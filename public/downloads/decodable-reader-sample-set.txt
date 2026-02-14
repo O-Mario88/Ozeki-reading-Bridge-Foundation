@@ -1,0 +1,6 @@
+Decodable Reader Sample Set
+
+Sample passages are aligned to:
+- early CVC decoding
+- consonant blends
+- fluency transitions
