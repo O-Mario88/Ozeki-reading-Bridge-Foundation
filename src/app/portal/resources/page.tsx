@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Portal Resources",
-  description: "Upload resource files or external links and map public download buttons.",
+  description: "Upload resource files or external links and map public download links.",
 };
 
 export default async function PortalResourcesPage() {
@@ -22,7 +22,7 @@ export default async function PortalResourcesPage() {
       user={user}
       activeHref="/portal/resources"
       title="Document Upload Manager"
-      description="Upload files, choose a document area (Resources, Compliance, Financial, Safeguarding, etc.), and map public download buttons automatically."
+      description="Upload files, choose a document area (Resources, Compliance, Financial, Safeguarding, etc.), and map public download links automatically."
     >
       <PortalResourcesManager initialResources={resources} />
     </PortalShell>

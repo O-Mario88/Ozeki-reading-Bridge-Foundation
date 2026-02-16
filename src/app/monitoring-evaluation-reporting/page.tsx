@@ -201,14 +201,16 @@ export default function MonitoringEvaluationReportingPage() {
                     <span className="meta-line">
                       {report.reportType} | {report.scopeType}: {report.scopeValue}
                     </span>
-                    <div className="action-row">
-                      <Link className="button button-ghost" href={`/impact/reports/${report.reportCode}`}>
-                        View
+                    <p>
+                      <Link className="inline-download-link" href={`/impact/reports/${report.reportCode}`}>
+                        View Report
                       </Link>
-                      <a className="button" href={`/api/impact-reports/${report.reportCode}/download`}>
+                    </p>
+                    <p>
+                      <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
                         Download PDF
                       </a>
-                    </div>
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -216,14 +218,14 @@ export default function MonitoringEvaluationReportingPage() {
           </article>
 
           <article className="card">
-            <h3>Website Downloads (Buttons)</h3>
+            <h3>Website Downloads</h3>
             <ul>
-              <li>Download Sample Partner Report (PDF)</li>
-              <li>Download Learning Brief Template (PDF/Word)</li>
-              <li>Download Classroom Observation Rubric (PDF)</li>
-              <li>Download Assessment Summary Template (Excel)</li>
-              <li>Download MER Indicator Menu (PDF)</li>
-              <li>Download Action Plan Template (Word)</li>
+              <li><a className="inline-download-link" href="/resources">Download Sample Partner Report (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Learning Brief Template (PDF/Word)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Classroom Observation Rubric (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Assessment Summary Template (Excel)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download MER Indicator Menu (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Action Plan Template (Word)</a></li>
             </ul>
           </article>
 

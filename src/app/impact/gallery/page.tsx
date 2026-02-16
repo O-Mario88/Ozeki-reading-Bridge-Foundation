@@ -174,7 +174,7 @@ export default async function ImpactGalleryPage({
             <Link className="button" href="/partner">
               Partner With Us
             </Link>
-            <Link className="button button-ghost" href="/donor-pack">
+            <Link className="inline-download-link" href="/donor-pack">
               Download Donor Pack
             </Link>
           </div>

@@ -179,35 +179,35 @@ export default function SchoolSystemsRoutinesPage() {
           <article className="card">
             <h3>Website Downloads: Literacy Timetables</h3>
             <ul>
-              <li>Download Literacy Timetable Template (PDF / Word)</li>
-              <li>Download Reading Block Schedule Samples (PDF)</li>
+              <li><a className="inline-download-link" href="/resources">Download Literacy Timetable Template (PDF / Word)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Reading Block Schedule Samples (PDF)</a></li>
             </ul>
           </article>
 
           <article className="card">
             <h3>Daily &amp; Weekly Reading Routines</h3>
             <ul>
-              <li>Download Daily Reading Routine Poster (PDF)</li>
-              <li>Download Weekly Literacy Routine Planner (PDF)</li>
-              <li>Download Structured Phonics Lesson Flow Card (PDF)</li>
+              <li><a className="inline-download-link" href="/resources">Download Daily Reading Routine Poster (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Weekly Literacy Routine Planner (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Structured Phonics Lesson Flow Card (PDF)</a></li>
             </ul>
           </article>
 
           <article className="card">
             <h3>Implementation Tracking Tools</h3>
             <ul>
-              <li>Download Routine Tracker (Teacher/Class) (Excel/PDF)</li>
-              <li>Download Term Literacy Implementation Checklist (PDF)</li>
-              <li>Download Learner Progress Tracking Sheet (Excel/PDF)</li>
+              <li><a className="inline-download-link" href="/resources">Download Routine Tracker (Teacher/Class) (Excel/PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Term Literacy Implementation Checklist (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Learner Progress Tracking Sheet (Excel/PDF)</a></li>
             </ul>
           </article>
 
           <article className="card">
             <h3>Accountability &amp; Supervision Tools</h3>
             <ul>
-              <li>Download Headteacher/DoS Supervision Checklist (PDF)</li>
-              <li>Download Coaching Conversation Guide (PDF)</li>
-              <li>Download Literacy Review Meeting Minutes Template (Word)</li>
+              <li><a className="inline-download-link" href="/resources">Download Headteacher/DoS Supervision Checklist (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Coaching Conversation Guide (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Literacy Review Meeting Minutes Template (Word)</a></li>
             </ul>
           </article>
         </div>

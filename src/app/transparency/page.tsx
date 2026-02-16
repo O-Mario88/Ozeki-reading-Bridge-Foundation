@@ -159,7 +159,7 @@ export default function TransparencyPage() {
             </div>
 
             <div className="action-row">
-              <a className="button" href="/downloads/donor-trust/ozeki-donor-pack.pdf">
+              <a className="inline-download-link" href="/downloads/donor-trust/ozeki-donor-pack.pdf">
                 Download Donor Pack (PDF Bundle)
               </a>
               <a className="button button-ghost" href={dueDiligenceRequestLink}>

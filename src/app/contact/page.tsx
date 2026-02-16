@@ -1,4 +1,4 @@
-import { ContactForm } from "@/components/ContactForm";
+import { ContactInquiryModal } from "@/components/ContactInquiryModal";
 import { PageHero } from "@/components/PageHero";
 import { officialContact, officialContactLinks } from "@/lib/contact";
 
@@ -36,7 +36,13 @@ export default function ContactPage() {
           </article>
           <article className="card">
             <h2>Inquiry form</h2>
-            <ContactForm />
+            <p>
+              Click below to open the inquiry form. It closes automatically after
+              successful submission.
+            </p>
+            <div className="action-row">
+              <ContactInquiryModal />
+            </div>
           </article>
         </div>
       </section>

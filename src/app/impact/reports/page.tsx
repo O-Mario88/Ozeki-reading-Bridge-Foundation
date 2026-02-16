@@ -161,14 +161,16 @@ export default async function ImpactReportsLibraryPage({
                 Version {report.version} | Generated {new Date(report.generatedAt).toLocaleDateString()}
               </p>
 
-              <div className="action-row">
-                <a className="button" href={`/api/impact-reports/${report.reportCode}/download`}>
+              <p>
+                <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
                   Download PDF
                 </a>
-                <Link className="button button-ghost" href={`/impact/reports/${report.reportCode}`}>
+              </p>
+              <p>
+                <Link className="inline-download-link" href={`/impact/reports/${report.reportCode}`}>
                   View Web Version
                 </Link>
-              </div>
+              </p>
             </article>
           ))}
 

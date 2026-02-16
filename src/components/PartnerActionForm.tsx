@@ -18,12 +18,14 @@ export function PartnerActionForm({
   includeCountry = false,
   contextLabel,
   onSuccess,
+  onCancel,
 }: {
   type: string;
   actionLabel: string;
   includeCountry?: boolean;
   contextLabel?: string;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }) {
   const [state, setState] = useState<SubmitState>(initialState);
 
@@ -169,9 +171,16 @@ export function PartnerActionForm({
         <textarea name="message" rows={4} placeholder="Share your funding interest or proposal request." required />
       </label>
 
-      <button className="button" type="submit" disabled={state.status === "submitting"}>
-        {state.status === "submitting" ? "Submitting..." : actionLabel}
-      </button>
+      <div className="action-row">
+        <button className="button" type="submit" disabled={state.status === "submitting"}>
+          {state.status === "submitting" ? "Submitting..." : actionLabel}
+        </button>
+        {onCancel ? (
+          <button className="button button-ghost" type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        ) : null}
+      </div>
 
       {state.message ? <p className={`form-message ${state.status}`}>{state.message}</p> : null}
     </form>

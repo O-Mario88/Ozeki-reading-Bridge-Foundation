@@ -137,7 +137,7 @@ export default async function ImpactHubPage() {
             <Link className="button" href="/impact/dashboard">
               View Live Impact Dashboard
             </Link>
-            <Link className="button button-ghost" href="/impact/reports">
+            <Link className="inline-download-link" href="/impact/reports">
               Download Latest Impact Report
             </Link>
             <Link className="button button-ghost" href="/impact/case-studies">
@@ -247,14 +247,16 @@ export default async function ImpactHubPage() {
                     Learners assessed: {report.factPack.coverageDelivery.assessmentsConducted.endline.toLocaleString()}
                   </li>
                 </ul>
-                <div className="action-row">
-                  <a className="button" href={`/api/impact-reports/${report.reportCode}/download`}>
+                <p>
+                  <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
                     Download PDF
                   </a>
-                  <Link className="button button-ghost" href={`/impact/reports/${report.reportCode}`}>
-                    View web version
+                </p>
+                <p>
+                  <Link className="inline-download-link" href={`/impact/reports/${report.reportCode}`}>
+                    View Web Version
                   </Link>
-                </div>
+                </p>
               </article>
             ))}
             {reports.length === 0 ? (

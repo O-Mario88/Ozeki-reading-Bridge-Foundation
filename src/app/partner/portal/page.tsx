@@ -1,4 +1,4 @@
-import { PartnerActionForm } from "@/components/PartnerActionForm";
+import { PartnerPortalAccessModal } from "@/components/PartnerPortalAccessModal";
 
 export const metadata = {
   title: "Partner Portal",
@@ -38,11 +38,13 @@ export default function PartnerPortalAccessPage() {
 
           <article className="card">
             <h2>Request access</h2>
-            <PartnerActionForm
-              type="Partner Portal Access"
-              actionLabel="Request Access"
-              includeCountry
-            />
+            <p>
+              Open the access form to request scoped partner dashboard and report
+              access.
+            </p>
+            <div className="action-row">
+              <PartnerPortalAccessModal />
+            </div>
           </article>
         </div>
       </section>

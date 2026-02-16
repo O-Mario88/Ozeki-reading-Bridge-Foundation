@@ -131,7 +131,7 @@ export default function ReadingMaterialsDevelopmentPage() {
             <p>Resource library page setup:</p>
             <ul>
               <li>Filters: Grade, Skill, Level, Resource Type</li>
-              <li>Each card: title, short description, tags, file type, download button</li>
+              <li>Each card: title, short description, tags, file type, download link</li>
               <li>Optional: email capture before download or free-download toggle</li>
               <li>Optional: most downloaded and new this week sections</li>
               <li>Optional: preview first two pages before download</li>
@@ -139,52 +139,25 @@ export default function ReadingMaterialsDevelopmentPage() {
           </article>
 
           <article className="card">
-            <h3>All Download Buttons</h3>
+            <h3>All Download Links</h3>
             <ul>
-              <li>Decodable Readers - Set 1, Set 2, Set 3</li>
-              <li>Leveled Passages - Beginner, Intermediate, Advanced</li>
-              <li>Comprehension Activities - Level 1, Level 2, Level 3</li>
-              <li>Practice Sheets (PDF)</li>
-              <li>Full Classroom Text Set (ZIP/PDF Bundle)</li>
+              <li><a className="inline-download-link" href="/resources">Download Decodable Readers - Set 1 (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Decodable Readers - Set 2 (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Decodable Readers - Set 3 (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Leveled Passages - Beginner (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Leveled Passages - Intermediate (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Leveled Passages - Advanced (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Comprehension Activities - Level 1 (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Comprehension Activities - Level 2 (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Comprehension Activities - Level 3 (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Practice Sheets (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Full Classroom Text Set (ZIP/PDF Bundle)</a></li>
             </ul>
-            <div className="action-row">
-              <Link className="button" href="/resources">
-                Download Decodable Readers - Set 1 (PDF)
+            <p>
+              <Link className="inline-download-link" href="/book-visit">
+                Book School Support
               </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Decodable Readers - Set 2 (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Decodable Readers - Set 3 (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Leveled Passages - Beginner (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Leveled Passages - Intermediate (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Leveled Passages - Advanced (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Comprehension Activities - Level 1 (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Comprehension Activities - Level 2 (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Comprehension Activities - Level 3 (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Practice Sheets (PDF)
-              </Link>
-              <Link className="button button-ghost" href="/resources">
-                Download Full Classroom Text Set (ZIP/PDF Bundle)
-              </Link>
-              <Link className="button button-ghost" href="/book-visit">
-                Book school support
-              </Link>
-            </div>
+            </p>
           </article>
         </div>
       </section>

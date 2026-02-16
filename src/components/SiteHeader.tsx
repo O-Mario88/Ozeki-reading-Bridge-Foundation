@@ -43,14 +43,30 @@ const programsGroup: NavGroup = {
   href: "/programs",
   description: "Teacher training, coaching, assessments, and literacy implementation services.",
   links: [
-    { href: "/programs", label: "Programs Overview" },
+    { href: "/phonics-training", label: "Signature Program: Phonics Training & School Support" },
     { href: "/teacher-professional-development", label: "Teacher Professional Development" },
     { href: "/in-school-coaching-mentorship", label: "In-School Coaching & Mentorship" },
     {
       href: "/learner-reading-assessments-progress-tracking",
       label: "Learner Assessments & Progress Tracking",
     },
+    {
+      href: "/remedial-catch-up-reading-interventions",
+      label: "Remedial & Catch-Up Reading Interventions",
+    },
+    { href: "/reading-materials-development", label: "Reading Materials Development (Learners)" },
     { href: "/story-project", label: "1001 Story Project" },
+    {
+      href: "/teaching-aids-instructional-resources-teachers",
+      label: "Teaching Aids & Instructional Resources",
+    },
+    { href: "/school-systems-routines", label: "School Systems & Routines" },
+    { href: "/instructional-leadership-support", label: "Instructional Leadership Support" },
+    { href: "/monitoring-evaluation-reporting", label: "Monitoring, Evaluation & Reporting" },
+    {
+      href: "/literacy-content-creation-advocacy",
+      label: "Literacy Content Creation & Advocacy",
+    },
   ],
 };
 

@@ -195,7 +195,9 @@ export function PartnerFundingPage() {
         <div className="container hero-layout hero-layout-single">
           <div className="hero-copy hero-copy-with-photo page-hero-copy">
             <p className="kicker">Partner with us</p>
-            <h1>Fund Literacy That Shows Results - by Country, Region, or District</h1>
+            <h1 className="partner-hero-title">
+              Fund Literacy That Shows Results - by Country, Region, or District
+            </h1>
             <p className="partner-hero-intro">
               Ozeki Reading Bridge Foundation equips teachers and schools with
               practical, evidence-based reading instruction using structured phonics,
@@ -209,8 +211,8 @@ export function PartnerFundingPage() {
               package includes evidence and reporting.
             </p>
             <div className="action-row">
-              <Link className="button" href="/donor-pack">
-                Download donor pack
+              <Link className="inline-download-link" href="/donor-pack">
+                Download Donor Pack
               </Link>
               <button
                 className="button button-ghost"
@@ -449,6 +451,7 @@ export function PartnerFundingPage() {
               includeCountry
               contextLabel={activeIntent.contextLabel}
               onSuccess={() => setActiveIntent(null)}
+              onCancel={() => setActiveIntent(null)}
             />
           </div>
         </div>

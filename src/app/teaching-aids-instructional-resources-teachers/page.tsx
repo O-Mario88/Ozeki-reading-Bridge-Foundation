@@ -72,9 +72,9 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
               </ul>
               <p>Button examples:</p>
               <ul>
-                <li>Download Sound Charts - Basic Letter Sounds (PDF)</li>
-                <li>Download Sound Charts - Digraphs &amp; Blends (PDF)</li>
-                <li>Download Sound Charts - Vowel Patterns (PDF)</li>
+                <li><a className="inline-download-link" href="/resources">Download Sound Charts - Basic Letter Sounds (PDF)</a></li>
+                <li><a className="inline-download-link" href="/resources">Download Sound Charts - Digraphs &amp; Blends (PDF)</a></li>
+                <li><a className="inline-download-link" href="/resources">Download Sound Charts - Vowel Patterns (PDF)</a></li>
               </ul>
             </article>
 
@@ -95,9 +95,9 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
               </ul>
               <p>Button examples:</p>
               <ul>
-                <li>Download Flashcards - Letter Sounds (PDF)</li>
-                <li>Download Flashcards - Decodable Words (PDF)</li>
-                <li>Download Flashcards - High-Frequency Words (PDF)</li>
+                <li><a className="inline-download-link" href="/resources">Download Flashcards - Letter Sounds (PDF)</a></li>
+                <li><a className="inline-download-link" href="/resources">Download Flashcards - Decodable Words (PDF)</a></li>
+                <li><a className="inline-download-link" href="/resources">Download Flashcards - High-Frequency Words (PDF)</a></li>
               </ul>
             </article>
 
@@ -117,9 +117,9 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
               </ul>
               <p>Button examples:</p>
               <ul>
-                <li>Download Blending Boards - Sound Boxes (PDF)</li>
-                <li>Download Blending Boards - Word Building Mats (PDF)</li>
-                <li>Download Blending Routine Cards (PDF)</li>
+                <li><a className="inline-download-link" href="/resources">Download Blending Boards - Sound Boxes (PDF)</a></li>
+                <li><a className="inline-download-link" href="/resources">Download Blending Boards - Word Building Mats (PDF)</a></li>
+                <li><a className="inline-download-link" href="/resources">Download Blending Routine Cards (PDF)</a></li>
               </ul>
             </article>
           </div>
@@ -139,8 +139,8 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
             </ul>
             <p>Button examples:</p>
             <ul>
-              <li>Download Word Lists - Phonics Sequence Set 1 (PDF)</li>
-              <li>Download Word Lists - Blends &amp; Digraphs (PDF)</li>
+              <li><a className="inline-download-link" href="/resources">Download Word Lists - Phonics Sequence Set 1 (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Word Lists - Blends &amp; Digraphs (PDF)</a></li>
             </ul>
           </article>
 
@@ -157,8 +157,8 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
             </ul>
             <p>Button examples:</p>
             <ul>
-              <li>Download Lesson Templates - Daily Phonics Lesson (PDF)</li>
-              <li>Download Lesson Templates - Weekly Reading Plan (PDF)</li>
+              <li><a className="inline-download-link" href="/resources">Download Lesson Templates - Daily Phonics Lesson (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Lesson Templates - Weekly Reading Plan (PDF)</a></li>
             </ul>
           </article>
 
@@ -176,9 +176,9 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
             </ul>
             <p>Button examples:</p>
             <ul>
-              <li>Download Teacher Guide - Phonics Routines (PDF)</li>
-              <li>Download Teacher Guide - Fluency Routines (PDF)</li>
-              <li>Download Teacher Guide - Error Correction Techniques (PDF)</li>
+              <li><a className="inline-download-link" href="/resources">Download Teacher Guide - Phonics Routines (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Teacher Guide - Fluency Routines (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Teacher Guide - Error Correction Techniques (PDF)</a></li>
             </ul>
           </article>
         </div>
@@ -191,7 +191,7 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
             <p>Cards + filters + downloads:</p>
             <ul>
               <li>Filters: Grade, Skill, Resource Type</li>
-              <li>Each card: title, short description, tags, file type, download button</li>
+              <li>Each card: title, short description, tags, file type, download link</li>
               <li>Recommended section for high-conversion resources</li>
             </ul>
           </article>
@@ -205,18 +205,17 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
           </article>
 
           <article className="card">
-            <h3>Download Button Label</h3>
+            <h3>Download Link Label</h3>
             <p>
-              <strong>Download Teacher Starter Pack (PDF Bundle)</strong>
+              <a className="inline-download-link" href="/resources">
+                Download Teacher Starter Pack (PDF Bundle)
+              </a>
             </p>
-            <div className="action-row">
-              <Link className="button" href="/resources">
-                Open resources library
+            <p>
+              <Link className="inline-download-link" href="/book-visit">
+                Book School Support
               </Link>
-              <Link className="button button-ghost" href="/book-visit">
-                Book school support
-              </Link>
-            </div>
+            </p>
           </article>
         </div>
       </section>

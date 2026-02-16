@@ -37,7 +37,7 @@ export default function DonorPackPage() {
             funding pathways, packaged for due diligence and fast decision-making.
           </p>
           <div className="action-row">
-            <a className="button" href="/downloads/donor-trust/ozeki-donor-pack.pdf">
+            <a className="inline-download-link" href="/downloads/donor-trust/ozeki-donor-pack.pdf">
               Download Donor Pack (PDF Bundle)
             </a>
             <Link className="button button-ghost" href="/partner#book-a-partner-call">
@@ -60,20 +60,26 @@ export default function DonorPackPage() {
 
           <article className="card">
             <h2>Quick links</h2>
-            <div className="action-row">
-              <a className="button button-ghost" href="/downloads/donor-trust/governance-overview.pdf">
-                Governance Summary
+            <p>
+              <a className="inline-download-link" href="/downloads/donor-trust/governance-overview.pdf">
+                Download Governance Summary
               </a>
-              <a className="button button-ghost" href="/downloads/donor-trust/safeguarding-summary.pdf">
-                Safeguarding Summary
+            </p>
+            <p>
+              <a className="inline-download-link" href="/downloads/donor-trust/safeguarding-summary.pdf">
+                Download Safeguarding Summary
               </a>
-              <a className="button button-ghost" href="/downloads/donor-trust/data-privacy-ethics-summary.pdf">
-                Data Privacy & Ethics
+            </p>
+            <p>
+              <a className="inline-download-link" href="/downloads/donor-trust/data-privacy-ethics-summary.pdf">
+                Download Data Privacy & Ethics Summary
               </a>
-              <a className="button button-ghost" href="/downloads/donor-trust/financial-controls-anti-fraud-summary.pdf">
-                Financial Controls
+            </p>
+            <p>
+              <a className="inline-download-link" href="/downloads/donor-trust/financial-controls-anti-fraud-summary.pdf">
+                Download Financial Controls Summary
               </a>
-            </div>
+            </p>
             {donorPackUploads.length > 0 ? (
               <>
                 <p className="meta-line">Latest uploaded donor documents</p>

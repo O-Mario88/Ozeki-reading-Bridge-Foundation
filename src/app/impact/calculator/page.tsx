@@ -501,7 +501,7 @@ export default function ImpactCalculatorPage() {
               <Link className="button button-ghost" href="/partner">
                 Talk to partnerships
               </Link>
-              <Link className="button button-ghost" href="/donor-pack">
+              <Link className="inline-download-link" href="/donor-pack">
                 Download donor pack
               </Link>
             </div>
@@ -563,7 +563,7 @@ export default function ImpactCalculatorPage() {
               Book a Partner Call
             </Link>
             <Link
-              className="button button-ghost"
+              className="inline-download-link"
               href="/donor-pack"
               onClick={() =>
                 trackEvent("donor_pack_download", {

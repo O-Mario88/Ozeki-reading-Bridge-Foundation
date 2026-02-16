@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { ResourceItem } from "@/lib/types";
+import { FloatingFormModal } from "@/components/FloatingFormModal";
 
 interface Lead {
   name: string;
@@ -37,7 +38,7 @@ export function ResourceLibrary({ resources }: { resources: ResourceItem[] }) {
     });
   }, [grade, query, resources, skill, type]);
 
-  async function saveLead(event: FormEvent<HTMLFormElement>) {
+  async function saveLead(event: FormEvent<HTMLFormElement>, close?: () => void) {
     event.preventDefault();
     if (!lead.email || !lead.name) {
       setStatus("Please enter your name and email to access downloads.");
@@ -60,6 +61,11 @@ export function ResourceLibrary({ resources }: { resources: ResourceItem[] }) {
 
       setLeadReady(true);
       setStatus("Downloads unlocked. Select any toolkit below.");
+      if (close) {
+        window.setTimeout(() => {
+          close();
+        }, 600);
+      }
     } catch {
       setStatus("Unable to unlock downloads right now. Please retry.");
     }
@@ -87,36 +93,51 @@ export function ResourceLibrary({ resources }: { resources: ResourceItem[] }) {
     <div className="library-layout">
       <section className="card lead-capture">
         <h2>Download Access</h2>
-        <p>Enter your details once to access all resources and bundles.</p>
-        <form onSubmit={saveLead} className="lead-form">
-          <input
-            placeholder="Full name"
-            value={lead.name}
-            onChange={(event) =>
-              setLead((prev) => ({ ...prev, name: event.target.value }))
-            }
-            required
-          />
-          <input
-            type="email"
-            placeholder="Email address"
-            value={lead.email}
-            onChange={(event) =>
-              setLead((prev) => ({ ...prev, email: event.target.value }))
-            }
-            required
-          />
-          <input
-            placeholder="School / Organization"
-            value={lead.organization}
-            onChange={(event) =>
-              setLead((prev) => ({ ...prev, organization: event.target.value }))
-            }
-          />
-          <button className="button" type="submit">
-            {leadReady ? "Access active" : "Unlock downloads"}
-          </button>
-        </form>
+        <p>Enter your details once to unlock all resources and bundles.</p>
+        <div className="action-row">
+          <FloatingFormModal
+            triggerLabel={leadReady ? "Access active" : "Unlock downloads"}
+            title="Unlock resource downloads"
+            description="Submit your details once and access all downloads."
+          >
+            {({ close }) => (
+              <form onSubmit={(event) => saveLead(event, close)} className="lead-form">
+                <input
+                  placeholder="Full name"
+                  value={lead.name}
+                  onChange={(event) =>
+                    setLead((prev) => ({ ...prev, name: event.target.value }))
+                  }
+                  required
+                />
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={lead.email}
+                  onChange={(event) =>
+                    setLead((prev) => ({ ...prev, email: event.target.value }))
+                  }
+                  required
+                />
+                <input
+                  placeholder="School / Organization"
+                  value={lead.organization}
+                  onChange={(event) =>
+                    setLead((prev) => ({ ...prev, organization: event.target.value }))
+                  }
+                />
+                <div className="action-row">
+                  <button className="button" type="submit">
+                    Submit
+                  </button>
+                  <button className="button button-ghost" type="button" onClick={close}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </FloatingFormModal>
+        </div>
         {status ? <p className="form-message success">{status}</p> : null}
       </section>
 
@@ -163,9 +184,16 @@ export function ResourceLibrary({ resources }: { resources: ResourceItem[] }) {
               <p className="meta-line">
                 {resource.grade} · {resource.skill}
               </p>
-              <button className="button" onClick={() => handleDownload(resource)}>
+              <a
+                className="inline-download-link"
+                href={resource.filePath}
+                onClick={(event) => {
+                  event.preventDefault();
+                  handleDownload(resource);
+                }}
+              >
                 {resource.downloadLabel || "Preview + Download"}
-              </button>
+              </a>
             </article>
           ))}
         </div>

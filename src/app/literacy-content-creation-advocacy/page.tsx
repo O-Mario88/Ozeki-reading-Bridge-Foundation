@@ -171,7 +171,7 @@ export default function LiteracyContentCreationAdvocacyPage() {
               </li>
               <li>
                 Resource Library downloads for toolkits and templates with
-                download buttons
+                download links
               </li>
               <li>
                 Program pages with embedded implementation tips and sample tools
@@ -181,14 +181,14 @@ export default function LiteracyContentCreationAdvocacyPage() {
           </article>
 
           <article className="card">
-            <h3>Website Downloads (Buttons)</h3>
+            <h3>Website Downloads</h3>
             <ul>
-              <li>Download Phonics Teaching Guide (PDF)</li>
-              <li>Download Fluency Routines Toolkit (PDF)</li>
-              <li>Download Reading Assessment Pack (PDF/Excel)</li>
-              <li>Download Remedial Reading Toolkit (PDF)</li>
-              <li>Download Supervision &amp; Coaching Toolkit (PDF)</li>
-              <li>Download Best-Practice Briefs (PDF Bundle)</li>
+              <li><a className="inline-download-link" href="/resources">Download Phonics Teaching Guide (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Fluency Routines Toolkit (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Reading Assessment Pack (PDF/Excel)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Remedial Reading Toolkit (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Supervision &amp; Coaching Toolkit (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Best-Practice Briefs (PDF Bundle)</a></li>
             </ul>
           </article>
 

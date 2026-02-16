@@ -53,7 +53,11 @@ const recommendations = [
   "Coach school leaders on reading lesson supervision and feedback cycles.",
 ];
 
-export function DiagnosticQuiz() {
+export function DiagnosticQuiz({
+  onSuccess,
+}: {
+  onSuccess?: () => void;
+}) {
   const [responses, setResponses] = useState<Record<string, Choice | undefined>>({});
   const [submitted, setSubmitted] = useState(false);
 
@@ -73,6 +77,11 @@ export function DiagnosticQuiz() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitted(true);
+    if (onSuccess) {
+      window.setTimeout(() => {
+        onSuccess();
+      }, 600);
+    }
   }
 
   return (

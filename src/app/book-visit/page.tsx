@@ -1,4 +1,4 @@
-import { BookingForm } from "@/components/BookingForm";
+import { BookingRequestModal } from "@/components/BookingRequestModal";
 import { PageHero } from "@/components/PageHero";
 
 export const metadata = {
@@ -41,7 +41,14 @@ export default function BookVisitPage() {
 
       <section className="section">
         <div className="container booking-form-shell">
-          <BookingForm />
+          <h2>Submit your booking request</h2>
+          <p>
+            Open the request form, submit your preferred schedule, and our team will
+            confirm next steps by email or WhatsApp.
+          </p>
+          <div className="action-row">
+            <BookingRequestModal />
+          </div>
         </div>
       </section>
     </>

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CtaBand } from "@/components/CtaBand";
 import { MediaTestimonialGrid } from "@/components/MediaTestimonialGrid";
 import { MetricStrip } from "@/components/MetricStrip";
 import { officialContact } from "@/lib/contact";
@@ -59,41 +58,28 @@ export default async function HomePage() {
           </div>
 
           <div className="hero-panel hero-panel-stretch">
-            <article className="hero-vision-card hero-vision-card-horizontal">
-              <section className="hero-vision-block">
-                <h2>Vision</h2>
-                <p>
-                  We empower teachers to build confident readers-and strengthen
-                  Uganda&apos;s future through literacy.
-                </p>
-              </section>
-
-              <section className="hero-vision-block">
-                <h3>Why We Work in Uganda (with Northern Uganda as a case example)</h3>
-                <p>
-                  Across Uganda, too many children move through school without mastering
-                  the most important gateway skill: reading. When reading is weak,
-                  learning slows in every subject-and the cost is lifelong.
-                </p>
-                <p>
-                  We serve schools across Uganda, and we place special focus on
-                  communities where learning foundations were most disrupted. Northern
-                  Uganda is a clear case example. Decades of conflict strained school
-                  systems, disrupted early learning, and left many classrooms still
-                  rebuilding: limited materials, large classes, teacher shortages, and
-                  cohorts of learners who missed early reading skills.
-                </p>
-                <p>
-                  Our response is simple and evidence-based: rebuild reading from the
-                  ground up by strengthening teachers. Because when a teacher learns
-                  structured phonics-and receives coaching to implement it-hundreds of
-                  children benefit, year after year.
-                </p>
-                <p className="cta-line">
-                  Support literacy where it matters most-and see the evidence in real
-                  classrooms.
-                </p>
-              </section>
+            <article className="home-focus-card">
+              <h2>Why We Work In Uganda</h2>
+              <p>
+                Across Uganda, too many children move through school without
+                mastering the gateway skill of reading. When foundational reading
+                is weak, learning slows in every subject.
+              </p>
+              <p>
+                We work nationally and maintain special focus on Northern Uganda
+                because decades of conflict disrupted early learning and left many
+                classrooms rebuilding with limited materials, large classes, and
+                teacher shortages.
+              </p>
+              <p>
+                Our evidence-based response is to strengthen teachers through
+                structured phonics, coaching, and classroom support so learners
+                rebuild reading confidence and progress term by term.
+              </p>
+              <p className="cta-line">
+                Support literacy where it matters most and see the evidence in real
+                classrooms.
+              </p>
             </article>
           </div>
         </div>
@@ -131,13 +117,6 @@ export default async function HomePage() {
           </article>
         </div>
       </section>
-
-      <CtaBand
-        title="Stand with Northern Uganda schools"
-        body="Partner with Ozeki Reading Bridge Foundation to train teachers, strengthen school routines, and help learners rebuild reading confidence."
-        primaryHref="/partner"
-        primaryLabel="Partner with us"
-      />
 
       <MetricStrip metrics={summary.metrics} />
 

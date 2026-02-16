@@ -1,6 +1,7 @@
 import { CtaBand } from "@/components/CtaBand";
 import { PageHero } from "@/components/PageHero";
 import Link from "next/link";
+import { getImpactSummary } from "@/lib/db";
 
 const programDirectory = [
   {
@@ -84,13 +85,45 @@ export const metadata = {
     "Professional overview of all Ozeki Reading Bridge Foundation programs with direct links to each detailed service page.",
 };
 
-export default function ProgramsPage() {
+export const dynamic = "force-dynamic";
+
+const headlineMetricLabels = [
+  "Schools trained",
+  "Teachers trained",
+  "Learners assessed",
+  "Stories published",
+  "Training sessions completed",
+];
+
+export default async function ProgramsPage() {
+  const summary = getImpactSummary();
+  const headlineMetrics = headlineMetricLabels
+    .map((label) => summary.metrics.find((metric) => metric.label === label))
+    .filter((metric): metric is { label: string; value: number } => Boolean(metric));
+
   return (
     <>
       <PageHero
         title="Programs & Services"
         description="Our full implementation support stack for nursery and primary literacy improvement."
       />
+
+      <section className="section program-headline-metrics">
+        <div className="container">
+          <div className="section-head">
+            <h2>Headline Metrics</h2>
+            <p>Live values from the backend data system.</p>
+          </div>
+          <div className="program-metrics-grid">
+            {headlineMetrics.map((metric) => (
+              <article className="card program-metric-card" key={metric.label}>
+                <strong>{metric.value.toLocaleString()}</strong>
+                <span>{metric.label}</span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="section">
         <div className="container">
@@ -101,13 +134,13 @@ export default function ProgramsPage() {
               implementation details, outcomes, and participation options.
             </p>
           </div>
-          <div className="program-directory-list">
+          <div className="program-directory-grid">
             {programDirectory.map((program) => (
-              <article className="program-directory-item" key={program.href}>
+              <article className="card program-directory-card" key={program.href}>
                 <h3>{program.title}</h3>
                 <p>{program.description}</p>
                 <div className="action-row">
-                  <Link className="button" href={program.href}>
+                  <Link className="button button-compact" href={program.href}>
                     View program page
                   </Link>
                 </div>

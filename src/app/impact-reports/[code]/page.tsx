@@ -42,13 +42,13 @@ export default async function ImpactReportDetailPage({
             {new Date(report.generatedAt).toLocaleString()}
           </p>
           <div className="action-row">
-            <a className="button" href={`/api/impact-reports/${report.reportCode}/download`}>
+            <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
               Download PDF
             </a>
-            <a className="button button-ghost" href={`/api/impact-reports/${report.reportCode}`}>
+            <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}`}>
               View JSON Fact Pack
             </a>
-            <Link className="button button-ghost" href="/impact/reports">
+            <Link className="inline-download-link" href="/impact/reports">
               Back to reports
             </Link>
           </div>

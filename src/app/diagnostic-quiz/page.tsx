@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DiagnosticQuiz } from "@/components/DiagnosticQuiz";
+import { DiagnosticQuizModal } from "@/components/DiagnosticQuizModal";
 import { PageHero } from "@/components/PageHero";
 
 export const metadata = {
@@ -19,7 +19,16 @@ export default function DiagnosticQuizPage() {
 
       <section className="section">
         <div className="container">
-          <DiagnosticQuiz />
+          <article className="card">
+            <h2>Start diagnostic quiz</h2>
+            <p>
+              Open the quiz form, complete seven questions, and get immediate
+              recommendations.
+            </p>
+            <div className="action-row">
+              <DiagnosticQuizModal />
+            </div>
+          </article>
         </div>
       </section>
 

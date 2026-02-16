@@ -151,7 +151,7 @@ export default async function ImpactDashboardPage({
             anonymized and never published.
           </p>
           <div className="action-row">
-            <Link className="button" href="/impact/reports">
+            <Link className="inline-download-link" href="/impact/reports">
               Download Latest Report
             </Link>
             <Link className="button button-ghost" href="/partner/portal">

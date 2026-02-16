@@ -12,7 +12,13 @@ type SubmitState = {
 
 const initialState: SubmitState = { status: "idle", message: "", eventLink: null, meetLink: null };
 
-export function BookingForm() {
+export function BookingForm({
+  onSuccess,
+  onCancel,
+}: {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}) {
   const [state, setState] = useState<SubmitState>(initialState);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -57,6 +63,11 @@ export function BookingForm() {
         eventLink: data.calendar?.eventLink ?? null,
         meetLink: data.calendar?.meetLink ?? null,
       });
+      if (onSuccess) {
+        window.setTimeout(() => {
+          onSuccess();
+        }, 700);
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Submission failed. Try again.";
@@ -133,13 +144,24 @@ export function BookingForm() {
         />
       </label>
 
-      <button
-        className="button button-compact booking-form-submit"
-        type="submit"
-        disabled={state.status === "submitting"}
-      >
-        {state.status === "submitting" ? "Submitting..." : "Submit request"}
-      </button>
+      <div className="action-row">
+        <button
+          className="button button-compact booking-form-submit"
+          type="submit"
+          disabled={state.status === "submitting"}
+        >
+          {state.status === "submitting" ? "Submitting..." : "Submit request"}
+        </button>
+        {onCancel ? (
+          <button
+            className="button button-ghost button-compact"
+            type="button"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        ) : null}
+      </div>
 
       {state.message ? (
         <div className={`form-message ${state.status}`}>

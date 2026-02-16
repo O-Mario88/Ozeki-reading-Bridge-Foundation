@@ -43,7 +43,7 @@ export default function DonatePage() {
             <Link className="button button-ghost" href="/impact/calculator">
               Open Impact Calculator
             </Link>
-            <Link className="button button-ghost" href="/donor-pack">
+            <Link className="inline-download-link" href="/donor-pack">
               Download Donor Pack
             </Link>
           </div>

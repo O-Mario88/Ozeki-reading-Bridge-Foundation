@@ -169,24 +169,24 @@ export default function InstructionalLeadershipSupportPage() {
           </article>
 
           <article className="card">
-            <h3>Website Downloads (Buttons)</h3>
+            <h3>Website Downloads</h3>
             <p>Observation &amp; Supervision</p>
             <ul>
-              <li>Download Reading Lesson Supervision Checklist (PDF)</li>
-              <li>Download Supervision Schedule Template (Word/Excel)</li>
-              <li>Download Literacy Implementation Checklist (PDF)</li>
+              <li><a className="inline-download-link" href="/resources">Download Reading Lesson Supervision Checklist (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Supervision Schedule Template (Word/Excel)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Literacy Implementation Checklist (PDF)</a></li>
             </ul>
             <p>Coaching Conversations</p>
             <ul>
-              <li>Download Coaching Conversation Guide (PDF)</li>
-              <li>Download Teacher Improvement Plan Template (Word)</li>
-              <li>Download Quick Feedback Form (PDF)</li>
+              <li><a className="inline-download-link" href="/resources">Download Coaching Conversation Guide (PDF)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Teacher Improvement Plan Template (Word)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Quick Feedback Form (PDF)</a></li>
             </ul>
             <p>Data-Informed Decisions</p>
             <ul>
-              <li>Download Literacy Data Summary Template (Excel)</li>
-              <li>Download Termly Literacy Review Meeting Template (Word)</li>
-              <li>Download Progress Tracking Dashboard (Simple Excel)</li>
+              <li><a className="inline-download-link" href="/resources">Download Literacy Data Summary Template (Excel)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Termly Literacy Review Meeting Template (Word)</a></li>
+              <li><a className="inline-download-link" href="/resources">Download Progress Tracking Dashboard (Simple Excel)</a></li>
             </ul>
           </article>
         </div>

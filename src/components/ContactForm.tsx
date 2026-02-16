@@ -9,7 +9,13 @@ type SubmitState = {
 
 const initialState: SubmitState = { status: "idle", message: "" };
 
-export function ContactForm() {
+export function ContactForm({
+  onSuccess,
+  onCancel,
+}: {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}) {
   const [state, setState] = useState<SubmitState>(initialState);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -36,6 +42,11 @@ export function ContactForm() {
         status: "success",
         message: "Inquiry sent successfully. We will reply within 1-2 business days.",
       });
+      if (onSuccess) {
+        window.setTimeout(() => {
+          onSuccess();
+        }, 700);
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Submission failed. Try again.";
@@ -86,9 +97,16 @@ export function ContactForm() {
         />
       </label>
 
-      <button className="button" type="submit" disabled={state.status === "submitting"}>
-        {state.status === "submitting" ? "Submitting..." : "Send inquiry"}
-      </button>
+      <div className="action-row">
+        <button className="button" type="submit" disabled={state.status === "submitting"}>
+          {state.status === "submitting" ? "Submitting..." : "Send inquiry"}
+        </button>
+        {onCancel ? (
+          <button className="button button-ghost" type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        ) : null}
+      </div>
 
       {state.message ? (
         <p className={`form-message ${state.status}`}>{state.message}</p>
