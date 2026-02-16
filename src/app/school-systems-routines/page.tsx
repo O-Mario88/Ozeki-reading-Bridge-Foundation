@@ -163,8 +163,8 @@ export default function SchoolSystemsRoutinesPage() {
               systems in your school.
             </p>
             <div className="action-row">
-              <Link className="button" href="/book-visit">
-                Book a School Literacy Setup Visit
+              <Link className="button" href="/portal/schools">
+                Open school profiles
               </Link>
               <Link className="button button-ghost" href="/phonics-training">
                 Signature program

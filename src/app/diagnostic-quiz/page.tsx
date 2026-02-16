@@ -36,8 +36,8 @@ export default function DiagnosticQuizPage() {
         <div className="container card">
           <h2>Need implementation support after your score?</h2>
           <div className="action-row">
-            <Link className="button" href="/book-visit">
-              Book a school diagnostic visit
+            <Link className="button" href="/portal/schools">
+              Open school profiles
             </Link>
             <Link className="button button-ghost" href="/contact">
               Talk to our team

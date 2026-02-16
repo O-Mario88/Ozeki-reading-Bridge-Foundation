@@ -154,8 +154,8 @@ export default function ReadingMaterialsDevelopmentPage() {
               <li><a className="inline-download-link" href="/resources">Download Full Classroom Text Set (ZIP/PDF Bundle)</a></li>
             </ul>
             <p>
-              <Link className="inline-download-link" href="/book-visit">
-                Book School Support
+              <Link className="inline-download-link" href="/portal/schools">
+                Open school profiles for support
               </Link>
             </p>
           </article>

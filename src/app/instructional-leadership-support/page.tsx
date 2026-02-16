@@ -201,8 +201,8 @@ export default function InstructionalLeadershipSupportPage() {
               strengthen supervision and teacher support in your school.
             </p>
             <div className="action-row">
-              <Link className="button" href="/book-visit">
-                Book Leadership Coaching for Your School
+              <Link className="button" href="/portal/schools">
+                Open school profiles
               </Link>
             </div>
           </article>

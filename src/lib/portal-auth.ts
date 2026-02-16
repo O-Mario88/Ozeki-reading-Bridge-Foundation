@@ -27,7 +27,7 @@ export async function requirePortalUser() {
 }
 
 export function getPortalHomePath(user: PortalUser) {
-  return user.role === "Volunteer" ? "/portal/trainings" : "/portal/dashboard";
+  return user.role === "Volunteer" ? "/portal/profiles" : "/portal/dashboard";
 }
 
 export function isPortalVolunteer(user: PortalUser) {

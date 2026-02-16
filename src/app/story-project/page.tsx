@@ -269,8 +269,8 @@ export default function StoryProjectPage() {
               <li>Publish your learners&apos; stories into a school anthology</li>
             </ul>
             <div className="action-row">
-              <Link className="button" href="/book-visit">
-                Register your school
+              <Link className="button" href="/portal/schools">
+                Open school profiles
               </Link>
               <Link className="button button-ghost" href="/partner">
                 Sponsor anthology printing

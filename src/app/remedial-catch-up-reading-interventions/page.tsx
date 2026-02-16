@@ -198,8 +198,8 @@ export default function RemedialCatchUpReadingInterventionsPage() {
               small-group routines, and guided by continuous progress tracking.
             </p>
             <div className="action-row">
-              <Link className="button" href="/book-visit">
-                Book catch-up support
+              <Link className="button" href="/portal/schools">
+                Open school profiles
               </Link>
               <Link className="button button-ghost" href="/partner">
                 Partner with us

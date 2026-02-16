@@ -49,8 +49,8 @@ export default async function TestimonialsPage() {
           <Link className="button" href="/media">
             Browse full media wall
           </Link>
-          <Link className="button button-ghost" href="/book-visit">
-            Book documentation visit
+          <Link className="button button-ghost" href="/portal/schools">
+            Open school profiles
           </Link>
         </div>
       </section>

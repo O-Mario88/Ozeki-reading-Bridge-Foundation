@@ -23,15 +23,15 @@ type NavGroup = {
 
 type NavItem =
   | {
-      type: "link";
-      label: string;
-      href: string;
-    }
+    type: "link";
+    label: string;
+    href: string;
+  }
   | {
-      type: "group";
-      key: string;
-      group: NavGroup;
-    };
+    type: "group";
+    key: string;
+    group: NavGroup;
+  };
 
 const utilityLinks = [
   { href: "/blog", label: "Blog" },
@@ -175,7 +175,7 @@ export function SiteHeader() {
                   return (
                     <li key={`${item.label}-${index + 1}`} className="header__nav-item">
                       <Link className="header__menu-link" href={item.href}>
-                        {item.label}
+                        <span>{item.label}</span>
                       </Link>
                     </li>
                   );
@@ -206,7 +206,7 @@ export function SiteHeader() {
                     }}
                   >
                     <Link className="header__menu-link" href={group.href}>
-                      {group.title}
+                      <span>{group.title}</span>
                     </Link>
                     <button
                       type="button"
@@ -246,7 +246,7 @@ export function SiteHeader() {
                               <ul>
                                 {column.map((link) => (
                                   <li className="header__navigation-wrap-item" key={link.href}>
-                                    <Link href={link.href}>{link.label}</Link>
+                                    <Link href={link.href}><span>{link.label}</span></Link>
                                   </li>
                                 ))}
                               </ul>
@@ -258,14 +258,14 @@ export function SiteHeader() {
                   </li>
                 );
               })}
-            </ul>
+            </ul >
 
             <div className="header__sticky-actions">
               <Link className="button header__sticky-button" href="/donate">
                 Donate
               </Link>
             </div>
-          </div>
+          </div >
 
           <button
             type="button"
@@ -277,8 +277,8 @@ export function SiteHeader() {
             <span className="header__hamburger-menu" />
             <span className="visually-hidden">{menuOpen ? "Close navigation" : "Open navigation"}</span>
           </button>
-        </nav>
-      </div>
+        </nav >
+      </div >
 
       <div className={`header__mobile ${menuOpen ? "header__mobile--active" : ""}`} id="mobile-navigation">
         <div className="container">
@@ -353,6 +353,6 @@ export function SiteHeader() {
           </div>
         </div>
       </div>
-    </header>
+    </header >
   );
 }

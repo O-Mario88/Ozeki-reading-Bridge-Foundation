@@ -6,7 +6,7 @@ import { PartnerActionForm } from "@/components/PartnerActionForm";
 export function PartnerPortalAccessModal() {
   return (
     <FloatingFormModal
-      triggerLabel="Open access request form"
+      triggerLabel="Open Access Request Form"
       title="Request partner portal access"
       description="Submit your organization details and preferred scope."
     >
@@ -22,4 +22,3 @@ export function PartnerPortalAccessModal() {
     </FloatingFormModal>
   );
 }
-

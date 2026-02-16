@@ -21,7 +21,7 @@ export default function PartnerPortalAccessPage() {
       </section>
 
       <section className="section">
-        <div className="container split">
+        <div className="container">
           <article className="card">
             <h2>What partners can do</h2>
             <ul>
@@ -33,14 +33,6 @@ export default function PartnerPortalAccessPage() {
             </ul>
             <p className="meta-line">
               Access control is scope-based. Partners only see permitted data views.
-            </p>
-          </article>
-
-          <article className="card">
-            <h2>Request access</h2>
-            <p>
-              Open the access form to request scoped partner dashboard and report
-              access.
             </p>
             <div className="action-row">
               <PartnerPortalAccessModal />

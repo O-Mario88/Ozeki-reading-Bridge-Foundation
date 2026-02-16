@@ -135,8 +135,8 @@ export default function PhonicsTrainingPage() {
               partner-funded implementation cycle.
             </p>
             <div className="action-row">
-              <Link className="button" href="/book-visit">
-                Book Phonics Training Consult
+              <Link className="button" href="/portal/schools">
+                Open school profiles
               </Link>
             </div>
           </article>

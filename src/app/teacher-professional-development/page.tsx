@@ -249,8 +249,8 @@ export default function TeacherProfessionalDevelopmentPage() {
               <Link className="button" href="/partner">
                 Partner with us
               </Link>
-              <Link className="button button-ghost" href="/book-visit">
-                Book a school visit
+              <Link className="button button-ghost" href="/portal/schools">
+                Open school profiles
               </Link>
             </div>
           </article>

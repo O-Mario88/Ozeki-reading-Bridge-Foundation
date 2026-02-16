@@ -4461,6 +4461,1241 @@ export function getImpactSummary() {
   };
 }
 
+type ImpactProfileStatus = "On track" | "Needs support" | "High priority";
+
+type ImpactOutcomeAggregate = {
+  letterSound: number | null;
+  decoding: number | null;
+  fluency: number | null;
+  comprehension: number | null;
+  sampleSize: number;
+};
+
+export type ImpactExplorerActivityItem = {
+  date: string;
+  module: PortalRecordModule;
+  programType: string;
+  status: PortalRecordStatus;
+};
+
+export type ImpactExplorerSchoolProfile = {
+  id: number | null;
+  schoolCode: string;
+  name: string;
+  region: string;
+  district: string;
+  subCounty: string;
+  parish: string;
+  village: string | null;
+  enrolledBoys: number;
+  enrolledGirls: number;
+  enrolledLearners: number;
+  trainings: number;
+  visits: number;
+  coachingCycles: number;
+  assessments: number;
+  baselineAssessments: number;
+  progressAssessments: number;
+  endlineAssessments: number;
+  storyActivities: number;
+  participantsTotal: number;
+  participantsTeachers: number;
+  participantsLeaders: number;
+  learnersAssessed: number;
+  storiesPublished: number;
+  evidenceUploads: number;
+  teacherObservationAverage: number | null;
+  keyIndicators: {
+    lessonStructure: number | null;
+    soundAccuracy: number | null;
+    blendingRoutine: number | null;
+    errorCorrection: number | null;
+    learnerEngagement: number | null;
+  };
+  outcomes: ImpactOutcomeAggregate;
+  status: ImpactProfileStatus;
+  nextFollowUpDate: string | null;
+  lastActivityDate: string | null;
+  topGaps: string[];
+  recommendedActions: string[];
+  timeline: ImpactExplorerActivityItem[];
+};
+
+export type ImpactExplorerDistrictProfile = {
+  district: string;
+  region: string;
+  schoolsTotal: number;
+  schoolsSupported: number;
+  enrolledLearners: number;
+  trainings: number;
+  visits: number;
+  assessments: number;
+  storyActivities: number;
+  participantsTotal: number;
+  participantsTeachers: number;
+  participantsLeaders: number;
+  learnersAssessed: number;
+  storiesPublished: number;
+  teacherObservationAverage: number | null;
+  outcomes: ImpactOutcomeAggregate;
+  statusCounts: {
+    onTrack: number;
+    needsSupport: number;
+    highPriority: number;
+  };
+};
+
+export type ImpactExplorerRegionProfile = {
+  region: string;
+  districtsTotal: number;
+  districtsCovered: number;
+  schoolsTotal: number;
+  schoolsSupported: number;
+  enrolledLearners: number;
+  trainings: number;
+  visits: number;
+  assessments: number;
+  storyActivities: number;
+  participantsTotal: number;
+  participantsTeachers: number;
+  participantsLeaders: number;
+  learnersAssessed: number;
+  storiesPublished: number;
+  teacherObservationAverage: number | null;
+  outcomes: ImpactOutcomeAggregate;
+  statusCounts: {
+    onTrack: number;
+    needsSupport: number;
+    highPriority: number;
+  };
+};
+
+export type ImpactExplorerCountryProfile = {
+  country: string;
+  regionsTotal: number;
+  regionsCovered: number;
+  districtsTotal: number;
+  districtsCovered: number;
+  schoolsTotal: number;
+  schoolsSupported: number;
+  enrolledLearners: number;
+  trainings: number;
+  visits: number;
+  assessments: number;
+  storyActivities: number;
+  participantsTotal: number;
+  participantsTeachers: number;
+  participantsLeaders: number;
+  learnersAssessed: number;
+  storiesPublished: number;
+  teacherObservationAverage: number | null;
+  outcomes: ImpactOutcomeAggregate;
+};
+
+export type ImpactExplorerProfiles = {
+  generatedAt: string;
+  country: ImpactExplorerCountryProfile;
+  regions: ImpactExplorerRegionProfile[];
+  districts: ImpactExplorerDistrictProfile[];
+  schools: ImpactExplorerSchoolProfile[];
+};
+
+type ImpactOutcomeAccumulator = {
+  letterSoundSum: number;
+  letterSoundWeight: number;
+  decodingSum: number;
+  decodingWeight: number;
+  fluencySum: number;
+  fluencyWeight: number;
+  comprehensionSum: number;
+  comprehensionWeight: number;
+  sampleSize: number;
+};
+
+type ImpactIndicatorAccumulator = {
+  lessonStructureSum: number;
+  lessonStructureCount: number;
+  soundAccuracySum: number;
+  soundAccuracyCount: number;
+  blendingRoutineSum: number;
+  blendingRoutineCount: number;
+  errorCorrectionSum: number;
+  errorCorrectionCount: number;
+  learnerEngagementSum: number;
+  learnerEngagementCount: number;
+};
+
+function normalizeLookupValue(value: string | null | undefined) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function parseNumberValue(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function averageOrNull(sum: number, count: number) {
+  if (count <= 0) {
+    return null;
+  }
+  return Number((sum / count).toFixed(1));
+}
+
+function selectOutcomeValue(
+  accumulator: ImpactOutcomeAccumulator,
+  metric: keyof Pick<
+    ImpactOutcomeAccumulator,
+    "letterSoundSum" | "decodingSum" | "fluencySum" | "comprehensionSum"
+  >,
+  weightMetric: keyof Pick<
+    ImpactOutcomeAccumulator,
+    "letterSoundWeight" | "decodingWeight" | "fluencyWeight" | "comprehensionWeight"
+  >,
+) {
+  return averageOrNull(accumulator[metric], accumulator[weightMetric]);
+}
+
+function toOutcomeAggregate(accumulator: ImpactOutcomeAccumulator): ImpactOutcomeAggregate {
+  return {
+    letterSound: selectOutcomeValue(accumulator, "letterSoundSum", "letterSoundWeight"),
+    decoding: selectOutcomeValue(accumulator, "decodingSum", "decodingWeight"),
+    fluency: selectOutcomeValue(accumulator, "fluencySum", "fluencyWeight"),
+    comprehension: selectOutcomeValue(accumulator, "comprehensionSum", "comprehensionWeight"),
+    sampleSize: accumulator.sampleSize,
+  };
+}
+
+function ratingToScorePercent(value: unknown): number | null {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized === "very good") return 100;
+  if (normalized === "good") return 60;
+  if (normalized === "fair") return 20;
+  if (normalized === "can improve") return 0;
+  return null;
+}
+
+type MutableSchoolProfile = ImpactExplorerSchoolProfile & {
+  indicatorAccumulator: ImpactIndicatorAccumulator;
+  outcomeAccumulator: ImpactOutcomeAccumulator;
+  observationScoreSum: number;
+  observationScoreCount: number;
+  followUpsDue: number;
+};
+
+function createEmptyIndicatorAccumulator(): ImpactIndicatorAccumulator {
+  return {
+    lessonStructureSum: 0,
+    lessonStructureCount: 0,
+    soundAccuracySum: 0,
+    soundAccuracyCount: 0,
+    blendingRoutineSum: 0,
+    blendingRoutineCount: 0,
+    errorCorrectionSum: 0,
+    errorCorrectionCount: 0,
+    learnerEngagementSum: 0,
+    learnerEngagementCount: 0,
+  };
+}
+
+function createEmptyOutcomeAccumulator(): ImpactOutcomeAccumulator {
+  return {
+    letterSoundSum: 0,
+    letterSoundWeight: 0,
+    decodingSum: 0,
+    decodingWeight: 0,
+    fluencySum: 0,
+    fluencyWeight: 0,
+    comprehensionSum: 0,
+    comprehensionWeight: 0,
+    sampleSize: 0,
+  };
+}
+
+function addWeightedOutcome(
+  accumulator: ImpactOutcomeAccumulator,
+  metric: "letterSound" | "decoding" | "fluency" | "comprehension",
+  value: number | null,
+  weight: number,
+) {
+  if (value === null || !Number.isFinite(value)) {
+    return;
+  }
+
+  const normalizedWeight = weight > 0 ? weight : 1;
+  if (metric === "letterSound") {
+    accumulator.letterSoundSum += value * normalizedWeight;
+    accumulator.letterSoundWeight += normalizedWeight;
+  }
+  if (metric === "decoding") {
+    accumulator.decodingSum += value * normalizedWeight;
+    accumulator.decodingWeight += normalizedWeight;
+  }
+  if (metric === "fluency") {
+    accumulator.fluencySum += value * normalizedWeight;
+    accumulator.fluencyWeight += normalizedWeight;
+  }
+  if (metric === "comprehension") {
+    accumulator.comprehensionSum += value * normalizedWeight;
+    accumulator.comprehensionWeight += normalizedWeight;
+  }
+}
+
+function parseAssessmentMetrics(payload: Record<string, unknown>) {
+  const rawSummary = payload.egraSummaryData;
+  let summaryData: Record<string, unknown> | null = null;
+
+  if (typeof rawSummary === "string" && rawSummary.trim()) {
+    try {
+      const parsed = JSON.parse(rawSummary) as unknown;
+      if (parsed && typeof parsed === "object") {
+        summaryData = parsed as Record<string, unknown>;
+      }
+    } catch {
+      summaryData = null;
+    }
+  } else if (rawSummary && typeof rawSummary === "object") {
+    summaryData = rawSummary as Record<string, unknown>;
+  }
+
+  const classMetrics =
+    summaryData && summaryData.class && typeof summaryData.class === "object"
+      ? (summaryData.class as Record<string, unknown>)
+      : null;
+
+  const letterSound =
+    parseNumberValue(classMetrics?.letterSounds) ??
+    parseNumberValue(payload.letterSoundKnowledge) ??
+    parseNumberValue(payload.letterSounds);
+  const realWords = parseNumberValue(classMetrics?.realWords);
+  const madeUpWords = parseNumberValue(classMetrics?.madeUpWords);
+  const decoding =
+    realWords !== null && madeUpWords !== null
+      ? Number(((realWords + madeUpWords) / 2).toFixed(1))
+      : realWords ?? madeUpWords ?? parseNumberValue(payload.decodingAccuracy);
+  const fluency =
+    parseNumberValue(classMetrics?.storyReading) ??
+    parseNumberValue(payload.wcpmAverage) ??
+    parseNumberValue(payload.oralReadingFluency);
+  const comprehension =
+    parseNumberValue(classMetrics?.readingComp) ??
+    parseNumberValue(payload.comprehensionAverage) ??
+    parseNumberValue(payload.comprehension);
+
+  return {
+    letterSound,
+    decoding,
+    fluency,
+    comprehension,
+  };
+}
+
+function deriveSchoolTopGaps(profile: MutableSchoolProfile) {
+  const indicatorAverages = {
+    lessonStructure: averageOrNull(
+      profile.indicatorAccumulator.lessonStructureSum,
+      profile.indicatorAccumulator.lessonStructureCount,
+    ),
+    soundAccuracy: averageOrNull(
+      profile.indicatorAccumulator.soundAccuracySum,
+      profile.indicatorAccumulator.soundAccuracyCount,
+    ),
+    blendingRoutine: averageOrNull(
+      profile.indicatorAccumulator.blendingRoutineSum,
+      profile.indicatorAccumulator.blendingRoutineCount,
+    ),
+    errorCorrection: averageOrNull(
+      profile.indicatorAccumulator.errorCorrectionSum,
+      profile.indicatorAccumulator.errorCorrectionCount,
+    ),
+    learnerEngagement: averageOrNull(
+      profile.indicatorAccumulator.learnerEngagementSum,
+      profile.indicatorAccumulator.learnerEngagementCount,
+    ),
+  };
+
+  const gaps: string[] = [];
+  if ((indicatorAverages.lessonStructure ?? 100) < 60) gaps.push("Lesson structure consistency");
+  if ((indicatorAverages.soundAccuracy ?? 100) < 60) gaps.push("Sound accuracy and pronunciation");
+  if ((indicatorAverages.blendingRoutine ?? 100) < 60) gaps.push("Blending and decoding routines");
+  if ((indicatorAverages.errorCorrection ?? 100) < 60) gaps.push("Error correction technique");
+  if ((indicatorAverages.learnerEngagement ?? 100) < 60) gaps.push("Learner engagement during reading");
+
+  const outcomes = toOutcomeAggregate(profile.outcomeAccumulator);
+  if ((outcomes.letterSound ?? 100) < 40) gaps.push("Letter-sound knowledge remains weak");
+  if ((outcomes.decoding ?? 100) < 40) gaps.push("Decoding accuracy remains below target");
+  if ((outcomes.fluency ?? 100) < 25) gaps.push("Oral reading fluency is still low");
+  if ((outcomes.comprehension ?? 100) < 40) gaps.push("Comprehension requires focused support");
+
+  return [...new Set(gaps)].slice(0, 3);
+}
+
+function deriveSchoolRecommendations(gaps: string[]) {
+  const recommendationMap: Record<string, string> = {
+    "Lesson structure consistency":
+      "Run coaching on review-teach-practice-check flow in every observed lesson.",
+    "Sound accuracy and pronunciation":
+      "Prioritize sound drill practice and pronunciation correction in daily routines.",
+    "Blending and decoding routines":
+      "Increase guided blending drills and decodable word practice in small groups.",
+    "Error correction technique":
+      "Model immediate supportive correction steps and reinforce through follow-up visits.",
+    "Learner engagement during reading":
+      "Use pair reading and active response routines to increase learner practice time.",
+    "Letter-sound knowledge remains weak":
+      "Re-teach priority sounds and run short mastery checks weekly.",
+    "Decoding accuracy remains below target":
+      "Introduce targeted decoding routines with decodable texts matched to taught patterns.",
+    "Oral reading fluency is still low":
+      "Implement repeated reading and phrase reading routines three times per week.",
+    "Comprehension requires focused support":
+      "Use short literal and inference questions after fluency practice with grade-level texts.",
+  };
+
+  return gaps
+    .map((gap) => recommendationMap[gap])
+    .filter((item): item is string => Boolean(item))
+    .slice(0, 3);
+}
+
+function deriveSchoolStatus(profile: MutableSchoolProfile): ImpactProfileStatus {
+  const today = new Date().toISOString().slice(0, 10);
+  const hasOverdueFollowUp = profile.followUpsDue > 0;
+  const lowObservation =
+    profile.observationScoreCount > 0 &&
+    profile.observationScoreSum / profile.observationScoreCount < 60;
+  const noImplementationYet = profile.trainings + profile.visits + profile.assessments <= 0;
+  const missingCoreCycle = profile.trainings === 0 || profile.visits === 0 || profile.assessments === 0;
+  const nextDuePassed = Boolean(profile.nextFollowUpDate && profile.nextFollowUpDate < today);
+
+  if (hasOverdueFollowUp || lowObservation || nextDuePassed) {
+    return "High priority";
+  }
+  if (noImplementationYet || missingCoreCycle) {
+    return "Needs support";
+  }
+  return "On track";
+}
+
+function createSchoolProfile(seed: {
+  id: number | null;
+  schoolCode: string;
+  name: string;
+  district: string;
+  region: string;
+  subCounty: string;
+  parish: string;
+  village: string | null;
+  enrolledBoys: number;
+  enrolledGirls: number;
+  enrolledLearners: number;
+}): MutableSchoolProfile {
+  return {
+    id: seed.id,
+    schoolCode: seed.schoolCode,
+    name: seed.name,
+    region: seed.region,
+    district: seed.district,
+    subCounty: seed.subCounty,
+    parish: seed.parish,
+    village: seed.village,
+    enrolledBoys: seed.enrolledBoys,
+    enrolledGirls: seed.enrolledGirls,
+    enrolledLearners: seed.enrolledLearners,
+    trainings: 0,
+    visits: 0,
+    coachingCycles: 0,
+    assessments: 0,
+    baselineAssessments: 0,
+    progressAssessments: 0,
+    endlineAssessments: 0,
+    storyActivities: 0,
+    participantsTotal: 0,
+    participantsTeachers: 0,
+    participantsLeaders: 0,
+    learnersAssessed: 0,
+    storiesPublished: 0,
+    evidenceUploads: 0,
+    teacherObservationAverage: null,
+    keyIndicators: {
+      lessonStructure: null,
+      soundAccuracy: null,
+      blendingRoutine: null,
+      errorCorrection: null,
+      learnerEngagement: null,
+    },
+    outcomes: {
+      letterSound: null,
+      decoding: null,
+      fluency: null,
+      comprehension: null,
+      sampleSize: 0,
+    },
+    status: "Needs support",
+    nextFollowUpDate: null,
+    lastActivityDate: null,
+    topGaps: [],
+    recommendedActions: [],
+    timeline: [],
+    indicatorAccumulator: createEmptyIndicatorAccumulator(),
+    outcomeAccumulator: createEmptyOutcomeAccumulator(),
+    observationScoreSum: 0,
+    observationScoreCount: 0,
+    followUpsDue: 0,
+  };
+}
+
+export function getImpactExplorerProfiles(): ImpactExplorerProfiles {
+  const db = getDb();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const schoolRows = db
+    .prepare(
+      `
+      SELECT
+        id,
+        school_code AS schoolCode,
+        name,
+        district,
+        sub_county AS subCounty,
+        parish,
+        village,
+        COALESCE(enrolled_boys, 0) AS enrolledBoys,
+        COALESCE(enrolled_girls, 0) AS enrolledGirls,
+        CASE
+          WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+            THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+          ELSE COALESCE(enrolled_learners, 0)
+        END AS enrolledLearners
+      FROM schools_directory
+      ORDER BY name ASC
+    `,
+    )
+    .all() as Array<{
+    id: number;
+    schoolCode: string;
+    name: string;
+    district: string;
+    subCounty: string;
+    parish: string;
+    village: string | null;
+    enrolledBoys: number;
+    enrolledGirls: number;
+    enrolledLearners: number;
+  }>;
+
+  const schoolProfilesByKey = new Map<string, MutableSchoolProfile>();
+  const keyBySchoolId = new Map<number, string>();
+  const keyByComposite = new Map<string, string>();
+  const keyByName = new Map<string, string>();
+  let syntheticCounter = 1;
+
+  schoolRows.forEach((row) => {
+    const region = inferRegionFromDistrict(row.district) ?? "Unknown Region";
+    const key = `id:${row.id}`;
+    const profile = createSchoolProfile({
+      id: row.id,
+      schoolCode: row.schoolCode,
+      name: row.name,
+      district: row.district,
+      region,
+      subCounty: row.subCounty,
+      parish: row.parish,
+      village: row.village,
+      enrolledBoys: Number(row.enrolledBoys ?? 0),
+      enrolledGirls: Number(row.enrolledGirls ?? 0),
+      enrolledLearners: Number(row.enrolledLearners ?? 0),
+    });
+
+    schoolProfilesByKey.set(key, profile);
+    keyBySchoolId.set(row.id, key);
+
+    const schoolNameKey = normalizeLookupValue(row.name);
+    const districtKey = normalizeLookupValue(row.district);
+    if (schoolNameKey) {
+      keyByName.set(schoolNameKey, key);
+      keyByComposite.set(`${schoolNameKey}|${districtKey}`, key);
+    }
+  });
+
+  const portalRows = db
+    .prepare(
+      `
+      SELECT
+        module,
+        date,
+        district,
+        school_name AS schoolName,
+        school_id AS schoolId,
+        program_type AS programType,
+        status,
+        follow_up_date AS followUpDate,
+        payload_json AS payloadJson
+      FROM portal_records
+      ORDER BY date DESC, id DESC
+    `,
+    )
+    .all() as Array<{
+    module: PortalRecordModule;
+    date: string;
+    district: string;
+    schoolName: string;
+    schoolId: number | null;
+    programType: string | null;
+    status: PortalRecordStatus;
+    followUpDate: string | null;
+    payloadJson: string;
+  }>;
+
+  const ensureSyntheticSchoolProfile = (schoolName: string, district: string) => {
+    const schoolNameKey = normalizeLookupValue(schoolName);
+    const districtKey = normalizeLookupValue(district);
+    const composite = `${schoolNameKey}|${districtKey}`;
+    const existing = keyByComposite.get(composite);
+    if (existing) {
+      return existing;
+    }
+
+    const key = `synthetic:${syntheticCounter}`;
+    syntheticCounter += 1;
+    const resolvedDistrict = district.trim() || "Unknown District";
+    const region = inferRegionFromDistrict(resolvedDistrict) ?? "Unknown Region";
+    const profile = createSchoolProfile({
+      id: null,
+      schoolCode: `UNLISTED-${syntheticCounter}`,
+      name: schoolName.trim() || "Unmapped School",
+      district: resolvedDistrict,
+      region,
+      subCounty: "",
+      parish: "",
+      village: null,
+      enrolledBoys: 0,
+      enrolledGirls: 0,
+      enrolledLearners: 0,
+    });
+
+    schoolProfilesByKey.set(key, profile);
+    if (schoolNameKey) {
+      keyByName.set(schoolNameKey, key);
+      keyByComposite.set(composite, key);
+    }
+    return key;
+  };
+
+  const resolveSchoolKey = (row: {
+    schoolId: number | null;
+    schoolName: string;
+    district: string;
+  }) => {
+    if (row.schoolId && keyBySchoolId.has(row.schoolId)) {
+      return keyBySchoolId.get(row.schoolId) as string;
+    }
+    const schoolNameKey = normalizeLookupValue(row.schoolName);
+    const districtKey = normalizeLookupValue(row.district);
+    if (!schoolNameKey) {
+      return ensureSyntheticSchoolProfile("Unmapped School", row.district);
+    }
+    const composite = keyByComposite.get(`${schoolNameKey}|${districtKey}`);
+    if (composite) {
+      return composite;
+    }
+    const byName = keyByName.get(schoolNameKey);
+    if (byName) {
+      return byName;
+    }
+    return ensureSyntheticSchoolProfile(row.schoolName, row.district);
+  };
+
+  portalRows.forEach((row) => {
+    const schoolKey = resolveSchoolKey(row);
+    const profile = schoolProfilesByKey.get(schoolKey);
+    if (!profile) {
+      return;
+    }
+
+    let payload: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(row.payloadJson || "{}") as unknown;
+      if (parsed && typeof parsed === "object") {
+        payload = parsed as Record<string, unknown>;
+      }
+    } catch {
+      payload = {};
+    }
+
+    profile.timeline.push({
+      date: row.date,
+      module: row.module,
+      programType: String(row.programType ?? "").trim() || "General",
+      status: row.status,
+    });
+
+    if (!profile.lastActivityDate || row.date > profile.lastActivityDate) {
+      profile.lastActivityDate = row.date;
+    }
+
+    if (row.followUpDate) {
+      if (!profile.nextFollowUpDate || row.followUpDate < profile.nextFollowUpDate) {
+        profile.nextFollowUpDate = row.followUpDate;
+      }
+      if (row.followUpDate <= today && row.status !== "Approved") {
+        profile.followUpsDue += 1;
+      }
+    }
+
+    if (row.module === "training") {
+      profile.trainings += 1;
+      const participants = parsePortalTrainingParticipants(payload);
+      profile.participantsTotal += participants.total;
+      profile.participantsTeachers += participants.teachers;
+      profile.participantsLeaders += participants.leaders;
+    }
+
+    if (row.module === "visit") {
+      profile.visits += 1;
+      profile.coachingCycles += 1;
+
+      const observationScorePercent = parseNumberValue(payload.observationScorePercent);
+      if (observationScorePercent !== null) {
+        profile.observationScoreSum += observationScorePercent;
+        profile.observationScoreCount += 1;
+      }
+
+      const accumulateIndicator = (
+        values: Array<number | null>,
+        sumKey: keyof Pick<
+          ImpactIndicatorAccumulator,
+          | "lessonStructureSum"
+          | "soundAccuracySum"
+          | "blendingRoutineSum"
+          | "errorCorrectionSum"
+          | "learnerEngagementSum"
+        >,
+        countKey: keyof Pick<
+          ImpactIndicatorAccumulator,
+          | "lessonStructureCount"
+          | "soundAccuracyCount"
+          | "blendingRoutineCount"
+          | "errorCorrectionCount"
+          | "learnerEngagementCount"
+        >,
+      ) => {
+        values.forEach((item) => {
+          if (item === null) {
+            return;
+          }
+          profile.indicatorAccumulator[sumKey] += item;
+          profile.indicatorAccumulator[countKey] += 1;
+        });
+      };
+
+      accumulateIndicator(
+        [ratingToScorePercent(payload.general_qualityLessonPlanning)],
+        "lessonStructureSum",
+        "lessonStructureCount",
+      );
+      accumulateIndicator(
+        [
+          ratingToScorePercent(payload.general_soundKnowledge),
+          ratingToScorePercent(payload.newSound_clearPronunciation),
+        ],
+        "soundAccuracySum",
+        "soundAccuracyCount",
+      );
+      accumulateIndicator(
+        [
+          ratingToScorePercent(payload.readingActivities_soundOutWords),
+          ratingToScorePercent(payload.readingActivities_teacherEncouragedDecoding),
+        ],
+        "blendingRoutineSum",
+        "blendingRoutineCount",
+      );
+      accumulateIndicator(
+        [ratingToScorePercent(payload.readingActivities_teacherEncouragedDecoding)],
+        "errorCorrectionSum",
+        "errorCorrectionCount",
+      );
+      accumulateIndicator(
+        [
+          ratingToScorePercent(payload.readingActivities_activeEngagement),
+          ratingToScorePercent(payload.readingActivities_pairGroupReading),
+        ],
+        "learnerEngagementSum",
+        "learnerEngagementCount",
+      );
+    }
+
+    if (row.module === "assessment") {
+      profile.assessments += 1;
+      const assessmentType = String(row.programType ?? "").trim().toLowerCase();
+      if (assessmentType === "baseline") profile.baselineAssessments += 1;
+      if (assessmentType === "progress") profile.progressAssessments += 1;
+      if (assessmentType === "endline") profile.endlineAssessments += 1;
+
+      const learnersAssessed = parseNumberValue(payload.learnersAssessed) ?? 0;
+      profile.learnersAssessed += learnersAssessed;
+      profile.storiesPublished += parseNumberValue(payload.storiesPublished) ?? 0;
+
+      const outcomes = parseAssessmentMetrics(payload);
+      const weight = learnersAssessed > 0 ? learnersAssessed : 1;
+      addWeightedOutcome(profile.outcomeAccumulator, "letterSound", outcomes.letterSound, weight);
+      addWeightedOutcome(profile.outcomeAccumulator, "decoding", outcomes.decoding, weight);
+      addWeightedOutcome(profile.outcomeAccumulator, "fluency", outcomes.fluency, weight);
+      addWeightedOutcome(profile.outcomeAccumulator, "comprehension", outcomes.comprehension, weight);
+      profile.outcomeAccumulator.sampleSize += learnersAssessed;
+    }
+
+    if (row.module === "story") {
+      profile.storyActivities += 1;
+      profile.storiesPublished += parseNumberValue(payload.storiesApproved) ?? 0;
+    }
+  });
+
+  const evidenceRows = db
+    .prepare(
+      `
+      SELECT
+        lower(trim(school_name)) AS schoolNameKey,
+        COUNT(*) AS total
+      FROM portal_evidence
+      GROUP BY lower(trim(school_name))
+    `,
+    )
+    .all() as Array<{ schoolNameKey: string | null; total: number | null }>;
+
+  evidenceRows.forEach((row) => {
+    const schoolNameKey = normalizeLookupValue(row.schoolNameKey);
+    if (!schoolNameKey) {
+      return;
+    }
+    const schoolKey = keyByName.get(schoolNameKey);
+    if (!schoolKey) {
+      return;
+    }
+    const profile = schoolProfilesByKey.get(schoolKey);
+    if (!profile) {
+      return;
+    }
+    profile.evidenceUploads += Number(row.total ?? 0);
+  });
+
+  const finalizedSchools: ImpactExplorerSchoolProfile[] = [...schoolProfilesByKey.values()]
+    .map((profile) => {
+      profile.timeline.sort((a, b) => b.date.localeCompare(a.date));
+      profile.timeline = profile.timeline.slice(0, 10);
+
+      profile.teacherObservationAverage = averageOrNull(
+        profile.observationScoreSum,
+        profile.observationScoreCount,
+      );
+      profile.keyIndicators = {
+        lessonStructure: averageOrNull(
+          profile.indicatorAccumulator.lessonStructureSum,
+          profile.indicatorAccumulator.lessonStructureCount,
+        ),
+        soundAccuracy: averageOrNull(
+          profile.indicatorAccumulator.soundAccuracySum,
+          profile.indicatorAccumulator.soundAccuracyCount,
+        ),
+        blendingRoutine: averageOrNull(
+          profile.indicatorAccumulator.blendingRoutineSum,
+          profile.indicatorAccumulator.blendingRoutineCount,
+        ),
+        errorCorrection: averageOrNull(
+          profile.indicatorAccumulator.errorCorrectionSum,
+          profile.indicatorAccumulator.errorCorrectionCount,
+        ),
+        learnerEngagement: averageOrNull(
+          profile.indicatorAccumulator.learnerEngagementSum,
+          profile.indicatorAccumulator.learnerEngagementCount,
+        ),
+      };
+      profile.outcomes = toOutcomeAggregate(profile.outcomeAccumulator);
+      profile.topGaps = deriveSchoolTopGaps(profile);
+      profile.recommendedActions = deriveSchoolRecommendations(profile.topGaps);
+      profile.status = deriveSchoolStatus(profile);
+
+      const publicProfile: ImpactExplorerSchoolProfile = {
+        id: profile.id,
+        schoolCode: profile.schoolCode,
+        name: profile.name,
+        region: profile.region,
+        district: profile.district,
+        subCounty: profile.subCounty,
+        parish: profile.parish,
+        village: profile.village,
+        enrolledBoys: profile.enrolledBoys,
+        enrolledGirls: profile.enrolledGirls,
+        enrolledLearners: profile.enrolledLearners,
+        trainings: profile.trainings,
+        visits: profile.visits,
+        coachingCycles: profile.coachingCycles,
+        assessments: profile.assessments,
+        baselineAssessments: profile.baselineAssessments,
+        progressAssessments: profile.progressAssessments,
+        endlineAssessments: profile.endlineAssessments,
+        storyActivities: profile.storyActivities,
+        participantsTotal: profile.participantsTotal,
+        participantsTeachers: profile.participantsTeachers,
+        participantsLeaders: profile.participantsLeaders,
+        learnersAssessed: profile.learnersAssessed,
+        storiesPublished: profile.storiesPublished,
+        evidenceUploads: profile.evidenceUploads,
+        teacherObservationAverage: profile.teacherObservationAverage,
+        keyIndicators: profile.keyIndicators,
+        outcomes: profile.outcomes,
+        status: profile.status,
+        nextFollowUpDate: profile.nextFollowUpDate,
+        lastActivityDate: profile.lastActivityDate,
+        topGaps: profile.topGaps,
+        recommendedActions: profile.recommendedActions,
+        timeline: profile.timeline,
+      };
+      return publicProfile;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const districtMap = new Map<string, ImpactExplorerDistrictProfile>();
+
+  finalizedSchools.forEach((school) => {
+    const districtKey = school.district.trim() || "Unknown District";
+    const districtRegion = school.region.trim() || "Unknown Region";
+    if (!districtMap.has(districtKey)) {
+      districtMap.set(districtKey, {
+        district: districtKey,
+        region: districtRegion,
+        schoolsTotal: 0,
+        schoolsSupported: 0,
+        enrolledLearners: 0,
+        trainings: 0,
+        visits: 0,
+        assessments: 0,
+        storyActivities: 0,
+        participantsTotal: 0,
+        participantsTeachers: 0,
+        participantsLeaders: 0,
+        learnersAssessed: 0,
+        storiesPublished: 0,
+        teacherObservationAverage: null,
+        outcomes: {
+          letterSound: null,
+          decoding: null,
+          fluency: null,
+          comprehension: null,
+          sampleSize: 0,
+        },
+        statusCounts: {
+          onTrack: 0,
+          needsSupport: 0,
+          highPriority: 0,
+        },
+      });
+    }
+
+    const districtProfile = districtMap.get(districtKey);
+    if (!districtProfile) {
+      return;
+    }
+
+    districtProfile.schoolsTotal += 1;
+    districtProfile.enrolledLearners += school.enrolledLearners;
+    districtProfile.trainings += school.trainings;
+    districtProfile.visits += school.visits;
+    districtProfile.assessments += school.assessments;
+    districtProfile.storyActivities += school.storyActivities;
+    districtProfile.participantsTotal += school.participantsTotal;
+    districtProfile.participantsTeachers += school.participantsTeachers;
+    districtProfile.participantsLeaders += school.participantsLeaders;
+    districtProfile.learnersAssessed += school.learnersAssessed;
+    districtProfile.storiesPublished += school.storiesPublished;
+
+    if (school.trainings + school.visits + school.assessments + school.storyActivities > 0) {
+      districtProfile.schoolsSupported += 1;
+    }
+
+    if (school.status === "On track") districtProfile.statusCounts.onTrack += 1;
+    if (school.status === "Needs support") districtProfile.statusCounts.needsSupport += 1;
+    if (school.status === "High priority") districtProfile.statusCounts.highPriority += 1;
+
+    const weight = school.outcomes.sampleSize > 0 ? school.outcomes.sampleSize : 1;
+    if (school.outcomes.letterSound !== null) {
+      const current = districtProfile.outcomes.letterSound ?? 0;
+      districtProfile.outcomes.letterSound =
+        current + school.outcomes.letterSound * weight;
+    }
+    if (school.outcomes.decoding !== null) {
+      const current = districtProfile.outcomes.decoding ?? 0;
+      districtProfile.outcomes.decoding = current + school.outcomes.decoding * weight;
+    }
+    if (school.outcomes.fluency !== null) {
+      const current = districtProfile.outcomes.fluency ?? 0;
+      districtProfile.outcomes.fluency = current + school.outcomes.fluency * weight;
+    }
+    if (school.outcomes.comprehension !== null) {
+      const current = districtProfile.outcomes.comprehension ?? 0;
+      districtProfile.outcomes.comprehension =
+        current + school.outcomes.comprehension * weight;
+    }
+    districtProfile.outcomes.sampleSize += weight;
+
+    if (school.teacherObservationAverage !== null) {
+      if (districtProfile.teacherObservationAverage === null) {
+        districtProfile.teacherObservationAverage = 0;
+      }
+      districtProfile.teacherObservationAverage += school.teacherObservationAverage;
+    }
+  });
+
+  const districts: ImpactExplorerDistrictProfile[] = [...districtMap.values()]
+    .map((district) => {
+      const observationSamples = finalizedSchools.filter(
+        (school) => school.district === district.district && school.teacherObservationAverage !== null,
+      ).length;
+      district.teacherObservationAverage =
+        district.teacherObservationAverage !== null && observationSamples > 0
+          ? Number((district.teacherObservationAverage / observationSamples).toFixed(1))
+          : null;
+
+      if (district.outcomes.sampleSize > 0) {
+        district.outcomes = {
+          letterSound:
+            district.outcomes.letterSound !== null
+              ? Number((district.outcomes.letterSound / district.outcomes.sampleSize).toFixed(1))
+              : null,
+          decoding:
+            district.outcomes.decoding !== null
+              ? Number((district.outcomes.decoding / district.outcomes.sampleSize).toFixed(1))
+              : null,
+          fluency:
+            district.outcomes.fluency !== null
+              ? Number((district.outcomes.fluency / district.outcomes.sampleSize).toFixed(1))
+              : null,
+          comprehension:
+            district.outcomes.comprehension !== null
+              ? Number((district.outcomes.comprehension / district.outcomes.sampleSize).toFixed(1))
+              : null,
+          sampleSize: district.outcomes.sampleSize,
+        };
+      }
+
+      return district;
+    })
+    .sort((a, b) => a.district.localeCompare(b.district));
+
+  const regionMap = new Map<string, ImpactExplorerRegionProfile>();
+  districts.forEach((district) => {
+    const regionKey = district.region.trim() || "Unknown Region";
+    if (!regionMap.has(regionKey)) {
+      regionMap.set(regionKey, {
+        region: regionKey,
+        districtsTotal: 0,
+        districtsCovered: 0,
+        schoolsTotal: 0,
+        schoolsSupported: 0,
+        enrolledLearners: 0,
+        trainings: 0,
+        visits: 0,
+        assessments: 0,
+        storyActivities: 0,
+        participantsTotal: 0,
+        participantsTeachers: 0,
+        participantsLeaders: 0,
+        learnersAssessed: 0,
+        storiesPublished: 0,
+        teacherObservationAverage: null,
+        outcomes: {
+          letterSound: null,
+          decoding: null,
+          fluency: null,
+          comprehension: null,
+          sampleSize: 0,
+        },
+        statusCounts: {
+          onTrack: 0,
+          needsSupport: 0,
+          highPriority: 0,
+        },
+      });
+    }
+
+    const region = regionMap.get(regionKey);
+    if (!region) {
+      return;
+    }
+
+    region.districtsTotal += 1;
+    if (district.schoolsSupported > 0) {
+      region.districtsCovered += 1;
+    }
+    region.schoolsTotal += district.schoolsTotal;
+    region.schoolsSupported += district.schoolsSupported;
+    region.enrolledLearners += district.enrolledLearners;
+    region.trainings += district.trainings;
+    region.visits += district.visits;
+    region.assessments += district.assessments;
+    region.storyActivities += district.storyActivities;
+    region.participantsTotal += district.participantsTotal;
+    region.participantsTeachers += district.participantsTeachers;
+    region.participantsLeaders += district.participantsLeaders;
+    region.learnersAssessed += district.learnersAssessed;
+    region.storiesPublished += district.storiesPublished;
+    region.statusCounts.onTrack += district.statusCounts.onTrack;
+    region.statusCounts.needsSupport += district.statusCounts.needsSupport;
+    region.statusCounts.highPriority += district.statusCounts.highPriority;
+
+    const weight = district.outcomes.sampleSize > 0 ? district.outcomes.sampleSize : 1;
+    if (district.outcomes.letterSound !== null) {
+      const current = region.outcomes.letterSound ?? 0;
+      region.outcomes.letterSound = current + district.outcomes.letterSound * weight;
+    }
+    if (district.outcomes.decoding !== null) {
+      const current = region.outcomes.decoding ?? 0;
+      region.outcomes.decoding = current + district.outcomes.decoding * weight;
+    }
+    if (district.outcomes.fluency !== null) {
+      const current = region.outcomes.fluency ?? 0;
+      region.outcomes.fluency = current + district.outcomes.fluency * weight;
+    }
+    if (district.outcomes.comprehension !== null) {
+      const current = region.outcomes.comprehension ?? 0;
+      region.outcomes.comprehension = current + district.outcomes.comprehension * weight;
+    }
+    region.outcomes.sampleSize += weight;
+
+    if (district.teacherObservationAverage !== null) {
+      if (region.teacherObservationAverage === null) {
+        region.teacherObservationAverage = 0;
+      }
+      region.teacherObservationAverage += district.teacherObservationAverage;
+    }
+  });
+
+  const regions: ImpactExplorerRegionProfile[] = [...regionMap.values()]
+    .map((region) => {
+      const observationSamples = districts.filter(
+        (district) => district.region === region.region && district.teacherObservationAverage !== null,
+      ).length;
+      region.teacherObservationAverage =
+        region.teacherObservationAverage !== null && observationSamples > 0
+          ? Number((region.teacherObservationAverage / observationSamples).toFixed(1))
+          : null;
+
+      if (region.outcomes.sampleSize > 0) {
+        region.outcomes = {
+          letterSound:
+            region.outcomes.letterSound !== null
+              ? Number((region.outcomes.letterSound / region.outcomes.sampleSize).toFixed(1))
+              : null,
+          decoding:
+            region.outcomes.decoding !== null
+              ? Number((region.outcomes.decoding / region.outcomes.sampleSize).toFixed(1))
+              : null,
+          fluency:
+            region.outcomes.fluency !== null
+              ? Number((region.outcomes.fluency / region.outcomes.sampleSize).toFixed(1))
+              : null,
+          comprehension:
+            region.outcomes.comprehension !== null
+              ? Number((region.outcomes.comprehension / region.outcomes.sampleSize).toFixed(1))
+              : null,
+          sampleSize: region.outcomes.sampleSize,
+        };
+      }
+
+      return region;
+    })
+    .sort((a, b) => a.region.localeCompare(b.region));
+
+  const country: ImpactExplorerCountryProfile = {
+    country: "Uganda",
+    regionsTotal: regions.length,
+    regionsCovered: regions.filter((region) => region.schoolsSupported > 0).length,
+    districtsTotal: districts.length,
+    districtsCovered: districts.filter((district) => district.schoolsSupported > 0).length,
+    schoolsTotal: finalizedSchools.length,
+    schoolsSupported: finalizedSchools.filter(
+      (school) => school.trainings + school.visits + school.assessments + school.storyActivities > 0,
+    ).length,
+    enrolledLearners: finalizedSchools.reduce((total, school) => total + school.enrolledLearners, 0),
+    trainings: finalizedSchools.reduce((total, school) => total + school.trainings, 0),
+    visits: finalizedSchools.reduce((total, school) => total + school.visits, 0),
+    assessments: finalizedSchools.reduce((total, school) => total + school.assessments, 0),
+    storyActivities: finalizedSchools.reduce((total, school) => total + school.storyActivities, 0),
+    participantsTotal: finalizedSchools.reduce((total, school) => total + school.participantsTotal, 0),
+    participantsTeachers: finalizedSchools.reduce(
+      (total, school) => total + school.participantsTeachers,
+      0,
+    ),
+    participantsLeaders: finalizedSchools.reduce(
+      (total, school) => total + school.participantsLeaders,
+      0,
+    ),
+    learnersAssessed: finalizedSchools.reduce((total, school) => total + school.learnersAssessed, 0),
+    storiesPublished: finalizedSchools.reduce((total, school) => total + school.storiesPublished, 0),
+    teacherObservationAverage:
+      finalizedSchools.filter((school) => school.teacherObservationAverage !== null).length > 0
+        ? Number(
+            (
+              finalizedSchools.reduce(
+                (total, school) => total + (school.teacherObservationAverage ?? 0),
+                0,
+              ) /
+              finalizedSchools.filter((school) => school.teacherObservationAverage !== null).length
+            ).toFixed(1),
+          )
+        : null,
+    outcomes: {
+      letterSound:
+        regions.filter((region) => region.outcomes.letterSound !== null).length > 0
+          ? Number(
+              (
+                regions.reduce((total, region) => total + (region.outcomes.letterSound ?? 0), 0) /
+                regions.filter((region) => region.outcomes.letterSound !== null).length
+              ).toFixed(1),
+            )
+          : null,
+      decoding:
+        regions.filter((region) => region.outcomes.decoding !== null).length > 0
+          ? Number(
+              (
+                regions.reduce((total, region) => total + (region.outcomes.decoding ?? 0), 0) /
+                regions.filter((region) => region.outcomes.decoding !== null).length
+              ).toFixed(1),
+            )
+          : null,
+      fluency:
+        regions.filter((region) => region.outcomes.fluency !== null).length > 0
+          ? Number(
+              (
+                regions.reduce((total, region) => total + (region.outcomes.fluency ?? 0), 0) /
+                regions.filter((region) => region.outcomes.fluency !== null).length
+              ).toFixed(1),
+            )
+          : null,
+      comprehension:
+        regions.filter((region) => region.outcomes.comprehension !== null).length > 0
+          ? Number(
+              (
+                regions.reduce((total, region) => total + (region.outcomes.comprehension ?? 0), 0) /
+                regions.filter((region) => region.outcomes.comprehension !== null).length
+              ).toFixed(1),
+            )
+          : null,
+      sampleSize: regions.reduce((total, region) => total + region.outcomes.sampleSize, 0),
+    },
+  };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    country,
+    regions,
+    districts,
+    schools: finalizedSchools,
+  };
+}
+
 function buildRecentMonthKeys(monthCount: number) {
   const keys: string[] = [];
   const now = new Date();

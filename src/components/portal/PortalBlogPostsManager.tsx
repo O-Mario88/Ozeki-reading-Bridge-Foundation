@@ -15,6 +15,7 @@ type PortalBlogPostView = {
   authorName: string;
   publishedAt: string;
   views: number;
+  isPublished: boolean;
   imageUrl: string | null;
   videoUrl: string | null;
 };
@@ -61,7 +62,7 @@ export function PortalBlogPostsManager({
       setFormKey((value) => value + 1);
       setSelectedImage("");
       setSelectedVideo("");
-      setStatus("Blog post published successfully.");
+      setStatus("Blog post published successfully and is now live on the public blog.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not publish blog post.");
     } finally {
@@ -77,6 +78,9 @@ export function PortalBlogPostsManager({
           Author and posting date are captured automatically from your portal account:
           {" "}
           <strong>{currentUserName}</strong>.
+        </p>
+        <p className="meta-line">
+          Every post submitted here is published directly to the public blog page.
         </p>
 
         <form key={formKey} className="form-grid portal-form-grid" onSubmit={handleSubmit}>
@@ -156,14 +160,6 @@ export function PortalBlogPostsManager({
             {selectedVideo ? <small className="portal-field-help">{selectedVideo}</small> : null}
           </label>
 
-          <label>
-            <span className="portal-field-label">Publish now</span>
-            <select name="isPublished" defaultValue="true">
-              <option value="true">Yes (public on blog page)</option>
-              <option value="false">No (save hidden)</option>
-            </select>
-          </label>
-
           <div className="full-width action-row portal-form-actions">
             <button className="button" type="submit" disabled={saving}>
               {saving ? "Publishing..." : "Publish blog post"}
@@ -187,14 +183,16 @@ export function PortalBlogPostsManager({
       </section>
 
       <section className="card">
-        <h2>Latest Published Posts</h2>
+        <h2>Latest Blog Posts</h2>
         {posts.length === 0 ? (
           <p>No blog posts submitted yet.</p>
         ) : (
           <div className="cards-grid">
             {posts.slice(0, 9).map((post) => (
               <article key={post.id} className="card">
-                <p className="meta-pill">{post.category}</p>
+                <p className="meta-pill">
+                  {post.category} • {post.isPublished ? "Published" : "Draft"}
+                </p>
                 <h3>{post.title}</h3>
                 {post.subtitle ? <p>{post.subtitle}</p> : null}
                 <p className="meta-line">
@@ -203,9 +201,13 @@ export function PortalBlogPostsManager({
                   {post.views} views
                 </p>
                 <div className="action-row">
-                  <Link className="button button-ghost" href={`/blog/${post.slug}`} target="_blank">
-                    View public post
-                  </Link>
+                  {post.isPublished ? (
+                    <Link className="button button-ghost" href={`/blog/${post.slug}`} target="_blank">
+                      View public post
+                    </Link>
+                  ) : (
+                    <span className="meta-line">Draft: not on public blog yet.</span>
+                  )}
                   {post.imageUrl ? (
                     <a className="button button-ghost" href={post.imageUrl} target="_blank" rel="noreferrer">
                       Image

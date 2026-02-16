@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { listPortalBlogPosts, savePortalBlogPost } from "@/lib/db";
@@ -121,7 +122,6 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    const isPublishedRaw = String(formData.get("isPublished") ?? "true").toLowerCase();
     const parsed = textSchema.parse({
       title: formData.get("title"),
       subtitle: formData.get("subtitle") || undefined,
@@ -164,9 +164,13 @@ export async function POST(request: Request) {
       videoStoredPath: savedVideo?.storedPath ?? null,
       videoMimeType: savedVideo?.mimeType ?? null,
       videoSizeBytes: savedVideo?.sizeBytes ?? null,
-      isPublished: isPublishedRaw !== "false",
+      isPublished: true,
       createdByUserId: user.id,
     });
+
+    revalidatePath("/blog");
+    revalidatePath(`/blog/${post.slug}`);
+    revalidatePath("/api/blog");
 
     return NextResponse.json({
       ok: true,

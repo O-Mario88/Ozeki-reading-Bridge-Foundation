@@ -237,8 +237,8 @@ export default function InSchoolCoachingMentorshipPage() {
               feedback, and follow-up implementation support.
             </p>
             <div className="action-row">
-              <Link className="button" href="/book-visit">
-                Book a coaching visit
+              <Link className="button" href="/portal/schools">
+                Open school profiles
               </Link>
               <Link className="button button-ghost" href="/partner">
                 Partner with us

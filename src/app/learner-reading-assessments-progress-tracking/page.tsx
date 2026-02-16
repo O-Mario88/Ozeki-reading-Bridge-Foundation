@@ -243,14 +243,14 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
           </article>
 
           <article className="card">
-            <h3>Book an Assessment Cycle</h3>
+            <h3>Launch an Assessment Cycle</h3>
             <p>
               Start with baseline, progress, and endline reading checks and get
               practical recommendations your teachers can apply immediately.
             </p>
             <div className="action-row">
-              <Link className="button" href="/book-visit">
-                Book learner assessment
+              <Link className="button" href="/portal/schools">
+                Open school profiles
               </Link>
               <Link className="button button-ghost" href="/partner">
                 Partner with us

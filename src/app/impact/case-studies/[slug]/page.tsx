@@ -80,8 +80,8 @@ export default async function ImpactCaseStudyDetailPage({
             <Link className="button" href="/resources">
               Open resource library
             </Link>
-            <Link className="button button-ghost" href="/book-visit">
-              Book coaching support
+            <Link className="button button-ghost" href="/portal/schools">
+              Open school profiles
             </Link>
             <Link className="button button-ghost" href="/impact/case-studies">
               Back to case studies

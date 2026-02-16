@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { PartnerActionForm } from "@/components/PartnerActionForm";
 
 type PackageCard = {
@@ -420,42 +421,45 @@ export function PartnerFundingPage() {
         </div>
       </section>
 
-      {activeIntent ? (
-        <div
-          className="floating-donor-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label={activeIntent.heading}
-          onClick={() => setActiveIntent(null)}
-        >
+      {activeIntent
+        ? createPortal(
           <div
-            className="card floating-donor-dialog"
-            onClick={(event) => event.stopPropagation()}
+            className="floating-donor-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={activeIntent.heading}
+            onClick={() => setActiveIntent(null)}
           >
-            <div className="floating-donor-header">
-              <div>
-                <p className="kicker">Donor form</p>
-                <h3>{activeIntent.heading}</h3>
+            <div
+              className="card floating-donor-dialog"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="floating-donor-header">
+                <div>
+                  <p className="kicker">Donor form</p>
+                  <h3>{activeIntent.heading}</h3>
+                </div>
+                <button
+                  className="button button-ghost"
+                  type="button"
+                  onClick={() => setActiveIntent(null)}
+                >
+                  Close
+                </button>
               </div>
-              <button
-                className="button button-ghost"
-                type="button"
-                onClick={() => setActiveIntent(null)}
-              >
-                Close
-              </button>
+              <PartnerActionForm
+                type={activeIntent.type}
+                actionLabel={activeIntent.actionLabel}
+                includeCountry
+                contextLabel={activeIntent.contextLabel}
+                onSuccess={() => setActiveIntent(null)}
+                onCancel={() => setActiveIntent(null)}
+              />
             </div>
-            <PartnerActionForm
-              type={activeIntent.type}
-              actionLabel={activeIntent.actionLabel}
-              includeCountry
-              contextLabel={activeIntent.contextLabel}
-              onSuccess={() => setActiveIntent(null)}
-              onCancel={() => setActiveIntent(null)}
-            />
-          </div>
-        </div>
-      ) : null}
+          </div>,
+          document.body,
+        )
+        : null}
     </>
   );
 }

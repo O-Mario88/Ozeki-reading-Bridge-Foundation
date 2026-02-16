@@ -129,6 +129,33 @@ export function PortalAnalyticsDashboard({ data }: PortalAnalyticsDashboardProps
           </div>
         </section>
 
+        <section className="card">
+          <div className="analytics-card-header">
+            <div>
+              <p className="kicker">Public profile explorer</p>
+              <h3>Open live dashboard by profile level</h3>
+            </div>
+          </div>
+          <p className="analytics-muted">
+            Use these shortcuts to validate what public users see in Country, Region, District, and
+            School profile views.
+          </p>
+          <div className="action-row">
+            <Link className="button button-ghost" href="/impact/dashboard?profile=country" target="_blank">
+              Country
+            </Link>
+            <Link className="button button-ghost" href="/impact/dashboard?profile=region" target="_blank">
+              Region
+            </Link>
+            <Link className="button button-ghost" href="/impact/dashboard?profile=district" target="_blank">
+              District
+            </Link>
+            <Link className="button button-ghost" href="/impact/dashboard?profile=school" target="_blank">
+              School
+            </Link>
+          </div>
+        </section>
+
         <section className="analytics-kpi-grid">
           <article className="analytics-kpi-card tone-primary">
             <p>Total records</p>

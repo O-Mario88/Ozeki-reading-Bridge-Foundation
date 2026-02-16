@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 type FloatingFormModalProps = {
   triggerLabel: string;
@@ -45,29 +46,32 @@ export function FloatingFormModal({
         {triggerLabel}
       </button>
 
-      {isOpen ? (
-        <div
-          className="floating-donor-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-          onClick={() => setIsOpen(false)}
-        >
-          <div className="card floating-donor-dialog" onClick={(event) => event.stopPropagation()}>
-            <div className="floating-donor-header">
-              <div>
-                <p className="kicker">Form</p>
-                <h3>{title}</h3>
-                {description ? <p>{description}</p> : null}
+      {isOpen
+        ? createPortal(
+          <div
+            className="floating-donor-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            onClick={() => setIsOpen(false)}
+          >
+            <div className="card floating-donor-dialog" onClick={(event) => event.stopPropagation()}>
+              <div className="floating-donor-header">
+                <div>
+                  <p className="kicker">Form</p>
+                  <h3>{title}</h3>
+                  {description ? <p>{description}</p> : null}
+                </div>
+                <button className="button button-ghost" type="button" onClick={() => setIsOpen(false)}>
+                  Cancel
+                </button>
               </div>
-              <button className="button button-ghost" type="button" onClick={() => setIsOpen(false)}>
-                Cancel
-              </button>
+              {children({ close: () => setIsOpen(false) })}
             </div>
-            {children({ close: () => setIsOpen(false) })}
-          </div>
-        </div>
-      ) : null}
+          </div>,
+          document.body,
+        )
+        : null}
     </>
   );
 }

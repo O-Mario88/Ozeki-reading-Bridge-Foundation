@@ -212,8 +212,8 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
               </a>
             </p>
             <p>
-              <Link className="inline-download-link" href="/book-visit">
-                Book School Support
+              <Link className="inline-download-link" href="/portal/schools">
+                Open school profiles for support
               </Link>
             </p>
           </article>
