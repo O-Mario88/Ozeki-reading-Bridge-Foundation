@@ -5,6 +5,7 @@ const quickLinks = [
   { href: "/programs", label: "Programs" },
   { href: "/academy", label: "Ozeki Literacy Academy" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/portal/login", label: "Staff Portal" },
   { href: "/transparency", label: "Transparency" },
 ];
 

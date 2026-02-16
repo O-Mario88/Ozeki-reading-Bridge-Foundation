@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 
 export const metadata = {
@@ -69,6 +70,21 @@ export default function EventsPage() {
               </p>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container card">
+          <h2>Staff scheduling</h2>
+          <p>
+            Volunteers and staff can schedule live online sessions from the portal with
+            Google Calendar invites and Google Meet links.
+          </p>
+          <div className="action-row">
+            <Link className="button" href="/portal/login">
+              Open training portal
+            </Link>
+          </div>
         </div>
       </section>
     </>

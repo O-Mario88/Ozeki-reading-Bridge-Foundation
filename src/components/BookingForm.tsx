@@ -6,16 +6,23 @@ import { serviceOptions } from "@/lib/content";
 type SubmitState = {
   status: "idle" | "submitting" | "success" | "error";
   message: string;
+  eventLink?: string | null;
+  meetLink?: string | null;
 };
 
-const initialState: SubmitState = { status: "idle", message: "" };
+const initialState: SubmitState = { status: "idle", message: "", eventLink: null, meetLink: null };
 
 export function BookingForm() {
   const [state, setState] = useState<SubmitState>(initialState);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState({ status: "submitting", message: "Submitting request..." });
+    setState({
+      status: "submitting",
+      message: "Submitting request...",
+      eventLink: null,
+      meetLink: null,
+    });
 
     const formData = new FormData(event.currentTarget);
     const payload = Object.fromEntries(formData.entries());
@@ -27,21 +34,33 @@ export function BookingForm() {
         body: JSON.stringify(payload),
       });
 
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+        calendar?: {
+          eventLink: string | null;
+          meetLink: string | null;
+        } | null;
+        calendarWarning?: string;
+      };
+
       if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
         throw new Error(data.error ?? "Could not submit booking request.");
       }
 
       event.currentTarget.reset();
       setState({
         status: "success",
-        message:
-          "Booking request submitted. Our team will confirm by email and WhatsApp.",
+        message: data.calendarWarning
+          ? `Booking request submitted. ${data.calendarWarning}`
+          : "Booking request submitted and calendar invite created.",
+        eventLink: data.calendar?.eventLink ?? null,
+        meetLink: data.calendar?.meetLink ?? null,
       });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Submission failed. Try again.";
-      setState({ status: "error", message });
+      setState({ status: "error", message, eventLink: null, meetLink: null });
     }
   }
 
@@ -119,7 +138,23 @@ export function BookingForm() {
       </button>
 
       {state.message ? (
-        <p className={`form-message ${state.status}`}>{state.message}</p>
+        <div className={`form-message ${state.status}`}>
+          <p>{state.message}</p>
+          {state.eventLink ? (
+            <p>
+              <a href={state.eventLink} target="_blank" rel="noreferrer">
+                Open calendar event
+              </a>
+            </p>
+          ) : null}
+          {state.meetLink ? (
+            <p>
+              <a href={state.meetLink} target="_blank" rel="noreferrer">
+                Open Meet link
+              </a>
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </form>
   );

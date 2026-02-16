@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { saveBooking } from "@/lib/db";
+import {
+  buildDateRangeFromDateAndTime,
+  createGoogleCalendarEvent,
+  isGoogleCalendarConfigured,
+} from "@/lib/google-calendar";
 
 export const runtime = "nodejs";
 
@@ -23,7 +28,62 @@ export async function POST(request: Request) {
     const payload = bookingSchema.parse(await request.json());
     saveBooking(payload);
 
-    return NextResponse.json({ ok: true, message: "Booking request submitted." });
+    let calendar:
+      | {
+          eventLink: string | null;
+          meetLink: string | null;
+        }
+      | null = null;
+    let calendarWarning: string | undefined;
+
+    if (isGoogleCalendarConfigured()) {
+      try {
+        const durationMinutes = Number(
+          process.env.BOOKING_CALENDAR_DURATION_MINUTES ?? 60,
+        );
+        const isOnlineSession = payload.service.toLowerCase().includes("online");
+        const dateRange = buildDateRangeFromDateAndTime(
+          payload.preferredDate,
+          payload.preferredTime,
+          durationMinutes,
+        );
+
+        const event = await createGoogleCalendarEvent({
+          summary: `${payload.service} - ${payload.schoolName}`,
+          description: `School: ${payload.schoolName}
+Contact: ${payload.contactName}
+Email: ${payload.email}
+Phone: ${payload.phone}
+Teachers: ${payload.teachers}
+Grades: ${payload.grades}
+Challenges: ${payload.challenges}
+Location details: ${payload.location}`,
+          location: payload.location,
+          startDateTime: dateRange.startDateTime,
+          endDateTime: dateRange.endDateTime,
+          attendeeEmails: [payload.email],
+          createMeet: isOnlineSession,
+        });
+
+        calendar = {
+          eventLink: event.htmlLink,
+          meetLink: event.meetLink,
+        };
+      } catch {
+        calendarWarning =
+          "Booking saved, but Google Calendar invite could not be created.";
+      }
+    } else {
+      calendarWarning =
+        "Booking saved, but Google Calendar integration is not configured yet.";
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: "Booking request submitted.",
+      calendar,
+      calendarWarning,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { CtaBand } from "@/components/CtaBand";
 import { MetricStrip } from "@/components/MetricStrip";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { getImpactSummary } from "@/lib/db";
 import {
-  impactMetrics,
   mission,
   organizationName,
   programs,
@@ -12,7 +12,10 @@ import {
   vision,
 } from "@/lib/content";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const summary = getImpactSummary();
   const orgSchema = {
     "@context": "https://schema.org",
     "@type": "NonProfit",
@@ -72,7 +75,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <MetricStrip metrics={impactMetrics} />
+      <MetricStrip metrics={summary.metrics} />
 
       <section className="section">
         <div className="container">

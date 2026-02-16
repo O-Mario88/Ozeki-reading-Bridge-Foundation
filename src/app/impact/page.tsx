@@ -1,13 +1,18 @@
 import { PageHero } from "@/components/PageHero";
-import { impactMetrics, caseStudies } from "@/lib/content";
+import { caseStudies } from "@/lib/content";
+import { getImpactSummary } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Impact",
   description:
-    "Track teachers trained, schools supported, learner assessment reach, and implementation case studies.",
+    "Track teachers trained, schools trained, learner assessment reach, stories published, and implementation case studies.",
 };
 
 export default function ImpactPage() {
+  const summary = getImpactSummary();
+
   return (
     <>
       <PageHero
@@ -18,7 +23,7 @@ export default function ImpactPage() {
 
       <section className="section">
         <div className="container metric-grid">
-          {impactMetrics.map((metric) => (
+          {summary.metrics.map((metric) => (
             <article key={metric.label}>
               <strong>{metric.value.toLocaleString()}</strong>
               <span>{metric.label}</span>

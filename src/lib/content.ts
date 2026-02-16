@@ -47,6 +47,7 @@ export const primaryNav = [
 export const serviceOptions = [
   "School diagnostic visit",
   "Teacher training session",
+  "Online training session",
   "Coaching follow-up",
   "Learner reading assessment",
   "1001 Story onboarding",
