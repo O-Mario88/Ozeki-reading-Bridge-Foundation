@@ -1,5 +1,5 @@
 import {
-  BlogPost,
+
   CaseStudy,
   Partner,
   Program,
@@ -62,7 +62,7 @@ export const primaryNav = [
   { href: "/phonics-training", label: "Phonics Training" },
   { href: "/story-project", label: "1001 Story Project" },
   { href: "/resources", label: "Resources" },
-  { href: "/blog", label: "Blog" },
+
   { href: "/events", label: "Events" },
   { href: "/diagnostic-quiz", label: "Diagnostic Quiz" },
   { href: "/book-visit", label: "Book a Visit" },
@@ -148,139 +148,7 @@ export const resources: ResourceItem[] = [
   },
 ];
 
-export const blogCategories = [
-  "Phonics & decoding",
-  "Fluency",
-  "Comprehension",
-  "Teaching routines",
-  "Assessments",
-  "Remedial strategies",
-  "School literacy systems",
-  "Teacher coaching",
-  "1001 Story",
-];
 
-export const blogPosts: BlogPost[] = [
-  {
-    slug: "how-to-teach-reading-using-letter-sounds",
-    title: "How to Teach Reading Using Letter Sounds in Primary Classrooms",
-    excerpt:
-      "A practical sequence schools can use to move from letter sounds to accurate decoding and early fluency.",
-    category: "Phonics & decoding",
-    author: "Ruth Nakato",
-    role: "Literacy Coach",
-    publishedAt: "2026-01-15",
-    readTime: "8 min read",
-    tags: ["phonics", "decoding", "uganda", "teacher training"],
-    sections: [
-      {
-        heading: "Start with explicit sound teaching",
-        paragraphs: [
-          "Teach one new sound at a time and connect it to common words learners can hear and say.",
-          "Use short demonstrations and immediate learner response so every child practices the target sound.",
-        ],
-      },
-      {
-        heading: "Move quickly into blending",
-        paragraphs: [
-          "Blend sounds orally first, then move to print. Keep words short and controlled.",
-          "Daily blending practice makes decoding automatic and prevents guessing from pictures.",
-        ],
-      },
-      {
-        heading: "Track mastery weekly",
-        paragraphs: [
-          "Use a one-minute check to see who can identify sounds, blend, and read simple words.",
-          "Group learners by need and run short intervention blocks three times a week.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "building-reading-fluency-with-daily-routines",
-    title: "Building Reading Fluency with Daily 15-Minute Routines",
-    excerpt:
-      "Small daily routines can dramatically improve oral reading speed, accuracy, and expression.",
-    category: "Fluency",
-    author: "Samuel Ouma",
-    role: "Program Lead",
-    publishedAt: "2026-01-29",
-    readTime: "6 min read",
-    tags: ["fluency", "classroom routines", "primary"],
-    sections: [
-      {
-        heading: "Use repeated reading with purpose",
-        paragraphs: [
-          "Learners read the same short passage multiple times with teacher feedback.",
-          "Focus feedback on accuracy first, then pace, then expression.",
-        ],
-      },
-      {
-        heading: "Set visible fluency goals",
-        paragraphs: [
-          "Show class goals for weekly oral reading improvement by grade level.",
-          "Celebrate growth publicly to increase motivation and persistence.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "simple-reading-assessments-for-school-leaders",
-    title: "Simple Reading Assessments School Leaders Can Use Every Term",
-    excerpt:
-      "A low-burden assessment model for headteachers and directors of studies.",
-    category: "Assessments",
-    author: "Grace Atwine",
-    role: "M&E Specialist",
-    publishedAt: "2026-02-05",
-    readTime: "7 min read",
-    tags: ["assessment", "school leadership", "monitoring"],
-    sections: [
-      {
-        heading: "Collect only what decisions need",
-        paragraphs: [
-          "Track letter sounds, decoding, oral reading fluency, and comprehension.",
-          "Avoid over-testing and focus on actionable indicators.",
-        ],
-      },
-      {
-        heading: "Use data in coaching conversations",
-        paragraphs: [
-          "Bring class-level trends into teacher coaching meetings.",
-          "Agree one instruction change per cycle and review after two weeks.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "inside-the-1001-story-project",
-    title: "Inside the 1001 Story Project: Turning Learners into Published Authors",
-    excerpt:
-      "How story writing strengthens reading, spelling, and learner confidence across upper primary grades.",
-    category: "1001 Story",
-    author: "Evelyn Kizza",
-    role: "Writing Program Coordinator",
-    publishedAt: "2026-02-10",
-    readTime: "9 min read",
-    tags: ["writing", "story project", "read aloud"],
-    sections: [
-      {
-        heading: "Prompt, draft, revise, publish",
-        paragraphs: [
-          "Teachers guide learners through short cycles that build idea generation and sentence quality.",
-          "Each cycle includes read-aloud and peer feedback before final editing.",
-        ],
-      },
-      {
-        heading: "Connect writing back to reading",
-        paragraphs: [
-          "Learners read their own stories and peer stories to practice fluency.",
-          "Local stories increase engagement and produce culturally relevant reading materials.",
-        ],
-      },
-    ],
-  },
-];
 
 export const testimonials: Testimonial[] = [
   {
@@ -424,7 +292,7 @@ export const pricingTiers = [
   {
     name: "Free",
     audience: "All educators",
-    description: "Access blog, selected resources, and monthly literacy newsletter.",
+    description: "Access selected resources and monthly literacy newsletter.",
   },
   {
     name: "Teacher Pro",

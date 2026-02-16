@@ -27,7 +27,6 @@ import {
   PortalUserAdminRecord,
   PortalUserRole,
   PortalEvidenceRecord,
-  PortalBlogPostRecord,
   ImpactReportBuildInput,
   ImpactReportCoverageBlock,
   ImpactReportDataQualityBlock,
@@ -497,38 +496,6 @@ function getDb() {
   CREATE INDEX IF NOT EXISTS idx_portal_resources_published
     ON portal_resources(is_published);
 
-  CREATE TABLE IF NOT EXISTS portal_blog_posts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    subtitle TEXT,
-    body TEXT NOT NULL,
-    category TEXT NOT NULL,
-    tags_json TEXT NOT NULL DEFAULT '[]',
-    image_file_name TEXT,
-    image_stored_path TEXT,
-    image_mime_type TEXT,
-    image_size_bytes INTEGER,
-    video_file_name TEXT,
-    video_stored_path TEXT,
-    video_mime_type TEXT,
-    video_size_bytes INTEGER,
-    views INTEGER NOT NULL DEFAULT 0,
-    is_published INTEGER NOT NULL DEFAULT 1,
-    created_by_user_id INTEGER NOT NULL,
-    published_at TEXT NOT NULL DEFAULT (datetime('now')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_portal_blog_posts_published_at
-    ON portal_blog_posts(published_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_portal_blog_posts_views
-    ON portal_blog_posts(views DESC);
-  CREATE INDEX IF NOT EXISTS idx_portal_blog_posts_published
-    ON portal_blog_posts(is_published);
-
   CREATE TABLE IF NOT EXISTS portal_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     record_code TEXT NOT NULL UNIQUE,
@@ -927,26 +894,26 @@ export function savePortalResource(input: {
     )
     .get({ id }) as
     | {
-        id: number;
-        slug: string;
-        title: string;
-        description: string;
-        grade: PortalResourceRecord["grade"];
-        skill: PortalResourceRecord["skill"];
-        type: PortalResourceRecord["type"];
-        section: PortalResourceSection;
-        fileName: string | null;
-        storedPath: string | null;
-        mimeType: string | null;
-        sizeBytes: number | null;
-        externalUrl: string | null;
-        downloadLabel: string | null;
-        isPublished: number;
-        createdByUserId: number;
-        createdByName: string;
-        createdAt: string;
-        updatedAt: string;
-      }
+      id: number;
+      slug: string;
+      title: string;
+      description: string;
+      grade: PortalResourceRecord["grade"];
+      skill: PortalResourceRecord["skill"];
+      type: PortalResourceRecord["type"];
+      section: PortalResourceSection;
+      fileName: string | null;
+      storedPath: string | null;
+      mimeType: string | null;
+      sizeBytes: number | null;
+      externalUrl: string | null;
+      downloadLabel: string | null;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }
     | undefined;
 
   if (!row) {
@@ -996,26 +963,26 @@ export function listPortalResources(user: PortalUser, limit = 180): PortalResour
     `,
     )
     .all(params) as Array<{
-    id: number;
-    slug: string;
-    title: string;
-    description: string;
-    grade: PortalResourceRecord["grade"];
-    skill: PortalResourceRecord["skill"];
-    type: PortalResourceRecord["type"];
-    section: PortalResourceSection;
-    fileName: string | null;
-    storedPath: string | null;
-    mimeType: string | null;
-    sizeBytes: number | null;
-    externalUrl: string | null;
-    downloadLabel: string | null;
-    isPublished: number;
-    createdByUserId: number;
-    createdByName: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
+      id: number;
+      slug: string;
+      title: string;
+      description: string;
+      grade: PortalResourceRecord["grade"];
+      skill: PortalResourceRecord["skill"];
+      type: PortalResourceRecord["type"];
+      section: PortalResourceSection;
+      fileName: string | null;
+      storedPath: string | null;
+      mimeType: string | null;
+      sizeBytes: number | null;
+      externalUrl: string | null;
+      downloadLabel: string | null;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
 
   return rows.map((row) => parsePortalResourceRow(row));
 }
@@ -1067,26 +1034,26 @@ export function listPublishedPortalResources(
     `,
     )
     .all(params) as Array<{
-    id: number;
-    slug: string;
-    title: string;
-    description: string;
-    grade: PortalResourceRecord["grade"];
-    skill: PortalResourceRecord["skill"];
-    type: PortalResourceRecord["type"];
-    section: PortalResourceSection;
-    fileName: string | null;
-    storedPath: string | null;
-    mimeType: string | null;
-    sizeBytes: number | null;
-    externalUrl: string | null;
-    downloadLabel: string | null;
-    isPublished: number;
-    createdByUserId: number;
-    createdByName: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
+      id: number;
+      slug: string;
+      title: string;
+      description: string;
+      grade: PortalResourceRecord["grade"];
+      skill: PortalResourceRecord["skill"];
+      type: PortalResourceRecord["type"];
+      section: PortalResourceSection;
+      fileName: string | null;
+      storedPath: string | null;
+      mimeType: string | null;
+      sizeBytes: number | null;
+      externalUrl: string | null;
+      downloadLabel: string | null;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
 
   return rows.map((row) => parsePortalResourceRow(row));
 }
@@ -1124,548 +1091,32 @@ export function getPublishedPortalResourceById(id: number): PortalResourceRecord
     )
     .get({ id }) as
     | {
-        id: number;
-        slug: string;
-        title: string;
-        description: string;
-        grade: PortalResourceRecord["grade"];
-        skill: PortalResourceRecord["skill"];
-        type: PortalResourceRecord["type"];
-        section: PortalResourceSection;
-        fileName: string | null;
-        storedPath: string | null;
-        mimeType: string | null;
-        sizeBytes: number | null;
-        externalUrl: string | null;
-        downloadLabel: string | null;
-        isPublished: number;
-        createdByUserId: number;
-        createdByName: string;
-        createdAt: string;
-        updatedAt: string;
-      }
+      id: number;
+      slug: string;
+      title: string;
+      description: string;
+      grade: PortalResourceRecord["grade"];
+      skill: PortalResourceRecord["skill"];
+      type: PortalResourceRecord["type"];
+      section: PortalResourceSection;
+      fileName: string | null;
+      storedPath: string | null;
+      mimeType: string | null;
+      sizeBytes: number | null;
+      externalUrl: string | null;
+      downloadLabel: string | null;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }
     | undefined;
 
   return row ? parsePortalResourceRow(row) : null;
 }
 
-function parsePortalBlogPostRow(row: {
-  id: number;
-  slug: string;
-  title: string;
-  subtitle: string | null;
-  body: string;
-  category: string;
-  tagsJson: string;
-  imageFileName: string | null;
-  imageStoredPath: string | null;
-  imageMimeType: string | null;
-  imageSizeBytes: number | null;
-  videoFileName: string | null;
-  videoStoredPath: string | null;
-  videoMimeType: string | null;
-  videoSizeBytes: number | null;
-  views: number;
-  isPublished: number;
-  createdByUserId: number;
-  authorName: string;
-  publishedAt: string;
-  createdAt: string;
-  updatedAt: string;
-}): PortalBlogPostRecord {
-  let tags: string[] = [];
-  try {
-    const parsed = JSON.parse(row.tagsJson || "[]");
-    tags = Array.isArray(parsed)
-      ? parsed
-          .map((value) => String(value).trim())
-          .filter((value) => value.length > 0)
-          .slice(0, 16)
-      : [];
-  } catch {
-    tags = [];
-  }
 
-  return {
-    id: Number(row.id),
-    slug: row.slug,
-    title: row.title,
-    subtitle: row.subtitle ?? null,
-    body: row.body,
-    category: row.category,
-    tags,
-    imageFileName: row.imageFileName ?? null,
-    imageStoredPath: row.imageStoredPath ?? null,
-    imageMimeType: row.imageMimeType ?? null,
-    imageSizeBytes: row.imageSizeBytes !== null ? Number(row.imageSizeBytes) : null,
-    videoFileName: row.videoFileName ?? null,
-    videoStoredPath: row.videoStoredPath ?? null,
-    videoMimeType: row.videoMimeType ?? null,
-    videoSizeBytes: row.videoSizeBytes !== null ? Number(row.videoSizeBytes) : null,
-    views: Number(row.views ?? 0),
-    isPublished: Boolean(row.isPublished),
-    createdByUserId: Number(row.createdByUserId),
-    authorName: row.authorName,
-    publishedAt: row.publishedAt,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function normalizeTagArray(tags: string[]) {
-  const unique = new Set<string>();
-  tags
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0)
-    .forEach((tag) => unique.add(tag.slice(0, 40)));
-  return [...unique].slice(0, 16);
-}
-
-export function savePortalBlogPost(input: {
-  title: string;
-  subtitle?: string | null;
-  body: string;
-  category: string;
-  tags: string[];
-  imageFileName?: string | null;
-  imageStoredPath?: string | null;
-  imageMimeType?: string | null;
-  imageSizeBytes?: number | null;
-  videoFileName?: string | null;
-  videoStoredPath?: string | null;
-  videoMimeType?: string | null;
-  videoSizeBytes?: number | null;
-  isPublished?: boolean;
-  createdByUserId: number;
-}): PortalBlogPostRecord {
-  const db = getDb();
-  const baseSlug = slugify(input.title) || `blog-${Date.now()}`;
-  let slug = baseSlug;
-  let counter = 2;
-
-  while (
-    db
-      .prepare(`SELECT 1 FROM portal_blog_posts WHERE slug = @slug LIMIT 1`)
-      .get({ slug })
-  ) {
-    slug = `${baseSlug}-${counter}`;
-    counter += 1;
-  }
-
-  const now = new Date().toISOString();
-  const tags = normalizeTagArray(input.tags);
-  const insertResult = db
-    .prepare(
-      `
-      INSERT INTO portal_blog_posts (
-        slug,
-        title,
-        subtitle,
-        body,
-        category,
-        tags_json,
-        image_file_name,
-        image_stored_path,
-        image_mime_type,
-        image_size_bytes,
-        video_file_name,
-        video_stored_path,
-        video_mime_type,
-        video_size_bytes,
-        views,
-        is_published,
-        created_by_user_id,
-        published_at,
-        created_at,
-        updated_at
-      ) VALUES (
-        @slug,
-        @title,
-        @subtitle,
-        @body,
-        @category,
-        @tagsJson,
-        @imageFileName,
-        @imageStoredPath,
-        @imageMimeType,
-        @imageSizeBytes,
-        @videoFileName,
-        @videoStoredPath,
-        @videoMimeType,
-        @videoSizeBytes,
-        0,
-        @isPublished,
-        @createdByUserId,
-        @publishedAt,
-        @createdAt,
-        @updatedAt
-      )
-    `,
-    )
-    .run({
-      slug,
-      title: input.title.trim(),
-      subtitle: input.subtitle?.trim() || null,
-      body: input.body.trim(),
-      category: input.category.trim(),
-      tagsJson: JSON.stringify(tags),
-      imageFileName: input.imageFileName ?? null,
-      imageStoredPath: input.imageStoredPath ?? null,
-      imageMimeType: input.imageMimeType ?? null,
-      imageSizeBytes: input.imageSizeBytes ?? null,
-      videoFileName: input.videoFileName ?? null,
-      videoStoredPath: input.videoStoredPath ?? null,
-      videoMimeType: input.videoMimeType ?? null,
-      videoSizeBytes: input.videoSizeBytes ?? null,
-      isPublished: input.isPublished === false ? 0 : 1,
-      createdByUserId: input.createdByUserId,
-      publishedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-  const id = Number(insertResult.lastInsertRowid);
-  const row = db
-    .prepare(
-      `
-      SELECT
-        pb.id,
-        pb.slug,
-        pb.title,
-        pb.subtitle,
-        pb.body,
-        pb.category,
-        pb.tags_json AS tagsJson,
-        pb.image_file_name AS imageFileName,
-        pb.image_stored_path AS imageStoredPath,
-        pb.image_mime_type AS imageMimeType,
-        pb.image_size_bytes AS imageSizeBytes,
-        pb.video_file_name AS videoFileName,
-        pb.video_stored_path AS videoStoredPath,
-        pb.video_mime_type AS videoMimeType,
-        pb.video_size_bytes AS videoSizeBytes,
-        pb.views,
-        pb.is_published AS isPublished,
-        pb.created_by_user_id AS createdByUserId,
-        pu.full_name AS authorName,
-        pb.published_at AS publishedAt,
-        pb.created_at AS createdAt,
-        pb.updated_at AS updatedAt
-      FROM portal_blog_posts pb
-      JOIN portal_users pu ON pu.id = pb.created_by_user_id
-      WHERE pb.id = @id
-      LIMIT 1
-    `,
-    )
-    .get({ id }) as
-    | {
-        id: number;
-        slug: string;
-        title: string;
-        subtitle: string | null;
-        body: string;
-        category: string;
-        tagsJson: string;
-        imageFileName: string | null;
-        imageStoredPath: string | null;
-        imageMimeType: string | null;
-        imageSizeBytes: number | null;
-        videoFileName: string | null;
-        videoStoredPath: string | null;
-        videoMimeType: string | null;
-        videoSizeBytes: number | null;
-        views: number;
-        isPublished: number;
-        createdByUserId: number;
-        authorName: string;
-        publishedAt: string;
-        createdAt: string;
-        updatedAt: string;
-      }
-    | undefined;
-
-  if (!row) {
-    throw new Error("Could not load saved blog post.");
-  }
-
-  return parsePortalBlogPostRow(row);
-}
-
-export function listPortalBlogPosts(user: PortalUser, limit = 180): PortalBlogPostRecord[] {
-  const whereClauses = ["1=1"];
-  const params: Record<string, string | number> = { limit };
-
-  if (!canViewAllRecords(user)) {
-    whereClauses.push("pb.created_by_user_id = @createdByUserId");
-    params.createdByUserId = user.id;
-  }
-
-  const rows = getDb()
-    .prepare(
-      `
-      SELECT
-        pb.id,
-        pb.slug,
-        pb.title,
-        pb.subtitle,
-        pb.body,
-        pb.category,
-        pb.tags_json AS tagsJson,
-        pb.image_file_name AS imageFileName,
-        pb.image_stored_path AS imageStoredPath,
-        pb.image_mime_type AS imageMimeType,
-        pb.image_size_bytes AS imageSizeBytes,
-        pb.video_file_name AS videoFileName,
-        pb.video_stored_path AS videoStoredPath,
-        pb.video_mime_type AS videoMimeType,
-        pb.video_size_bytes AS videoSizeBytes,
-        pb.views,
-        pb.is_published AS isPublished,
-        pb.created_by_user_id AS createdByUserId,
-        pu.full_name AS authorName,
-        pb.published_at AS publishedAt,
-        pb.created_at AS createdAt,
-        pb.updated_at AS updatedAt
-      FROM portal_blog_posts pb
-      JOIN portal_users pu ON pu.id = pb.created_by_user_id
-      WHERE ${whereClauses.join(" AND ")}
-      ORDER BY pb.published_at DESC, pb.id DESC
-      LIMIT @limit
-    `,
-    )
-    .all(params) as Array<{
-    id: number;
-    slug: string;
-    title: string;
-    subtitle: string | null;
-    body: string;
-    category: string;
-    tagsJson: string;
-    imageFileName: string | null;
-    imageStoredPath: string | null;
-    imageMimeType: string | null;
-    imageSizeBytes: number | null;
-    videoFileName: string | null;
-    videoStoredPath: string | null;
-    videoMimeType: string | null;
-    videoSizeBytes: number | null;
-    views: number;
-    isPublished: number;
-    createdByUserId: number;
-    authorName: string;
-    publishedAt: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
-
-  return rows.map((row) => parsePortalBlogPostRow(row));
-}
-
-export function listPublishedPortalBlogPosts(limit = 120): PortalBlogPostRecord[] {
-  const rows = getDb()
-    .prepare(
-      `
-      SELECT
-        pb.id,
-        pb.slug,
-        pb.title,
-        pb.subtitle,
-        pb.body,
-        pb.category,
-        pb.tags_json AS tagsJson,
-        pb.image_file_name AS imageFileName,
-        pb.image_stored_path AS imageStoredPath,
-        pb.image_mime_type AS imageMimeType,
-        pb.image_size_bytes AS imageSizeBytes,
-        pb.video_file_name AS videoFileName,
-        pb.video_stored_path AS videoStoredPath,
-        pb.video_mime_type AS videoMimeType,
-        pb.video_size_bytes AS videoSizeBytes,
-        pb.views,
-        pb.is_published AS isPublished,
-        pb.created_by_user_id AS createdByUserId,
-        pu.full_name AS authorName,
-        pb.published_at AS publishedAt,
-        pb.created_at AS createdAt,
-        pb.updated_at AS updatedAt
-      FROM portal_blog_posts pb
-      JOIN portal_users pu ON pu.id = pb.created_by_user_id
-      WHERE pb.is_published = 1
-      ORDER BY pb.published_at DESC, pb.id DESC
-      LIMIT @limit
-    `,
-    )
-    .all({ limit }) as Array<{
-    id: number;
-    slug: string;
-    title: string;
-    subtitle: string | null;
-    body: string;
-    category: string;
-    tagsJson: string;
-    imageFileName: string | null;
-    imageStoredPath: string | null;
-    imageMimeType: string | null;
-    imageSizeBytes: number | null;
-    videoFileName: string | null;
-    videoStoredPath: string | null;
-    videoMimeType: string | null;
-    videoSizeBytes: number | null;
-    views: number;
-    isPublished: number;
-    createdByUserId: number;
-    authorName: string;
-    publishedAt: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
-
-  return rows.map((row) => parsePortalBlogPostRow(row));
-}
-
-export function getPublishedPortalBlogPostBySlug(slug: string): PortalBlogPostRecord | null {
-  const row = getDb()
-    .prepare(
-      `
-      SELECT
-        pb.id,
-        pb.slug,
-        pb.title,
-        pb.subtitle,
-        pb.body,
-        pb.category,
-        pb.tags_json AS tagsJson,
-        pb.image_file_name AS imageFileName,
-        pb.image_stored_path AS imageStoredPath,
-        pb.image_mime_type AS imageMimeType,
-        pb.image_size_bytes AS imageSizeBytes,
-        pb.video_file_name AS videoFileName,
-        pb.video_stored_path AS videoStoredPath,
-        pb.video_mime_type AS videoMimeType,
-        pb.video_size_bytes AS videoSizeBytes,
-        pb.views,
-        pb.is_published AS isPublished,
-        pb.created_by_user_id AS createdByUserId,
-        pu.full_name AS authorName,
-        pb.published_at AS publishedAt,
-        pb.created_at AS createdAt,
-        pb.updated_at AS updatedAt
-      FROM portal_blog_posts pb
-      JOIN portal_users pu ON pu.id = pb.created_by_user_id
-      WHERE pb.slug = @slug
-        AND pb.is_published = 1
-      LIMIT 1
-    `,
-    )
-    .get({ slug }) as
-    | {
-        id: number;
-        slug: string;
-        title: string;
-        subtitle: string | null;
-        body: string;
-        category: string;
-        tagsJson: string;
-        imageFileName: string | null;
-        imageStoredPath: string | null;
-        imageMimeType: string | null;
-        imageSizeBytes: number | null;
-        videoFileName: string | null;
-        videoStoredPath: string | null;
-        videoMimeType: string | null;
-        videoSizeBytes: number | null;
-        views: number;
-        isPublished: number;
-        createdByUserId: number;
-        authorName: string;
-        publishedAt: string;
-        createdAt: string;
-        updatedAt: string;
-      }
-    | undefined;
-
-  return row ? parsePortalBlogPostRow(row) : null;
-}
-
-export function getPublishedPortalBlogPostById(id: number): PortalBlogPostRecord | null {
-  const row = getDb()
-    .prepare(
-      `
-      SELECT
-        pb.id,
-        pb.slug,
-        pb.title,
-        pb.subtitle,
-        pb.body,
-        pb.category,
-        pb.tags_json AS tagsJson,
-        pb.image_file_name AS imageFileName,
-        pb.image_stored_path AS imageStoredPath,
-        pb.image_mime_type AS imageMimeType,
-        pb.image_size_bytes AS imageSizeBytes,
-        pb.video_file_name AS videoFileName,
-        pb.video_stored_path AS videoStoredPath,
-        pb.video_mime_type AS videoMimeType,
-        pb.video_size_bytes AS videoSizeBytes,
-        pb.views,
-        pb.is_published AS isPublished,
-        pb.created_by_user_id AS createdByUserId,
-        pu.full_name AS authorName,
-        pb.published_at AS publishedAt,
-        pb.created_at AS createdAt,
-        pb.updated_at AS updatedAt
-      FROM portal_blog_posts pb
-      JOIN portal_users pu ON pu.id = pb.created_by_user_id
-      WHERE pb.id = @id
-        AND pb.is_published = 1
-      LIMIT 1
-    `,
-    )
-    .get({ id }) as
-    | {
-        id: number;
-        slug: string;
-        title: string;
-        subtitle: string | null;
-        body: string;
-        category: string;
-        tagsJson: string;
-        imageFileName: string | null;
-        imageStoredPath: string | null;
-        imageMimeType: string | null;
-        imageSizeBytes: number | null;
-        videoFileName: string | null;
-        videoStoredPath: string | null;
-        videoMimeType: string | null;
-        videoSizeBytes: number | null;
-        views: number;
-        isPublished: number;
-        createdByUserId: number;
-        authorName: string;
-        publishedAt: string;
-        createdAt: string;
-        updatedAt: string;
-      }
-    | undefined;
-
-  return row ? parsePortalBlogPostRow(row) : null;
-}
-
-export function incrementPortalBlogViews(id: number) {
-  getDb()
-    .prepare(
-      `
-      UPDATE portal_blog_posts
-      SET views = views + 1,
-          updated_at = @updatedAt
-      WHERE id = @id
-    `,
-    )
-    .run({
-      id,
-      updatedAt: new Date().toISOString(),
-    });
-}
 
 export function saveNewsletterSubscriber(payload: { name: string; email: string }) {
   return getDb()
@@ -1734,16 +1185,16 @@ export function getPortalUserByEmail(email: string): PortalUser | null {
     )
     .get({ email: normalized }) as
     | {
-        id: number;
-        fullName: string;
-        email: string;
-        phone: string | null;
-        role: PortalUserRole;
-        isSupervisor: number;
-        isME: number;
-        isAdmin: number;
-        isSuperAdmin: number;
-      }
+      id: number;
+      fullName: string;
+      email: string;
+      phone: string | null;
+      role: PortalUserRole;
+      isSupervisor: number;
+      isME: number;
+      isAdmin: number;
+      isSuperAdmin: number;
+    }
     | undefined;
 
   if (!row) {
@@ -1781,17 +1232,17 @@ export function listPortalUsersForAdmin(currentUser: PortalUser): PortalUserAdmi
     `,
     )
     .all() as Array<{
-    id: number;
-    fullName: string;
-    email: string;
-    phone: string | null;
-    role: PortalUserRole;
-    isSupervisor: number;
-    isME: number;
-    isAdmin: number;
-    isSuperAdmin: number;
-    createdAt: string;
-  }>;
+      id: number;
+      fullName: string;
+      email: string;
+      phone: string | null;
+      role: PortalUserRole;
+      isSupervisor: number;
+      isME: number;
+      isAdmin: number;
+      isSuperAdmin: number;
+      createdAt: string;
+    }>;
 
   return rows.map((row) => ({
     ...parsePortalUserRow(row),
@@ -2071,10 +1522,7 @@ export function deletePortalUserAccount(userId: number, currentUser: PortalUser)
       label: "resources",
       query: "SELECT COUNT(*) AS total FROM portal_resources WHERE created_by_user_id = @userId",
     },
-    {
-      label: "blog posts",
-      query: "SELECT COUNT(*) AS total FROM portal_blog_posts WHERE created_by_user_id = @userId",
-    },
+
     {
       label: "impact reports",
       query: "SELECT COUNT(*) AS total FROM impact_reports WHERE created_by_user_id = @userId",
@@ -2132,17 +1580,17 @@ export function authenticatePortalUser(identifier: string, password: string): Po
     )
     .get({ email: normalizedEmail, phone: normalizedIdentifier }) as
     | {
-        id: number;
-        fullName: string;
-        email: string;
-        phone: string | null;
-        role: PortalUserRole;
-        isSupervisor: number;
-        isME: number;
-        isAdmin: number;
-        isSuperAdmin: number;
-        passwordHash: string;
-      }
+      id: number;
+      fullName: string;
+      email: string;
+      phone: string | null;
+      role: PortalUserRole;
+      isSupervisor: number;
+      isME: number;
+      isAdmin: number;
+      isSuperAdmin: number;
+      passwordHash: string;
+    }
     | undefined;
 
   if (!row) {
@@ -2210,16 +1658,16 @@ export function getPortalUserFromSession(token: string): PortalUser | null {
     )
     .get({ token }) as
     | {
-        id: number;
-        fullName: string;
-        email: string;
-        phone: string | null;
-        role: PortalUserRole;
-        isSupervisor: number;
-        isME: number;
-        isAdmin: number;
-        isSuperAdmin: number;
-      }
+      id: number;
+      fullName: string;
+      email: string;
+      phone: string | null;
+      role: PortalUserRole;
+      isSupervisor: number;
+      isME: number;
+      isAdmin: number;
+      isSuperAdmin: number;
+    }
     | undefined;
 
   if (!row) {
@@ -2691,9 +2139,9 @@ export function saveOnlineTrainingAttendance(
         input.attendeeCount !== undefined
           ? Math.max(0, Math.floor(input.attendeeCount))
           : Math.max(
-              0,
-              Math.floor(input.onlineTeachersTrained) + Math.floor(input.onlineSchoolLeadersTrained),
-            ),
+            0,
+            Math.floor(input.onlineTeachersTrained) + Math.floor(input.onlineSchoolLeadersTrained),
+          ),
       recordingUrl: input.recordingUrl?.trim() ? input.recordingUrl.trim() : null,
       chatSummary: input.chatSummary?.trim() ? input.chatSummary.trim() : null,
       attendanceCapturedAt: new Date().toISOString(),
@@ -3078,23 +2526,23 @@ export function getPortalRecordById(id: number, user: PortalUser): PortalRecord 
     )
     .get({ id }) as
     | {
-        id: number;
-        recordCode: string;
-        module: PortalRecordModule;
-        date: string;
-        district: string;
-        schoolId: number | null;
-        schoolName: string;
-        programType: string | null;
-        status: PortalRecordStatus;
-        followUpDate: string | null;
-        payloadJson: string;
-        reviewNote: string | null;
-        createdByUserId: number;
-        createdByName: string;
-        createdAt: string;
-        updatedAt: string;
-      }
+      id: number;
+      recordCode: string;
+      module: PortalRecordModule;
+      date: string;
+      district: string;
+      schoolId: number | null;
+      schoolName: string;
+      programType: string | null;
+      status: PortalRecordStatus;
+      followUpDate: string | null;
+      payloadJson: string;
+      reviewNote: string | null;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }
     | undefined;
 
   if (!row) {
@@ -3174,23 +2622,23 @@ export function listPortalRecords(filters: PortalRecordFilters, user: PortalUser
     `,
     )
     .all(params) as Array<{
-    id: number;
-    recordCode: string;
-    module: PortalRecordModule;
-    date: string;
-    district: string;
-    schoolId: number | null;
-    schoolName: string;
-    programType: string | null;
-    status: PortalRecordStatus;
-    followUpDate: string | null;
-    payloadJson: string;
-    reviewNote: string | null;
-    createdByUserId: number;
-    createdByName: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
+      id: number;
+      recordCode: string;
+      module: PortalRecordModule;
+      date: string;
+      district: string;
+      schoolId: number | null;
+      schoolName: string;
+      programType: string | null;
+      status: PortalRecordStatus;
+      followUpDate: string | null;
+      payloadJson: string;
+      reviewNote: string | null;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
 
   return rows.map((row) => parsePortalRecord(row));
 }
@@ -3239,9 +2687,9 @@ export function getPortalDashboardData(user: PortalUser): PortalDashboardData {
     `,
     )
     .all({ ...baseParams, from: weekBounds.from, to: weekBounds.to }) as Array<{
-    module: PortalRecordModule;
-    total: number;
-  }>;
+      module: PortalRecordModule;
+      total: number;
+    }>;
 
   const agendaRows = db
     .prepare(
@@ -3753,18 +3201,18 @@ export function savePortalEvidence(input: {
     )
     .get({ id }) as
     | {
-        id: number;
-        recordId: number | null;
-        module: PortalRecordModule;
-        date: string;
-        schoolName: string;
-        fileName: string;
-        storedPath: string;
-        mimeType: string;
-        sizeBytes: number;
-        uploadedByName: string;
-        createdAt: string;
-      }
+      id: number;
+      recordId: number | null;
+      module: PortalRecordModule;
+      date: string;
+      schoolName: string;
+      fileName: string;
+      storedPath: string;
+      mimeType: string;
+      sizeBytes: number;
+      uploadedByName: string;
+      createdAt: string;
+    }
     | undefined;
 
   if (!row) {
@@ -3840,18 +3288,18 @@ export function listPortalEvidence(
     `,
     )
     .all(params) as Array<{
-    id: number;
-    recordId: number | null;
-    module: PortalRecordModule;
-    date: string;
-    schoolName: string;
-    fileName: string;
-    storedPath: string;
-    mimeType: string;
-    sizeBytes: number;
-    uploadedByName: string;
-    createdAt: string;
-  }>;
+      id: number;
+      recordId: number | null;
+      module: PortalRecordModule;
+      date: string;
+      schoolName: string;
+      fileName: string;
+      storedPath: string;
+      mimeType: string;
+      sizeBytes: number;
+      uploadedByName: string;
+      createdAt: string;
+    }>;
 
   return rows.map((row) => parsePortalEvidenceRow(row));
 }
@@ -3881,19 +3329,19 @@ export function getPortalEvidenceById(id: number, user: PortalUser): PortalEvide
     )
     .get({ id }) as
     | {
-        id: number;
-        recordId: number | null;
-        module: PortalRecordModule;
-        date: string;
-        schoolName: string;
-        fileName: string;
-        storedPath: string;
-        mimeType: string;
-        sizeBytes: number;
-        uploadedByUserId: number;
-        uploadedByName: string;
-        createdAt: string;
-      }
+      id: number;
+      recordId: number | null;
+      module: PortalRecordModule;
+      date: string;
+      schoolName: string;
+      fileName: string;
+      storedPath: string;
+      mimeType: string;
+      sizeBytes: number;
+      uploadedByUserId: number;
+      uploadedByName: string;
+      createdAt: string;
+    }
     | undefined;
 
   if (!row) {
@@ -4052,25 +3500,25 @@ export function savePortalTestimonial(input: {
     )
     .get({ id }) as
     | {
-        id: number;
-        storytellerName: string;
-        storytellerRole: string;
-        schoolName: string;
-        district: string;
-        storyText: string;
-        videoFileName: string;
-        videoStoredPath: string;
-        videoMimeType: string;
-        videoSizeBytes: number;
-        photoFileName: string | null;
-        photoStoredPath: string | null;
-        photoMimeType: string | null;
-        photoSizeBytes: number | null;
-        isPublished: number;
-        createdByUserId: number;
-        createdByName: string;
-        createdAt: string;
-      }
+      id: number;
+      storytellerName: string;
+      storytellerRole: string;
+      schoolName: string;
+      district: string;
+      storyText: string;
+      videoFileName: string;
+      videoStoredPath: string;
+      videoMimeType: string;
+      videoSizeBytes: number;
+      photoFileName: string | null;
+      photoStoredPath: string | null;
+      photoMimeType: string | null;
+      photoSizeBytes: number | null;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+    }
     | undefined;
 
   if (!row) {
@@ -4117,25 +3565,25 @@ export function listPortalTestimonials(
     .all(
       canViewAll ? { limit } : { currentUserId: user.id, limit },
     ) as Array<{
-    id: number;
-    storytellerName: string;
-    storytellerRole: string;
-    schoolName: string;
-    district: string;
-    storyText: string;
-    videoFileName: string;
-    videoStoredPath: string;
-    videoMimeType: string;
-    videoSizeBytes: number;
-    photoFileName: string | null;
-    photoStoredPath: string | null;
-    photoMimeType: string | null;
-    photoSizeBytes: number | null;
-    isPublished: number;
-    createdByUserId: number;
-    createdByName: string;
-    createdAt: string;
-  }>;
+      id: number;
+      storytellerName: string;
+      storytellerRole: string;
+      schoolName: string;
+      district: string;
+      storyText: string;
+      videoFileName: string;
+      videoStoredPath: string;
+      videoMimeType: string;
+      videoSizeBytes: number;
+      photoFileName: string | null;
+      photoStoredPath: string | null;
+      photoMimeType: string | null;
+      photoSizeBytes: number | null;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+    }>;
 
   return rows.map((row) => parsePortalTestimonialRow(row));
 }
@@ -4171,25 +3619,25 @@ export function listPublishedPortalTestimonials(limit = 180): PortalTestimonialR
     `,
     )
     .all({ limit }) as Array<{
-    id: number;
-    storytellerName: string;
-    storytellerRole: string;
-    schoolName: string;
-    district: string;
-    storyText: string;
-    videoFileName: string;
-    videoStoredPath: string;
-    videoMimeType: string;
-    videoSizeBytes: number;
-    photoFileName: string | null;
-    photoStoredPath: string | null;
-    photoMimeType: string | null;
-    photoSizeBytes: number | null;
-    isPublished: number;
-    createdByUserId: number;
-    createdByName: string;
-    createdAt: string;
-  }>;
+      id: number;
+      storytellerName: string;
+      storytellerRole: string;
+      schoolName: string;
+      district: string;
+      storyText: string;
+      videoFileName: string;
+      videoStoredPath: string;
+      videoMimeType: string;
+      videoSizeBytes: number;
+      photoFileName: string | null;
+      photoStoredPath: string | null;
+      photoMimeType: string | null;
+      photoSizeBytes: number | null;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+    }>;
 
   return rows.map((row) => parsePortalTestimonialRow(row));
 }
@@ -4228,25 +3676,25 @@ export function getPublishedPortalTestimonialById(
     )
     .get({ id }) as
     | {
-        id: number;
-        storytellerName: string;
-        storytellerRole: string;
-        schoolName: string;
-        district: string;
-        storyText: string;
-        videoFileName: string;
-        videoStoredPath: string;
-        videoMimeType: string;
-        videoSizeBytes: number;
-        photoFileName: string | null;
-        photoStoredPath: string | null;
-        photoMimeType: string | null;
-        photoSizeBytes: number | null;
-        isPublished: number;
-        createdByUserId: number;
-        createdByName: string;
-        createdAt: string;
-      }
+      id: number;
+      storytellerName: string;
+      storytellerRole: string;
+      schoolName: string;
+      district: string;
+      storyText: string;
+      videoFileName: string;
+      videoStoredPath: string;
+      videoMimeType: string;
+      videoSizeBytes: number;
+      photoFileName: string | null;
+      photoStoredPath: string | null;
+      photoMimeType: string | null;
+      photoSizeBytes: number | null;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+    }
     | undefined;
 
   if (!row) {
@@ -4319,10 +3767,10 @@ export function getImpactSummary() {
     `,
     )
     .all() as Array<{
-    id: number;
-    schoolKey: string | null;
-    districtKey: string | null;
-  }>;
+      id: number;
+      schoolKey: string | null;
+      districtKey: string | null;
+    }>;
   const schoolLookupByComposite = new Map<string, number>();
   const schoolLookupByName = new Map<string, number>();
   schoolLookupRows.forEach((row) => {
@@ -4348,12 +3796,12 @@ export function getImpactSummary() {
     `,
     )
     .all() as Array<{
-    module: PortalRecordModule;
-    schoolId: number | null;
-    schoolName: string;
-    district: string;
-    payloadJson: string;
-  }>;
+      module: PortalRecordModule;
+      schoolId: number | null;
+      schoolName: string;
+      district: string;
+      payloadJson: string;
+    }>;
 
   let portalTeachersTrained = 0;
   let portalLearnersAssessed = 0;
@@ -4974,17 +4422,17 @@ export function getImpactExplorerProfiles(): ImpactExplorerProfiles {
     `,
     )
     .all() as Array<{
-    id: number;
-    schoolCode: string;
-    name: string;
-    district: string;
-    subCounty: string;
-    parish: string;
-    village: string | null;
-    enrolledBoys: number;
-    enrolledGirls: number;
-    enrolledLearners: number;
-  }>;
+      id: number;
+      schoolCode: string;
+      name: string;
+      district: string;
+      subCounty: string;
+      parish: string;
+      village: string | null;
+      enrolledBoys: number;
+      enrolledGirls: number;
+      enrolledLearners: number;
+    }>;
 
   const schoolProfilesByKey = new Map<string, MutableSchoolProfile>();
   const keyBySchoolId = new Map<number, string>();
@@ -5038,16 +4486,16 @@ export function getImpactExplorerProfiles(): ImpactExplorerProfiles {
     `,
     )
     .all() as Array<{
-    module: PortalRecordModule;
-    date: string;
-    district: string;
-    schoolName: string;
-    schoolId: number | null;
-    programType: string | null;
-    status: PortalRecordStatus;
-    followUpDate: string | null;
-    payloadJson: string;
-  }>;
+      module: PortalRecordModule;
+      date: string;
+      district: string;
+      schoolName: string;
+      schoolId: number | null;
+      programType: string | null;
+      status: PortalRecordStatus;
+      followUpDate: string | null;
+      payloadJson: string;
+    }>;
 
   const ensureSyntheticSchoolProfile = (schoolName: string, district: string) => {
     const schoolNameKey = normalizeLookupValue(schoolName);
@@ -5637,51 +5085,51 @@ export function getImpactExplorerProfiles(): ImpactExplorerProfiles {
     teacherObservationAverage:
       finalizedSchools.filter((school) => school.teacherObservationAverage !== null).length > 0
         ? Number(
-            (
-              finalizedSchools.reduce(
-                (total, school) => total + (school.teacherObservationAverage ?? 0),
-                0,
-              ) /
-              finalizedSchools.filter((school) => school.teacherObservationAverage !== null).length
-            ).toFixed(1),
-          )
+          (
+            finalizedSchools.reduce(
+              (total, school) => total + (school.teacherObservationAverage ?? 0),
+              0,
+            ) /
+            finalizedSchools.filter((school) => school.teacherObservationAverage !== null).length
+          ).toFixed(1),
+        )
         : null,
     outcomes: {
       letterSound:
         regions.filter((region) => region.outcomes.letterSound !== null).length > 0
           ? Number(
-              (
-                regions.reduce((total, region) => total + (region.outcomes.letterSound ?? 0), 0) /
-                regions.filter((region) => region.outcomes.letterSound !== null).length
-              ).toFixed(1),
-            )
+            (
+              regions.reduce((total, region) => total + (region.outcomes.letterSound ?? 0), 0) /
+              regions.filter((region) => region.outcomes.letterSound !== null).length
+            ).toFixed(1),
+          )
           : null,
       decoding:
         regions.filter((region) => region.outcomes.decoding !== null).length > 0
           ? Number(
-              (
-                regions.reduce((total, region) => total + (region.outcomes.decoding ?? 0), 0) /
-                regions.filter((region) => region.outcomes.decoding !== null).length
-              ).toFixed(1),
-            )
+            (
+              regions.reduce((total, region) => total + (region.outcomes.decoding ?? 0), 0) /
+              regions.filter((region) => region.outcomes.decoding !== null).length
+            ).toFixed(1),
+          )
           : null,
       fluency:
         regions.filter((region) => region.outcomes.fluency !== null).length > 0
           ? Number(
-              (
-                regions.reduce((total, region) => total + (region.outcomes.fluency ?? 0), 0) /
-                regions.filter((region) => region.outcomes.fluency !== null).length
-              ).toFixed(1),
-            )
+            (
+              regions.reduce((total, region) => total + (region.outcomes.fluency ?? 0), 0) /
+              regions.filter((region) => region.outcomes.fluency !== null).length
+            ).toFixed(1),
+          )
           : null,
       comprehension:
         regions.filter((region) => region.outcomes.comprehension !== null).length > 0
           ? Number(
-              (
-                regions.reduce((total, region) => total + (region.outcomes.comprehension ?? 0), 0) /
-                regions.filter((region) => region.outcomes.comprehension !== null).length
-              ).toFixed(1),
-            )
+            (
+              regions.reduce((total, region) => total + (region.outcomes.comprehension ?? 0), 0) /
+              regions.filter((region) => region.outcomes.comprehension !== null).length
+            ).toFixed(1),
+          )
           : null,
       sampleSize: regions.reduce((total, region) => total + region.outcomes.sampleSize, 0),
     },
@@ -5779,7 +5227,7 @@ export function getPortalAnalyticsData(user: PortalUser): PortalAnalyticsData {
   const testimonialFilter = canViewAll ? "" : "AND pt.created_by_user_id = @currentUserId";
   const onlineFilter = canViewAll ? "" : "AND created_by_user_id = @currentUserId";
   const resourceFilter = canViewAll ? "" : "AND created_by_user_id = @currentUserId";
-  const blogFilter = canViewAll ? "" : "AND created_by_user_id = @currentUserId";
+
   const legacyTrainingFilter = canViewAll ? "" : "AND ts.created_by_user_id = @currentUserId";
   const legacyAssessmentFilter = canViewAll ? "" : "AND ar.created_by_user_id = @currentUserId";
 
@@ -5807,19 +5255,19 @@ export function getPortalAnalyticsData(user: PortalUser): PortalAnalyticsData {
     `,
     )
     .all(accessParams) as Array<{
-    id: number;
-    recordCode: string;
-    module: PortalRecordModule;
-    date: string;
-    district: string;
-    schoolName: string;
-    status: PortalRecordStatus;
-    followUpDate: string | null;
-    payloadJson: string;
-    createdByUserId: number;
-    createdByName: string;
-    updatedAt: string;
-  }>;
+      id: number;
+      recordCode: string;
+      module: PortalRecordModule;
+      date: string;
+      district: string;
+      schoolName: string;
+      status: PortalRecordStatus;
+      followUpDate: string | null;
+      payloadJson: string;
+      createdByUserId: number;
+      createdByName: string;
+      updatedAt: string;
+    }>;
 
   const moduleStatusMap = new Map<PortalRecordModule, PortalAnalyticsModuleStatus>([
     ["training", { module: "training", draft: 0, submitted: 0, returned: 0, approved: 0, total: 0 }],
@@ -6129,11 +5577,11 @@ export function getPortalAnalyticsData(user: PortalUser): PortalAnalyticsData {
     `,
     )
     .get(accessParams) as {
-    total: number | null;
-    attendees: number | null;
-    teachers: number | null;
-    leaders: number | null;
-  };
+      total: number | null;
+      attendees: number | null;
+      teachers: number | null;
+      leaders: number | null;
+    };
   const onlineTrainingEvents = Number(onlineTrainingSummary.total ?? 0);
   const onlineTrainingAttendees = Number(onlineTrainingSummary.attendees ?? 0);
   const onlineTeachersTrained = Number(onlineTrainingSummary.teachers ?? 0);
@@ -6154,20 +5602,7 @@ export function getPortalAnalyticsData(user: PortalUser): PortalAnalyticsData {
     ).total ?? 0,
   );
 
-  const blogPostsPublished = Number(
-    (
-      db
-        .prepare(
-          `
-          SELECT COUNT(*) AS total
-          FROM portal_blog_posts
-          WHERE 1=1
-            ${blogFilter}
-        `,
-        )
-        .get(accessParams) as { total: number | null }
-    ).total ?? 0,
-  );
+
 
   const schoolsDirectory = countTotal(db, "SELECT COUNT(*) AS total FROM schools_directory");
   const bookingRequests = countTotal(db, "SELECT COUNT(*) AS total FROM bookings");
@@ -6195,8 +5630,8 @@ export function getPortalAnalyticsData(user: PortalUser): PortalAnalyticsData {
 
   const userStats = canViewAll
     ? (db
-        .prepare(
-          `
+      .prepare(
+        `
           SELECT
             pu.id AS userId,
             pu.full_name AS fullName,
@@ -6222,18 +5657,18 @@ export function getPortalAnalyticsData(user: PortalUser): PortalAnalyticsData {
           ) t ON t.userId = pu.id
           ORDER BY records DESC, testimonials DESC, fullName ASC
         `,
-        )
-        .all() as PortalAnalyticsUserStat[])
+      )
+      .all() as PortalAnalyticsUserStat[])
     : ([
-        {
-          userId: user.id,
-          fullName: user.fullName,
-          role: user.role,
-          records: portalRows.length,
-          evidence: evidenceTotal,
-          testimonials: testimonialTotal,
-        },
-      ] as PortalAnalyticsUserStat[]);
+      {
+        userId: user.id,
+        fullName: user.fullName,
+        role: user.role,
+        records: portalRows.length,
+        evidence: evidenceTotal,
+        testimonials: testimonialTotal,
+      },
+    ] as PortalAnalyticsUserStat[]);
 
   const monthly = monthKeys
     .map((key) => monthlyMap.get(key))
@@ -6260,7 +5695,7 @@ export function getPortalAnalyticsData(user: PortalUser): PortalAnalyticsData {
       onlineTeachersTrained,
       onlineSchoolLeadersTrained,
       resourcesUploaded,
-      blogPostsPublished,
+
       schoolsDirectory,
       legacyTrainingSessions,
       legacyAssessmentRecords,
@@ -6374,207 +5809,207 @@ const sectionCatalog: Array<{
   aiWrites: string;
   order: number;
 }> = [
-  {
-    id: "cover-page",
-    title: "Cover Page",
-    purpose: "Present report identity, scope, period, and version metadata.",
-    dataBlocks: [
-      "report title",
-      "scope",
-      "time period",
-      "prepared by",
-      "version and generation date",
-      "optional partner name",
-    ],
-    aiWrites: "No narrative generation. Metadata only.",
-    order: 0,
-  },
-  {
-    id: "table-of-contents",
-    title: "Table of Contents",
-    purpose: "Provide quick navigation across included modules.",
-    dataBlocks: ["included section list"],
-    aiWrites: "No narrative generation. Auto list from included sections.",
-    order: 1,
-  },
-  {
-    id: "1-executive-summary",
-    title: "1) Executive Summary",
-    purpose: "Quick donor decision page with headline results and priorities.",
-    dataBlocks: [
-      "coverage headline totals",
-      "learning deltas",
-      "top geographic highlights",
-      "top challenges",
-      "next priorities",
-    ],
-    aiWrites: "Write 6-10 factual sentences using Fact Pack metrics only.",
-    order: 2,
-  },
-  {
-    id: "2-about-ozeki",
-    title: "2) About Ozeki Reading Bridge Foundation",
-    purpose: "State mission, vision, and signature approach.",
-    dataBlocks: ["mission", "vision", "signature program model", "lifetime totals (optional)"],
-    aiWrites: "Static mission/vision text plus optional dynamic totals.",
-    order: 3,
-  },
-  {
-    id: "3-program-model",
-    title: "3) Program Model and Implementation Approach",
-    purpose: "Explain delivery pathway from training to sustained classroom practice.",
-    dataBlocks: ["program components delivered", "delivery pathway", "term or quarter timeline"],
-    aiWrites: "Describe what was delivered and how implementation flowed.",
-    order: 4,
-  },
-  {
-    id: "4-coverage-reach",
-    title: "4) Coverage and Reach",
-    purpose: "Show delivery scale and where implementation happened.",
-    dataBlocks: [
-      "schools impacted",
-      "schools coached",
-      "teachers trained",
-      "leaders trained",
-      "learners reached",
-      "region and district tables",
-    ],
-    aiWrites: "Highlight concentration zones and notable coverage shifts.",
-    order: 5,
-  },
-  {
-    id: "5-training-results",
-    title: "5) Training Delivery Results",
-    purpose: "Show teacher professional development outputs and quality.",
-    dataBlocks: [
-      "training sessions conducted",
-      "schools represented",
-      "teachers and leaders trained",
-      "attendance and topic coverage",
-    ],
-    aiWrites: "Summarize delivery quality and next-cycle strengthening needs.",
-    order: 6,
-  },
-  {
-    id: "6-coaching-results",
-    title: "6) Coaching, Observation, and Mentorship Results",
-    purpose: "Show classroom practice change after training.",
-    dataBlocks: [
-      "coaching completion",
-      "teachers observed",
-      "routine adoption indicators",
-      "top observed gaps",
-      "trend across coaching cycles",
-    ],
-    aiWrites: "Explain instructional quality change tied to rubric trends.",
-    order: 7,
-  },
-  {
-    id: "7-learner-outcomes",
-    title: "7) Learner Outcomes",
-    purpose: "Prove learning impact through baseline-progress-endline evidence.",
-    dataBlocks: [
-      "assessment coverage",
-      "letter-sound, decoding, fluency, comprehension results",
-      "proficiency movement",
-      "sample size notes",
-    ],
-    aiWrites: "Interpret strongest and weakest gains based on evidence.",
-    order: 8,
-  },
-  {
-    id: "8-remedial-results",
-    title: "8) Remedial & Catch-Up Intervention Results",
-    purpose: "Show targeted support outcomes for at-risk learners.",
-    dataBlocks: [
-      "intervention enrollment",
-      "grouping levels",
-      "session frequency",
-      "progress and exit trends",
-    ],
-    aiWrites: "Summarize what improved and where support should intensify.",
-    order: 9,
-  },
-  {
-    id: "9-resource-utilization",
-    title: "9) Resource Utilization and Digital Engagement",
-    purpose: "Show usage of teaching materials and digital resources.",
-    dataBlocks: [
-      "total downloads",
-      "downloads by type",
-      "downloads by geography",
-      "top resources",
-      "booking requests",
-    ],
-    aiWrites: "Explain resource adoption patterns and content priorities.",
-    order: 10,
-  },
-  {
-    id: "10-regional-district-breakdown",
-    title: "10) Regional and District Performance Breakdown",
-    purpose: "Provide localized evidence for partner planning and prioritization.",
-    dataBlocks: [
-      "regional KPIs",
-      "district KPIs",
-      "strengths and gaps",
-      "priority actions",
-    ],
-    aiWrites: "Generate short factual summaries per region or district.",
-    order: 11,
-  },
-  {
-    id: "11-school-level-report",
-    title: "11) School-Level Report",
-    purpose: "Deliver school-specific accountability and action planning.",
-    dataBlocks: [
-      "school profile",
-      "learner outcome trends",
-      "teacher observation trends",
-      "intervention summary",
-      "recommended resources",
-      "30/60/90-day plan",
-    ],
-    aiWrites: "Provide school-specific gaps, priorities, and coaching focus.",
-    order: 12,
-  },
-  {
-    id: "12-case-studies",
-    title: "12) Case Studies and Stories of Change",
-    purpose: "Humanize verified evidence with selected improvement stories.",
-    dataBlocks: ["before and after metrics", "quotes", "photos with consent"],
-    aiWrites: "Produce concise change stories supported by actual metrics.",
-    order: 13,
-  },
-  {
-    id: "13-challenges-lessons",
-    title: "13) Challenges, Lessons Learned, and Program Adaptations",
-    purpose: "Provide honest reflection and mitigation actions.",
-    dataBlocks: ["implementation bottlenecks", "data quality flags", "adaptations made"],
-    aiWrites: "State constraints clearly and list practical mitigation actions.",
-    order: 14,
-  },
-  {
-    id: "14-next-cycle-priorities",
-    title: "14) Next Cycle Priorities and Funding Opportunities",
-    purpose: "Translate evidence into funding-aligned next actions.",
-    dataBlocks: ["priority geographies", "resource gaps", "expansion targets", "cost drivers"],
-    aiWrites: "Provide actionable funding-linked priorities only from observed gaps.",
-    order: 15,
-  },
-  {
-    id: "15-appendix-methods",
-    title: "15) Appendix: Evidence and Methods",
-    purpose: "Document definitions, tools, verification, and versioning metadata.",
-    dataBlocks: [
-      "indicator definitions",
-      "assessment tool notes",
-      "data quality checks",
-      "report version and dataset timestamp",
-    ],
-    aiWrites: "Technical appendix with no speculative claims.",
-    order: 16,
-  },
-];
+    {
+      id: "cover-page",
+      title: "Cover Page",
+      purpose: "Present report identity, scope, period, and version metadata.",
+      dataBlocks: [
+        "report title",
+        "scope",
+        "time period",
+        "prepared by",
+        "version and generation date",
+        "optional partner name",
+      ],
+      aiWrites: "No narrative generation. Metadata only.",
+      order: 0,
+    },
+    {
+      id: "table-of-contents",
+      title: "Table of Contents",
+      purpose: "Provide quick navigation across included modules.",
+      dataBlocks: ["included section list"],
+      aiWrites: "No narrative generation. Auto list from included sections.",
+      order: 1,
+    },
+    {
+      id: "1-executive-summary",
+      title: "1) Executive Summary",
+      purpose: "Quick donor decision page with headline results and priorities.",
+      dataBlocks: [
+        "coverage headline totals",
+        "learning deltas",
+        "top geographic highlights",
+        "top challenges",
+        "next priorities",
+      ],
+      aiWrites: "Write 6-10 factual sentences using Fact Pack metrics only.",
+      order: 2,
+    },
+    {
+      id: "2-about-ozeki",
+      title: "2) About Ozeki Reading Bridge Foundation",
+      purpose: "State mission, vision, and signature approach.",
+      dataBlocks: ["mission", "vision", "signature program model", "lifetime totals (optional)"],
+      aiWrites: "Static mission/vision text plus optional dynamic totals.",
+      order: 3,
+    },
+    {
+      id: "3-program-model",
+      title: "3) Program Model and Implementation Approach",
+      purpose: "Explain delivery pathway from training to sustained classroom practice.",
+      dataBlocks: ["program components delivered", "delivery pathway", "term or quarter timeline"],
+      aiWrites: "Describe what was delivered and how implementation flowed.",
+      order: 4,
+    },
+    {
+      id: "4-coverage-reach",
+      title: "4) Coverage and Reach",
+      purpose: "Show delivery scale and where implementation happened.",
+      dataBlocks: [
+        "schools impacted",
+        "schools coached",
+        "teachers trained",
+        "leaders trained",
+        "learners reached",
+        "region and district tables",
+      ],
+      aiWrites: "Highlight concentration zones and notable coverage shifts.",
+      order: 5,
+    },
+    {
+      id: "5-training-results",
+      title: "5) Training Delivery Results",
+      purpose: "Show teacher professional development outputs and quality.",
+      dataBlocks: [
+        "training sessions conducted",
+        "schools represented",
+        "teachers and leaders trained",
+        "attendance and topic coverage",
+      ],
+      aiWrites: "Summarize delivery quality and next-cycle strengthening needs.",
+      order: 6,
+    },
+    {
+      id: "6-coaching-results",
+      title: "6) Coaching, Observation, and Mentorship Results",
+      purpose: "Show classroom practice change after training.",
+      dataBlocks: [
+        "coaching completion",
+        "teachers observed",
+        "routine adoption indicators",
+        "top observed gaps",
+        "trend across coaching cycles",
+      ],
+      aiWrites: "Explain instructional quality change tied to rubric trends.",
+      order: 7,
+    },
+    {
+      id: "7-learner-outcomes",
+      title: "7) Learner Outcomes",
+      purpose: "Prove learning impact through baseline-progress-endline evidence.",
+      dataBlocks: [
+        "assessment coverage",
+        "letter-sound, decoding, fluency, comprehension results",
+        "proficiency movement",
+        "sample size notes",
+      ],
+      aiWrites: "Interpret strongest and weakest gains based on evidence.",
+      order: 8,
+    },
+    {
+      id: "8-remedial-results",
+      title: "8) Remedial & Catch-Up Intervention Results",
+      purpose: "Show targeted support outcomes for at-risk learners.",
+      dataBlocks: [
+        "intervention enrollment",
+        "grouping levels",
+        "session frequency",
+        "progress and exit trends",
+      ],
+      aiWrites: "Summarize what improved and where support should intensify.",
+      order: 9,
+    },
+    {
+      id: "9-resource-utilization",
+      title: "9) Resource Utilization and Digital Engagement",
+      purpose: "Show usage of teaching materials and digital resources.",
+      dataBlocks: [
+        "total downloads",
+        "downloads by type",
+        "downloads by geography",
+        "top resources",
+        "booking requests",
+      ],
+      aiWrites: "Explain resource adoption patterns and content priorities.",
+      order: 10,
+    },
+    {
+      id: "10-regional-district-breakdown",
+      title: "10) Regional and District Performance Breakdown",
+      purpose: "Provide localized evidence for partner planning and prioritization.",
+      dataBlocks: [
+        "regional KPIs",
+        "district KPIs",
+        "strengths and gaps",
+        "priority actions",
+      ],
+      aiWrites: "Generate short factual summaries per region or district.",
+      order: 11,
+    },
+    {
+      id: "11-school-level-report",
+      title: "11) School-Level Report",
+      purpose: "Deliver school-specific accountability and action planning.",
+      dataBlocks: [
+        "school profile",
+        "learner outcome trends",
+        "teacher observation trends",
+        "intervention summary",
+        "recommended resources",
+        "30/60/90-day plan",
+      ],
+      aiWrites: "Provide school-specific gaps, priorities, and coaching focus.",
+      order: 12,
+    },
+    {
+      id: "12-case-studies",
+      title: "12) Case Studies and Stories of Change",
+      purpose: "Humanize verified evidence with selected improvement stories.",
+      dataBlocks: ["before and after metrics", "quotes", "photos with consent"],
+      aiWrites: "Produce concise change stories supported by actual metrics.",
+      order: 13,
+    },
+    {
+      id: "13-challenges-lessons",
+      title: "13) Challenges, Lessons Learned, and Program Adaptations",
+      purpose: "Provide honest reflection and mitigation actions.",
+      dataBlocks: ["implementation bottlenecks", "data quality flags", "adaptations made"],
+      aiWrites: "State constraints clearly and list practical mitigation actions.",
+      order: 14,
+    },
+    {
+      id: "14-next-cycle-priorities",
+      title: "14) Next Cycle Priorities and Funding Opportunities",
+      purpose: "Translate evidence into funding-aligned next actions.",
+      dataBlocks: ["priority geographies", "resource gaps", "expansion targets", "cost drivers"],
+      aiWrites: "Provide actionable funding-linked priorities only from observed gaps.",
+      order: 15,
+    },
+    {
+      id: "15-appendix-methods",
+      title: "15) Appendix: Evidence and Methods",
+      purpose: "Document definitions, tools, verification, and versioning metadata.",
+      dataBlocks: [
+        "indicator definitions",
+        "assessment tool notes",
+        "data quality checks",
+        "report version and dataset timestamp",
+      ],
+      aiWrites: "Technical appendix with no speculative claims.",
+      order: 16,
+    },
+  ];
 
 function isSectionIncluded(variant: ImpactReportVariant, sectionId: string) {
   if (sectionId === "cover-page" || sectionId === "table-of-contents") {
@@ -6793,14 +6228,14 @@ function listScopedPortalRows(
     `,
     )
     .all(params) as Array<{
-    id: number;
-    module: PortalRecordModule;
-    date: string;
-    district: string;
-    schoolName: string;
-    status: PortalRecordStatus;
-    payloadJson: string;
-  }>;
+      id: number;
+      module: PortalRecordModule;
+      date: string;
+      district: string;
+      schoolName: string;
+      status: PortalRecordStatus;
+      payloadJson: string;
+    }>;
 
   return rows
     .map((row) => ({
@@ -6846,11 +6281,11 @@ function listScopedLegacyTrainingSessions(
     `,
     )
     .all(params) as Array<{
-    id: number;
-    schoolName: string;
-    district: string;
-    sessionDate: string;
-  }>;
+      id: number;
+      schoolName: string;
+      district: string;
+      sessionDate: string;
+    }>;
 
   return rows.filter((row) => scopeMatches(scopeType, scopeValue, row.district, row.schoolName));
 }
@@ -7017,11 +6452,11 @@ function calculateImpactFactPack(input: {
       `,
       )
       .all(params) as Array<{
-      schoolName: string;
-      district: string;
-      learnersAssessed: number;
-      storiesPublished: number;
-    }>;
+        schoolName: string;
+        district: string;
+        learnersAssessed: number;
+        storiesPublished: number;
+      }>;
 
     legacyRows
       .filter((row) => scopeMatches(input.scopeType, scopeValue, row.district, row.schoolName))
@@ -7225,19 +6660,19 @@ function calculateImpactFactPack(input: {
     proficiencyBandMovementPercent:
       bandMovementValues.length > 0
         ? Number(
-            (
-              bandMovementValues.reduce((sum, value) => sum + value, 0) / bandMovementValues.length
-            ).toFixed(2),
-          )
+          (
+            bandMovementValues.reduce((sum, value) => sum + value, 0) / bandMovementValues.length
+          ).toFixed(2),
+        )
         : null,
     reductionInNonReadersPercent:
       nonReaderReductionValues.length > 0
         ? Number(
-            (
-              nonReaderReductionValues.reduce((sum, value) => sum + value, 0) /
-              nonReaderReductionValues.length
-            ).toFixed(2),
-          )
+          (
+            nonReaderReductionValues.reduce((sum, value) => sum + value, 0) /
+            nonReaderReductionValues.length
+          ).toFixed(2),
+        )
         : null,
   };
 
@@ -7464,10 +6899,9 @@ function buildImpactNarrative(
     `${coverage.learnersReached.toLocaleString()} learners reached through assessed cohorts. ` +
     `${options?.partnerName ? `Partner scope: ${options.partnerName}. ` : ""}` +
     `This report is evidence-locked and uses only metrics generated for ${factPack.periodStart} to ${factPack.periodEnd}. ` +
-    `${
-      factPack.reportType === "FY Impact Report"
-        ? `${factPack.definitions.reportingCalendar} `
-        : ""
+    `${factPack.reportType === "FY Impact Report"
+      ? `${factPack.definitions.reportingCalendar} `
+      : ""
     }`;
 
   const sectionNarratives: ImpactReportSectionNarrative[] = template.sections
@@ -7559,34 +6993,34 @@ function normalizeImpactNarrative(
     template:
       parsed.template && typeof parsed.template === "object"
         ? {
-            masterTemplateId:
-              (parsed.template as Partial<ImpactReportTemplatePackage>).masterTemplateId ??
-              fallback.template.masterTemplateId,
-            masterTemplateName:
-              (parsed.template as Partial<ImpactReportTemplatePackage>).masterTemplateName ??
-              fallback.template.masterTemplateName,
-            variant:
-              (parsed.template as Partial<ImpactReportTemplatePackage>).variant ??
-              fallback.template.variant,
-            aiWritingRules:
-              Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).aiWritingRules) &&
+          masterTemplateId:
+            (parsed.template as Partial<ImpactReportTemplatePackage>).masterTemplateId ??
+            fallback.template.masterTemplateId,
+          masterTemplateName:
+            (parsed.template as Partial<ImpactReportTemplatePackage>).masterTemplateName ??
+            fallback.template.masterTemplateName,
+          variant:
+            (parsed.template as Partial<ImpactReportTemplatePackage>).variant ??
+            fallback.template.variant,
+          aiWritingRules:
+            Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).aiWritingRules) &&
               (parsed.template as Partial<ImpactReportTemplatePackage>).aiWritingRules!.length > 0
-                ? ((parsed.template as Partial<ImpactReportTemplatePackage>).aiWritingRules as string[])
-                : fallback.template.aiWritingRules,
-            tableOfContents:
-              Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).tableOfContents) &&
+              ? ((parsed.template as Partial<ImpactReportTemplatePackage>).aiWritingRules as string[])
+              : fallback.template.aiWritingRules,
+          tableOfContents:
+            Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).tableOfContents) &&
               (parsed.template as Partial<ImpactReportTemplatePackage>).tableOfContents!.length > 0
-                ? ((parsed.template as Partial<ImpactReportTemplatePackage>).tableOfContents as string[])
-                : fallback.template.tableOfContents,
-            sections:
-              Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).sections) &&
+              ? ((parsed.template as Partial<ImpactReportTemplatePackage>).tableOfContents as string[])
+              : fallback.template.tableOfContents,
+          sections:
+            Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).sections) &&
               (parsed.template as Partial<ImpactReportTemplatePackage>).sections!.length > 0
-                ? ((parsed.template as Partial<ImpactReportTemplatePackage>).sections as ImpactReportTemplateSection[])
-                : fallback.template.sections,
-            generatedDate:
-              (parsed.template as Partial<ImpactReportTemplatePackage>).generatedDate ??
-              fallback.template.generatedDate,
-          }
+              ? ((parsed.template as Partial<ImpactReportTemplatePackage>).sections as ImpactReportTemplateSection[])
+              : fallback.template.sections,
+          generatedDate:
+            (parsed.template as Partial<ImpactReportTemplatePackage>).generatedDate ??
+            fallback.template.generatedDate,
+        }
         : fallback.template,
   };
 }
@@ -7837,29 +7271,29 @@ export function createImpactReport(
     )
     .get({ id: result.lastInsertRowid }) as
     | {
-        id: number;
-        reportCode: string;
-        title: string;
-        partnerName: string | null;
-        reportType: ImpactReportType;
-        scopeType: ImpactReportScopeType;
-        scopeValue: string;
-        periodStart: string;
-        periodEnd: string;
-        programsJson: string;
-        factPackJson: string;
-        narrativeJson: string;
-        status: "Generated";
-        isPublic: number;
-        version: string;
-        generatedAt: string;
-        viewCount: number;
-        downloadCount: number;
-        createdByUserId: number;
-        createdByName: string;
-        createdAt: string;
-        updatedAt: string;
-      }
+      id: number;
+      reportCode: string;
+      title: string;
+      partnerName: string | null;
+      reportType: ImpactReportType;
+      scopeType: ImpactReportScopeType;
+      scopeValue: string;
+      periodStart: string;
+      periodEnd: string;
+      programsJson: string;
+      factPackJson: string;
+      narrativeJson: string;
+      status: "Generated";
+      isPublic: number;
+      version: string;
+      generatedAt: string;
+      viewCount: number;
+      downloadCount: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }
     | undefined;
 
   if (!row) {
@@ -7908,29 +7342,29 @@ function listImpactReportRows(
     `,
     )
     .all({ ...params, limit }) as Array<{
-    id: number;
-    reportCode: string;
-    title: string;
-    partnerName: string | null;
-    reportType: ImpactReportType;
-    scopeType: ImpactReportScopeType;
-    scopeValue: string;
-    periodStart: string;
-    periodEnd: string;
-    programsJson: string;
-    factPackJson: string;
-    narrativeJson: string;
-    status: "Generated";
-    isPublic: number;
-    version: string;
-    generatedAt: string;
-    viewCount: number;
-    downloadCount: number;
-    createdByUserId: number;
-    createdByName: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
+      id: number;
+      reportCode: string;
+      title: string;
+      partnerName: string | null;
+      reportType: ImpactReportType;
+      scopeType: ImpactReportScopeType;
+      scopeValue: string;
+      periodStart: string;
+      periodEnd: string;
+      programsJson: string;
+      factPackJson: string;
+      narrativeJson: string;
+      status: "Generated";
+      isPublic: number;
+      version: string;
+      generatedAt: string;
+      viewCount: number;
+      downloadCount: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
 }
 
 export function listPortalImpactReports(user: PortalUser, limit = 120): ImpactReportRecord[] {
@@ -8012,29 +7446,29 @@ export function getImpactReportByCode(
     )
     .get({ reportCode }) as
     | {
-        id: number;
-        reportCode: string;
-        title: string;
-        partnerName: string | null;
-        reportType: ImpactReportType;
-        scopeType: ImpactReportScopeType;
-        scopeValue: string;
-        periodStart: string;
-        periodEnd: string;
-        programsJson: string;
-        factPackJson: string;
-        narrativeJson: string;
-        status: "Generated";
-        isPublic: number;
-        version: string;
-        generatedAt: string;
-        viewCount: number;
-        downloadCount: number;
-        createdByUserId: number;
-        createdByName: string;
-        createdAt: string;
-        updatedAt: string;
-      }
+      id: number;
+      reportCode: string;
+      title: string;
+      partnerName: string | null;
+      reportType: ImpactReportType;
+      scopeType: ImpactReportScopeType;
+      scopeValue: string;
+      periodStart: string;
+      periodEnd: string;
+      programsJson: string;
+      factPackJson: string;
+      narrativeJson: string;
+      status: "Generated";
+      isPublic: number;
+      version: string;
+      generatedAt: string;
+      viewCount: number;
+      downloadCount: number;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+    }
     | undefined;
 
   if (!row) {
@@ -8098,11 +7532,11 @@ export function getImpactReportFilterFacets() {
     `,
     )
     .all() as Array<{
-    reportType: ImpactReportType;
-    scopeType: ImpactReportScopeType;
-    scopeValue: string;
-    year: string;
-  }>;
+      reportType: ImpactReportType;
+      scopeType: ImpactReportScopeType;
+      scopeValue: string;
+      year: string;
+    }>;
 
   const reportTypes = [...new Set(rows.map((row) => row.reportType))];
   const scopeTypes = [...new Set(rows.map((row) => row.scopeType))];

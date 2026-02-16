@@ -12,7 +12,7 @@ const quickActions = [
   { href: "/portal/schools", label: "Open School Profiles" },
   { href: "/portal/testimonials", label: "+ New Testimonial Story" },
   { href: "/portal/resources", label: "+ Upload Resource" },
-  { href: "/portal/blog", label: "+ Publish Blog Post" },
+
   { href: "/portal/events", label: "+ Schedule Webinar/Event" },
 ];
 

@@ -195,11 +195,7 @@ export function PortalAnalyticsDashboard({ data }: PortalAnalyticsDashboardProps
             <strong>{formatNumber(data.totals.resourcesUploaded)}</strong>
             <span>Library files/links configured from staff portal</span>
           </article>
-          <article className="analytics-kpi-card tone-cyan">
-            <p>Blog posts published</p>
-            <strong>{formatNumber(data.totals.blogPostsPublished)}</strong>
-            <span>Knowledge-sharing articles posted by staff</span>
-          </article>
+
           <article className="analytics-kpi-card tone-orange-soft">
             <p>Testimonials</p>
             <strong>{formatNumber(data.totals.testimonials)}</strong>

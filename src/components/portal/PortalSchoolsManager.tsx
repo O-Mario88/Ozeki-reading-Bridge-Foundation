@@ -269,10 +269,11 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
 
   async function handleCreateSchool(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setCreateFeedback({ kind: "success", message: "Saving school..." });
     setSavingSchool(true);
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const region = String(formData.get("region") ?? "").trim();
     const district = String(formData.get("district") ?? "").trim();
     const payload = {
@@ -363,7 +364,9 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
       upsertSchool(data.school);
       setSelectedSchoolId(data.school.id);
       setEditingProfile(false);
-      event.currentTarget.reset();
+      setSelectedSchoolId(data.school.id);
+      setEditingProfile(false);
+      form.reset();
       setCreateRegion(ugandaRegions[0]?.region ?? "");
       setCreateDistrict("");
       setCreateContactName("");
@@ -685,9 +688,8 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
             {createFeedback.message ? (
               <p
                 role="status"
-                className={`full-width form-message ${
-                  createFeedback.kind === "error" ? "error" : "success"
-                }`}
+                className={`full-width form-message ${createFeedback.kind === "error" ? "error" : "success"
+                  }`}
               >
                 {createFeedback.message}
               </p>
@@ -925,9 +927,8 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
             {profileFeedback.message ? (
               <p
                 role="status"
-                className={`form-message ${
-                  profileFeedback.kind === "error" ? "error" : "success"
-                }`}
+                className={`form-message ${profileFeedback.kind === "error" ? "error" : "success"
+                  }`}
               >
                 {profileFeedback.message}
               </p>
@@ -999,9 +1000,8 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
         {directoryFeedback.message ? (
           <p
             role="status"
-            className={`form-message ${
-              directoryFeedback.kind === "error" ? "error" : "success"
-            }`}
+            className={`form-message ${directoryFeedback.kind === "error" ? "error" : "success"
+              }`}
           >
             {directoryFeedback.message}
           </p>

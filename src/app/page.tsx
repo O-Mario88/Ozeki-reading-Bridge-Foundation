@@ -39,9 +39,9 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
       />
 
-      <section className="hero">
+      <section className="hero section">
         <div className="container">
-          <div className="hero-copy hero-copy-with-photo">
+          <div className="hero-copy hero-copy-with-photo flow">
             <p className="kicker">Northern Uganda literacy recovery</p>
             <h1>{organizationName}</h1>
             <p>{tagline}</p>

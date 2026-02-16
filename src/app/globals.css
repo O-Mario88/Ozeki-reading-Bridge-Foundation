@@ -16,6 +16,21 @@
   --md-sys-color-outline-variant: #e1d8ce;
   --md-sys-color-error: #b3261e;
 
+  /* Spacing Scale */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* Layout */
+  --header-height: 80px;
+  /* Adjust based on actual header */
+  --container-max: 1280px;
+  --container-padding: var(--spacing-md);
+
   --shape-xs: 0.7rem;
   --shape-sm: 0.85rem;
   --shape-md: 1.1rem;
@@ -30,6 +45,11 @@
   --max-width: 1440px;
 }
 
+/* Global Scroll Padding for Sticky Header */
+html {
+  scroll-padding-top: var(--header-height);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -42,12 +62,36 @@ body {
   overflow-x: clip;
 }
 
+/* Layout Primitives */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-padding);
+}
+
+.section {
+  padding-block: var(--spacing-2xl);
+}
+
+.flow>*+* {
+  margin-top: var(--spacing-md);
+}
+
+.grid-responsive {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+}
+
 body {
   color: var(--md-sys-color-on-surface);
   font-family: var(--orbf-font-family, "Poppins", "Segoe UI", "Helvetica Neue", sans-serif);
   font-size: 16px;
   line-height: 1.52;
   background: var(--md-sys-color-background);
+  /* Offset for fixed header to prevent H1 overlap */
+  padding-top: var(--header-height);
 }
 
 body::before,
@@ -481,7 +525,7 @@ main {
 
 .hero-copy p {
   color: rgba(241, 251, 255, 0.95);
-  max-width: 48ch;
+  max-width: 100%;
 }
 
 .kicker {
@@ -2813,6 +2857,7 @@ fieldset.card {
 .metric-grid,
 .portal-kpis {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.95rem;
 }
 
 .media-showcase-card {
@@ -2904,7 +2949,7 @@ fieldset.card {
 
 .header {
   background: #fff;
-  position: sticky;
+  position: fixed;
   top: 0;
   transition: all 0.3s ease;
   width: 100%;
@@ -3855,12 +3900,12 @@ a {
   font-size: clamp(2.35rem, 4vw, 3.8rem);
   font-weight: 900;
   line-height: 1.05;
-  max-width: 15ch;
+  max-width: 100%;
 }
 
 .hero-copy p {
   font-size: 1.04rem;
-  max-width: 52ch;
+  max-width: 100%;
 }
 
 .hero-panel {
@@ -3970,9 +4015,10 @@ table {
   background: #ffffff;
   border-bottom: 1px solid var(--orbf-mercy-border);
   box-shadow: 0 4px 12px rgba(12, 35, 52, 0.08);
-  position: sticky;
+  position: fixed;
   top: 0;
   z-index: 100;
+  width: 100%;
 }
 
 .header.header__home:not(.sticky),
@@ -4423,6 +4469,23 @@ h6 {
 .card {
   display: flex;
   flex-direction: column;
+  gap: 0.35rem;
+  height: 100%;
+}
+
+.card h3,
+.card h4 {
+  color: var(--md-sys-color-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  width: 100%;
+}
+
+.card p {
+  color: var(--orbf-body-text);
+  flex: 1 1 auto;
+  margin: 0;
 }
 
 .card>.action-row:last-child {
@@ -4781,7 +4844,6 @@ h3 {
 
 .cards-grid {
   gap: 0.9rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .card {
@@ -5366,24 +5428,31 @@ textarea {
   position: relative;
 }
 
-.header__navigation-wrap-item a::after,
-.header__navigation--children-m-item a::after {
+/* Ensure span is the positioning context for the underline */
+.header__navigation-wrap-item a span,
+.header__navigation--children-m-item a span {
+  position: relative;
+}
+
+.header__navigation-wrap-item a span::after,
+.header__navigation--children-m-item a span::after {
   background: #fa7d16;
-  bottom: 0.15rem;
+  bottom: -0.1rem;
   content: "";
   height: 2px;
-  left: 0.6rem;
+  left: 0;
   position: absolute;
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform 170ms ease;
-  width: calc(100% - 1.2rem);
+  width: 100%;
 }
 
-.header__navigation-wrap-item a:hover::after,
-.header__navigation-wrap-item a:focus-visible::after,
-.header__navigation--children-m-item a:hover::after,
-.header__navigation--children-m-item a:focus-visible::after {
+.header__navigation-wrap-item a:hover span::after,
+.header__navigation-wrap-item a:focus-visible span::after,
+/* Mobile links likely don't have spans based on SiteHeader, but if they do: */
+.header__navigation--children-m-item a:hover span::after,
+.header__navigation--children-m-item a:focus-visible span::after {
   transform: scaleX(1);
 }
 
@@ -5671,7 +5740,6 @@ h3,
 
 /* Home Mission Content */
 .home-mission-content {
-  margin-top: 2rem;
   max-width: 80ch;
   margin-left: auto;
   margin-right: auto;
@@ -5726,4 +5794,38 @@ h3,
 .home-mission-content strong {
   color: var(--md-sys-color-primary);
   font-weight: 700;
+}
+
+/* --- New Footer Grid & Contrast Fixes --- */
+.footer-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-xl);
+  padding-block: var(--spacing-xl);
+}
+
+.footer-links-columns {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+}
+
+.footer-bottom {
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-md);
+  padding-bottom: var(--spacing-xl);
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.site-footer a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-footer h3 {
+  font-size: 1.2rem;
+  margin-bottom: var(--spacing-md);
+  color: var(--md-sys-color-secondary);
 }

@@ -1,5 +1,4 @@
 import { MetadataRoute } from "next";
-import { blogPosts } from "@/lib/content";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://ozekireadingbridge.org";
@@ -31,7 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/phonics-training",
     "/story-project",
     "/resources",
-    "/blog",
+
     "/book-visit",
     "/partner",
     "/contact",
@@ -53,12 +52,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: path === "" ? 1 : 0.7,
   }));
 
-  const posts = blogPosts.map((post) => ({
-    url: `${base}/blog/${post.slug}`,
-    lastModified: new Date(post.publishedAt),
-    changeFrequency: "monthly" as const,
-    priority: 0.65,
-  }));
-
-  return [...routes, ...posts];
+  return [...routes];
 }

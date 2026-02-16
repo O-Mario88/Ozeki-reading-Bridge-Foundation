@@ -77,53 +77,7 @@ export interface PortalResourceRecord {
   updatedAt: string;
 }
 
-export interface BlogSection {
-  heading: string;
-  paragraphs: string[];
-}
 
-export interface BlogPost {
-  slug: string;
-  title: string;
-  subtitle?: string;
-  excerpt: string;
-  category: string;
-  author: string;
-  role: string;
-  publishedAt: string;
-  readTime: string;
-  tags: string[];
-  sections: BlogSection[];
-  mediaImageUrl?: string | null;
-  mediaVideoUrl?: string | null;
-  source?: "static" | "portal";
-  views?: number;
-}
-
-export interface PortalBlogPostRecord {
-  id: number;
-  slug: string;
-  title: string;
-  subtitle: string | null;
-  body: string;
-  category: string;
-  tags: string[];
-  imageFileName: string | null;
-  imageStoredPath: string | null;
-  imageMimeType: string | null;
-  imageSizeBytes: number | null;
-  videoFileName: string | null;
-  videoStoredPath: string | null;
-  videoMimeType: string | null;
-  videoSizeBytes: number | null;
-  views: number;
-  isPublished: boolean;
-  createdByUserId: number;
-  authorName: string;
-  publishedAt: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface Testimonial {
   name: string;
@@ -399,7 +353,7 @@ export interface PortalAnalyticsData {
     onlineTeachersTrained: number;
     onlineSchoolLeadersTrained: number;
     resourcesUploaded: number;
-    blogPostsPublished: number;
+
     schoolsDirectory: number;
     legacyTrainingSessions: number;
     legacyAssessmentRecords: number;

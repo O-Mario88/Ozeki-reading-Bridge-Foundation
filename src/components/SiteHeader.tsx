@@ -34,7 +34,7 @@ type NavItem =
   };
 
 const utilityLinks = [
-  { href: "/blog", label: "Blog" },
+
   { href: "/portal/login", label: "Staff Portal" },
 ];
 
@@ -76,7 +76,7 @@ const resourcesGroup: NavGroup = {
   description: "Practical downloads, webinars, and knowledge content for literacy implementation.",
   links: [
     { href: "/resources", label: "Resource Library" },
-    { href: "/blog", label: "Blog" },
+
     { href: "/events", label: "Events & Webinars" },
     { href: "/media", label: "Media & Press" },
   ],
