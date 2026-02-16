@@ -7,13 +7,14 @@ import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-    params: {
+    params: Promise<{
         schoolId: string;
-    };
+    }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
-    const schoolId = parseInt(params.schoolId, 10);
+    const { schoolId: schoolIdStr } = await params;
+    const schoolId = parseInt(schoolIdStr, 10);
     if (isNaN(schoolId)) return { title: "School Not Found" };
 
     const school = await getSchoolDirectoryRecord(schoolId);
@@ -24,7 +25,8 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function SchoolProfilePage({ params }: PageProps) {
     const user = await requirePortalStaffUser();
-    const schoolId = parseInt(params.schoolId, 10);
+    const { schoolId: schoolIdStr } = await params;
+    const schoolId = parseInt(schoolIdStr, 10);
 
     if (isNaN(schoolId)) {
         notFound();

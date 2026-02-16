@@ -7643,7 +7643,7 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
         parish,
         village,
         notes,
-        enrolled_mid: 0,
+
         enrolled_boys,
         enrolled_girls,
         enrolled_baby,
