@@ -1,16 +1,19 @@
 import { notFound } from "next/navigation";
 import { blogPosts } from "@/lib/content";
+import { incrementPortalBlogViews, getPublishedPortalBlogPostBySlug } from "@/lib/db";
+import { mapPortalPostToBlogPost } from "@/lib/blog-data";
 
 type Params = {
   slug: string;
 };
 
-export function generateStaticParams() {
-  return blogPosts.map((post) => ({ slug: post.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export function generateMetadata({ params }: { params: Params }) {
-  const post = blogPosts.find((item) => item.slug === params.slug);
+  const portalPost = getPublishedPortalBlogPostBySlug(params.slug);
+  const post = portalPost
+    ? mapPortalPostToBlogPost(portalPost)
+    : blogPosts.find((item) => item.slug === params.slug);
 
   if (!post) {
     return {
@@ -25,10 +28,17 @@ export function generateMetadata({ params }: { params: Params }) {
 }
 
 export default function BlogPostPage({ params }: { params: Params }) {
-  const post = blogPosts.find((item) => item.slug === params.slug);
+  const portalPost = getPublishedPortalBlogPostBySlug(params.slug);
+  const post = portalPost
+    ? mapPortalPostToBlogPost(portalPost)
+    : blogPosts.find((item) => item.slug === params.slug);
 
   if (!post) {
     notFound();
+  }
+
+  if (portalPost) {
+    incrementPortalBlogViews(portalPost.id);
   }
 
   return (
@@ -37,7 +47,7 @@ export default function BlogPostPage({ params }: { params: Params }) {
         <div className="container">
           <p className="kicker">{post.category}</p>
           <h1>{post.title}</h1>
-          <p>{post.excerpt}</p>
+          {post.subtitle ? <p>{post.subtitle}</p> : <p>{post.excerpt}</p>}
           <p className="meta-line">
             {post.author} ({post.role}) · {new Date(post.publishedAt).toLocaleDateString()} ·
             {" "}
@@ -45,6 +55,27 @@ export default function BlogPostPage({ params }: { params: Params }) {
           </p>
         </div>
       </section>
+
+      {post.mediaImageUrl || post.mediaVideoUrl ? (
+        <section className="section">
+          <div className="container card">
+            {post.mediaImageUrl ? (
+              <img
+                src={post.mediaImageUrl}
+                alt={post.title}
+                loading="lazy"
+                decoding="async"
+                style={{ width: "100%", height: "auto" }}
+              />
+            ) : null}
+            {post.mediaVideoUrl ? (
+              <video controls preload="metadata" playsInline style={{ width: "100%", height: "auto" }}>
+                <source src={post.mediaVideoUrl} />
+              </video>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="section">
         <div className="container split">

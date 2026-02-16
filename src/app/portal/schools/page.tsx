@@ -1,7 +1,7 @@
 import { PortalSchoolsManager } from "@/components/portal/PortalSchoolsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { listSchoolDirectoryRecords } from "@/lib/db";
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 export default async function PortalSchoolsPage() {
-  const user = await requirePortalUser();
+  const user = await requirePortalStaffUser();
   const schools = listSchoolDirectoryRecords();
 
   return (

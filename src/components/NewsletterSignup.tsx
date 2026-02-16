@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 type SubmitState = {
@@ -44,7 +45,7 @@ export function NewsletterSignup() {
   }
 
   return (
-    <form className="form-grid" onSubmit={handleSubmit}>
+    <form className="form-grid newsletter-form" onSubmit={handleSubmit}>
       <label>
         Name
         <input name="name" required />
@@ -53,11 +54,22 @@ export function NewsletterSignup() {
         Email
         <input name="email" type="email" required />
       </label>
-      <button className="button" type="submit" disabled={state.status === "submitting"}>
-        {state.status === "submitting" ? "Submitting..." : "Subscribe"}
-      </button>
+
+      <div className="newsletter-actions full-width">
+        <button
+          className="button newsletter-submit-button"
+          type="submit"
+          disabled={state.status === "submitting"}
+        >
+          {state.status === "submitting" ? "Submitting..." : "Subscribe"}
+        </button>
+        <Link className="button button-ghost newsletter-events-button" href="/events">
+          View monthly events
+        </Link>
+      </div>
+
       {state.message ? (
-        <p className={`form-message ${state.status}`}>{state.message}</p>
+        <p className={`form-message ${state.status} full-width`}>{state.message}</p>
       ) : null}
     </form>
   );

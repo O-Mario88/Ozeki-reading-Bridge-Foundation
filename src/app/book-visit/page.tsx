@@ -17,8 +17,8 @@ export default function BookVisitPage() {
       />
 
       <section className="section">
-        <div className="container split">
-          <article className="card">
+        <div className="container booking-info-grid">
+          <article>
             <h2>What happens after booking</h2>
             <ol>
               <li>Request review by our program team</li>
@@ -27,7 +27,7 @@ export default function BookVisitPage() {
               <li>On-site or remote support session</li>
             </ol>
           </article>
-          <article className="card">
+          <article>
             <h2>Pre-visit checklist</h2>
             <ul>
               <li>Number of teachers and grade levels</li>
@@ -40,7 +40,7 @@ export default function BookVisitPage() {
       </section>
 
       <section className="section">
-        <div className="container card">
+        <div className="container booking-form-shell">
           <BookingForm />
         </div>
       </section>

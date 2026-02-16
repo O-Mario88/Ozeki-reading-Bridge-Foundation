@@ -10,3 +10,9 @@ pnpm-debug.log*
 .DS_Store
 data/*
 !data/.gitkeep
+
+# Ignore large media files
+assets/videos/*.mp4
+
+# Ignore all next build artifacts
+.next*

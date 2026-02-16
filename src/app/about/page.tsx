@@ -13,40 +13,43 @@ export default function AboutPage() {
       <PageHero
         kicker="Who we are"
         title={organizationName}
-        description="A literacy-focused organization strengthening how reading is taught in primary schools through evidence-based classroom practice."
+        description="A literacy-focused organization based in Gulu City, Northern Uganda, strengthening how reading is taught in primary schools through practical classroom support."
       />
 
       <section className="section">
-        <div className="container two-col">
-          <article className="card">
-            <h2>Vision</h2>
-            <p>{vision}</p>
-          </article>
-          <article className="card">
-            <h2>Mission</h2>
-            <p>{mission}</p>
-          </article>
+        <div className="container about-intro-block">
+          <h2>Vision and Mission</h2>
+          <p>
+            <strong>Vision:</strong> {vision}
+          </p>
+          <p>
+            <strong>Mission:</strong> {mission}
+          </p>
         </div>
       </section>
 
       <section className="section">
-        <div className="container split">
-          <article className="card">
-            <h2>Approach</h2>
+        <div className="container about-focus-grid">
+          <article>
+            <h2>Why we focus on Northern Uganda</h2>
+            <p>
+              Northern Uganda experienced more than two decades of conflict that
+              disrupted school systems, teacher support, and early grade literacy
+              development.
+            </p>
+            <p>
+              Today, many schools are still rebuilding. We are based in Gulu so we can
+              stay close to classrooms, teachers, and school leaders who need sustained
+              literacy recovery support.
+            </p>
+          </article>
+          <article>
+            <h2>How we deliver change</h2>
             <ul>
               <li>Practical demonstration-based teacher training</li>
               <li>School-based coaching for implementation fidelity</li>
               <li>Learner assessments that guide instruction</li>
               <li>Data-driven program improvement and partner reporting</li>
-            </ul>
-          </article>
-          <article className="card">
-            <h2>Credibility pillars</h2>
-            <ul>
-              <li>Evidence-based methods aligned to how children learn to read</li>
-              <li>Classroom-tested tools and routines for teachers</li>
-              <li>Leadership support for school-wide accountability</li>
-              <li>Transparent monitoring, evaluation, and reporting</li>
             </ul>
           </article>
         </div>

@@ -9,6 +9,9 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (user.role === "Volunteer") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   return NextResponse.json({
     dashboard: getPortalDashboardData(user),
@@ -21,6 +24,7 @@ export async function GET() {
       isSupervisor: user.isSupervisor,
       isME: user.isME,
       isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin,
     },
   });
 }

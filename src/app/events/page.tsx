@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
+import { listOnlineTrainingEvents } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Events & Webinars",
@@ -7,28 +10,29 @@ export const metadata = {
     "Monthly literacy webinars and live teacher development sessions from Ozeki Reading Bridge Foundation.",
 };
 
-const events = [
-  {
-    title: "Monthly Literacy Webinar: Practical Phonics in P1-P2",
-    date: "2026-03-12",
-    mode: "Online (Zoom)",
-    audience: "Teachers and literacy coaches",
-  },
-  {
-    title: "School Leaders Session: Supervising Reading Instruction",
-    date: "2026-03-26",
-    mode: "Online (Google Meet)",
-    audience: "Headteachers and Directors of Studies",
-  },
-  {
-    title: "Assessment Clinic: Baseline to Progress Tracking",
-    date: "2026-04-09",
-    mode: "Online (Zoom)",
-    audience: "School assessment teams",
-  },
-];
-
 export default function EventsPage() {
+  const scheduledEvents = listOnlineTrainingEvents(30).map((event) => ({
+    title: event.title,
+    date: event.startDateTime,
+    mode: event.meetLink ? "Online (Google Meet)" : "Online session",
+    audience: event.audience,
+    calendarLink: event.calendarLink,
+    meetLink: event.meetLink,
+  }));
+  const events =
+    scheduledEvents.length > 0
+      ? scheduledEvents
+      : [
+          {
+            title: "Monthly Literacy Webinar: Practical Phonics in P1-P2",
+            date: "2026-03-12T10:00:00",
+            mode: "Online (Google Meet)",
+            audience: "Teachers and literacy coaches",
+            calendarLink: null,
+            meetLink: null,
+          },
+        ];
+
   const eventSchema = {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -60,7 +64,14 @@ export default function EventsPage() {
             <article className="card" key={event.title}>
               <h2>{event.title}</h2>
               <p>
-                <strong>Date:</strong> {new Date(event.date).toLocaleDateString()}
+                <strong>Date:</strong>{" "}
+                {new Date(event.date).toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </p>
               <p>
                 <strong>Mode:</strong> {event.mode}
@@ -68,6 +79,18 @@ export default function EventsPage() {
               <p>
                 <strong>Audience:</strong> {event.audience}
               </p>
+              <div className="action-row">
+                {event.calendarLink ? (
+                  <a className="button button-ghost" href={event.calendarLink} target="_blank" rel="noreferrer">
+                    Calendar
+                  </a>
+                ) : null}
+                {event.meetLink ? (
+                  <a className="button" href={event.meetLink} target="_blank" rel="noreferrer">
+                    Join meet
+                  </a>
+                ) : null}
+              </div>
             </article>
           ))}
         </div>

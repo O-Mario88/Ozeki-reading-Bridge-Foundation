@@ -52,6 +52,12 @@ type FeedbackState = {
   message: string;
 };
 
+type BrowserCoordinates = {
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+};
+
 type EvidenceItem = {
   id: number;
   fileName: string;
@@ -134,11 +140,14 @@ type EgraSummary = {
 };
 
 type TrainingParticipantRole = "" | "Teacher" | "Leader";
+type TrainingParticipantGender = "" | "Male" | "Female";
 
 type TrainingParticipantRow = {
   participantName: string;
+  schoolAccountId: string;
   schoolAttachedTo: string;
   role: TrainingParticipantRole;
+  gender: TrainingParticipantGender;
   phoneContact: string;
 };
 
@@ -177,6 +186,34 @@ const visitObservationScoreByRating: Record<string, number> = {
   "Can Improve": 0,
 };
 
+async function requestBrowserCoordinates(): Promise<BrowserCoordinates> {
+  if (typeof window === "undefined" || !navigator.geolocation) {
+    throw new Error("Geolocation is not available on this device.");
+  }
+
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: Number(position.coords.latitude),
+          longitude: Number(position.coords.longitude),
+          accuracy: Number.isFinite(position.coords.accuracy)
+            ? Number(position.coords.accuracy)
+            : null,
+        });
+      },
+      (error) => {
+        reject(new Error(error.message || "Could not get current GPS coordinates."));
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      },
+    );
+  });
+}
+
 function isVisitObservationField(key: string) {
   return (
     key.startsWith("general_") ||
@@ -188,6 +225,18 @@ function isVisitObservationField(key: string) {
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysToDate(dateValue: string, days: number) {
+  if (!dateValue) {
+    return getToday();
+  }
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return getToday();
+  }
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function sanitizeForInput(value: unknown): string {
@@ -283,11 +332,24 @@ function normalizeParticipantRole(value: unknown): TrainingParticipantRole {
   return "";
 }
 
-function createEmptyTrainingParticipant(defaultSchool = ""): TrainingParticipantRow {
+function normalizeParticipantGender(value: unknown): TrainingParticipantGender {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "male" || normalized === "m") {
+    return "Male";
+  }
+  if (normalized === "female" || normalized === "f") {
+    return "Female";
+  }
+  return "";
+}
+
+function createEmptyTrainingParticipant(defaultSchoolId = "", defaultSchoolName = ""): TrainingParticipantRow {
   return {
     participantName: "",
-    schoolAttachedTo: defaultSchool,
+    schoolAccountId: defaultSchoolId,
+    schoolAttachedTo: defaultSchoolName,
     role: "",
+    gender: "",
     phoneContact: "",
   };
 }
@@ -295,14 +357,26 @@ function createEmptyTrainingParticipant(defaultSchool = ""): TrainingParticipant
 function rowHasTrainingParticipantData(row: TrainingParticipantRow) {
   return (
     row.participantName.trim() ||
+    row.schoolAccountId.trim() ||
     row.schoolAttachedTo.trim() ||
     row.role ||
+    row.gender ||
     row.phoneContact.trim()
   );
 }
 
-function parseTrainingParticipants(raw: unknown, defaultSchool = ""): TrainingParticipantRow[] {
-  const fallback = [createEmptyTrainingParticipant(defaultSchool)];
+function parseTrainingParticipants(
+  raw: unknown,
+  options?: {
+    defaultSchoolId?: string;
+    defaultSchoolName?: string;
+    schoolsById?: Map<number, SchoolDirectoryRecord>;
+    schoolsByName?: Map<string, SchoolDirectoryRecord>;
+  },
+): TrainingParticipantRow[] {
+  const fallback = [
+    createEmptyTrainingParticipant(options?.defaultSchoolId ?? "", options?.defaultSchoolName ?? ""),
+  ];
   if (!raw) {
     return fallback;
   }
@@ -324,11 +398,28 @@ function parseTrainingParticipants(raw: unknown, defaultSchool = ""): TrainingPa
     .filter((item) => item && typeof item === "object")
     .map((item) => {
       const entry = item as Record<string, unknown>;
+      const schoolAccountIdRaw = sanitizeForInput(entry.schoolAccountId).trim();
+      const schoolAttachedToRaw = sanitizeForInput(entry.schoolAttachedTo).trim();
+      const schoolFromId =
+        schoolAccountIdRaw && options?.schoolsById
+          ? options.schoolsById.get(Number(schoolAccountIdRaw))
+          : null;
+      const schoolFromName =
+        !schoolFromId && schoolAttachedToRaw && options?.schoolsByName
+          ? options.schoolsByName.get(schoolAttachedToRaw.toLowerCase())
+          : null;
+      const linkedSchool = schoolFromId ?? schoolFromName ?? null;
+
       return {
         participantName: sanitizeForInput(entry.participantName),
+        schoolAccountId: linkedSchool ? String(linkedSchool.id) : schoolAccountIdRaw,
         schoolAttachedTo:
-          sanitizeForInput(entry.schoolAttachedTo) || defaultSchool,
+          linkedSchool?.name ||
+          schoolAttachedToRaw ||
+          options?.defaultSchoolName ||
+          "",
         role: normalizeParticipantRole(entry.role),
+        gender: normalizeParticipantGender(entry.gender),
         phoneContact: sanitizeForInput(entry.phoneContact),
       } as TrainingParticipantRow;
     })
@@ -596,7 +687,10 @@ export function PortalModuleManager({
   currentUser,
 }: PortalModuleManagerProps) {
   const searchParams = useSearchParams();
-  const canReview = currentUser.isSupervisor || currentUser.isME || currentUser.isAdmin;
+  const canReview =
+    currentUser.isSupervisor || currentUser.isME || currentUser.isAdmin || currentUser.isSuperAdmin;
+  const canExport =
+    currentUser.isSupervisor || currentUser.isME || currentUser.isAdmin || currentUser.isSuperAdmin;
   const draftStorageKey = `portal-form-draft-${config.module}`;
   const participantField = useMemo(
     () =>
@@ -629,6 +723,7 @@ export function PortalModuleManager({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
+  const [gpsSeededSchoolIds, setGpsSeededSchoolIds] = useState<number[]>([]);
   const [egraLearners, setEgraLearners] = useState<EgraLearnerRow[]>(() => createDefaultEgraRows());
   const [trainingParticipants, setTrainingParticipants] = useState<TrainingParticipantRow[]>(
     () => [createEmptyTrainingParticipant()],
@@ -665,6 +760,13 @@ export function PortalModuleManager({
     () => new Map(initialSchools.map((school) => [school.id, school])),
     [initialSchools],
   );
+  const schoolsByName = useMemo(
+    () =>
+      new Map(
+        initialSchools.map((school) => [school.name.trim().toLowerCase(), school]),
+      ),
+    [initialSchools],
+  );
   const formSchoolOptions = useMemo(() => {
     const region = formState.region.trim();
     const district = formState.district.trim().toLowerCase();
@@ -683,6 +785,23 @@ export function PortalModuleManager({
   const participantSchoolOptions = useMemo(
     () => [...initialSchools].sort((left, right) => left.name.localeCompare(right.name)),
     [initialSchools],
+  );
+  const trainingParticipantStats = useMemo(() => {
+    const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
+    return {
+      total: activeRows.length,
+      teachers: activeRows.filter((row) => row.role === "Teacher").length,
+      leaders: activeRows.filter((row) => row.role === "Leader").length,
+      male: activeRows.filter((row) => row.gender === "Male").length,
+      female: activeRows.filter((row) => row.gender === "Female").length,
+    };
+  }, [trainingParticipants]);
+  const followUpMinDate = useMemo(
+    () =>
+      config.module === "training"
+        ? addDaysToDate(formState.date || getToday(), 14)
+        : formState.date || getToday(),
+    [config.module, formState.date],
   );
 
   const refreshOfflineCount = useCallback(() => {
@@ -707,27 +826,64 @@ export function PortalModuleManager({
     }
   }, [config.module]);
 
-  const newFormState = useCallback((): FormState => {
-    const defaults = buildDefaultPayload(config);
-    return {
-      id: null,
-      date: getToday(),
-      region: defaultRegion,
-      district: "",
-      schoolId: "",
-      schoolName: "",
-      programType: config.programTypeOptions[0]?.value ?? "",
-      followUpDate: "",
-      status: "Draft",
-      reviewNote: "",
-      payload: defaults,
-    };
-  }, [config]);
+  const getSchoolScopeDefaults = useCallback(
+    (schoolId?: number | null) => {
+      const school =
+        typeof schoolId === "number" && Number.isInteger(schoolId) && schoolId > 0
+          ? schoolsById.get(schoolId) ?? null
+          : null;
 
-  const openNewForm = useCallback(() => {
-    setFormState(newFormState());
+      if (!school) {
+        return {
+          region: defaultRegion,
+          district: "",
+          schoolId: "",
+          schoolName: "",
+        };
+      }
+
+      return {
+        region: inferRegionFromDistrict(school.district) ?? defaultRegion,
+        district: school.district,
+        schoolId: String(school.id),
+        schoolName: school.name,
+      };
+    },
+    [schoolsById],
+  );
+
+  const newFormState = useCallback(
+    (options?: { schoolId?: number | null; programType?: string }): FormState => {
+      const defaults = buildDefaultPayload(config);
+      const schoolDefaults = getSchoolScopeDefaults(options?.schoolId);
+
+      return {
+        id: null,
+        date: getToday(),
+        region: schoolDefaults.region,
+        district: schoolDefaults.district,
+        schoolId: schoolDefaults.schoolId,
+        schoolName: schoolDefaults.schoolName,
+        programType:
+          options?.programType?.trim() ||
+          config.programTypeOptions[0]?.value ||
+          "",
+        followUpDate: config.module === "training" ? addDaysToDate(getToday(), 14) : "",
+        status: "Draft",
+        reviewNote: "",
+        payload: defaults,
+      };
+    },
+    [config, getSchoolScopeDefaults],
+  );
+
+  const openNewForm = useCallback((options?: { schoolId?: number | null; programType?: string }) => {
+    const nextForm = newFormState(options);
+    setFormState(nextForm);
     setEgraLearners(createDefaultEgraRows());
-    setTrainingParticipants([createEmptyTrainingParticipant()]);
+    setTrainingParticipants([
+      createEmptyTrainingParticipant(nextForm.schoolId, nextForm.schoolName),
+    ]);
     setIsFormOpen(true);
     setSelectedFiles([]);
     setFileInputKey((value) => value + 1);
@@ -752,12 +908,24 @@ export function PortalModuleManager({
     const linkedSchoolName = matchedSchool?.name ?? record.schoolName;
 
     setEgraLearners(createDefaultEgraRows());
-    setTrainingParticipants([createEmptyTrainingParticipant(linkedSchoolName)]);
+    setTrainingParticipants([
+      createEmptyTrainingParticipant(
+        matchedSchool ? String(matchedSchool.id) : "",
+        linkedSchoolName,
+      ),
+    ]);
 
     Object.entries(record.payload).forEach(([key, value]) => {
       const field = findField(config, key);
       if (field?.type === "participants") {
-        setTrainingParticipants(parseTrainingParticipants(value, linkedSchoolName));
+        setTrainingParticipants(
+          parseTrainingParticipants(value, {
+            defaultSchoolId: matchedSchool ? String(matchedSchool.id) : "",
+            defaultSchoolName: linkedSchoolName,
+            schoolsById,
+            schoolsByName,
+          }),
+        );
         return;
       }
 
@@ -802,7 +970,7 @@ export function PortalModuleManager({
     setSelectedFiles([]);
     setFileInputKey((value) => value + 1);
     setFeedback({ kind: "idle", message: "" });
-  }, [config, initialSchools, schoolsById]);
+  }, [config, initialSchools, schoolsById, schoolsByName]);
 
   const fetchRecords = useCallback(async (nextFilters: FilterState) => {
     setLoadingRecords(true);
@@ -954,17 +1122,29 @@ export function PortalModuleManager({
   }, [config.module, draftStorageKey, formState, egraLearners, isFormOpen, trainingParticipants]);
 
   useEffect(() => {
-    if (!formState.schoolName.trim()) {
+    if (config.module !== "training") {
+      return;
+    }
+    if (!formState.schoolId.trim()) {
+      return;
+    }
+    const school = schoolsById.get(Number(formState.schoolId));
+    if (!school) {
       return;
     }
     setTrainingParticipants((prev) =>
-      prev.map((row) =>
-        row.schoolAttachedTo.trim()
-          ? row
-          : { ...row, schoolAttachedTo: formState.schoolName.trim() },
-      ),
+      prev.map((row) => {
+        if (row.schoolAccountId.trim()) {
+          return row;
+        }
+        return {
+          ...row,
+          schoolAccountId: String(school.id),
+          schoolAttachedTo: school.name,
+        };
+      }),
     );
-  }, [formState.schoolName]);
+  }, [config.module, formState.schoolId, schoolsById]);
 
   useEffect(() => {
     if (urlInitialized) {
@@ -973,6 +1153,13 @@ export function PortalModuleManager({
 
     const recordQuery = searchParams.get("record");
     const isNew = searchParams.get("new") === "1";
+    const schoolIdQueryRaw = searchParams.get("schoolId");
+    const schoolIdQuery = schoolIdQueryRaw ? Number(schoolIdQueryRaw) : Number.NaN;
+    const prefillSchoolId =
+      Number.isInteger(schoolIdQuery) && schoolIdQuery > 0 && schoolsById.has(schoolIdQuery)
+        ? schoolIdQuery
+        : null;
+    const prefillProgramType = searchParams.get("programType")?.trim() || undefined;
 
     if (recordQuery) {
       const targetId = Number(recordQuery);
@@ -1047,18 +1234,28 @@ export function PortalModuleManager({
                   .toLowerCase(),
             ) ??
             null;
+          const schoolPrefill = prefillSchoolId ? schoolsById.get(prefillSchoolId) : null;
+          const enforcedSchool = schoolPrefill ?? draftSchool;
+          const resolvedProgramType =
+            prefillProgramType ||
+            parsed.programType ||
+            config.programTypeOptions[0]?.value ||
+            "";
+
           setFormState({
             id: parsed.id ?? null,
             date: parsed.date ?? getToday(),
             region:
               parsed.region && getDistrictsByRegion(parsed.region).length > 0
                 ? parsed.region
-                : inferRegionFromDistrict(draftSchool?.district ?? parsed.district ?? "") ??
+                : inferRegionFromDistrict(
+                    enforcedSchool?.district ?? parsed.district ?? "",
+                  ) ??
                   defaultRegion,
-            district: draftSchool?.district ?? parsed.district ?? "",
-            schoolId: draftSchool ? String(draftSchool.id) : draftSchoolId,
-            schoolName: draftSchool?.name ?? parsed.schoolName ?? "",
-            programType: parsed.programType || config.programTypeOptions[0]?.value || "",
+            district: enforcedSchool?.district ?? parsed.district ?? "",
+            schoolId: enforcedSchool ? String(enforcedSchool.id) : draftSchoolId,
+            schoolName: enforcedSchool?.name ?? parsed.schoolName ?? "",
+            programType: resolvedProgramType,
             followUpDate: parsed.followUpDate ?? "",
             status: parsed.status ?? "Draft",
             reviewNote: parsed.reviewNote ?? "",
@@ -1068,7 +1265,12 @@ export function PortalModuleManager({
           setTrainingParticipants(
             parseTrainingParticipants(
               parsed.trainingParticipants,
-              draftSchool?.name ?? parsed.schoolName ?? "",
+              {
+                defaultSchoolId: enforcedSchool ? String(enforcedSchool.id) : draftSchoolId,
+                defaultSchoolName: enforcedSchool?.name ?? parsed.schoolName ?? "",
+                schoolsById,
+                schoolsByName,
+              },
             ),
           );
           setIsFormOpen(true);
@@ -1080,7 +1282,10 @@ export function PortalModuleManager({
       }
     }
 
-    openNewForm();
+    openNewForm({
+      schoolId: prefillSchoolId,
+      programType: prefillProgramType,
+    });
     setUrlInitialized(true);
   }, [
     config,
@@ -1092,6 +1297,7 @@ export function PortalModuleManager({
     records,
     searchParams,
     schoolsById,
+    schoolsByName,
     urlInitialized,
   ]);
 
@@ -1134,58 +1340,126 @@ export function PortalModuleManager({
 
   const updateTrainingParticipant = useCallback(
     (index: number, key: keyof TrainingParticipantRow, value: string) => {
+      const schoolForSelection =
+        key === "schoolAccountId" && value ? schoolsById.get(Number(value)) ?? null : null;
+      if (config.module === "training" && schoolForSelection) {
+        setFormState((prev) => ({
+          ...prev,
+          schoolId: String(schoolForSelection.id),
+          schoolName: schoolForSelection.name,
+          district: schoolForSelection.district,
+          region: inferRegionFromDistrict(schoolForSelection.district) ?? prev.region,
+        }));
+      }
       setTrainingParticipants((prev) =>
         prev.map((row, rowIndex) => {
           if (rowIndex !== index) {
             return row;
           }
+          if (key === "schoolAccountId") {
+            return {
+              ...row,
+              schoolAccountId: value,
+              schoolAttachedTo: schoolForSelection?.name ?? "",
+            };
+          }
           if (key === "role") {
             return { ...row, role: normalizeParticipantRole(value) };
+          }
+          if (key === "gender") {
+            return { ...row, gender: normalizeParticipantGender(value) };
           }
           return { ...row, [key]: value };
         }),
       );
     },
-    [],
+    [config.module, schoolsById],
   );
 
   const addTrainingParticipant = useCallback(() => {
+    const fallbackSchool =
+      formState.schoolId && schoolsById.has(Number(formState.schoolId))
+        ? schoolsById.get(Number(formState.schoolId))
+        : null;
     setTrainingParticipants((prev) => [
       ...prev,
-      createEmptyTrainingParticipant(formState.schoolName),
+      createEmptyTrainingParticipant(
+        fallbackSchool ? String(fallbackSchool.id) : "",
+        fallbackSchool?.name ?? "",
+      ),
     ]);
-  }, [formState.schoolName]);
+  }, [formState.schoolId, schoolsById]);
 
   const removeTrainingParticipant = useCallback((index: number) => {
+    const fallbackSchool =
+      formState.schoolId && schoolsById.has(Number(formState.schoolId))
+        ? schoolsById.get(Number(formState.schoolId))
+        : null;
     setTrainingParticipants((prev) => {
       if (prev.length <= 1) {
-        return [createEmptyTrainingParticipant(formState.schoolName)];
+        return [
+          createEmptyTrainingParticipant(
+            fallbackSchool ? String(fallbackSchool.id) : "",
+            fallbackSchool?.name ?? "",
+          ),
+        ];
       }
       return prev.filter((_, rowIndex) => rowIndex !== index);
     });
-  }, [formState.schoolName]);
+  }, [formState.schoolId, schoolsById]);
 
   const validateForm = useCallback(() => {
-    if (
-      !formState.date ||
-      !formState.region.trim() ||
-      !formState.district.trim() ||
-      !formState.schoolId.trim()
-    ) {
-      return "Date, region, district, and school account are required.";
+    const requiresDistrict = config.module !== "training";
+    if (!formState.date || !formState.region.trim() || (requiresDistrict && !formState.district.trim())) {
+      return requiresDistrict
+        ? "Date, region, and district are required."
+        : "Date and region are required.";
     }
     if (!formState.programType.trim()) {
       return `${config.programTypeLabel} is required.`;
     }
+
     const selectedSchoolId = Number(formState.schoolId);
-    if (!Number.isInteger(selectedSchoolId) || selectedSchoolId <= 0) {
-      return "Select a valid school account.";
+    const hasSelectedSchool =
+      Number.isInteger(selectedSchoolId) && selectedSchoolId > 0 && schoolsById.has(selectedSchoolId);
+
+    if (config.module !== "training") {
+      if (!hasSelectedSchool) {
+        return "Select a valid school account.";
+      }
     }
-    if (!schoolsById.has(selectedSchoolId)) {
-      return "Selected school account could not be found. Refresh and try again.";
+
+    if (config.module === "training") {
+      const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
+      if (activeRows.length === 0) {
+        return "Add at least one participant.";
+      }
+
+      const hasLinkedSchool = activeRows.some((row) => {
+        if (!row.schoolAccountId.trim()) {
+          return false;
+        }
+        const schoolId = Number(row.schoolAccountId);
+        return Number.isInteger(schoolId) && schoolId > 0 && schoolsById.has(schoolId);
+      });
+
+      if (!hasLinkedSchool && !hasSelectedSchool) {
+        return "At least one participant must be linked to a school account.";
+      }
+
+      if (!formState.followUpDate) {
+        return "Next follow-up date is required and must be at least 2 weeks after training.";
+      }
     }
-    if (formState.followUpDate && formState.followUpDate < formState.date) {
-      return "Follow-up date cannot be earlier than the main record date.";
+
+    if (formState.followUpDate) {
+      const minimumDate = config.module === "training" ? addDaysToDate(formState.date, 14) : formState.date;
+      if (formState.followUpDate < minimumDate) {
+        if (config.module === "training") {
+          return "Next follow-up date must be at least 2 weeks after the training date.";
+        }
+        return "Follow-up date cannot be earlier than the main record date.";
+      }
     }
 
     const startTimeValue = String(formState.payload.startTime ?? "").trim();
@@ -1194,9 +1468,19 @@ export function PortalModuleManager({
       return "End time must be later than start time.";
     }
 
-    const attendedValue = Number(String(formState.payload.numberAttended ?? "").trim() || 0);
-    const femaleValue = Number(String(formState.payload.femaleCount ?? "").trim() || 0);
-    const maleValue = Number(String(formState.payload.maleCount ?? "").trim() || 0);
+    const attendedValue =
+      config.module === "training"
+        ? trainingParticipantStats.total
+        : Number(String(formState.payload.numberAttended ?? "").trim() || 0);
+    const femaleValue =
+      config.module === "training"
+        ? trainingParticipantStats.female
+        : Number(String(formState.payload.femaleCount ?? "").trim() || 0);
+    const maleValue =
+      config.module === "training"
+        ? trainingParticipantStats.male
+        : Number(String(formState.payload.maleCount ?? "").trim() || 0);
+
     if (attendedValue > 0 && femaleValue + maleValue > attendedValue) {
       return "Female + male attendance cannot exceed total number attended.";
     }
@@ -1227,11 +1511,18 @@ export function PortalModuleManager({
             if (!participant.participantName.trim()) {
               return `Participant ${index + 1}: participant name is required.`;
             }
-            if (!participant.schoolAttachedTo.trim()) {
-              return `Participant ${index + 1}: school attached to is required.`;
+            if (!participant.schoolAccountId.trim()) {
+              return `Participant ${index + 1}: school account is required.`;
+            }
+            const participantSchoolId = Number(participant.schoolAccountId);
+            if (!Number.isInteger(participantSchoolId) || participantSchoolId <= 0 || !schoolsById.has(participantSchoolId)) {
+              return `Participant ${index + 1}: select a valid school account.`;
             }
             if (!participant.role) {
               return `Participant ${index + 1}: role is required.`;
+            }
+            if (!participant.gender) {
+              return `Participant ${index + 1}: gender is required.`;
             }
             if (!participant.phoneContact.trim()) {
               return `Participant ${index + 1}: phone contact is required.`;
@@ -1251,6 +1542,14 @@ export function PortalModuleManager({
         if (field.type === "egraSummary" || field.type === "egraProfile") {
           continue;
         }
+        if (
+          config.module === "training" &&
+          (field.key === "numberAttended" ||
+            field.key === "femaleCount" ||
+            field.key === "maleCount")
+        ) {
+          continue;
+        }
         if (!String(value ?? "").trim()) {
           return `${field.label} is required.`;
         }
@@ -1258,7 +1557,16 @@ export function PortalModuleManager({
     }
 
     return "";
-  }, [config, egraSummary.learnersAssessed, formState, schoolsById, trainingParticipants]);
+  }, [
+    config,
+    egraSummary.learnersAssessed,
+    formState,
+    schoolsById,
+    trainingParticipantStats.female,
+    trainingParticipantStats.male,
+    trainingParticipantStats.total,
+    trainingParticipants,
+  ]);
 
   const buildRequestBody = useCallback(
     (nextStatus: PortalRecordStatus) => {
@@ -1267,8 +1575,6 @@ export function PortalModuleManager({
         Number.isInteger(selectedSchoolId) && selectedSchoolId > 0
           ? schoolsById.get(selectedSchoolId) ?? null
           : null;
-      const resolvedSchoolName = selectedSchool?.name ?? formState.schoolName.trim();
-      const resolvedDistrict = selectedSchool?.district ?? formState.district.trim();
 
       const payload: Record<string, string | number | boolean | string[] | null | undefined> = {};
 
@@ -1308,20 +1614,64 @@ export function PortalModuleManager({
       if (participantField) {
         const participantRows = trainingParticipants
           .filter((row) => rowHasTrainingParticipantData(row))
-          .map((row) => ({
-            participantName: row.participantName.trim(),
-            schoolAttachedTo: row.schoolAttachedTo.trim(),
-            role: row.role,
-            phoneContact: row.phoneContact.trim(),
-          }));
+          .map((row) => {
+            const mappedSchool =
+              (row.schoolAccountId.trim()
+                ? schoolsById.get(Number(row.schoolAccountId.trim()))
+                : null) ??
+              selectedSchool ??
+              null;
+            return {
+              participantName: row.participantName.trim(),
+              schoolAttachedTo: mappedSchool?.name ?? row.schoolAttachedTo.trim(),
+              schoolAccountId: mappedSchool?.id ?? null,
+              schoolAccountCode: mappedSchool?.schoolCode ?? null,
+              role: row.role,
+              gender: row.gender,
+              phoneContact: row.phoneContact.trim(),
+            };
+          });
+
+        const primaryParticipantSchool =
+          participantRows
+            .map((row) =>
+              typeof row.schoolAccountId === "number" && Number.isInteger(row.schoolAccountId)
+                ? schoolsById.get(row.schoolAccountId) ?? null
+                : null,
+            )
+            .find((school) => Boolean(school)) ?? null;
+        const resolvedPrimarySchool =
+          config.module === "training"
+            ? primaryParticipantSchool ?? selectedSchool
+            : selectedSchool;
+
+        const resolvedSchoolName =
+          resolvedPrimarySchool?.name ??
+          (formState.schoolName.trim() || "Training Cluster");
+        const resolvedDistrict =
+          resolvedPrimarySchool?.district ?? formState.district.trim();
 
         payload[participantField.key] = JSON.stringify(participantRows);
         payload.participantsTotal = participantRows.length;
         payload.classroomTeachers = participantRows.filter((row) => row.role === "Teacher").length;
         payload.schoolLeaders = participantRows.filter((row) => row.role === "Leader").length;
-        if (!String(formState.payload.numberAttended ?? "").trim()) {
-          payload.numberAttended = participantRows.length;
-        }
+        payload.femaleCount = participantRows.filter((row) => row.gender === "Female").length;
+        payload.maleCount = participantRows.filter((row) => row.gender === "Male").length;
+        payload.numberAttended = participantRows.length;
+
+        return {
+          module: config.module,
+          date: formState.date,
+          district: resolvedDistrict,
+          schoolId:
+            resolvedPrimarySchool?.id ??
+            (Number.isInteger(selectedSchoolId) ? selectedSchoolId : 0),
+          schoolName: resolvedSchoolName,
+          programType: formState.programType.trim(),
+          followUpDate: formState.followUpDate.trim() || undefined,
+          status: nextStatus,
+          payload,
+        };
       }
 
       if (config.module === "assessment") {
@@ -1342,6 +1692,12 @@ export function PortalModuleManager({
       }
 
       if (config.module === "visit") {
+        if (selectedSchool?.gpsLat?.trim() && selectedSchool?.gpsLng?.trim()) {
+          payload.schoolGpsLat = selectedSchool.gpsLat.trim();
+          payload.schoolGpsLng = selectedSchool.gpsLng.trim();
+          payload.schoolGpsSource = "school_profile";
+        }
+
         const observationRatings = Object.entries(payload).filter(
           ([key, value]) => isVisitObservationField(key) && typeof value === "string" && value,
         );
@@ -1365,6 +1721,9 @@ export function PortalModuleManager({
         payload.observationScoreGuide = "Very Good=5, Good=3, Fair=1, Can Improve=0";
       }
 
+      const resolvedSchoolName = selectedSchool?.name ?? formState.schoolName.trim();
+      const resolvedDistrict = selectedSchool?.district ?? formState.district.trim();
+
       return {
         module: config.module,
         date: formState.date,
@@ -1378,6 +1737,86 @@ export function PortalModuleManager({
       };
     },
     [config, egraSummary, formState, participantField, schoolsById, trainingParticipants],
+  );
+
+  const enrichVisitGps = useCallback(
+    async (inputBody: ReturnType<typeof buildRequestBody>) => {
+      if (config.module !== "visit") {
+        return inputBody;
+      }
+
+      const schoolId = Number(inputBody.schoolId);
+      if (!Number.isInteger(schoolId) || schoolId <= 0) {
+        return inputBody;
+      }
+
+      const selectedSchool = schoolsById.get(schoolId);
+      if (!selectedSchool) {
+        return inputBody;
+      }
+
+      const payload = { ...inputBody.payload };
+      const schoolHasGps = Boolean(
+        selectedSchool.gpsLat?.trim() && selectedSchool.gpsLng?.trim(),
+      );
+
+      if (schoolHasGps) {
+        payload.schoolGpsLat = selectedSchool.gpsLat?.trim() || "";
+        payload.schoolGpsLng = selectedSchool.gpsLng?.trim() || "";
+        payload.schoolGpsSource = "school_profile";
+        return {
+          ...inputBody,
+          payload,
+        };
+      }
+
+      if (gpsSeededSchoolIds.includes(schoolId)) {
+        return {
+          ...inputBody,
+          payload,
+        };
+      }
+
+      try {
+        const coordinates = await requestBrowserCoordinates();
+        const latitude = coordinates.latitude.toFixed(6);
+        const longitude = coordinates.longitude.toFixed(6);
+
+        payload.visitGpsLat = latitude;
+        payload.visitGpsLng = longitude;
+        payload.visitGpsAccuracyMeters =
+          coordinates.accuracy !== null ? Number(coordinates.accuracy.toFixed(1)) : null;
+        payload.visitGpsCapturedAt = new Date().toISOString();
+        payload.visitGpsSource = "browser_geolocation";
+        payload.schoolGpsLat = latitude;
+        payload.schoolGpsLng = longitude;
+        payload.schoolGpsSource = "visit_auto_capture";
+
+        const response = await fetch("/api/portal/schools", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            schoolId,
+            gpsLat: latitude,
+            gpsLng: longitude,
+          }),
+        });
+
+        if (response.ok) {
+          setGpsSeededSchoolIds((prev) =>
+            prev.includes(schoolId) ? prev : [...prev, schoolId],
+          );
+        }
+      } catch {
+        // Keep submission moving even if GPS permission is denied.
+      }
+
+      return {
+        ...inputBody,
+        payload,
+      };
+    },
+    [config.module, gpsSeededSchoolIds, schoolsById],
   );
 
   const uploadEvidence = useCallback(
@@ -1419,7 +1858,7 @@ export function PortalModuleManager({
         return;
       }
 
-      const body = buildRequestBody(nextStatus);
+      const draftBody = buildRequestBody(nextStatus);
       setSaving(true);
       setFeedback({
         kind: "success",
@@ -1427,6 +1866,7 @@ export function PortalModuleManager({
       });
 
       try {
+        const body = await enrichVisitGps(draftBody);
         const endpoint = formState.id ? `/api/portal/records/${formState.id}` : "/api/portal/records";
         const method = formState.id ? "PUT" : "POST";
         const response = await fetch(endpoint, {
@@ -1474,7 +1914,7 @@ export function PortalModuleManager({
           queue.push({
             action: formState.id ? "update" : "create",
             id: formState.id ?? undefined,
-            body,
+            body: draftBody,
           });
           writeQueue(queue);
           refreshOfflineCount();
@@ -1492,6 +1932,7 @@ export function PortalModuleManager({
     [
       buildRequestBody,
       draftStorageKey,
+      enrichVisitGps,
       formState.id,
       refreshOfflineCount,
       uploadEvidence,
@@ -1584,7 +2025,7 @@ export function PortalModuleManager({
           <p className="portal-muted">Fields marked with * are required.</p>
         </div>
         <div className="action-row">
-          <button className="button" type="button" onClick={openNewForm}>
+          <button className="button" type="button" onClick={() => openNewForm()}>
             {config.newLabel}
           </button>
           <button className="button button-ghost" type="button" onClick={() => void syncOfflineQueue()} disabled={syncing}>
@@ -1708,9 +2149,11 @@ export function PortalModuleManager({
             <button className="button button-ghost" type="button" onClick={() => void resetFilters()}>
               Reset
             </button>
-            <a href={exportUrl} className="button button-ghost">
-              Export
-            </a>
+            {canExport ? (
+              <a href={exportUrl} className="button button-ghost">
+                Export
+              </a>
+            ) : null}
           </div>
         </form>
       </section>
@@ -1800,7 +2243,31 @@ export function PortalModuleManager({
                 type="date"
                 value={formState.date}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, date: event.target.value }))
+                  setFormState((prev) => {
+                    const nextDate = event.target.value;
+                    if (!nextDate) {
+                      return { ...prev, date: nextDate };
+                    }
+
+                    if (config.module === "training") {
+                      const minimumFollowUp = addDaysToDate(nextDate, 14);
+                      const nextFollowUp =
+                        prev.followUpDate && prev.followUpDate >= minimumFollowUp
+                          ? prev.followUpDate
+                          : minimumFollowUp;
+                      return {
+                        ...prev,
+                        date: nextDate,
+                        followUpDate: nextFollowUp,
+                      };
+                    }
+
+                    if (prev.followUpDate && prev.followUpDate < nextDate) {
+                      return { ...prev, date: nextDate, followUpDate: nextDate };
+                    }
+
+                    return { ...prev, date: nextDate };
+                  })
                 }
                 required
               />
@@ -1874,43 +2341,45 @@ export function PortalModuleManager({
                 ))}
               </select>
             </label>
-            <label>
-              {renderLabel("School Account", true)}
-              <select
-                value={formState.schoolId}
-                onChange={(event) =>
-                  setFormState((prev) => {
-                    const nextSchoolId = event.target.value;
-                    const selectedSchool = nextSchoolId
-                      ? schoolsById.get(Number(nextSchoolId))
-                      : undefined;
+            {config.module !== "training" ? (
+              <label>
+                {renderLabel("School Account", true)}
+                <select
+                  value={formState.schoolId}
+                  onChange={(event) =>
+                    setFormState((prev) => {
+                      const nextSchoolId = event.target.value;
+                      const selectedSchool = nextSchoolId
+                        ? schoolsById.get(Number(nextSchoolId))
+                        : undefined;
 
-                    return {
-                      ...prev,
-                      schoolId: nextSchoolId,
-                      schoolName: selectedSchool?.name ?? "",
-                      district: selectedSchool?.district ?? prev.district,
-                      region: selectedSchool
-                        ? inferRegionFromDistrict(selectedSchool.district) ?? prev.region
-                        : prev.region,
-                    };
-                  })
-                }
-                required
-              >
-                <option value="">Select school account</option>
-                {formSchoolOptions.map((school) => (
-                  <option key={school.id} value={String(school.id)}>
-                    {school.name} ({school.schoolCode})
-                  </option>
-                ))}
-              </select>
-              {formSchoolOptions.length === 0 ? (
-                <span className="portal-muted">
-                  No school account matches the selected region/district.
-                </span>
-              ) : null}
-            </label>
+                      return {
+                        ...prev,
+                        schoolId: nextSchoolId,
+                        schoolName: selectedSchool?.name ?? "",
+                        district: selectedSchool?.district ?? prev.district,
+                        region: selectedSchool
+                          ? inferRegionFromDistrict(selectedSchool.district) ?? prev.region
+                          : prev.region,
+                      };
+                    })
+                  }
+                  required
+                >
+                  <option value="">Select school account</option>
+                  {formSchoolOptions.map((school) => (
+                    <option key={school.id} value={String(school.id)}>
+                      {school.name} ({school.schoolCode})
+                    </option>
+                  ))}
+                </select>
+                {formSchoolOptions.length === 0 ? (
+                  <span className="portal-muted">
+                    No school account matches the selected region/district.
+                  </span>
+                ) : null}
+              </label>
+            ) : null}
             <label>
               {renderLabel(config.programTypeLabel, true)}
               <select
@@ -1930,13 +2399,19 @@ export function PortalModuleManager({
             </label>
 
             <label>
-              {renderLabel("Follow-up date")}
+              {renderLabel(
+                config.module === "training"
+                  ? "Next follow-up date (minimum 2 weeks)"
+                  : "Follow-up date",
+              )}
               <input
                 type="date"
                 value={formState.followUpDate}
+                min={followUpMinDate}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, followUpDate: event.target.value }))
                 }
+                required={config.module === "training"}
               />
             </label>
             <label>
@@ -2174,8 +2649,10 @@ export function PortalModuleManager({
                                 <tr>
                                   <th>#</th>
                                   <th>Participant Name</th>
+                                  <th>School ID</th>
                                   <th>School Attached To</th>
                                   <th>Role</th>
+                                  <th>Gender</th>
                                   <th>Phone Contact</th>
                                   <th>Action</th>
                                 </tr>
@@ -2198,29 +2675,24 @@ export function PortalModuleManager({
                                       />
                                     </td>
                                     <td>
+                                      {row.schoolAccountId
+                                        ? schoolsById.get(Number(row.schoolAccountId))?.schoolCode ?? "-"
+                                        : "-"}
+                                    </td>
+                                    <td>
                                       <select
-                                        value={row.schoolAttachedTo}
+                                        value={row.schoolAccountId}
                                         onChange={(event) =>
                                           updateTrainingParticipant(
                                             index,
-                                            "schoolAttachedTo",
+                                            "schoolAccountId",
                                             event.target.value,
                                           )
                                         }
                                       >
                                         <option value="">Select school account</option>
-                                        {row.schoolAttachedTo.trim() &&
-                                        !participantSchoolOptions.some(
-                                          (school) =>
-                                            school.name.trim().toLowerCase() ===
-                                            row.schoolAttachedTo.trim().toLowerCase(),
-                                        ) ? (
-                                          <option value={row.schoolAttachedTo}>
-                                            {row.schoolAttachedTo} (legacy)
-                                          </option>
-                                        ) : null}
                                         {participantSchoolOptions.map((school) => (
-                                          <option key={school.id} value={school.name}>
+                                          <option key={school.id} value={String(school.id)}>
                                             {school.name} ({school.schoolCode})
                                           </option>
                                         ))}
@@ -2236,6 +2708,18 @@ export function PortalModuleManager({
                                         <option value="">Select role</option>
                                         <option value="Teacher">Teacher</option>
                                         <option value="Leader">Leader</option>
+                                      </select>
+                                    </td>
+                                    <td>
+                                      <select
+                                        value={row.gender}
+                                        onChange={(event) =>
+                                          updateTrainingParticipant(index, "gender", event.target.value)
+                                        }
+                                      >
+                                        <option value="">Select gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
                                       </select>
                                     </td>
                                     <td>
@@ -2349,20 +2833,51 @@ export function PortalModuleManager({
                     return (
                       <label key={field.key}>
                         {renderLabel(field.label, field.required)}
-                        <input
-                          type={inferInputType(field)}
-                          min={isNumberField(field) ? field.min : undefined}
-                          max={isNumberField(field) ? field.max : undefined}
-                          step={isNumberField(field) ? field.step ?? 1 : undefined}
-                          inputMode={inferInputMode(field)}
-                          autoComplete={inferAutoComplete(field)}
-                          value={Array.isArray(value) ? value.join(", ") : sanitizeForInput(value)}
-                          placeholder={inferPlaceholder(field)}
-                          onChange={(event) => updatePayloadField(field.key, event.target.value)}
-                          required={field.required}
-                        />
+                        {(() => {
+                          const isTrainingAutoAttendanceField =
+                            config.module === "training" &&
+                            (field.key === "numberAttended" ||
+                              field.key === "femaleCount" ||
+                              field.key === "maleCount");
+                          const computedValue =
+                            field.key === "numberAttended"
+                              ? String(trainingParticipantStats.total)
+                              : field.key === "femaleCount"
+                                ? String(trainingParticipantStats.female)
+                                : field.key === "maleCount"
+                                  ? String(trainingParticipantStats.male)
+                                  : Array.isArray(value)
+                                    ? value.join(", ")
+                                    : sanitizeForInput(value);
+
+                          return (
+                            <input
+                              type={inferInputType(field)}
+                              min={isNumberField(field) ? field.min : undefined}
+                              max={isNumberField(field) ? field.max : undefined}
+                              step={isNumberField(field) ? field.step ?? 1 : undefined}
+                              inputMode={inferInputMode(field)}
+                              autoComplete={inferAutoComplete(field)}
+                              value={computedValue}
+                              placeholder={inferPlaceholder(field)}
+                              onChange={(event) =>
+                                updatePayloadField(field.key, event.target.value)
+                              }
+                              required={field.required}
+                              readOnly={isTrainingAutoAttendanceField}
+                            />
+                          );
+                        })()}
                         {field.helperText ? (
                           <small className="portal-field-help">{field.helperText}</small>
+                        ) : null}
+                        {config.module === "training" &&
+                        (field.key === "numberAttended" ||
+                          field.key === "femaleCount" ||
+                          field.key === "maleCount") ? (
+                          <small className="portal-field-help">
+                            Auto-calculated from participant entries.
+                          </small>
                         ) : null}
                       </label>
                     );

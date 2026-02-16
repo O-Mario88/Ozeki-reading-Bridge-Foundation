@@ -1,5 +1,6 @@
 import { ContactForm } from "@/components/ContactForm";
 import { PageHero } from "@/components/PageHero";
+import { officialContact, officialContactLinks } from "@/lib/contact";
 
 export const metadata = {
   title: "Contact",
@@ -20,11 +21,15 @@ export default function ContactPage() {
         <div className="container split">
           <article className="card">
             <h2>Direct contact</h2>
-            <p>Email: info@ozekireadingbridge.org</p>
-            <p>Phone/WhatsApp: +256 700 000 000</p>
-            <p>Kampala, Uganda</p>
             <p>
-              <a href="https://wa.me/256700000000" target="_blank" rel="noreferrer">
+              <a href={officialContactLinks.mailto}>Email: {officialContact.email}</a>
+            </p>
+            <p>
+              <a href={officialContactLinks.tel}>Phone/WhatsApp: {officialContact.phoneDisplay}</a>
+            </p>
+            <p>{officialContact.address}</p>
+            <p>
+              <a href={officialContactLinks.whatsapp} target="_blank" rel="noreferrer">
                 Open WhatsApp chat
               </a>
             </p>

@@ -9,10 +9,11 @@ interface PortalDashboardClientProps {
 }
 
 const quickActions = [
-  { href: "/portal/trainings?new=1", label: "+ New Training" },
-  { href: "/portal/visits?new=1", label: "+ New School Visit" },
-  { href: "/portal/assessments?new=1", label: "+ New Assessment" },
-  { href: "/portal/story?new=1", label: "+ New 1001 Story Support" },
+  { href: "/portal/schools", label: "Open School Profiles" },
+  { href: "/portal/testimonials", label: "+ New Testimonial Story" },
+  { href: "/portal/resources", label: "+ Upload Resource" },
+  { href: "/portal/blog", label: "+ Publish Blog Post" },
+  { href: "/portal/events", label: "+ Schedule Webinar/Event" },
 ];
 
 const moduleRoute: Record<PortalRecordModule, string> = {
@@ -123,6 +124,10 @@ export function PortalDashboardClient({ dashboard }: PortalDashboardClientProps)
             </Link>
           ))}
         </div>
+        <p className="portal-muted">
+          New training, visit, assessment, 1001 Story, enrollment, and contact updates are now
+          launched from each school profile.
+        </p>
         <div className="portal-status-line">
           <p>
             <strong>Drafts:</strong>{" "}

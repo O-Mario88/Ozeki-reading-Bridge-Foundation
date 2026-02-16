@@ -1,7 +1,7 @@
 import { PortalDashboardClient } from "@/components/portal/PortalDashboardClient";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { getPortalDashboardData } from "@/lib/db";
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export const metadata = {
 };
 
 export default async function PortalDashboardPage() {
-  const user = await requirePortalUser();
+  const user = await requirePortalStaffUser();
   const dashboard = getPortalDashboardData(user);
 
   return (
@@ -21,6 +21,7 @@ export default async function PortalDashboardPage() {
       activeHref="/portal/dashboard"
       title="Staff Dashboard"
       description="Track weekly operations, pending follow-ups, and recent submissions."
+      shellClassName="portal-dashboard-shell"
     >
       <PortalDashboardClient dashboard={dashboard} />
     </PortalShell>

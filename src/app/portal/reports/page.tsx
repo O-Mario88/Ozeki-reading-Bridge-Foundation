@@ -1,7 +1,12 @@
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getImpactSummary, listPortalRecords } from "@/lib/db";
+import {
+  getImpactSummary,
+  listPortalImpactReports,
+  listPortalRecords,
+} from "@/lib/db";
+import { PortalImpactReportsManager } from "@/components/portal/PortalImpactReportsManager";
 import { portalModuleConfigs } from "@/lib/portal-config";
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/portal-auth";
 import { PortalRecordStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +21,9 @@ function countStatus(rows: Array<{ status: PortalRecordStatus }>, status: Portal
 }
 
 export default async function PortalReportsPage() {
-  const user = await requirePortalUser();
+  const user = await requirePortalStaffUser();
   const impact = getImpactSummary();
+  const impactReports = listPortalImpactReports(user, 120);
 
   const moduleRows = portalModuleConfigs.map((config) => {
     const rows = listPortalRecords({ module: config.module }, user);
@@ -99,6 +105,8 @@ export default async function PortalReportsPage() {
             <li>Export filters are available directly in each module page.</li>
           </ul>
         </section>
+
+        <PortalImpactReportsManager initialReports={impactReports} />
       </div>
     </PortalShell>
   );

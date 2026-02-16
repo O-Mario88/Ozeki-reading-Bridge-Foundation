@@ -432,6 +432,7 @@ export interface SchoolDirectoryInput {
   subCounty: string;
   parish: string;
   village?: string;
+  notes?: string;
   enrolledBoys?: number;
   enrolledGirls?: number;
   gpsLat?: string;
@@ -448,6 +449,7 @@ export interface SchoolDirectoryRecord {
   subCounty: string;
   parish: string;
   village: string | null;
+  notes: string | null;
   enrolledBoys: number;
   enrolledGirls: number;
   enrolledLearners: number;
@@ -627,6 +629,7 @@ export interface ImpactReportFactPack {
     schoolsImpacted: string;
     schoolsCoachedVisited: string;
     improvement: string;
+    reportingCalendar: string;
   };
   coverageDelivery: ImpactReportCoverageBlock;
   engagement: ImpactReportEngagementBlock;

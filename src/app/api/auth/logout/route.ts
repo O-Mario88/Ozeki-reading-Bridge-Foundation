@@ -18,6 +18,9 @@ export async function POST() {
     name: PORTAL_SESSION_COOKIE,
     value: "",
     maxAge: 0,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
   });
 

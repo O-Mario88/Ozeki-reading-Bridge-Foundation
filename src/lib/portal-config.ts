@@ -57,7 +57,7 @@ const trainingConfig: PortalModuleConfig = {
   description:
     "Log teacher professional development sessions and track quality, participation, and follow-up actions.",
   newLabel: "+ New Training",
-  programTypeLabel: "Training type",
+  programTypeLabel: "Training topic",
   programTypeOptions: [
     { value: "Phonics", label: "Phonics" },
     { value: "Fluency", label: "Fluency" },
@@ -71,6 +71,18 @@ const trainingConfig: PortalModuleConfig = {
       id: "basics",
       title: "Section 1: Basics",
       fields: [
+        {
+          key: "trainingStatus",
+          label: "Training status",
+          type: "select",
+          required: true,
+          options: [
+            { value: "Scheduled", label: "Scheduled" },
+            { value: "In Progress", label: "In Progress" },
+            { value: "Completed", label: "Completed" },
+            { value: "Canceled", label: "Canceled" },
+          ],
+        },
         { key: "startTime", label: "Start time", type: "time", required: true },
         { key: "endTime", label: "End time", type: "time", required: true },
         { key: "subCounty", label: "Sub-county", type: "text", required: true },
@@ -123,7 +135,7 @@ const trainingConfig: PortalModuleConfig = {
           type: "participants",
           required: true,
           helperText:
-            "Capture participant name, school attached to, role (Teacher or Leader), and phone contact.",
+            "Capture participant name, school attached to, role (Teacher or Leader), gender, and phone contact.",
         },
         { key: "facilitators", label: "Facilitators", type: "text", required: true },
       ],
@@ -134,13 +146,13 @@ const trainingConfig: PortalModuleConfig = {
       fields: [
         {
           key: "numberAttended",
-          label: "Number attended",
+          label: "Number attended (auto)",
           type: "number",
           required: true,
           min: 0,
         },
-        { key: "femaleCount", label: "Female attended", type: "number", min: 0 },
-        { key: "maleCount", label: "Male attended", type: "number", min: 0 },
+        { key: "femaleCount", label: "Female attended (auto)", type: "number", min: 0 },
+        { key: "maleCount", label: "Male attended (auto)", type: "number", min: 0 },
         {
           key: "preTestAverage",
           label: "Pre-test average (%)",
@@ -148,14 +160,6 @@ const trainingConfig: PortalModuleConfig = {
           min: 0,
           max: 100,
         },
-        {
-          key: "postTestAverage",
-          label: "Post-test average (%)",
-          type: "number",
-          min: 0,
-          max: 100,
-        },
-        { key: "testedCount", label: "# tested", type: "number", min: 0 },
       ],
     },
     {
@@ -164,19 +168,7 @@ const trainingConfig: PortalModuleConfig = {
       fields: [
         { key: "challenges", label: "Challenges / risks", type: "textarea" },
         { key: "actionPoints", label: "Action points agreed", type: "textarea" },
-        { key: "followUpFocus", label: "Follow-up focus", type: "text" },
-      ],
-    },
-    {
-      id: "evidence",
-      title: "Section 5: Evidence Uploads",
-      fields: [
-        {
-          key: "evidenceNotes",
-          label: "Evidence notes",
-          type: "textarea",
-          placeholder: "Attendance sheet, photos, or observations summary.",
-        },
+        { key: "trainingNotes", label: "Training notes", type: "textarea" },
       ],
     },
   ],

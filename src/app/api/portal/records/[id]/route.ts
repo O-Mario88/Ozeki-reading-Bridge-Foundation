@@ -24,6 +24,7 @@ const updateSchema = z.object({
   module: moduleSchema,
   date: z.string().min(6),
   district: z.string().min(2),
+  schoolId: z.coerce.number().int().positive(),
   schoolName: z.string().min(2),
   programType: z.string().trim().optional(),
   followUpDate: z.string().trim().optional(),

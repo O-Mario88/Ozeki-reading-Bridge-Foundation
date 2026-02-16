@@ -6,16 +6,24 @@ import { PortalUser } from "@/lib/types";
 type PortalNavItem = {
   href: string;
   label: string;
+  staffOnly?: boolean;
+  superAdminOnly?: boolean;
 };
 
 const portalNavItems: PortalNavItem[] = [
-  { href: "/portal/dashboard", label: "Dashboard" },
+  { href: "/portal/dashboard", label: "Dashboard", staffOnly: true },
+  { href: "/portal/analytics", label: "Data Dashboard", staffOnly: true },
   { href: "/portal/trainings", label: "Trainings" },
   { href: "/portal/visits", label: "Visits" },
   { href: "/portal/assessments", label: "Assessments" },
   { href: "/portal/story", label: "1001 Story" },
-  { href: "/portal/schools", label: "Schools" },
-  { href: "/portal/reports", label: "Reports" },
+  { href: "/portal/resources", label: "Resources", staffOnly: true },
+  { href: "/portal/blog", label: "Blog Posts", staffOnly: true },
+  { href: "/portal/events", label: "Events", staffOnly: true },
+  { href: "/portal/testimonials", label: "Testimonials" },
+  { href: "/portal/schools", label: "Schools", staffOnly: true },
+  { href: "/portal/reports", label: "Reports", staffOnly: true },
+  { href: "/portal/superadmin", label: "Super Admin", superAdminOnly: true },
 ];
 
 interface PortalShellProps {
@@ -24,6 +32,7 @@ interface PortalShellProps {
   title: string;
   description?: string;
   actions?: ReactNode;
+  shellClassName?: string;
   children: ReactNode;
 }
 
@@ -33,11 +42,22 @@ export function PortalShell({
   title,
   description,
   actions,
+  shellClassName,
   children,
 }: PortalShellProps) {
+  const navItems = portalNavItems.filter((item) => {
+    if (item.superAdminOnly && !user.isSuperAdmin) {
+      return false;
+    }
+    if (item.staffOnly && user.role === "Volunteer") {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <section className="section portal-section">
-      <div className="container portal-shell">
+      <div className={`container portal-shell ${shellClassName ?? ""}`.trim()}>
         <header className="portal-header card">
           <div className="portal-header-top">
             <div>
@@ -54,13 +74,14 @@ export function PortalShell({
                 {user.isSupervisor ? " • Supervisor" : ""}
                 {user.isME ? " • M&E" : ""}
                 {user.isAdmin ? " • Admin" : ""}
+                {user.isSuperAdmin ? " • Super Admin" : ""}
               </p>
               <PortalLogoutButton />
             </div>
           </div>
 
           <nav className="portal-nav" aria-label="Portal navigation">
-            {portalNavItems.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

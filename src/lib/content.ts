@@ -32,15 +32,41 @@ export const signatureProgram = {
 export const primaryNav = [
   { href: "/", label: "Home" },
   { href: "/programs", label: "Programs" },
+  { href: "/teacher-professional-development", label: "Teacher Professional Development" },
+  { href: "/in-school-coaching-mentorship", label: "In-School Coaching & Mentorship" },
+  {
+    href: "/learner-reading-assessments-progress-tracking",
+    label: "Learner Assessments & Progress Tracking",
+  },
+  {
+    href: "/teaching-aids-instructional-resources-teachers",
+    label: "Teaching Aids & Instructional Resources",
+  },
+  {
+    href: "/school-systems-routines",
+    label: "School Systems & Routines",
+  },
+  {
+    href: "/instructional-leadership-support",
+    label: "Instructional Leadership Support",
+  },
+  {
+    href: "/monitoring-evaluation-reporting",
+    label: "Monitoring, Evaluation & Reporting",
+  },
+  {
+    href: "/literacy-content-creation-advocacy",
+    label: "Literacy Content Creation & Advocacy",
+  },
+  { href: "/reading-materials-development", label: "Reading Materials Development" },
   { href: "/phonics-training", label: "Phonics Training" },
   { href: "/story-project", label: "1001 Story Project" },
   { href: "/resources", label: "Resources" },
   { href: "/blog", label: "Blog" },
   { href: "/events", label: "Events" },
-  { href: "/impact", label: "Impact" },
   { href: "/diagnostic-quiz", label: "Diagnostic Quiz" },
   { href: "/book-visit", label: "Book a Visit" },
-  { href: "/partner-with-us", label: "Partner With Us" },
+  { href: "/partner", label: "Partner With Us" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -55,80 +81,6 @@ export const serviceOptions = [
 
 export const programs: Program[] = [
   {
-    id: 1,
-    title: "Teacher Professional Development (Structured Phonics & Reading Instruction)",
-    summary:
-      "Practical, demonstration-based training that equips teachers to teach reading step by step.",
-    focusAreas: [
-      "Letter sounds and sound-to-symbol mapping",
-      "Blending, segmenting, decoding, and encoding",
-      "Fluency routines, vocabulary, and comprehension",
-    ],
-    outputs: [
-      "Training sessions",
-      "Teacher guides",
-      "Lesson routines",
-      "Classroom implementation plans",
-    ],
-    outcome: "Teachers deliver clearer and more consistent reading instruction.",
-  },
-  {
-    id: 2,
-    title: "In-School Teacher Evaluation, Coaching & Mentorship",
-    summary:
-      "Classroom observation and targeted coaching that turns training into daily practice.",
-    focusAreas: [
-      "Lesson observation with simple rubrics",
-      "Immediate feedback and coaching cycles",
-      "Model lessons and co-teaching",
-    ],
-    outputs: ["Observation notes", "Teacher improvement plans", "Follow-up coaching"],
-    outcome: "Instruction quality improves and adoption of phonics routines is sustained.",
-  },
-  {
-    id: 3,
-    title: "Learner Reading Assessments & Progress Tracking",
-    summary:
-      "Simple, reliable assessment tools that inform targeted instruction.",
-    focusAreas: [
-      "Letter-sound knowledge",
-      "Blending and decoding accuracy",
-      "Oral reading fluency and comprehension",
-    ],
-    outputs: [
-      "Baseline, progress, and endline summaries",
-      "Learner profiles",
-      "Instructional recommendations",
-    ],
-    outcome: "Schools make better literacy decisions using real learner data.",
-  },
-  {
-    id: 4,
-    title: "Remedial & Catch-Up Reading Interventions",
-    summary:
-      "Small-group interventions for non-readers and struggling readers.",
-    focusAreas: [
-      "Skill-gap diagnosis",
-      "Targeted decoding and blending lessons",
-      "Structured fluency building",
-    ],
-    outputs: ["Intervention plans", "Grouping strategies", "Progress monitoring tools"],
-    outcome: "At-risk learners gain foundational reading skills faster.",
-  },
-  {
-    id: 5,
-    title: "Reading Materials Development (Learners)",
-    summary:
-      "Learner-friendly texts aligned to phonics progression and classroom lessons.",
-    focusAreas: [
-      "Decodable readers",
-      "Leveled passages",
-      "Comprehension activities",
-    ],
-    outputs: ["Practice sheets", "Reading passages", "Classroom text sets"],
-    outcome: "More meaningful practice leads to stronger fluency and comprehension.",
-  },
-  {
     id: 6,
     title: "Teaching Aids & Instructional Resources (Teachers)",
     summary:
@@ -136,67 +88,6 @@ export const programs: Program[] = [
     focusAreas: ["Sound charts", "Flashcards", "Blending boards"],
     outputs: ["Word lists", "Lesson templates", "Teacher guides"],
     outcome: "Teachers deliver engaging lessons with stronger structure.",
-  },
-  {
-    id: 7,
-    title: "School Literacy Program Strengthening (Systems & Routines)",
-    summary:
-      "School-wide routines and accountability systems for literacy implementation.",
-    focusAreas: [
-      "Literacy timetables",
-      "Daily and weekly reading routines",
-      "Implementation tracking tools",
-    ],
-    outputs: ["School literacy plans", "Routine trackers", "Accountability checklists"],
-    outcome: "Schools sustain literacy gains beyond one-off training.",
-  },
-  {
-    id: 8,
-    title: "Instructional Leadership Support (Headteachers & Directors of Studies)",
-    summary:
-      "Leadership coaching for stronger supervision and teacher support.",
-    focusAreas: [
-      "Observation and supervision checklists",
-      "Coaching conversations",
-      "Data-informed decisions",
-    ],
-    outputs: ["Leadership toolkits", "Supervision routines", "Coaching templates"],
-    outcome: "Leaders drive consistent, high-quality reading instruction.",
-  },
-  {
-    id: 9,
-    title: "Monitoring, Evaluation & Reporting",
-    summary:
-      "Data collection and reporting systems that prove impact and guide improvement.",
-    focusAreas: ["Program monitoring", "Data quality", "Evidence synthesis"],
-    outputs: ["Partner-ready reports", "Learning briefs", "Action recommendations"],
-    outcome: "Partners get accountability, transparency, and credible evidence of results.",
-  },
-  {
-    id: 10,
-    title: "Literacy Content Creation & Advocacy",
-    summary:
-      "Practical professional knowledge sharing for teachers and school leaders.",
-    focusAreas: ["Guides", "Articles", "Implementation tips"],
-    outputs: ["Toolkits", "Campaign content", "Best-practice briefs"],
-    outcome: "More educators apply proven literacy practices in real classrooms.",
-  },
-  {
-    id: 11,
-    title: "The 1001 Story Project (Learner Authors -> Published Books)",
-    summary:
-      "School-based writing program that strengthens writing and reinforces reading fluency.",
-    focusAreas: [
-      "Teacher-led story-writing routines",
-      "Drafting and revision workflows",
-      "Read-aloud and editing cycles",
-    ],
-    outputs: [
-      "Learner drafts",
-      "Edited anthology (digital/print)",
-      "School story showcase",
-    ],
-    outcome: "Learners become confident readers and emerging authors.",
   },
 ];
 
@@ -409,6 +300,48 @@ export const testimonials: Testimonial[] = [
     role: "P2 Teacher, Starlight Academy",
     quote:
       "The sound charts and blending routines are practical. I can see struggling readers catching up.",
+  },
+  {
+    name: "Mercy Nankya",
+    role: "Classroom Teacher, Kyengera Primary",
+    quote:
+      "The demonstration sessions were immediately usable. My learners now decode words confidently and read with better pace.",
+  },
+  {
+    name: "Peter Okello",
+    role: "School Leader, Gulu Sunrise Primary",
+    quote:
+      "The school systems support helped us align timetables, coaching notes, and assessment tracking in one routine.",
+  },
+  {
+    name: "Scovia Twinomujuni",
+    role: "P3 Teacher, Rukungiri Model School",
+    quote:
+      "Small-group remedial routines helped our non-readers make steady gains. We now monitor progress every week.",
+  },
+  {
+    name: "Ronald Mugisha",
+    role: "Director of Studies, Hillside Junior School",
+    quote:
+      "The assessment summaries gave us clear decisions for instruction. Teachers know exactly what skills to reteach.",
+  },
+  {
+    name: "Harriet Nakato",
+    role: "Literacy Champion, Wakiso Cluster",
+    quote:
+      "The coaching follow-ups kept implementation strong after training. Teachers did not return to old habits.",
+  },
+  {
+    name: "Samuel Ochieng",
+    role: "Headteacher, Lira Community School",
+    quote:
+      "Our 1001 Story sessions increased both reading and writing confidence. Learners are proud to read their own stories aloud.",
+  },
+  {
+    name: "Brenda Atuhura",
+    role: "P1 Teacher, Mbarara Junior Academy",
+    quote:
+      "Phonics routines are now consistent across classes, and we can see stronger blending and spelling accuracy.",
   },
 ];
 

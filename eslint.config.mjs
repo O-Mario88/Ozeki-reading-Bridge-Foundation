@@ -4,7 +4,13 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [".next/**", "node_modules/**", "public/**"],
+    ignores: [
+      ".next/**",
+      ".next_old_*/**",
+      ".next_build_lock_*/**",
+      "node_modules/**",
+      "public/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

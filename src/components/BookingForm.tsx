@@ -65,7 +65,7 @@ export function BookingForm() {
   }
 
   return (
-    <form className="form-grid" onSubmit={handleSubmit}>
+    <form className="form-grid booking-form-grid" onSubmit={handleSubmit}>
       <label>
         Service
         <select name="service" required>
@@ -133,8 +133,12 @@ export function BookingForm() {
         />
       </label>
 
-      <button className="button" type="submit" disabled={state.status === "submitting"}>
-        {state.status === "submitting" ? "Submitting..." : "Submit booking request"}
+      <button
+        className="button button-compact booking-form-submit"
+        type="submit"
+        disabled={state.status === "submitting"}
+      >
+        {state.status === "submitting" ? "Submitting..." : "Submit request"}
       </button>
 
       {state.message ? (

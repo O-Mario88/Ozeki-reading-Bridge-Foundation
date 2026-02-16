@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { PageHero } from "@/components/PageHero";
 import { PortalLoginForm } from "@/components/PortalLoginForm";
-import { getCurrentPortalUser } from "@/lib/portal-auth";
+import { getCurrentPortalUser, getPortalHomePath } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ export default async function PortalLoginPage() {
   const user = await getCurrentPortalUser();
 
   if (user) {
-    redirect("/portal/dashboard");
+    redirect(getPortalHomePath(user));
   }
 
   return (

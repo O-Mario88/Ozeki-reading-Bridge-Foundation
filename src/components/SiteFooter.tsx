@@ -1,15 +1,32 @@
 import Link from "next/link";
+import { officialContact, officialContactLinks } from "@/lib/contact";
+
+function chunkArray<T>(items: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
 
 const quickLinks = [
-  { href: "/about", label: "About" },
+  { href: "/", label: "Home" },
   { href: "/programs", label: "Programs" },
-  { href: "/academy", label: "Ozeki Literacy Academy" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/portal/login", label: "Staff Portal" },
-  { href: "/transparency", label: "Transparency" },
+  { href: "/about", label: "About Ozeki" },
+  { href: "/impact", label: "Impact Hub" },
+  { href: "/impact/reports", label: "Impact Reports" },
+  { href: "/media", label: "Evidence Gallery" },
+  { href: "/resources", label: "Resources" },
+  { href: "/partner", label: "Partner With Us" },
+  { href: "/impact/case-studies", label: "Case Studies" },
+  { href: "/transparency", label: "Trust & Accountability" },
+  { href: "/contact", label: "Contact" },
+  { href: "/donate", label: "Donate" },
 ];
 
 export function SiteFooter() {
+  const quickLinkColumns = chunkArray(quickLinks, 5);
+
   return (
     <footer className="site-footer">
       <div className="container footer-grid">
@@ -19,25 +36,35 @@ export function SiteFooter() {
             We strengthen reading instruction in nursery and primary schools through
             practical phonics, coaching, and literacy systems.
           </p>
-          <a href="https://wa.me/256700000000" target="_blank" rel="noreferrer">
-            WhatsApp: +256 700 000 000
-          </a>
+          <p>
+            <a href={officialContactLinks.mailto}>Email: {officialContact.email}</a>
+          </p>
+          <a href={officialContactLinks.tel}>Phone: {officialContact.phoneDisplay}</a>
         </section>
-        <section>
+        <section className="footer-quick-links">
           <h3>Quick Links</h3>
-          <ul>
-            {quickLinks.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href}>{item.label}</Link>
-              </li>
+          <div className="footer-links-columns">
+            {quickLinkColumns.map((column, columnIndex) => (
+              <ul className="footer-links-list" key={`footer-column-${columnIndex + 1}`}>
+                {column.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href}>{item.label}</Link>
+                  </li>
+                ))}
+              </ul>
             ))}
-          </ul>
+          </div>
         </section>
         <section>
-          <h3>Contact</h3>
-          <p>Email: info@ozekireadingbridge.org</p>
-          <p>Kampala, Uganda</p>
-          <Link href="/contact">Send inquiry</Link>
+          <h3>Northern Uganda Focus</h3>
+          <p>{officialContact.address}</p>
+          <p>
+            We are based in Gulu City and prioritize literacy recovery in Northern
+            Uganda communities affected by long-term education disruption.
+          </p>
+          <p>
+            <Link href="/partner">Partner to support school literacy recovery</Link>
+          </p>
         </section>
       </div>
       <div className="container footer-bottom">

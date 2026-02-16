@@ -164,7 +164,7 @@ export function ResourceLibrary({ resources }: { resources: ResourceItem[] }) {
                 {resource.grade} · {resource.skill}
               </p>
               <button className="button" onClick={() => handleDownload(resource)}>
-                Preview + Download
+                {resource.downloadLabel || "Preview + Download"}
               </button>
             </article>
           ))}

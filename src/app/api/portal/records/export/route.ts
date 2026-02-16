@@ -43,9 +43,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!(user.isME || user.isAdmin || user.isSupervisor)) {
+  if (!(user.isME || user.isAdmin || user.isSupervisor || user.isSuperAdmin)) {
     return NextResponse.json(
-      { error: "Only supervisors, M&E, or admins can export reports." },
+      { error: "Only supervisors, M&E, admins, or super admins can export reports." },
       { status: 403 },
     );
   }

@@ -9,6 +9,14 @@ Full-stack Next.js web application for Ozeki Reading Bridge Foundation.
 - Cookie session auth for staff/volunteer portal access
 - REST-style API routes for booking, contact, downloads, impact, blog, resources, and portal data entry
 
+## Scalable Architecture Blueprint
+- Architecture document:
+  - `docs/scalable-platform-architecture.md`
+- Supabase migration scaffold (Postgres + RLS + assignment model + core modules):
+  - `supabase/migrations/20260215_000001_core_platform.sql`
+
+This project currently runs on SQLite for local delivery speed. The Supabase scaffold is included to support migration to a multi-tenant production architecture with Row Level Security.
+
 ## Implemented Website Structure
 - Home
 - About
@@ -89,6 +97,12 @@ Set custom credentials in `.env.local` (or copy from `.env.example`):
 - `GOOGLE_CALENDAR_ID`
 - `GOOGLE_CALENDAR_TIMEZONE`
 - `BOOKING_CALENDAR_DURATION_MINUTES`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `POSTHOG_KEY`
+- `POSTHOG_HOST`
+- `METABASE_SITE_URL`
 
 ## SEO & Technical Setup
 - Clean routes for all core pages

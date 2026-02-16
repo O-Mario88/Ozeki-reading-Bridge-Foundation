@@ -1,6 +1,10 @@
 import { PortalModuleManager } from "@/components/portal/PortalModuleManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listPortalRecords, listPortalUsersForFilters } from "@/lib/db";
+import {
+  listPortalRecords,
+  listPortalUsersForFilters,
+  listSchoolDirectoryRecords,
+} from "@/lib/db";
 import { portalModuleConfigByModule } from "@/lib/portal-config";
 import { requirePortalUser } from "@/lib/portal-auth";
 
@@ -15,6 +19,7 @@ export default async function PortalAssessmentsPage() {
   const user = await requirePortalUser();
   const config = portalModuleConfigByModule.assessment;
   const records = listPortalRecords({ module: "assessment" }, user);
+  const schools = listSchoolDirectoryRecords();
   const users = listPortalUsersForFilters(user);
 
   return (
@@ -27,6 +32,7 @@ export default async function PortalAssessmentsPage() {
       <PortalModuleManager
         config={config}
         initialRecords={records}
+        initialSchools={schools}
         initialUsers={users}
         currentUser={user}
       />

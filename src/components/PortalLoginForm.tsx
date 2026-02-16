@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { officialContactLinks } from "@/lib/contact";
 
 type SubmitState = {
   status: "idle" | "submitting" | "success" | "error";
@@ -12,6 +14,8 @@ const initialState: SubmitState = { status: "idle", message: "" };
 export function PortalLoginForm() {
   const [state, setState] = useState<SubmitState>(initialState);
   const [showPassword, setShowPassword] = useState(false);
+  const searchParams = useSearchParams();
+  const oauthError = searchParams.get("error");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,8 +36,9 @@ export function PortalLoginForm() {
         throw new Error(data.error ?? "Could not sign in.");
       }
 
+      const data = (await response.json()) as { redirectTo?: string };
       setState({ status: "success", message: "Sign-in successful. Redirecting..." });
-      window.location.href = "/portal/dashboard";
+      window.location.href = data.redirectTo ?? "/portal/dashboard";
     } catch (error) {
       const message = error instanceof Error ? error.message : "Sign-in failed.";
       setState({ status: "error", message });
@@ -73,10 +78,16 @@ export function PortalLoginForm() {
         {state.status === "submitting" ? "Signing in..." : "Sign In"}
       </button>
 
+      <a className="button button-ghost" href="/api/auth/google">
+        Continue with Google
+      </a>
+
       <div className="portal-login-links">
-        <a href="mailto:support@ozekireadingbridge.org">Forgot password?</a>
-        <a href="mailto:admin@ozekireadingbridge.org">Need access? Contact Admin</a>
+        <a href={officialContactLinks.mailto}>Forgot password?</a>
+        <a href={officialContactLinks.mailto}>Need access? Contact Admin</a>
       </div>
+
+      {oauthError ? <p className="form-message error">{oauthError}</p> : null}
 
       {state.message ? (
         <p className={`form-message ${state.status}`}>{state.message}</p>

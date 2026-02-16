@@ -17,6 +17,7 @@ export function canReview(user: {
   isSupervisor: boolean;
   isME: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
 }) {
-  return user.isSupervisor || user.isME || user.isAdmin;
+  return user.isSupervisor || user.isME || user.isAdmin || user.isSuperAdmin;
 }

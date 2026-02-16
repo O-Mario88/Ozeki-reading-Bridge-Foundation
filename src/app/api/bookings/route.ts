@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { saveBooking } from "@/lib/db";
+import { workspaceCalendarRecipients } from "@/lib/contact";
 import {
   buildDateRangeFromDateAndTime,
   createGoogleCalendarEvent,
@@ -47,6 +48,9 @@ export async function POST(request: Request) {
           payload.preferredTime,
           durationMinutes,
         );
+        const attendeeEmails = [...workspaceCalendarRecipients, payload.email]
+          .map((email) => email.trim().toLowerCase())
+          .filter((email, index, list) => email && list.indexOf(email) === index);
 
         const event = await createGoogleCalendarEvent({
           summary: `${payload.service} - ${payload.schoolName}`,
@@ -61,7 +65,7 @@ Location details: ${payload.location}`,
           location: payload.location,
           startDateTime: dateRange.startDateTime,
           endDateTime: dateRange.endDateTime,
-          attendeeEmails: [payload.email],
+          attendeeEmails,
           createMeet: isOnlineSession,
         });
 

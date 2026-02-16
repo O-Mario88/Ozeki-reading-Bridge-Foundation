@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticatePortalUser, createPortalSession } from "@/lib/db";
-import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { getPortalHomePath, PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { clearRateLimit, consumeRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,24 @@ const loginSchema = z.object({
 export async function POST(request: Request) {
   try {
     const payload = loginSchema.parse(await request.json());
+    const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const loginIdentifier = payload.identifier.trim().toLowerCase();
+    const rateLimitKey = `portal-login:${ipAddress}:${loginIdentifier}`;
+    const rateLimit = consumeRateLimit(rateLimitKey, {
+      maxRequests: 8,
+      windowMs: 10 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many login attempts. Please wait and try again.",
+          retryAfterSeconds: rateLimit.retryAfterSeconds,
+        },
+        { status: 429 },
+      );
+    }
+
     const user = authenticatePortalUser(payload.identifier, payload.password);
 
     if (!user) {
@@ -23,8 +42,10 @@ export async function POST(request: Request) {
     }
 
     const session = createPortalSession(user.id);
+    clearRateLimit(rateLimitKey);
     const response = NextResponse.json({
       ok: true,
+      redirectTo: getPortalHomePath(user),
       user: {
         fullName: user.fullName,
         role: user.role,

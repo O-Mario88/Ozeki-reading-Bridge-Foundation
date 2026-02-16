@@ -129,6 +129,7 @@ function ensureSchoolDirectoryColumns(db: Database.Database) {
   ensureColumn(db, "schools_directory", "enrolled_learners", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrolled_boys", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrolled_girls", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "notes", "TEXT");
   db.exec(`
     UPDATE schools_directory
     SET enrolled_boys = COALESCE(enrolled_learners, 0)
@@ -465,6 +466,7 @@ function getDb() {
     gps_lng TEXT,
     contact_name TEXT,
     contact_phone TEXT,
+    notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -1820,6 +1822,7 @@ export function createPortalUserAccount(
   if (!normalizedEmail || !fullName) {
     throw new Error("Full name and email are required.");
   }
+  const isVolunteer = input.role === "Volunteer";
 
   const result = getDb()
     .prepare(
@@ -1853,10 +1856,10 @@ export function createPortalUserAccount(
       phone: input.phone?.trim() ? input.phone.trim() : null,
       role: input.role,
       passwordHash: hashPassword(input.password),
-      isSupervisor: input.isSupervisor ? 1 : 0,
-      isME: input.isME ? 1 : 0,
-      isAdmin: input.isAdmin ? 1 : 0,
-      isSuperAdmin: input.isSuperAdmin ? 1 : 0,
+      isSupervisor: !isVolunteer && input.isSupervisor ? 1 : 0,
+      isME: !isVolunteer && input.isME ? 1 : 0,
+      isAdmin: !isVolunteer && input.isAdmin ? 1 : 0,
+      isSuperAdmin: !isVolunteer && input.isSuperAdmin ? 1 : 0,
     });
 
   return Number(result.lastInsertRowid);
@@ -1885,24 +1888,30 @@ export function updatePortalUserPermissions(
       `
       SELECT
         id,
+        role,
         is_superadmin AS isSuperAdmin
       FROM portal_users
       WHERE id = @userId
       LIMIT 1
     `,
     )
-    .get({ userId }) as { id: number; isSuperAdmin: number } | undefined;
+    .get({ userId }) as { id: number; role: PortalUserRole; isSuperAdmin: number } | undefined;
 
   if (!target) {
     throw new Error("User not found.");
   }
 
-  if (target.id === currentUser.id && input.isSuperAdmin === false) {
+  if (
+    target.id === currentUser.id &&
+    (input.isSuperAdmin === false || input.role === "Volunteer")
+  ) {
     throw new Error("You cannot remove your own super admin access.");
   }
 
   const updates: string[] = [];
   const params: Record<string, unknown> = { userId };
+  const nextRole = input.role ?? target.role;
+  const forceVolunteerPermissions = input.role === "Volunteer";
 
   if (typeof input.fullName === "string") {
     updates.push("full_name = @fullName");
@@ -1918,23 +1927,42 @@ export function updatePortalUserPermissions(
   }
   if (input.isSupervisor !== undefined) {
     updates.push("is_supervisor = @isSupervisor");
-    params.isSupervisor = input.isSupervisor ? 1 : 0;
+    params.isSupervisor = forceVolunteerPermissions ? 0 : input.isSupervisor ? 1 : 0;
   }
   if (input.isME !== undefined) {
     updates.push("is_me = @isME");
-    params.isME = input.isME ? 1 : 0;
+    params.isME = forceVolunteerPermissions ? 0 : input.isME ? 1 : 0;
   }
   if (input.isAdmin !== undefined) {
     updates.push("is_admin = @isAdmin");
-    params.isAdmin = input.isAdmin ? 1 : 0;
+    params.isAdmin = forceVolunteerPermissions ? 0 : input.isAdmin ? 1 : 0;
   }
   if (input.isSuperAdmin !== undefined) {
     updates.push("is_superadmin = @isSuperAdmin");
-    params.isSuperAdmin = input.isSuperAdmin ? 1 : 0;
+    params.isSuperAdmin = forceVolunteerPermissions ? 0 : input.isSuperAdmin ? 1 : 0;
   }
   if (input.password) {
     updates.push("password_hash = @passwordHash");
     params.passwordHash = hashPassword(input.password);
+  }
+
+  if (nextRole === "Volunteer") {
+    if (!updates.includes("is_supervisor = @isSupervisor")) {
+      updates.push("is_supervisor = @isSupervisor");
+      params.isSupervisor = 0;
+    }
+    if (!updates.includes("is_me = @isME")) {
+      updates.push("is_me = @isME");
+      params.isME = 0;
+    }
+    if (!updates.includes("is_admin = @isAdmin")) {
+      updates.push("is_admin = @isAdmin");
+      params.isAdmin = 0;
+    }
+    if (!updates.includes("is_superadmin = @isSuperAdmin")) {
+      updates.push("is_superadmin = @isSuperAdmin");
+      params.isSuperAdmin = 0;
+    }
   }
 
   if (updates.length === 0) {
@@ -1950,6 +1978,133 @@ export function updatePortalUserPermissions(
     `,
     )
     .run(params);
+}
+
+function tableExists(tableName: string) {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name = @tableName
+      LIMIT 1
+    `,
+    )
+    .get({ tableName }) as { name?: string } | undefined;
+
+  return Boolean(row?.name);
+}
+
+export function deletePortalUserAccount(userId: number, currentUser: PortalUser) {
+  if (!canManagePortalUsers(currentUser)) {
+    throw new Error("Unauthorized");
+  }
+
+  const db = getDb();
+  const target = db
+    .prepare(
+      `
+      SELECT
+        id,
+        full_name AS fullName,
+        is_superadmin AS isSuperAdmin
+      FROM portal_users
+      WHERE id = @userId
+      LIMIT 1
+    `,
+    )
+    .get({ userId }) as { id: number; fullName: string; isSuperAdmin: number } | undefined;
+
+  if (!target) {
+    throw new Error("User not found.");
+  }
+
+  if (target.id === currentUser.id) {
+    throw new Error("You cannot delete your own account.");
+  }
+
+  if (target.isSuperAdmin) {
+    const remainingSuperAdmins = db
+      .prepare(
+        `
+        SELECT COUNT(*) AS total
+        FROM portal_users
+        WHERE is_superadmin = 1
+          AND id != @userId
+      `,
+      )
+      .get({ userId }) as { total: number };
+
+    if (Number(remainingSuperAdmins.total ?? 0) <= 0) {
+      throw new Error("At least one super admin account must remain.");
+    }
+  }
+
+  const dependencyChecks: Array<{ label: string; query: string }> = [
+    {
+      label: "portal records",
+      query:
+        "SELECT COUNT(*) AS total FROM portal_records WHERE created_by_user_id = @userId OR updated_by_user_id = @userId",
+    },
+    {
+      label: "evidence uploads",
+      query: "SELECT COUNT(*) AS total FROM portal_evidence WHERE uploaded_by_user_id = @userId",
+    },
+    {
+      label: "training sessions",
+      query: "SELECT COUNT(*) AS total FROM training_sessions WHERE created_by_user_id = @userId",
+    },
+    {
+      label: "assessment records",
+      query: "SELECT COUNT(*) AS total FROM assessment_records WHERE created_by_user_id = @userId",
+    },
+    {
+      label: "online trainings",
+      query: "SELECT COUNT(*) AS total FROM online_training_events WHERE created_by_user_id = @userId",
+    },
+    {
+      label: "testimonials",
+      query: "SELECT COUNT(*) AS total FROM portal_testimonials WHERE created_by_user_id = @userId",
+    },
+    {
+      label: "resources",
+      query: "SELECT COUNT(*) AS total FROM portal_resources WHERE created_by_user_id = @userId",
+    },
+    {
+      label: "blog posts",
+      query: "SELECT COUNT(*) AS total FROM portal_blog_posts WHERE created_by_user_id = @userId",
+    },
+    {
+      label: "impact reports",
+      query: "SELECT COUNT(*) AS total FROM impact_reports WHERE created_by_user_id = @userId",
+    },
+  ];
+
+  const linkedData: string[] = [];
+  for (const check of dependencyChecks) {
+    const tableName = check.query.match(/FROM\s+([a-zA-Z0-9_]+)/i)?.[1];
+    if (tableName && !tableExists(tableName)) {
+      continue;
+    }
+    const row = db.prepare(check.query).get({ userId }) as { total: number } | undefined;
+    if (Number(row?.total ?? 0) > 0) {
+      linkedData.push(check.label);
+    }
+  }
+
+  if (linkedData.length > 0) {
+    throw new Error(
+      `Cannot delete this account because it has linked data (${linkedData.join(", ")}).`,
+    );
+  }
+
+  const transaction = db.transaction(() => {
+    db.prepare("DELETE FROM portal_sessions WHERE user_id = @userId").run({ userId });
+    db.prepare("DELETE FROM portal_users WHERE id = @userId").run({ userId });
+  });
+
+  transaction();
 }
 
 export function authenticatePortalUser(identifier: string, password: string): PortalUser | null {
@@ -2633,6 +2788,7 @@ function getSchoolDirectoryRecordById(id: number) {
         gps_lng AS gpsLng,
         contact_name AS contactName,
         contact_phone AS contactPhone,
+        notes,
         created_at AS createdAt
       FROM schools_directory
       WHERE id = @id
@@ -2640,6 +2796,31 @@ function getSchoolDirectoryRecordById(id: number) {
     `,
     )
     .get({ id }) as SchoolDirectoryRecord | undefined;
+
+  return row ?? null;
+}
+
+function findSchoolByNormalizedName(name: string, excludeId?: number) {
+  const normalizedName = name.trim().toLowerCase();
+  if (!normalizedName) {
+    return null;
+  }
+
+  const row = getDb()
+    .prepare(
+      `
+      SELECT id, school_code AS schoolCode, name, district
+      FROM schools_directory
+      WHERE lower(trim(name)) = @normalizedName
+        ${excludeId ? "AND id != @excludeId" : ""}
+      LIMIT 1
+    `,
+    )
+    .get(
+      excludeId
+        ? { normalizedName, excludeId }
+        : { normalizedName },
+    ) as { id: number; schoolCode: string; name: string; district: string } | undefined;
 
   return row ?? null;
 }
@@ -3140,6 +3321,18 @@ export function getPortalDashboardData(user: PortalUser): PortalDashboardData {
 
 export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): SchoolDirectoryRecord {
   const db = getDb();
+  const normalizedName = input.name.trim();
+  if (!normalizedName) {
+    throw new Error("School name is required.");
+  }
+
+  const duplicateSchool = findSchoolByNormalizedName(normalizedName);
+  if (duplicateSchool) {
+    throw new Error(
+      "A school with this name already exists. Append location details (district/sub-county/parish) to distinguish it.",
+    );
+  }
+
   const insertResult = db
     .prepare(
       `
@@ -3156,7 +3349,8 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         gps_lat,
         gps_lng,
         contact_name,
-        contact_phone
+        contact_phone,
+        notes
       ) VALUES (
         @schoolCode,
         @name,
@@ -3170,13 +3364,14 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         @gpsLat,
         @gpsLng,
         @contactName,
-        @contactPhone
+        @contactPhone,
+        @notes
       )
     `,
     )
     .run({
       schoolCode: "SCH-PENDING",
-      name: input.name,
+      name: normalizedName,
       district: input.district,
       subCounty: input.subCounty,
       parish: input.parish,
@@ -3190,6 +3385,7 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
       gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
       contactName: input.contactName?.trim() ? input.contactName : null,
       contactPhone: input.contactPhone?.trim() ? input.contactPhone : null,
+      notes: input.notes?.trim() ? input.notes.trim() : null,
     });
 
   const id = Number(insertResult.lastInsertRowid);
@@ -3221,6 +3417,7 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         gps_lng AS gpsLng,
         contact_name AS contactName,
         contact_phone AS contactPhone,
+        notes,
         created_at AS createdAt
       FROM schools_directory
       WHERE id = @id
@@ -3234,6 +3431,157 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
   }
 
   return row;
+}
+
+export function updateSchoolDirectoryRecord(
+  schoolId: number,
+  input: {
+    name?: string;
+    district?: string;
+    subCounty?: string;
+    parish?: string;
+    village?: string | null;
+    enrolledBoys?: number;
+    enrolledGirls?: number;
+    gpsLat?: string | null;
+    gpsLng?: string | null;
+    contactName?: string | null;
+    contactPhone?: string | null;
+    notes?: string | null;
+  },
+): SchoolDirectoryRecord {
+  const current = getSchoolDirectoryRecordById(schoolId);
+  if (!current) {
+    throw new Error("School not found.");
+  }
+
+  const updates: string[] = [];
+  const params: Record<string, unknown> = { schoolId };
+
+  if (input.name !== undefined) {
+    const value = input.name.trim();
+    if (!value) {
+      throw new Error("School name is required.");
+    }
+    const duplicateSchool = findSchoolByNormalizedName(value, schoolId);
+    if (duplicateSchool) {
+      throw new Error(
+        "A school with this name already exists. Append location details (district/sub-county/parish) to distinguish it.",
+      );
+    }
+    updates.push("name = @name");
+    params.name = value;
+  }
+  if (input.district !== undefined) {
+    const value = input.district.trim();
+    if (!value) {
+      throw new Error("District is required.");
+    }
+    updates.push("district = @district");
+    params.district = value;
+  }
+  if (input.subCounty !== undefined) {
+    const value = input.subCounty.trim();
+    if (!value) {
+      throw new Error("Sub-county is required.");
+    }
+    updates.push("sub_county = @subCounty");
+    params.subCounty = value;
+  }
+  if (input.parish !== undefined) {
+    const value = input.parish.trim();
+    if (!value) {
+      throw new Error("Parish is required.");
+    }
+    updates.push("parish = @parish");
+    params.parish = value;
+  }
+  if (input.village !== undefined) {
+    const value = input.village?.trim();
+    updates.push("village = @village");
+    params.village = value ? value : null;
+  }
+  if (input.enrolledBoys !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledBoys)));
+    if (!Number.isFinite(value)) {
+      throw new Error("Enrolled boys must be a valid number.");
+    }
+    updates.push("enrolled_boys = @enrolledBoys");
+    params.enrolledBoys = value;
+  }
+  if (input.enrolledGirls !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledGirls)));
+    if (!Number.isFinite(value)) {
+      throw new Error("Enrolled girls must be a valid number.");
+    }
+    updates.push("enrolled_girls = @enrolledGirls");
+    params.enrolledGirls = value;
+  }
+  if (input.gpsLat !== undefined) {
+    const value = input.gpsLat?.trim();
+    updates.push("gps_lat = @gpsLat");
+    params.gpsLat = value ? value : null;
+  }
+  if (input.gpsLng !== undefined) {
+    const value = input.gpsLng?.trim();
+    updates.push("gps_lng = @gpsLng");
+    params.gpsLng = value ? value : null;
+  }
+  if (input.contactName !== undefined) {
+    const value = input.contactName?.trim();
+    updates.push("contact_name = @contactName");
+    params.contactName = value ? value : null;
+  }
+  if (input.contactPhone !== undefined) {
+    const value = input.contactPhone?.trim();
+    updates.push("contact_phone = @contactPhone");
+    params.contactPhone = value ? value : null;
+  }
+  if (input.notes !== undefined) {
+    const value = input.notes?.trim();
+    updates.push("notes = @notes");
+    params.notes = value ? value : null;
+  }
+
+  if (updates.length === 0) {
+    return current;
+  }
+
+  const nextBoys =
+    input.enrolledBoys !== undefined
+      ? Math.max(0, Math.floor(Number(input.enrolledBoys)))
+      : Number(current.enrolledBoys ?? 0);
+  const nextGirls =
+    input.enrolledGirls !== undefined
+      ? Math.max(0, Math.floor(Number(input.enrolledGirls)))
+      : Number(current.enrolledGirls ?? 0);
+
+  if (!updates.includes("enrolled_boys = @enrolledBoys")) {
+    params.enrolledBoys = nextBoys;
+  }
+  if (!updates.includes("enrolled_girls = @enrolledGirls")) {
+    params.enrolledGirls = nextGirls;
+  }
+
+  updates.push("enrolled_learners = @enrolledLearners");
+  params.enrolledLearners = nextBoys + nextGirls;
+
+  getDb()
+    .prepare(
+      `
+      UPDATE schools_directory
+      SET ${updates.join(", ")}
+      WHERE id = @schoolId
+    `,
+    )
+    .run(params);
+
+  const updated = getSchoolDirectoryRecordById(schoolId);
+  if (!updated) {
+    throw new Error("Could not load updated school record.");
+  }
+
+  return updated;
 }
 
 export function listSchoolDirectoryRecords(filters?: {
@@ -3275,6 +3623,7 @@ export function listSchoolDirectoryRecords(filters?: {
         gps_lng AS gpsLng,
         contact_name AS contactName,
         contact_phone AS contactPhone,
+        notes,
         created_at AS createdAt
       FROM schools_directory
       WHERE ${where.join(" AND ")}
@@ -5739,6 +6088,8 @@ function calculateImpactFactPack(input: {
       schoolsCoachedVisited: "Unique schools with at least one coaching/visit record in the selected period.",
       improvement:
         "Improvement is represented by baseline-to-endline mean change when both values are available.",
+      reportingCalendar:
+        "FY reports follow Uganda school-calendar sessions (Term I-III): 01 February to 30 November.",
     },
     coverageDelivery,
     engagement,
@@ -5877,7 +6228,12 @@ function buildImpactNarrative(
     `${coverage.teachersTrained.toLocaleString()} teachers trained, and ` +
     `${coverage.learnersReached.toLocaleString()} learners reached through assessed cohorts. ` +
     `${options?.partnerName ? `Partner scope: ${options.partnerName}. ` : ""}` +
-    `This report is evidence-locked and uses only metrics generated for ${factPack.periodStart} to ${factPack.periodEnd}.`;
+    `This report is evidence-locked and uses only metrics generated for ${factPack.periodStart} to ${factPack.periodEnd}. ` +
+    `${
+      factPack.reportType === "FY Impact Report"
+        ? `${factPack.definitions.reportingCalendar} `
+        : ""
+    }`;
 
   const sectionNarratives: ImpactReportSectionNarrative[] = template.sections
     .filter((section) => section.included)
@@ -6060,6 +6416,8 @@ function parseImpactReportRow(row: {
             schoolsImpacted: "Data not available",
             schoolsCoachedVisited: "Data not available",
             improvement: "Data not available",
+            reportingCalendar:
+              "FY reports follow Uganda school-calendar sessions (Term I-III): 01 February to 30 November.",
           },
           coverageDelivery: {
             schoolsImpacted: 0,

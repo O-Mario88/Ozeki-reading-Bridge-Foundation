@@ -6,6 +6,7 @@ import {
   getPortalUserFromSession,
   saveOnlineTrainingEvent,
 } from "@/lib/db";
+import { workspaceCalendarRecipients } from "@/lib/contact";
 import {
   buildDateRangeFromDateAndTime,
   createGoogleCalendarEvent,
@@ -42,6 +43,9 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (user.role === "Volunteer") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   return NextResponse.json({ events: listOnlineTrainingEvents(20) });
 }
@@ -52,10 +56,13 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (user.role === "Volunteer") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   try {
     const payload = onlineTrainingSchema.parse(await request.json());
-    const attendeeEmails = (payload.attendeeEmails ?? [])
+    const attendeeEmails = [...workspaceCalendarRecipients, ...(payload.attendeeEmails ?? [])]
       .map((email) => email.trim().toLowerCase())
       .filter((email, index, list) => email && list.indexOf(email) === index);
 
