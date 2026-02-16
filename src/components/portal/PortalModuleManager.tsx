@@ -8,12 +8,20 @@ import {
   portalStatusOptions,
 } from "@/lib/portal-config";
 import {
+  allUgandaDistricts,
+  getDistrictsByRegion,
+  inferRegionFromDistrict,
+  ugandaRegions,
+} from "@/lib/uganda-locations";
+import {
   PortalRecord,
   PortalRecordStatus,
+  SchoolDirectoryRecord,
   PortalUser,
 } from "@/lib/types";
 
 type FilterState = {
+  region: string;
   dateFrom: string;
   dateTo: string;
   district: string;
@@ -28,7 +36,9 @@ type FormPayloadState = Record<string, string | string[]>;
 type FormState = {
   id: number | null;
   date: string;
+  region: string;
   district: string;
+  schoolId: string;
   schoolName: string;
   programType: string;
   followUpDate: string;
@@ -56,6 +66,7 @@ type OfflineQueueItem = {
     module: string;
     date: string;
     district: string;
+    schoolId: number;
     schoolName: string;
     programType?: string;
     followUpDate?: string;
@@ -64,14 +75,116 @@ type OfflineQueueItem = {
   };
 };
 
+type EgraMetricKey =
+  | "letterNames"
+  | "letterSounds"
+  | "realWords"
+  | "madeUpWords"
+  | "storyReading"
+  | "readingComp";
+
+type EgraLearnerRow = {
+  no: number;
+  learnerId: string;
+  sex: "" | "M" | "F";
+  age: string;
+  letterNames: string;
+  letterSounds: string;
+  realWords: string;
+  madeUpWords: string;
+  storyReading: string;
+  readingComp: string;
+  fluencyLevel: string;
+};
+
+type EgraSummary = {
+  learnersAssessed: number;
+  averages: {
+    boys: Record<EgraMetricKey, number>;
+    girls: Record<EgraMetricKey, number>;
+    class: Record<EgraMetricKey, number>;
+  };
+  profile: {
+    nonReaders: number;
+    emerging: number;
+    developing: number;
+    transitional: number;
+    fluent: number;
+    percentages: {
+      nonReaders: number;
+      emerging: number;
+      developing: number;
+      transitional: number;
+      fluent: number;
+    };
+  };
+  rowsForPayload: Array<{
+    no: number;
+    learnerId: string;
+    sex: "M" | "F" | "";
+    age: number | null;
+    letterNames: number | null;
+    letterSounds: number | null;
+    realWords: number | null;
+    madeUpWords: number | null;
+    storyReading: number | null;
+    readingComp: number | null;
+    fluencyLevel: string;
+  }>;
+};
+
+type TrainingParticipantRole = "" | "Teacher" | "Leader";
+
+type TrainingParticipantRow = {
+  participantName: string;
+  schoolAttachedTo: string;
+  role: TrainingParticipantRole;
+  phoneContact: string;
+};
+
 interface PortalModuleManagerProps {
   config: PortalModuleConfig;
   initialRecords: PortalRecord[];
+  initialSchools: SchoolDirectoryRecord[];
   initialUsers: Array<{ id: number; fullName: string }>;
   currentUser: PortalUser;
 }
 
 const queueStorageKey = "portal-offline-queue";
+const defaultRegion = ugandaRegions[0]?.region ?? "";
+const EGRA_ROW_COUNT = 20;
+const egraMetricLabels: Array<{ key: EgraMetricKey; label: string }> = [
+  { key: "letterNames", label: "Letter Names (letters/min)" },
+  { key: "letterSounds", label: "Letter Sounds (sounds/min)" },
+  { key: "realWords", label: "Real Words (words/min)" },
+  { key: "madeUpWords", label: "Made-up Words (words/min)" },
+  { key: "storyReading", label: "Story Reading (words/min)" },
+  { key: "readingComp", label: "Reading Comprehension (correct Qs)" },
+];
+
+const egraLevelLabels = [
+  "Non-Reader",
+  "Emerging Reader",
+  "Developing Reader",
+  "Transitional Reader",
+  "Fluent Reader",
+] as const;
+
+const visitObservationScoreByRating: Record<string, number> = {
+  "Very Good": 5,
+  Good: 3,
+  Fair: 1,
+  "Can Improve": 0,
+};
+
+function isVisitObservationField(key: string) {
+  return (
+    key.startsWith("general_") ||
+    key.startsWith("newSound_") ||
+    key.startsWith("readingActivities_") ||
+    key.startsWith("trickyWords_")
+  );
+}
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
@@ -84,12 +197,159 @@ function sanitizeForInput(value: unknown): string {
   return String(value);
 }
 
+function renderLabel(label: string, required?: boolean) {
+  return (
+    <span className="portal-field-label">
+      <span>{label}</span>
+      {required ? (
+        <span className="portal-required-indicator">
+          *<span className="visually-hidden">required</span>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function inferInputType(field: PortalFieldConfig) {
+  if (field.type !== "text") {
+    return field.type;
+  }
+
+  const normalizedKey = field.key.toLowerCase();
+  if (normalizedKey.includes("email")) {
+    return "email";
+  }
+  if (normalizedKey.includes("phone")) {
+    return "tel";
+  }
+  return "text";
+}
+
+function inferInputMode(field: PortalFieldConfig) {
+  if (field.type === "number") {
+    return field.step && !Number.isInteger(field.step) ? "decimal" : "numeric";
+  }
+
+  if (field.type === "text") {
+    const normalizedKey = field.key.toLowerCase();
+    if (normalizedKey.includes("phone")) {
+      return "tel";
+    }
+    if (normalizedKey.includes("email")) {
+      return "email";
+    }
+  }
+
+  return undefined;
+}
+
+function inferAutoComplete(field: PortalFieldConfig) {
+  const normalizedKey = field.key.toLowerCase();
+  if (normalizedKey.includes("school")) return "organization";
+  if (normalizedKey.includes("district")) return "address-level1";
+  if (normalizedKey.includes("subcounty")) return "address-level2";
+  if (normalizedKey.includes("parish")) return "address-level3";
+  if (normalizedKey.includes("village")) return "address-level4";
+  if (normalizedKey.includes("email")) return "email";
+  if (normalizedKey.includes("phone")) return "tel";
+  return "off";
+}
+
+function inferPlaceholder(field: PortalFieldConfig) {
+  if (field.placeholder) {
+    return field.placeholder;
+  }
+
+  const normalizedKey = field.key.toLowerCase();
+  if (normalizedKey.includes("district")) return "e.g. Oyam";
+  if (normalizedKey.includes("school")) return "e.g. Bright Future Primary";
+  if (normalizedKey.includes("subcounty")) return "e.g. Loro";
+  if (normalizedKey.includes("parish")) return "e.g. Corner Parish";
+  if (normalizedKey.includes("village")) return "e.g. Agurur";
+  if (normalizedKey.includes("email")) return "name@school.org";
+  if (normalizedKey.includes("phone")) return "+2567xxxxxxxx";
+  if (normalizedKey.includes("facilitator")) return "e.g. Ruth Nakato, Peter Okello";
+  return undefined;
+}
+
+function normalizeParticipantRole(value: unknown): TrainingParticipantRole {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "teacher") {
+    return "Teacher";
+  }
+  if (normalized === "leader") {
+    return "Leader";
+  }
+  return "";
+}
+
+function createEmptyTrainingParticipant(defaultSchool = ""): TrainingParticipantRow {
+  return {
+    participantName: "",
+    schoolAttachedTo: defaultSchool,
+    role: "",
+    phoneContact: "",
+  };
+}
+
+function rowHasTrainingParticipantData(row: TrainingParticipantRow) {
+  return (
+    row.participantName.trim() ||
+    row.schoolAttachedTo.trim() ||
+    row.role ||
+    row.phoneContact.trim()
+  );
+}
+
+function parseTrainingParticipants(raw: unknown, defaultSchool = ""): TrainingParticipantRow[] {
+  const fallback = [createEmptyTrainingParticipant(defaultSchool)];
+  if (!raw) {
+    return fallback;
+  }
+
+  let source: unknown = raw;
+  if (typeof source === "string") {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      return fallback;
+    }
+  }
+
+  if (!Array.isArray(source)) {
+    return fallback;
+  }
+
+  const rows = source
+    .filter((item) => item && typeof item === "object")
+    .map((item) => {
+      const entry = item as Record<string, unknown>;
+      return {
+        participantName: sanitizeForInput(entry.participantName),
+        schoolAttachedTo:
+          sanitizeForInput(entry.schoolAttachedTo) || defaultSchool,
+        role: normalizeParticipantRole(entry.role),
+        phoneContact: sanitizeForInput(entry.phoneContact),
+      } as TrainingParticipantRow;
+    })
+    .filter((row) => rowHasTrainingParticipantData(row));
+
+  return rows.length > 0 ? rows : fallback;
+}
+
 function buildDefaultPayload(config: PortalModuleConfig): FormPayloadState {
   const payload: FormPayloadState = {};
   config.sections.forEach((section) => {
     section.fields.forEach((field) => {
       if (field.type === "multiselect") {
         payload[field.key] = [];
+      } else if (
+        field.type === "participants" ||
+        field.type === "egraLearners" ||
+        field.type === "egraSummary" ||
+        field.type === "egraProfile"
+      ) {
+        payload[field.key] = "";
       } else if (field.type === "select") {
         payload[field.key] = field.options?.[0]?.value ?? "";
       } else {
@@ -138,15 +398,213 @@ function writeQueue(items: OfflineQueueItem[]) {
   window.localStorage.setItem(queueStorageKey, JSON.stringify(items));
 }
 
+function createEmptyEgraMetricRecord(): Record<EgraMetricKey, number> {
+  return {
+    letterNames: 0,
+    letterSounds: 0,
+    realWords: 0,
+    madeUpWords: 0,
+    storyReading: 0,
+    readingComp: 0,
+  };
+}
+
+function createEmptyEgraLearnerRow(no: number): EgraLearnerRow {
+  return {
+    no,
+    learnerId: "",
+    sex: "",
+    age: "",
+    letterNames: "",
+    letterSounds: "",
+    realWords: "",
+    madeUpWords: "",
+    storyReading: "",
+    readingComp: "",
+    fluencyLevel: "",
+  };
+}
+
+function createDefaultEgraRows() {
+  return Array.from({ length: EGRA_ROW_COUNT }, (_, index) => createEmptyEgraLearnerRow(index + 1));
+}
+
+function toNumberOrNull(value: string): number | null {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function roundOne(value: number) {
+  return Number(value.toFixed(1));
+}
+
+function determineFluencyLevel(storyReadingValue: string) {
+  const storyReading = toNumberOrNull(storyReadingValue);
+  if (storyReading === null) {
+    return "";
+  }
+
+  if (storyReading <= 10) {
+    return "Non-Reader";
+  }
+  if (storyReading <= 25) {
+    return "Emerging Reader";
+  }
+  if (storyReading <= 45) {
+    return "Developing Reader";
+  }
+  if (storyReading <= 60) {
+    return "Transitional Reader";
+  }
+  return "Fluent Reader";
+}
+
+function rowHasAssessmentData(row: EgraLearnerRow) {
+  if (row.learnerId.trim() || row.sex || row.age.trim()) {
+    return true;
+  }
+
+  return egraMetricLabels.some((metric) => String(row[metric.key]).trim() !== "");
+}
+
+function averageMetric(rows: EgraLearnerRow[], metric: EgraMetricKey) {
+  const values = rows
+    .map((row) => toNumberOrNull(row[metric]))
+    .filter((value): value is number => value !== null);
+
+  if (values.length === 0) {
+    return 0;
+  }
+  return roundOne(values.reduce((total, value) => total + value, 0) / values.length);
+}
+
+function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
+  const activeRows = rows.filter((row) => rowHasAssessmentData(row));
+  const boys = activeRows.filter((row) => row.sex === "M");
+  const girls = activeRows.filter((row) => row.sex === "F");
+
+  const boysAverages = createEmptyEgraMetricRecord();
+  const girlsAverages = createEmptyEgraMetricRecord();
+  const classAverages = createEmptyEgraMetricRecord();
+
+  egraMetricLabels.forEach((metric) => {
+    boysAverages[metric.key] = averageMetric(boys, metric.key);
+    girlsAverages[metric.key] = averageMetric(girls, metric.key);
+    classAverages[metric.key] = averageMetric(activeRows, metric.key);
+  });
+
+  const profileCounts = {
+    nonReaders: 0,
+    emerging: 0,
+    developing: 0,
+    transitional: 0,
+    fluent: 0,
+  };
+
+  activeRows.forEach((row) => {
+    const level = row.fluencyLevel || determineFluencyLevel(row.storyReading);
+    if (level === "Non-Reader") profileCounts.nonReaders += 1;
+    if (level === "Emerging Reader") profileCounts.emerging += 1;
+    if (level === "Developing Reader") profileCounts.developing += 1;
+    if (level === "Transitional Reader") profileCounts.transitional += 1;
+    if (level === "Fluent Reader") profileCounts.fluent += 1;
+  });
+
+  const total = activeRows.length || 1;
+  const percentages = {
+    nonReaders: roundOne((profileCounts.nonReaders / total) * 100),
+    emerging: roundOne((profileCounts.emerging / total) * 100),
+    developing: roundOne((profileCounts.developing / total) * 100),
+    transitional: roundOne((profileCounts.transitional / total) * 100),
+    fluent: roundOne((profileCounts.fluent / total) * 100),
+  };
+
+  return {
+    learnersAssessed: activeRows.length,
+    averages: {
+      boys: boysAverages,
+      girls: girlsAverages,
+      class: classAverages,
+    },
+    profile: {
+      ...profileCounts,
+      percentages,
+    },
+    rowsForPayload: activeRows.map((row) => ({
+      no: row.no,
+      learnerId: row.learnerId.trim(),
+      sex: row.sex,
+      age: toNumberOrNull(row.age),
+      letterNames: toNumberOrNull(row.letterNames),
+      letterSounds: toNumberOrNull(row.letterSounds),
+      realWords: toNumberOrNull(row.realWords),
+      madeUpWords: toNumberOrNull(row.madeUpWords),
+      storyReading: toNumberOrNull(row.storyReading),
+      readingComp: toNumberOrNull(row.readingComp),
+      fluencyLevel: row.fluencyLevel || determineFluencyLevel(row.storyReading),
+    })),
+  };
+}
+
+function normalizeSex(value: unknown): "" | "M" | "F" {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "M" || normalized === "F") {
+    return normalized;
+  }
+  return "";
+}
+
+function parseEgraRows(raw: unknown): EgraLearnerRow[] {
+  const defaults = createDefaultEgraRows();
+  if (!Array.isArray(raw)) {
+    return defaults;
+  }
+
+  return defaults.map((template, index) => {
+    const source = raw[index];
+    if (!source || typeof source !== "object") {
+      return template;
+    }
+    const entry = source as Record<string, unknown>;
+    const storyReading = sanitizeForInput(entry.storyReading);
+    const fluencyLevel = sanitizeForInput(entry.fluencyLevel) || determineFluencyLevel(storyReading);
+
+    return {
+      no: Number(entry.no ?? template.no) || template.no,
+      learnerId: sanitizeForInput(entry.learnerId),
+      sex: normalizeSex(entry.sex),
+      age: sanitizeForInput(entry.age),
+      letterNames: sanitizeForInput(entry.letterNames),
+      letterSounds: sanitizeForInput(entry.letterSounds),
+      realWords: sanitizeForInput(entry.realWords),
+      madeUpWords: sanitizeForInput(entry.madeUpWords),
+      storyReading,
+      readingComp: sanitizeForInput(entry.readingComp),
+      fluencyLevel,
+    };
+  });
+}
+
 export function PortalModuleManager({
   config,
   initialRecords,
+  initialSchools,
   initialUsers,
   currentUser,
 }: PortalModuleManagerProps) {
   const searchParams = useSearchParams();
   const canReview = currentUser.isSupervisor || currentUser.isME || currentUser.isAdmin;
   const draftStorageKey = `portal-form-draft-${config.module}`;
+  const participantField = useMemo(
+    () =>
+      config.sections
+        .flatMap((section) => section.fields)
+        .find((field) => field.type === "participants"),
+    [config.sections],
+  );
 
   const [records, setRecords] = useState(initialRecords);
   const [loadingRecords, setLoadingRecords] = useState(false);
@@ -154,6 +612,7 @@ export function PortalModuleManager({
   const [syncing, setSyncing] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>({ kind: "idle", message: "" });
   const [filters, setFilters] = useState<FilterState>({
+    region: "",
     dateFrom: "",
     dateTo: "",
     district: "",
@@ -170,11 +629,17 @@ export function PortalModuleManager({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
+  const [egraLearners, setEgraLearners] = useState<EgraLearnerRow[]>(() => createDefaultEgraRows());
+  const [trainingParticipants, setTrainingParticipants] = useState<TrainingParticipantRow[]>(
+    () => [createEmptyTrainingParticipant()],
+  );
 
   const [formState, setFormState] = useState<FormState>(() => ({
     id: null,
     date: getToday(),
+    region: defaultRegion,
     district: "",
+    schoolId: "",
     schoolName: "",
     programType: config.programTypeOptions[0]?.value ?? "",
     followUpDate: "",
@@ -182,6 +647,43 @@ export function PortalModuleManager({
     reviewNote: "",
     payload: buildDefaultPayload(config),
   }));
+
+  const egraSummary = useMemo(() => computeEgraSummary(egraLearners), [egraLearners]);
+  const formDistrictOptions = useMemo(() => {
+    if (formState.region) {
+      return getDistrictsByRegion(formState.region);
+    }
+    return allUgandaDistricts;
+  }, [formState.region]);
+  const filterDistrictOptions = useMemo(() => {
+    if (filters.region) {
+      return getDistrictsByRegion(filters.region);
+    }
+    return allUgandaDistricts;
+  }, [filters.region]);
+  const schoolsById = useMemo(
+    () => new Map(initialSchools.map((school) => [school.id, school])),
+    [initialSchools],
+  );
+  const formSchoolOptions = useMemo(() => {
+    const region = formState.region.trim();
+    const district = formState.district.trim().toLowerCase();
+    const list = initialSchools.filter((school) => {
+      if (district && school.district.trim().toLowerCase() !== district) {
+        return false;
+      }
+      if (!region) {
+        return true;
+      }
+      return inferRegionFromDistrict(school.district) === region;
+    });
+
+    return list.sort((left, right) => left.name.localeCompare(right.name));
+  }, [formState.district, formState.region, initialSchools]);
+  const participantSchoolOptions = useMemo(
+    () => [...initialSchools].sort((left, right) => left.name.localeCompare(right.name)),
+    [initialSchools],
+  );
 
   const refreshOfflineCount = useCallback(() => {
     setOfflineCount(readQueue().length);
@@ -210,7 +712,9 @@ export function PortalModuleManager({
     return {
       id: null,
       date: getToday(),
+      region: defaultRegion,
       district: "",
+      schoolId: "",
       schoolName: "",
       programType: config.programTypeOptions[0]?.value ?? "",
       followUpDate: "",
@@ -222,6 +726,8 @@ export function PortalModuleManager({
 
   const openNewForm = useCallback(() => {
     setFormState(newFormState());
+    setEgraLearners(createDefaultEgraRows());
+    setTrainingParticipants([createEmptyTrainingParticipant()]);
     setIsFormOpen(true);
     setSelectedFiles([]);
     setFileInputKey((value) => value + 1);
@@ -232,10 +738,46 @@ export function PortalModuleManager({
   const openRecordForm = useCallback((record: PortalRecord) => {
     const defaultPayload = buildDefaultPayload(config);
     const nextPayload = { ...defaultPayload };
+    const matchedSchool =
+      (record.schoolId ? schoolsById.get(record.schoolId) : undefined) ??
+      initialSchools.find(
+        (school) =>
+          school.name.trim().toLowerCase() === record.schoolName.trim().toLowerCase() &&
+          school.district.trim().toLowerCase() === record.district.trim().toLowerCase(),
+      ) ??
+      initialSchools.find(
+        (school) => school.name.trim().toLowerCase() === record.schoolName.trim().toLowerCase(),
+      ) ??
+      null;
+    const linkedSchoolName = matchedSchool?.name ?? record.schoolName;
+
+    setEgraLearners(createDefaultEgraRows());
+    setTrainingParticipants([createEmptyTrainingParticipant(linkedSchoolName)]);
 
     Object.entries(record.payload).forEach(([key, value]) => {
+      const field = findField(config, key);
+      if (field?.type === "participants") {
+        setTrainingParticipants(parseTrainingParticipants(value, linkedSchoolName));
+        return;
+      }
+
+      if (key === "egraLearnersData") {
+        if (typeof value === "string" && value.trim()) {
+          try {
+            setEgraLearners(parseEgraRows(JSON.parse(value)));
+          } catch {
+            setEgraLearners(createDefaultEgraRows());
+          }
+        } else {
+          setEgraLearners(createDefaultEgraRows());
+        }
+        return;
+      }
+
       if (Array.isArray(value)) {
         nextPayload[key] = value.map((item) => String(item));
+      } else if (value && typeof value === "object") {
+        return;
       } else {
         nextPayload[key] = sanitizeForInput(value);
       }
@@ -244,8 +786,12 @@ export function PortalModuleManager({
     setFormState({
       id: record.id,
       date: record.date,
-      district: record.district,
-      schoolName: record.schoolName,
+      region:
+        inferRegionFromDistrict(matchedSchool?.district ?? record.district) ??
+        (sanitizeForInput(record.payload.region) || defaultRegion),
+      district: matchedSchool?.district ?? record.district,
+      schoolId: matchedSchool ? String(matchedSchool.id) : "",
+      schoolName: linkedSchoolName,
       programType: record.programType ?? config.programTypeOptions[0]?.value ?? "",
       followUpDate: record.followUpDate ?? "",
       status: record.status,
@@ -256,7 +802,7 @@ export function PortalModuleManager({
     setSelectedFiles([]);
     setFileInputKey((value) => value + 1);
     setFeedback({ kind: "idle", message: "" });
-  }, [config]);
+  }, [config, initialSchools, schoolsById]);
 
   const fetchRecords = useCallback(async (nextFilters: FilterState) => {
     setLoadingRecords(true);
@@ -301,6 +847,35 @@ export function PortalModuleManager({
 
     for (const item of queue) {
       try {
+        const syncedBody = { ...item.body };
+        if (!Number.isInteger(syncedBody.schoolId) || syncedBody.schoolId <= 0) {
+          const matchedSchool =
+            initialSchools.find(
+              (school) =>
+                school.name.trim().toLowerCase() ===
+                  String(syncedBody.schoolName ?? "")
+                    .trim()
+                    .toLowerCase() &&
+                school.district.trim().toLowerCase() ===
+                  String(syncedBody.district ?? "")
+                    .trim()
+                    .toLowerCase(),
+            ) ??
+            initialSchools.find(
+              (school) =>
+                school.name.trim().toLowerCase() ===
+                String(syncedBody.schoolName ?? "")
+                  .trim()
+                  .toLowerCase(),
+            ) ??
+            null;
+          if (matchedSchool) {
+            syncedBody.schoolId = matchedSchool.id;
+            syncedBody.schoolName = matchedSchool.name;
+            syncedBody.district = matchedSchool.district;
+          }
+        }
+
         const url =
           item.action === "update" && item.id
             ? `/api/portal/records/${item.id}`
@@ -310,7 +885,7 @@ export function PortalModuleManager({
         const response = await fetch(url, {
           method,
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(item.body),
+          body: JSON.stringify(syncedBody),
         });
 
         if (!response.ok) {
@@ -340,7 +915,7 @@ export function PortalModuleManager({
     }
 
     setFeedback({ kind: "success", message: `Offline queue synced (${synced} item(s)).` });
-  }, [fetchRecords, filters, refreshOfflineCount]);
+  }, [fetchRecords, filters, initialSchools, refreshOfflineCount]);
 
   useEffect(() => {
     refreshOfflineCount();
@@ -364,6 +939,8 @@ export function PortalModuleManager({
     const interval = window.setInterval(() => {
       const snapshot = {
         ...formState,
+        egraLearners,
+        trainingParticipants,
         module: config.module,
         savedAt: new Date().toISOString(),
       };
@@ -374,7 +951,20 @@ export function PortalModuleManager({
     return () => {
       window.clearInterval(interval);
     };
-  }, [config.module, draftStorageKey, formState, isFormOpen]);
+  }, [config.module, draftStorageKey, formState, egraLearners, isFormOpen, trainingParticipants]);
+
+  useEffect(() => {
+    if (!formState.schoolName.trim()) {
+      return;
+    }
+    setTrainingParticipants((prev) =>
+      prev.map((row) =>
+        row.schoolAttachedTo.trim()
+          ? row
+          : { ...row, schoolAttachedTo: formState.schoolName.trim() },
+      ),
+    );
+  }, [formState.schoolName]);
 
   useEffect(() => {
     if (urlInitialized) {
@@ -421,19 +1011,66 @@ export function PortalModuleManager({
     const rawDraft = window.localStorage.getItem(draftStorageKey);
     if (rawDraft) {
       try {
-        const parsed = JSON.parse(rawDraft) as FormState & { module?: string };
+        const parsed = JSON.parse(rawDraft) as FormState & {
+          module?: string;
+          schoolId?: unknown;
+          egraLearners?: unknown;
+          trainingParticipants?: unknown;
+        };
         if (parsed.module === config.module || !parsed.module) {
+          const draftSchoolIdValue =
+            typeof parsed.schoolId === "number" || typeof parsed.schoolId === "string"
+              ? String(parsed.schoolId)
+              : "";
+          const draftSchoolId =
+            draftSchoolIdValue && schoolsById.has(Number(draftSchoolIdValue))
+              ? draftSchoolIdValue
+              : "";
+          const draftSchool =
+            (draftSchoolId ? schoolsById.get(Number(draftSchoolId)) : undefined) ??
+            initialSchools.find(
+              (school) =>
+                school.name.trim().toLowerCase() ===
+                  String(parsed.schoolName ?? "")
+                    .trim()
+                    .toLowerCase() &&
+                school.district.trim().toLowerCase() ===
+                  String(parsed.district ?? "")
+                    .trim()
+                    .toLowerCase(),
+            ) ??
+            initialSchools.find(
+              (school) =>
+                school.name.trim().toLowerCase() ===
+                String(parsed.schoolName ?? "")
+                  .trim()
+                  .toLowerCase(),
+            ) ??
+            null;
           setFormState({
             id: parsed.id ?? null,
             date: parsed.date ?? getToday(),
-            district: parsed.district ?? "",
-            schoolName: parsed.schoolName ?? "",
+            region:
+              parsed.region && getDistrictsByRegion(parsed.region).length > 0
+                ? parsed.region
+                : inferRegionFromDistrict(draftSchool?.district ?? parsed.district ?? "") ??
+                  defaultRegion,
+            district: draftSchool?.district ?? parsed.district ?? "",
+            schoolId: draftSchool ? String(draftSchool.id) : draftSchoolId,
+            schoolName: draftSchool?.name ?? parsed.schoolName ?? "",
             programType: parsed.programType || config.programTypeOptions[0]?.value || "",
             followUpDate: parsed.followUpDate ?? "",
             status: parsed.status ?? "Draft",
             reviewNote: parsed.reviewNote ?? "",
             payload: { ...buildDefaultPayload(config), ...(parsed.payload ?? {}) },
           });
+          setEgraLearners(parseEgraRows(parsed.egraLearners));
+          setTrainingParticipants(
+            parseTrainingParticipants(
+              parsed.trainingParticipants,
+              draftSchool?.name ?? parsed.schoolName ?? "",
+            ),
+          );
           setIsFormOpen(true);
           setUrlInitialized(true);
           return;
@@ -448,11 +1085,13 @@ export function PortalModuleManager({
   }, [
     config,
     draftStorageKey,
+    initialSchools,
     loadEvidence,
     openNewForm,
     openRecordForm,
     records,
     searchParams,
+    schoolsById,
     urlInitialized,
   ]);
 
@@ -466,12 +1105,100 @@ export function PortalModuleManager({
     }));
   }, []);
 
+  const updateEgraLearner = useCallback(
+    (index: number, key: keyof Omit<EgraLearnerRow, "no">, value: string) => {
+      setEgraLearners((prev) =>
+        prev.map((row, rowIndex) => {
+          if (rowIndex !== index) {
+            return row;
+          }
+
+          const updated = {
+            ...row,
+            [key]:
+              key === "sex"
+                ? normalizeSex(value)
+                : value,
+          } as EgraLearnerRow;
+
+          if (key === "storyReading") {
+            updated.fluencyLevel = determineFluencyLevel(value);
+          }
+
+          return updated;
+        }),
+      );
+    },
+    [],
+  );
+
+  const updateTrainingParticipant = useCallback(
+    (index: number, key: keyof TrainingParticipantRow, value: string) => {
+      setTrainingParticipants((prev) =>
+        prev.map((row, rowIndex) => {
+          if (rowIndex !== index) {
+            return row;
+          }
+          if (key === "role") {
+            return { ...row, role: normalizeParticipantRole(value) };
+          }
+          return { ...row, [key]: value };
+        }),
+      );
+    },
+    [],
+  );
+
+  const addTrainingParticipant = useCallback(() => {
+    setTrainingParticipants((prev) => [
+      ...prev,
+      createEmptyTrainingParticipant(formState.schoolName),
+    ]);
+  }, [formState.schoolName]);
+
+  const removeTrainingParticipant = useCallback((index: number) => {
+    setTrainingParticipants((prev) => {
+      if (prev.length <= 1) {
+        return [createEmptyTrainingParticipant(formState.schoolName)];
+      }
+      return prev.filter((_, rowIndex) => rowIndex !== index);
+    });
+  }, [formState.schoolName]);
+
   const validateForm = useCallback(() => {
-    if (!formState.date || !formState.district.trim() || !formState.schoolName.trim()) {
-      return "Date, district, and school are required.";
+    if (
+      !formState.date ||
+      !formState.region.trim() ||
+      !formState.district.trim() ||
+      !formState.schoolId.trim()
+    ) {
+      return "Date, region, district, and school account are required.";
     }
     if (!formState.programType.trim()) {
       return `${config.programTypeLabel} is required.`;
+    }
+    const selectedSchoolId = Number(formState.schoolId);
+    if (!Number.isInteger(selectedSchoolId) || selectedSchoolId <= 0) {
+      return "Select a valid school account.";
+    }
+    if (!schoolsById.has(selectedSchoolId)) {
+      return "Selected school account could not be found. Refresh and try again.";
+    }
+    if (formState.followUpDate && formState.followUpDate < formState.date) {
+      return "Follow-up date cannot be earlier than the main record date.";
+    }
+
+    const startTimeValue = String(formState.payload.startTime ?? "").trim();
+    const endTimeValue = String(formState.payload.endTime ?? "").trim();
+    if (startTimeValue && endTimeValue && endTimeValue <= startTimeValue) {
+      return "End time must be later than start time.";
+    }
+
+    const attendedValue = Number(String(formState.payload.numberAttended ?? "").trim() || 0);
+    const femaleValue = Number(String(formState.payload.femaleCount ?? "").trim() || 0);
+    const maleValue = Number(String(formState.payload.maleCount ?? "").trim() || 0);
+    if (attendedValue > 0 && femaleValue + maleValue > attendedValue) {
+      return "Female + male attendance cannot exceed total number attended.";
     }
 
     for (const section of config.sections) {
@@ -486,6 +1213,44 @@ export function PortalModuleManager({
           }
           continue;
         }
+        if (field.type === "participants") {
+          const activeRows = trainingParticipants.filter((row) =>
+            rowHasTrainingParticipantData(row),
+          );
+          if (activeRows.length === 0) {
+            return "Add at least one participant.";
+          }
+
+          const validPhone = /^[+0-9()\s-]{7,20}$/;
+          for (let index = 0; index < activeRows.length; index += 1) {
+            const participant = activeRows[index];
+            if (!participant.participantName.trim()) {
+              return `Participant ${index + 1}: participant name is required.`;
+            }
+            if (!participant.schoolAttachedTo.trim()) {
+              return `Participant ${index + 1}: school attached to is required.`;
+            }
+            if (!participant.role) {
+              return `Participant ${index + 1}: role is required.`;
+            }
+            if (!participant.phoneContact.trim()) {
+              return `Participant ${index + 1}: phone contact is required.`;
+            }
+            if (!validPhone.test(participant.phoneContact.trim())) {
+              return `Participant ${index + 1}: phone contact format is invalid.`;
+            }
+          }
+          continue;
+        }
+        if (field.type === "egraLearners") {
+          if (egraSummary.learnersAssessed <= 0) {
+            return "Enter at least one learner in the EGRA learner table.";
+          }
+          continue;
+        }
+        if (field.type === "egraSummary" || field.type === "egraProfile") {
+          continue;
+        }
         if (!String(value ?? "").trim()) {
           return `${field.label} is required.`;
         }
@@ -493,15 +1258,32 @@ export function PortalModuleManager({
     }
 
     return "";
-  }, [config, formState]);
+  }, [config, egraSummary.learnersAssessed, formState, schoolsById, trainingParticipants]);
 
   const buildRequestBody = useCallback(
     (nextStatus: PortalRecordStatus) => {
+      const selectedSchoolId = Number(formState.schoolId);
+      const selectedSchool =
+        Number.isInteger(selectedSchoolId) && selectedSchoolId > 0
+          ? schoolsById.get(selectedSchoolId) ?? null
+          : null;
+      const resolvedSchoolName = selectedSchool?.name ?? formState.schoolName.trim();
+      const resolvedDistrict = selectedSchool?.district ?? formState.district.trim();
+
       const payload: Record<string, string | number | boolean | string[] | null | undefined> = {};
 
       Object.entries(formState.payload).forEach(([key, value]) => {
         const field = findField(config, key);
         if (!field) {
+          return;
+        }
+
+        if (
+          field.type === "participants" ||
+          field.type === "egraLearners" ||
+          field.type === "egraSummary" ||
+          field.type === "egraProfile"
+        ) {
           return;
         }
 
@@ -519,18 +1301,83 @@ export function PortalModuleManager({
         payload[key] = String(value ?? "").trim();
       });
 
+      if (formState.region.trim()) {
+        payload.region = formState.region.trim();
+      }
+
+      if (participantField) {
+        const participantRows = trainingParticipants
+          .filter((row) => rowHasTrainingParticipantData(row))
+          .map((row) => ({
+            participantName: row.participantName.trim(),
+            schoolAttachedTo: row.schoolAttachedTo.trim(),
+            role: row.role,
+            phoneContact: row.phoneContact.trim(),
+          }));
+
+        payload[participantField.key] = JSON.stringify(participantRows);
+        payload.participantsTotal = participantRows.length;
+        payload.classroomTeachers = participantRows.filter((row) => row.role === "Teacher").length;
+        payload.schoolLeaders = participantRows.filter((row) => row.role === "Leader").length;
+        if (!String(formState.payload.numberAttended ?? "").trim()) {
+          payload.numberAttended = participantRows.length;
+        }
+      }
+
+      if (config.module === "assessment") {
+        payload.egraLearnersData = JSON.stringify(egraSummary.rowsForPayload);
+        payload.egraSummaryData = JSON.stringify(egraSummary.averages);
+        payload.egraProfileData = JSON.stringify(egraSummary.profile);
+        payload.learnersAssessed = egraSummary.learnersAssessed;
+        payload.nonReaders = egraSummary.profile.nonReaders;
+        payload.emergingReaders = egraSummary.profile.emerging;
+        payload.developingReaders = egraSummary.profile.developing;
+        payload.transitionalReaders = egraSummary.profile.transitional;
+        payload.fluentReaders = egraSummary.profile.fluent;
+        payload.wcpmAverage = egraSummary.averages.class.storyReading;
+        payload.comprehensionAverage = egraSummary.averages.class.readingComp;
+        if (typeof payload.storiesPublished !== "number") {
+          payload.storiesPublished = 0;
+        }
+      }
+
+      if (config.module === "visit") {
+        const observationRatings = Object.entries(payload).filter(
+          ([key, value]) => isVisitObservationField(key) && typeof value === "string" && value,
+        );
+        const observationItemsScored = observationRatings.length;
+        const observationScore = observationRatings.reduce(
+          (total, [, rating]) =>
+            total + (visitObservationScoreByRating[String(rating)] ?? 0),
+          0,
+        );
+        const observationMaxScore = observationItemsScored * 5;
+        const observationScorePercent =
+          observationMaxScore > 0
+            ? roundOne((observationScore / observationMaxScore) * 100)
+            : 0;
+
+        payload.observationItemsScored = observationItemsScored;
+        payload.observationScore = observationScore;
+        payload.observationMaxScore = observationMaxScore;
+        payload.observationScorePercent = observationScorePercent;
+        payload.observationSatisfactory = observationScorePercent >= 60;
+        payload.observationScoreGuide = "Very Good=5, Good=3, Fair=1, Can Improve=0";
+      }
+
       return {
         module: config.module,
         date: formState.date,
-        district: formState.district.trim(),
-        schoolName: formState.schoolName.trim(),
+        district: resolvedDistrict,
+        schoolId: selectedSchool?.id ?? (Number.isInteger(selectedSchoolId) ? selectedSchoolId : 0),
+        schoolName: resolvedSchoolName,
         programType: formState.programType.trim(),
         followUpDate: formState.followUpDate.trim() || undefined,
         status: nextStatus,
         payload,
       };
     },
-    [config, formState],
+    [config, egraSummary, formState, participantField, schoolsById, trainingParticipants],
   );
 
   const uploadEvidence = useCallback(
@@ -715,6 +1562,7 @@ export function PortalModuleManager({
 
   const resetFilters = useCallback(async () => {
     const empty: FilterState = {
+      region: "",
       dateFrom: "",
       dateTo: "",
       district: "",
@@ -733,6 +1581,7 @@ export function PortalModuleManager({
         <div>
           <h2>{config.pageTitle}</h2>
           <p>{config.description}</p>
+          <p className="portal-muted">Fields marked with * are required.</p>
         </div>
         <div className="action-row">
           <button className="button" type="button" onClick={openNewForm}>
@@ -744,40 +1593,76 @@ export function PortalModuleManager({
         </div>
       </section>
 
-      <section className="card">
-        <form className="portal-filter-grid" onSubmit={handleFiltersSubmit}>
-          <label>
-            Date from
+      <section className="card portal-filter-card">
+        <form className="portal-filter-grid portal-filter-grid-pretty" onSubmit={handleFiltersSubmit}>
+          <label className="portal-filter-field">
+            <span className="portal-filter-field-label">Date from</span>
+            <span className="portal-filter-field-hint">dd/mm/yyyy</span>
             <input
               type="date"
               value={filters.dateFrom}
               onChange={(event) => setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))}
             />
           </label>
-          <label>
-            Date to
+          <label className="portal-filter-field">
+            <span className="portal-filter-field-label">Date to</span>
+            <span className="portal-filter-field-hint">dd/mm/yyyy</span>
             <input
               type="date"
               value={filters.dateTo}
               onChange={(event) => setFilters((prev) => ({ ...prev, dateTo: event.target.value }))}
             />
           </label>
-          <label>
-            District
-            <input
+          <label className="portal-filter-field">
+            <span className="portal-filter-field-label">Region</span>
+            <select
+              value={filters.region}
+              onChange={(event) =>
+                setFilters((prev) => {
+                  const nextRegion = event.target.value;
+                  const nextDistrictOptions = nextRegion
+                    ? getDistrictsByRegion(nextRegion)
+                    : allUgandaDistricts;
+                  return {
+                    ...prev,
+                    region: nextRegion,
+                    district: nextDistrictOptions.includes(prev.district) ? prev.district : "",
+                  };
+                })
+              }
+            >
+              <option value="">All regions</option>
+              {ugandaRegions.map((entry) => (
+                <option key={entry.region} value={entry.region}>
+                  {entry.region}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="portal-filter-field">
+            <span className="portal-filter-field-label">District</span>
+            <select
               value={filters.district}
               onChange={(event) => setFilters((prev) => ({ ...prev, district: event.target.value }))}
-            />
+            >
+              <option value="">All districts</option>
+              {filterDistrictOptions.map((district) => (
+                <option key={district} value={district}>
+                  {district}
+                </option>
+              ))}
+            </select>
           </label>
-          <label>
-            School
+          <label className="portal-filter-field">
+            <span className="portal-filter-field-label">School</span>
             <input
+              placeholder="School name"
               value={filters.school}
               onChange={(event) => setFilters((prev) => ({ ...prev, school: event.target.value }))}
             />
           </label>
-          <label>
-            Status
+          <label className="portal-filter-field">
+            <span className="portal-filter-field-label">Status</span>
             <select
               value={filters.status}
               onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
@@ -790,8 +1675,8 @@ export function PortalModuleManager({
               ))}
             </select>
           </label>
-          <label>
-            Created by
+          <label className="portal-filter-field">
+            <span className="portal-filter-field-label">Created by</span>
             <select
               value={filters.createdBy}
               onChange={(event) => setFilters((prev) => ({ ...prev, createdBy: event.target.value }))}
@@ -805,9 +1690,10 @@ export function PortalModuleManager({
               ))}
             </select>
           </label>
-          <label>
-            Program type
+          <label className="portal-filter-field">
+            <span className="portal-filter-field-label">Program type</span>
             <input
+              placeholder="e.g. Coaching"
               value={filters.programType}
               onChange={(event) =>
                 setFilters((prev) => ({ ...prev, programType: event.target.value }))
@@ -830,7 +1716,10 @@ export function PortalModuleManager({
       </section>
 
       {feedback.message ? (
-        <p className={`form-message ${feedback.kind === "error" ? "error" : "success"}`}>
+        <p
+          role="status"
+          className={`form-message ${feedback.kind === "error" ? "error" : "success"}`}
+        >
           {feedback.message}
         </p>
       ) : null}
@@ -904,9 +1793,9 @@ export function PortalModuleManager({
             </button>
           </div>
 
-          <form className="form-grid" onSubmit={(event) => event.preventDefault()}>
+          <form className="form-grid portal-form-grid" onSubmit={(event) => event.preventDefault()}>
             <label>
-              Date
+              {renderLabel("Date", true)}
               <input
                 type="date"
                 value={formState.date}
@@ -917,27 +1806,113 @@ export function PortalModuleManager({
               />
             </label>
             <label>
-              District
-              <input
+              {renderLabel("Region", true)}
+              <select
+                value={formState.region}
+                onChange={(event) =>
+                  setFormState((prev) => {
+                    const nextRegion = event.target.value;
+                    const options = getDistrictsByRegion(nextRegion);
+                    const nextDistrict = options.includes(prev.district) ? prev.district : "";
+                    const selectedSchool = prev.schoolId
+                      ? schoolsById.get(Number(prev.schoolId))
+                      : undefined;
+                    const keepSchool = Boolean(
+                      selectedSchool &&
+                        (!nextRegion ||
+                          inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
+                        (!nextDistrict || selectedSchool.district === nextDistrict),
+                    );
+                    return {
+                      ...prev,
+                      region: nextRegion,
+                      district: nextDistrict,
+                      schoolId: keepSchool ? prev.schoolId : "",
+                      schoolName: keepSchool ? selectedSchool?.name ?? prev.schoolName : "",
+                    };
+                  })
+                }
+                required
+              >
+                <option value="">Select region</option>
+                {ugandaRegions.map((entry) => (
+                  <option key={entry.region} value={entry.region}>
+                    {entry.region}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {renderLabel("District", true)}
+              <select
                 value={formState.district}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, district: event.target.value }))
+                  setFormState((prev) => {
+                    const nextDistrict = event.target.value;
+                    const selectedSchool = prev.schoolId
+                      ? schoolsById.get(Number(prev.schoolId))
+                      : undefined;
+                    const keepSchool = Boolean(
+                      selectedSchool &&
+                        (!nextDistrict || selectedSchool.district === nextDistrict),
+                    );
+                    return {
+                      ...prev,
+                      district: nextDistrict,
+                      schoolId: keepSchool ? prev.schoolId : "",
+                      schoolName: keepSchool ? selectedSchool?.name ?? prev.schoolName : "",
+                    };
+                  })
                 }
                 required
-              />
+              >
+                <option value="">Select district</option>
+                {formDistrictOptions.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
-              School
-              <input
-                value={formState.schoolName}
+              {renderLabel("School Account", true)}
+              <select
+                value={formState.schoolId}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, schoolName: event.target.value }))
+                  setFormState((prev) => {
+                    const nextSchoolId = event.target.value;
+                    const selectedSchool = nextSchoolId
+                      ? schoolsById.get(Number(nextSchoolId))
+                      : undefined;
+
+                    return {
+                      ...prev,
+                      schoolId: nextSchoolId,
+                      schoolName: selectedSchool?.name ?? "",
+                      district: selectedSchool?.district ?? prev.district,
+                      region: selectedSchool
+                        ? inferRegionFromDistrict(selectedSchool.district) ?? prev.region
+                        : prev.region,
+                    };
+                  })
                 }
                 required
-              />
+              >
+                <option value="">Select school account</option>
+                {formSchoolOptions.map((school) => (
+                  <option key={school.id} value={String(school.id)}>
+                    {school.name} ({school.schoolCode})
+                  </option>
+                ))}
+              </select>
+              {formSchoolOptions.length === 0 ? (
+                <span className="portal-muted">
+                  No school account matches the selected region/district.
+                </span>
+              ) : null}
             </label>
             <label>
-              {config.programTypeLabel}
+              {renderLabel(config.programTypeLabel, true)}
               <select
                 value={formState.programType}
                 onChange={(event) =>
@@ -955,7 +1930,7 @@ export function PortalModuleManager({
             </label>
 
             <label>
-              Follow-up date
+              {renderLabel("Follow-up date")}
               <input
                 type="date"
                 value={formState.followUpDate}
@@ -965,27 +1940,353 @@ export function PortalModuleManager({
               />
             </label>
             <label>
-              Workflow status
+              {renderLabel("Workflow status")}
               <input value={formState.status} readOnly />
             </label>
 
             {config.sections.map((section) => (
-              <fieldset key={section.id} className="card full-width">
+              <fieldset key={section.id} className="card full-width portal-form-section">
                 <legend>{section.title}</legend>
                 <div className="form-grid">
                   {section.fields.map((field) => {
                     const value = formState.payload[field.key];
+                    if (field.type === "egraLearners") {
+                      return (
+                        <div key={field.key} className="full-width">
+                          <p>
+                            Enter learner-level scores exactly as captured on the EGRA baseline sheet.
+                          </p>
+                          <div className="table-wrap egra-table-wrap">
+                            <table className="egra-table">
+                              <thead>
+                                <tr>
+                                  <th>No</th>
+                                  <th>Learner ID</th>
+                                  <th>Sex (M/F)</th>
+                                  <th>Age</th>
+                                  <th>Letter Names</th>
+                                  <th>Letter Sounds</th>
+                                  <th>Real Words</th>
+                                  <th>Made-up Words</th>
+                                  <th>Story Reading</th>
+                                  <th>Reading Comp.</th>
+                                  <th>Fluency Level</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {egraLearners.map((row, index) => (
+                                  <tr key={row.no}>
+                                    <td>{row.no}</td>
+                                    <td>
+                                      <input
+                                        value={row.learnerId}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "learnerId", event.target.value)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <select
+                                        value={row.sex}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "sex", event.target.value)
+                                        }
+                                      >
+                                        <option value="">-</option>
+                                        <option value="M">M</option>
+                                        <option value="F">F</option>
+                                      </select>
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={row.age}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "age", event.target.value)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={row.letterNames}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "letterNames", event.target.value)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={row.letterSounds}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "letterSounds", event.target.value)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={row.realWords}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "realWords", event.target.value)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={row.madeUpWords}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "madeUpWords", event.target.value)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={row.storyReading}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "storyReading", event.target.value)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={row.readingComp}
+                                        onChange={(event) =>
+                                          updateEgraLearner(index, "readingComp", event.target.value)
+                                        }
+                                      />
+                                    </td>
+                                    <td>{row.fluencyLevel || "-"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          <div className="portal-egra-legend">
+                            <span>Non-Reader: 0-10 CWPM</span>
+                            <span>Emerging: 11-25 CWPM</span>
+                            <span>Developing: 26-45 CWPM</span>
+                            <span>Transitional: 46-60 CWPM</span>
+                            <span>Fluent: 61+ CWPM</span>
+                          </div>
+                          {field.helperText ? <small>{field.helperText}</small> : null}
+                        </div>
+                      );
+                    }
+
+                    if (field.type === "egraSummary") {
+                      return (
+                        <div key={field.key} className="full-width table-wrap">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Baseline Snapshot</th>
+                                <th>Boys Avg</th>
+                                <th>Girls Avg</th>
+                                <th>Class Avg</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {egraMetricLabels.map((metric) => (
+                                <tr key={metric.key}>
+                                  <td>{metric.label}</td>
+                                  <td>{egraSummary.averages.boys[metric.key].toFixed(1)}</td>
+                                  <td>{egraSummary.averages.girls[metric.key].toFixed(1)}</td>
+                                  <td>{egraSummary.averages.class[metric.key].toFixed(1)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    }
+
+                    if (field.type === "egraProfile") {
+                      return (
+                        <div key={field.key} className="full-width table-wrap">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Reading Level</th>
+                                <th>No. Learners</th>
+                                <th>% Class</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>{egraLevelLabels[0]}</td>
+                                <td>{egraSummary.profile.nonReaders}</td>
+                                <td>{egraSummary.profile.percentages.nonReaders.toFixed(1)}%</td>
+                              </tr>
+                              <tr>
+                                <td>{egraLevelLabels[1]}</td>
+                                <td>{egraSummary.profile.emerging}</td>
+                                <td>{egraSummary.profile.percentages.emerging.toFixed(1)}%</td>
+                              </tr>
+                              <tr>
+                                <td>{egraLevelLabels[2]}</td>
+                                <td>{egraSummary.profile.developing}</td>
+                                <td>{egraSummary.profile.percentages.developing.toFixed(1)}%</td>
+                              </tr>
+                              <tr>
+                                <td>{egraLevelLabels[3]}</td>
+                                <td>{egraSummary.profile.transitional}</td>
+                                <td>{egraSummary.profile.percentages.transitional.toFixed(1)}%</td>
+                              </tr>
+                              <tr>
+                                <td>{egraLevelLabels[4]}</td>
+                                <td>{egraSummary.profile.fluent}</td>
+                                <td>{egraSummary.profile.percentages.fluent.toFixed(1)}%</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    }
+
+                    if (field.type === "participants") {
+                      return (
+                        <div key={field.key} className="full-width portal-participants-block">
+                          <div className="portal-participants-header">
+                            {renderLabel(field.label, field.required)}
+                            <button
+                              className="button button-ghost"
+                              type="button"
+                              onClick={addTrainingParticipant}
+                            >
+                              + Add participant
+                            </button>
+                          </div>
+                          <div className="table-wrap">
+                            <table className="portal-participants-table">
+                              <thead>
+                                <tr>
+                                  <th>#</th>
+                                  <th>Participant Name</th>
+                                  <th>School Attached To</th>
+                                  <th>Role</th>
+                                  <th>Phone Contact</th>
+                                  <th>Action</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {trainingParticipants.map((row, index) => (
+                                  <tr key={`participant-${index + 1}`}>
+                                    <td>{index + 1}</td>
+                                    <td>
+                                      <input
+                                        value={row.participantName}
+                                        placeholder="Full name"
+                                        onChange={(event) =>
+                                          updateTrainingParticipant(
+                                            index,
+                                            "participantName",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <select
+                                        value={row.schoolAttachedTo}
+                                        onChange={(event) =>
+                                          updateTrainingParticipant(
+                                            index,
+                                            "schoolAttachedTo",
+                                            event.target.value,
+                                          )
+                                        }
+                                      >
+                                        <option value="">Select school account</option>
+                                        {row.schoolAttachedTo.trim() &&
+                                        !participantSchoolOptions.some(
+                                          (school) =>
+                                            school.name.trim().toLowerCase() ===
+                                            row.schoolAttachedTo.trim().toLowerCase(),
+                                        ) ? (
+                                          <option value={row.schoolAttachedTo}>
+                                            {row.schoolAttachedTo} (legacy)
+                                          </option>
+                                        ) : null}
+                                        {participantSchoolOptions.map((school) => (
+                                          <option key={school.id} value={school.name}>
+                                            {school.name} ({school.schoolCode})
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </td>
+                                    <td>
+                                      <select
+                                        value={row.role}
+                                        onChange={(event) =>
+                                          updateTrainingParticipant(index, "role", event.target.value)
+                                        }
+                                      >
+                                        <option value="">Select role</option>
+                                        <option value="Teacher">Teacher</option>
+                                        <option value="Leader">Leader</option>
+                                      </select>
+                                    </td>
+                                    <td>
+                                      <input
+                                        value={row.phoneContact}
+                                        placeholder="+2567xxxxxxxx"
+                                        inputMode="tel"
+                                        onChange={(event) =>
+                                          updateTrainingParticipant(
+                                            index,
+                                            "phoneContact",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <button
+                                        className="button button-ghost"
+                                        type="button"
+                                        onClick={() => removeTrainingParticipant(index)}
+                                      >
+                                        Remove
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {field.helperText ? (
+                            <small className="portal-field-help">{field.helperText}</small>
+                          ) : null}
+                        </div>
+                      );
+                    }
+
                     if (field.type === "textarea") {
                       return (
                         <label key={field.key} className="full-width">
-                          {field.label}
+                          {renderLabel(field.label, field.required)}
                           <textarea
-                            rows={3}
+                            rows={4}
                             value={Array.isArray(value) ? value.join(", ") : sanitizeForInput(value)}
-                            placeholder={field.placeholder}
+                            placeholder={inferPlaceholder(field)}
                             onChange={(event) => updatePayloadField(field.key, event.target.value)}
+                            required={field.required}
                           />
-                          {field.helperText ? <small>{field.helperText}</small> : null}
+                          {field.helperText ? (
+                            <small className="portal-field-help">{field.helperText}</small>
+                          ) : null}
                         </label>
                       );
                     }
@@ -993,7 +2294,7 @@ export function PortalModuleManager({
                     if (field.type === "select") {
                       return (
                         <label key={field.key}>
-                          {field.label}
+                          {renderLabel(field.label, field.required)}
                           <select
                             value={Array.isArray(value) ? value[0] ?? "" : sanitizeForInput(value)}
                             onChange={(event) => updatePayloadField(field.key, event.target.value)}
@@ -1013,8 +2314,11 @@ export function PortalModuleManager({
                     if (field.type === "multiselect") {
                       const selected = Array.isArray(value) ? value : [];
                       return (
-                        <fieldset key={field.key} className="card full-width">
-                          <legend>{field.label}</legend>
+                        <fieldset key={field.key} className="card full-width portal-form-options">
+                          <legend>
+                            {field.label}
+                            {field.required ? " *" : ""}
+                          </legend>
                           <div className="portal-multiselect">
                             {(field.options ?? []).map((option) => {
                               const checked = selected.includes(option.value);
@@ -1044,18 +2348,22 @@ export function PortalModuleManager({
 
                     return (
                       <label key={field.key}>
-                        {field.label}
+                        {renderLabel(field.label, field.required)}
                         <input
-                          type={field.type}
+                          type={inferInputType(field)}
                           min={isNumberField(field) ? field.min : undefined}
                           max={isNumberField(field) ? field.max : undefined}
                           step={isNumberField(field) ? field.step ?? 1 : undefined}
+                          inputMode={inferInputMode(field)}
+                          autoComplete={inferAutoComplete(field)}
                           value={Array.isArray(value) ? value.join(", ") : sanitizeForInput(value)}
-                          placeholder={field.placeholder}
+                          placeholder={inferPlaceholder(field)}
                           onChange={(event) => updatePayloadField(field.key, event.target.value)}
                           required={field.required}
                         />
-                        {field.helperText ? <small>{field.helperText}</small> : null}
+                        {field.helperText ? (
+                          <small className="portal-field-help">{field.helperText}</small>
+                        ) : null}
                       </label>
                     );
                   })}
@@ -1063,23 +2371,36 @@ export function PortalModuleManager({
               </fieldset>
             ))}
 
-            <fieldset className="card full-width">
+            <fieldset className="card full-width portal-form-section">
               <legend>Evidence Locker</legend>
               <div className="form-grid">
                 <label className="full-width">
-                  Attach files (photo/PDF/document)
+                  {renderLabel("Attach files (photo/video/PDF/document)")}
                   <input
                     key={fileInputKey}
                     type="file"
+                    accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
                     multiple
                     onChange={(event) =>
                       setSelectedFiles(event.target.files ? Array.from(event.target.files) : [])
                     }
                   />
+                  <small className="portal-field-help">
+                    Files are uploaded after Save Draft or Submit.
+                  </small>
                 </label>
                 <div className="full-width">
                   {selectedFiles.length > 0 ? (
-                    <p>{selectedFiles.length} file(s) selected. Files upload when you save/submit.</p>
+                    <div>
+                      <p>{selectedFiles.length} file(s) selected.</p>
+                      <ul className="portal-file-list">
+                        {selectedFiles.map((file) => (
+                          <li key={`${file.name}-${file.size}`}>
+                            {file.name} ({Math.max(1, Math.round(file.size / 1024))} KB)
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ) : (
                     <p>No new files selected.</p>
                   )}
@@ -1113,7 +2434,7 @@ export function PortalModuleManager({
 
             {canReview && formState.id ? (
               <label className="full-width">
-                Supervisor review note
+                {renderLabel("Supervisor review note")}
                 <textarea
                   rows={2}
                   value={formState.reviewNote}
@@ -1124,7 +2445,7 @@ export function PortalModuleManager({
               </label>
             ) : null}
 
-            <div className="full-width action-row">
+            <div className="full-width action-row portal-form-actions">
               <button className="button" type="button" disabled={saving} onClick={() => void submitRecord("Draft")}>
                 {saving ? "Saving..." : "Save Draft"}
               </button>

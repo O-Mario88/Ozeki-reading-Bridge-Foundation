@@ -10,20 +10,50 @@ import {
   DashboardFollowUpItem,
   OnlineTrainingEventInput,
   OnlineTrainingEventRecord,
+  PortalAnalyticsData,
+  PortalAnalyticsDistrictStat,
+  PortalAnalyticsModuleStatus,
+  PortalAnalyticsMonthlyPoint,
+  PortalAnalyticsRecentRecord,
+  PortalAnalyticsUserStat,
   PortalDashboardData,
   PortalRecord,
   PortalRecordFilters,
   PortalRecordInput,
   PortalRecordModule,
   PortalRecordStatus,
+  PortalTestimonialRecord,
   PortalUser,
+  PortalUserAdminRecord,
   PortalUserRole,
   PortalEvidenceRecord,
+  PortalBlogPostRecord,
+  ImpactReportBuildInput,
+  ImpactReportCoverageBlock,
+  ImpactReportDataQualityBlock,
+  ImpactReportEngagementBlock,
+  ImpactReportFactPack,
+  ImpactReportInstructionQualityBlock,
+  ImpactReportLearningOutcomeMetric,
+  ImpactReportLearningOutcomesBlock,
+  ImpactReportNarrative,
+  ImpactReportSectionNarrative,
+  ImpactReportProgramType,
+  ImpactReportRecord,
+  ImpactReportScopeType,
+  ImpactReportTemplatePackage,
+  ImpactReportTemplateSection,
+  ImpactReportType,
+  ImpactReportVariant,
   SchoolDirectoryInput,
   SchoolDirectoryRecord,
+  PortalResourceRecord,
+  PortalResourceSection,
+  portalResourceSections,
   TrainingSessionInput,
   TrainingSessionRecord,
 } from "@/lib/types";
+import { getDistrictsByRegion, inferRegionFromDistrict } from "@/lib/uganda-locations";
 
 const dataDir = path.join(process.cwd(), "data");
 const dbFile = path.join(dataDir, "app.db");
@@ -66,6 +96,79 @@ function ensurePortalUserColumns(db: Database.Database) {
   ensureColumn(db, "portal_users", "is_supervisor", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "portal_users", "is_me", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "portal_users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "portal_users", "is_superadmin", "INTEGER NOT NULL DEFAULT 0");
+}
+
+function ensureOnlineTrainingColumns(db: Database.Database) {
+  ensureColumn(
+    db,
+    "online_training_events",
+    "online_teachers_trained",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  ensureColumn(
+    db,
+    "online_training_events",
+    "online_school_leaders_trained",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  ensureColumn(db, "online_training_events", "recording_url", "TEXT");
+  ensureColumn(db, "online_training_events", "chat_summary", "TEXT");
+  ensureColumn(db, "online_training_events", "attendance_captured_at", "TEXT");
+}
+
+function ensureImpactReportColumns(db: Database.Database) {
+  ensureColumn(db, "impact_reports", "partner_name", "TEXT");
+}
+
+function ensurePortalResourceColumns(db: Database.Database) {
+  ensureColumn(db, "portal_resources", "section", "TEXT NOT NULL DEFAULT 'Resources Library'");
+}
+
+function ensureSchoolDirectoryColumns(db: Database.Database) {
+  ensureColumn(db, "schools_directory", "enrolled_learners", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_boys", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_girls", "INTEGER NOT NULL DEFAULT 0");
+  db.exec(`
+    UPDATE schools_directory
+    SET enrolled_boys = COALESCE(enrolled_learners, 0)
+    WHERE COALESCE(enrolled_boys, 0) = 0
+      AND COALESCE(enrolled_girls, 0) = 0
+      AND COALESCE(enrolled_learners, 0) > 0;
+  `);
+}
+
+function ensurePortalRecordColumns(db: Database.Database) {
+  ensureColumn(db, "portal_records", "school_id", "INTEGER");
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_portal_records_school_id
+      ON portal_records(school_id);
+  `);
+
+  db.exec(`
+    UPDATE portal_records
+    SET school_id = (
+      SELECT sd.id
+      FROM schools_directory sd
+      WHERE lower(trim(sd.name)) = lower(trim(portal_records.school_name))
+        AND lower(trim(sd.district)) = lower(trim(portal_records.district))
+      LIMIT 1
+    )
+    WHERE school_id IS NULL
+      AND trim(COALESCE(school_name, '')) != '';
+  `);
+
+  db.exec(`
+    UPDATE portal_records
+    SET school_id = (
+      SELECT sd.id
+      FROM schools_directory sd
+      WHERE lower(trim(sd.name)) = lower(trim(portal_records.school_name))
+      LIMIT 1
+    )
+    WHERE school_id IS NULL
+      AND trim(COALESCE(school_name, '')) != '';
+  `);
 }
 
 function seedPortalUsers(db: Database.Database) {
@@ -79,6 +182,7 @@ function seedPortalUsers(db: Database.Database) {
       isSupervisor: 0,
       isME: 0,
       isAdmin: 0,
+      isSuperAdmin: 0,
     },
     {
       fullName: "ORB Foundation Volunteer",
@@ -91,6 +195,7 @@ function seedPortalUsers(db: Database.Database) {
       isSupervisor: 0,
       isME: 0,
       isAdmin: 0,
+      isSuperAdmin: 0,
     },
     {
       fullName: "ORB Supervisor",
@@ -101,6 +206,7 @@ function seedPortalUsers(db: Database.Database) {
       isSupervisor: 1,
       isME: 0,
       isAdmin: 0,
+      isSuperAdmin: 0,
     },
     {
       fullName: "ORB M&E Officer",
@@ -111,16 +217,29 @@ function seedPortalUsers(db: Database.Database) {
       isSupervisor: 0,
       isME: 1,
       isAdmin: 0,
+      isSuperAdmin: 0,
     },
     {
       fullName: "ORB Admin",
-      email: process.env.PORTAL_ADMIN_EMAIL?.toLowerCase() ?? "admin@ozekireadingbridge.org",
-      phone: process.env.PORTAL_ADMIN_PHONE ?? "+256700100005",
+      email: process.env.PORTAL_ADMIN_EMAIL?.toLowerCase() ?? "admin@ozekiread.org",
+      phone: process.env.PORTAL_ADMIN_PHONE ?? "+256773397375",
       role: "Staff" as PortalUserRole,
-      password: process.env.PORTAL_ADMIN_PASSWORD ?? "Admin@12345",
+      password: process.env.PORTAL_ADMIN_PASSWORD ?? "Admin@16079",
       isSupervisor: 0,
       isME: 0,
       isAdmin: 1,
+      isSuperAdmin: 0,
+    },
+    {
+      fullName: "ORB Super Admin",
+      email: process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org",
+      phone: process.env.PORTAL_SUPERADMIN_PHONE ?? "+256773397375",
+      role: "Staff" as PortalUserRole,
+      password: process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Admin@16079",
+      isSupervisor: 0,
+      isME: 0,
+      isAdmin: 1,
+      isSuperAdmin: 1,
     },
   ];
 
@@ -133,7 +252,8 @@ function seedPortalUsers(db: Database.Database) {
       phone,
       is_supervisor,
       is_me,
-      is_admin
+      is_admin,
+      is_superadmin
     ) VALUES (
       @fullName,
       @email,
@@ -142,7 +262,8 @@ function seedPortalUsers(db: Database.Database) {
       @phone,
       @isSupervisor,
       @isME,
-      @isAdmin
+      @isAdmin,
+      @isSuperAdmin
     )
     ON CONFLICT(email) DO UPDATE SET
       full_name = excluded.full_name,
@@ -151,7 +272,8 @@ function seedPortalUsers(db: Database.Database) {
       phone = excluded.phone,
       is_supervisor = excluded.is_supervisor,
       is_me = excluded.is_me,
-      is_admin = excluded.is_admin
+      is_admin = excluded.is_admin,
+      is_superadmin = excluded.is_superadmin
   `);
 
   accounts.forEach((account) => {
@@ -163,9 +285,32 @@ function seedPortalUsers(db: Database.Database) {
       isSupervisor: account.isSupervisor,
       isME: account.isME,
       isAdmin: account.isAdmin,
+      isSuperAdmin: account.isSuperAdmin,
       passwordHash: hashPassword(account.password),
     });
   });
+
+  const legacyAdminEmail = "admin@ozekireadingbridge.org";
+  const seededSuperAdminEmail =
+    process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
+  if (legacyAdminEmail !== seededSuperAdminEmail) {
+    db.prepare(
+      `
+      UPDATE portal_users
+      SET
+        role = 'Volunteer',
+        is_supervisor = 0,
+        is_me = 0,
+        is_admin = 0,
+        is_superadmin = 0,
+        password_hash = @passwordHash
+      WHERE lower(email) = @email
+    `,
+    ).run({
+      email: legacyAdminEmail,
+      passwordHash: hashPassword(`${seededSuperAdminEmail}:disabled`),
+    });
+  }
 }
 
 function getDb() {
@@ -227,6 +372,7 @@ function getDb() {
     email TEXT NOT NULL UNIQUE,
     role TEXT NOT NULL CHECK(role IN ('Staff', 'Volunteer')),
     password_hash TEXT NOT NULL,
+    is_superadmin INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -291,9 +437,14 @@ function getDb() {
     duration_minutes INTEGER NOT NULL,
     attendee_emails TEXT,
     attendee_count INTEGER NOT NULL DEFAULT 0,
+    online_teachers_trained INTEGER NOT NULL DEFAULT 0,
+    online_school_leaders_trained INTEGER NOT NULL DEFAULT 0,
     calendar_event_id TEXT,
     calendar_link TEXT,
     meet_link TEXT,
+    recording_url TEXT,
+    chat_summary TEXT,
+    attendance_captured_at TEXT,
     created_by_user_id INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
@@ -307,6 +458,9 @@ function getDb() {
     sub_county TEXT NOT NULL,
     parish TEXT NOT NULL,
     village TEXT,
+    enrolled_boys INTEGER NOT NULL DEFAULT 0,
+    enrolled_girls INTEGER NOT NULL DEFAULT 0,
+    enrolled_learners INTEGER NOT NULL DEFAULT 0,
     gps_lat TEXT,
     gps_lng TEXT,
     contact_name TEXT,
@@ -314,12 +468,72 @@ function getDb() {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS portal_resources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    grade TEXT NOT NULL CHECK(grade IN ('Nursery', 'P1-P2', 'P3-P4', 'P5-P7', 'All Primary')),
+    skill TEXT NOT NULL CHECK(skill IN ('Phonics', 'Fluency', 'Comprehension', 'Assessment', 'Remedial', 'Writing')),
+    type TEXT NOT NULL CHECK(type IN ('Toolkit', 'Lesson Plan', 'Assessment', 'Poster', 'Guide', 'Reader')),
+    file_name TEXT,
+    stored_path TEXT,
+    mime_type TEXT,
+    size_bytes INTEGER,
+    external_url TEXT,
+    download_label TEXT,
+    section TEXT NOT NULL DEFAULT 'Resources Library',
+    is_published INTEGER NOT NULL DEFAULT 1,
+    created_by_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_portal_resources_created_at
+    ON portal_resources(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_portal_resources_published
+    ON portal_resources(is_published);
+
+  CREATE TABLE IF NOT EXISTS portal_blog_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    subtitle TEXT,
+    body TEXT NOT NULL,
+    category TEXT NOT NULL,
+    tags_json TEXT NOT NULL DEFAULT '[]',
+    image_file_name TEXT,
+    image_stored_path TEXT,
+    image_mime_type TEXT,
+    image_size_bytes INTEGER,
+    video_file_name TEXT,
+    video_stored_path TEXT,
+    video_mime_type TEXT,
+    video_size_bytes INTEGER,
+    views INTEGER NOT NULL DEFAULT 0,
+    is_published INTEGER NOT NULL DEFAULT 1,
+    created_by_user_id INTEGER NOT NULL,
+    published_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_portal_blog_posts_published_at
+    ON portal_blog_posts(published_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_portal_blog_posts_views
+    ON portal_blog_posts(views DESC);
+  CREATE INDEX IF NOT EXISTS idx_portal_blog_posts_published
+    ON portal_blog_posts(is_published);
+
   CREATE TABLE IF NOT EXISTS portal_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     record_code TEXT NOT NULL UNIQUE,
     module TEXT NOT NULL CHECK(module IN ('training', 'visit', 'assessment', 'story')),
     date TEXT NOT NULL,
     district TEXT NOT NULL,
+    school_id INTEGER,
     school_name TEXT NOT NULL,
     program_type TEXT,
     status TEXT NOT NULL CHECK(status IN ('Draft', 'Submitted', 'Returned', 'Approved')),
@@ -330,6 +544,7 @@ function getDb() {
     updated_by_user_id INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL,
     FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
     FOREIGN KEY(updated_by_user_id) REFERENCES portal_users(id)
   );
@@ -360,9 +575,72 @@ function getDb() {
   CREATE INDEX IF NOT EXISTS idx_portal_evidence_module ON portal_evidence(module);
   CREATE INDEX IF NOT EXISTS idx_portal_evidence_date ON portal_evidence(date);
   CREATE INDEX IF NOT EXISTS idx_portal_evidence_school ON portal_evidence(school_name);
+
+  CREATE TABLE IF NOT EXISTS portal_testimonials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    storyteller_name TEXT NOT NULL,
+    storyteller_role TEXT NOT NULL,
+    school_name TEXT NOT NULL,
+    district TEXT NOT NULL,
+    story_text TEXT NOT NULL,
+    video_file_name TEXT NOT NULL,
+    video_stored_path TEXT NOT NULL,
+    video_mime_type TEXT NOT NULL,
+    video_size_bytes INTEGER NOT NULL,
+    photo_file_name TEXT,
+    photo_stored_path TEXT,
+    photo_mime_type TEXT,
+    photo_size_bytes INTEGER,
+    is_published INTEGER NOT NULL DEFAULT 1,
+    created_by_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_portal_testimonials_created_at
+    ON portal_testimonials(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_portal_testimonials_published
+    ON portal_testimonials(is_published);
+
+  CREATE TABLE IF NOT EXISTS impact_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_code TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    partner_name TEXT,
+    report_type TEXT NOT NULL,
+    scope_type TEXT NOT NULL CHECK(scope_type IN ('National', 'Region', 'District', 'School')),
+    scope_value TEXT NOT NULL DEFAULT 'All',
+    period_start TEXT NOT NULL,
+    period_end TEXT NOT NULL,
+    programs_json TEXT NOT NULL,
+    fact_pack_json TEXT NOT NULL,
+    narrative_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Generated',
+    is_public INTEGER NOT NULL DEFAULT 0,
+    version TEXT NOT NULL DEFAULT 'v1.0',
+    generated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    view_count INTEGER NOT NULL DEFAULT 0,
+    download_count INTEGER NOT NULL DEFAULT 0,
+    created_by_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_impact_reports_generated_at
+    ON impact_reports(generated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_impact_reports_public
+    ON impact_reports(is_public, generated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_impact_reports_scope
+    ON impact_reports(scope_type, scope_value);
   `);
 
   ensurePortalUserColumns(db);
+  ensureOnlineTrainingColumns(db);
+  ensureImpactReportColumns(db);
+  ensurePortalResourceColumns(db);
+  ensureSchoolDirectoryColumns(db);
+  ensurePortalRecordColumns(db);
   seedPortalUsers(db);
 
   dbInstance = db;
@@ -465,6 +743,928 @@ export function saveDownloadLead(payload: {
     .run(payload);
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 90);
+}
+
+function parsePortalResourceRow(row: {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  grade: PortalResourceRecord["grade"];
+  skill: PortalResourceRecord["skill"];
+  type: PortalResourceRecord["type"];
+  section?: string | null;
+  fileName: string | null;
+  storedPath: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  externalUrl: string | null;
+  downloadLabel: string | null;
+  isPublished: number;
+  createdByUserId: number;
+  createdByName: string;
+  createdAt: string;
+  updatedAt: string;
+}): PortalResourceRecord {
+  return {
+    id: Number(row.id),
+    slug: row.slug,
+    title: row.title,
+    description: row.description,
+    grade: row.grade,
+    skill: row.skill,
+    type: row.type,
+    section: portalResourceSections.includes((row.section ?? "") as PortalResourceSection)
+      ? ((row.section ?? "") as PortalResourceSection)
+      : "Resources Library",
+    fileName: row.fileName ?? null,
+    storedPath: row.storedPath ?? null,
+    mimeType: row.mimeType ?? null,
+    sizeBytes: row.sizeBytes !== null ? Number(row.sizeBytes) : null,
+    externalUrl: row.externalUrl ?? null,
+    downloadLabel: row.downloadLabel ?? null,
+    isPublished: Boolean(row.isPublished),
+    createdByUserId: Number(row.createdByUserId),
+    createdByName: row.createdByName,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export function savePortalResource(input: {
+  title: string;
+  description: string;
+  grade: PortalResourceRecord["grade"];
+  skill: PortalResourceRecord["skill"];
+  type: PortalResourceRecord["type"];
+  section: PortalResourceSection;
+  fileName?: string | null;
+  storedPath?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  externalUrl?: string | null;
+  downloadLabel?: string | null;
+  isPublished?: boolean;
+  createdByUserId: number;
+}): PortalResourceRecord {
+  const db = getDb();
+  const baseSlug = slugify(input.title) || `resource-${Date.now()}`;
+  let slug = baseSlug;
+  let counter = 2;
+
+  while (
+    db
+      .prepare(`SELECT 1 FROM portal_resources WHERE slug = @slug LIMIT 1`)
+      .get({ slug })
+  ) {
+    slug = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+
+  const now = new Date().toISOString();
+  const insertResult = db
+    .prepare(
+      `
+      INSERT INTO portal_resources (
+        slug,
+        title,
+        description,
+        grade,
+        skill,
+        type,
+        section,
+        file_name,
+        stored_path,
+        mime_type,
+        size_bytes,
+        external_url,
+        download_label,
+        is_published,
+        created_by_user_id,
+        created_at,
+        updated_at
+      ) VALUES (
+        @slug,
+        @title,
+        @description,
+        @grade,
+        @skill,
+        @type,
+        @section,
+        @fileName,
+        @storedPath,
+        @mimeType,
+        @sizeBytes,
+        @externalUrl,
+        @downloadLabel,
+        @isPublished,
+        @createdByUserId,
+        @createdAt,
+        @updatedAt
+      )
+    `,
+    )
+    .run({
+      slug,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      grade: input.grade,
+      skill: input.skill,
+      type: input.type,
+      section: input.section,
+      fileName: input.fileName ?? null,
+      storedPath: input.storedPath ?? null,
+      mimeType: input.mimeType ?? null,
+      sizeBytes: input.sizeBytes ?? null,
+      externalUrl: input.externalUrl ?? null,
+      downloadLabel: input.downloadLabel?.trim() || null,
+      isPublished: input.isPublished === false ? 0 : 1,
+      createdByUserId: input.createdByUserId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+  const id = Number(insertResult.lastInsertRowid);
+  const row = db
+    .prepare(
+      `
+      SELECT
+        pr.id,
+        pr.slug,
+        pr.title,
+        pr.description,
+        pr.grade,
+        pr.skill,
+        pr.type,
+        pr.section,
+        pr.file_name AS fileName,
+        pr.stored_path AS storedPath,
+        pr.mime_type AS mimeType,
+        pr.size_bytes AS sizeBytes,
+        pr.external_url AS externalUrl,
+        pr.download_label AS downloadLabel,
+        pr.is_published AS isPublished,
+        pr.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pr.created_at AS createdAt,
+        pr.updated_at AS updatedAt
+      FROM portal_resources pr
+      JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      WHERE pr.id = @id
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as
+    | {
+        id: number;
+        slug: string;
+        title: string;
+        description: string;
+        grade: PortalResourceRecord["grade"];
+        skill: PortalResourceRecord["skill"];
+        type: PortalResourceRecord["type"];
+        section: PortalResourceSection;
+        fileName: string | null;
+        storedPath: string | null;
+        mimeType: string | null;
+        sizeBytes: number | null;
+        externalUrl: string | null;
+        downloadLabel: string | null;
+        isPublished: number;
+        createdByUserId: number;
+        createdByName: string;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | undefined;
+
+  if (!row) {
+    throw new Error("Could not load saved resource.");
+  }
+
+  return parsePortalResourceRow(row);
+}
+
+export function listPortalResources(user: PortalUser, limit = 180): PortalResourceRecord[] {
+  const whereClauses = ["1=1"];
+  const params: Record<string, string | number> = { limit };
+
+  if (!canViewAllRecords(user)) {
+    whereClauses.push("pr.created_by_user_id = @createdByUserId");
+    params.createdByUserId = user.id;
+  }
+
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        pr.id,
+        pr.slug,
+        pr.title,
+        pr.description,
+        pr.grade,
+        pr.skill,
+        pr.type,
+        pr.section,
+        pr.file_name AS fileName,
+        pr.stored_path AS storedPath,
+        pr.mime_type AS mimeType,
+        pr.size_bytes AS sizeBytes,
+        pr.external_url AS externalUrl,
+        pr.download_label AS downloadLabel,
+        pr.is_published AS isPublished,
+        pr.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pr.created_at AS createdAt,
+        pr.updated_at AS updatedAt
+      FROM portal_resources pr
+      JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      WHERE ${whereClauses.join(" AND ")}
+      ORDER BY pr.created_at DESC, pr.id DESC
+      LIMIT @limit
+    `,
+    )
+    .all(params) as Array<{
+    id: number;
+    slug: string;
+    title: string;
+    description: string;
+    grade: PortalResourceRecord["grade"];
+    skill: PortalResourceRecord["skill"];
+    type: PortalResourceRecord["type"];
+    section: PortalResourceSection;
+    fileName: string | null;
+    storedPath: string | null;
+    mimeType: string | null;
+    sizeBytes: number | null;
+    externalUrl: string | null;
+    downloadLabel: string | null;
+    isPublished: number;
+    createdByUserId: number;
+    createdByName: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+
+  return rows.map((row) => parsePortalResourceRow(row));
+}
+
+export function listPublishedPortalResources(
+  limit = 250,
+  options?: { sections?: PortalResourceSection[] },
+): PortalResourceRecord[] {
+  const whereClauses = ["pr.is_published = 1"];
+  const params: Record<string, string | number> = { limit };
+
+  const sections = options?.sections?.length ? options.sections : null;
+  if (sections) {
+    const placeholders = sections.map((_, index) => `@section${index}`);
+    whereClauses.push(`pr.section IN (${placeholders.join(", ")})`);
+    sections.forEach((section, index) => {
+      params[`section${index}`] = section;
+    });
+  }
+
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        pr.id,
+        pr.slug,
+        pr.title,
+        pr.description,
+        pr.grade,
+        pr.skill,
+        pr.type,
+        pr.section,
+        pr.file_name AS fileName,
+        pr.stored_path AS storedPath,
+        pr.mime_type AS mimeType,
+        pr.size_bytes AS sizeBytes,
+        pr.external_url AS externalUrl,
+        pr.download_label AS downloadLabel,
+        pr.is_published AS isPublished,
+        pr.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pr.created_at AS createdAt,
+        pr.updated_at AS updatedAt
+      FROM portal_resources pr
+      JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      WHERE ${whereClauses.join(" AND ")}
+      ORDER BY pr.created_at DESC, pr.id DESC
+      LIMIT @limit
+    `,
+    )
+    .all(params) as Array<{
+    id: number;
+    slug: string;
+    title: string;
+    description: string;
+    grade: PortalResourceRecord["grade"];
+    skill: PortalResourceRecord["skill"];
+    type: PortalResourceRecord["type"];
+    section: PortalResourceSection;
+    fileName: string | null;
+    storedPath: string | null;
+    mimeType: string | null;
+    sizeBytes: number | null;
+    externalUrl: string | null;
+    downloadLabel: string | null;
+    isPublished: number;
+    createdByUserId: number;
+    createdByName: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+
+  return rows.map((row) => parsePortalResourceRow(row));
+}
+
+export function getPublishedPortalResourceById(id: number): PortalResourceRecord | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        pr.id,
+        pr.slug,
+        pr.title,
+        pr.description,
+        pr.grade,
+        pr.skill,
+        pr.type,
+        pr.section,
+        pr.file_name AS fileName,
+        pr.stored_path AS storedPath,
+        pr.mime_type AS mimeType,
+        pr.size_bytes AS sizeBytes,
+        pr.external_url AS externalUrl,
+        pr.download_label AS downloadLabel,
+        pr.is_published AS isPublished,
+        pr.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pr.created_at AS createdAt,
+        pr.updated_at AS updatedAt
+      FROM portal_resources pr
+      JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      WHERE pr.id = @id
+        AND pr.is_published = 1
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as
+    | {
+        id: number;
+        slug: string;
+        title: string;
+        description: string;
+        grade: PortalResourceRecord["grade"];
+        skill: PortalResourceRecord["skill"];
+        type: PortalResourceRecord["type"];
+        section: PortalResourceSection;
+        fileName: string | null;
+        storedPath: string | null;
+        mimeType: string | null;
+        sizeBytes: number | null;
+        externalUrl: string | null;
+        downloadLabel: string | null;
+        isPublished: number;
+        createdByUserId: number;
+        createdByName: string;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | undefined;
+
+  return row ? parsePortalResourceRow(row) : null;
+}
+
+function parsePortalBlogPostRow(row: {
+  id: number;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  body: string;
+  category: string;
+  tagsJson: string;
+  imageFileName: string | null;
+  imageStoredPath: string | null;
+  imageMimeType: string | null;
+  imageSizeBytes: number | null;
+  videoFileName: string | null;
+  videoStoredPath: string | null;
+  videoMimeType: string | null;
+  videoSizeBytes: number | null;
+  views: number;
+  isPublished: number;
+  createdByUserId: number;
+  authorName: string;
+  publishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}): PortalBlogPostRecord {
+  let tags: string[] = [];
+  try {
+    const parsed = JSON.parse(row.tagsJson || "[]");
+    tags = Array.isArray(parsed)
+      ? parsed
+          .map((value) => String(value).trim())
+          .filter((value) => value.length > 0)
+          .slice(0, 16)
+      : [];
+  } catch {
+    tags = [];
+  }
+
+  return {
+    id: Number(row.id),
+    slug: row.slug,
+    title: row.title,
+    subtitle: row.subtitle ?? null,
+    body: row.body,
+    category: row.category,
+    tags,
+    imageFileName: row.imageFileName ?? null,
+    imageStoredPath: row.imageStoredPath ?? null,
+    imageMimeType: row.imageMimeType ?? null,
+    imageSizeBytes: row.imageSizeBytes !== null ? Number(row.imageSizeBytes) : null,
+    videoFileName: row.videoFileName ?? null,
+    videoStoredPath: row.videoStoredPath ?? null,
+    videoMimeType: row.videoMimeType ?? null,
+    videoSizeBytes: row.videoSizeBytes !== null ? Number(row.videoSizeBytes) : null,
+    views: Number(row.views ?? 0),
+    isPublished: Boolean(row.isPublished),
+    createdByUserId: Number(row.createdByUserId),
+    authorName: row.authorName,
+    publishedAt: row.publishedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function normalizeTagArray(tags: string[]) {
+  const unique = new Set<string>();
+  tags
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0)
+    .forEach((tag) => unique.add(tag.slice(0, 40)));
+  return [...unique].slice(0, 16);
+}
+
+export function savePortalBlogPost(input: {
+  title: string;
+  subtitle?: string | null;
+  body: string;
+  category: string;
+  tags: string[];
+  imageFileName?: string | null;
+  imageStoredPath?: string | null;
+  imageMimeType?: string | null;
+  imageSizeBytes?: number | null;
+  videoFileName?: string | null;
+  videoStoredPath?: string | null;
+  videoMimeType?: string | null;
+  videoSizeBytes?: number | null;
+  isPublished?: boolean;
+  createdByUserId: number;
+}): PortalBlogPostRecord {
+  const db = getDb();
+  const baseSlug = slugify(input.title) || `blog-${Date.now()}`;
+  let slug = baseSlug;
+  let counter = 2;
+
+  while (
+    db
+      .prepare(`SELECT 1 FROM portal_blog_posts WHERE slug = @slug LIMIT 1`)
+      .get({ slug })
+  ) {
+    slug = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+
+  const now = new Date().toISOString();
+  const tags = normalizeTagArray(input.tags);
+  const insertResult = db
+    .prepare(
+      `
+      INSERT INTO portal_blog_posts (
+        slug,
+        title,
+        subtitle,
+        body,
+        category,
+        tags_json,
+        image_file_name,
+        image_stored_path,
+        image_mime_type,
+        image_size_bytes,
+        video_file_name,
+        video_stored_path,
+        video_mime_type,
+        video_size_bytes,
+        views,
+        is_published,
+        created_by_user_id,
+        published_at,
+        created_at,
+        updated_at
+      ) VALUES (
+        @slug,
+        @title,
+        @subtitle,
+        @body,
+        @category,
+        @tagsJson,
+        @imageFileName,
+        @imageStoredPath,
+        @imageMimeType,
+        @imageSizeBytes,
+        @videoFileName,
+        @videoStoredPath,
+        @videoMimeType,
+        @videoSizeBytes,
+        0,
+        @isPublished,
+        @createdByUserId,
+        @publishedAt,
+        @createdAt,
+        @updatedAt
+      )
+    `,
+    )
+    .run({
+      slug,
+      title: input.title.trim(),
+      subtitle: input.subtitle?.trim() || null,
+      body: input.body.trim(),
+      category: input.category.trim(),
+      tagsJson: JSON.stringify(tags),
+      imageFileName: input.imageFileName ?? null,
+      imageStoredPath: input.imageStoredPath ?? null,
+      imageMimeType: input.imageMimeType ?? null,
+      imageSizeBytes: input.imageSizeBytes ?? null,
+      videoFileName: input.videoFileName ?? null,
+      videoStoredPath: input.videoStoredPath ?? null,
+      videoMimeType: input.videoMimeType ?? null,
+      videoSizeBytes: input.videoSizeBytes ?? null,
+      isPublished: input.isPublished === false ? 0 : 1,
+      createdByUserId: input.createdByUserId,
+      publishedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+  const id = Number(insertResult.lastInsertRowid);
+  const row = db
+    .prepare(
+      `
+      SELECT
+        pb.id,
+        pb.slug,
+        pb.title,
+        pb.subtitle,
+        pb.body,
+        pb.category,
+        pb.tags_json AS tagsJson,
+        pb.image_file_name AS imageFileName,
+        pb.image_stored_path AS imageStoredPath,
+        pb.image_mime_type AS imageMimeType,
+        pb.image_size_bytes AS imageSizeBytes,
+        pb.video_file_name AS videoFileName,
+        pb.video_stored_path AS videoStoredPath,
+        pb.video_mime_type AS videoMimeType,
+        pb.video_size_bytes AS videoSizeBytes,
+        pb.views,
+        pb.is_published AS isPublished,
+        pb.created_by_user_id AS createdByUserId,
+        pu.full_name AS authorName,
+        pb.published_at AS publishedAt,
+        pb.created_at AS createdAt,
+        pb.updated_at AS updatedAt
+      FROM portal_blog_posts pb
+      JOIN portal_users pu ON pu.id = pb.created_by_user_id
+      WHERE pb.id = @id
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as
+    | {
+        id: number;
+        slug: string;
+        title: string;
+        subtitle: string | null;
+        body: string;
+        category: string;
+        tagsJson: string;
+        imageFileName: string | null;
+        imageStoredPath: string | null;
+        imageMimeType: string | null;
+        imageSizeBytes: number | null;
+        videoFileName: string | null;
+        videoStoredPath: string | null;
+        videoMimeType: string | null;
+        videoSizeBytes: number | null;
+        views: number;
+        isPublished: number;
+        createdByUserId: number;
+        authorName: string;
+        publishedAt: string;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | undefined;
+
+  if (!row) {
+    throw new Error("Could not load saved blog post.");
+  }
+
+  return parsePortalBlogPostRow(row);
+}
+
+export function listPortalBlogPosts(user: PortalUser, limit = 180): PortalBlogPostRecord[] {
+  const whereClauses = ["1=1"];
+  const params: Record<string, string | number> = { limit };
+
+  if (!canViewAllRecords(user)) {
+    whereClauses.push("pb.created_by_user_id = @createdByUserId");
+    params.createdByUserId = user.id;
+  }
+
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        pb.id,
+        pb.slug,
+        pb.title,
+        pb.subtitle,
+        pb.body,
+        pb.category,
+        pb.tags_json AS tagsJson,
+        pb.image_file_name AS imageFileName,
+        pb.image_stored_path AS imageStoredPath,
+        pb.image_mime_type AS imageMimeType,
+        pb.image_size_bytes AS imageSizeBytes,
+        pb.video_file_name AS videoFileName,
+        pb.video_stored_path AS videoStoredPath,
+        pb.video_mime_type AS videoMimeType,
+        pb.video_size_bytes AS videoSizeBytes,
+        pb.views,
+        pb.is_published AS isPublished,
+        pb.created_by_user_id AS createdByUserId,
+        pu.full_name AS authorName,
+        pb.published_at AS publishedAt,
+        pb.created_at AS createdAt,
+        pb.updated_at AS updatedAt
+      FROM portal_blog_posts pb
+      JOIN portal_users pu ON pu.id = pb.created_by_user_id
+      WHERE ${whereClauses.join(" AND ")}
+      ORDER BY pb.published_at DESC, pb.id DESC
+      LIMIT @limit
+    `,
+    )
+    .all(params) as Array<{
+    id: number;
+    slug: string;
+    title: string;
+    subtitle: string | null;
+    body: string;
+    category: string;
+    tagsJson: string;
+    imageFileName: string | null;
+    imageStoredPath: string | null;
+    imageMimeType: string | null;
+    imageSizeBytes: number | null;
+    videoFileName: string | null;
+    videoStoredPath: string | null;
+    videoMimeType: string | null;
+    videoSizeBytes: number | null;
+    views: number;
+    isPublished: number;
+    createdByUserId: number;
+    authorName: string;
+    publishedAt: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+
+  return rows.map((row) => parsePortalBlogPostRow(row));
+}
+
+export function listPublishedPortalBlogPosts(limit = 120): PortalBlogPostRecord[] {
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        pb.id,
+        pb.slug,
+        pb.title,
+        pb.subtitle,
+        pb.body,
+        pb.category,
+        pb.tags_json AS tagsJson,
+        pb.image_file_name AS imageFileName,
+        pb.image_stored_path AS imageStoredPath,
+        pb.image_mime_type AS imageMimeType,
+        pb.image_size_bytes AS imageSizeBytes,
+        pb.video_file_name AS videoFileName,
+        pb.video_stored_path AS videoStoredPath,
+        pb.video_mime_type AS videoMimeType,
+        pb.video_size_bytes AS videoSizeBytes,
+        pb.views,
+        pb.is_published AS isPublished,
+        pb.created_by_user_id AS createdByUserId,
+        pu.full_name AS authorName,
+        pb.published_at AS publishedAt,
+        pb.created_at AS createdAt,
+        pb.updated_at AS updatedAt
+      FROM portal_blog_posts pb
+      JOIN portal_users pu ON pu.id = pb.created_by_user_id
+      WHERE pb.is_published = 1
+      ORDER BY pb.published_at DESC, pb.id DESC
+      LIMIT @limit
+    `,
+    )
+    .all({ limit }) as Array<{
+    id: number;
+    slug: string;
+    title: string;
+    subtitle: string | null;
+    body: string;
+    category: string;
+    tagsJson: string;
+    imageFileName: string | null;
+    imageStoredPath: string | null;
+    imageMimeType: string | null;
+    imageSizeBytes: number | null;
+    videoFileName: string | null;
+    videoStoredPath: string | null;
+    videoMimeType: string | null;
+    videoSizeBytes: number | null;
+    views: number;
+    isPublished: number;
+    createdByUserId: number;
+    authorName: string;
+    publishedAt: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+
+  return rows.map((row) => parsePortalBlogPostRow(row));
+}
+
+export function getPublishedPortalBlogPostBySlug(slug: string): PortalBlogPostRecord | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        pb.id,
+        pb.slug,
+        pb.title,
+        pb.subtitle,
+        pb.body,
+        pb.category,
+        pb.tags_json AS tagsJson,
+        pb.image_file_name AS imageFileName,
+        pb.image_stored_path AS imageStoredPath,
+        pb.image_mime_type AS imageMimeType,
+        pb.image_size_bytes AS imageSizeBytes,
+        pb.video_file_name AS videoFileName,
+        pb.video_stored_path AS videoStoredPath,
+        pb.video_mime_type AS videoMimeType,
+        pb.video_size_bytes AS videoSizeBytes,
+        pb.views,
+        pb.is_published AS isPublished,
+        pb.created_by_user_id AS createdByUserId,
+        pu.full_name AS authorName,
+        pb.published_at AS publishedAt,
+        pb.created_at AS createdAt,
+        pb.updated_at AS updatedAt
+      FROM portal_blog_posts pb
+      JOIN portal_users pu ON pu.id = pb.created_by_user_id
+      WHERE pb.slug = @slug
+        AND pb.is_published = 1
+      LIMIT 1
+    `,
+    )
+    .get({ slug }) as
+    | {
+        id: number;
+        slug: string;
+        title: string;
+        subtitle: string | null;
+        body: string;
+        category: string;
+        tagsJson: string;
+        imageFileName: string | null;
+        imageStoredPath: string | null;
+        imageMimeType: string | null;
+        imageSizeBytes: number | null;
+        videoFileName: string | null;
+        videoStoredPath: string | null;
+        videoMimeType: string | null;
+        videoSizeBytes: number | null;
+        views: number;
+        isPublished: number;
+        createdByUserId: number;
+        authorName: string;
+        publishedAt: string;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | undefined;
+
+  return row ? parsePortalBlogPostRow(row) : null;
+}
+
+export function getPublishedPortalBlogPostById(id: number): PortalBlogPostRecord | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        pb.id,
+        pb.slug,
+        pb.title,
+        pb.subtitle,
+        pb.body,
+        pb.category,
+        pb.tags_json AS tagsJson,
+        pb.image_file_name AS imageFileName,
+        pb.image_stored_path AS imageStoredPath,
+        pb.image_mime_type AS imageMimeType,
+        pb.image_size_bytes AS imageSizeBytes,
+        pb.video_file_name AS videoFileName,
+        pb.video_stored_path AS videoStoredPath,
+        pb.video_mime_type AS videoMimeType,
+        pb.video_size_bytes AS videoSizeBytes,
+        pb.views,
+        pb.is_published AS isPublished,
+        pb.created_by_user_id AS createdByUserId,
+        pu.full_name AS authorName,
+        pb.published_at AS publishedAt,
+        pb.created_at AS createdAt,
+        pb.updated_at AS updatedAt
+      FROM portal_blog_posts pb
+      JOIN portal_users pu ON pu.id = pb.created_by_user_id
+      WHERE pb.id = @id
+        AND pb.is_published = 1
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as
+    | {
+        id: number;
+        slug: string;
+        title: string;
+        subtitle: string | null;
+        body: string;
+        category: string;
+        tagsJson: string;
+        imageFileName: string | null;
+        imageStoredPath: string | null;
+        imageMimeType: string | null;
+        imageSizeBytes: number | null;
+        videoFileName: string | null;
+        videoStoredPath: string | null;
+        videoMimeType: string | null;
+        videoSizeBytes: number | null;
+        views: number;
+        isPublished: number;
+        createdByUserId: number;
+        authorName: string;
+        publishedAt: string;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | undefined;
+
+  return row ? parsePortalBlogPostRow(row) : null;
+}
+
+export function incrementPortalBlogViews(id: number) {
+  getDb()
+    .prepare(
+      `
+      UPDATE portal_blog_posts
+      SET views = views + 1,
+          updated_at = @updatedAt
+      WHERE id = @id
+    `,
+    )
+    .run({
+      id,
+      updatedAt: new Date().toISOString(),
+    });
+}
+
 export function saveNewsletterSubscriber(payload: { name: string; email: string }) {
   return getDb()
     .prepare(
@@ -482,6 +1682,276 @@ export function saveNewsletterSubscriber(payload: { name: string; email: string 
     .run(payload);
 }
 
+function parsePortalUserRow(row: {
+  id: number;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  role: PortalUserRole;
+  isSupervisor: number;
+  isME: number;
+  isAdmin: number;
+  isSuperAdmin: number;
+}): PortalUser {
+  return {
+    id: row.id,
+    fullName: row.fullName,
+    email: row.email,
+    phone: row.phone,
+    role: row.role,
+    isSupervisor: Boolean(row.isSupervisor),
+    isME: Boolean(row.isME),
+    isAdmin: Boolean(row.isAdmin),
+    isSuperAdmin: Boolean(row.isSuperAdmin),
+  };
+}
+
+export function getPortalUserByEmail(email: string): PortalUser | null {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        full_name AS fullName,
+        email,
+        phone,
+        role,
+        is_supervisor AS isSupervisor,
+        is_me AS isME,
+        is_admin AS isAdmin,
+        is_superadmin AS isSuperAdmin
+      FROM portal_users
+      WHERE lower(email) = @email
+      LIMIT 1
+    `,
+    )
+    .get({ email: normalized }) as
+    | {
+        id: number;
+        fullName: string;
+        email: string;
+        phone: string | null;
+        role: PortalUserRole;
+        isSupervisor: number;
+        isME: number;
+        isAdmin: number;
+        isSuperAdmin: number;
+      }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return parsePortalUserRow(row);
+}
+
+export function canManagePortalUsers(user: PortalUser) {
+  return user.isSuperAdmin;
+}
+
+export function listPortalUsersForAdmin(currentUser: PortalUser): PortalUserAdminRecord[] {
+  if (!canManagePortalUsers(currentUser)) {
+    throw new Error("Unauthorized");
+  }
+
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        full_name AS fullName,
+        email,
+        phone,
+        role,
+        is_supervisor AS isSupervisor,
+        is_me AS isME,
+        is_admin AS isAdmin,
+        is_superadmin AS isSuperAdmin,
+        created_at AS createdAt
+      FROM portal_users
+      ORDER BY is_superadmin DESC, full_name ASC
+    `,
+    )
+    .all() as Array<{
+    id: number;
+    fullName: string;
+    email: string;
+    phone: string | null;
+    role: PortalUserRole;
+    isSupervisor: number;
+    isME: number;
+    isAdmin: number;
+    isSuperAdmin: number;
+    createdAt: string;
+  }>;
+
+  return rows.map((row) => ({
+    ...parsePortalUserRow(row),
+    createdAt: row.createdAt,
+  }));
+}
+
+export function createPortalUserAccount(
+  input: {
+    fullName: string;
+    email: string;
+    phone?: string;
+    role: PortalUserRole;
+    password: string;
+    isSupervisor?: boolean;
+    isME?: boolean;
+    isAdmin?: boolean;
+    isSuperAdmin?: boolean;
+  },
+  currentUser: PortalUser,
+) {
+  if (!canManagePortalUsers(currentUser)) {
+    throw new Error("Unauthorized");
+  }
+
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const fullName = input.fullName.trim();
+  if (!normalizedEmail || !fullName) {
+    throw new Error("Full name and email are required.");
+  }
+
+  const result = getDb()
+    .prepare(
+      `
+      INSERT INTO portal_users (
+        full_name,
+        email,
+        phone,
+        role,
+        password_hash,
+        is_supervisor,
+        is_me,
+        is_admin,
+        is_superadmin
+      ) VALUES (
+        @fullName,
+        @email,
+        @phone,
+        @role,
+        @passwordHash,
+        @isSupervisor,
+        @isME,
+        @isAdmin,
+        @isSuperAdmin
+      )
+    `,
+    )
+    .run({
+      fullName,
+      email: normalizedEmail,
+      phone: input.phone?.trim() ? input.phone.trim() : null,
+      role: input.role,
+      passwordHash: hashPassword(input.password),
+      isSupervisor: input.isSupervisor ? 1 : 0,
+      isME: input.isME ? 1 : 0,
+      isAdmin: input.isAdmin ? 1 : 0,
+      isSuperAdmin: input.isSuperAdmin ? 1 : 0,
+    });
+
+  return Number(result.lastInsertRowid);
+}
+
+export function updatePortalUserPermissions(
+  userId: number,
+  input: {
+    fullName?: string;
+    phone?: string | null;
+    role?: PortalUserRole;
+    isSupervisor?: boolean;
+    isME?: boolean;
+    isAdmin?: boolean;
+    isSuperAdmin?: boolean;
+    password?: string;
+  },
+  currentUser: PortalUser,
+) {
+  if (!canManagePortalUsers(currentUser)) {
+    throw new Error("Unauthorized");
+  }
+
+  const target = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        is_superadmin AS isSuperAdmin
+      FROM portal_users
+      WHERE id = @userId
+      LIMIT 1
+    `,
+    )
+    .get({ userId }) as { id: number; isSuperAdmin: number } | undefined;
+
+  if (!target) {
+    throw new Error("User not found.");
+  }
+
+  if (target.id === currentUser.id && input.isSuperAdmin === false) {
+    throw new Error("You cannot remove your own super admin access.");
+  }
+
+  const updates: string[] = [];
+  const params: Record<string, unknown> = { userId };
+
+  if (typeof input.fullName === "string") {
+    updates.push("full_name = @fullName");
+    params.fullName = input.fullName.trim();
+  }
+  if (input.phone !== undefined) {
+    updates.push("phone = @phone");
+    params.phone = input.phone?.trim() ? input.phone.trim() : null;
+  }
+  if (input.role) {
+    updates.push("role = @role");
+    params.role = input.role;
+  }
+  if (input.isSupervisor !== undefined) {
+    updates.push("is_supervisor = @isSupervisor");
+    params.isSupervisor = input.isSupervisor ? 1 : 0;
+  }
+  if (input.isME !== undefined) {
+    updates.push("is_me = @isME");
+    params.isME = input.isME ? 1 : 0;
+  }
+  if (input.isAdmin !== undefined) {
+    updates.push("is_admin = @isAdmin");
+    params.isAdmin = input.isAdmin ? 1 : 0;
+  }
+  if (input.isSuperAdmin !== undefined) {
+    updates.push("is_superadmin = @isSuperAdmin");
+    params.isSuperAdmin = input.isSuperAdmin ? 1 : 0;
+  }
+  if (input.password) {
+    updates.push("password_hash = @passwordHash");
+    params.passwordHash = hashPassword(input.password);
+  }
+
+  if (updates.length === 0) {
+    return;
+  }
+
+  getDb()
+    .prepare(
+      `
+      UPDATE portal_users
+      SET ${updates.join(", ")}
+      WHERE id = @userId
+    `,
+    )
+    .run(params);
+}
+
 export function authenticatePortalUser(identifier: string, password: string): PortalUser | null {
   const normalizedIdentifier = identifier.trim();
   const normalizedEmail = normalizedIdentifier.toLowerCase();
@@ -497,6 +1967,7 @@ export function authenticatePortalUser(identifier: string, password: string): Po
         is_supervisor AS isSupervisor,
         is_me AS isME,
         is_admin AS isAdmin,
+        is_superadmin AS isSuperAdmin,
         password_hash AS passwordHash
       FROM portal_users
       WHERE lower(email) = @email
@@ -514,6 +1985,7 @@ export function authenticatePortalUser(identifier: string, password: string): Po
         isSupervisor: number;
         isME: number;
         isAdmin: number;
+        isSuperAdmin: number;
         passwordHash: string;
       }
     | undefined;
@@ -526,16 +1998,7 @@ export function authenticatePortalUser(identifier: string, password: string): Po
     return null;
   }
 
-  return {
-    id: row.id,
-    fullName: row.fullName,
-    email: row.email,
-    phone: row.phone,
-    role: row.role,
-    isSupervisor: Boolean(row.isSupervisor),
-    isME: Boolean(row.isME),
-    isAdmin: Boolean(row.isAdmin),
-  };
+  return parsePortalUserRow(row);
 }
 
 export function createPortalSession(userId: number) {
@@ -581,7 +2044,8 @@ export function getPortalUserFromSession(token: string): PortalUser | null {
         u.role,
         u.is_supervisor AS isSupervisor,
         u.is_me AS isME,
-        u.is_admin AS isAdmin
+        u.is_admin AS isAdmin,
+        u.is_superadmin AS isSuperAdmin
       FROM portal_sessions s
       JOIN portal_users u ON u.id = s.user_id
       WHERE s.token = @token
@@ -599,6 +2063,7 @@ export function getPortalUserFromSession(token: string): PortalUser | null {
         isSupervisor: number;
         isME: number;
         isAdmin: number;
+        isSuperAdmin: number;
       }
     | undefined;
 
@@ -606,16 +2071,7 @@ export function getPortalUserFromSession(token: string): PortalUser | null {
     return null;
   }
 
-  return {
-    id: row.id,
-    fullName: row.fullName,
-    email: row.email,
-    phone: row.phone,
-    role: row.role,
-    isSupervisor: Boolean(row.isSupervisor),
-    isME: Boolean(row.isME),
-    isAdmin: Boolean(row.isAdmin),
-  };
+  return parsePortalUserRow(row);
 }
 
 export function deletePortalSession(token: string) {
@@ -885,6 +2341,8 @@ export function saveOnlineTrainingEvent(
         duration_minutes,
         attendee_emails,
         attendee_count,
+        online_teachers_trained,
+        online_school_leaders_trained,
         calendar_event_id,
         calendar_link,
         meet_link,
@@ -898,6 +2356,8 @@ export function saveOnlineTrainingEvent(
         @durationMinutes,
         @attendeeEmails,
         @attendeeCount,
+        @onlineTeachersTrained,
+        @onlineSchoolLeadersTrained,
         @calendarEventId,
         @calendarLink,
         @meetLink,
@@ -914,6 +2374,8 @@ export function saveOnlineTrainingEvent(
       durationMinutes: payload.durationMinutes,
       attendeeEmails: payload.attendeeEmails.join(","),
       attendeeCount: payload.attendeeEmails.length,
+      onlineTeachersTrained: 0,
+      onlineSchoolLeadersTrained: 0,
       calendarEventId: payload.calendarEventId ?? null,
       calendarLink: payload.calendarLink ?? null,
       meetLink: payload.meetLink ?? null,
@@ -933,9 +2395,14 @@ export function saveOnlineTrainingEvent(
         end_datetime AS endDateTime,
         duration_minutes AS durationMinutes,
         attendee_count AS attendeeCount,
+        online_teachers_trained AS onlineTeachersTrained,
+        online_school_leaders_trained AS onlineSchoolLeadersTrained,
         calendar_event_id AS calendarEventId,
         calendar_link AS calendarLink,
         meet_link AS meetLink,
+        recording_url AS recordingUrl,
+        chat_summary AS chatSummary,
+        attendance_captured_at AS attendanceCapturedAt,
         created_at AS createdAt
       FROM online_training_events
       WHERE id = @eventId
@@ -952,6 +2419,8 @@ export function saveOnlineTrainingEvent(
     ...row,
     attendeeCount: Number(row.attendeeCount ?? 0),
     durationMinutes: Number(row.durationMinutes ?? 0),
+    onlineTeachersTrained: Number(row.onlineTeachersTrained ?? 0),
+    onlineSchoolLeadersTrained: Number(row.onlineSchoolLeadersTrained ?? 0),
   };
 }
 
@@ -968,9 +2437,14 @@ export function listOnlineTrainingEvents(limit = 20): OnlineTrainingEventRecord[
         end_datetime AS endDateTime,
         duration_minutes AS durationMinutes,
         attendee_count AS attendeeCount,
+        online_teachers_trained AS onlineTeachersTrained,
+        online_school_leaders_trained AS onlineSchoolLeadersTrained,
         calendar_event_id AS calendarEventId,
         calendar_link AS calendarLink,
         meet_link AS meetLink,
+        recording_url AS recordingUrl,
+        chat_summary AS chatSummary,
+        attendance_captured_at AS attendanceCapturedAt,
         created_at AS createdAt
       FROM online_training_events
       ORDER BY start_datetime DESC, id DESC
@@ -983,7 +2457,94 @@ export function listOnlineTrainingEvents(limit = 20): OnlineTrainingEventRecord[
     ...row,
     attendeeCount: Number(row.attendeeCount ?? 0),
     durationMinutes: Number(row.durationMinutes ?? 0),
+    onlineTeachersTrained: Number(row.onlineTeachersTrained ?? 0),
+    onlineSchoolLeadersTrained: Number(row.onlineSchoolLeadersTrained ?? 0),
   }));
+}
+
+export function getOnlineTrainingEventById(eventId: number): OnlineTrainingEventRecord | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        title,
+        description,
+        audience,
+        start_datetime AS startDateTime,
+        end_datetime AS endDateTime,
+        duration_minutes AS durationMinutes,
+        attendee_count AS attendeeCount,
+        online_teachers_trained AS onlineTeachersTrained,
+        online_school_leaders_trained AS onlineSchoolLeadersTrained,
+        calendar_event_id AS calendarEventId,
+        calendar_link AS calendarLink,
+        meet_link AS meetLink,
+        recording_url AS recordingUrl,
+        chat_summary AS chatSummary,
+        attendance_captured_at AS attendanceCapturedAt,
+        created_at AS createdAt
+      FROM online_training_events
+      WHERE id = @eventId
+      LIMIT 1
+    `,
+    )
+    .get({ eventId }) as OnlineTrainingEventRecord | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    attendeeCount: Number(row.attendeeCount ?? 0),
+    durationMinutes: Number(row.durationMinutes ?? 0),
+    onlineTeachersTrained: Number(row.onlineTeachersTrained ?? 0),
+    onlineSchoolLeadersTrained: Number(row.onlineSchoolLeadersTrained ?? 0),
+  };
+}
+
+export function saveOnlineTrainingAttendance(
+  eventId: number,
+  input: {
+    onlineTeachersTrained: number;
+    onlineSchoolLeadersTrained: number;
+    attendeeCount?: number;
+    recordingUrl?: string | null;
+    chatSummary?: string | null;
+  },
+) {
+  getDb()
+    .prepare(
+      `
+      UPDATE online_training_events
+      SET
+        online_teachers_trained = @onlineTeachersTrained,
+        online_school_leaders_trained = @onlineSchoolLeadersTrained,
+        attendee_count = @attendeeCount,
+        recording_url = @recordingUrl,
+        chat_summary = @chatSummary,
+        attendance_captured_at = @attendanceCapturedAt
+      WHERE id = @eventId
+    `,
+    )
+    .run({
+      eventId,
+      onlineTeachersTrained: Math.max(0, Math.floor(input.onlineTeachersTrained)),
+      onlineSchoolLeadersTrained: Math.max(0, Math.floor(input.onlineSchoolLeadersTrained)),
+      attendeeCount:
+        input.attendeeCount !== undefined
+          ? Math.max(0, Math.floor(input.attendeeCount))
+          : Math.max(
+              0,
+              Math.floor(input.onlineTeachersTrained) + Math.floor(input.onlineSchoolLeadersTrained),
+            ),
+      recordingUrl: input.recordingUrl?.trim() ? input.recordingUrl.trim() : null,
+      chatSummary: input.chatSummary?.trim() ? input.chatSummary.trim() : null,
+      attendanceCapturedAt: new Date().toISOString(),
+    });
+
+  return getOnlineTrainingEventById(eventId);
 }
 
 const recordCodePrefix: Record<PortalRecordModule, string> = {
@@ -998,11 +2559,11 @@ function formatRecordCode(module: PortalRecordModule, id: number) {
 }
 
 function canReviewRecords(user: PortalUser) {
-  return user.isSupervisor || user.isME || user.isAdmin;
+  return user.isSupervisor || user.isME || user.isAdmin || user.isSuperAdmin;
 }
 
 function canViewAllRecords(user: PortalUser) {
-  return user.isSupervisor || user.isME || user.isAdmin;
+  return user.isSupervisor || user.isME || user.isAdmin || user.isSuperAdmin;
 }
 
 function parsePortalRecord(
@@ -1012,6 +2573,7 @@ function parsePortalRecord(
     module: PortalRecordModule;
     date: string;
     district: string;
+    schoolId: number | null;
     schoolName: string;
     programType: string | null;
     status: PortalRecordStatus;
@@ -1030,6 +2592,7 @@ function parsePortalRecord(
     module: row.module,
     date: row.date,
     district: row.district,
+    schoolId: row.schoolId !== null ? Number(row.schoolId) : null,
     schoolName: row.schoolName,
     programType: row.programType ?? undefined,
     status: row.status,
@@ -1047,10 +2610,45 @@ function normalizePayload(input: PortalRecordInput) {
   return JSON.stringify(input.payload ?? {});
 }
 
+function getSchoolDirectoryRecordById(id: number) {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        school_code AS schoolCode,
+        name,
+        district,
+        sub_county AS subCounty,
+        parish,
+        village,
+        enrolled_boys AS enrolledBoys,
+        enrolled_girls AS enrolledGirls,
+        CASE
+          WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+            THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+          ELSE COALESCE(enrolled_learners, 0)
+        END AS enrolledLearners,
+        gps_lat AS gpsLat,
+        gps_lng AS gpsLng,
+        contact_name AS contactName,
+        contact_phone AS contactPhone,
+        created_at AS createdAt
+      FROM schools_directory
+      WHERE id = @id
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as SchoolDirectoryRecord | undefined;
+
+  return row ?? null;
+}
+
 function checkPortalDuplicate(
   db: Database.Database,
   module: PortalRecordModule,
   date: string,
+  schoolId: number,
   schoolName: string,
   excludeId?: number,
 ) {
@@ -1061,20 +2659,31 @@ function checkPortalDuplicate(
       FROM portal_records
       WHERE module = @module
         AND date = @date
-        AND lower(school_name) = lower(@schoolName)
+        AND (
+          school_id = @schoolId
+          OR (school_id IS NULL AND lower(trim(school_name)) = lower(trim(@schoolName)))
+        )
         ${excludeId ? "AND id != @excludeId" : ""}
       LIMIT 1
     `,
     )
-    .get({ module, date, schoolName, excludeId }) as { id?: number } | undefined;
+    .get({ module, date, schoolId, schoolName, excludeId }) as { id?: number } | undefined;
 
   return Boolean(row?.id);
 }
 
 export function createPortalRecord(input: PortalRecordInput, user: PortalUser): PortalRecord {
   const db = getDb();
+  if (!input.schoolId || input.schoolId <= 0) {
+    throw new Error("School selection is required.");
+  }
 
-  if (checkPortalDuplicate(db, input.module, input.date, input.schoolName)) {
+  const school = getSchoolDirectoryRecordById(input.schoolId);
+  if (!school) {
+    throw new Error("Selected school account was not found.");
+  }
+
+  if (checkPortalDuplicate(db, input.module, input.date, school.id, school.name)) {
     throw new Error(
       `Duplicate prevention: a ${input.module} entry already exists for this school and date.`,
     );
@@ -1088,6 +2697,7 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
         module,
         date,
         district,
+        school_id,
         school_name,
         program_type,
         status,
@@ -1100,6 +2710,7 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
         @module,
         @date,
         @district,
+        @schoolId,
         @schoolName,
         @programType,
         @status,
@@ -1114,8 +2725,9 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
       recordCode: `${recordCodePrefix[input.module]}-PENDING`,
       module: input.module,
       date: input.date,
-      district: input.district,
-      schoolName: input.schoolName,
+      district: school.district,
+      schoolId: school.id,
+      schoolName: school.name,
       programType: input.programType ?? null,
       status: input.status,
       followUpDate: input.followUpDate ?? null,
@@ -1145,6 +2757,15 @@ export function updatePortalRecord(
   user: PortalUser,
 ): PortalRecord {
   const db = getDb();
+  if (!input.schoolId || input.schoolId <= 0) {
+    throw new Error("School selection is required.");
+  }
+
+  const school = getSchoolDirectoryRecordById(input.schoolId);
+  if (!school) {
+    throw new Error("Selected school account was not found.");
+  }
+
   const current = db
     .prepare(
       `
@@ -1165,7 +2786,7 @@ export function updatePortalRecord(
     throw new Error("You do not have permission to edit this record.");
   }
 
-  if (checkPortalDuplicate(db, input.module, input.date, input.schoolName, id)) {
+  if (checkPortalDuplicate(db, input.module, input.date, school.id, school.name, id)) {
     throw new Error(
       `Duplicate prevention: a ${input.module} entry already exists for this school and date.`,
     );
@@ -1178,6 +2799,7 @@ export function updatePortalRecord(
       module = @module,
       date = @date,
       district = @district,
+      school_id = @schoolId,
       school_name = @schoolName,
       program_type = @programType,
       status = @status,
@@ -1191,8 +2813,9 @@ export function updatePortalRecord(
     id,
     module: input.module,
     date: input.date,
-    district: input.district,
-    schoolName: input.schoolName,
+    district: school.district,
+    schoolId: school.id,
+    schoolName: school.name,
     programType: input.programType ?? null,
     status: input.status,
     followUpDate: input.followUpDate ?? null,
@@ -1255,6 +2878,7 @@ export function getPortalRecordById(id: number, user: PortalUser): PortalRecord 
         pr.module,
         pr.date,
         pr.district,
+        pr.school_id AS schoolId,
         pr.school_name AS schoolName,
         pr.program_type AS programType,
         pr.status,
@@ -1278,6 +2902,7 @@ export function getPortalRecordById(id: number, user: PortalUser): PortalRecord 
         module: PortalRecordModule;
         date: string;
         district: string;
+        schoolId: number | null;
         schoolName: string;
         programType: string | null;
         status: PortalRecordStatus;
@@ -1349,6 +2974,7 @@ export function listPortalRecords(filters: PortalRecordFilters, user: PortalUser
         pr.module,
         pr.date,
         pr.district,
+        pr.school_id AS schoolId,
         pr.school_name AS schoolName,
         pr.program_type AS programType,
         pr.status,
@@ -1372,6 +2998,7 @@ export function listPortalRecords(filters: PortalRecordFilters, user: PortalUser
     module: PortalRecordModule;
     date: string;
     district: string;
+    schoolId: number | null;
     schoolName: string;
     programType: string | null;
     status: PortalRecordStatus;
@@ -1523,6 +3150,9 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         sub_county,
         parish,
         village,
+        enrolled_boys,
+        enrolled_girls,
+        enrolled_learners,
         gps_lat,
         gps_lng,
         contact_name,
@@ -1534,6 +3164,9 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         @subCounty,
         @parish,
         @village,
+        @enrolledBoys,
+        @enrolledGirls,
+        @enrolledLearners,
         @gpsLat,
         @gpsLng,
         @contactName,
@@ -1548,6 +3181,11 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
       subCounty: input.subCounty,
       parish: input.parish,
       village: input.village?.trim() ? input.village : null,
+      enrolledBoys: Math.max(0, Math.floor(Number(input.enrolledBoys ?? 0))),
+      enrolledGirls: Math.max(0, Math.floor(Number(input.enrolledGirls ?? 0))),
+      enrolledLearners:
+        Math.max(0, Math.floor(Number(input.enrolledBoys ?? 0))) +
+        Math.max(0, Math.floor(Number(input.enrolledGirls ?? 0))),
       gpsLat: input.gpsLat?.trim() ? input.gpsLat : null,
       gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
       contactName: input.contactName?.trim() ? input.contactName : null,
@@ -1572,6 +3210,13 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         sub_county AS subCounty,
         parish,
         village,
+        enrolled_boys AS enrolledBoys,
+        enrolled_girls AS enrolledGirls,
+        CASE
+          WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+            THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+          ELSE COALESCE(enrolled_learners, 0)
+        END AS enrolledLearners,
         gps_lat AS gpsLat,
         gps_lng AS gpsLng,
         contact_name AS contactName,
@@ -1596,7 +3241,7 @@ export function listSchoolDirectoryRecords(filters?: {
   query?: string;
 }): SchoolDirectoryRecord[] {
   const where: string[] = ["1=1"];
-  const params: Record<string, string> = {};
+  const params: Record<string, string | number> = {};
 
   if (filters?.district) {
     where.push("lower(district) LIKE lower(@district)");
@@ -1619,6 +3264,13 @@ export function listSchoolDirectoryRecords(filters?: {
         sub_county AS subCounty,
         parish,
         village,
+        enrolled_boys AS enrolledBoys,
+        enrolled_girls AS enrolledGirls,
+        CASE
+          WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+            THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+          ELSE COALESCE(enrolled_learners, 0)
+        END AS enrolledLearners,
         gps_lat AS gpsLat,
         gps_lng AS gpsLng,
         contact_name AS contactName,
@@ -1906,6 +3558,355 @@ export function getPortalEvidenceById(id: number, user: PortalUser): PortalEvide
   return parsePortalEvidenceRow(row);
 }
 
+function parsePortalTestimonialRow(row: {
+  id: number;
+  storytellerName: string;
+  storytellerRole: string;
+  schoolName: string;
+  district: string;
+  storyText: string;
+  videoFileName: string;
+  videoStoredPath: string;
+  videoMimeType: string;
+  videoSizeBytes: number;
+  photoFileName: string | null;
+  photoStoredPath: string | null;
+  photoMimeType: string | null;
+  photoSizeBytes: number | null;
+  isPublished: number;
+  createdByUserId: number;
+  createdByName: string;
+  createdAt: string;
+}): PortalTestimonialRecord {
+  return {
+    id: row.id,
+    storytellerName: row.storytellerName,
+    storytellerRole: row.storytellerRole,
+    schoolName: row.schoolName,
+    district: row.district,
+    storyText: row.storyText,
+    videoFileName: row.videoFileName,
+    videoStoredPath: row.videoStoredPath,
+    videoMimeType: row.videoMimeType,
+    videoSizeBytes: Number(row.videoSizeBytes),
+    photoFileName: row.photoFileName ?? null,
+    photoStoredPath: row.photoStoredPath ?? null,
+    photoMimeType: row.photoMimeType ?? null,
+    photoSizeBytes: row.photoSizeBytes !== null ? Number(row.photoSizeBytes) : null,
+    isPublished: Boolean(row.isPublished),
+    createdByUserId: Number(row.createdByUserId),
+    createdByName: row.createdByName,
+    createdAt: row.createdAt,
+  };
+}
+
+export function savePortalTestimonial(input: {
+  storytellerName: string;
+  storytellerRole: string;
+  schoolName: string;
+  district: string;
+  storyText: string;
+  videoFileName: string;
+  videoStoredPath: string;
+  videoMimeType: string;
+  videoSizeBytes: number;
+  photoFileName?: string | null;
+  photoStoredPath?: string | null;
+  photoMimeType?: string | null;
+  photoSizeBytes?: number | null;
+  createdByUserId: number;
+}): PortalTestimonialRecord {
+  const db = getDb();
+  const insertResult = db
+    .prepare(
+      `
+      INSERT INTO portal_testimonials (
+        storyteller_name,
+        storyteller_role,
+        school_name,
+        district,
+        story_text,
+        video_file_name,
+        video_stored_path,
+        video_mime_type,
+        video_size_bytes,
+        photo_file_name,
+        photo_stored_path,
+        photo_mime_type,
+        photo_size_bytes,
+        is_published,
+        created_by_user_id
+      ) VALUES (
+        @storytellerName,
+        @storytellerRole,
+        @schoolName,
+        @district,
+        @storyText,
+        @videoFileName,
+        @videoStoredPath,
+        @videoMimeType,
+        @videoSizeBytes,
+        @photoFileName,
+        @photoStoredPath,
+        @photoMimeType,
+        @photoSizeBytes,
+        1,
+        @createdByUserId
+      )
+    `,
+    )
+    .run({
+      storytellerName: input.storytellerName,
+      storytellerRole: input.storytellerRole,
+      schoolName: input.schoolName,
+      district: input.district,
+      storyText: input.storyText,
+      videoFileName: input.videoFileName,
+      videoStoredPath: input.videoStoredPath,
+      videoMimeType: input.videoMimeType,
+      videoSizeBytes: input.videoSizeBytes,
+      photoFileName: input.photoFileName ?? null,
+      photoStoredPath: input.photoStoredPath ?? null,
+      photoMimeType: input.photoMimeType ?? null,
+      photoSizeBytes: input.photoSizeBytes ?? null,
+      createdByUserId: input.createdByUserId,
+    });
+
+  const id = Number(insertResult.lastInsertRowid);
+  const row = db
+    .prepare(
+      `
+      SELECT
+        pt.id,
+        pt.storyteller_name AS storytellerName,
+        pt.storyteller_role AS storytellerRole,
+        pt.school_name AS schoolName,
+        pt.district,
+        pt.story_text AS storyText,
+        pt.video_file_name AS videoFileName,
+        pt.video_stored_path AS videoStoredPath,
+        pt.video_mime_type AS videoMimeType,
+        pt.video_size_bytes AS videoSizeBytes,
+        pt.photo_file_name AS photoFileName,
+        pt.photo_stored_path AS photoStoredPath,
+        pt.photo_mime_type AS photoMimeType,
+        pt.photo_size_bytes AS photoSizeBytes,
+        pt.is_published AS isPublished,
+        pt.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pt.created_at AS createdAt
+      FROM portal_testimonials pt
+      JOIN portal_users pu ON pu.id = pt.created_by_user_id
+      WHERE pt.id = @id
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as
+    | {
+        id: number;
+        storytellerName: string;
+        storytellerRole: string;
+        schoolName: string;
+        district: string;
+        storyText: string;
+        videoFileName: string;
+        videoStoredPath: string;
+        videoMimeType: string;
+        videoSizeBytes: number;
+        photoFileName: string | null;
+        photoStoredPath: string | null;
+        photoMimeType: string | null;
+        photoSizeBytes: number | null;
+        isPublished: number;
+        createdByUserId: number;
+        createdByName: string;
+        createdAt: string;
+      }
+    | undefined;
+
+  if (!row) {
+    throw new Error("Could not load saved testimonial.");
+  }
+
+  return parsePortalTestimonialRow(row);
+}
+
+export function listPortalTestimonials(
+  user: PortalUser,
+  limit = 120,
+): PortalTestimonialRecord[] {
+  const canViewAll = canViewAllRecords(user);
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        pt.id,
+        pt.storyteller_name AS storytellerName,
+        pt.storyteller_role AS storytellerRole,
+        pt.school_name AS schoolName,
+        pt.district,
+        pt.story_text AS storyText,
+        pt.video_file_name AS videoFileName,
+        pt.video_stored_path AS videoStoredPath,
+        pt.video_mime_type AS videoMimeType,
+        pt.video_size_bytes AS videoSizeBytes,
+        pt.photo_file_name AS photoFileName,
+        pt.photo_stored_path AS photoStoredPath,
+        pt.photo_mime_type AS photoMimeType,
+        pt.photo_size_bytes AS photoSizeBytes,
+        pt.is_published AS isPublished,
+        pt.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pt.created_at AS createdAt
+      FROM portal_testimonials pt
+      JOIN portal_users pu ON pu.id = pt.created_by_user_id
+      ${canViewAll ? "" : "WHERE pt.created_by_user_id = @currentUserId"}
+      ORDER BY pt.created_at DESC
+      LIMIT @limit
+    `,
+    )
+    .all(
+      canViewAll ? { limit } : { currentUserId: user.id, limit },
+    ) as Array<{
+    id: number;
+    storytellerName: string;
+    storytellerRole: string;
+    schoolName: string;
+    district: string;
+    storyText: string;
+    videoFileName: string;
+    videoStoredPath: string;
+    videoMimeType: string;
+    videoSizeBytes: number;
+    photoFileName: string | null;
+    photoStoredPath: string | null;
+    photoMimeType: string | null;
+    photoSizeBytes: number | null;
+    isPublished: number;
+    createdByUserId: number;
+    createdByName: string;
+    createdAt: string;
+  }>;
+
+  return rows.map((row) => parsePortalTestimonialRow(row));
+}
+
+export function listPublishedPortalTestimonials(limit = 180): PortalTestimonialRecord[] {
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        pt.id,
+        pt.storyteller_name AS storytellerName,
+        pt.storyteller_role AS storytellerRole,
+        pt.school_name AS schoolName,
+        pt.district,
+        pt.story_text AS storyText,
+        pt.video_file_name AS videoFileName,
+        pt.video_stored_path AS videoStoredPath,
+        pt.video_mime_type AS videoMimeType,
+        pt.video_size_bytes AS videoSizeBytes,
+        pt.photo_file_name AS photoFileName,
+        pt.photo_stored_path AS photoStoredPath,
+        pt.photo_mime_type AS photoMimeType,
+        pt.photo_size_bytes AS photoSizeBytes,
+        pt.is_published AS isPublished,
+        pt.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pt.created_at AS createdAt
+      FROM portal_testimonials pt
+      JOIN portal_users pu ON pu.id = pt.created_by_user_id
+      WHERE pt.is_published = 1
+      ORDER BY pt.created_at DESC
+      LIMIT @limit
+    `,
+    )
+    .all({ limit }) as Array<{
+    id: number;
+    storytellerName: string;
+    storytellerRole: string;
+    schoolName: string;
+    district: string;
+    storyText: string;
+    videoFileName: string;
+    videoStoredPath: string;
+    videoMimeType: string;
+    videoSizeBytes: number;
+    photoFileName: string | null;
+    photoStoredPath: string | null;
+    photoMimeType: string | null;
+    photoSizeBytes: number | null;
+    isPublished: number;
+    createdByUserId: number;
+    createdByName: string;
+    createdAt: string;
+  }>;
+
+  return rows.map((row) => parsePortalTestimonialRow(row));
+}
+
+export function getPublishedPortalTestimonialById(
+  id: number,
+): PortalTestimonialRecord | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        pt.id,
+        pt.storyteller_name AS storytellerName,
+        pt.storyteller_role AS storytellerRole,
+        pt.school_name AS schoolName,
+        pt.district,
+        pt.story_text AS storyText,
+        pt.video_file_name AS videoFileName,
+        pt.video_stored_path AS videoStoredPath,
+        pt.video_mime_type AS videoMimeType,
+        pt.video_size_bytes AS videoSizeBytes,
+        pt.photo_file_name AS photoFileName,
+        pt.photo_stored_path AS photoStoredPath,
+        pt.photo_mime_type AS photoMimeType,
+        pt.photo_size_bytes AS photoSizeBytes,
+        pt.is_published AS isPublished,
+        pt.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pt.created_at AS createdAt
+      FROM portal_testimonials pt
+      JOIN portal_users pu ON pu.id = pt.created_by_user_id
+      WHERE pt.id = @id
+        AND pt.is_published = 1
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as
+    | {
+        id: number;
+        storytellerName: string;
+        storytellerRole: string;
+        schoolName: string;
+        district: string;
+        storyText: string;
+        videoFileName: string;
+        videoStoredPath: string;
+        videoMimeType: string;
+        videoSizeBytes: number;
+        photoFileName: string | null;
+        photoStoredPath: string | null;
+        photoMimeType: string | null;
+        photoSizeBytes: number | null;
+        isPublished: number;
+        createdByUserId: number;
+        createdByName: string;
+        createdAt: string;
+      }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return parsePortalTestimonialRow(row);
+}
+
 function countTotal(db: Database.Database, query: string) {
   const row = db.prepare(query).get() as { total: number | null };
   return Number(row.total ?? 0);
@@ -1919,10 +3920,18 @@ export function getImpactSummary() {
     "SELECT COUNT(*) AS total FROM training_participants WHERE participant_role = 'Classroom teacher'",
   );
   const trainingSessionsCompleted = countTotal(db, "SELECT COUNT(*) AS total FROM training_sessions");
-  const onlineTrainingSessionsCompleted = countTotal(
-    db,
-    "SELECT COUNT(*) AS total FROM online_training_events",
-  );
+  const onlineTrainingSummary = db
+    .prepare(
+      `
+      SELECT
+        COUNT(*) AS total,
+        COALESCE(SUM(online_teachers_trained), 0) AS teachers
+      FROM online_training_events
+    `,
+    )
+    .get() as { total: number | null; teachers: number | null };
+  const onlineTrainingSessionsCompleted = Number(onlineTrainingSummary.total ?? 0);
+  const onlineTeachersTrained = Number(onlineTrainingSummary.teachers ?? 0);
 
   const learnersAssessedRow = db
     .prepare("SELECT COALESCE(SUM(learners_assessed), 0) AS total FROM assessment_records")
@@ -1930,17 +3939,70 @@ export function getImpactSummary() {
   const storiesPublishedRow = db
     .prepare("SELECT COALESCE(SUM(stories_published), 0) AS total FROM assessment_records")
     .get() as { total: number | null };
+  const enrolledLearnersRow = db
+    .prepare(
+      `
+      SELECT
+        COALESCE(
+          SUM(
+            CASE
+              WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+                THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+              ELSE COALESCE(enrolled_learners, 0)
+            END
+          ),
+          0
+        ) AS total
+      FROM schools_directory
+    `,
+    )
+    .get() as { total: number | null };
+
+  const schoolLookupRows = db
+    .prepare(
+      `
+      SELECT
+        id,
+        lower(trim(name)) AS schoolKey,
+        lower(trim(district)) AS districtKey
+      FROM schools_directory
+      WHERE trim(COALESCE(name, '')) != ''
+    `,
+    )
+    .all() as Array<{
+    id: number;
+    schoolKey: string | null;
+    districtKey: string | null;
+  }>;
+  const schoolLookupByComposite = new Map<string, number>();
+  const schoolLookupByName = new Map<string, number>();
+  schoolLookupRows.forEach((row) => {
+    const schoolKey = String(row.schoolKey ?? "").trim();
+    if (!schoolKey) {
+      return;
+    }
+    const districtKey = String(row.districtKey ?? "").trim();
+    schoolLookupByName.set(schoolKey, Number(row.id));
+    schoolLookupByComposite.set(`${schoolKey}|${districtKey}`, Number(row.id));
+  });
 
   const portalRows = db
     .prepare(
       `
-      SELECT module, school_name AS schoolName, payload_json AS payloadJson
+      SELECT
+        module,
+        school_id AS schoolId,
+        school_name AS schoolName,
+        district,
+        payload_json AS payloadJson
       FROM portal_records
     `,
     )
     .all() as Array<{
     module: PortalRecordModule;
+    schoolId: number | null;
     schoolName: string;
+    district: string;
     payloadJson: string;
   }>;
 
@@ -1949,22 +4011,47 @@ export function getImpactSummary() {
   let portalStoriesPublished = 0;
   let portalTrainingSessions = 0;
   const legacySchoolRows = db
-    .prepare("SELECT DISTINCT lower(trim(school_name)) AS schoolKey FROM training_sessions")
-    .all() as Array<{ schoolKey: string | null }>;
-  const uniqueTrainingSchools = new Set(
-    legacySchoolRows
-      .map((row) => row.schoolKey ?? "")
-      .map((value) => value.trim())
-      .filter(Boolean),
-  );
+    .prepare(
+      `
+      SELECT
+        lower(trim(school_name)) AS schoolKey,
+        lower(trim(district)) AS districtKey
+      FROM training_sessions
+      WHERE trim(COALESCE(school_name, '')) != ''
+    `,
+    )
+    .all() as Array<{ schoolKey: string | null; districtKey: string | null }>;
+  const uniqueTrainingSchools = new Set<string>();
+  legacySchoolRows.forEach((row) => {
+    const schoolKey = String(row.schoolKey ?? "").trim();
+    const districtKey = String(row.districtKey ?? "").trim();
+    if (!schoolKey) {
+      return;
+    }
+    const resolvedId =
+      schoolLookupByComposite.get(`${schoolKey}|${districtKey}`) ??
+      schoolLookupByName.get(schoolKey);
+    uniqueTrainingSchools.add(resolvedId ? `id:${resolvedId}` : `name:${schoolKey}`);
+  });
 
   portalRows.forEach((row) => {
     const payload = JSON.parse(row.payloadJson || "{}") as Record<string, unknown>;
 
     if (row.module === "training") {
       portalTrainingSessions += 1;
-      const schoolKey = row.schoolName.trim().toLowerCase();
-      uniqueTrainingSchools.add(schoolKey);
+      if (row.schoolId && row.schoolId > 0) {
+        uniqueTrainingSchools.add(`id:${Number(row.schoolId)}`);
+      } else {
+        const schoolKey = row.schoolName.trim().toLowerCase();
+        if (!schoolKey) {
+          return;
+        }
+        const districtKey = String(row.district ?? "").trim().toLowerCase();
+        const resolvedId =
+          schoolLookupByComposite.get(`${schoolKey}|${districtKey}`) ??
+          schoolLookupByName.get(schoolKey);
+        uniqueTrainingSchools.add(resolvedId ? `id:${resolvedId}` : `name:${schoolKey}`);
+      }
 
       const attendedValue =
         Number(payload.attendedTotal ?? payload.participantsTotal ?? payload.numberAttended ?? 0) ||
@@ -1992,7 +4079,10 @@ export function getImpactSummary() {
 
   return {
     metrics: [
-      { label: "Teachers trained", value: teachersTrained + portalTeachersTrained },
+      {
+        label: "Teachers trained",
+        value: teachersTrained + portalTeachersTrained + onlineTeachersTrained,
+      },
       { label: "Schools trained", value: uniqueTrainingSchools.size },
       {
         label: "Learners assessed",
@@ -2007,6 +4097,10 @@ export function getImpactSummary() {
         value:
           trainingSessionsCompleted + onlineTrainingSessionsCompleted + portalTrainingSessions,
       },
+      {
+        label: "Learners enrolled",
+        value: Number(enrolledLearnersRow.total ?? 0),
+      },
     ],
     engagement: {
       bookingRequests: bookingCount,
@@ -2015,6 +4109,602 @@ export function getImpactSummary() {
       newsletterSubscribers: newsletterCount,
     },
     generatedAt: new Date().toISOString(),
+  };
+}
+
+function buildRecentMonthKeys(monthCount: number) {
+  const keys: string[] = [];
+  const now = new Date();
+  const anchor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+  for (let index = monthCount - 1; index >= 0; index -= 1) {
+    const point = new Date(anchor);
+    point.setUTCMonth(anchor.getUTCMonth() - index);
+    const year = point.getUTCFullYear();
+    const month = String(point.getUTCMonth() + 1).padStart(2, "0");
+    keys.push(`${year}-${month}`);
+  }
+
+  return keys;
+}
+
+function formatMonthLabel(key: string) {
+  const [year, month] = key.split("-").map((value) => Number(value));
+  const date = new Date(Date.UTC(year, Math.max(0, month - 1), 1));
+  return date.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+}
+
+function parsePortalTrainingParticipants(payload: Record<string, unknown>) {
+  let teachers = Number(payload.classroomTeachers ?? 0) || 0;
+  let leaders = Number(payload.schoolLeaders ?? 0) || 0;
+  let total =
+    Number(payload.participantsTotal ?? payload.numberAttended ?? payload.attendedTotal ?? 0) || 0;
+
+  const rawParticipants = payload.participants;
+  let parsedParticipants: unknown = rawParticipants;
+  if (typeof parsedParticipants === "string" && parsedParticipants.trim()) {
+    try {
+      parsedParticipants = JSON.parse(parsedParticipants);
+    } catch {
+      parsedParticipants = null;
+    }
+  }
+
+  if (Array.isArray(parsedParticipants)) {
+    let computedTeachers = 0;
+    let computedLeaders = 0;
+    parsedParticipants.forEach((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return;
+      }
+      const row = entry as Record<string, unknown>;
+      const role = String(row.role ?? "").trim().toLowerCase();
+      if (role === "teacher" || role === "classroom teacher") {
+        computedTeachers += 1;
+      } else if (role === "leader" || role === "school leader") {
+        computedLeaders += 1;
+      }
+    });
+
+    if (computedTeachers > 0 || computedLeaders > 0) {
+      teachers = computedTeachers;
+      leaders = computedLeaders;
+      total = computedTeachers + computedLeaders;
+    } else if (parsedParticipants.length > 0) {
+      total = parsedParticipants.length;
+    }
+  }
+
+  if (total <= 0) {
+    total = teachers + leaders;
+  }
+
+  if (teachers + leaders > total) {
+    total = teachers + leaders;
+  }
+
+  return { teachers, leaders, total };
+}
+
+export function getPortalAnalyticsData(user: PortalUser): PortalAnalyticsData {
+  const db = getDb();
+  const canViewAll = canViewAllRecords(user);
+  const accessParams = canViewAll ? {} : { currentUserId: user.id };
+  const recordFilter = canViewAll ? "" : "AND pr.created_by_user_id = @currentUserId";
+  const evidenceFilter = canViewAll ? "" : "AND pe.uploaded_by_user_id = @currentUserId";
+  const testimonialFilter = canViewAll ? "" : "AND pt.created_by_user_id = @currentUserId";
+  const onlineFilter = canViewAll ? "" : "AND created_by_user_id = @currentUserId";
+  const resourceFilter = canViewAll ? "" : "AND created_by_user_id = @currentUserId";
+  const blogFilter = canViewAll ? "" : "AND created_by_user_id = @currentUserId";
+  const legacyTrainingFilter = canViewAll ? "" : "AND ts.created_by_user_id = @currentUserId";
+  const legacyAssessmentFilter = canViewAll ? "" : "AND ar.created_by_user_id = @currentUserId";
+
+  const portalRows = db
+    .prepare(
+      `
+      SELECT
+        pr.id,
+        pr.record_code AS recordCode,
+        pr.module,
+        pr.date,
+        pr.district,
+        pr.school_name AS schoolName,
+        pr.status,
+        pr.follow_up_date AS followUpDate,
+        pr.payload_json AS payloadJson,
+        pr.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        pr.updated_at AS updatedAt
+      FROM portal_records pr
+      JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      WHERE 1=1
+        ${recordFilter}
+      ORDER BY pr.updated_at DESC
+    `,
+    )
+    .all(accessParams) as Array<{
+    id: number;
+    recordCode: string;
+    module: PortalRecordModule;
+    date: string;
+    district: string;
+    schoolName: string;
+    status: PortalRecordStatus;
+    followUpDate: string | null;
+    payloadJson: string;
+    createdByUserId: number;
+    createdByName: string;
+    updatedAt: string;
+  }>;
+
+  const moduleStatusMap = new Map<PortalRecordModule, PortalAnalyticsModuleStatus>([
+    ["training", { module: "training", draft: 0, submitted: 0, returned: 0, approved: 0, total: 0 }],
+    ["visit", { module: "visit", draft: 0, submitted: 0, returned: 0, approved: 0, total: 0 }],
+    ["assessment", { module: "assessment", draft: 0, submitted: 0, returned: 0, approved: 0, total: 0 }],
+    ["story", { module: "story", draft: 0, submitted: 0, returned: 0, approved: 0, total: 0 }],
+  ]);
+
+  const monthKeys = buildRecentMonthKeys(8);
+  const monthlyMap = new Map<string, PortalAnalyticsMonthlyPoint>(
+    monthKeys.map((key) => [
+      key,
+      {
+        key,
+        month: formatMonthLabel(key),
+        records: 0,
+        training: 0,
+        visits: 0,
+        assessments: 0,
+        story: 0,
+        evidence: 0,
+        testimonials: 0,
+      },
+    ]),
+  );
+
+  const uniqueSchools = new Set<string>();
+  const districtMap = new Map<string, { records: number; schools: Set<string>; testimonials: number }>();
+
+  let approvedRecords = 0;
+  let submittedRecords = 0;
+  let returnedRecords = 0;
+  let draftRecords = 0;
+  let followUpsDue = 0;
+  let portalLearnersAssessed = 0;
+  let portalStoriesPublished = 0;
+  let portalTrainingSessionCount = 0;
+  let portalParticipantTotal = 0;
+  let portalParticipantTeachers = 0;
+  let portalParticipantLeaders = 0;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  portalRows.forEach((row) => {
+    const moduleBucket = moduleStatusMap.get(row.module);
+    if (moduleBucket) {
+      moduleBucket.total += 1;
+      if (row.status === "Draft") moduleBucket.draft += 1;
+      if (row.status === "Submitted") moduleBucket.submitted += 1;
+      if (row.status === "Returned") moduleBucket.returned += 1;
+      if (row.status === "Approved") moduleBucket.approved += 1;
+    }
+
+    if (row.status === "Approved") approvedRecords += 1;
+    if (row.status === "Submitted") submittedRecords += 1;
+    if (row.status === "Returned") returnedRecords += 1;
+    if (row.status === "Draft") draftRecords += 1;
+
+    if (row.followUpDate && row.followUpDate <= today && row.status !== "Approved") {
+      followUpsDue += 1;
+    }
+
+    const schoolKey = row.schoolName.trim().toLowerCase();
+    if (schoolKey) {
+      uniqueSchools.add(schoolKey);
+    }
+
+    const district = row.district.trim() || "Unknown";
+    if (!districtMap.has(district)) {
+      districtMap.set(district, { records: 0, schools: new Set<string>(), testimonials: 0 });
+    }
+    const districtItem = districtMap.get(district);
+    if (districtItem) {
+      districtItem.records += 1;
+      if (schoolKey) {
+        districtItem.schools.add(schoolKey);
+      }
+    }
+
+    const monthKey = row.date.slice(0, 7);
+    const monthPoint = monthlyMap.get(monthKey);
+    if (monthPoint) {
+      monthPoint.records += 1;
+      if (row.module === "training") monthPoint.training += 1;
+      if (row.module === "visit") monthPoint.visits += 1;
+      if (row.module === "assessment") monthPoint.assessments += 1;
+      if (row.module === "story") monthPoint.story += 1;
+    }
+
+    const payload = JSON.parse(row.payloadJson || "{}") as Record<string, unknown>;
+
+    if (row.module === "training") {
+      portalTrainingSessionCount += 1;
+      const participants = parsePortalTrainingParticipants(payload);
+      portalParticipantTotal += participants.total;
+      portalParticipantTeachers += participants.teachers;
+      portalParticipantLeaders += participants.leaders;
+    }
+
+    if (row.module === "assessment") {
+      portalLearnersAssessed += Number(payload.learnersAssessed ?? 0) || 0;
+      portalStoriesPublished += Number(payload.storiesPublished ?? 0) || 0;
+    }
+
+    if (row.module === "story") {
+      portalStoriesPublished += Number(payload.storiesApproved ?? 0) || 0;
+    }
+  });
+
+  const recentRecords: PortalAnalyticsRecentRecord[] = portalRows.slice(0, 12).map((row) => ({
+    id: row.id,
+    recordCode: row.recordCode,
+    module: row.module,
+    date: row.date,
+    district: row.district,
+    schoolName: row.schoolName,
+    status: row.status,
+    createdByName: row.createdByName,
+    updatedAt: row.updatedAt,
+  }));
+
+  const followUps = portalRows
+    .filter((row) => row.followUpDate && row.followUpDate <= today && row.status !== "Approved")
+    .sort((a, b) => String(a.followUpDate).localeCompare(String(b.followUpDate)))
+    .slice(0, 10)
+    .map((row) => ({
+      id: row.id,
+      recordCode: row.recordCode,
+      module: row.module,
+      schoolName: row.schoolName,
+      followUpDate: String(row.followUpDate),
+    }));
+
+  const evidenceTotal = Number(
+    (
+      db
+        .prepare(
+          `
+          SELECT COUNT(*) AS total
+          FROM portal_evidence pe
+          WHERE 1=1
+            ${evidenceFilter}
+        `,
+        )
+        .get(accessParams) as { total: number | null }
+    ).total ?? 0,
+  );
+
+  const testimonialTotal = Number(
+    (
+      db
+        .prepare(
+          `
+          SELECT COUNT(*) AS total
+          FROM portal_testimonials pt
+          WHERE 1=1
+            ${testimonialFilter}
+        `,
+        )
+        .get(accessParams) as { total: number | null }
+    ).total ?? 0,
+  );
+
+  const evidenceMonthlyRows = db
+    .prepare(
+      `
+      SELECT substr(pe.created_at, 1, 7) AS monthKey, COUNT(*) AS total
+      FROM portal_evidence pe
+      WHERE 1=1
+        ${evidenceFilter}
+      GROUP BY substr(pe.created_at, 1, 7)
+    `,
+    )
+    .all(accessParams) as Array<{ monthKey: string; total: number }>;
+
+  evidenceMonthlyRows.forEach((row) => {
+    const monthPoint = monthlyMap.get(row.monthKey);
+    if (monthPoint) {
+      monthPoint.evidence = Number(row.total ?? 0);
+    }
+  });
+
+  const testimonialMonthlyRows = db
+    .prepare(
+      `
+      SELECT substr(pt.created_at, 1, 7) AS monthKey, COUNT(*) AS total
+      FROM portal_testimonials pt
+      WHERE 1=1
+        ${testimonialFilter}
+      GROUP BY substr(pt.created_at, 1, 7)
+    `,
+    )
+    .all(accessParams) as Array<{ monthKey: string; total: number }>;
+
+  testimonialMonthlyRows.forEach((row) => {
+    const monthPoint = monthlyMap.get(row.monthKey);
+    if (monthPoint) {
+      monthPoint.testimonials = Number(row.total ?? 0);
+    }
+  });
+
+  const testimonialDistrictRows = db
+    .prepare(
+      `
+      SELECT district, COUNT(*) AS total
+      FROM portal_testimonials pt
+      WHERE 1=1
+        ${testimonialFilter}
+      GROUP BY district
+    `,
+    )
+    .all(accessParams) as Array<{ district: string; total: number }>;
+
+  testimonialDistrictRows.forEach((row) => {
+    const district = row.district.trim() || "Unknown";
+    if (!districtMap.has(district)) {
+      districtMap.set(district, { records: 0, schools: new Set<string>(), testimonials: 0 });
+    }
+    const item = districtMap.get(district);
+    if (item) {
+      item.testimonials += Number(row.total ?? 0);
+    }
+  });
+
+  const districtStats: PortalAnalyticsDistrictStat[] = [...districtMap.entries()]
+    .map(([district, item]) => ({
+      district,
+      records: item.records,
+      schools: item.schools.size,
+      testimonials: item.testimonials,
+    }))
+    .sort((a, b) => b.records - a.records || b.testimonials - a.testimonials)
+    .slice(0, 12);
+
+  const recentEvidence = listPortalEvidence({}, user).slice(0, 8);
+  const recentTestimonials = listPortalTestimonials(user, 8);
+
+  const legacyParticipantsRow = db
+    .prepare(
+      `
+      SELECT
+        COUNT(tp.id) AS total,
+        SUM(CASE WHEN tp.participant_role = 'Classroom teacher' THEN 1 ELSE 0 END) AS teachers,
+        SUM(CASE WHEN tp.participant_role = 'School Leader' THEN 1 ELSE 0 END) AS leaders
+      FROM training_participants tp
+      JOIN training_sessions ts ON ts.id = tp.session_id
+      WHERE 1=1
+        ${legacyTrainingFilter}
+    `,
+    )
+    .get(accessParams) as { total: number | null; teachers: number | null; leaders: number | null };
+
+  const legacyLearnersRow = db
+    .prepare(
+      `
+      SELECT
+        COALESCE(SUM(ar.learners_assessed), 0) AS learners,
+        COALESCE(SUM(ar.stories_published), 0) AS stories
+      FROM assessment_records ar
+      WHERE 1=1
+        ${legacyAssessmentFilter}
+    `,
+    )
+    .get(accessParams) as { learners: number | null; stories: number | null };
+
+  const legacyTrainingSessions = Number(
+    (
+      db
+        .prepare(
+          `
+          SELECT COUNT(*) AS total
+          FROM training_sessions ts
+          WHERE 1=1
+            ${legacyTrainingFilter}
+        `,
+        )
+        .get(accessParams) as { total: number | null }
+    ).total ?? 0,
+  );
+
+  const legacyAssessmentRecords = Number(
+    (
+      db
+        .prepare(
+          `
+          SELECT COUNT(*) AS total
+          FROM assessment_records ar
+          WHERE 1=1
+            ${legacyAssessmentFilter}
+        `,
+        )
+        .get(accessParams) as { total: number | null }
+    ).total ?? 0,
+  );
+
+  const onlineTrainingSummary = db
+    .prepare(
+      `
+      SELECT
+        COUNT(*) AS total,
+        COALESCE(SUM(attendee_count), 0) AS attendees,
+        COALESCE(SUM(online_teachers_trained), 0) AS teachers,
+        COALESCE(SUM(online_school_leaders_trained), 0) AS leaders
+      FROM online_training_events
+      WHERE 1=1
+        ${onlineFilter}
+    `,
+    )
+    .get(accessParams) as {
+    total: number | null;
+    attendees: number | null;
+    teachers: number | null;
+    leaders: number | null;
+  };
+  const onlineTrainingEvents = Number(onlineTrainingSummary.total ?? 0);
+  const onlineTrainingAttendees = Number(onlineTrainingSummary.attendees ?? 0);
+  const onlineTeachersTrained = Number(onlineTrainingSummary.teachers ?? 0);
+  const onlineSchoolLeadersTrained = Number(onlineTrainingSummary.leaders ?? 0);
+
+  const resourcesUploaded = Number(
+    (
+      db
+        .prepare(
+          `
+          SELECT COUNT(*) AS total
+          FROM portal_resources
+          WHERE 1=1
+            ${resourceFilter}
+        `,
+        )
+        .get(accessParams) as { total: number | null }
+    ).total ?? 0,
+  );
+
+  const blogPostsPublished = Number(
+    (
+      db
+        .prepare(
+          `
+          SELECT COUNT(*) AS total
+          FROM portal_blog_posts
+          WHERE 1=1
+            ${blogFilter}
+        `,
+        )
+        .get(accessParams) as { total: number | null }
+    ).total ?? 0,
+  );
+
+  const schoolsDirectory = countTotal(db, "SELECT COUNT(*) AS total FROM schools_directory");
+  const bookingRequests = countTotal(db, "SELECT COUNT(*) AS total FROM bookings");
+  const partnerInquiries = countTotal(db, "SELECT COUNT(*) AS total FROM contacts");
+  const toolkitLeads = countTotal(db, "SELECT COUNT(*) AS total FROM download_leads");
+  const newsletterSubscribers = countTotal(db, "SELECT COUNT(*) AS total FROM newsletter_subscribers");
+
+  const legacySchoolRows = db
+    .prepare(
+      `
+      SELECT DISTINCT lower(trim(ts.school_name)) AS schoolKey
+      FROM training_sessions ts
+      WHERE 1=1
+        ${legacyTrainingFilter}
+    `,
+    )
+    .all(accessParams) as Array<{ schoolKey: string | null }>;
+
+  legacySchoolRows.forEach((row) => {
+    const schoolKey = (row.schoolKey ?? "").trim();
+    if (schoolKey) {
+      uniqueSchools.add(schoolKey);
+    }
+  });
+
+  const userStats = canViewAll
+    ? (db
+        .prepare(
+          `
+          SELECT
+            pu.id AS userId,
+            pu.full_name AS fullName,
+            pu.role AS role,
+            COALESCE(r.totalRecords, 0) AS records,
+            COALESCE(e.totalEvidence, 0) AS evidence,
+            COALESCE(t.totalTestimonials, 0) AS testimonials
+          FROM portal_users pu
+          LEFT JOIN (
+            SELECT created_by_user_id AS userId, COUNT(*) AS totalRecords
+            FROM portal_records
+            GROUP BY created_by_user_id
+          ) r ON r.userId = pu.id
+          LEFT JOIN (
+            SELECT uploaded_by_user_id AS userId, COUNT(*) AS totalEvidence
+            FROM portal_evidence
+            GROUP BY uploaded_by_user_id
+          ) e ON e.userId = pu.id
+          LEFT JOIN (
+            SELECT created_by_user_id AS userId, COUNT(*) AS totalTestimonials
+            FROM portal_testimonials
+            GROUP BY created_by_user_id
+          ) t ON t.userId = pu.id
+          ORDER BY records DESC, testimonials DESC, fullName ASC
+        `,
+        )
+        .all() as PortalAnalyticsUserStat[])
+    : ([
+        {
+          userId: user.id,
+          fullName: user.fullName,
+          role: user.role,
+          records: portalRows.length,
+          evidence: evidenceTotal,
+          testimonials: testimonialTotal,
+        },
+      ] as PortalAnalyticsUserStat[]);
+
+  const monthly = monthKeys
+    .map((key) => monthlyMap.get(key))
+    .filter((item): item is PortalAnalyticsMonthlyPoint => Boolean(item));
+
+  const moduleStatus = (["training", "visit", "assessment", "story"] as PortalRecordModule[])
+    .map((module) => moduleStatusMap.get(module))
+    .filter((item): item is PortalAnalyticsModuleStatus => Boolean(item));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    scope: canViewAll ? "all" : "mine",
+    totals: {
+      portalRecords: portalRows.length,
+      approvedRecords,
+      submittedRecords,
+      returnedRecords,
+      draftRecords,
+      schoolsCovered: uniqueSchools.size,
+      followUpsDue,
+      evidenceUploads: evidenceTotal,
+      testimonials: testimonialTotal,
+      onlineTrainingEvents,
+      onlineTeachersTrained,
+      onlineSchoolLeadersTrained,
+      resourcesUploaded,
+      blogPostsPublished,
+      schoolsDirectory,
+      legacyTrainingSessions,
+      legacyAssessmentRecords,
+      bookingRequests,
+      partnerInquiries,
+      toolkitLeads,
+      newsletterSubscribers,
+      learnersAssessed: Number(legacyLearnersRow.learners ?? 0) + portalLearnersAssessed,
+      storiesPublished: Number(legacyLearnersRow.stories ?? 0) + portalStoriesPublished,
+      trainingSessionsCompleted: legacyTrainingSessions + portalTrainingSessionCount + onlineTrainingEvents,
+    },
+    participants: {
+      total: Number(legacyParticipantsRow.total ?? 0) + portalParticipantTotal + onlineTrainingAttendees,
+      teachers:
+        Number(legacyParticipantsRow.teachers ?? 0) + portalParticipantTeachers + onlineTeachersTrained,
+      leaders:
+        Number(legacyParticipantsRow.leaders ?? 0) +
+        portalParticipantLeaders +
+        onlineSchoolLeadersTrained,
+    },
+    moduleStatus,
+    monthly,
+    districtStats,
+    userStats,
+    followUps,
+    recentRecords,
+    recentEvidence,
+    recentTestimonials,
   };
 }
 
@@ -2032,5 +4722,1807 @@ export function getPortalRoleSummary(): Record<PortalUserRole, number> {
   return {
     Staff: Number(rows.find((item) => item.role === "Staff")?.total ?? 0),
     Volunteer: Number(rows.find((item) => item.role === "Volunteer")?.total ?? 0),
+  };
+}
+
+const impactReportTypePrefixes: Record<ImpactReportType, string> = {
+  "FY Impact Report": "FYR",
+  "Regional Impact Report": "REG",
+  "District Report": "DST",
+  "School Report": "SCH",
+  "Partner Snapshot Report": "PSR",
+};
+
+type AssessmentStage = "baseline" | "progress" | "endline";
+
+function asDateOnly(value: string) {
+  return value.slice(0, 10);
+}
+
+function normalizeDateRange(start: string, end: string) {
+  const startDate = asDateOnly(start);
+  const endDate = asDateOnly(end);
+  if (startDate <= endDate) {
+    return { startDate, endDate };
+  }
+  return { startDate: endDate, endDate: startDate };
+}
+
+function normalizeScopeValue(scopeType: ImpactReportScopeType, scopeValue?: string) {
+  const normalized = (scopeValue ?? "").trim();
+  if (!normalized) {
+    return scopeType === "National" ? "All" : "Not specified";
+  }
+  return normalized;
+}
+
+function buildImpactReportCode(type: ImpactReportType) {
+  const prefix = impactReportTypePrefixes[type] ?? "RPT";
+  const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  const suffix = crypto.randomUUID().slice(0, 6).toUpperCase();
+  return `${prefix}-${stamp}-${suffix}`;
+}
+
+const impactTemplateId = "ORBF-IMPACT-TEMPLATE-v1";
+const impactTemplateName = "Ozeki Donor-Grade Impact Report Template";
+const impactAiWritingRules = [
+  "Use only provided metrics; never invent numbers.",
+  "If a metric is missing, state: Data not available for this period.",
+  "Recommendations must map to observed gaps (rubric and learner outcomes).",
+  "Tone: professional, evidence-led, locally grounded.",
+];
+
+function resolveImpactReportVariant(reportType: ImpactReportType): ImpactReportVariant {
+  if (reportType === "School Report") {
+    return "School Report";
+  }
+  if (reportType === "Partner Snapshot Report") {
+    return "Partner Report";
+  }
+  return "Public Impact Report";
+}
+
+const sectionCatalog: Array<{
+  id: string;
+  title: string;
+  purpose: string;
+  dataBlocks: string[];
+  aiWrites: string;
+  order: number;
+}> = [
+  {
+    id: "cover-page",
+    title: "Cover Page",
+    purpose: "Present report identity, scope, period, and version metadata.",
+    dataBlocks: [
+      "report title",
+      "scope",
+      "time period",
+      "prepared by",
+      "version and generation date",
+      "optional partner name",
+    ],
+    aiWrites: "No narrative generation. Metadata only.",
+    order: 0,
+  },
+  {
+    id: "table-of-contents",
+    title: "Table of Contents",
+    purpose: "Provide quick navigation across included modules.",
+    dataBlocks: ["included section list"],
+    aiWrites: "No narrative generation. Auto list from included sections.",
+    order: 1,
+  },
+  {
+    id: "1-executive-summary",
+    title: "1) Executive Summary",
+    purpose: "Quick donor decision page with headline results and priorities.",
+    dataBlocks: [
+      "coverage headline totals",
+      "learning deltas",
+      "top geographic highlights",
+      "top challenges",
+      "next priorities",
+    ],
+    aiWrites: "Write 6-10 factual sentences using Fact Pack metrics only.",
+    order: 2,
+  },
+  {
+    id: "2-about-ozeki",
+    title: "2) About Ozeki Reading Bridge Foundation",
+    purpose: "State mission, vision, and signature approach.",
+    dataBlocks: ["mission", "vision", "signature program model", "lifetime totals (optional)"],
+    aiWrites: "Static mission/vision text plus optional dynamic totals.",
+    order: 3,
+  },
+  {
+    id: "3-program-model",
+    title: "3) Program Model and Implementation Approach",
+    purpose: "Explain delivery pathway from training to sustained classroom practice.",
+    dataBlocks: ["program components delivered", "delivery pathway", "term or quarter timeline"],
+    aiWrites: "Describe what was delivered and how implementation flowed.",
+    order: 4,
+  },
+  {
+    id: "4-coverage-reach",
+    title: "4) Coverage and Reach",
+    purpose: "Show delivery scale and where implementation happened.",
+    dataBlocks: [
+      "schools impacted",
+      "schools coached",
+      "teachers trained",
+      "leaders trained",
+      "learners reached",
+      "region and district tables",
+    ],
+    aiWrites: "Highlight concentration zones and notable coverage shifts.",
+    order: 5,
+  },
+  {
+    id: "5-training-results",
+    title: "5) Training Delivery Results",
+    purpose: "Show teacher professional development outputs and quality.",
+    dataBlocks: [
+      "training sessions conducted",
+      "schools represented",
+      "teachers and leaders trained",
+      "attendance and topic coverage",
+    ],
+    aiWrites: "Summarize delivery quality and next-cycle strengthening needs.",
+    order: 6,
+  },
+  {
+    id: "6-coaching-results",
+    title: "6) Coaching, Observation, and Mentorship Results",
+    purpose: "Show classroom practice change after training.",
+    dataBlocks: [
+      "coaching completion",
+      "teachers observed",
+      "routine adoption indicators",
+      "top observed gaps",
+      "trend across coaching cycles",
+    ],
+    aiWrites: "Explain instructional quality change tied to rubric trends.",
+    order: 7,
+  },
+  {
+    id: "7-learner-outcomes",
+    title: "7) Learner Outcomes",
+    purpose: "Prove learning impact through baseline-progress-endline evidence.",
+    dataBlocks: [
+      "assessment coverage",
+      "letter-sound, decoding, fluency, comprehension results",
+      "proficiency movement",
+      "sample size notes",
+    ],
+    aiWrites: "Interpret strongest and weakest gains based on evidence.",
+    order: 8,
+  },
+  {
+    id: "8-remedial-results",
+    title: "8) Remedial & Catch-Up Intervention Results",
+    purpose: "Show targeted support outcomes for at-risk learners.",
+    dataBlocks: [
+      "intervention enrollment",
+      "grouping levels",
+      "session frequency",
+      "progress and exit trends",
+    ],
+    aiWrites: "Summarize what improved and where support should intensify.",
+    order: 9,
+  },
+  {
+    id: "9-resource-utilization",
+    title: "9) Resource Utilization and Digital Engagement",
+    purpose: "Show usage of teaching materials and digital resources.",
+    dataBlocks: [
+      "total downloads",
+      "downloads by type",
+      "downloads by geography",
+      "top resources",
+      "booking requests",
+    ],
+    aiWrites: "Explain resource adoption patterns and content priorities.",
+    order: 10,
+  },
+  {
+    id: "10-regional-district-breakdown",
+    title: "10) Regional and District Performance Breakdown",
+    purpose: "Provide localized evidence for partner planning and prioritization.",
+    dataBlocks: [
+      "regional KPIs",
+      "district KPIs",
+      "strengths and gaps",
+      "priority actions",
+    ],
+    aiWrites: "Generate short factual summaries per region or district.",
+    order: 11,
+  },
+  {
+    id: "11-school-level-report",
+    title: "11) School-Level Report",
+    purpose: "Deliver school-specific accountability and action planning.",
+    dataBlocks: [
+      "school profile",
+      "learner outcome trends",
+      "teacher observation trends",
+      "intervention summary",
+      "recommended resources",
+      "30/60/90-day plan",
+    ],
+    aiWrites: "Provide school-specific gaps, priorities, and coaching focus.",
+    order: 12,
+  },
+  {
+    id: "12-case-studies",
+    title: "12) Case Studies and Stories of Change",
+    purpose: "Humanize verified evidence with selected improvement stories.",
+    dataBlocks: ["before and after metrics", "quotes", "photos with consent"],
+    aiWrites: "Produce concise change stories supported by actual metrics.",
+    order: 13,
+  },
+  {
+    id: "13-challenges-lessons",
+    title: "13) Challenges, Lessons Learned, and Program Adaptations",
+    purpose: "Provide honest reflection and mitigation actions.",
+    dataBlocks: ["implementation bottlenecks", "data quality flags", "adaptations made"],
+    aiWrites: "State constraints clearly and list practical mitigation actions.",
+    order: 14,
+  },
+  {
+    id: "14-next-cycle-priorities",
+    title: "14) Next Cycle Priorities and Funding Opportunities",
+    purpose: "Translate evidence into funding-aligned next actions.",
+    dataBlocks: ["priority geographies", "resource gaps", "expansion targets", "cost drivers"],
+    aiWrites: "Provide actionable funding-linked priorities only from observed gaps.",
+    order: 15,
+  },
+  {
+    id: "15-appendix-methods",
+    title: "15) Appendix: Evidence and Methods",
+    purpose: "Document definitions, tools, verification, and versioning metadata.",
+    dataBlocks: [
+      "indicator definitions",
+      "assessment tool notes",
+      "data quality checks",
+      "report version and dataset timestamp",
+    ],
+    aiWrites: "Technical appendix with no speculative claims.",
+    order: 16,
+  },
+];
+
+function isSectionIncluded(variant: ImpactReportVariant, sectionId: string) {
+  if (sectionId === "cover-page" || sectionId === "table-of-contents") {
+    return true;
+  }
+
+  if (variant === "Public Impact Report") {
+    return [
+      "1-executive-summary",
+      "2-about-ozeki",
+      "3-program-model",
+      "4-coverage-reach",
+      "5-training-results",
+      "6-coaching-results",
+      "7-learner-outcomes",
+      "8-remedial-results",
+      "9-resource-utilization",
+      "10-regional-district-breakdown",
+      "13-challenges-lessons",
+      "14-next-cycle-priorities",
+      "15-appendix-methods",
+    ].includes(sectionId);
+  }
+
+  if (variant === "Partner Report") {
+    return [
+      "1-executive-summary",
+      "2-about-ozeki",
+      "3-program-model",
+      "4-coverage-reach",
+      "5-training-results",
+      "6-coaching-results",
+      "7-learner-outcomes",
+      "8-remedial-results",
+      "9-resource-utilization",
+      "10-regional-district-breakdown",
+      "12-case-studies",
+      "13-challenges-lessons",
+      "14-next-cycle-priorities",
+      "15-appendix-methods",
+    ].includes(sectionId);
+  }
+
+  return [
+    "1-executive-summary",
+    "3-program-model",
+    "7-learner-outcomes",
+    "11-school-level-report",
+    "13-challenges-lessons",
+    "14-next-cycle-priorities",
+    "15-appendix-methods",
+  ].includes(sectionId);
+}
+
+function buildImpactTemplatePackage(
+  reportType: ImpactReportType,
+  generatedDate: string,
+): ImpactReportTemplatePackage {
+  const variant = resolveImpactReportVariant(reportType);
+  const sections: ImpactReportTemplateSection[] = sectionCatalog
+    .map((section) => ({
+      ...section,
+      included: isSectionIncluded(variant, section.id),
+    }))
+    .sort((a, b) => a.order - b.order);
+
+  const tableOfContents = sections
+    .filter((section) => section.included && section.id !== "cover-page")
+    .map((section) => section.title);
+
+  return {
+    masterTemplateId: impactTemplateId,
+    masterTemplateName: impactTemplateName,
+    variant,
+    aiWritingRules: impactAiWritingRules,
+    tableOfContents,
+    sections,
+    generatedDate,
+  };
+}
+
+function safeParseObject(text: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(text || "{}");
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function readNumeric(payload: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const numeric = asNumber(payload[key]);
+    if (numeric !== null) {
+      return numeric;
+    }
+  }
+  return null;
+}
+
+function readString(payload: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function parseStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(/[,\n;|]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function inferAssessmentStage(payload: Record<string, unknown>): AssessmentStage {
+  const raw = readString(payload, ["assessmentType", "stage", "phase", "assessmentPhase"]);
+  if (!raw) {
+    return "progress";
+  }
+  const normalized = raw.toLowerCase();
+  if (normalized.includes("baseline")) return "baseline";
+  if (normalized.includes("endline")) return "endline";
+  return "progress";
+}
+
+function scopeMatches(
+  scopeType: ImpactReportScopeType,
+  scopeValue: string,
+  district: string,
+  schoolName: string,
+) {
+  if (scopeType === "National") {
+    return true;
+  }
+
+  if (scopeType === "District") {
+    return district.trim().toLowerCase() === scopeValue.trim().toLowerCase();
+  }
+
+  if (scopeType === "School") {
+    return schoolName.trim().toLowerCase() === scopeValue.trim().toLowerCase();
+  }
+
+  if (scopeType === "Region") {
+    const region = inferRegionFromDistrict(district);
+    return Boolean(region && region.toLowerCase() === scopeValue.trim().toLowerCase());
+  }
+
+  return true;
+}
+
+function shouldIncludeModule(programs: ImpactReportProgramType[], module: PortalRecordModule) {
+  if (module === "training") return programs.includes("training");
+  if (module === "visit") return programs.includes("visit");
+  if (module === "assessment") return programs.includes("assessment");
+  if (module === "story") return programs.includes("story");
+  return true;
+}
+
+function listScopedPortalRows(
+  user: PortalUser,
+  startDate: string,
+  endDate: string,
+  scopeType: ImpactReportScopeType,
+  scopeValue: string,
+  programs: ImpactReportProgramType[],
+) {
+  const db = getDb();
+  const canViewAll = canViewAllRecords(user);
+  const recordFilter = canViewAll ? "" : "AND pr.created_by_user_id = @currentUserId";
+  const params = canViewAll
+    ? { startDate, endDate }
+    : { startDate, endDate, currentUserId: user.id };
+
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        pr.id,
+        pr.module,
+        pr.date,
+        pr.district,
+        pr.school_name AS schoolName,
+        pr.status,
+        pr.payload_json AS payloadJson
+      FROM portal_records pr
+      WHERE pr.date >= @startDate
+        AND pr.date <= @endDate
+        ${recordFilter}
+      ORDER BY pr.date ASC
+    `,
+    )
+    .all(params) as Array<{
+    id: number;
+    module: PortalRecordModule;
+    date: string;
+    district: string;
+    schoolName: string;
+    status: PortalRecordStatus;
+    payloadJson: string;
+  }>;
+
+  return rows
+    .map((row) => ({
+      id: row.id,
+      module: row.module,
+      date: row.date,
+      district: row.district,
+      schoolName: row.schoolName,
+      status: row.status,
+      payload: safeParseObject(row.payloadJson),
+    }))
+    .filter((row) => shouldIncludeModule(programs, row.module))
+    .filter((row) => scopeMatches(scopeType, scopeValue, row.district, row.schoolName));
+}
+
+function listScopedLegacyTrainingSessions(
+  user: PortalUser,
+  startDate: string,
+  endDate: string,
+  scopeType: ImpactReportScopeType,
+  scopeValue: string,
+) {
+  const db = getDb();
+  const canViewAll = canViewAllRecords(user);
+  const filter = canViewAll ? "" : "AND ts.created_by_user_id = @currentUserId";
+  const params = canViewAll
+    ? { startDate, endDate }
+    : { startDate, endDate, currentUserId: user.id };
+
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        ts.id,
+        ts.school_name AS schoolName,
+        ts.district,
+        ts.session_date AS sessionDate
+      FROM training_sessions ts
+      WHERE ts.session_date >= @startDate
+        AND ts.session_date <= @endDate
+        ${filter}
+      ORDER BY ts.session_date ASC
+    `,
+    )
+    .all(params) as Array<{
+    id: number;
+    schoolName: string;
+    district: string;
+    sessionDate: string;
+  }>;
+
+  return rows.filter((row) => scopeMatches(scopeType, scopeValue, row.district, row.schoolName));
+}
+
+function buildLearningMetric(
+  stageSums: Record<AssessmentStage, number>,
+  stageCounts: Record<AssessmentStage, number>,
+): ImpactReportLearningOutcomeMetric {
+  const baseline =
+    stageCounts.baseline > 0 ? Number((stageSums.baseline / stageCounts.baseline).toFixed(2)) : null;
+  const progress =
+    stageCounts.progress > 0 ? Number((stageSums.progress / stageCounts.progress).toFixed(2)) : null;
+  const endline =
+    stageCounts.endline > 0 ? Number((stageSums.endline / stageCounts.endline).toFixed(2)) : null;
+
+  let change: number | null = null;
+  if (baseline !== null && endline !== null) {
+    change = Number((endline - baseline).toFixed(2));
+  } else if (progress !== null && endline !== null) {
+    change = Number((endline - progress).toFixed(2));
+  }
+
+  return { baseline, progress, endline, change };
+}
+
+function calculateImpactFactPack(input: {
+  user: PortalUser;
+  reportType: ImpactReportType;
+  scopeType: ImpactReportScopeType;
+  scopeValue: string;
+  periodStart: string;
+  periodEnd: string;
+  programsIncluded: ImpactReportProgramType[];
+}): ImpactReportFactPack {
+  const db = getDb();
+  const { startDate, endDate } = normalizeDateRange(input.periodStart, input.periodEnd);
+  const scopeValue = normalizeScopeValue(input.scopeType, input.scopeValue);
+  const portalRows = listScopedPortalRows(
+    input.user,
+    startDate,
+    endDate,
+    input.scopeType,
+    scopeValue,
+    input.programsIncluded,
+  );
+
+  const byModule = {
+    training: portalRows.filter((row) => row.module === "training"),
+    visit: portalRows.filter((row) => row.module === "visit"),
+    assessment: portalRows.filter((row) => row.module === "assessment"),
+    story: portalRows.filter((row) => row.module === "story"),
+  };
+
+  const schoolsImpacted = new Set(
+    portalRows.map((row) => row.schoolName.trim().toLowerCase()).filter(Boolean),
+  );
+  const schoolsVisited = new Set(
+    byModule.visit.map((row) => row.schoolName.trim().toLowerCase()).filter(Boolean),
+  );
+
+  let portalTeachers = 0;
+  let portalLeaders = 0;
+  byModule.training.forEach((row) => {
+    const participantStats = parsePortalTrainingParticipants(row.payload);
+    portalTeachers += participantStats.teachers;
+    portalLeaders += participantStats.leaders;
+  });
+
+  let legacyTeachers = 0;
+  let legacyLeaders = 0;
+  if (input.programsIncluded.includes("training")) {
+    const legacySessions = listScopedLegacyTrainingSessions(
+      input.user,
+      startDate,
+      endDate,
+      input.scopeType,
+      scopeValue,
+    );
+    legacySessions.forEach((session) => {
+      schoolsImpacted.add(session.schoolName.trim().toLowerCase());
+    });
+
+    if (legacySessions.length > 0) {
+      const ids = legacySessions.map((session) => session.id);
+      const placeholders = ids.map((_, index) => `@id${index}`);
+      const params: Record<string, number> = {};
+      ids.forEach((id, index) => {
+        params[`id${index}`] = id;
+      });
+      const participantRows = db
+        .prepare(
+          `
+          SELECT participant_role AS participantRole, COUNT(*) AS total
+          FROM training_participants
+          WHERE session_id IN (${placeholders.join(",")})
+          GROUP BY participant_role
+        `,
+        )
+        .all(params) as Array<{ participantRole: string; total: number }>;
+
+      legacyTeachers = Number(
+        participantRows.find((entry) => entry.participantRole === "Classroom teacher")?.total ?? 0,
+      );
+      legacyLeaders = Number(
+        participantRows.find((entry) => entry.participantRole === "School Leader")?.total ?? 0,
+      );
+    }
+  }
+
+  let onlineTeachers = 0;
+  let onlineLeaders = 0;
+  if (input.programsIncluded.includes("online-training") && input.scopeType === "National") {
+    const canViewAll = canViewAllRecords(input.user);
+    const filter = canViewAll ? "" : "AND created_by_user_id = @currentUserId";
+    const params = canViewAll
+      ? { startDate, endDate }
+      : { startDate, endDate, currentUserId: input.user.id };
+    const onlineRow = db
+      .prepare(
+        `
+        SELECT
+          COUNT(*) AS total,
+          COALESCE(SUM(online_teachers_trained), 0) AS teachers,
+          COALESCE(SUM(online_school_leaders_trained), 0) AS leaders
+        FROM online_training_events
+        WHERE substr(start_datetime, 1, 10) >= @startDate
+          AND substr(start_datetime, 1, 10) <= @endDate
+          ${filter}
+      `,
+      )
+      .get(params) as { total: number | null; teachers: number | null; leaders: number | null };
+    onlineTeachers = Number(onlineRow.teachers ?? 0);
+    onlineLeaders = Number(onlineRow.leaders ?? 0);
+  }
+
+  let learnersAssessed = 0;
+  const assessmentCounts = { baseline: 0, progress: 0, endline: 0 };
+
+  byModule.assessment.forEach((row) => {
+    const stage = inferAssessmentStage(row.payload);
+    assessmentCounts[stage] += 1;
+    learnersAssessed += Number(readNumeric(row.payload, ["learnersAssessed"]) ?? 0);
+  });
+
+  if (input.programsIncluded.includes("assessment")) {
+    const canViewAll = canViewAllRecords(input.user);
+    const legacyFilter = canViewAll ? "" : "AND ar.created_by_user_id = @currentUserId";
+    const params = canViewAll
+      ? { startDate, endDate }
+      : { startDate, endDate, currentUserId: input.user.id };
+
+    const legacyRows = db
+      .prepare(
+        `
+        SELECT
+          ar.school_name AS schoolName,
+          ar.district,
+          ar.learners_assessed AS learnersAssessed,
+          ar.stories_published AS storiesPublished
+        FROM assessment_records ar
+        WHERE ar.assessment_date >= @startDate
+          AND ar.assessment_date <= @endDate
+          ${legacyFilter}
+      `,
+      )
+      .all(params) as Array<{
+      schoolName: string;
+      district: string;
+      learnersAssessed: number;
+      storiesPublished: number;
+    }>;
+
+    legacyRows
+      .filter((row) => scopeMatches(input.scopeType, scopeValue, row.district, row.schoolName))
+      .forEach((row) => {
+        schoolsImpacted.add(row.schoolName.trim().toLowerCase());
+        learnersAssessed += Number(row.learnersAssessed ?? 0);
+      });
+  }
+
+  const coverageDelivery: ImpactReportCoverageBlock = {
+    schoolsImpacted: schoolsImpacted.size,
+    schoolsCoachedVisited: schoolsVisited.size,
+    teachersTrained: legacyTeachers + portalTeachers + onlineTeachers,
+    schoolLeadersTrained: legacyLeaders + portalLeaders + onlineLeaders,
+    learnersReached: learnersAssessed,
+    coachingVisitsCompleted: byModule.visit.filter((row) =>
+      row.status === "Approved" || row.status === "Submitted",
+    ).length,
+    coachingVisitsPlanned: byModule.visit.length,
+    assessmentsConducted: assessmentCounts,
+  };
+
+  const topDownloadRows = db
+    .prepare(
+      `
+      SELECT resource_slug AS slug, COUNT(*) AS downloads
+      FROM download_leads
+      WHERE date(created_at) >= @startDate
+        AND date(created_at) <= @endDate
+      GROUP BY resource_slug
+      ORDER BY downloads DESC
+      LIMIT 5
+    `,
+    )
+    .all({ startDate, endDate }) as Array<{ slug: string; downloads: number }>;
+
+  const resourceMetaRows = db
+    .prepare(
+      `
+      SELECT slug, title, type, grade
+      FROM portal_resources
+    `,
+    )
+    .all() as Array<{ slug: string; title: string; type: string; grade: string }>;
+  const resourceMetaMap = new Map(resourceMetaRows.map((row) => [row.slug, row]));
+
+  const downloadsByType = db
+    .prepare(
+      `
+      SELECT COALESCE(pr.type, 'Unknown') AS type, COUNT(*) AS downloads
+      FROM download_leads dl
+      LEFT JOIN portal_resources pr ON pr.slug = dl.resource_slug
+      WHERE date(dl.created_at) >= @startDate
+        AND date(dl.created_at) <= @endDate
+      GROUP BY COALESCE(pr.type, 'Unknown')
+      ORDER BY downloads DESC
+      LIMIT 8
+    `,
+    )
+    .all({ startDate, endDate }) as Array<{ type: string; downloads: number }>;
+
+  const downloadsByGrade = db
+    .prepare(
+      `
+      SELECT COALESCE(pr.grade, 'Unknown') AS grade, COUNT(*) AS downloads
+      FROM download_leads dl
+      LEFT JOIN portal_resources pr ON pr.slug = dl.resource_slug
+      WHERE date(dl.created_at) >= @startDate
+        AND date(dl.created_at) <= @endDate
+      GROUP BY COALESCE(pr.grade, 'Unknown')
+      ORDER BY downloads DESC
+      LIMIT 8
+    `,
+    )
+    .all({ startDate, endDate }) as Array<{ grade: string; downloads: number }>;
+
+  const bookingRequests = Number(
+    (
+      db
+        .prepare(
+          `
+        SELECT COUNT(*) AS total
+        FROM bookings
+        WHERE date(created_at) >= @startDate
+          AND date(created_at) <= @endDate
+      `,
+        )
+        .get({ startDate, endDate }) as { total: number | null }
+    ).total ?? 0,
+  );
+
+  const engagement: ImpactReportEngagementBlock = {
+    resourcesDownloaded: downloadsByType.reduce((sum, row) => sum + Number(row.downloads ?? 0), 0),
+    topDownloads: topDownloadRows.map((row) => {
+      const meta = resourceMetaMap.get(row.slug);
+      return {
+        slug: row.slug,
+        title: meta?.title ?? row.slug,
+        downloads: Number(row.downloads ?? 0),
+      };
+    }),
+    downloadsByType: downloadsByType.map((row) => ({
+      type: row.type,
+      downloads: Number(row.downloads ?? 0),
+    })),
+    downloadsByGrade: downloadsByGrade.map((row) => ({
+      grade: row.grade,
+      downloads: Number(row.downloads ?? 0),
+    })),
+    bookingRequests,
+  };
+
+  const metricMaps = {
+    letterSoundKnowledge: {
+      sums: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      counts: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      keys: ["letterSoundMastery", "letterSoundKnowledge", "letterSoundScore", "letterSoundPct"],
+    },
+    decodingAccuracy: {
+      sums: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      counts: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      keys: ["decodingAccuracy", "blendingDecodingAccuracy", "decodingScore"],
+    },
+    oralReadingFluencyWcpm: {
+      sums: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      counts: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      keys: ["wcpm", "fluencyWcpm", "oralReadingFluency"],
+    },
+    oralReadingAccuracy: {
+      sums: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      counts: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      keys: ["oralReadingAccuracy", "readingAccuracy", "fluencyAccuracy"],
+    },
+    comprehension: {
+      sums: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      counts: { baseline: 0, progress: 0, endline: 0 } as Record<AssessmentStage, number>,
+      keys: ["comprehensionScore", "comprehension", "comprehensionPct"],
+    },
+  };
+
+  const bandMovementValues: number[] = [];
+  const nonReaderReductionValues: number[] = [];
+
+  byModule.assessment.forEach((row) => {
+    const stage = inferAssessmentStage(row.payload);
+    (Object.keys(metricMaps) as Array<keyof typeof metricMaps>).forEach((key) => {
+      const metricConfig = metricMaps[key];
+      const value = readNumeric(row.payload, metricConfig.keys);
+      if (value !== null) {
+        metricConfig.sums[stage] += value;
+        metricConfig.counts[stage] += 1;
+      }
+    });
+
+    const bandMove = readNumeric(row.payload, [
+      "proficiencyBandMovementPercent",
+      "movedUpBandPercent",
+      "bandMovementPercent",
+    ]);
+    if (bandMove !== null) {
+      bandMovementValues.push(bandMove);
+    }
+
+    const nonReaderStart = readNumeric(row.payload, [
+      "nonReadersBaseline",
+      "nonReadersStart",
+      "nonReadersAtStart",
+    ]);
+    const nonReaderEnd = readNumeric(row.payload, [
+      "nonReadersEndline",
+      "nonReadersEnd",
+      "nonReadersAtEnd",
+    ]);
+    if (nonReaderStart !== null && nonReaderStart > 0 && nonReaderEnd !== null) {
+      const reduction = ((nonReaderStart - nonReaderEnd) / nonReaderStart) * 100;
+      nonReaderReductionValues.push(Number(reduction.toFixed(2)));
+    }
+  });
+
+  const learningOutcomes: ImpactReportLearningOutcomesBlock = {
+    letterSoundKnowledge: buildLearningMetric(
+      metricMaps.letterSoundKnowledge.sums,
+      metricMaps.letterSoundKnowledge.counts,
+    ),
+    decodingAccuracy: buildLearningMetric(
+      metricMaps.decodingAccuracy.sums,
+      metricMaps.decodingAccuracy.counts,
+    ),
+    oralReadingFluencyWcpm: buildLearningMetric(
+      metricMaps.oralReadingFluencyWcpm.sums,
+      metricMaps.oralReadingFluencyWcpm.counts,
+    ),
+    oralReadingAccuracy: buildLearningMetric(
+      metricMaps.oralReadingAccuracy.sums,
+      metricMaps.oralReadingAccuracy.counts,
+    ),
+    comprehension: buildLearningMetric(
+      metricMaps.comprehension.sums,
+      metricMaps.comprehension.counts,
+    ),
+    proficiencyBandMovementPercent:
+      bandMovementValues.length > 0
+        ? Number(
+            (
+              bandMovementValues.reduce((sum, value) => sum + value, 0) / bandMovementValues.length
+            ).toFixed(2),
+          )
+        : null,
+    reductionInNonReadersPercent:
+      nonReaderReductionValues.length > 0
+        ? Number(
+            (
+              nonReaderReductionValues.reduce((sum, value) => sum + value, 0) /
+              nonReaderReductionValues.length
+            ).toFixed(2),
+          )
+        : null,
+  };
+
+  const visitScores: number[] = [];
+  let routineAdopted = 0;
+  let routineMeasured = 0;
+  const gapCounts = new Map<string, number>();
+
+  byModule.visit.forEach((row) => {
+    const score = readNumeric(row.payload, ["overallRating", "observationScore", "score"]);
+    if (score !== null) {
+      visitScores.push(score);
+    }
+
+    const fidelityScore = readNumeric(row.payload, ["routineFidelity", "phonicsRoutineFidelity"]);
+    const lessonStructure = readString(row.payload, ["lessonStructureFollowed"]);
+    if (fidelityScore !== null || lessonStructure !== null) {
+      routineMeasured += 1;
+      if (
+        (fidelityScore !== null && fidelityScore >= 70) ||
+        (lessonStructure !== null &&
+          (lessonStructure.toLowerCase() === "yes" || lessonStructure.toLowerCase() === "high"))
+      ) {
+        routineAdopted += 1;
+      }
+    }
+
+    const gaps = [
+      ...parseStringList(row.payload.commonGaps),
+      ...parseStringList(row.payload.gaps),
+      ...parseStringList(row.payload.errorsNoticed),
+    ];
+    gaps.forEach((gap) => {
+      const key = gap.toLowerCase();
+      gapCounts.set(key, (gapCounts.get(key) ?? 0) + 1);
+    });
+  });
+
+  let observationScoreChange: number | null = null;
+  if (visitScores.length >= 2) {
+    const mid = Math.floor(visitScores.length / 2);
+    const startValues = visitScores.slice(0, Math.max(1, mid));
+    const endValues = visitScores.slice(mid);
+    const startAvg = startValues.reduce((sum, value) => sum + value, 0) / startValues.length;
+    const endAvg = endValues.reduce((sum, value) => sum + value, 0) / endValues.length;
+    observationScoreChange = Number((endAvg - startAvg).toFixed(2));
+  }
+
+  const topGaps = [...gapCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([gap]) => gap.replace(/\b\w/g, (char) => char.toUpperCase()));
+
+  const instructionQuality: ImpactReportInstructionQualityBlock = {
+    routineAdoptionRate:
+      routineMeasured > 0 ? Number(((routineAdopted / routineMeasured) * 100).toFixed(2)) : null,
+    observationScoreChange,
+    topGaps,
+  };
+
+  const approvedRecords = portalRows.filter((row) => row.status === "Approved").length;
+  const missingPayloadRows = portalRows.filter((row) => Object.keys(row.payload).length === 0).length;
+  const dataQuality: ImpactReportDataQualityBlock = {
+    approvedRecords,
+    totalRecords: portalRows.length,
+    missingPayloadRate:
+      portalRows.length > 0 ? Number(((missingPayloadRows / portalRows.length) * 100).toFixed(2)) : 0,
+    verificationNote:
+      "Values are generated from signed-in portal submissions and legacy records available in the selected scope.",
+  };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    reportType: input.reportType,
+    scopeType: input.scopeType,
+    scopeValue,
+    periodStart: startDate,
+    periodEnd: endDate,
+    programsIncluded: input.programsIncluded,
+    definitions: {
+      learnersReached: "Learners reached is standardized as learners assessed in the selected period.",
+      schoolsImpacted: "Unique schools with at least one approved or submitted implementation record.",
+      schoolsCoachedVisited: "Unique schools with at least one coaching/visit record in the selected period.",
+      improvement:
+        "Improvement is represented by baseline-to-endline mean change when both values are available.",
+    },
+    coverageDelivery,
+    engagement,
+    learningOutcomes,
+    instructionQuality,
+    dataQuality,
+  };
+}
+
+function formatMetricChange(label: string, metric: ImpactReportLearningOutcomeMetric) {
+  if (metric.change === null) {
+    return `${label}: Data not available`;
+  }
+  if (metric.change > 0) {
+    return `${label}: improved by ${metric.change.toFixed(2)} points`;
+  }
+  if (metric.change < 0) {
+    return `${label}: declined by ${Math.abs(metric.change).toFixed(2)} points`;
+  }
+  return `${label}: no meaningful change`;
+}
+
+function buildSectionSummary(
+  sectionId: string,
+  factPack: ImpactReportFactPack,
+  baseNarrative: {
+    biggestImprovements: string[];
+    keyChallenges: string[];
+    nextPriorities: string[];
+  },
+) {
+  const coverage = factPack.coverageDelivery;
+  const outcomes = factPack.learningOutcomes;
+  const quality = factPack.instructionQuality;
+  const engagement = factPack.engagement;
+
+  switch (sectionId) {
+    case "cover-page":
+      return `Prepared by Ozeki Reading Bridge Foundation for ${factPack.scopeType}: ${factPack.scopeValue}, covering ${factPack.periodStart} to ${factPack.periodEnd}.`;
+    case "table-of-contents":
+      return "Section list generated automatically from the selected report variant.";
+    case "1-executive-summary":
+      return `Coverage reached ${coverage.schoolsImpacted.toLocaleString()} schools and ${coverage.learnersReached.toLocaleString()} learners; top priorities are ${baseNarrative.nextPriorities.slice(0, 2).join(" ")}`;
+    case "2-about-ozeki":
+      return "Mission, vision, and signature delivery pathway are included to contextualize implementation evidence.";
+    case "3-program-model":
+      return "Implementation pathway follows training, coaching, assessment, intervention, resources, and leadership supervision loops.";
+    case "4-coverage-reach":
+      return `Schools impacted: ${coverage.schoolsImpacted.toLocaleString()}, schools coached/visited: ${coverage.schoolsCoachedVisited.toLocaleString()}, teachers trained: ${coverage.teachersTrained.toLocaleString()}.`;
+    case "5-training-results":
+      return `Training and classroom support outputs are reported with attendance, completion, and coverage summaries for the selected scope.`;
+    case "6-coaching-results":
+      return `Routine adoption rate: ${quality.routineAdoptionRate ?? "Data not available for this period."}; top gaps: ${quality.topGaps.slice(0, 3).join(", ") || "Data not available for this period."}`;
+    case "7-learner-outcomes":
+      return `Learning outcomes include letter-sound change (${outcomes.letterSoundKnowledge.change ?? "Data not available for this period."}), decoding change (${outcomes.decodingAccuracy.change ?? "Data not available for this period."}), and comprehension change (${outcomes.comprehension.change ?? "Data not available for this period."}).`;
+    case "8-remedial-results":
+      return "Remedial and catch-up evidence is summarized from intervention-linked records and progress indicators where available.";
+    case "9-resource-utilization":
+      return `Total resources downloaded: ${engagement.resourcesDownloaded.toLocaleString()}; top downloads and usage patterns are listed by type and region/district where available.`;
+    case "10-regional-district-breakdown":
+      return "Regional and district blocks provide localized KPIs, key strengths, key gaps, and priority actions.";
+    case "11-school-level-report":
+      return "School-level report includes learner gaps, teaching-practice gaps, and a 30/60/90-day action plan.";
+    case "12-case-studies":
+      return "Case studies combine verified before/after indicators with implementation actions and approved field stories.";
+    case "13-challenges-lessons":
+      return baseNarrative.keyChallenges.slice(0, 3).join(" ");
+    case "14-next-cycle-priorities":
+      return baseNarrative.nextPriorities.slice(0, 3).join(" ");
+    case "15-appendix-methods":
+      return "Appendix includes indicator definitions, tools and rubric notes, data verification summary, and report versioning metadata.";
+    default:
+      return "Data not available for this period.";
+  }
+}
+
+function buildImpactNarrative(
+  factPack: ImpactReportFactPack,
+  options?: { partnerName?: string | null },
+): ImpactReportNarrative {
+  const coverage = factPack.coverageDelivery;
+  const outcomes = factPack.learningOutcomes;
+  const quality = factPack.instructionQuality;
+  const template = buildImpactTemplatePackage(factPack.reportType, factPack.generatedAt);
+  const factsLockInstruction =
+    "Use only numbers in this Fact Pack. If a metric is missing, return: Data not available for this period.";
+
+  const improvementCandidates = [
+    formatMetricChange("Letter-sound knowledge", outcomes.letterSoundKnowledge),
+    formatMetricChange("Decoding accuracy", outcomes.decodingAccuracy),
+    formatMetricChange("Oral reading fluency", outcomes.oralReadingFluencyWcpm),
+    formatMetricChange("Comprehension", outcomes.comprehension),
+  ];
+
+  const positiveImprovements = improvementCandidates.filter((line) => line.includes("improved"));
+  const biggestImprovements = positiveImprovements.length > 0
+    ? positiveImprovements.slice(0, 3)
+    : ["No baseline-to-endline gain is available yet in the selected scope."];
+
+  const keyChallenges: string[] = [];
+  if (outcomes.letterSoundKnowledge.change === null) {
+    keyChallenges.push("Letter-sound progression data is incomplete for the selected period.");
+  }
+  if (outcomes.decodingAccuracy.change === null) {
+    keyChallenges.push("Decoding trend data is incomplete; additional assessment entries are needed.");
+  }
+  if (quality.routineAdoptionRate !== null && quality.routineAdoptionRate < 70) {
+    keyChallenges.push(
+      `Routine adoption is below target at ${quality.routineAdoptionRate.toFixed(1)}%; coaching follow-up needs tightening.`,
+    );
+  }
+  if (coverage.coachingVisitsPlanned > 0 && coverage.coachingVisitsCompleted < coverage.coachingVisitsPlanned) {
+    keyChallenges.push(
+      `Coaching completion is ${coverage.coachingVisitsCompleted}/${coverage.coachingVisitsPlanned}, below full plan execution.`,
+    );
+  }
+  if (keyChallenges.length === 0) {
+    keyChallenges.push("No critical implementation constraints were flagged in the selected period.");
+  }
+
+  const nextPriorities = [
+    "Protect baseline/endline coverage to strengthen trend confidence across all assessed grades.",
+    "Focus coaching on top implementation gaps and verify change in the next cycle.",
+    "Link high-need schools to the most downloaded remedial and phonics resources.",
+  ];
+
+  if (quality.topGaps.length > 0) {
+    nextPriorities.unshift(
+      `Address top observed gaps first: ${quality.topGaps.slice(0, 3).join(", ")}.`,
+    );
+  }
+
+  const executiveSummary =
+    `${factPack.reportType} (${factPack.scopeType}: ${factPack.scopeValue}) shows ` +
+    `${coverage.schoolsImpacted.toLocaleString()} schools impacted, ` +
+    `${coverage.teachersTrained.toLocaleString()} teachers trained, and ` +
+    `${coverage.learnersReached.toLocaleString()} learners reached through assessed cohorts. ` +
+    `${options?.partnerName ? `Partner scope: ${options.partnerName}. ` : ""}` +
+    `This report is evidence-locked and uses only metrics generated for ${factPack.periodStart} to ${factPack.periodEnd}.`;
+
+  const sectionNarratives: ImpactReportSectionNarrative[] = template.sections
+    .filter((section) => section.included)
+    .map((section) => ({
+      sectionId: section.id,
+      title: section.title,
+      summary: buildSectionSummary(section.id, factPack, {
+        biggestImprovements,
+        keyChallenges,
+        nextPriorities,
+      }),
+    }));
+
+  return {
+    variant: template.variant,
+    factsLockInstruction,
+    executiveSummary,
+    biggestImprovements,
+    keyChallenges: keyChallenges.slice(0, 3),
+    nextPriorities: nextPriorities.slice(0, 3),
+    methodsNote:
+      "Narrative was generated from the Report Fact Pack only. Missing metrics are explicitly marked as Data not available for this period.",
+    limitations:
+      "Where baseline/endline pairs are missing, trend interpretation is limited. Public summaries exclude learner-level or teacher personal data.",
+    sectionNarratives,
+    template,
+  };
+}
+
+function buildFallbackImpactNarrative(
+  reportType: ImpactReportType,
+  generatedAt: string,
+): ImpactReportNarrative {
+  const fallbackTemplate = buildImpactTemplatePackage(reportType, generatedAt);
+  return {
+    variant: fallbackTemplate.variant,
+    factsLockInstruction:
+      "Use only provided metrics; missing values must be stated as Data not available for this period.",
+    executiveSummary: "Data not available",
+    biggestImprovements: ["Data not available"],
+    keyChallenges: ["Data not available"],
+    nextPriorities: ["Data not available"],
+    methodsNote: "Data not available",
+    limitations: "Data not available",
+    sectionNarratives: fallbackTemplate.sections
+      .filter((section) => section.included)
+      .map((section) => ({
+        sectionId: section.id,
+        title: section.title,
+        summary: "Data not available for this period.",
+      })),
+    template: fallbackTemplate,
+  };
+}
+
+function normalizeImpactNarrative(
+  value: unknown,
+  reportType: ImpactReportType,
+  generatedAt: string,
+): ImpactReportNarrative {
+  const fallback = buildFallbackImpactNarrative(reportType, generatedAt);
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return fallback;
+  }
+  const parsed = value as Partial<ImpactReportNarrative>;
+  return {
+    variant: parsed.variant ?? fallback.variant,
+    factsLockInstruction: parsed.factsLockInstruction ?? fallback.factsLockInstruction,
+    executiveSummary: parsed.executiveSummary ?? fallback.executiveSummary,
+    biggestImprovements:
+      Array.isArray(parsed.biggestImprovements) && parsed.biggestImprovements.length > 0
+        ? parsed.biggestImprovements
+        : fallback.biggestImprovements,
+    keyChallenges:
+      Array.isArray(parsed.keyChallenges) && parsed.keyChallenges.length > 0
+        ? parsed.keyChallenges
+        : fallback.keyChallenges,
+    nextPriorities:
+      Array.isArray(parsed.nextPriorities) && parsed.nextPriorities.length > 0
+        ? parsed.nextPriorities
+        : fallback.nextPriorities,
+    methodsNote: parsed.methodsNote ?? fallback.methodsNote,
+    limitations: parsed.limitations ?? fallback.limitations,
+    sectionNarratives:
+      Array.isArray(parsed.sectionNarratives) && parsed.sectionNarratives.length > 0
+        ? parsed.sectionNarratives
+        : fallback.sectionNarratives,
+    template:
+      parsed.template && typeof parsed.template === "object"
+        ? {
+            masterTemplateId:
+              (parsed.template as Partial<ImpactReportTemplatePackage>).masterTemplateId ??
+              fallback.template.masterTemplateId,
+            masterTemplateName:
+              (parsed.template as Partial<ImpactReportTemplatePackage>).masterTemplateName ??
+              fallback.template.masterTemplateName,
+            variant:
+              (parsed.template as Partial<ImpactReportTemplatePackage>).variant ??
+              fallback.template.variant,
+            aiWritingRules:
+              Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).aiWritingRules) &&
+              (parsed.template as Partial<ImpactReportTemplatePackage>).aiWritingRules!.length > 0
+                ? ((parsed.template as Partial<ImpactReportTemplatePackage>).aiWritingRules as string[])
+                : fallback.template.aiWritingRules,
+            tableOfContents:
+              Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).tableOfContents) &&
+              (parsed.template as Partial<ImpactReportTemplatePackage>).tableOfContents!.length > 0
+                ? ((parsed.template as Partial<ImpactReportTemplatePackage>).tableOfContents as string[])
+                : fallback.template.tableOfContents,
+            sections:
+              Array.isArray((parsed.template as Partial<ImpactReportTemplatePackage>).sections) &&
+              (parsed.template as Partial<ImpactReportTemplatePackage>).sections!.length > 0
+                ? ((parsed.template as Partial<ImpactReportTemplatePackage>).sections as ImpactReportTemplateSection[])
+                : fallback.template.sections,
+            generatedDate:
+              (parsed.template as Partial<ImpactReportTemplatePackage>).generatedDate ??
+              fallback.template.generatedDate,
+          }
+        : fallback.template,
+  };
+}
+
+function parseImpactReportRow(row: {
+  id: number;
+  reportCode: string;
+  title: string;
+  partnerName: string | null;
+  reportType: ImpactReportType;
+  scopeType: ImpactReportScopeType;
+  scopeValue: string;
+  periodStart: string;
+  periodEnd: string;
+  programsJson: string;
+  factPackJson: string;
+  narrativeJson: string;
+  status: "Generated";
+  isPublic: number;
+  version: string;
+  generatedAt: string;
+  viewCount: number;
+  downloadCount: number;
+  createdByUserId: number;
+  createdByName: string;
+  createdAt: string;
+  updatedAt: string;
+}): ImpactReportRecord {
+  return {
+    id: row.id,
+    reportCode: row.reportCode,
+    title: row.title,
+    partnerName: row.partnerName ?? null,
+    reportType: row.reportType,
+    scopeType: row.scopeType,
+    scopeValue: row.scopeValue,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    programsIncluded: (() => {
+      try {
+        const parsed = JSON.parse(row.programsJson);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((entry) => typeof entry === "string") as ImpactReportProgramType[];
+      } catch {
+        return [];
+      }
+    })(),
+    factPack: (() => {
+      try {
+        return JSON.parse(row.factPackJson) as ImpactReportFactPack;
+      } catch {
+        return {
+          generatedAt: row.generatedAt,
+          reportType: row.reportType,
+          scopeType: row.scopeType,
+          scopeValue: row.scopeValue,
+          periodStart: row.periodStart,
+          periodEnd: row.periodEnd,
+          programsIncluded: [],
+          definitions: {
+            learnersReached: "Data not available",
+            schoolsImpacted: "Data not available",
+            schoolsCoachedVisited: "Data not available",
+            improvement: "Data not available",
+          },
+          coverageDelivery: {
+            schoolsImpacted: 0,
+            schoolsCoachedVisited: 0,
+            teachersTrained: 0,
+            schoolLeadersTrained: 0,
+            learnersReached: 0,
+            coachingVisitsCompleted: 0,
+            coachingVisitsPlanned: 0,
+            assessmentsConducted: { baseline: 0, progress: 0, endline: 0 },
+          },
+          engagement: {
+            resourcesDownloaded: 0,
+            topDownloads: [],
+            downloadsByType: [],
+            downloadsByGrade: [],
+            bookingRequests: 0,
+          },
+          learningOutcomes: {
+            letterSoundKnowledge: { baseline: null, progress: null, endline: null, change: null },
+            decodingAccuracy: { baseline: null, progress: null, endline: null, change: null },
+            oralReadingFluencyWcpm: { baseline: null, progress: null, endline: null, change: null },
+            oralReadingAccuracy: { baseline: null, progress: null, endline: null, change: null },
+            comprehension: { baseline: null, progress: null, endline: null, change: null },
+            proficiencyBandMovementPercent: null,
+            reductionInNonReadersPercent: null,
+          },
+          instructionQuality: {
+            routineAdoptionRate: null,
+            observationScoreChange: null,
+            topGaps: [],
+          },
+          dataQuality: {
+            approvedRecords: 0,
+            totalRecords: 0,
+            missingPayloadRate: 0,
+            verificationNote: "Data not available",
+          },
+        };
+      }
+    })(),
+    narrative: (() => {
+      try {
+        return normalizeImpactNarrative(
+          JSON.parse(row.narrativeJson),
+          row.reportType,
+          row.generatedAt,
+        );
+      } catch {
+        return buildFallbackImpactNarrative(row.reportType, row.generatedAt);
+      }
+    })(),
+    status: row.status,
+    isPublic: row.isPublic === 1,
+    version: row.version,
+    generatedAt: row.generatedAt,
+    viewCount: Number(row.viewCount ?? 0),
+    downloadCount: Number(row.downloadCount ?? 0),
+    createdByUserId: row.createdByUserId,
+    createdByName: row.createdByName,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export function createImpactReport(
+  input: ImpactReportBuildInput,
+  user: PortalUser,
+): ImpactReportRecord {
+  const db = getDb();
+  const normalizedScopeValue = normalizeScopeValue(input.scopeType, input.scopeValue);
+  const normalizedPartnerName = input.partnerName?.trim() ? input.partnerName.trim() : null;
+  const { startDate, endDate } = normalizeDateRange(input.periodStart, input.periodEnd);
+
+  const factPack = calculateImpactFactPack({
+    user,
+    reportType: input.reportType,
+    scopeType: input.scopeType,
+    scopeValue: normalizedScopeValue,
+    periodStart: startDate,
+    periodEnd: endDate,
+    programsIncluded: input.programsIncluded,
+  });
+  const narrative = buildImpactNarrative(factPack, { partnerName: normalizedPartnerName });
+  const reportCode = buildImpactReportCode(input.reportType);
+  const title =
+    input.title?.trim() ||
+    `${input.reportType}${normalizedPartnerName ? ` - ${normalizedPartnerName}` : ""} - ${normalizedScopeValue} (${startDate} to ${endDate})`;
+
+  const result = db
+    .prepare(
+      `
+      INSERT INTO impact_reports (
+        report_code,
+        title,
+        partner_name,
+        report_type,
+        scope_type,
+        scope_value,
+        period_start,
+        period_end,
+        programs_json,
+        fact_pack_json,
+        narrative_json,
+        status,
+        is_public,
+        version,
+        generated_at,
+        created_by_user_id,
+        updated_at
+      ) VALUES (
+        @reportCode,
+        @title,
+        @partnerName,
+        @reportType,
+        @scopeType,
+        @scopeValue,
+        @periodStart,
+        @periodEnd,
+        @programsJson,
+        @factPackJson,
+        @narrativeJson,
+        'Generated',
+        @isPublic,
+        @version,
+        @generatedAt,
+        @createdByUserId,
+        @updatedAt
+      )
+    `,
+    )
+    .run({
+      reportCode,
+      title,
+      partnerName: normalizedPartnerName,
+      reportType: input.reportType,
+      scopeType: input.scopeType,
+      scopeValue: normalizedScopeValue,
+      periodStart: startDate,
+      periodEnd: endDate,
+      programsJson: JSON.stringify(input.programsIncluded),
+      factPackJson: JSON.stringify(factPack),
+      narrativeJson: JSON.stringify(narrative),
+      isPublic: input.isPublic ? 1 : 0,
+      version: input.version.trim() || "v1.0",
+      generatedAt: new Date().toISOString(),
+      createdByUserId: user.id,
+      updatedAt: new Date().toISOString(),
+    });
+
+  const row = db
+    .prepare(
+      `
+      SELECT
+        ir.id,
+        ir.report_code AS reportCode,
+        ir.title,
+        ir.partner_name AS partnerName,
+        ir.report_type AS reportType,
+        ir.scope_type AS scopeType,
+        ir.scope_value AS scopeValue,
+        ir.period_start AS periodStart,
+        ir.period_end AS periodEnd,
+        ir.programs_json AS programsJson,
+        ir.fact_pack_json AS factPackJson,
+        ir.narrative_json AS narrativeJson,
+        ir.status,
+        ir.is_public AS isPublic,
+        ir.version,
+        ir.generated_at AS generatedAt,
+        ir.view_count AS viewCount,
+        ir.download_count AS downloadCount,
+        ir.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        ir.created_at AS createdAt,
+        ir.updated_at AS updatedAt
+      FROM impact_reports ir
+      JOIN portal_users pu ON pu.id = ir.created_by_user_id
+      WHERE ir.id = @id
+      LIMIT 1
+    `,
+    )
+    .get({ id: result.lastInsertRowid }) as
+    | {
+        id: number;
+        reportCode: string;
+        title: string;
+        partnerName: string | null;
+        reportType: ImpactReportType;
+        scopeType: ImpactReportScopeType;
+        scopeValue: string;
+        periodStart: string;
+        periodEnd: string;
+        programsJson: string;
+        factPackJson: string;
+        narrativeJson: string;
+        status: "Generated";
+        isPublic: number;
+        version: string;
+        generatedAt: string;
+        viewCount: number;
+        downloadCount: number;
+        createdByUserId: number;
+        createdByName: string;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | undefined;
+
+  if (!row) {
+    throw new Error("Could not load generated report.");
+  }
+  return parseImpactReportRow(row);
+}
+
+function listImpactReportRows(
+  whereClause: string,
+  params: Record<string, string | number>,
+  limit: number,
+) {
+  const db = getDb();
+  return db
+    .prepare(
+      `
+      SELECT
+        ir.id,
+        ir.report_code AS reportCode,
+        ir.title,
+        ir.partner_name AS partnerName,
+        ir.report_type AS reportType,
+        ir.scope_type AS scopeType,
+        ir.scope_value AS scopeValue,
+        ir.period_start AS periodStart,
+        ir.period_end AS periodEnd,
+        ir.programs_json AS programsJson,
+        ir.fact_pack_json AS factPackJson,
+        ir.narrative_json AS narrativeJson,
+        ir.status,
+        ir.is_public AS isPublic,
+        ir.version,
+        ir.generated_at AS generatedAt,
+        ir.view_count AS viewCount,
+        ir.download_count AS downloadCount,
+        ir.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        ir.created_at AS createdAt,
+        ir.updated_at AS updatedAt
+      FROM impact_reports ir
+      JOIN portal_users pu ON pu.id = ir.created_by_user_id
+      WHERE ${whereClause}
+      ORDER BY ir.generated_at DESC, ir.id DESC
+      LIMIT @limit
+    `,
+    )
+    .all({ ...params, limit }) as Array<{
+    id: number;
+    reportCode: string;
+    title: string;
+    partnerName: string | null;
+    reportType: ImpactReportType;
+    scopeType: ImpactReportScopeType;
+    scopeValue: string;
+    periodStart: string;
+    periodEnd: string;
+    programsJson: string;
+    factPackJson: string;
+    narrativeJson: string;
+    status: "Generated";
+    isPublic: number;
+    version: string;
+    generatedAt: string;
+    viewCount: number;
+    downloadCount: number;
+    createdByUserId: number;
+    createdByName: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
+export function listPortalImpactReports(user: PortalUser, limit = 120): ImpactReportRecord[] {
+  const canViewAll = canViewAllRecords(user);
+  const rows = listImpactReportRows(
+    canViewAll ? "1=1" : "ir.created_by_user_id = @currentUserId",
+    canViewAll ? {} : { currentUserId: user.id },
+    limit,
+  );
+  return rows.map(parseImpactReportRow);
+}
+
+export function listPublicImpactReports(filters?: {
+  year?: string;
+  scopeType?: ImpactReportScopeType;
+  scopeValue?: string;
+  reportType?: ImpactReportType;
+  limit?: number;
+}) {
+  const clauses = ["ir.is_public = 1"];
+  const params: Record<string, string | number> = {};
+
+  if (filters?.year && /^\d{4}$/.test(filters.year)) {
+    clauses.push("substr(ir.generated_at, 1, 4) = @year");
+    params.year = filters.year;
+  }
+  if (filters?.scopeType) {
+    clauses.push("ir.scope_type = @scopeType");
+    params.scopeType = filters.scopeType;
+  }
+  if (filters?.scopeValue && filters.scopeValue.trim()) {
+    clauses.push("lower(ir.scope_value) = lower(@scopeValue)");
+    params.scopeValue = filters.scopeValue.trim();
+  }
+  if (filters?.reportType) {
+    clauses.push("ir.report_type = @reportType");
+    params.reportType = filters.reportType;
+  }
+
+  const rows = listImpactReportRows(clauses.join(" AND "), params, Math.min(filters?.limit ?? 60, 200));
+  return rows.map(parseImpactReportRow);
+}
+
+export function getImpactReportByCode(
+  reportCode: string,
+  user?: PortalUser | null,
+): ImpactReportRecord | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        ir.id,
+        ir.report_code AS reportCode,
+        ir.title,
+        ir.partner_name AS partnerName,
+        ir.report_type AS reportType,
+        ir.scope_type AS scopeType,
+        ir.scope_value AS scopeValue,
+        ir.period_start AS periodStart,
+        ir.period_end AS periodEnd,
+        ir.programs_json AS programsJson,
+        ir.fact_pack_json AS factPackJson,
+        ir.narrative_json AS narrativeJson,
+        ir.status,
+        ir.is_public AS isPublic,
+        ir.version,
+        ir.generated_at AS generatedAt,
+        ir.view_count AS viewCount,
+        ir.download_count AS downloadCount,
+        ir.created_by_user_id AS createdByUserId,
+        pu.full_name AS createdByName,
+        ir.created_at AS createdAt,
+        ir.updated_at AS updatedAt
+      FROM impact_reports ir
+      JOIN portal_users pu ON pu.id = ir.created_by_user_id
+      WHERE ir.report_code = @reportCode
+      LIMIT 1
+    `,
+    )
+    .get({ reportCode }) as
+    | {
+        id: number;
+        reportCode: string;
+        title: string;
+        partnerName: string | null;
+        reportType: ImpactReportType;
+        scopeType: ImpactReportScopeType;
+        scopeValue: string;
+        periodStart: string;
+        periodEnd: string;
+        programsJson: string;
+        factPackJson: string;
+        narrativeJson: string;
+        status: "Generated";
+        isPublic: number;
+        version: string;
+        generatedAt: string;
+        viewCount: number;
+        downloadCount: number;
+        createdByUserId: number;
+        createdByName: string;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  const parsed = parseImpactReportRow(row);
+  if (parsed.isPublic) {
+    return parsed;
+  }
+
+  if (!user) {
+    return null;
+  }
+  if (canViewAllRecords(user) || parsed.createdByUserId === user.id) {
+    return parsed;
+  }
+  return null;
+}
+
+export function incrementImpactReportViewCount(reportCode: string) {
+  getDb()
+    .prepare(
+      `
+      UPDATE impact_reports
+      SET
+        view_count = view_count + 1,
+        updated_at = @updatedAt
+      WHERE report_code = @reportCode
+    `,
+    )
+    .run({ reportCode, updatedAt: new Date().toISOString() });
+}
+
+export function incrementImpactReportDownloadCount(reportCode: string) {
+  getDb()
+    .prepare(
+      `
+      UPDATE impact_reports
+      SET
+        download_count = download_count + 1,
+        updated_at = @updatedAt
+      WHERE report_code = @reportCode
+    `,
+    )
+    .run({ reportCode, updatedAt: new Date().toISOString() });
+}
+
+export function getImpactReportFilterFacets() {
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        report_type AS reportType,
+        scope_type AS scopeType,
+        scope_value AS scopeValue,
+        substr(generated_at, 1, 4) AS year
+      FROM impact_reports
+      WHERE is_public = 1
+      ORDER BY generated_at DESC
+    `,
+    )
+    .all() as Array<{
+    reportType: ImpactReportType;
+    scopeType: ImpactReportScopeType;
+    scopeValue: string;
+    year: string;
+  }>;
+
+  const reportTypes = [...new Set(rows.map((row) => row.reportType))];
+  const scopeTypes = [...new Set(rows.map((row) => row.scopeType))];
+  const years = [...new Set(rows.map((row) => row.year))];
+  const scopeValues = [...new Set(rows.map((row) => row.scopeValue))];
+
+  return {
+    reportTypes,
+    scopeTypes,
+    years,
+    scopeValues,
+    regions: getDistrictsByRegion("Central Region").length > 0
+      ? ["Central Region", "Northern Region", "Eastern Region", "Western Region"]
+      : [],
   };
 }

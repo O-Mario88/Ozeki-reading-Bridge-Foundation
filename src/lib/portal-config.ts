@@ -7,7 +7,11 @@ export type PortalFieldType =
   | "date"
   | "time"
   | "select"
-  | "multiselect";
+  | "multiselect"
+  | "participants"
+  | "egraLearners"
+  | "egraSummary"
+  | "egraProfile";
 
 export interface PortalFieldOption {
   value: string;
@@ -114,12 +118,12 @@ const trainingConfig: PortalModuleConfig = {
           ],
         },
         {
-          key: "participantRoster",
-          label: "Participants (Name | Role | Phone | Email)",
-          type: "textarea",
-          placeholder:
-            "Jane Doe | Classroom teacher | +2567xxxxxxx | jane@school.org",
-          helperText: "Enter one participant per line.",
+          key: "participants",
+          label: "Participants",
+          type: "participants",
+          required: true,
+          helperText:
+            "Capture participant name, school attached to, role (Teacher or Leader), and phone contact.",
         },
         { key: "facilitators", label: "Facilitators", type: "text", required: true },
       ],
@@ -178,13 +182,28 @@ const trainingConfig: PortalModuleConfig = {
   ],
 };
 
+const observationRatingOptions: PortalFieldOption[] = [
+  { value: "", label: "Select rating" },
+  { value: "Very Good", label: "Very Good" },
+  { value: "Good", label: "Good" },
+  { value: "Fair", label: "Fair" },
+  { value: "Can Improve", label: "Can Improve" },
+];
+
+const trickyWordDefaultOptions: PortalFieldOption[] = [
+  { value: "Can Improve", label: "Can Improve" },
+  { value: "Very Good", label: "Very Good" },
+  { value: "Good", label: "Good" },
+  { value: "Fair", label: "Fair" },
+];
+
 const visitConfig: PortalModuleConfig = {
   module: "visit",
   route: "/portal/visits",
   navLabel: "Visits",
   pageTitle: "School Visits",
   description:
-    "Capture coaching, observation, mentorship, and school support visits with structured rubric scoring.",
+    "Ozeki Reading Bridge Foundation Lesson Observation Sheet (Nursery and Primary Classes). Use this to log school visits, teacher performance, and coaching decisions for professional development and progress reporting.",
   newLabel: "+ New School Visit",
   programTypeLabel: "Visit purpose",
   programTypeOptions: [
@@ -197,92 +216,195 @@ const visitConfig: PortalModuleConfig = {
   sections: [
     {
       id: "basics",
-      title: "Section 1: Basics",
+      title: "Header details",
       fields: [
-        { key: "startTime", label: "Start time", type: "time", required: true },
-        { key: "endTime", label: "End time", type: "time", required: true },
+        {
+          key: "teacherObserved",
+          label: "Teacher",
+          type: "text",
+          required: true,
+          helperText:
+            "Form title: Ozeki Reading Bridge Foundation Lesson Observation Sheet (Nursery and Primary Classes). School is captured from the selected school account above.",
+        },
+        {
+          key: "classLevel",
+          label: "Class",
+          type: "select",
+          required: true,
+          options: [
+            { value: "P1", label: "P1" },
+            { value: "P2", label: "P2" },
+            { value: "P3", label: "P3" },
+            { value: "P4", label: "P4" },
+            { value: "P5", label: "P5" },
+            { value: "P6", label: "P6" },
+            { value: "P7", label: "P7" },
+            { value: "Nursery - Baby", label: "Nursery - Baby" },
+            { value: "Nursery - Middle", label: "Nursery - Middle" },
+            { value: "Nursery - Top", label: "Nursery - Top" },
+          ],
+        },
+        { key: "classSize", label: "Class size", type: "number", min: 0 },
+        {
+          key: "startTime",
+          label: "Visit start time",
+          type: "time",
+          required: true,
+          helperText: "Date is captured in the visit metadata above.",
+        },
+        { key: "endTime", label: "Visit end time", type: "time", required: true },
         { key: "subCounty", label: "Sub-county", type: "text", required: true },
         { key: "parish", label: "Parish", type: "text", required: true },
         { key: "village", label: "Village (optional)", type: "text" },
-        { key: "teacherObserved", label: "Teacher observed", type: "text" },
-        { key: "gradeClass", label: "Grade / class", type: "text" },
       ],
     },
     {
-      id: "program",
-      title: "Section 2: Program Details",
+      id: "generalTeaching",
+      title: "1) General teaching",
       fields: [
         {
-          key: "lessonType",
-          label: "Lesson type",
+          key: "general_revisedSoundsQuickly",
+          label: "Children revised sounds quickly at the start of the lesson.",
           type: "select",
-          options: [
-            { value: "Phonics", label: "Phonics" },
-            { value: "Fluency", label: "Fluency" },
-            { value: "Comprehension", label: "Comprehension" },
-            { value: "Remedial", label: "Remedial" },
-          ],
+          required: true,
+          options: observationRatingOptions,
+          helperText: "Rating scale: Very Good | Good | Fair | Can Improve.",
         },
-        { key: "subjectFocus", label: "Subject focus", type: "text" },
+        {
+          key: "general_qualityLessonPlanning",
+          label:
+            "Quality lesson planning was evident and the teacher was well prepared.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
+        },
+        {
+          key: "general_choiceOfWords",
+          label:
+            "Good choice of words used in the lesson, at pupils’ level and covered sounds already learnt.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
+        },
+        {
+          key: "general_soundKnowledge",
+          label: "Teacher displayed a good knowledge of sounds during the lesson.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
+        },
+        {
+          key: "general_followsSoundOrder",
+          label: "Teacher follows the sounds in order.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
+        },
+        {
+          key: "general_usesRangeOfResources",
+          label: "The teacher used a range of resources in the lesson to engage learners.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
+        },
       ],
     },
     {
-      id: "results",
-      title: "Section 3: Results / Scores",
+      id: "teacherNewSound",
+      title: "2) Teacher new sound",
       fields: [
         {
-          key: "lessonStructureFollowed",
-          label: "Lesson structure followed",
+          key: "newSound_clearPronunciation",
+          label: "Teacher models clear pronunciation.",
           type: "select",
-          options: [
-            { value: "Yes", label: "Yes" },
-            { value: "Partial", label: "Partial" },
-            { value: "No", label: "No" },
-          ],
+          required: true,
+          options: observationRatingOptions,
         },
         {
-          key: "phonicsRoutineCorrect",
-          label: "Correct phonics routine",
+          key: "newSound_handwritingFormation",
+          label: "Teacher models handwriting/letter formation.",
           type: "select",
-          options: [
-            { value: "Yes", label: "Yes" },
-            { value: "Partial", label: "Partial" },
-            { value: "No", label: "No" },
-          ],
+          required: true,
+          options: observationRatingOptions,
         },
         {
-          key: "learnerEngagement",
-          label: "Learner engagement",
+          key: "newSound_childrenSayWrite",
+          label: "Children had opportunities to say and write the new sound.",
           type: "select",
-          options: [
-            { value: "Low", label: "Low" },
-            { value: "Medium", label: "Medium" },
-            { value: "High", label: "High" },
-          ],
+          required: true,
+          options: observationRatingOptions,
+        },
+      ],
+    },
+    {
+      id: "readingActivities",
+      title: "3) Reading activities",
+      fields: [
+        {
+          key: "readingActivities_soundOutWords",
+          label: "Pupils given opportunities to sound out word.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
         },
         {
-          key: "teachingAidsUse",
-          label: "Use of teaching aids",
+          key: "readingActivities_pairGroupReading",
+          label: "Pupils given opportunities to read in pairs/groups.",
           type: "select",
-          options: [
-            { value: "Yes", label: "Yes" },
-            { value: "Partial", label: "Partial" },
-            { value: "No", label: "No" },
-          ],
+          required: true,
+          options: observationRatingOptions,
         },
         {
-          key: "overallRating",
-          label: "Overall rating (1-5)",
-          type: "number",
-          min: 1,
-          max: 5,
-          step: 1,
+          key: "readingActivities_teacherEncouragedDecoding",
+          label:
+            "Teacher did not read for children but encouraged learners to sound out words.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
+        },
+        {
+          key: "readingActivities_activeEngagement",
+          label:
+            "All pupils actively engaged in sounding and reading sounds, words and sentences.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
+        },
+        {
+          key: "readingActivities_resourceVariety",
+          label:
+            "Teacher used a range of different resources to engage learners in reading activities.",
+          type: "select",
+          required: true,
+          options: observationRatingOptions,
+        },
+      ],
+    },
+    {
+      id: "trickyWords",
+      title: "4) Tricky (non-decodable) words",
+      fields: [
+        {
+          key: "trickyWords_taughtOrRevised",
+          label: "Pupils were taught a new tricky word or revised tricky words in the lesson.",
+          type: "select",
+          required: true,
+          options: trickyWordDefaultOptions,
+        },
+        {
+          key: "trickyWords_sightWordSpeed",
+          label: "Pupils are beginning to say tricky words by sight quickly.",
+          type: "select",
+          required: true,
+          options: trickyWordDefaultOptions,
+          helperText:
+            "Scoring note: Very Good = 5 marks; Good = 3 marks; Fair = 1 mark. Satisfactory phonics lesson = 60% or above.",
         },
       ],
     },
     {
       id: "actions",
-      title: "Section 4: Actions & Follow-up",
+      title: "Actions, feedback and follow-up",
       fields: [
         { key: "strengthsObserved", label: "Strengths observed", type: "textarea" },
         { key: "gapsIdentified", label: "Gaps identified", type: "textarea" },
@@ -293,12 +415,8 @@ const visitConfig: PortalModuleConfig = {
           type: "textarea",
         },
         { key: "nextVisitFocus", label: "Next visit focus", type: "text" },
+        { key: "evidenceNotes", label: "Evidence notes", type: "textarea" },
       ],
-    },
-    {
-      id: "evidence",
-      title: "Section 5: Evidence Uploads",
-      fields: [{ key: "evidenceNotes", label: "Evidence notes", type: "textarea" }],
     },
   ],
 };
@@ -309,92 +427,108 @@ const assessmentConfig: PortalModuleConfig = {
   navLabel: "Assessments",
   pageTitle: "Assessments",
   description:
-    "Capture baseline/progress/endline learner reading data and recommendations for targeted support.",
+    "Capture Early Grade Reading Assessment (EGRA) baseline data with learner-level records and school summaries.",
   newLabel: "+ New Assessment",
-  programTypeLabel: "Assessment type",
+  programTypeLabel: "Type",
   programTypeOptions: [
-    { value: "Baseline", label: "Baseline" },
+    { value: "Baseline", label: "BASELINE" },
     { value: "Progress", label: "Progress" },
     { value: "Endline", label: "Endline" },
   ],
   sections: [
     {
       id: "basics",
-      title: "Section 1: Basics",
+      title: "SECTION A: SCHOOL INFORMATION",
       fields: [
+        { key: "emisCode", label: "EMIS Code", type: "text", required: true },
         { key: "subCounty", label: "Sub-county", type: "text", required: true },
         { key: "parish", label: "Parish", type: "text", required: true },
+        { key: "classLevel", label: "Class", type: "select", required: true, options: [
+          { value: "Baby", label: "Baby" },
+          { value: "Middle", label: "Middle" },
+          { value: "Top", label: "Top" },
+          { value: "P1", label: "P1" },
+          { value: "P2", label: "P2" },
+          { value: "P3", label: "P3" },
+        ] },
+        { key: "term", label: "Term", type: "select", required: true, options: [
+          { value: "Term 1", label: "Term 1" },
+          { value: "Term 2", label: "Term 2" },
+          { value: "Term 3", label: "Term 3" },
+        ] },
+        { key: "assessor", label: "Assessor", type: "text", required: true },
         { key: "village", label: "Village (optional)", type: "text" },
-        {
-          key: "toolUsed",
-          label: "Tool used",
-          type: "select",
-          options: [
-            { value: "Paper", label: "Paper" },
-            { value: "Digital", label: "Digital" },
-            { value: "One Test App", label: "One Test App" },
-          ],
-        },
-        { key: "gradesAssessed", label: "Grade(s) assessed", type: "text" },
-        {
-          key: "samplingMethod",
-          label: "Sampling method",
-          type: "select",
-          options: [
-            { value: "Whole class", label: "Whole class" },
-            { value: "Sample", label: "Sample" },
-          ],
-        },
       ],
     },
     {
       id: "program",
-      title: "Section 2: Program Details",
+      title: "SECTION B: LEARNER-LEVEL ASSESSMENT RECORD",
       fields: [
-        { key: "learnersAssessed", label: "# learners assessed", type: "number", min: 0 },
-        { key: "nonReaders", label: "Non-readers", type: "number", min: 0 },
-        { key: "emergingReaders", label: "Emerging", type: "number", min: 0 },
-        { key: "atLevelReaders", label: "At level", type: "number", min: 0 },
-        { key: "aboveLevelReaders", label: "Above level", type: "number", min: 0 },
+        {
+          key: "egraLearners",
+          label: "Learner table",
+          type: "egraLearners",
+          required: true,
+          helperText: "Enter up to 20 learners, matching the baseline assessment sheet.",
+        },
       ],
     },
     {
       id: "results",
-      title: "Section 3: Results / Scores",
+      title: "SECTION C: SCHOOL SUMMARY",
       fields: [
-        { key: "wcpmAverage", label: "Average WCPM", type: "number", min: 0 },
         {
-          key: "accuracyPercent",
-          label: "Accuracy (%)",
-          type: "number",
-          min: 0,
-          max: 100,
+          key: "egraSummary",
+          label: "Baseline snapshot",
+          type: "egraSummary",
         },
-        {
-          key: "comprehensionAverage",
-          label: "Comprehension average (%)",
-          type: "number",
-          min: 0,
-          max: 100,
-        },
-        { key: "keyInsights", label: "Top 3 insights", type: "textarea" },
       ],
     },
     {
       id: "actions",
-      title: "Section 4: Actions & Follow-up",
+      title: "SECTION D: READING PROFILE",
       fields: [
-        { key: "recommendations", label: "Recommendations", type: "textarea" },
         {
-          key: "followUpRequired",
-          label: "Follow-up required",
-          type: "select",
+          key: "egraProfile",
+          label: "Reading level profile",
+          type: "egraProfile",
+        },
+      ],
+    },
+    {
+      id: "recommendations",
+      title: "SECTION E: INSTRUCTIONAL RECOMMENDATIONS",
+      fields: [
+        {
+          key: "instructionalRecommendations",
+          label: "Instructional recommendations",
+          type: "multiselect",
           options: [
-            { value: "Yes", label: "Yes" },
-            { value: "No", label: "No" },
+            {
+              value: "Majority are Non-Readers - Focus on phonemic awareness plus letter sounds",
+              label: "Majority are Non-Readers",
+            },
+            {
+              value: "Weak in Made-up Words - Strengthen decoding instruction",
+              label: "Weak in Made-up Words",
+            },
+            {
+              value: "Low comprehension with good story reading - Work on vocabulary plus questioning",
+              label: "Low comprehension with good story reading",
+            },
+            {
+              value: "Fluency plateau - Increase guided repeated reading",
+              label: "Fluency plateau",
+            },
           ],
         },
-        { key: "storiesPublished", label: "Stories published", type: "number", min: 0 },
+        {
+          key: "assessorComments",
+          label: "Assessor comments",
+          type: "textarea",
+          helperText:
+            "Accuracy formula reference: Accuracy % = (Correct Words / (Correct Words + Errors)) x 100",
+        },
       ],
     },
     {
