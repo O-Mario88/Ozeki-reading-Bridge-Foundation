@@ -251,6 +251,7 @@ export interface DashboardKpis {
   schoolVisits: number;
   assessments: number;
   storyActivities: number;
+  learnersReached: number;
 }
 
 export interface DashboardAgendaItem {
@@ -389,6 +390,16 @@ export interface SchoolDirectoryInput {
   notes?: string;
   enrolledBoys?: number;
   enrolledGirls?: number;
+  enrolledBaby?: number;
+  enrolledMiddle?: number;
+  enrolledTop?: number;
+  enrolledP1?: number;
+  enrolledP2?: number;
+  enrolledP3?: number;
+  enrolledP4?: number;
+  enrolledP5?: number;
+  enrolledP6?: number;
+  enrolledP7?: number;
   gpsLat?: string;
   gpsLng?: string;
   contactName?: string;
@@ -407,6 +418,16 @@ export interface SchoolDirectoryRecord {
   enrolledBoys: number;
   enrolledGirls: number;
   enrolledLearners: number;
+  enrolledBaby: number;
+  enrolledMiddle: number;
+  enrolledTop: number;
+  enrolledP1: number;
+  enrolledP2: number;
+  enrolledP3: number;
+  enrolledP4: number;
+  enrolledP5: number;
+  enrolledP6: number;
+  enrolledP7: number;
   gpsLat: string | null;
   gpsLng: string | null;
   contactName: string | null;
@@ -628,4 +649,21 @@ export interface ImpactReportRecord {
   createdByName: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RegionStats {
+  region: string;
+  totalSchools: number;
+  totalDistricts: number;
+  totalZapSchools: number;
+  totalLearners: number;
+  districts: string[];
+}
+
+export interface DistrictStats {
+  district: string;
+  region: string;
+  totalSchools: number;
+  totalZapSchools: number;
+  totalLearners: number;
 }

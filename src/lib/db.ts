@@ -51,6 +51,8 @@ import {
   portalResourceSections,
   TrainingSessionInput,
   TrainingSessionRecord,
+  RegionStats,
+  DistrictStats,
 } from "@/lib/types";
 import { getDistrictsByRegion, inferRegionFromDistrict } from "@/lib/uganda-locations";
 
@@ -128,6 +130,16 @@ function ensureSchoolDirectoryColumns(db: Database.Database) {
   ensureColumn(db, "schools_directory", "enrolled_learners", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrolled_boys", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrolled_girls", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_baby", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_middle", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_top", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_p1", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_p2", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_p3", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_p4", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_p5", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_p6", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrolled_p7", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "notes", "TEXT");
   db.exec(`
     UPDATE schools_directory
@@ -2754,12 +2766,18 @@ export function getPortalDashboardData(user: PortalUser): PortalDashboardData {
   const getCount = (module: PortalRecordModule) =>
     Number(kpiRows.find((row) => row.module === module)?.total ?? 0);
 
+  const learnersResult = db
+    .prepare("SELECT SUM(enrolled_learners) as total FROM schools_directory")
+    .get() as { total: number };
+  const totalLearners = learnersResult?.total ?? 0;
+
   return {
     kpis: {
       trainingsLogged: getCount("training"),
       schoolVisits: getCount("visit"),
       assessments: getCount("assessment"),
       storyActivities: getCount("story"),
+      learnersReached: totalLearners,
     },
     weekAgenda: agendaRows,
     dueFollowUps: followUpRows,
@@ -2793,6 +2811,16 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         village,
         enrolled_boys,
         enrolled_girls,
+        enrolled_baby,
+        enrolled_middle,
+        enrolled_top,
+        enrolled_p1,
+        enrolled_p2,
+        enrolled_p3,
+        enrolled_p4,
+        enrolled_p5,
+        enrolled_p6,
+        enrolled_p7,
         enrolled_learners,
         gps_lat,
         gps_lng,
@@ -2808,6 +2836,16 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         @village,
         @enrolledBoys,
         @enrolledGirls,
+        @enrolledBaby,
+        @enrolledMiddle,
+        @enrolledTop,
+        @enrolledP1,
+        @enrolledP2,
+        @enrolledP3,
+        @enrolledP4,
+        @enrolledP5,
+        @enrolledP6,
+        @enrolledP7,
         @enrolledLearners,
         @gpsLat,
         @gpsLng,
@@ -2826,9 +2864,23 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
       village: input.village?.trim() ? input.village : null,
       enrolledBoys: Math.max(0, Math.floor(Number(input.enrolledBoys ?? 0))),
       enrolledGirls: Math.max(0, Math.floor(Number(input.enrolledGirls ?? 0))),
+      enrolledBaby: Math.max(0, Math.floor(Number(input.enrolledBaby ?? 0))),
+      enrolledMiddle: Math.max(0, Math.floor(Number(input.enrolledMiddle ?? 0))),
+      enrolledTop: Math.max(0, Math.floor(Number(input.enrolledTop ?? 0))),
+      enrolledP1: Math.max(0, Math.floor(Number(input.enrolledP1 ?? 0))),
+      enrolledP2: Math.max(0, Math.floor(Number(input.enrolledP2 ?? 0))),
+      enrolledP3: Math.max(0, Math.floor(Number(input.enrolledP3 ?? 0))),
+      enrolledP4: Math.max(0, Math.floor(Number(input.enrolledP4 ?? 0))),
+      enrolledP5: Math.max(0, Math.floor(Number(input.enrolledP5 ?? 0))),
+      enrolledP6: Math.max(0, Math.floor(Number(input.enrolledP6 ?? 0))),
+      enrolledP7: Math.max(0, Math.floor(Number(input.enrolledP7 ?? 0))),
       enrolledLearners:
-        Math.max(0, Math.floor(Number(input.enrolledBoys ?? 0))) +
-        Math.max(0, Math.floor(Number(input.enrolledGirls ?? 0))),
+        Math.max(0, Math.floor(Number(input.enrolledBaby ?? 0))) +
+        Math.max(0, Math.floor(Number(input.enrolledMiddle ?? 0))) +
+        Math.max(0, Math.floor(Number(input.enrolledTop ?? 0))) +
+        Math.max(0, Math.floor(Number(input.enrolledP1 ?? 0))) +
+        Math.max(0, Math.floor(Number(input.enrolledP2 ?? 0))) +
+        Math.max(0, Math.floor(Number(input.enrolledP3 ?? 0))),
       gpsLat: input.gpsLat?.trim() ? input.gpsLat : null,
       gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
       contactName: input.contactName?.trim() ? input.contactName : null,
@@ -2843,37 +2895,7 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
     schoolCode,
   });
 
-  const row = db
-    .prepare(
-      `
-      SELECT
-        id,
-        school_code AS schoolCode,
-        name,
-        district,
-        sub_county AS subCounty,
-        parish,
-        village,
-        enrolled_boys AS enrolledBoys,
-        enrolled_girls AS enrolledGirls,
-        CASE
-          WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
-            THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
-          ELSE COALESCE(enrolled_learners, 0)
-        END AS enrolledLearners,
-        gps_lat AS gpsLat,
-        gps_lng AS gpsLng,
-        contact_name AS contactName,
-        contact_phone AS contactPhone,
-        notes,
-        created_at AS createdAt
-      FROM schools_directory
-      WHERE id = @id
-      LIMIT 1
-    `,
-    )
-    .get({ id }) as SchoolDirectoryRecord | undefined;
-
+  const row = getSchoolDirectoryRecordById(id);
   if (!row) {
     throw new Error("Could not load created school.");
   }
@@ -2891,6 +2913,16 @@ export function updateSchoolDirectoryRecord(
     village?: string | null;
     enrolledBoys?: number;
     enrolledGirls?: number;
+    enrolledBaby?: number;
+    enrolledMiddle?: number;
+    enrolledTop?: number;
+    enrolledP1?: number;
+    enrolledP2?: number;
+    enrolledP3?: number;
+    enrolledP4?: number;
+    enrolledP5?: number;
+    enrolledP6?: number;
+    enrolledP7?: number;
     gpsLat?: string | null;
     gpsLng?: string | null;
     contactName?: string | null;
@@ -2995,24 +3027,67 @@ export function updateSchoolDirectoryRecord(
     return current;
   }
 
-  const nextBoys =
-    input.enrolledBoys !== undefined
-      ? Math.max(0, Math.floor(Number(input.enrolledBoys)))
-      : Number(current.enrolledBoys ?? 0);
-  const nextGirls =
-    input.enrolledGirls !== undefined
-      ? Math.max(0, Math.floor(Number(input.enrolledGirls)))
-      : Number(current.enrolledGirls ?? 0);
+  if (input.enrolledBaby !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledBaby)));
+    updates.push("enrolled_baby = @enrolledBaby");
+    params.enrolledBaby = value;
+  }
+  if (input.enrolledMiddle !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledMiddle)));
+    updates.push("enrolled_middle = @enrolledMiddle");
+    params.enrolledMiddle = value;
+  }
+  if (input.enrolledTop !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledTop)));
+    updates.push("enrolled_top = @enrolledTop");
+    params.enrolledTop = value;
+  }
+  if (input.enrolledP1 !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledP1)));
+    updates.push("enrolled_p1 = @enrolledP1");
+    params.enrolledP1 = value;
+  }
+  if (input.enrolledP2 !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledP2)));
+    updates.push("enrolled_p2 = @enrolledP2");
+    params.enrolledP2 = value;
+  }
+  if (input.enrolledP3 !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledP3)));
+    updates.push("enrolled_p3 = @enrolledP3");
+    params.enrolledP3 = value;
+  }
+  if (input.enrolledP4 !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledP4)));
+    updates.push("enrolled_p4 = @enrolledP4");
+    params.enrolledP4 = value;
+  }
+  if (input.enrolledP5 !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledP5)));
+    updates.push("enrolled_p5 = @enrolledP5");
+    params.enrolledP5 = value;
+  }
+  if (input.enrolledP6 !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledP6)));
+    updates.push("enrolled_p6 = @enrolledP6");
+    params.enrolledP6 = value;
+  }
+  if (input.enrolledP7 !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrolledP7)));
+    updates.push("enrolled_p7 = @enrolledP7");
+    params.enrolledP7 = value;
+  }
 
-  if (!updates.includes("enrolled_boys = @enrolledBoys")) {
-    params.enrolledBoys = nextBoys;
-  }
-  if (!updates.includes("enrolled_girls = @enrolledGirls")) {
-    params.enrolledGirls = nextGirls;
-  }
+  // Recalculate learners reached (Baby-P3)
+  const baby = input.enrolledBaby !== undefined ? Math.max(0, Math.floor(Number(input.enrolledBaby))) : current.enrolledBaby;
+  const middle = input.enrolledMiddle !== undefined ? Math.max(0, Math.floor(Number(input.enrolledMiddle))) : current.enrolledMiddle;
+  const top = input.enrolledTop !== undefined ? Math.max(0, Math.floor(Number(input.enrolledTop))) : current.enrolledTop;
+  const p1 = input.enrolledP1 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP1))) : current.enrolledP1;
+  const p2 = input.enrolledP2 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP2))) : current.enrolledP2;
+  const p3 = input.enrolledP3 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP3))) : current.enrolledP3;
 
   updates.push("enrolled_learners = @enrolledLearners");
-  params.enrolledLearners = nextBoys + nextGirls;
+  params.enrolledLearners = baby + middle + top + p1 + p2 + p3;
 
   getDb()
     .prepare(
@@ -7551,5 +7626,168 @@ export function getImpactReportFilterFacets() {
     regions: getDistrictsByRegion("Central Region").length > 0
       ? ["Central Region", "Northern Region", "Eastern Region", "Western Region"]
       : [],
+  };
+}
+
+export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | null {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `
+      SELECT
+        id,
+        school_code,
+        name,
+        district,
+        sub_county,
+        parish,
+        village,
+        notes,
+        enrolled_mid: 0,
+        enrolled_boys,
+        enrolled_girls,
+        enrolled_baby,
+        enrolled_middle,
+        enrolled_top,
+        enrolled_p1,
+        enrolled_p2,
+        enrolled_p3,
+        enrolled_p4,
+        enrolled_p5,
+        enrolled_p6,
+        enrolled_p7,
+        enrolled_learners,
+        gps_lat,
+        gps_lng,
+        contact_name,
+        contact_phone,
+        created_at
+      FROM schools_directory
+      WHERE id = ?
+    `,
+    )
+    .get(id) as
+    | {
+      id: number;
+      school_code: string;
+      name: string;
+      district: string;
+      sub_county: string;
+      parish: string;
+      village: string | null;
+      notes: string | null;
+      enrolled_boys: number;
+      enrolled_girls: number;
+      enrolled_baby: number;
+      enrolled_middle: number;
+      enrolled_top: number;
+      enrolled_p1: number;
+      enrolled_p2: number;
+      enrolled_p3: number;
+      enrolled_p4: number;
+      enrolled_p5: number;
+      enrolled_p6: number;
+      enrolled_p7: number;
+      enrolled_learners: number;
+      gps_lat: string | null;
+      gps_lng: string | null;
+      contact_name: string | null;
+      contact_phone: string | null;
+      created_at: string;
+    }
+    | undefined;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    schoolCode: row.school_code,
+    name: row.name,
+    district: row.district,
+    subCounty: row.sub_county,
+    parish: row.parish,
+    village: row.village,
+    notes: row.notes,
+    enrolledBoys: row.enrolled_boys,
+    enrolledGirls: row.enrolled_girls,
+    enrolledBaby: row.enrolled_baby,
+    enrolledMiddle: row.enrolled_middle,
+    enrolledTop: row.enrolled_top,
+    enrolledP1: row.enrolled_p1,
+    enrolledP2: row.enrolled_p2,
+    enrolledP3: row.enrolled_p3,
+    enrolledP4: row.enrolled_p4,
+    enrolledP5: row.enrolled_p5,
+    enrolledP6: row.enrolled_p6,
+    enrolledP7: row.enrolled_p7,
+    enrolledLearners: row.enrolled_learners,
+    gpsLat: row.gps_lat,
+    gpsLng: row.gps_lng,
+    contactName: row.contact_name,
+    contactPhone: row.contact_phone,
+    createdAt: row.created_at,
+  };
+}
+
+export function getRegionStats(region: string): RegionStats | null {
+  const db = getDb();
+
+  // Get all schools in this region
+  // Note: Since we don't have a direct "region" column in schools_directory yet, 
+  // we might need to rely on the region mapping or if we added it.
+  // Ideally, we filter schools whose district belongs to this region.
+
+  const allDistrictsInRegion = getDistrictsByRegion(region);
+
+  if (allDistrictsInRegion.length === 0) return null;
+
+  const placeholders = allDistrictsInRegion.map(() => '?').join(',');
+
+  const result = db.prepare(`
+    SELECT 
+      COUNT(*) as totalSchools,
+      SUM(enrolled_learners) as totalLearners
+    FROM schools_directory
+    WHERE district IN (${placeholders})
+  `).get(allDistrictsInRegion) as { totalSchools: number; totalLearners: number };
+
+  // Get distinct districts that actually have schools
+  const activeDistricts = db.prepare(`
+    SELECT DISTINCT district
+    FROM schools_directory
+    WHERE district IN (${placeholders})
+    ORDER BY district ASC
+  `).all(allDistrictsInRegion) as Array<{ district: string }>;
+
+  return {
+    region,
+    totalSchools: result.totalSchools,
+    totalDistricts: activeDistricts.length, // or allDistrictsInRegion.length if we want potential
+    totalZapSchools: 0, // Placeholder
+    totalLearners: result.totalLearners || 0,
+    districts: activeDistricts.map(d => d.district)
+  };
+}
+
+export function getDistrictStats(district: string): DistrictStats | null {
+  const db = getDb();
+  const region = inferRegionFromDistrict(district);
+
+  if (!region) return null;
+
+  const result = db.prepare(`
+    SELECT 
+      COUNT(*) as totalSchools,
+      SUM(enrolled_learners) as totalLearners
+    FROM schools_directory
+    WHERE district = ?
+  `).get(district) as { totalSchools: number; totalLearners: number };
+
+  return {
+    district,
+    region,
+    totalSchools: result.totalSchools,
+    totalZapSchools: 0, // Placeholder
+    totalLearners: result.totalLearners || 0
   };
 }

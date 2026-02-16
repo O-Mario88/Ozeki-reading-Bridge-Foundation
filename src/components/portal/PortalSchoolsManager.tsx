@@ -285,6 +285,16 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
       notes: String(formData.get("notes") ?? ""),
       enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
       enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
+      enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
+      enrolledMiddle: String(formData.get("enrolledMiddle") ?? "0"),
+      enrolledTop: String(formData.get("enrolledTop") ?? "0"),
+      enrolledP1: String(formData.get("enrolledP1") ?? "0"),
+      enrolledP2: String(formData.get("enrolledP2") ?? "0"),
+      enrolledP3: String(formData.get("enrolledP3") ?? "0"),
+      enrolledP4: String(formData.get("enrolledP4") ?? "0"),
+      enrolledP5: String(formData.get("enrolledP5") ?? "0"),
+      enrolledP6: String(formData.get("enrolledP6") ?? "0"),
+      enrolledP7: String(formData.get("enrolledP7") ?? "0"),
       gpsLat: String(formData.get("gpsLat") ?? ""),
       gpsLng: String(formData.get("gpsLng") ?? ""),
       contactName: String(formData.get("contactName") ?? ""),
@@ -353,6 +363,16 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
           ...payload,
           enrolledBoys,
           enrolledGirls,
+          enrolledBaby: toWholeNumber(payload.enrolledBaby),
+          enrolledMiddle: toWholeNumber(payload.enrolledMiddle),
+          enrolledTop: toWholeNumber(payload.enrolledTop),
+          enrolledP1: toWholeNumber(payload.enrolledP1),
+          enrolledP2: toWholeNumber(payload.enrolledP2),
+          enrolledP3: toWholeNumber(payload.enrolledP3),
+          enrolledP4: toWholeNumber(payload.enrolledP4),
+          enrolledP5: toWholeNumber(payload.enrolledP5),
+          enrolledP6: toWholeNumber(payload.enrolledP6),
+          enrolledP7: toWholeNumber(payload.enrolledP7),
         }),
       });
 
@@ -401,6 +421,16 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
       notes: String(formData.get("notes") ?? ""),
       enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
       enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
+      enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
+      enrolledMiddle: String(formData.get("enrolledMiddle") ?? "0"),
+      enrolledTop: String(formData.get("enrolledTop") ?? "0"),
+      enrolledP1: String(formData.get("enrolledP1") ?? "0"),
+      enrolledP2: String(formData.get("enrolledP2") ?? "0"),
+      enrolledP3: String(formData.get("enrolledP3") ?? "0"),
+      enrolledP4: String(formData.get("enrolledP4") ?? "0"),
+      enrolledP5: String(formData.get("enrolledP5") ?? "0"),
+      enrolledP6: String(formData.get("enrolledP6") ?? "0"),
+      enrolledP7: String(formData.get("enrolledP7") ?? "0"),
       gpsLat: String(formData.get("gpsLat") ?? ""),
       gpsLng: String(formData.get("gpsLng") ?? ""),
       contactName: String(formData.get("contactName") ?? ""),
@@ -459,6 +489,16 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
           notes: payload.notes.trim() || null,
           enrolledBoys,
           enrolledGirls,
+          enrolledBaby: toWholeNumber(payload.enrolledBaby),
+          enrolledMiddle: toWholeNumber(payload.enrolledMiddle),
+          enrolledTop: toWholeNumber(payload.enrolledTop),
+          enrolledP1: toWholeNumber(payload.enrolledP1),
+          enrolledP2: toWholeNumber(payload.enrolledP2),
+          enrolledP3: toWholeNumber(payload.enrolledP3),
+          enrolledP4: toWholeNumber(payload.enrolledP4),
+          enrolledP5: toWholeNumber(payload.enrolledP5),
+          enrolledP6: toWholeNumber(payload.enrolledP6),
+          enrolledP7: toWholeNumber(payload.enrolledP7),
           gpsLat: payload.gpsLat.trim() || null,
           gpsLng: payload.gpsLng.trim() || null,
           contactName: payload.contactName.trim() || null,
@@ -621,8 +661,65 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 inputMode="numeric"
               />
             </label>
+
+            <fieldset className="portal-fieldset">
+              <legend>Class Enrollment</legend>
+              <div className="form-grid-3">
+                <label>
+                  <span className="portal-field-label">Baby</span>
+                  <input name="enrolledBaby" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">Middle</span>
+                  <input name="enrolledMiddle" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">Top</span>
+                  <input name="enrolledTop" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">P1</span>
+                  <input name="enrolledP1" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">P2</span>
+                  <input name="enrolledP2" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">P3</span>
+                  <input name="enrolledP3" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">P4</span>
+                  <input name="enrolledP4" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">P5</span>
+                  <input name="enrolledP5" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">P6</span>
+                  <input name="enrolledP6" type="number" min={0} defaultValue={0} />
+                </label>
+                <label>
+                  <span className="portal-field-label">P7</span>
+                  <input name="enrolledP7" type="number" min={0} defaultValue={0} />
+                </label>
+              </div>
+            </fieldset>
             <label>
-              <span className="portal-field-label">Enrolled Girls</span>
+              <span className="portal-field-label">Total Boys</span>
+              <input
+                name="enrolledBoys"
+                type="number"
+                min={0}
+                step={1}
+                defaultValue={0}
+                inputMode="numeric"
+              />
+            </label>
+            <label>
+              <span className="portal-field-label">Total Girls</span>
               <input
                 name="enrolledGirls"
                 type="number"
@@ -803,6 +900,63 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                     ))}
                   </select>
                 </label>
+
+                <fieldset className="portal-fieldset full-width">
+                  <legend>Class Enrollment</legend>
+                  <div className="form-grid-3">
+                    <label>
+                      <span className="portal-field-label">Baby</span>
+                      <input name="enrolledBaby" type="number" min={0} defaultValue={selectedSchool.enrolledBaby ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">Middle</span>
+                      <input name="enrolledMiddle" type="number" min={0} defaultValue={selectedSchool.enrolledMiddle ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">Top</span>
+                      <input name="enrolledTop" type="number" min={0} defaultValue={selectedSchool.enrolledTop ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">P1</span>
+                      <input name="enrolledP1" type="number" min={0} defaultValue={selectedSchool.enrolledP1 ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">P2</span>
+                      <input name="enrolledP2" type="number" min={0} defaultValue={selectedSchool.enrolledP2 ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">P3</span>
+                      <input name="enrolledP3" type="number" min={0} defaultValue={selectedSchool.enrolledP3 ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">P4</span>
+                      <input name="enrolledP4" type="number" min={0} defaultValue={selectedSchool.enrolledP4 ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">P5</span>
+                      <input name="enrolledP5" type="number" min={0} defaultValue={selectedSchool.enrolledP5 ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">P6</span>
+                      <input name="enrolledP6" type="number" min={0} defaultValue={selectedSchool.enrolledP6 ?? 0} />
+                    </label>
+                    <label>
+                      <span className="portal-field-label">P7</span>
+                      <input name="enrolledP7" type="number" min={0} defaultValue={selectedSchool.enrolledP7 ?? 0} />
+                    </label>
+                  </div>
+                </fieldset>
+
+                <div className="form-grid-2 full-width">
+                  <label>
+                    <span className="portal-field-label">Total Boys</span>
+                    <input name="enrolledBoys" type="number" defaultValue={selectedSchool.enrolledBoys ?? 0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Total Girls</span>
+                    <input name="enrolledGirls" type="number" defaultValue={selectedSchool.enrolledGirls ?? 0} />
+                  </label>
+                </div>
                 <label>
                   <span className="portal-field-label">District</span>
                   <select
@@ -1050,17 +1204,12 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                       {school.contactPhone ? ` (${school.contactPhone})` : ""}
                     </td>
                     <td>
-                      <button
+                      <Link
+                        href={`/portal/schools/${school.id}`}
                         className="button button-ghost button-compact"
-                        type="button"
-                        onClick={() => {
-                          setSelectedSchoolId(school.id);
-                          setEditingProfile(false);
-                          setProfileFeedback({ kind: "idle", message: "" });
-                        }}
                       >
                         Open profile
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))
@@ -1069,6 +1218,6 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
           </table>
         </div>
       </section>
-    </div>
+    </div >
   );
 }

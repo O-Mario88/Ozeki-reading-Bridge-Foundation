@@ -1,7 +1,7 @@
 import { PortalAnalyticsDashboard } from "@/components/portal/PortalAnalyticsDashboard";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getPortalAnalyticsData } from "@/lib/db";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { getImpactExplorerProfiles, getPortalAnalyticsData } from "@/lib/db";
+import { requirePortalUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,18 +12,19 @@ export const metadata = {
 };
 
 export default async function PortalAnalyticsPage() {
-  const user = await requirePortalStaffUser();
+  const user = await requirePortalUser();
   const analytics = getPortalAnalyticsData(user);
+  const explorer = getImpactExplorerProfiles();
 
   return (
     <PortalShell
       user={user}
       activeHref="/portal/analytics"
       title="Data Dashboard"
-      description="A high-resolution view of all entered data: records, participants, evidence, testimonials, and engagement."
+      description="Unified staff, volunteer, and admin analytics workspace for school, district, region, and country data."
       shellClassName="portal-dashboard-shell"
     >
-      <PortalAnalyticsDashboard data={analytics} />
+      <PortalAnalyticsDashboard data={analytics} explorer={explorer} user={user} />
     </PortalShell>
   );
 }

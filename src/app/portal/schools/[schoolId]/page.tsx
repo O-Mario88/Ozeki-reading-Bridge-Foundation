@@ -1,0 +1,49 @@
+import { SchoolProfileView } from "@/components/portal/SchoolProfileView";
+import { PortalShell } from "@/components/portal/PortalShell";
+import { getSchoolDirectoryRecord } from "@/lib/db";
+import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { notFound } from "next/navigation";
+
+export const dynamic = "force-dynamic";
+
+interface PageProps {
+    params: {
+        schoolId: string;
+    };
+}
+
+export async function generateMetadata({ params }: PageProps) {
+    const schoolId = parseInt(params.schoolId, 10);
+    if (isNaN(schoolId)) return { title: "School Not Found" };
+
+    const school = await getSchoolDirectoryRecord(schoolId);
+    return {
+        title: school ? `${school.name} - School Profile` : "School Not Found",
+    };
+}
+
+export default async function SchoolProfilePage({ params }: PageProps) {
+    const user = await requirePortalStaffUser();
+    const schoolId = parseInt(params.schoolId, 10);
+
+    if (isNaN(schoolId)) {
+        notFound();
+    }
+
+    const school = await getSchoolDirectoryRecord(schoolId);
+
+    if (!school) {
+        notFound();
+    }
+
+    return (
+        <PortalShell
+            user={user}
+            activeHref="/portal/schools"
+            title={`${school.name}`}
+            description={`School Profile for ${school.schoolCode}`}
+        >
+            <SchoolProfileView school={school} />
+        </PortalShell>
+    );
+}

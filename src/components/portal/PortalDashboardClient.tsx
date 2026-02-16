@@ -92,6 +92,7 @@ export function PortalDashboardClient({ dashboard }: PortalDashboardClientProps)
 
   const kpiCards = useMemo(
     () => [
+      { label: "Learners Reached", value: dashboard.kpis.learnersReached },
       { label: "Trainings Logged", value: dashboard.kpis.trainingsLogged },
       { label: "School Visits", value: dashboard.kpis.schoolVisits },
       { label: "Assessments", value: dashboard.kpis.assessments },
