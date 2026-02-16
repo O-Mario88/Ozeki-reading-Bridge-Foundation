@@ -4805,3 +4805,132 @@ textarea,
 .header__nav-item--mobile {
   border-color: var(--orbf-nav-border) !important;
 }
+
+/* Deployment accessibility + navigation polish */
+html {
+  font-size: 106.25%;
+}
+
+body {
+  color: #1f3441;
+  font-size: 1rem !important;
+  font-weight: 400;
+  line-height: 1.66;
+}
+
+p,
+li,
+td,
+th,
+label,
+input,
+select,
+textarea {
+  font-size: 1rem;
+}
+
+.button {
+  font-size: 0.9rem;
+  min-height: 40px;
+  padding: 0.54rem 0.92rem;
+}
+
+.header__menu-link {
+  background: transparent !important;
+  font-size: 1.08rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  padding-bottom: 0.28rem;
+  position: relative;
+}
+
+.header__menu-link::after {
+  background: #fa7d16;
+  bottom: -0.2rem;
+  content: "";
+  height: 2px;
+  left: 0;
+  position: absolute;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 170ms ease;
+  width: 100%;
+}
+
+.header__menu-link:hover::after,
+.header__menu-link:focus-visible::after,
+.header__nav-item:hover > .header__menu-link::after,
+.header__nav-item:focus-within > .header__menu-link::after {
+  transform: scaleX(1);
+}
+
+.header__menu-link:hover,
+.header__menu-link:focus-visible {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+.header .button,
+.header__mobile-actions .button {
+  font-size: 0.95rem !important;
+  min-height: 42px;
+  padding: 0.56rem 1rem;
+}
+
+.header__sticky-button {
+  font-size: 0.98rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  min-width: 132px !important;
+}
+
+.hero-panel-stretch > .hero-vision-card-horizontal {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 0.64fr) minmax(0, 1fr);
+}
+
+.hero-vision-card-horizontal .hero-vision-block {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.hero-vision-card-horizontal .hero-vision-block + .hero-vision-block {
+  border-left: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant), white 8%);
+  padding-left: 1rem;
+}
+
+.hero-vision-card-horizontal h2,
+.hero-vision-card-horizontal h3 {
+  margin: 0;
+}
+
+.hero-vision-card-horizontal p {
+  margin: 0 0 0.78rem;
+  max-width: 72ch;
+}
+
+.hero-vision-card-horizontal .cta-line {
+  margin-top: 0.2rem;
+  padding-top: 0;
+}
+
+@media (max-width: 1199px) {
+  .hero-panel-stretch > .hero-vision-card-horizontal {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-vision-card-horizontal .hero-vision-block + .hero-vision-block {
+    border-left: 0;
+    border-top: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant), white 8%);
+    padding-left: 0;
+    padding-top: 0.8rem;
+  }
+}
+
+@media (max-width: 760px) {
+  html {
+    font-size: 100%;
+  }
+}
