@@ -1,5 +1,5 @@
 import {
-
+  BlogPost,
   CaseStudy,
   Partner,
   Program,
@@ -147,6 +147,104 @@ export const resources: ResourceItem[] = [
     filePath: "/downloads/1001-story-writing-pack.txt",
   },
 ];
+
+export const blogPosts: BlogPost[] = [
+  {
+    slug: "rebuilding-reading-routines-in-northern-uganda",
+    title: "Rebuilding Reading Routines In Northern Uganda",
+    subtitle: "How structured phonics turns recovery plans into daily classroom practice.",
+    excerpt:
+      "Schools in Northern Uganda are rebuilding foundational learning. This article shows how practical routines, coaching, and aligned materials help teachers deliver consistent early-grade reading lessons.",
+    category: "Phonics",
+    author: "Ozeki Literacy Team",
+    role: "Program Team",
+    publishedAt: "2026-01-15T08:00:00.000Z",
+    readTime: "6 min read",
+    tags: ["Northern Uganda", "Phonics", "Teacher Coaching"],
+    sections: [
+      {
+        heading: "Why routines matter",
+        paragraphs: [
+          "When teachers use the same lesson flow every day, learners spend more time reading and less time waiting.",
+          "Structured routines also make school supervision easier because leaders can see exactly what is working and what needs support.",
+        ],
+      },
+      {
+        heading: "What changes in class",
+        paragraphs: [
+          "Teachers model sounds accurately, guide blending, and correct errors immediately.",
+          "Learners practice reading words and short sentences at their level, which builds confidence and fluency over time.",
+        ],
+      },
+    ],
+    source: "static",
+    views: 0,
+  },
+  {
+    slug: "using-assessment-data-for-catch-up-reading",
+    title: "Using Assessment Data For Catch-Up Reading",
+    subtitle: "Simple progress checks that help schools target support early.",
+    excerpt:
+      "Assessment is most useful when it leads to action. We explain how schools can move from baseline data to practical grouping and catch-up routines for non-readers.",
+    category: "Assessments",
+    author: "Monitoring & Evaluation Team",
+    role: "MER Unit",
+    publishedAt: "2026-01-29T08:00:00.000Z",
+    readTime: "5 min read",
+    tags: ["Assessment", "Remedial", "Data Use"],
+    sections: [
+      {
+        heading: "Start with clear diagnostics",
+        paragraphs: [
+          "Schools first identify whether learners are struggling with sounds, blending, fluency, or comprehension.",
+          "This prevents generic remediation and focuses teaching time on the exact skill gap.",
+        ],
+      },
+      {
+        heading: "Use short monitoring cycles",
+        paragraphs: [
+          "Progress checks should be short, consistent, and easy for teachers to administer.",
+          "When data shows learners are stuck, routines can be adjusted immediately instead of waiting until endline.",
+        ],
+      },
+    ],
+    source: "static",
+    views: 0,
+  },
+  {
+    slug: "leadership-actions-that-protect-reading-time",
+    title: "Leadership Actions That Protect Reading Time",
+    subtitle: "How headteachers and Directors of Studies sustain literacy implementation.",
+    excerpt:
+      "Reading gains depend on school systems. This guide highlights leadership actions that protect timetable time, strengthen supervision, and keep coaching on track.",
+    category: "Leadership",
+    author: "School Support Team",
+    role: "Instructional Leadership",
+    publishedAt: "2026-02-10T08:00:00.000Z",
+    readTime: "4 min read",
+    tags: ["Leadership", "School Systems", "Supervision"],
+    sections: [
+      {
+        heading: "Protect the timetable",
+        paragraphs: [
+          "School leaders should set and monitor daily reading blocks so literacy routines are not displaced by other activities.",
+          "A protected timetable gives teachers predictable time to teach, practice, and check mastery.",
+        ],
+      },
+      {
+        heading: "Coach with simple tools",
+        paragraphs: [
+          "Short lesson observation checklists and quick feedback cycles help leaders support teachers consistently.",
+          "When supervision is practical and regular, reading instruction quality improves faster.",
+        ],
+      },
+    ],
+    source: "static",
+    views: 0,
+  },
+];
+
+export const blogCategories = [...new Set(blogPosts.map((post) => post.category))].sort();
 
 
 

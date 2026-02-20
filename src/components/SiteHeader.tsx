@@ -205,7 +205,11 @@ export function SiteHeader() {
                       }
                     }}
                   >
-                    <Link className="header__menu-link" href={group.href}>
+                    <Link
+                      className="header__menu-link"
+                      href={group.href}
+                      onClick={() => setActiveDesktopMenu(null)}
+                    >
                       <span>{group.title}</span>
                     </Link>
                     <button
@@ -232,7 +236,11 @@ export function SiteHeader() {
                         <div className="header__featured-text">
                           <h3>{group.title}</h3>
                           <p>{group.description}</p>
-                          <Link className="emphasized-link" href={group.href}>
+                          <Link
+                            className="emphasized-link"
+                            href={group.href}
+                            onClick={() => setActiveDesktopMenu(null)}
+                          >
                             Explore {group.title}
                           </Link>
                         </div>
@@ -246,7 +254,12 @@ export function SiteHeader() {
                               <ul>
                                 {column.map((link) => (
                                   <li className="header__navigation-wrap-item" key={link.href}>
-                                    <Link href={link.href}><span>{link.label}</span></Link>
+                                    <Link
+                                      href={link.href}
+                                      onClick={() => setActiveDesktopMenu(null)}
+                                    >
+                                      <span>{link.label}</span>
+                                    </Link>
                                   </li>
                                 ))}
                               </ul>
@@ -287,7 +300,11 @@ export function SiteHeader() {
               if (item.type === "link") {
                 return (
                   <li key={`mobile-${item.label}-${index + 1}`} className="header__nav-item header__nav-item--mobile">
-                    <Link className="header__mobile-direct-link" href={item.href}>
+                    <Link
+                      className="header__mobile-direct-link"
+                      href={item.href}
+                      onClick={() => setMenuOpen(false)}
+                    >
                       {item.label}
                     </Link>
                   </li>
@@ -316,7 +333,14 @@ export function SiteHeader() {
                     <div className="header__dropdown-container">
                       <div className="header__featured-text">
                         <p>{group.description}</p>
-                        <Link className="emphasized-link" href={group.href}>
+                        <Link
+                          className="emphasized-link"
+                          href={group.href}
+                          onClick={() => {
+                            setMenuOpen(false);
+                            setActiveMobileMenu(null);
+                          }}
+                        >
                           Explore {group.title}
                         </Link>
                       </div>
@@ -326,7 +350,15 @@ export function SiteHeader() {
                         <ul>
                           {group.links.map((link) => (
                             <li className="header__navigation--children-m-item" key={link.href}>
-                              <Link href={link.href}>{link.label}</Link>
+                              <Link
+                                href={link.href}
+                                onClick={() => {
+                                  setMenuOpen(false);
+                                  setActiveMobileMenu(null);
+                                }}
+                              >
+                                {link.label}
+                              </Link>
                             </li>
                           ))}
                         </ul>
@@ -346,7 +378,11 @@ export function SiteHeader() {
 
           <div className="header__mobile-links">
             {utilityLinks.map((item) => (
-              <Link key={item.href} href={item.href}>
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+              >
                 {item.label}
               </Link>
             ))}

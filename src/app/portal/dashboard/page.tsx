@@ -1,7 +1,8 @@
 import { PortalDashboardClient } from "@/components/portal/PortalDashboardClient";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getPortalDashboardData } from "@/lib/db";
+import { getPortalDashboardData, listPortalRecords } from "@/lib/db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { buildPerformanceCascade } from "@/lib/performance-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,10 @@ export default async function PortalDashboardPage() {
   const user = await requirePortalStaffUser();
   const dashboard = getPortalDashboardData(user);
 
+  // Fetch all assessment records to build the performance scorecard
+  const assessments = listPortalRecords({ module: "assessment" }, user);
+  const performanceData = buildPerformanceCascade(assessments);
+
   return (
     <PortalShell
       user={user}
@@ -23,7 +28,7 @@ export default async function PortalDashboardPage() {
       description="Track weekly operations, pending follow-ups, and recent submissions."
       shellClassName="portal-dashboard-shell"
     >
-      <PortalDashboardClient dashboard={dashboard} />
+      <PortalDashboardClient dashboard={dashboard} performanceData={performanceData} />
     </PortalShell>
   );
 }

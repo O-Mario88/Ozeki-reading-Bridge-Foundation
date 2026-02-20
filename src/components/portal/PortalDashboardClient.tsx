@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PortalDashboardData, PortalRecordModule } from "@/lib/types";
+import { PerformanceCascade, PerformanceNode } from "@/components/dashboard/PerformanceCascade";
 
 interface PortalDashboardClientProps {
   dashboard: PortalDashboardData;
+  performanceData?: PerformanceNode;
 }
 
 const quickActions = [
-  { href: "/portal/schools", label: "Open School Profiles" },
-  { href: "/portal/testimonials", label: "+ New Testimonial Story" },
+  { href: "/portal/trainings?new=1", label: "+ New Training" },
+  { href: "/portal/visits?new=1", label: "+ New School Visit" },
+  { href: "/portal/assessments?new=1", label: "+ New Assessment" },
+  { href: "/portal/story?new=1", label: "+ New 1001 Story" },
   { href: "/portal/resources", label: "+ Upload Resource" },
-
-  { href: "/portal/events", label: "+ Schedule Webinar/Event" },
 ];
 
 const moduleRoute: Record<PortalRecordModule, string> = {
@@ -71,7 +73,7 @@ function readDraftModules() {
   return items;
 }
 
-export function PortalDashboardClient({ dashboard }: PortalDashboardClientProps) {
+export function PortalDashboardClient({ dashboard, performanceData }: PortalDashboardClientProps) {
   const [offlineCount, setOfflineCount] = useState(0);
   const [draftModules, setDraftModules] = useState<string[]>([]);
 
@@ -160,6 +162,9 @@ export function PortalDashboardClient({ dashboard }: PortalDashboardClientProps)
           </ul>
         )}
       </section>
+
+      {performanceData && <PerformanceCascade data={performanceData} />}
+
 
       <section className="card">
         <h2>My Week at a Glance</h2>

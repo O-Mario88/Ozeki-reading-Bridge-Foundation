@@ -34,6 +34,7 @@ export interface PortalFieldConfig {
 export interface PortalSectionConfig {
   id: string;
   title: string;
+  collapsible?: boolean;
   fields: PortalFieldConfig[];
 }
 
@@ -48,6 +49,64 @@ export interface PortalModuleConfig {
   programTypeOptions: PortalFieldOption[];
   sections: PortalSectionConfig[];
 }
+
+export const performanceSection: PortalSectionConfig = {
+  id: "performance",
+  title: "SECTION: SCHOOL PERFORMANCE SCORECARD (0-10)",
+  collapsible: true,
+  fields: [
+    {
+      key: "score_instruction",
+      label: "Instruction Quality (0-10)",
+      type: "number",
+      min: 0,
+      max: 10,
+      step: 1,
+      required: false,
+      helperText: "Rate the quality of teaching and lesson delivery.",
+    },
+    {
+      key: "score_outcomes",
+      label: "Learner Outcomes (0-10)",
+      type: "number",
+      min: 0,
+      max: 10,
+      step: 1,
+      required: false,
+      helperText: "Rate based on assessment data and learner progress.",
+    },
+    {
+      key: "score_leadership",
+      label: "Leadership & Governance (0-10)",
+      type: "number",
+      min: 0,
+      max: 10,
+      step: 1,
+      required: false,
+      helperText: "Rate school administration support and oversight.",
+    },
+    {
+      key: "score_community",
+      label: "Community Engagement (0-10)",
+      type: "number",
+      min: 0,
+      max: 10,
+      step: 1,
+      required: false,
+      helperText: "Rate parental and community involvement.",
+    },
+    {
+      key: "score_environment",
+      label: "Safe Learning Environment (0-10)",
+      type: "number",
+      min: 0,
+      max: 10,
+      step: 1,
+      required: false,
+      helperText: "Rate safety, inclusivity, and resource availability.",
+    },
+  ],
+};
 
 const trainingConfig: PortalModuleConfig = {
   module: "training",
@@ -423,9 +482,10 @@ const assessmentConfig: PortalModuleConfig = {
   newLabel: "+ New Assessment",
   programTypeLabel: "Type",
   programTypeOptions: [
-    { value: "Baseline", label: "BASELINE" },
-    { value: "Progress", label: "Progress" },
-    { value: "Endline", label: "Endline" },
+    { value: "Baseline", label: "Baseline" },
+    { value: "Year 1", label: "Year 1" },
+    { value: "Year 2", label: "Year 2" },
+    { value: "Year 3 (Endline)", label: "Year 3 (Endline)" },
   ],
   sections: [
     {
@@ -435,19 +495,23 @@ const assessmentConfig: PortalModuleConfig = {
         { key: "emisCode", label: "EMIS Code", type: "text", required: true },
         { key: "subCounty", label: "Sub-county", type: "text", required: true },
         { key: "parish", label: "Parish", type: "text", required: true },
-        { key: "classLevel", label: "Class", type: "select", required: true, options: [
-          { value: "Baby", label: "Baby" },
-          { value: "Middle", label: "Middle" },
-          { value: "Top", label: "Top" },
-          { value: "P1", label: "P1" },
-          { value: "P2", label: "P2" },
-          { value: "P3", label: "P3" },
-        ] },
-        { key: "term", label: "Term", type: "select", required: true, options: [
-          { value: "Term 1", label: "Term 1" },
-          { value: "Term 2", label: "Term 2" },
-          { value: "Term 3", label: "Term 3" },
-        ] },
+        {
+          key: "classLevel", label: "Class", type: "select", required: true, options: [
+            { value: "Baby", label: "Baby" },
+            { value: "Middle", label: "Middle" },
+            { value: "Top", label: "Top" },
+            { value: "P1", label: "P1" },
+            { value: "P2", label: "P2" },
+            { value: "P3", label: "P3" },
+          ]
+        },
+        {
+          key: "term", label: "Term", type: "select", required: true, options: [
+            { value: "Term 1", label: "Term 1" },
+            { value: "Term 2", label: "Term 2" },
+            { value: "Term 3", label: "Term 3" },
+          ]
+        },
         { key: "assessor", label: "Assessor", type: "text", required: true },
         { key: "village", label: "Village (optional)", type: "text" },
       ],
@@ -523,9 +587,10 @@ const assessmentConfig: PortalModuleConfig = {
         },
       ],
     },
+    performanceSection,
     {
       id: "evidence",
-      title: "Section 5: Evidence Uploads",
+      title: "Section G: Evidence Uploads",
       fields: [{ key: "evidenceNotes", label: "Evidence notes", type: "textarea" }],
     },
   ],

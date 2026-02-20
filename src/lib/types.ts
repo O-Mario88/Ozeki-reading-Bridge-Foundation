@@ -100,6 +100,29 @@ export interface Partner {
   note: string;
 }
 
+export interface BlogPostSection {
+  heading: string;
+  paragraphs: string[];
+}
+
+export interface BlogPost {
+  slug: string;
+  title: string;
+  subtitle?: string;
+  excerpt: string;
+  category: string;
+  author: string;
+  role: string;
+  publishedAt: string;
+  readTime: string;
+  tags: string[];
+  sections: BlogPostSection[];
+  mediaImageUrl?: string | null;
+  mediaVideoUrl?: string | null;
+  source?: "static" | "portal";
+  views?: number;
+}
+
 export type PortalUserRole = "Staff" | "Volunteer";
 
 export interface PortalUser {

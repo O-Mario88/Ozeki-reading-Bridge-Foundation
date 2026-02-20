@@ -1,0 +1,236 @@
+import { useState, useEffect } from "react";
+
+export interface EgraLearner {
+    no: number;
+    learnerId: string;
+    sex: string;
+    age: number | string; // Allow string for empty state
+    letterNames: number | string;
+    letterSounds: number | string;
+    realWords: number | string;
+    madeUpWords: number | string;
+    storyReading: number | string;
+    readingComp: number | string;
+    fluencyLevel: string;
+}
+
+interface EgraLearnerInputModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (learner: EgraLearner) => void;
+    nextLearnerId: string;
+    nextNo: number;
+}
+
+export function EgraLearnerInputModal({
+    isOpen,
+    onClose,
+    onSave,
+    nextLearnerId,
+    nextNo,
+}: EgraLearnerInputModalProps) {
+    const [learner, setLearner] = useState<EgraLearner>({
+        no: nextNo,
+        learnerId: nextLearnerId,
+        sex: "M",
+        age: "",
+        letterNames: "",
+        letterSounds: "",
+        realWords: "",
+        madeUpWords: "",
+        storyReading: "",
+        readingComp: "",
+        fluencyLevel: "Non-Reader",
+    });
+
+    // Reset form when modal opens or nextLearnerId changes
+    useEffect(() => {
+        if (isOpen) {
+            setLearner({
+                no: nextNo,
+                learnerId: nextLearnerId,
+                sex: "M",
+                age: "",
+                letterNames: "",
+                letterSounds: "",
+                realWords: "",
+                madeUpWords: "",
+                storyReading: "",
+                readingComp: "",
+                fluencyLevel: "Non-Reader",
+            });
+        }
+    }, [isOpen, nextLearnerId, nextNo]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave(learner);
+    };
+
+    const updateField = (field: keyof EgraLearner, value: EgraLearner[keyof EgraLearner]) => {
+        setLearner((prev) => ({ ...prev, [field]: value }));
+    };
+
+    return (
+        <div className="portal-modal-overlay">
+            <div className="portal-modal-content card">
+                <div className="portal-modal-header">
+                    <h3>Add Learner Result</h3>
+                    <button type="button" className="button button-ghost" onClick={onClose}>
+                        ✕
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="form-grid">
+                    <div className="full-width grid grid-cols-2 gap-4">
+                        <label>
+                            <span className="label-text">Learner ID</span>
+                            <input value={learner.learnerId} readOnly className="bg-slate-100" />
+                        </label>
+                        <label>
+                            <span className="label-text">Sex</span>
+                            <select
+                                value={learner.sex}
+                                onChange={(e) => updateField("sex", e.target.value)}
+                                required
+                            >
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label>
+                        <span className="label-text">Age</span>
+                        <input
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={learner.age}
+                            onChange={(e) => updateField("age", e.target.value)}
+                            required
+                        />
+                    </label>
+
+                    <label>
+                        <span className="label-text">Letter Names</span>
+                        <input
+                            type="number" min="0"
+                            value={learner.letterNames}
+                            onChange={(e) => updateField("letterNames", e.target.value)}
+                        />
+                    </label>
+
+                    <label>
+                        <span className="label-text">Letter Sounds</span>
+                        <input
+                            type="number" min="0"
+                            value={learner.letterSounds}
+                            onChange={(e) => updateField("letterSounds", e.target.value)}
+                        />
+                    </label>
+
+                    <label>
+                        <span className="label-text">Real Words</span>
+                        <input
+                            type="number" min="0"
+                            value={learner.realWords}
+                            onChange={(e) => updateField("realWords", e.target.value)}
+                        />
+                    </label>
+
+                    <label>
+                        <span className="label-text">Made-up Words</span>
+                        <input
+                            type="number" min="0"
+                            value={learner.madeUpWords}
+                            onChange={(e) => updateField("madeUpWords", e.target.value)}
+                        />
+                    </label>
+
+                    <label>
+                        <span className="label-text">Story Reading</span>
+                        <input
+                            type="number" min="0"
+                            value={learner.storyReading}
+                            onChange={(e) => updateField("storyReading", e.target.value)}
+                        />
+                    </label>
+
+                    <label>
+                        <span className="label-text">Reading Comp</span>
+                        <input
+                            type="number" min="0"
+                            value={learner.readingComp}
+                            onChange={(e) => updateField("readingComp", e.target.value)}
+                        />
+                    </label>
+
+                    <label className="full-width">
+                        <span className="label-text">Fluency Level</span>
+                        <select
+                            value={learner.fluencyLevel}
+                            onChange={(e) => updateField("fluencyLevel", e.target.value)}
+                        >
+                            <option value="Non-Reader">Non-Reader</option>
+                            <option value="Letter Reader">Letter Reader</option>
+                            <option value="Syllable Reader">Syllable Reader</option>
+                            <option value="Word Reader">Word Reader</option>
+                            <option value="Story Reader">Story Reader</option>
+                        </select>
+                    </label>
+
+                    <div className="full-width action-row mt-4">
+                        <button type="button" className="button button-ghost" onClick={onClose}>
+                            Cancel
+                        </button>
+                        <button type="submit" className="button">
+                            Save & Add Next
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <style jsx>{`
+        .portal-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+        .portal-modal-content {
+          width: 90%;
+          max-width: 500px;
+          max-height: 90vh;
+          overflow-y: auto;
+          background: white;
+          padding: 1.5rem;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .portal-modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+          border-bottom: 1px solid #eee;
+          padding-bottom: 0.5rem;
+        }
+        .grid-cols-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+        }
+        .gap-4 {
+          gap: 1rem;
+        }
+      `}</style>
+        </div>
+    );
+}

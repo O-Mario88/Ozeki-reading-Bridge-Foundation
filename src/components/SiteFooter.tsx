@@ -37,9 +37,12 @@ export function SiteFooter() {
             practical phonics, coaching, and literacy systems.
           </p>
           <p>
-            <a href={officialContactLinks.mailto}>Email: {officialContact.email}</a>
+            We are based in Gulu City and prioritize literacy recovery in Northern
+            Uganda communities affected by long-term education disruption.
           </p>
-          <a href={officialContactLinks.tel}>Phone: {officialContact.phoneDisplay}</a>
+          <p>
+            <Link href="/partner">Partner to support school literacy recovery</Link>
+          </p>
         </section>
         <section className="footer-quick-links">
           <h3>Quick Links</h3>
@@ -59,11 +62,13 @@ export function SiteFooter() {
           <h3>Northern Uganda Focus</h3>
           <p>{officialContact.address}</p>
           <p>
-            We are based in Gulu City and prioritize literacy recovery in Northern
-            Uganda communities affected by long-term education disruption.
+            TIN: {officialContact.tin} <br />
+            Registration No: {officialContact.regNo}
           </p>
           <p>
-            <Link href="/partner">Partner to support school literacy recovery</Link>
+            <a href={officialContactLinks.mailto}>Email: {officialContact.email}</a>
+            <br />
+            <a href={officialContactLinks.tel}>Phone: {officialContact.phoneDisplay}</a>
           </p>
         </section>
       </div>

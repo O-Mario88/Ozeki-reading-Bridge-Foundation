@@ -228,8 +228,8 @@ export function RegionProfileView({ stats }: RegionProfileViewProps) {
         }
 
         .tab-btn {
-          padding: 1rem 1.5rem;
-          font-size: 0.875rem;
+          padding: 0.75rem 1.25rem;
+          font-size: 0.82rem;
           font-weight: 600;
           color: #6b7280;
           background: none;

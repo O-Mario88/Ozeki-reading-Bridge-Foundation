@@ -19,6 +19,7 @@ import {
   SchoolDirectoryRecord,
   PortalUser,
 } from "@/lib/types";
+import { EgraLearnerInputModal, EgraLearner } from "./EgraLearnerInputModal";
 
 type FilterState = {
   region: string;
@@ -729,6 +730,10 @@ export function PortalModuleManager({
     () => [createEmptyTrainingParticipant()],
   );
 
+  const [isEgraModalOpen, setIsEgraModalOpen] = useState(false);
+  const [modalLearnerNo, setModalLearnerNo] = useState(1);
+  const [modalLearnerId, setModalLearnerId] = useState("");
+
   const [formState, setFormState] = useState<FormState>(() => ({
     id: null,
     date: getToday(),
@@ -1021,13 +1026,13 @@ export function PortalModuleManager({
             initialSchools.find(
               (school) =>
                 school.name.trim().toLowerCase() ===
-                  String(syncedBody.schoolName ?? "")
-                    .trim()
-                    .toLowerCase() &&
+                String(syncedBody.schoolName ?? "")
+                  .trim()
+                  .toLowerCase() &&
                 school.district.trim().toLowerCase() ===
-                  String(syncedBody.district ?? "")
-                    .trim()
-                    .toLowerCase(),
+                String(syncedBody.district ?? "")
+                  .trim()
+                  .toLowerCase(),
             ) ??
             initialSchools.find(
               (school) =>
@@ -1218,13 +1223,13 @@ export function PortalModuleManager({
             initialSchools.find(
               (school) =>
                 school.name.trim().toLowerCase() ===
-                  String(parsed.schoolName ?? "")
-                    .trim()
-                    .toLowerCase() &&
+                String(parsed.schoolName ?? "")
+                  .trim()
+                  .toLowerCase() &&
                 school.district.trim().toLowerCase() ===
-                  String(parsed.district ?? "")
-                    .trim()
-                    .toLowerCase(),
+                String(parsed.district ?? "")
+                  .trim()
+                  .toLowerCase(),
             ) ??
             initialSchools.find(
               (school) =>
@@ -1249,9 +1254,9 @@ export function PortalModuleManager({
               parsed.region && getDistrictsByRegion(parsed.region).length > 0
                 ? parsed.region
                 : inferRegionFromDistrict(
-                    enforcedSchool?.district ?? parsed.district ?? "",
-                  ) ??
-                  defaultRegion,
+                  enforcedSchool?.district ?? parsed.district ?? "",
+                ) ??
+                defaultRegion,
             district: enforcedSchool?.district ?? parsed.district ?? "",
             schoolId: enforcedSchool ? String(enforcedSchool.id) : draftSchoolId,
             schoolName: enforcedSchool?.name ?? parsed.schoolName ?? "",
@@ -1310,33 +1315,6 @@ export function PortalModuleManager({
       },
     }));
   }, []);
-
-  const updateEgraLearner = useCallback(
-    (index: number, key: keyof Omit<EgraLearnerRow, "no">, value: string) => {
-      setEgraLearners((prev) =>
-        prev.map((row, rowIndex) => {
-          if (rowIndex !== index) {
-            return row;
-          }
-
-          const updated = {
-            ...row,
-            [key]:
-              key === "sex"
-                ? normalizeSex(value)
-                : value,
-          } as EgraLearnerRow;
-
-          if (key === "storyReading") {
-            updated.fluencyLevel = determineFluencyLevel(value);
-          }
-
-          return updated;
-        }),
-      );
-    },
-    [],
-  );
 
   const updateTrainingParticipant = useCallback(
     (index: number, key: keyof TrainingParticipantRow, value: string) => {
@@ -1407,6 +1385,63 @@ export function PortalModuleManager({
       return prev.filter((_, rowIndex) => rowIndex !== index);
     });
   }, [formState.schoolId, schoolsById]);
+
+  const handleOpenEgraModal = useCallback(() => {
+    const nextIndex = egraLearners.findIndex((row) => !rowHasAssessmentData(row));
+    const targetIndex = nextIndex === -1 ? egraLearners.length : nextIndex;
+    const nextNo = targetIndex + 1;
+
+    // Generate Learner ID
+    const schoolCode = formState.schoolId ? schoolsById.get(Number(formState.schoolId))?.schoolCode ?? "SCH" : "SCH";
+    const classLevel = (formState.payload.classLevel as string) || "CLS";
+    const nextId = `${schoolCode}-${classLevel}-${String(nextNo).padStart(2, "0")}`;
+
+    setModalLearnerNo(nextNo);
+    setModalLearnerId(nextId);
+    setIsEgraModalOpen(true);
+  }, [egraLearners, formState.payload.classLevel, formState.schoolId, schoolsById]);
+
+  const handleSaveLearner = useCallback((learner: EgraLearner) => {
+    setEgraLearners((prev) => {
+      const newRows = [...prev];
+      // Ensure we have enough rows
+      while (newRows.length < learner.no) {
+        newRows.push(createEmptyEgraLearnerRow(newRows.length + 1));
+      }
+
+      const index = learner.no - 1;
+      newRows[index] = {
+        no: learner.no,
+        learnerId: learner.learnerId,
+        sex: learner.sex as "M" | "F",
+        age: String(learner.age),
+        letterNames: String(learner.letterNames),
+        letterSounds: String(learner.letterSounds),
+        realWords: String(learner.realWords),
+        madeUpWords: String(learner.madeUpWords),
+        storyReading: String(learner.storyReading),
+        readingComp: String(learner.readingComp),
+        fluencyLevel: learner.fluencyLevel,
+      };
+      return newRows;
+    });
+    // Keep modal open for next learner? No, close it for now as per "popup" flow implies single entry.
+    // User can click "Save & Add Next" in modal if we implement that, 
+    // but the modal component has "Save & Add Next" button.
+    // Let's increment and keep open.
+
+    const nextNo = learner.no + 1;
+    if (nextNo <= 20) { // Limit to 20
+      const schoolCode = formState.schoolId ? schoolsById.get(Number(formState.schoolId))?.schoolCode ?? "SCH" : "SCH";
+      const classLevel = (formState.payload.classLevel as string) || "CLS";
+      const nextId = `${schoolCode}-${classLevel}-${String(nextNo).padStart(2, "0")}`;
+      setModalLearnerNo(nextNo);
+      setModalLearnerId(nextId);
+      // Don't close, effectively "Add Next"
+    } else {
+      setIsEgraModalOpen(false);
+    }
+  }, [formState.payload.classLevel, formState.schoolId, schoolsById]);
 
   const validateForm = useCallback(() => {
     const requiresDistrict = config.module !== "training";
@@ -2286,9 +2321,9 @@ export function PortalModuleManager({
                       : undefined;
                     const keepSchool = Boolean(
                       selectedSchool &&
-                        (!nextRegion ||
-                          inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
-                        (!nextDistrict || selectedSchool.district === nextDistrict),
+                      (!nextRegion ||
+                        inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
+                      (!nextDistrict || selectedSchool.district === nextDistrict),
                     );
                     return {
                       ...prev,
@@ -2321,7 +2356,7 @@ export function PortalModuleManager({
                       : undefined;
                     const keepSchool = Boolean(
                       selectedSchool &&
-                        (!nextDistrict || selectedSchool.district === nextDistrict),
+                      (!nextDistrict || selectedSchool.district === nextDistrict),
                     );
                     return {
                       ...prev,
@@ -2419,143 +2454,66 @@ export function PortalModuleManager({
               <input value={formState.status} readOnly />
             </label>
 
-            {config.sections.map((section) => (
-              <fieldset key={section.id} className="card full-width portal-form-section">
-                <legend>{section.title}</legend>
+
+            {config.sections.map((section) => {
+              const content = (
                 <div className="form-grid">
                   {section.fields.map((field) => {
                     const value = formState.payload[field.key];
                     if (field.type === "egraLearners") {
                       return (
                         <div key={field.key} className="full-width">
-                          <p>
-                            Enter learner-level scores exactly as captured on the EGRA baseline sheet.
+                          <div className="portal-participants-header">
+                            {renderLabel(field.label, field.required)}
+                            <button
+                              className="button button-ghost"
+                              type="button"
+                              onClick={handleOpenEgraModal}
+                            >
+                              + Add Learner Result
+                            </button>
+                          </div>
+                          <p className="portal-muted">
+                            {field.helperText || "Enter learner-level scores exactly as captured on the EGRA baseline sheet."}
                           </p>
+
+                          {/* Summary Table of Added Learners */}
                           <div className="table-wrap egra-table-wrap">
                             <table className="egra-table">
                               <thead>
                                 <tr>
                                   <th>No</th>
                                   <th>Learner ID</th>
-                                  <th>Sex (M/F)</th>
+                                  <th>Sex</th>
                                   <th>Age</th>
-                                  <th>Letter Names</th>
-                                  <th>Letter Sounds</th>
-                                  <th>Real Words</th>
-                                  <th>Made-up Words</th>
-                                  <th>Story Reading</th>
-                                  <th>Reading Comp.</th>
                                   <th>Fluency Level</th>
+                                  <th>Action</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {egraLearners.map((row, index) => (
+                                {egraLearners.filter(rowHasAssessmentData).map((row) => (
                                   <tr key={row.no}>
                                     <td>{row.no}</td>
+                                    <td>{row.learnerId}</td>
+                                    <td>{row.sex}</td>
+                                    <td>{row.age}</td>
+                                    <td>{row.fluencyLevel || determineFluencyLevel(row.storyReading)}</td>
                                     <td>
-                                      <input
-                                        value={row.learnerId}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "learnerId", event.target.value)
-                                        }
-                                      />
+                                      {/* Edit button could go here */}
+                                      <button type="button" className="button button-small button-ghost" onClick={() => {
+                                        setModalLearnerNo(row.no);
+                                        setModalLearnerId(row.learnerId);
+                                        setIsEgraModalOpen(true);
+                                      }}>Edit</button>
                                     </td>
-                                    <td>
-                                      <select
-                                        value={row.sex}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "sex", event.target.value)
-                                        }
-                                      >
-                                        <option value="">-</option>
-                                        <option value="M">M</option>
-                                        <option value="F">F</option>
-                                      </select>
-                                    </td>
-                                    <td>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={row.age}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "age", event.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={row.letterNames}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "letterNames", event.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={row.letterSounds}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "letterSounds", event.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={row.realWords}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "realWords", event.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={row.madeUpWords}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "madeUpWords", event.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={row.storyReading}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "storyReading", event.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={row.readingComp}
-                                        onChange={(event) =>
-                                          updateEgraLearner(index, "readingComp", event.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td>{row.fluencyLevel || "-"}</td>
                                   </tr>
                                 ))}
+                                {egraLearners.filter(rowHasAssessmentData).length === 0 && (
+                                  <tr><td colSpan={6} className="text-center p-4 text-slate-500">No learners added yet. Click "+ Add Learner Result" to begin.</td></tr>
+                                )}
                               </tbody>
                             </table>
                           </div>
-                          <div className="portal-egra-legend">
-                            <span>Non-Reader: 0-10 CWPM</span>
-                            <span>Emerging: 11-25 CWPM</span>
-                            <span>Developing: 26-45 CWPM</span>
-                            <span>Transitional: 46-60 CWPM</span>
-                            <span>Fluent: 61+ CWPM</span>
-                          </div>
-                          {field.helperText ? <small>{field.helperText}</small> : null}
                         </div>
                       );
                     }
@@ -2872,9 +2830,9 @@ export function PortalModuleManager({
                           <small className="portal-field-help">{field.helperText}</small>
                         ) : null}
                         {config.module === "training" &&
-                        (field.key === "numberAttended" ||
-                          field.key === "femaleCount" ||
-                          field.key === "maleCount") ? (
+                          (field.key === "numberAttended" ||
+                            field.key === "femaleCount" ||
+                            field.key === "maleCount") ? (
                           <small className="portal-field-help">
                             Auto-calculated from participant entries.
                           </small>
@@ -2883,8 +2841,29 @@ export function PortalModuleManager({
                     );
                   })}
                 </div>
-              </fieldset>
-            ))}
+              );
+
+              if (section.collapsible) {
+                return (
+                  <details key={section.id} className="card full-width portal-form-section" open={false}>
+                    <summary className="portal-section-summary" style={{ cursor: 'pointer', outline: 'none' }}>
+                      <strong>{section.title}</strong>
+                      <span className="text-sm text-slate-500 ml-2">(Click to expand)</span>
+                    </summary>
+                    <div className="pt-4 border-t mt-2">
+                      {content}
+                    </div>
+                  </details>
+                );
+              }
+
+              return (
+                <fieldset key={section.id} className="card full-width portal-form-section">
+                  <legend>{section.title}</legend>
+                  {content}
+                </fieldset>
+              );
+            })}
 
             <fieldset className="card full-width portal-form-section">
               <legend>Evidence Locker</legend>
@@ -2994,8 +2973,16 @@ export function PortalModuleManager({
               ) : null}
             </div>
           </form>
-        </section>
-      ) : null}
+        </section >
+      ) : null
+      }
+      <EgraLearnerInputModal
+        isOpen={isEgraModalOpen}
+        onClose={() => setIsEgraModalOpen(false)}
+        onSave={handleSaveLearner}
+        nextLearnerId={modalLearnerId}
+        nextNo={modalLearnerNo}
+      />
     </>
   );
 }
