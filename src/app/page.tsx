@@ -141,7 +141,8 @@ export default async function HomePage() {
       <section className="section">
         <div className="container story-focus-grid">
           <article>
-            <h2>The literacy story we are changing</h2>
+            <p className="section-subtitle">KNOW ABOUT US</p>
+            <h2 className="tpd-page-title">The literacy story we are changing</h2>
             <p>
               Many learners in Northern Uganda are still rebuilding foundational
               reading skills. Ozeki Reading Bridge Foundation exists to help schools
@@ -155,7 +156,8 @@ export default async function HomePage() {
           </article>
 
           <article>
-            <h2>How we work</h2>
+            <p className="section-subtitle">OUR APPROACH</p>
+            <h2 className="tpd-page-title">How we work</h2>
             <ul>
               <li>Train teachers using structured phonics and reading routines</li>
               <li>Coach in real classrooms until routines are consistent</li>
@@ -176,7 +178,8 @@ export default async function HomePage() {
       <section className="section home-evidence-section">
         <div className="container">
           <div className="section-head">
-            <h2>Testimonial Evidence from the Field</h2>
+            <p className="section-subtitle">STORIES OF IMPACT</p>
+            <h2 className="tpd-page-title">Testimonial Evidence from the Field</h2>
             <p>
               Photo and video stories from real training and coaching sessions in
               Northern Uganda, showing implementation quality in action.

@@ -1,20 +1,21 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
 
 :root {
-  --md-sys-color-primary: #084f66;
+  --md-sys-color-primary: #0d3330;
   --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-secondary: #fa7d16;
+  --md-sys-color-secondary: #27825b;
   --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-background: #fff8ee;
+  --md-sys-color-background: #f8f6f0;
   --md-sys-color-surface: #ffffff;
-  --md-sys-color-surface-container: #f8efe2;
-  --md-sys-color-surface-container-high: #f3e8db;
-  --md-sys-color-surface-variant: #ebe1d6;
-  --md-sys-color-on-surface: #090015;
-  --md-sys-color-on-surface-variant: #4b4561;
-  --md-sys-color-outline: #c9bcae;
-  --md-sys-color-outline-variant: #e1d8ce;
+  --md-sys-color-surface-container: #f0eee8;
+  --md-sys-color-surface-container-high: #e8e5df;
+  --md-sys-color-surface-variant: #e0ddd6;
+  --md-sys-color-on-surface: #2b3a39;
+  --md-sys-color-on-surface-variant: #4b5e5d;
+  --md-sys-color-outline: #c8d1d0;
+  --md-sys-color-outline-variant: #e4ebea;
   --md-sys-color-error: #b3261e;
+  --md-sys-color-tertiary: #d9774a;
 
   /* Spacing Scale */
   --spacing-xs: 0.25rem;
@@ -113,7 +114,9 @@ h6 {
 }
 
 h1 {
-  font-size: clamp(2rem, 3vw + 1.3rem, 3.25rem);
+  font-size: clamp(2.25rem, 4vw + 1rem, 3.5rem);
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
 }
 
 h2 {
@@ -128,7 +131,30 @@ h6 {
 }
 
 p {
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0 0 1rem;
+}
+
+.kicker,
+.section-subtitle {
+  color: var(--md-sys-color-tertiary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.kicker::before,
+.section-subtitle::before {
+  content: "";
+  display: block;
+  width: 24px;
+  height: 2px;
+  background-color: var(--md-sys-color-tertiary);
 }
 
 a {
@@ -610,38 +636,23 @@ main {
 }
 
 .card {
-  background:
-    linear-gradient(180deg, #ffffff 0%, #fffdf9 100%);
-  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant), white 12%);
-  border-radius: 0.82rem;
-  padding: 1.06rem;
+  background: #ffffff;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 12px;
+  padding: 1.25rem;
   box-shadow:
-    0 1px 2px rgba(14, 9, 34, 0.05),
-    0 10px 24px rgba(14, 9, 34, 0.08);
+    0 4px 12px rgba(13, 51, 48, 0.04),
+    0 1px 2px rgba(13, 51, 48, 0.02);
   position: relative;
-  overflow: hidden;
   transition: transform 180ms ease, box-shadow 220ms ease, border-color 220ms ease;
-}
-
-.card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg,
-      color-mix(in oklab, var(--md-sys-color-primary), white 15%),
-      color-mix(in oklab, var(--md-sys-color-secondary), white 5%));
-  opacity: 0.82;
 }
 
 .card:hover {
   transform: translateY(-3px);
-  border-color: color-mix(in oklab, var(--md-sys-color-primary), white 52%);
+  border-color: color-mix(in oklab, var(--md-sys-color-secondary), white 70%);
   box-shadow:
-    0 2px 6px rgba(14, 9, 34, 0.08),
-    0 16px 36px rgba(14, 9, 34, 0.13);
+    0 8px 24px rgba(13, 51, 48, 0.06),
+    0 2px 8px rgba(13, 51, 48, 0.04);
 }
 
 .card h3 {
@@ -2803,24 +2814,26 @@ th {
 
 .site-footer {
   margin-top: 1.5rem;
-  border-top: 1px solid #084f66;
-  background: #084f66;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container);
 }
 
 .footer-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 2.2fr) minmax(0, 1fr);
   gap: 1rem;
-  padding: 1rem 0;
+  padding: 2.5rem 0;
 }
 
 .footer-grid h3 {
-  color: #ffffff;
+  color: var(--md-sys-color-primary);
+  font-weight: 700;
+  margin-bottom: 0.8rem;
 }
 
 .footer-grid p,
 .footer-grid a {
-  color: #ffffff;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .footer-grid ul {
@@ -2849,14 +2862,14 @@ th {
 }
 
 .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.35);
-  padding: 0.5rem 0;
-  color: #ffffff;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  padding: 1rem 0;
+  color: var(--md-sys-color-on-surface-variant);
   font-size: 0.85rem;
 }
 
 .footer-bottom p {
-  color: #ffffff;
+  color: var(--md-sys-color-on-surface-variant);
   margin-bottom: 0;
   opacity: 0.9;
 }
@@ -3181,20 +3194,25 @@ a:focus-visible {
 
 .button {
   align-items: center;
-  background: var(--md-sys-color-primary);
-  border-radius: 2.25rem;
+  background: var(--md-sys-color-secondary);
+  color: #ffffff;
+  border-radius: 9999px;
+  /* Pill shape */
   display: inline-flex;
   gap: 0.35rem;
   justify-content: center;
   overflow: hidden;
-  padding: 0.68rem 1.38rem;
+  padding: 0.75rem 1.5rem;
   position: relative;
   text-decoration: none;
-  text-transform: uppercase;
+  text-transform: capitalize;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
 }
 
 .button::after {
-  background: color-mix(in oklab, var(--md-sys-color-primary), white 16%);
+  background: color-mix(in oklab, var(--md-sys-color-secondary), white 16%);
   border-radius: 50%;
   content: "";
   height: 0;
@@ -3218,13 +3236,13 @@ a:focus-visible {
 }
 
 .button-ghost {
-  background: var(--md-sys-color-secondary);
-  border-color: var(--md-sys-color-secondary);
-  color: #fff;
+  background: transparent;
+  border: 1px solid var(--md-sys-color-primary);
+  color: var(--md-sys-color-primary);
 }
 
 .button-ghost::after {
-  background: color-mix(in oklab, var(--md-sys-color-secondary), black 16%);
+  background: color-mix(in oklab, var(--md-sys-color-primary), white 90%);
 }
 
 .button-ghost:hover,
@@ -3276,18 +3294,7 @@ fieldset.card {
   font-weight: 600;
 }
 
-.site-footer {
-  background: #084f66;
-  border-top-color: #084f66;
-}
 
-.footer-grid h3 {
-  color: #ffffff;
-}
-
-.footer-bottom {
-  color: #ffffff;
-}
 
 .media-wall-head {
   align-items: end;
@@ -3458,18 +3465,17 @@ fieldset.card {
 }
 
 .header__logo-text strong {
-  color: #090015;
+  color: var(--md-sys-color-primary);
   font-family: inherit;
   font-size: 1.14rem;
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: 0.01em;
   line-height: 1.05;
 }
 
 .header__logo-text small {
-  color: #3f3a54;
+  color: var(--md-sys-color-on-surface-variant);
   font-family: inherit;
-  font-style: italic;
   font-size: 0.76rem;
   font-weight: 500;
 }
@@ -3515,7 +3521,7 @@ fieldset.card {
 }
 
 .header__menu-link {
-  color: #090015;
+  color: var(--md-sys-color-primary);
   font-family: inherit;
   font-size: 1rem;
   font-weight: 700;
@@ -4673,7 +4679,6 @@ table {
 }
 
 .site-footer {
-  background: var(--orbf-mercy-primary);
   border-top: 0;
   margin-top: 1.8rem;
 }
@@ -4685,7 +4690,6 @@ table {
 }
 
 .footer-grid h3 {
-  color: #ffffff;
   font-size: 1.02rem;
   margin-bottom: 0.65rem;
 }
@@ -4693,7 +4697,6 @@ table {
 .footer-grid p,
 .footer-grid a,
 .footer-grid li {
-  color: rgba(255, 255, 255, 0.94);
   font-size: 0.9rem;
 }
 
