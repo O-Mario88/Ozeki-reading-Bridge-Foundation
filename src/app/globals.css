@@ -2855,6 +2855,12 @@ th {
   font-size: 0.85rem;
 }
 
+.footer-bottom p {
+  color: #ffffff;
+  margin-bottom: 0;
+  opacity: 0.9;
+}
+
 @keyframes reveal-up {
   from {
     opacity: 0;

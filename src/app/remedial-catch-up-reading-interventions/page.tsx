@@ -157,55 +157,53 @@ export default function RemedialCatchUpReadingInterventionsPage() {
               </p>
             </article>
           </div>
-        </div>
-      </section>
 
-      <section className="section">
-        <div className="container cards-grid">
-          <article className="card">
-            <h3>Focus Areas (What the Intervention Targets)</h3>
-            <ul>
-              <li>
-                Skill-gap diagnosis (sounds, blending, decoding, fluency, and
-                comprehension basics)
-              </li>
-              <li>
-                Targeted decoding and blending lessons with a structured routine
-              </li>
-              <li>Structured fluency building (accuracy to speed to expression)</li>
-              <li>Continuous progress checks and regrouping when needed</li>
-            </ul>
-          </article>
+          <div className="cards-grid" style={{ marginTop: "2rem" }}>
+            <article className="card">
+              <h3>Focus Areas (What the Intervention Targets)</h3>
+              <ul>
+                <li>
+                  Skill-gap diagnosis (sounds, blending, decoding, fluency, and
+                  comprehension basics)
+                </li>
+                <li>
+                  Targeted decoding and blending lessons with a structured routine
+                </li>
+                <li>Structured fluency building (accuracy to speed to expression)</li>
+                <li>Continuous progress checks and regrouping when needed</li>
+              </ul>
+            </article>
 
-          <article className="card">
-            <h3>Outputs (What Schools Receive)</h3>
-            <ul>
-              <li>Intervention plans (by level, by group, by week)</li>
-              <li>Grouping strategies (how to form groups and move learners)</li>
-              <li>Progress monitoring tools (simple checklists and trackers)</li>
-              <li>
-                Optional lesson routine cards, word lists, and decodable practice
-                texts aligned to intervention targets
-              </li>
-            </ul>
-          </article>
+            <article className="card">
+              <h3>Outputs (What Schools Receive)</h3>
+              <ul>
+                <li>Intervention plans (by level, by group, by week)</li>
+                <li>Grouping strategies (how to form groups and move learners)</li>
+                <li>Progress monitoring tools (simple checklists and trackers)</li>
+                <li>
+                  Optional lesson routine cards, word lists, and decodable practice
+                  texts aligned to intervention targets
+                </li>
+              </ul>
+            </article>
 
-          <article className="card">
-            <h3>Outcome</h3>
-            <p>
-              At-risk learners gain foundational reading skills faster because
-              intervention is based on diagnosis, delivered through structured
-              small-group routines, and guided by continuous progress tracking.
-            </p>
-            <div className="action-row">
-              <Link className="button" href="/portal/schools">
-                Open school profiles
-              </Link>
-              <Link className="button button-ghost" href="/partner">
-                Partner with us
-              </Link>
-            </div>
-          </article>
+            <article className="card">
+              <h3>Outcome</h3>
+              <p>
+                At-risk learners gain foundational reading skills faster because
+                intervention is based on diagnosis, delivered through structured
+                small-group routines, and guided by continuous progress tracking.
+              </p>
+              <div className="action-row">
+                <Link className="button" href="/portal/schools">
+                  Open school profiles
+                </Link>
+                <Link className="button button-ghost" href="/partner">
+                  Partner with us
+                </Link>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
     </>
