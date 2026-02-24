@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import trainingPhoto from "../../../assets/photos/Phonics training in Alebtong.jpg";
+import trainingPhoto from "../../../assets/photos/PXL_20260218_124648833.MP.jpg";
 import { signatureProgram } from "@/lib/content";
 
 export const metadata = {
@@ -48,7 +48,7 @@ export default function PhonicsTrainingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program Spotlight</p>

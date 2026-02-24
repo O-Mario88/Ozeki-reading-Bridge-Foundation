@@ -16,6 +16,7 @@ const quickActions = [
   { href: "/portal/assessments?new=1", label: "+ New Assessment" },
   { href: "/portal/story?new=1", label: "+ New 1001 Story" },
   { href: "/portal/resources", label: "+ Upload Resource" },
+  { href: "/portal/reports", label: "Open Reports Workspace" },
 ];
 
 const moduleRoute: Record<PortalRecordModule, string> = {

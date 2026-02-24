@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import assessmentPhoto from "../../../assets/photos/Literacy Training in Loro - Oyam District.jpg";
+import assessmentPhoto from "../../../assets/photos/PXL_20260218_133343618.jpg";
 
 export const metadata = {
   title: "Learner Reading Assessments & Progress Tracking",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function LearnerReadingAssessmentsProgressTrackingPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -53,8 +53,8 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>What We Assess (Focus Areas)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">What We Assess (Focus Areas)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -119,8 +119,8 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>How We Do It (Simple Process Schools Can Use)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">How We Do It (Simple Process Schools Can Use)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -171,8 +171,8 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>What Schools Receive (Outputs)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">What Schools Receive (Outputs)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">

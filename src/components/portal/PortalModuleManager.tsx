@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import {
   PortalFieldConfig,
@@ -83,24 +84,27 @@ type OfflineQueueItem = {
 };
 
 type EgraMetricKey =
-  | "letterNames"
-  | "letterSounds"
-  | "realWords"
+  | "letterIdentification"
+  | "soundIdentification"
+  | "decodableWords"
+  | "undecodableWords"
   | "madeUpWords"
   | "storyReading"
-  | "readingComp";
+  | "readingComprehension";
 
 type EgraLearnerRow = {
   no: number;
   learnerId: string;
+  learnerName: string;
   sex: "" | "M" | "F";
   age: string;
-  letterNames: string;
-  letterSounds: string;
-  realWords: string;
+  letterIdentification: string;
+  soundIdentification: string;
+  decodableWords: string;
+  undecodableWords: string;
   madeUpWords: string;
   storyReading: string;
-  readingComp: string;
+  readingComprehension: string;
   fluencyLevel: string;
 };
 
@@ -128,14 +132,16 @@ type EgraSummary = {
   rowsForPayload: Array<{
     no: number;
     learnerId: string;
+    learnerName: string;
     sex: "M" | "F" | "";
     age: number | null;
-    letterNames: number | null;
-    letterSounds: number | null;
-    realWords: number | null;
+    letterIdentification: number | null;
+    soundIdentification: number | null;
+    decodableWords: number | null;
+    undecodableWords: number | null;
     madeUpWords: number | null;
     storyReading: number | null;
-    readingComp: number | null;
+    readingComprehension: number | null;
     fluencyLevel: string;
   }>;
 };
@@ -164,12 +170,13 @@ const queueStorageKey = "portal-offline-queue";
 const defaultRegion = ugandaRegions[0]?.region ?? "";
 const EGRA_ROW_COUNT = 20;
 const egraMetricLabels: Array<{ key: EgraMetricKey; label: string }> = [
-  { key: "letterNames", label: "Letter Names (letters/min)" },
-  { key: "letterSounds", label: "Letter Sounds (sounds/min)" },
-  { key: "realWords", label: "Real Words (words/min)" },
+  { key: "letterIdentification", label: "Letter Identification (letters/min)" },
+  { key: "soundIdentification", label: "Sound Identification (sounds/min)" },
+  { key: "decodableWords", label: "Decodable Words (words/min)" },
+  { key: "undecodableWords", label: "Undecodable Words (words/min)" },
   { key: "madeUpWords", label: "Made-up Words (words/min)" },
   { key: "storyReading", label: "Story Reading (words/min)" },
-  { key: "readingComp", label: "Reading Comprehension (correct Qs)" },
+  { key: "readingComprehension", label: "Reading Comprehension (correct Qs)" },
 ];
 
 const egraLevelLabels = [
@@ -492,12 +499,13 @@ function writeQueue(items: OfflineQueueItem[]) {
 
 function createEmptyEgraMetricRecord(): Record<EgraMetricKey, number> {
   return {
-    letterNames: 0,
-    letterSounds: 0,
-    realWords: 0,
+    letterIdentification: 0,
+    soundIdentification: 0,
+    decodableWords: 0,
+    undecodableWords: 0,
     madeUpWords: 0,
     storyReading: 0,
-    readingComp: 0,
+    readingComprehension: 0,
   };
 }
 
@@ -505,14 +513,16 @@ function createEmptyEgraLearnerRow(no: number): EgraLearnerRow {
   return {
     no,
     learnerId: "",
+    learnerName: "",
     sex: "",
     age: "",
-    letterNames: "",
-    letterSounds: "",
-    realWords: "",
+    letterIdentification: "",
+    soundIdentification: "",
+    decodableWords: "",
+    undecodableWords: "",
     madeUpWords: "",
     storyReading: "",
-    readingComp: "",
+    readingComprehension: "",
     fluencyLevel: "",
   };
 }
@@ -555,7 +565,7 @@ function determineFluencyLevel(storyReadingValue: string) {
 }
 
 function rowHasAssessmentData(row: EgraLearnerRow) {
-  if (row.learnerId.trim() || row.sex || row.age.trim()) {
+  if (row.learnerId.trim() || row.learnerName.trim() || row.sex || row.age.trim()) {
     return true;
   }
 
@@ -628,14 +638,16 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
     rowsForPayload: activeRows.map((row) => ({
       no: row.no,
       learnerId: row.learnerId.trim(),
+      learnerName: row.learnerName.trim(),
       sex: row.sex,
       age: toNumberOrNull(row.age),
-      letterNames: toNumberOrNull(row.letterNames),
-      letterSounds: toNumberOrNull(row.letterSounds),
-      realWords: toNumberOrNull(row.realWords),
+      letterIdentification: toNumberOrNull(row.letterIdentification),
+      soundIdentification: toNumberOrNull(row.soundIdentification),
+      decodableWords: toNumberOrNull(row.decodableWords),
+      undecodableWords: toNumberOrNull(row.undecodableWords),
       madeUpWords: toNumberOrNull(row.madeUpWords),
       storyReading: toNumberOrNull(row.storyReading),
-      readingComp: toNumberOrNull(row.readingComp),
+      readingComprehension: toNumberOrNull(row.readingComprehension),
       fluencyLevel: row.fluencyLevel || determineFluencyLevel(row.storyReading),
     })),
   };
@@ -667,14 +679,16 @@ function parseEgraRows(raw: unknown): EgraLearnerRow[] {
     return {
       no: Number(entry.no ?? template.no) || template.no,
       learnerId: sanitizeForInput(entry.learnerId),
+      learnerName: sanitizeForInput(entry.learnerName),
       sex: normalizeSex(entry.sex),
       age: sanitizeForInput(entry.age),
-      letterNames: sanitizeForInput(entry.letterNames),
-      letterSounds: sanitizeForInput(entry.letterSounds),
-      realWords: sanitizeForInput(entry.realWords),
+      letterIdentification: sanitizeForInput(entry.letterIdentification),
+      soundIdentification: sanitizeForInput(entry.soundIdentification),
+      decodableWords: sanitizeForInput(entry.decodableWords),
+      undecodableWords: sanitizeForInput(entry.undecodableWords),
       madeUpWords: sanitizeForInput(entry.madeUpWords),
       storyReading,
-      readingComp: sanitizeForInput(entry.readingComp),
+      readingComprehension: sanitizeForInput(entry.readingComprehension),
       fluencyLevel,
     };
   });
@@ -1105,6 +1119,19 @@ export function PortalModuleManager({
   }, [syncOfflineQueue]);
 
   useEffect(() => {
+    if (!isFormOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsFormOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isFormOpen]);
+
+  useEffect(() => {
     if (!isFormOpen) {
       return;
     }
@@ -1413,14 +1440,16 @@ export function PortalModuleManager({
       newRows[index] = {
         no: learner.no,
         learnerId: learner.learnerId,
+        learnerName: learner.learnerName,
         sex: learner.sex as "M" | "F",
         age: String(learner.age),
-        letterNames: String(learner.letterNames),
-        letterSounds: String(learner.letterSounds),
-        realWords: String(learner.realWords),
+        letterIdentification: String(learner.letterIdentification),
+        soundIdentification: String(learner.soundIdentification),
+        decodableWords: String(learner.decodableWords),
+        undecodableWords: String(learner.undecodableWords),
         madeUpWords: String(learner.madeUpWords),
         storyReading: String(learner.storyReading),
-        readingComp: String(learner.readingComp),
+        readingComprehension: String(learner.readingComprehension),
         fluencyLevel: learner.fluencyLevel,
       };
       return newRows;
@@ -1719,8 +1748,13 @@ export function PortalModuleManager({
         payload.developingReaders = egraSummary.profile.developing;
         payload.transitionalReaders = egraSummary.profile.transitional;
         payload.fluentReaders = egraSummary.profile.fluent;
-        payload.wcpmAverage = egraSummary.averages.class.storyReading;
-        payload.comprehensionAverage = egraSummary.averages.class.readingComp;
+        payload.letterIdentificationScore = egraSummary.averages.class.letterIdentification;
+        payload.soundIdentificationScore = egraSummary.averages.class.soundIdentification;
+        payload.decodableWordsScore = egraSummary.averages.class.decodableWords;
+        payload.undecodableWordsScore = egraSummary.averages.class.undecodableWords;
+        payload.madeUpWordsScore = egraSummary.averages.class.madeUpWords;
+        payload.storyReadingScore = egraSummary.averages.class.storyReading;
+        payload.readingComprehensionScore = egraSummary.averages.class.readingComprehension;
         if (typeof payload.storiesPublished !== "number") {
           payload.storiesPublished = 0;
         }
@@ -2252,730 +2286,744 @@ export function PortalModuleManager({
         </div>
       </section>
 
-      {isFormOpen ? (
-        <section className="card portal-form-card">
-          <div className="portal-form-header">
-            <div>
-              <h2>
-                {config.pageTitle} Form {formState.id ? `(${records.find((row) => row.id === formState.id)?.recordCode ?? `#${formState.id}`})` : ""}
-              </h2>
-              <p>Status: {formState.status}</p>
-              {autosaveAt ? (
-                <p className="portal-muted">
-                  Autosaved at {new Date(autosaveAt).toLocaleTimeString()}
-                </p>
-              ) : null}
-            </div>
-            <button className="button button-ghost" type="button" onClick={() => setIsFormOpen(false)}>
-              Close form
-            </button>
-          </div>
+      {isFormOpen
+        ? createPortal(
+          <div
+            className="floating-donor-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${config.pageTitle} Form`}
+            onClick={() => setIsFormOpen(false)}
+          >
+            <div className="card floating-donor-dialog floating-dialog-wide" onClick={(e) => e.stopPropagation()}>
+              <section className="portal-form-card">
+                <div className="portal-form-header">
+                  <div>
+                    <h2>
+                      {config.pageTitle} Form {formState.id ? `(${records.find((row) => row.id === formState.id)?.recordCode ?? `#${formState.id}`})` : ""}
+                    </h2>
+                    <p>Status: {formState.status}</p>
+                    {autosaveAt ? (
+                      <p className="portal-muted">
+                        Autosaved at {new Date(autosaveAt).toLocaleTimeString()}
+                      </p>
+                    ) : null}
+                  </div>
+                  <button className="button button-ghost" type="button" onClick={() => setIsFormOpen(false)}>
+                    Close form
+                  </button>
+                </div>
 
-          <form className="form-grid portal-form-grid" onSubmit={(event) => event.preventDefault()}>
-            <label>
-              {renderLabel("Date", true)}
-              <input
-                type="date"
-                value={formState.date}
-                onChange={(event) =>
-                  setFormState((prev) => {
-                    const nextDate = event.target.value;
-                    if (!nextDate) {
-                      return { ...prev, date: nextDate };
-                    }
+                <form className="form-grid portal-form-grid" onSubmit={(event) => event.preventDefault()}>
+                  <label>
+                    {renderLabel("Date", true)}
+                    <input
+                      type="date"
+                      value={formState.date}
+                      onChange={(event) =>
+                        setFormState((prev) => {
+                          const nextDate = event.target.value;
+                          if (!nextDate) {
+                            return { ...prev, date: nextDate };
+                          }
 
-                    if (config.module === "training") {
-                      const minimumFollowUp = addDaysToDate(nextDate, 14);
-                      const nextFollowUp =
-                        prev.followUpDate && prev.followUpDate >= minimumFollowUp
-                          ? prev.followUpDate
-                          : minimumFollowUp;
-                      return {
-                        ...prev,
-                        date: nextDate,
-                        followUpDate: nextFollowUp,
-                      };
-                    }
+                          if (config.module === "training") {
+                            const minimumFollowUp = addDaysToDate(nextDate, 14);
+                            const nextFollowUp =
+                              prev.followUpDate && prev.followUpDate >= minimumFollowUp
+                                ? prev.followUpDate
+                                : minimumFollowUp;
+                            return {
+                              ...prev,
+                              date: nextDate,
+                              followUpDate: nextFollowUp,
+                            };
+                          }
 
-                    if (prev.followUpDate && prev.followUpDate < nextDate) {
-                      return { ...prev, date: nextDate, followUpDate: nextDate };
-                    }
+                          if (prev.followUpDate && prev.followUpDate < nextDate) {
+                            return { ...prev, date: nextDate, followUpDate: nextDate };
+                          }
 
-                    return { ...prev, date: nextDate };
-                  })
-                }
-                required
-              />
-            </label>
-            <label>
-              {renderLabel("Region", true)}
-              <select
-                value={formState.region}
-                onChange={(event) =>
-                  setFormState((prev) => {
-                    const nextRegion = event.target.value;
-                    const options = getDistrictsByRegion(nextRegion);
-                    const nextDistrict = options.includes(prev.district) ? prev.district : "";
-                    const selectedSchool = prev.schoolId
-                      ? schoolsById.get(Number(prev.schoolId))
-                      : undefined;
-                    const keepSchool = Boolean(
-                      selectedSchool &&
-                      (!nextRegion ||
-                        inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
-                      (!nextDistrict || selectedSchool.district === nextDistrict),
+                          return { ...prev, date: nextDate };
+                        })
+                      }
+                      required
+                    />
+                  </label>
+                  <label>
+                    {renderLabel("Region", true)}
+                    <select
+                      value={formState.region}
+                      onChange={(event) =>
+                        setFormState((prev) => {
+                          const nextRegion = event.target.value;
+                          const options = getDistrictsByRegion(nextRegion);
+                          const nextDistrict = options.includes(prev.district) ? prev.district : "";
+                          const selectedSchool = prev.schoolId
+                            ? schoolsById.get(Number(prev.schoolId))
+                            : undefined;
+                          const keepSchool = Boolean(
+                            selectedSchool &&
+                            (!nextRegion ||
+                              inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
+                            (!nextDistrict || selectedSchool.district === nextDistrict),
+                          );
+                          return {
+                            ...prev,
+                            region: nextRegion,
+                            district: nextDistrict,
+                            schoolId: keepSchool ? prev.schoolId : "",
+                            schoolName: keepSchool ? selectedSchool?.name ?? prev.schoolName : "",
+                          };
+                        })
+                      }
+                      required
+                    >
+                      <option value="">Select region</option>
+                      {ugandaRegions.map((entry) => (
+                        <option key={entry.region} value={entry.region}>
+                          {entry.region}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {renderLabel("District", true)}
+                    <select
+                      value={formState.district}
+                      onChange={(event) =>
+                        setFormState((prev) => {
+                          const nextDistrict = event.target.value;
+                          const selectedSchool = prev.schoolId
+                            ? schoolsById.get(Number(prev.schoolId))
+                            : undefined;
+                          const keepSchool = Boolean(
+                            selectedSchool &&
+                            (!nextDistrict || selectedSchool.district === nextDistrict),
+                          );
+                          return {
+                            ...prev,
+                            district: nextDistrict,
+                            schoolId: keepSchool ? prev.schoolId : "",
+                            schoolName: keepSchool ? selectedSchool?.name ?? prev.schoolName : "",
+                          };
+                        })
+                      }
+                      required
+                    >
+                      <option value="">Select district</option>
+                      {formDistrictOptions.map((district) => (
+                        <option key={district} value={district}>
+                          {district}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {config.module !== "training" ? (
+                    <label>
+                      {renderLabel("School Account", true)}
+                      <select
+                        value={formState.schoolId}
+                        onChange={(event) =>
+                          setFormState((prev) => {
+                            const nextSchoolId = event.target.value;
+                            const selectedSchool = nextSchoolId
+                              ? schoolsById.get(Number(nextSchoolId))
+                              : undefined;
+
+                            return {
+                              ...prev,
+                              schoolId: nextSchoolId,
+                              schoolName: selectedSchool?.name ?? "",
+                              district: selectedSchool?.district ?? prev.district,
+                              region: selectedSchool
+                                ? inferRegionFromDistrict(selectedSchool.district) ?? prev.region
+                                : prev.region,
+                            };
+                          })
+                        }
+                        required
+                      >
+                        <option value="">Select school account</option>
+                        {formSchoolOptions.map((school) => (
+                          <option key={school.id} value={String(school.id)}>
+                            {school.name} ({school.schoolCode})
+                          </option>
+                        ))}
+                      </select>
+                      {formSchoolOptions.length === 0 ? (
+                        <span className="portal-muted">
+                          No school account matches the selected region/district.
+                        </span>
+                      ) : null}
+                    </label>
+                  ) : null}
+                  <label>
+                    {renderLabel(config.programTypeLabel, true)}
+                    <select
+                      value={formState.programType}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, programType: event.target.value }))
+                      }
+                      required
+                    >
+                      <option value="">Select</option>
+                      {config.programTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    {renderLabel(
+                      config.module === "training"
+                        ? "Next follow-up date (minimum 2 weeks)"
+                        : "Follow-up date",
+                    )}
+                    <input
+                      type="date"
+                      value={formState.followUpDate}
+                      min={followUpMinDate}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, followUpDate: event.target.value }))
+                      }
+                      required={config.module === "training"}
+                    />
+                  </label>
+                  <label>
+                    {renderLabel("Workflow status")}
+                    <input value={formState.status} readOnly />
+                  </label>
+
+
+                  {config.sections.map((section) => {
+                    const content = (
+                      <div className="form-grid">
+                        {section.fields.map((field) => {
+                          const value = formState.payload[field.key];
+                          if (field.type === "egraLearners") {
+                            return (
+                              <div key={field.key} className="full-width">
+                                <div className="portal-participants-header">
+                                  {renderLabel(field.label, field.required)}
+                                  <button
+                                    className="button button-ghost"
+                                    type="button"
+                                    onClick={handleOpenEgraModal}
+                                  >
+                                    + Add Learner Result
+                                  </button>
+                                </div>
+                                <p className="portal-muted">
+                                  {field.helperText || "Enter learner-level scores exactly as captured on the EGRA baseline sheet."}
+                                </p>
+
+                                {/* Summary Table of Added Learners */}
+                                <div className="table-wrap egra-table-wrap">
+                                  <table className="egra-table">
+                                    <thead>
+                                      <tr>
+                                        <th>No</th>
+                                        <th>Learner ID</th>
+                                        <th>Learner Name</th>
+                                        <th>Sex</th>
+                                        <th>Age</th>
+                                        <th>Fluency Level</th>
+                                        <th>Action</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {egraLearners.filter(rowHasAssessmentData).map((row) => (
+                                        <tr key={row.no}>
+                                          <td>{row.no}</td>
+                                          <td>{row.learnerId}</td>
+                                          <td>{row.learnerName || "-"}</td>
+                                          <td>{row.sex}</td>
+                                          <td>{row.age}</td>
+                                          <td>{row.fluencyLevel || determineFluencyLevel(row.storyReading)}</td>
+                                          <td>
+                                            {/* Edit button could go here */}
+                                            <button type="button" className="button button-small button-ghost" onClick={() => {
+                                              setModalLearnerNo(row.no);
+                                              setModalLearnerId(row.learnerId);
+                                              setIsEgraModalOpen(true);
+                                            }}>Edit</button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      {egraLearners.filter(rowHasAssessmentData).length === 0 && (
+                                        <tr><td colSpan={7} className="text-center p-4 text-slate-500">No learners added yet. Click "+ Add Learner Result" to begin.</td></tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (field.type === "egraSummary") {
+                            return (
+                              <div key={field.key} className="full-width table-wrap">
+                                <table>
+                                  <thead>
+                                    <tr>
+                                      <th>Baseline Snapshot</th>
+                                      <th>Boys Avg</th>
+                                      <th>Girls Avg</th>
+                                      <th>Class Avg</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {egraMetricLabels.map((metric) => (
+                                      <tr key={metric.key}>
+                                        <td>{metric.label}</td>
+                                        <td>{egraSummary.averages.boys[metric.key].toFixed(1)}</td>
+                                        <td>{egraSummary.averages.girls[metric.key].toFixed(1)}</td>
+                                        <td>{egraSummary.averages.class[metric.key].toFixed(1)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          }
+
+                          if (field.type === "egraProfile") {
+                            return (
+                              <div key={field.key} className="full-width table-wrap">
+                                <table>
+                                  <thead>
+                                    <tr>
+                                      <th>Reading Level</th>
+                                      <th>No. Learners</th>
+                                      <th>% Class</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr>
+                                      <td>{egraLevelLabels[0]}</td>
+                                      <td>{egraSummary.profile.nonReaders}</td>
+                                      <td>{egraSummary.profile.percentages.nonReaders.toFixed(1)}%</td>
+                                    </tr>
+                                    <tr>
+                                      <td>{egraLevelLabels[1]}</td>
+                                      <td>{egraSummary.profile.emerging}</td>
+                                      <td>{egraSummary.profile.percentages.emerging.toFixed(1)}%</td>
+                                    </tr>
+                                    <tr>
+                                      <td>{egraLevelLabels[2]}</td>
+                                      <td>{egraSummary.profile.developing}</td>
+                                      <td>{egraSummary.profile.percentages.developing.toFixed(1)}%</td>
+                                    </tr>
+                                    <tr>
+                                      <td>{egraLevelLabels[3]}</td>
+                                      <td>{egraSummary.profile.transitional}</td>
+                                      <td>{egraSummary.profile.percentages.transitional.toFixed(1)}%</td>
+                                    </tr>
+                                    <tr>
+                                      <td>{egraLevelLabels[4]}</td>
+                                      <td>{egraSummary.profile.fluent}</td>
+                                      <td>{egraSummary.profile.percentages.fluent.toFixed(1)}%</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          }
+
+                          if (field.type === "participants") {
+                            return (
+                              <div key={field.key} className="full-width portal-participants-block">
+                                <div className="portal-participants-header">
+                                  {renderLabel(field.label, field.required)}
+                                  <button
+                                    className="button button-ghost"
+                                    type="button"
+                                    onClick={addTrainingParticipant}
+                                  >
+                                    + Add participant
+                                  </button>
+                                </div>
+                                <div className="table-wrap">
+                                  <table className="portal-participants-table">
+                                    <thead>
+                                      <tr>
+                                        <th>#</th>
+                                        <th>Participant Name</th>
+                                        <th>School ID</th>
+                                        <th>School Attached To</th>
+                                        <th>Role</th>
+                                        <th>Gender</th>
+                                        <th>Phone Contact</th>
+                                        <th>Action</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {trainingParticipants.map((row, index) => (
+                                        <tr key={`participant-${index + 1}`}>
+                                          <td>{index + 1}</td>
+                                          <td>
+                                            <input
+                                              value={row.participantName}
+                                              placeholder="Full name"
+                                              onChange={(event) =>
+                                                updateTrainingParticipant(
+                                                  index,
+                                                  "participantName",
+                                                  event.target.value,
+                                                )
+                                              }
+                                            />
+                                          </td>
+                                          <td>
+                                            {row.schoolAccountId
+                                              ? schoolsById.get(Number(row.schoolAccountId))?.schoolCode ?? "-"
+                                              : "-"}
+                                          </td>
+                                          <td>
+                                            <select
+                                              value={row.schoolAccountId}
+                                              onChange={(event) =>
+                                                updateTrainingParticipant(
+                                                  index,
+                                                  "schoolAccountId",
+                                                  event.target.value,
+                                                )
+                                              }
+                                            >
+                                              <option value="">Select school account</option>
+                                              {participantSchoolOptions.map((school) => (
+                                                <option key={school.id} value={String(school.id)}>
+                                                  {school.name} ({school.schoolCode})
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </td>
+                                          <td>
+                                            <select
+                                              value={row.role}
+                                              onChange={(event) =>
+                                                updateTrainingParticipant(index, "role", event.target.value)
+                                              }
+                                            >
+                                              <option value="">Select role</option>
+                                              <option value="Teacher">Teacher</option>
+                                              <option value="Leader">Leader</option>
+                                            </select>
+                                          </td>
+                                          <td>
+                                            <select
+                                              value={row.gender}
+                                              onChange={(event) =>
+                                                updateTrainingParticipant(index, "gender", event.target.value)
+                                              }
+                                            >
+                                              <option value="">Select gender</option>
+                                              <option value="Male">Male</option>
+                                              <option value="Female">Female</option>
+                                            </select>
+                                          </td>
+                                          <td>
+                                            <input
+                                              value={row.phoneContact}
+                                              placeholder="+2567xxxxxxxx"
+                                              inputMode="tel"
+                                              onChange={(event) =>
+                                                updateTrainingParticipant(
+                                                  index,
+                                                  "phoneContact",
+                                                  event.target.value,
+                                                )
+                                              }
+                                            />
+                                          </td>
+                                          <td>
+                                            <button
+                                              className="button button-ghost"
+                                              type="button"
+                                              onClick={() => removeTrainingParticipant(index)}
+                                            >
+                                              Remove
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </div>
+                            );
+                          }
+
+                          if (field.type === "textarea") {
+                            return (
+                              <label key={field.key} className="full-width">
+                                {renderLabel(field.label, field.required)}
+                                <textarea
+                                  rows={4}
+                                  value={Array.isArray(value) ? value.join(", ") : sanitizeForInput(value)}
+                                  placeholder={inferPlaceholder(field)}
+                                  onChange={(event) => updatePayloadField(field.key, event.target.value)}
+                                  required={field.required}
+                                />
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </label>
+                            );
+                          }
+
+                          if (field.type === "select") {
+                            return (
+                              <label key={field.key}>
+                                {renderLabel(field.label, field.required)}
+                                <select
+                                  value={Array.isArray(value) ? value[0] ?? "" : sanitizeForInput(value)}
+                                  onChange={(event) => updatePayloadField(field.key, event.target.value)}
+                                  required={field.required}
+                                >
+                                  <option value="">Select</option>
+                                  {(field.options ?? []).map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            );
+                          }
+
+                          if (field.type === "multiselect") {
+                            const selected = Array.isArray(value) ? value : [];
+                            return (
+                              <fieldset key={field.key} className="card full-width portal-form-options">
+                                <legend>
+                                  {field.label}
+                                  {field.required ? " *" : ""}
+                                </legend>
+                                <div className="portal-multiselect">
+                                  {(field.options ?? []).map((option) => {
+                                    const checked = selected.includes(option.value);
+                                    return (
+                                      <label key={option.value}>
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={(event) => {
+                                            const next = new Set(selected);
+                                            if (event.target.checked) {
+                                              next.add(option.value);
+                                            } else {
+                                              next.delete(option.value);
+                                            }
+                                            updatePayloadField(field.key, Array.from(next));
+                                          }}
+                                        />
+                                        <span>{option.label}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </fieldset>
+                            );
+                          }
+
+                          return (
+                            <label key={field.key}>
+                              {renderLabel(field.label, field.required)}
+                              {(() => {
+                                const isTrainingAutoAttendanceField =
+                                  config.module === "training" &&
+                                  (field.key === "numberAttended" ||
+                                    field.key === "femaleCount" ||
+                                    field.key === "maleCount");
+                                const computedValue =
+                                  field.key === "numberAttended"
+                                    ? String(trainingParticipantStats.total)
+                                    : field.key === "femaleCount"
+                                      ? String(trainingParticipantStats.female)
+                                      : field.key === "maleCount"
+                                        ? String(trainingParticipantStats.male)
+                                        : Array.isArray(value)
+                                          ? value.join(", ")
+                                          : sanitizeForInput(value);
+
+                                return (
+                                  <input
+                                    type={inferInputType(field)}
+                                    min={isNumberField(field) ? field.min : undefined}
+                                    max={isNumberField(field) ? field.max : undefined}
+                                    step={isNumberField(field) ? field.step ?? 1 : undefined}
+                                    inputMode={inferInputMode(field)}
+                                    autoComplete={inferAutoComplete(field)}
+                                    value={computedValue}
+                                    placeholder={inferPlaceholder(field)}
+                                    onChange={(event) =>
+                                      updatePayloadField(field.key, event.target.value)
+                                    }
+                                    required={field.required}
+                                    readOnly={isTrainingAutoAttendanceField}
+                                  />
+                                );
+                              })()}
+                              {field.helperText ? (
+                                <small className="portal-field-help">{field.helperText}</small>
+                              ) : null}
+                              {config.module === "training" &&
+                                (field.key === "numberAttended" ||
+                                  field.key === "femaleCount" ||
+                                  field.key === "maleCount") ? (
+                                <small className="portal-field-help">
+                                  Auto-calculated from participant entries.
+                                </small>
+                              ) : null}
+                            </label>
+                          );
+                        })}
+                      </div>
                     );
-                    return {
-                      ...prev,
-                      region: nextRegion,
-                      district: nextDistrict,
-                      schoolId: keepSchool ? prev.schoolId : "",
-                      schoolName: keepSchool ? selectedSchool?.name ?? prev.schoolName : "",
-                    };
-                  })
-                }
-                required
-              >
-                <option value="">Select region</option>
-                {ugandaRegions.map((entry) => (
-                  <option key={entry.region} value={entry.region}>
-                    {entry.region}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {renderLabel("District", true)}
-              <select
-                value={formState.district}
-                onChange={(event) =>
-                  setFormState((prev) => {
-                    const nextDistrict = event.target.value;
-                    const selectedSchool = prev.schoolId
-                      ? schoolsById.get(Number(prev.schoolId))
-                      : undefined;
-                    const keepSchool = Boolean(
-                      selectedSchool &&
-                      (!nextDistrict || selectedSchool.district === nextDistrict),
-                    );
-                    return {
-                      ...prev,
-                      district: nextDistrict,
-                      schoolId: keepSchool ? prev.schoolId : "",
-                      schoolName: keepSchool ? selectedSchool?.name ?? prev.schoolName : "",
-                    };
-                  })
-                }
-                required
-              >
-                <option value="">Select district</option>
-                {formDistrictOptions.map((district) => (
-                  <option key={district} value={district}>
-                    {district}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {config.module !== "training" ? (
-              <label>
-                {renderLabel("School Account", true)}
-                <select
-                  value={formState.schoolId}
-                  onChange={(event) =>
-                    setFormState((prev) => {
-                      const nextSchoolId = event.target.value;
-                      const selectedSchool = nextSchoolId
-                        ? schoolsById.get(Number(nextSchoolId))
-                        : undefined;
 
-                      return {
-                        ...prev,
-                        schoolId: nextSchoolId,
-                        schoolName: selectedSchool?.name ?? "",
-                        district: selectedSchool?.district ?? prev.district,
-                        region: selectedSchool
-                          ? inferRegionFromDistrict(selectedSchool.district) ?? prev.region
-                          : prev.region,
-                      };
-                    })
-                  }
-                  required
-                >
-                  <option value="">Select school account</option>
-                  {formSchoolOptions.map((school) => (
-                    <option key={school.id} value={String(school.id)}>
-                      {school.name} ({school.schoolCode})
-                    </option>
-                  ))}
-                </select>
-                {formSchoolOptions.length === 0 ? (
-                  <span className="portal-muted">
-                    No school account matches the selected region/district.
-                  </span>
-                ) : null}
-              </label>
-            ) : null}
-            <label>
-              {renderLabel(config.programTypeLabel, true)}
-              <select
-                value={formState.programType}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, programType: event.target.value }))
-                }
-                required
-              >
-                <option value="">Select</option>
-                {config.programTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              {renderLabel(
-                config.module === "training"
-                  ? "Next follow-up date (minimum 2 weeks)"
-                  : "Follow-up date",
-              )}
-              <input
-                type="date"
-                value={formState.followUpDate}
-                min={followUpMinDate}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, followUpDate: event.target.value }))
-                }
-                required={config.module === "training"}
-              />
-            </label>
-            <label>
-              {renderLabel("Workflow status")}
-              <input value={formState.status} readOnly />
-            </label>
-
-
-            {config.sections.map((section) => {
-              const content = (
-                <div className="form-grid">
-                  {section.fields.map((field) => {
-                    const value = formState.payload[field.key];
-                    if (field.type === "egraLearners") {
+                    if (section.collapsible) {
                       return (
-                        <div key={field.key} className="full-width">
-                          <div className="portal-participants-header">
-                            {renderLabel(field.label, field.required)}
-                            <button
-                              className="button button-ghost"
-                              type="button"
-                              onClick={handleOpenEgraModal}
-                            >
-                              + Add Learner Result
-                            </button>
+                        <details key={section.id} className="card full-width portal-form-section" open={false}>
+                          <summary className="portal-section-summary" style={{ cursor: 'pointer', outline: 'none' }}>
+                            <strong>{section.title}</strong>
+                            <span className="text-sm text-slate-500 ml-2">(Click to expand)</span>
+                          </summary>
+                          <div className="pt-4 border-t mt-2">
+                            {content}
                           </div>
-                          <p className="portal-muted">
-                            {field.helperText || "Enter learner-level scores exactly as captured on the EGRA baseline sheet."}
-                          </p>
-
-                          {/* Summary Table of Added Learners */}
-                          <div className="table-wrap egra-table-wrap">
-                            <table className="egra-table">
-                              <thead>
-                                <tr>
-                                  <th>No</th>
-                                  <th>Learner ID</th>
-                                  <th>Sex</th>
-                                  <th>Age</th>
-                                  <th>Fluency Level</th>
-                                  <th>Action</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {egraLearners.filter(rowHasAssessmentData).map((row) => (
-                                  <tr key={row.no}>
-                                    <td>{row.no}</td>
-                                    <td>{row.learnerId}</td>
-                                    <td>{row.sex}</td>
-                                    <td>{row.age}</td>
-                                    <td>{row.fluencyLevel || determineFluencyLevel(row.storyReading)}</td>
-                                    <td>
-                                      {/* Edit button could go here */}
-                                      <button type="button" className="button button-small button-ghost" onClick={() => {
-                                        setModalLearnerNo(row.no);
-                                        setModalLearnerId(row.learnerId);
-                                        setIsEgraModalOpen(true);
-                                      }}>Edit</button>
-                                    </td>
-                                  </tr>
-                                ))}
-                                {egraLearners.filter(rowHasAssessmentData).length === 0 && (
-                                  <tr><td colSpan={6} className="text-center p-4 text-slate-500">No learners added yet. Click "+ Add Learner Result" to begin.</td></tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
+                        </details>
                       );
                     }
 
-                    if (field.type === "egraSummary") {
-                      return (
-                        <div key={field.key} className="full-width table-wrap">
+                    return (
+                      <fieldset key={section.id} className="card full-width portal-form-section">
+                        <legend>{section.title}</legend>
+                        {content}
+                      </fieldset>
+                    );
+                  })}
+
+                  <fieldset className="card full-width portal-form-section">
+                    <legend>Evidence Locker</legend>
+                    <div className="form-grid">
+                      <label className="full-width">
+                        {renderLabel("Attach files (photo/video/PDF/document)")}
+                        <input
+                          key={fileInputKey}
+                          type="file"
+                          accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                          multiple
+                          onChange={(event) =>
+                            setSelectedFiles(event.target.files ? Array.from(event.target.files) : [])
+                          }
+                        />
+                        <small className="portal-field-help">
+                          Files are uploaded after Save Draft or Submit.
+                        </small>
+                      </label>
+                      <div className="full-width">
+                        {selectedFiles.length > 0 ? (
+                          <div>
+                            <p>{selectedFiles.length} file(s) selected.</p>
+                            <ul className="portal-file-list">
+                              {selectedFiles.map((file) => (
+                                <li key={`${file.name}-${file.size}`}>
+                                  {file.name} ({Math.max(1, Math.round(file.size / 1024))} KB)
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <p>No new files selected.</p>
+                        )}
+                      </div>
+                      {evidenceItems.length > 0 ? (
+                        <div className="full-width table-wrap">
                           <table>
                             <thead>
                               <tr>
-                                <th>Baseline Snapshot</th>
-                                <th>Boys Avg</th>
-                                <th>Girls Avg</th>
-                                <th>Class Avg</th>
+                                <th>File</th>
+                                <th>Uploaded</th>
+                                <th>Download</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {egraMetricLabels.map((metric) => (
-                                <tr key={metric.key}>
-                                  <td>{metric.label}</td>
-                                  <td>{egraSummary.averages.boys[metric.key].toFixed(1)}</td>
-                                  <td>{egraSummary.averages.girls[metric.key].toFixed(1)}</td>
-                                  <td>{egraSummary.averages.class[metric.key].toFixed(1)}</td>
+                              {evidenceItems.map((item) => (
+                                <tr key={item.id}>
+                                  <td>{item.fileName}</td>
+                                  <td>{new Date(item.createdAt).toLocaleString()}</td>
+                                  <td>
+                                    <a href={item.downloadUrl}>Download</a>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         </div>
-                      );
-                    }
-
-                    if (field.type === "egraProfile") {
-                      return (
-                        <div key={field.key} className="full-width table-wrap">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Reading Level</th>
-                                <th>No. Learners</th>
-                                <th>% Class</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td>{egraLevelLabels[0]}</td>
-                                <td>{egraSummary.profile.nonReaders}</td>
-                                <td>{egraSummary.profile.percentages.nonReaders.toFixed(1)}%</td>
-                              </tr>
-                              <tr>
-                                <td>{egraLevelLabels[1]}</td>
-                                <td>{egraSummary.profile.emerging}</td>
-                                <td>{egraSummary.profile.percentages.emerging.toFixed(1)}%</td>
-                              </tr>
-                              <tr>
-                                <td>{egraLevelLabels[2]}</td>
-                                <td>{egraSummary.profile.developing}</td>
-                                <td>{egraSummary.profile.percentages.developing.toFixed(1)}%</td>
-                              </tr>
-                              <tr>
-                                <td>{egraLevelLabels[3]}</td>
-                                <td>{egraSummary.profile.transitional}</td>
-                                <td>{egraSummary.profile.percentages.transitional.toFixed(1)}%</td>
-                              </tr>
-                              <tr>
-                                <td>{egraLevelLabels[4]}</td>
-                                <td>{egraSummary.profile.fluent}</td>
-                                <td>{egraSummary.profile.percentages.fluent.toFixed(1)}%</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      );
-                    }
-
-                    if (field.type === "participants") {
-                      return (
-                        <div key={field.key} className="full-width portal-participants-block">
-                          <div className="portal-participants-header">
-                            {renderLabel(field.label, field.required)}
-                            <button
-                              className="button button-ghost"
-                              type="button"
-                              onClick={addTrainingParticipant}
-                            >
-                              + Add participant
-                            </button>
-                          </div>
-                          <div className="table-wrap">
-                            <table className="portal-participants-table">
-                              <thead>
-                                <tr>
-                                  <th>#</th>
-                                  <th>Participant Name</th>
-                                  <th>School ID</th>
-                                  <th>School Attached To</th>
-                                  <th>Role</th>
-                                  <th>Gender</th>
-                                  <th>Phone Contact</th>
-                                  <th>Action</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {trainingParticipants.map((row, index) => (
-                                  <tr key={`participant-${index + 1}`}>
-                                    <td>{index + 1}</td>
-                                    <td>
-                                      <input
-                                        value={row.participantName}
-                                        placeholder="Full name"
-                                        onChange={(event) =>
-                                          updateTrainingParticipant(
-                                            index,
-                                            "participantName",
-                                            event.target.value,
-                                          )
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      {row.schoolAccountId
-                                        ? schoolsById.get(Number(row.schoolAccountId))?.schoolCode ?? "-"
-                                        : "-"}
-                                    </td>
-                                    <td>
-                                      <select
-                                        value={row.schoolAccountId}
-                                        onChange={(event) =>
-                                          updateTrainingParticipant(
-                                            index,
-                                            "schoolAccountId",
-                                            event.target.value,
-                                          )
-                                        }
-                                      >
-                                        <option value="">Select school account</option>
-                                        {participantSchoolOptions.map((school) => (
-                                          <option key={school.id} value={String(school.id)}>
-                                            {school.name} ({school.schoolCode})
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </td>
-                                    <td>
-                                      <select
-                                        value={row.role}
-                                        onChange={(event) =>
-                                          updateTrainingParticipant(index, "role", event.target.value)
-                                        }
-                                      >
-                                        <option value="">Select role</option>
-                                        <option value="Teacher">Teacher</option>
-                                        <option value="Leader">Leader</option>
-                                      </select>
-                                    </td>
-                                    <td>
-                                      <select
-                                        value={row.gender}
-                                        onChange={(event) =>
-                                          updateTrainingParticipant(index, "gender", event.target.value)
-                                        }
-                                      >
-                                        <option value="">Select gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                      </select>
-                                    </td>
-                                    <td>
-                                      <input
-                                        value={row.phoneContact}
-                                        placeholder="+2567xxxxxxxx"
-                                        inputMode="tel"
-                                        onChange={(event) =>
-                                          updateTrainingParticipant(
-                                            index,
-                                            "phoneContact",
-                                            event.target.value,
-                                          )
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <button
-                                        className="button button-ghost"
-                                        type="button"
-                                        onClick={() => removeTrainingParticipant(index)}
-                                      >
-                                        Remove
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                          {field.helperText ? (
-                            <small className="portal-field-help">{field.helperText}</small>
-                          ) : null}
-                        </div>
-                      );
-                    }
-
-                    if (field.type === "textarea") {
-                      return (
-                        <label key={field.key} className="full-width">
-                          {renderLabel(field.label, field.required)}
-                          <textarea
-                            rows={4}
-                            value={Array.isArray(value) ? value.join(", ") : sanitizeForInput(value)}
-                            placeholder={inferPlaceholder(field)}
-                            onChange={(event) => updatePayloadField(field.key, event.target.value)}
-                            required={field.required}
-                          />
-                          {field.helperText ? (
-                            <small className="portal-field-help">{field.helperText}</small>
-                          ) : null}
-                        </label>
-                      );
-                    }
-
-                    if (field.type === "select") {
-                      return (
-                        <label key={field.key}>
-                          {renderLabel(field.label, field.required)}
-                          <select
-                            value={Array.isArray(value) ? value[0] ?? "" : sanitizeForInput(value)}
-                            onChange={(event) => updatePayloadField(field.key, event.target.value)}
-                            required={field.required}
-                          >
-                            <option value="">Select</option>
-                            {(field.options ?? []).map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      );
-                    }
-
-                    if (field.type === "multiselect") {
-                      const selected = Array.isArray(value) ? value : [];
-                      return (
-                        <fieldset key={field.key} className="card full-width portal-form-options">
-                          <legend>
-                            {field.label}
-                            {field.required ? " *" : ""}
-                          </legend>
-                          <div className="portal-multiselect">
-                            {(field.options ?? []).map((option) => {
-                              const checked = selected.includes(option.value);
-                              return (
-                                <label key={option.value}>
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={(event) => {
-                                      const next = new Set(selected);
-                                      if (event.target.checked) {
-                                        next.add(option.value);
-                                      } else {
-                                        next.delete(option.value);
-                                      }
-                                      updatePayloadField(field.key, Array.from(next));
-                                    }}
-                                  />
-                                  <span>{option.label}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </fieldset>
-                      );
-                    }
-
-                    return (
-                      <label key={field.key}>
-                        {renderLabel(field.label, field.required)}
-                        {(() => {
-                          const isTrainingAutoAttendanceField =
-                            config.module === "training" &&
-                            (field.key === "numberAttended" ||
-                              field.key === "femaleCount" ||
-                              field.key === "maleCount");
-                          const computedValue =
-                            field.key === "numberAttended"
-                              ? String(trainingParticipantStats.total)
-                              : field.key === "femaleCount"
-                                ? String(trainingParticipantStats.female)
-                                : field.key === "maleCount"
-                                  ? String(trainingParticipantStats.male)
-                                  : Array.isArray(value)
-                                    ? value.join(", ")
-                                    : sanitizeForInput(value);
-
-                          return (
-                            <input
-                              type={inferInputType(field)}
-                              min={isNumberField(field) ? field.min : undefined}
-                              max={isNumberField(field) ? field.max : undefined}
-                              step={isNumberField(field) ? field.step ?? 1 : undefined}
-                              inputMode={inferInputMode(field)}
-                              autoComplete={inferAutoComplete(field)}
-                              value={computedValue}
-                              placeholder={inferPlaceholder(field)}
-                              onChange={(event) =>
-                                updatePayloadField(field.key, event.target.value)
-                              }
-                              required={field.required}
-                              readOnly={isTrainingAutoAttendanceField}
-                            />
-                          );
-                        })()}
-                        {field.helperText ? (
-                          <small className="portal-field-help">{field.helperText}</small>
-                        ) : null}
-                        {config.module === "training" &&
-                          (field.key === "numberAttended" ||
-                            field.key === "femaleCount" ||
-                            field.key === "maleCount") ? (
-                          <small className="portal-field-help">
-                            Auto-calculated from participant entries.
-                          </small>
-                        ) : null}
-                      </label>
-                    );
-                  })}
-                </div>
-              );
-
-              if (section.collapsible) {
-                return (
-                  <details key={section.id} className="card full-width portal-form-section" open={false}>
-                    <summary className="portal-section-summary" style={{ cursor: 'pointer', outline: 'none' }}>
-                      <strong>{section.title}</strong>
-                      <span className="text-sm text-slate-500 ml-2">(Click to expand)</span>
-                    </summary>
-                    <div className="pt-4 border-t mt-2">
-                      {content}
+                      ) : null}
                     </div>
-                  </details>
-                );
-              }
+                  </fieldset>
 
-              return (
-                <fieldset key={section.id} className="card full-width portal-form-section">
-                  <legend>{section.title}</legend>
-                  {content}
-                </fieldset>
-              );
-            })}
+                  {canReview && formState.id ? (
+                    <label className="full-width">
+                      {renderLabel("Supervisor review note")}
+                      <textarea
+                        rows={2}
+                        value={formState.reviewNote}
+                        onChange={(event) =>
+                          setFormState((prev) => ({ ...prev, reviewNote: event.target.value }))
+                        }
+                      />
+                    </label>
+                  ) : null}
 
-            <fieldset className="card full-width portal-form-section">
-              <legend>Evidence Locker</legend>
-              <div className="form-grid">
-                <label className="full-width">
-                  {renderLabel("Attach files (photo/video/PDF/document)")}
-                  <input
-                    key={fileInputKey}
-                    type="file"
-                    accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-                    multiple
-                    onChange={(event) =>
-                      setSelectedFiles(event.target.files ? Array.from(event.target.files) : [])
-                    }
-                  />
-                  <small className="portal-field-help">
-                    Files are uploaded after Save Draft or Submit.
-                  </small>
-                </label>
-                <div className="full-width">
-                  {selectedFiles.length > 0 ? (
-                    <div>
-                      <p>{selectedFiles.length} file(s) selected.</p>
-                      <ul className="portal-file-list">
-                        {selectedFiles.map((file) => (
-                          <li key={`${file.name}-${file.size}`}>
-                            {file.name} ({Math.max(1, Math.round(file.size / 1024))} KB)
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <p>No new files selected.</p>
-                  )}
-                </div>
-                {evidenceItems.length > 0 ? (
-                  <div className="full-width table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>File</th>
-                          <th>Uploaded</th>
-                          <th>Download</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {evidenceItems.map((item) => (
-                          <tr key={item.id}>
-                            <td>{item.fileName}</td>
-                            <td>{new Date(item.createdAt).toLocaleString()}</td>
-                            <td>
-                              <a href={item.downloadUrl}>Download</a>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="full-width action-row portal-form-actions">
+                    <button className="button" type="button" disabled={saving} onClick={() => void submitRecord("Draft")}>
+                      {saving ? "Saving..." : "Save Draft"}
+                    </button>
+                    <button
+                      className="button button-ghost"
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void submitRecord("Submitted")}
+                    >
+                      {saving ? "Saving..." : "Submit"}
+                    </button>
+                    {canReview && formState.id ? (
+                      <>
+                        <button
+                          className="button"
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void submitReviewStatus("Approved")}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="button button-ghost"
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void submitReviewStatus("Returned")}
+                        >
+                          Return
+                        </button>
+                      </>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
-            </fieldset>
-
-            {canReview && formState.id ? (
-              <label className="full-width">
-                {renderLabel("Supervisor review note")}
-                <textarea
-                  rows={2}
-                  value={formState.reviewNote}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, reviewNote: event.target.value }))
-                  }
-                />
-              </label>
-            ) : null}
-
-            <div className="full-width action-row portal-form-actions">
-              <button className="button" type="button" disabled={saving} onClick={() => void submitRecord("Draft")}>
-                {saving ? "Saving..." : "Save Draft"}
-              </button>
-              <button
-                className="button button-ghost"
-                type="button"
-                disabled={saving}
-                onClick={() => void submitRecord("Submitted")}
-              >
-                {saving ? "Saving..." : "Submit"}
-              </button>
-              {canReview && formState.id ? (
-                <>
-                  <button
-                    className="button"
-                    type="button"
-                    disabled={saving}
-                    onClick={() => void submitReviewStatus("Approved")}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    className="button button-ghost"
-                    type="button"
-                    disabled={saving}
-                    onClick={() => void submitReviewStatus("Returned")}
-                  >
-                    Return
-                  </button>
-                </>
-              ) : null}
+                </form>
+              </section>
             </div>
-          </form>
-        </section >
-      ) : null
-      }
+          </div>,
+          document.body,
+        )
+        : null}
       <EgraLearnerInputModal
         isOpen={isEgraModalOpen}
         onClose={() => setIsEgraModalOpen(false)}

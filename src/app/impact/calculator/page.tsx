@@ -511,8 +511,8 @@ export default function ImpactCalculatorPage() {
 
       <section className="section" id="cost-per-child">
         <div className="container cost-per-child-section">
-          <div className="section-head">
-            <h2>Cost to Support Reading in One School</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">Cost to Support Reading in One School</h2>
             <p>
               Transparent pricing that shows exactly what your support delivers, down to
               the cost per child.

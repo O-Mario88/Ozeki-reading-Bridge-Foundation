@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import schoolSystemsPhoto from "../../../assets/photos/Literacy Training in Loro - Oyam District.jpg";
+import schoolSystemsPhoto from "../../../assets/photos/Amolatar District Literacy.jpg";
 
 export const metadata = {
   title: "School Literacy Program Strengthening (Systems & Routines)",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function SchoolSystemsRoutinesPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -53,8 +53,8 @@ export default function SchoolSystemsRoutinesPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>How We Do It (What Happens in a School)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">How We Do It (What Happens in a School)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -112,7 +112,7 @@ export default function SchoolSystemsRoutinesPage() {
               </ul>
             </article>
 
-            <article className="card">
+            <article className="card full-width">
               <h3>4) Accountability &amp; Supervision (Supportive, not punitive)</h3>
               <p>
                 We help leaders supervise reading lessons using short checklists and
@@ -131,7 +131,7 @@ export default function SchoolSystemsRoutinesPage() {
       </section>
 
       <section className="section">
-        <div className="container cards-grid">
+        <div className="container cards-grid-two">
           <article className="card">
             <h3>Focus Areas</h3>
             <ul>
@@ -156,7 +156,7 @@ export default function SchoolSystemsRoutinesPage() {
             </ul>
           </article>
 
-          <article className="card">
+          <article className="card full-width">
             <h3>Primary CTA</h3>
             <p>
               Book a setup visit to establish literacy routines and accountability

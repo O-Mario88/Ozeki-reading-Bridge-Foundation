@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import remedialPhoto from "../../../assets/photos/PXL_20250531_090804621.jpg";
+import remedialPhoto from "../../../assets/photos/PXL_20260217_124358059.jpg";
 
 export const metadata = {
   title: "Remedial & Catch-Up Reading Interventions",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function RemedialCatchUpReadingInterventionsPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -52,8 +52,8 @@ export default function RemedialCatchUpReadingInterventionsPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>How We Do It (Our Catch-Up Model)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">How We Do It (Our Catch-Up Model)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -158,7 +158,7 @@ export default function RemedialCatchUpReadingInterventionsPage() {
             </article>
           </div>
 
-          <div className="cards-grid" style={{ marginTop: "2rem" }}>
+          <div className="cards-grid-two" style={{ marginTop: "2rem" }}>
             <article className="card">
               <h3>Focus Areas (What the Intervention Targets)</h3>
               <ul>
@@ -187,7 +187,7 @@ export default function RemedialCatchUpReadingInterventionsPage() {
               </ul>
             </article>
 
-            <article className="card">
+            <article className="card full-width">
               <h3>Outcome</h3>
               <p>
                 At-risk learners gain foundational reading skills faster because

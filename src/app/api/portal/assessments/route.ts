@@ -7,18 +7,38 @@ import {
   saveAssessmentRecord,
 } from "@/lib/db";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { AssessmentRecordInput } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+const optionalScore = (max: number) =>
+  z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? null : value),
+    z.coerce.number().int().min(0).max(max).nullable(),
+  );
+
 const assessmentSchema = z.object({
-  schoolName: z.string().min(2),
-  district: z.string().min(2),
-  subCounty: z.string().min(2),
-  parish: z.string().min(2),
-  village: z.string().optional(),
-  learnersAssessed: z.coerce.number().int().min(0),
-  storiesPublished: z.coerce.number().int().min(0),
+  childName: z.string().min(2),
+  childId: z.string().min(2),
+  gender: z.enum(["Boy", "Girl", "Other"]),
+  age: z.coerce.number().int().min(3).max(20),
+  schoolId: z.coerce.number().int().min(1),
+  classGrade: z.string().min(1),
   assessmentDate: z.string().min(6),
+  assessmentType: z.enum(["baseline", "progress", "endline"]),
+  letterIdentificationScore: optionalScore(100).optional(),
+  soundIdentificationScore: optionalScore(100).optional(),
+  decodableWordsScore: optionalScore(100).optional(),
+  undecodableWordsScore: optionalScore(100).optional(),
+  madeUpWordsScore: optionalScore(100).optional(),
+  storyReadingScore: optionalScore(150).optional(),
+  readingComprehensionScore: optionalScore(100).optional(),
+  letterSoundScore: optionalScore(100).optional(),
+  decodingScore: optionalScore(100).optional(),
+  fluencyScore: optionalScore(150).optional(),
+  comprehensionScore: optionalScore(100).optional(),
+
+  notes: z.string().optional(),
 });
 
 async function requireAuth() {
@@ -51,7 +71,27 @@ export async function POST(request: Request) {
 
   try {
     const payload = assessmentSchema.parse(await request.json());
-    const assessment = saveAssessmentRecord(payload, user.id);
+    const normalizedPayload: AssessmentRecordInput = {
+      childName: payload.childName,
+      childId: payload.childId,
+      gender: payload.gender,
+      age: payload.age,
+      schoolId: payload.schoolId,
+      classGrade: payload.classGrade,
+      assessmentDate: payload.assessmentDate,
+      assessmentType: payload.assessmentType,
+      letterIdentificationScore: payload.letterIdentificationScore ?? payload.letterSoundScore ?? null,
+      soundIdentificationScore: payload.soundIdentificationScore ?? payload.letterSoundScore ?? null,
+      decodableWordsScore: payload.decodableWordsScore ?? payload.decodingScore ?? null,
+      undecodableWordsScore: payload.undecodableWordsScore ?? payload.decodingScore ?? null,
+      madeUpWordsScore: payload.madeUpWordsScore ?? null,
+      storyReadingScore: payload.storyReadingScore ?? payload.fluencyScore ?? null,
+      readingComprehensionScore:
+        payload.readingComprehensionScore ?? payload.comprehensionScore ?? null,
+      notes: payload.notes,
+    };
+
+    const assessment = saveAssessmentRecord(normalizedPayload, user.id);
 
     return NextResponse.json({ ok: true, assessment });
   } catch (error) {

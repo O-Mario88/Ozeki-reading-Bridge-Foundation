@@ -123,7 +123,15 @@ export interface BlogPost {
   views?: number;
 }
 
-export type PortalUserRole = "Staff" | "Volunteer";
+export type PortalUserRole =
+  | "Staff"
+  | "Volunteer"
+  | "Admin"
+  | "Coach"
+  | "DataClerk"
+  | "SchoolLeader"
+  | "Partner"
+  | "Government";
 
 export interface PortalUser {
   id: number;
@@ -131,10 +139,272 @@ export interface PortalUser {
   email: string;
   phone: string | null;
   role: PortalUserRole;
+  geographyScope: string | null;
   isSupervisor: boolean;
   isME: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+}
+
+/* ─── NLIS Fidelity ───────────────────────────────── */
+
+export type FidelityBand = "Strong" | "Developing" | "Needs support" | "High priority";
+
+export interface FidelityDriverScore {
+  driver: string;
+  label: string;
+  score: number;
+  weight: number;
+  detail: string;
+}
+
+export interface FidelityScore {
+  scopeType: "country" | "region" | "sub_region" | "district" | "sub_county" | "parish" | "school";
+  scopeId: string;
+  totalScore: number;
+  band: FidelityBand;
+  drivers: FidelityDriverScore[];
+  sampleSize: number;
+  period: string;
+  lastUpdated: string;
+}
+
+export interface FidelityDashboardData {
+  scope: FidelityScore;
+  children: FidelityScore[];
+  rankings: Array<{ name: string; score: number; band: FidelityBand }>;
+}
+
+/* ─── NLIS Cost Tracking ──────────────────────────── */
+
+export type CostCategory =
+  | "transport"
+  | "meals"
+  | "printing"
+  | "staff_time"
+  | "materials"
+  | "training"
+  | "assessment"
+  | "other";
+
+export interface CostEntryInput {
+  scopeType: "country" | "region" | "district" | "school";
+  scopeValue: string;
+  period: string;
+  category: CostCategory;
+  amount: number;
+  notes?: string;
+}
+
+export interface CostEntryRecord extends CostEntryInput {
+  id: number;
+  createdByUserId: number;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface CostEffectivenessData {
+  totalCost: number;
+  costPerSchool: number | null;
+  costPerTeacher: number | null;
+  costPerLearnerAssessed: number | null;
+  costPerLearnerImproved: number | null;
+  period: string;
+  scopeType: string;
+  scopeValue: string;
+  breakdown: Array<{ category: CostCategory; amount: number }>;
+}
+
+export interface ImpactCalculatorResult {
+  inputAmount: number;
+  estimatedSchools: number;
+  estimatedTeachers: number;
+  estimatedLearners: number;
+  estimatedOutcomes: string;
+  assumptions: string[];
+  methodology: string;
+}
+
+/* ─── NLIS Audit Logging ──────────────────────────── */
+
+export interface AuditLogEntry {
+  id: number;
+  userId: number;
+  userName: string;
+  action: string;
+  targetTable: string;
+  targetId: number | null;
+  detail: string | null;
+  ipAddress: string | null;
+  timestamp: string;
+}
+
+/* ─── NLIS Observation Rubrics ────────────────────── */
+
+export interface RubricIndicator {
+  key: string;
+  label: string;
+  score: number;
+  maxScore: number;
+}
+
+export interface ObservationRubricInput {
+  schoolId: number;
+  teacherUid: string;
+  date: string;
+  lessonType: string;
+  indicators: RubricIndicator[];
+  strengths: string;
+  gaps: string;
+  coachingActions: string;
+}
+
+export interface ObservationRubricRecord extends Omit<ObservationRubricInput, "indicators"> {
+  id: number;
+  overallScore: number;
+  indicatorsJson: string;
+  createdByUserId: number;
+  createdByName: string;
+  createdAt: string;
+}
+
+/* ─── NLIS Interventions ──────────────────────────── */
+
+export interface InterventionGroupInput {
+  schoolId: number;
+  grade: string;
+  targetSkill: string;
+  learnerUids: string[];
+  schedule: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface InterventionGroupRecord extends Omit<InterventionGroupInput, "learnerUids"> {
+  id: number;
+  learnersJson: string;
+  createdByUserId: number;
+  createdAt: string;
+}
+
+export interface InterventionSessionInput {
+  groupId: number;
+  date: string;
+  attendance: number;
+  skillsPracticed: string;
+  quickCheckScore: number | null;
+  notes: string;
+}
+
+export interface InterventionSessionRecord extends InterventionSessionInput {
+  id: number;
+  createdByUserId: number;
+  createdAt: string;
+}
+
+/* ─── NLIS Materials Distribution ─────────────────── */
+
+export interface MaterialDistributionInput {
+  schoolId: number;
+  date: string;
+  materialType: string;
+  quantity: number;
+  receiptPath?: string;
+  notes?: string;
+}
+
+export interface MaterialDistributionRecord extends MaterialDistributionInput {
+  id: number;
+  createdByUserId: number;
+  createdByName: string;
+  createdAt: string;
+}
+
+/* ─── NLIS Consent ────────────────────────────────── */
+
+export type ConsentType = "photo" | "video" | "story";
+export type ConsentUsage = "public" | "partner" | "internal";
+
+export interface ConsentRecordInput {
+  schoolId: number;
+  consentType: ConsentType;
+  source: string;
+  date: string;
+  allowedUsage: ConsentUsage;
+  linkedFiles: string;
+  expiryDate?: string;
+}
+
+export interface ConsentRecordEntry extends ConsentRecordInput {
+  id: number;
+  createdByUserId: number;
+  createdAt: string;
+}
+
+/* ─── NLIS Data Quality ───────────────────────────── */
+
+export interface DataQualitySummary {
+  scopeType: string;
+  scopeId: string;
+  completenessScore: number;
+  schoolsMissingBaseline: number;
+  schoolsMissingEndline: number;
+  outlierCount: number;
+  duplicateLearnersDetected: number;
+  lastChecked: string;
+}
+
+/* ─── NLIS Learning Gains ─────────────────────────── */
+
+export interface DomainGainData {
+  domain: string;
+  baselineAvg: number | null;
+  endlineAvg: number | null;
+  change: number | null;
+  sampleSize: number;
+  belowBenchmarkPct: number | null;
+  approachingPct: number | null;
+  atBenchmarkPct: number | null;
+}
+
+export interface LearningGainsData {
+  scopeType: string;
+  scopeId: string;
+  period: string;
+  domains: DomainGainData[];
+  schoolImprovementIndex: number | null;
+  lastUpdated: string;
+}
+
+/* ─── NLIS Government View ────────────────────────── */
+
+export interface DistrictLeagueRow {
+  district: string;
+  region: string;
+  outcomesScore: number | null;
+  fidelityScore: number | null;
+  rank: number;
+  priorityFlag: "urgent" | "watch" | "on-track";
+  schoolsSupported: number;
+  learnersAssessed: number;
+}
+
+export interface GovernmentViewData {
+  leagueTable: DistrictLeagueRow[];
+  generatedAt: string;
+  period: string;
+}
+
+/* ─── NLIS Geography ──────────────────────────────── */
+
+export interface GeographyMasterRecord {
+  id: number;
+  name: string;
+  code: string;
+  parentId: number | null;
+  level: "country" | "region" | "district";
+  metadata: string | null;
+  createdAt: string;
 }
 
 export type ParticipantRole = "Classroom teacher" | "School Leader";
@@ -170,28 +440,67 @@ export interface TrainingSessionRecord {
   createdAt: string;
 }
 
+export type AssessmentType = "baseline" | "progress" | "endline";
+export type LearnerGender = "Boy" | "Girl" | "Other";
+
 export interface AssessmentRecordInput {
-  schoolName: string;
-  district: string;
-  subCounty: string;
-  parish: string;
-  village?: string;
-  learnersAssessed: number;
-  storiesPublished: number;
+  childName: string;
+  childId: string;
+  gender: LearnerGender;
+  age: number;
+  schoolId: number;
+  classGrade: string;
   assessmentDate: string;
+  assessmentType: AssessmentType;
+  letterIdentificationScore: number | null;
+  soundIdentificationScore: number | null;
+  decodableWordsScore: number | null;
+  undecodableWordsScore: number | null;
+  madeUpWordsScore: number | null;
+  storyReadingScore: number | null;
+  readingComprehensionScore: number | null;
+  notes?: string;
 }
 
-export interface AssessmentRecord {
+export interface AssessmentRecord extends AssessmentRecordInput {
   id: number;
-  schoolName: string;
-  district: string;
-  subCounty: string;
-  parish: string;
-  village: string | null;
-  learnersAssessed: number;
-  storiesPublished: number;
-  assessmentDate: string;
+  createdByUserId: number;
   createdAt: string;
+}
+
+export interface DomainOutcomes {
+  baselineName: string;
+  baselineScore: number;
+  endlineName: string;
+  endlineScore: number;
+  sampleSize: number;
+}
+
+export interface AggregatedImpactData {
+  level: "country" | "region" | "sub_region" | "district" | "sub_county" | "parish" | "school";
+  name: string;
+  kpis: {
+    schoolsSupported: number;
+    teachersTrained: number;
+    learnersEnrolled: number;
+    learnersAssessed: number;
+  };
+  outcomesByDomain: {
+    letterIdentification: DomainOutcomes;
+    soundIdentification: DomainOutcomes;
+    decodableWords: DomainOutcomes;
+    undecodableWords: DomainOutcomes;
+    madeUpWords: DomainOutcomes;
+    storyReading: DomainOutcomes;
+    readingComprehension: DomainOutcomes;
+  };
+  funnel: {
+    targetSchools: number;
+    schoolsTrained: number;
+    schoolsVisited: number;
+    schoolsAssessedBaseline: number;
+    schoolsAssessedEndline: number;
+  };
 }
 
 export interface OnlineTrainingEventInput {
@@ -404,6 +713,81 @@ export interface PortalAnalyticsData {
   recentTestimonials: PortalTestimonialRecord[];
 }
 
+export interface PortalSchoolReportRow {
+  country?: string | null;
+  region?: string | null;
+  subRegion?: string | null;
+  district: string;
+  subCounty?: string | null;
+  parish?: string | null;
+  village?: string | null;
+  schoolId: number;
+  schoolCode: string;
+  schoolName: string;
+  accountOwner: string;
+  currentEnrollment: number;
+  lastActivityDate: string | null;
+  schoolStatus: "Open";
+  phone: string | null;
+  primaryContact: string | null;
+  trainings: number;
+  schoolVisits: number;
+  storyActivities: number;
+  resourcesDistributed: number;
+  teacherAssessments: number;
+  teacherObservationAverage: number | null;
+  teacherObservationCount: number;
+  learnerAssessments: number;
+  contactsCount: number;
+  totalRecords: number;
+}
+
+export interface PortalDistrictReportSummary {
+  country?: string | null;
+  region?: string | null;
+  subRegion?: string | null;
+  district: string;
+  schools: number;
+  enrollment: number;
+  trainings: number;
+  schoolVisits: number;
+  storyActivities: number;
+  resourcesDistributed: number;
+  teacherAssessments: number;
+  teacherObservationCount: number;
+  learnerAssessments: number;
+  schoolsWithContacts: number;
+  totalRecords: number;
+}
+
+export interface PortalObservationEvent {
+  schoolId: number;
+  date: string;
+  overallScore: number;
+  indicators: RubricIndicator[];
+}
+
+export interface PortalOperationalReportsData {
+  generatedAt: string;
+  totals: {
+    totalRecords: number;
+    totalSchools: number;
+    totalEnrollment: number;
+    totalDistricts: number;
+    trainings: number;
+    schoolVisits: number;
+    storyActivities: number;
+    resourcesDistributed: number;
+    teacherAssessments: number;
+    learnerAssessments: number;
+    schoolsWithContacts: number;
+    teacherObservationCount: number;
+  };
+  districts: PortalDistrictReportSummary[];
+  schools: PortalSchoolReportRow[];
+  observationEvents: PortalObservationEvent[];
+}
+
 export interface SchoolDirectoryInput {
   name: string;
   district: string;
@@ -479,10 +863,17 @@ export interface PortalTestimonialRecord {
   schoolName: string;
   district: string;
   storyText: string;
+  videoSourceType: "upload" | "youtube";
   videoFileName: string;
   videoStoredPath: string;
   videoMimeType: string;
   videoSizeBytes: number;
+  youtubeVideoId: string | null;
+  youtubeVideoTitle: string | null;
+  youtubeChannelTitle: string | null;
+  youtubeThumbnailUrl: string | null;
+  youtubeEmbedUrl: string | null;
+  youtubeWatchUrl: string | null;
   photoFileName: string | null;
   photoStoredPath: string | null;
   photoMimeType: string | null;
@@ -592,11 +983,13 @@ export interface ImpactReportLearningOutcomeMetric {
 }
 
 export interface ImpactReportLearningOutcomesBlock {
-  letterSoundKnowledge: ImpactReportLearningOutcomeMetric;
-  decodingAccuracy: ImpactReportLearningOutcomeMetric;
-  oralReadingFluencyWcpm: ImpactReportLearningOutcomeMetric;
-  oralReadingAccuracy: ImpactReportLearningOutcomeMetric;
-  comprehension: ImpactReportLearningOutcomeMetric;
+  letterIdentification: ImpactReportLearningOutcomeMetric;
+  soundIdentification: ImpactReportLearningOutcomeMetric;
+  decodableWords: ImpactReportLearningOutcomeMetric;
+  undecodableWords: ImpactReportLearningOutcomeMetric;
+  madeUpWords: ImpactReportLearningOutcomeMetric;
+  storyReading: ImpactReportLearningOutcomeMetric;
+  readingComprehension: ImpactReportLearningOutcomeMetric;
   proficiencyBandMovementPercent: number | null;
   reductionInNonReadersPercent: number | null;
 }

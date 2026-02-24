@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AssessmentRecord,
   OnlineTrainingEventRecord,
@@ -62,6 +63,29 @@ export function TrainingPortalManager({
   const [savingOnline, setSavingOnline] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const [showTrainingForm, setShowTrainingForm] = useState(false);
+  const [showAssessmentForm, setShowAssessmentForm] = useState(false);
+  const [showOnlineForm, setShowOnlineForm] = useState(false);
+
+  const anyFormOpen = showTrainingForm || showAssessmentForm || showOnlineForm;
+
+  useEffect(() => {
+    if (!anyFormOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowTrainingForm(false);
+        setShowAssessmentForm(false);
+        setShowOnlineForm(false);
+      }
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [anyFormOpen]);
 
   function addParticipant() {
     setParticipants((prev) => [...prev, createParticipant(nextParticipantId)]);
@@ -157,18 +181,26 @@ export function TrainingPortalManager({
   async function submitAssessment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSavingAssessment(true);
-    setAssessmentStatus("Saving assessment data...");
+    setAssessmentStatus("Saving child assessment...");
 
     const formData = new FormData(event.currentTarget);
     const payload = {
-      schoolName: String(formData.get("schoolName") ?? ""),
-      district: String(formData.get("district") ?? ""),
-      subCounty: String(formData.get("subCounty") ?? ""),
-      parish: String(formData.get("parish") ?? ""),
-      village: String(formData.get("village") ?? ""),
-      learnersAssessed: Number(formData.get("learnersAssessed") ?? 0),
-      storiesPublished: Number(formData.get("storiesPublished") ?? 0),
+      childName: String(formData.get("childName") ?? ""),
+      childId: String(formData.get("childId") ?? ""),
+      gender: String(formData.get("gender") ?? ""),
+      age: Number(formData.get("age") ?? 0),
+      schoolId: Number(formData.get("schoolId") ?? 0),
+      classGrade: String(formData.get("classGrade") ?? ""),
       assessmentDate: String(formData.get("assessmentDate") ?? ""),
+      assessmentType: String(formData.get("assessmentType") ?? "baseline"),
+      letterIdentificationScore: formData.get("letterIdentificationScore") ? Number(formData.get("letterIdentificationScore")) : null,
+      soundIdentificationScore: formData.get("soundIdentificationScore") ? Number(formData.get("soundIdentificationScore")) : null,
+      decodableWordsScore: formData.get("decodableWordsScore") ? Number(formData.get("decodableWordsScore")) : null,
+      undecodableWordsScore: formData.get("undecodableWordsScore") ? Number(formData.get("undecodableWordsScore")) : null,
+      madeUpWordsScore: formData.get("madeUpWordsScore") ? Number(formData.get("madeUpWordsScore")) : null,
+      storyReadingScore: formData.get("storyReadingScore") ? Number(formData.get("storyReadingScore")) : null,
+      readingComprehensionScore: formData.get("readingComprehensionScore") ? Number(formData.get("readingComprehensionScore")) : null,
+      notes: String(formData.get("notes") ?? ""),
     };
 
     try {
@@ -277,151 +309,196 @@ export function TrainingPortalManager({
               Record completed training sessions. This updates teachers trained,
               schools trained, and training session metrics.
             </p>
-
-            <form className="form-grid" onSubmit={submitTraining}>
-              <label>
-                School Name
-                <input name="schoolName" required />
-              </label>
-              <label>
-                Session Date
-                <input type="date" name="sessionDate" defaultValue={today} required />
-              </label>
-
-              <label>
-                District
-                <input name="district" required />
-              </label>
-              <label>
-                Sub-county
-                <input name="subCounty" required />
-              </label>
-
-              <label>
-                Parish
-                <input name="parish" required />
-              </label>
-              <label>
-                Village (Optional)
-                <input name="village" />
-              </label>
-
-              <div className="full-width participant-section">
-                <h3>Participants</h3>
-                {participants.map((participant) => (
-                  <div className="participant-row" key={participant.id}>
-                    <input
-                      placeholder="Participant name"
-                      value={participant.name}
-                      onChange={(event) =>
-                        updateParticipant(participant.id, "name", event.target.value)
-                      }
-                      required
-                    />
-                    <select
-                      value={participant.role}
-                      onChange={(event) =>
-                        updateParticipant(participant.id, "role", event.target.value)
-                      }
-                      required
-                    >
-                      <option value="Classroom teacher">Classroom teacher</option>
-                      <option value="School Leader">School Leader</option>
-                    </select>
-                    <input
-                      placeholder="Phone number"
-                      value={participant.phone}
-                      onChange={(event) =>
-                        updateParticipant(participant.id, "phone", event.target.value)
-                      }
-                      required
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={participant.email}
-                      onChange={(event) =>
-                        updateParticipant(participant.id, "email", event.target.value)
-                      }
-                      required
-                    />
-                    <button
-                      className="button button-ghost"
-                      type="button"
-                      onClick={() => removeParticipant(participant.id)}
-                      disabled={participants.length === 1}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button className="button button-ghost" type="button" onClick={addParticipant}>
-                  Add participant
-                </button>
-              </div>
-
-              <button className="button" type="submit" disabled={savingTraining}>
-                {savingTraining ? "Saving..." : "Save training session"}
+            <div className="action-row">
+              <button className="button" type="button" onClick={() => setShowTrainingForm(true)}>
+                Log Training Session
               </button>
-            </form>
-
+            </div>
             {trainingStatus ? <p className="form-message success">{trainingStatus}</p> : null}
           </article>
 
           <article className="card">
-            <h2>Assessment Data</h2>
+            <h2>Record Learner Assessment</h2>
             <p>
-              Record learner assessments and stories published to update impact metrics.
+              Capture individual child-level performance. This data is private
+              to the organization but will automatically update aggregated public metrics.
             </p>
-
-            <form className="form-grid" onSubmit={submitAssessment}>
-              <label>
-                School Name
-                <input name="schoolName" required />
-              </label>
-              <label>
-                Assessment Date
-                <input type="date" name="assessmentDate" defaultValue={today} required />
-              </label>
-
-              <label>
-                District
-                <input name="district" required />
-              </label>
-              <label>
-                Sub-county
-                <input name="subCounty" required />
-              </label>
-
-              <label>
-                Parish
-                <input name="parish" required />
-              </label>
-              <label>
-                Village (Optional)
-                <input name="village" />
-              </label>
-
-              <label>
-                Learners Assessed
-                <input name="learnersAssessed" type="number" min={0} required />
-              </label>
-              <label>
-                Stories Published
-                <input name="storiesPublished" type="number" min={0} required />
-              </label>
-
-              <button className="button" type="submit" disabled={savingAssessment}>
-                {savingAssessment ? "Saving..." : "Save assessment data"}
+            <div className="action-row">
+              <button className="button" type="button" onClick={() => setShowAssessmentForm(true)}>
+                Record Assessment
               </button>
-            </form>
-
+            </div>
             {assessmentStatus ? (
               <p className="form-message success">{assessmentStatus}</p>
             ) : null}
           </article>
         </div>
       </section>
+
+      {showTrainingForm
+        ? createPortal(
+          <div className="floating-donor-overlay" role="dialog" aria-modal="true" aria-label="Training Session Form" onClick={() => setShowTrainingForm(false)}>
+            <div className="card floating-donor-dialog floating-dialog-wide" onClick={(e) => e.stopPropagation()}>
+              <div className="floating-donor-header">
+                <div>
+                  <p className="kicker">Data Entry</p>
+                  <h3>Log Training Session</h3>
+                </div>
+                <button className="button button-ghost" type="button" onClick={() => setShowTrainingForm(false)}>Cancel</button>
+              </div>
+              <form className="form-grid" onSubmit={submitTraining}>
+                <label>
+                  School Name
+                  <input name="schoolName" required />
+                </label>
+                <label>
+                  Session Date
+                  <input type="date" name="sessionDate" defaultValue={today} required />
+                </label>
+                <label>
+                  District
+                  <input name="district" required />
+                </label>
+                <label>
+                  Sub-county
+                  <input name="subCounty" required />
+                </label>
+                <label>
+                  Parish
+                  <input name="parish" required />
+                </label>
+                <label>
+                  Village (Optional)
+                  <input name="village" />
+                </label>
+                <div className="full-width participant-section">
+                  <h3>Participants</h3>
+                  {participants.map((participant) => (
+                    <div className="participant-row" key={participant.id}>
+                      <input placeholder="Participant name" value={participant.name} onChange={(event) => updateParticipant(participant.id, "name", event.target.value)} required />
+                      <select value={participant.role} onChange={(event) => updateParticipant(participant.id, "role", event.target.value)} required>
+                        <option value="Classroom teacher">Classroom teacher</option>
+                        <option value="School Leader">School Leader</option>
+                      </select>
+                      <input placeholder="Phone number" value={participant.phone} onChange={(event) => updateParticipant(participant.id, "phone", event.target.value)} required />
+                      <input type="email" placeholder="Email" value={participant.email} onChange={(event) => updateParticipant(participant.id, "email", event.target.value)} required />
+                      <button className="button button-ghost" type="button" onClick={() => removeParticipant(participant.id)} disabled={participants.length === 1}>Remove</button>
+                    </div>
+                  ))}
+                  <button className="button button-ghost" type="button" onClick={addParticipant}>Add participant</button>
+                </div>
+                <button className="button" type="submit" disabled={savingTraining}>
+                  {savingTraining ? "Saving..." : "Save training session"}
+                </button>
+              </form>
+              {trainingStatus ? <p className="form-message success">{trainingStatus}</p> : null}
+            </div>
+          </div>,
+          document.body,
+        )
+        : null}
+
+      {showAssessmentForm
+        ? createPortal(
+          <div className="floating-donor-overlay" role="dialog" aria-modal="true" aria-label="Assessment Form" onClick={() => setShowAssessmentForm(false)}>
+            <div className="card floating-donor-dialog floating-dialog-wide" onClick={(e) => e.stopPropagation()}>
+              <div className="floating-donor-header">
+                <div>
+                  <p className="kicker">Data Entry</p>
+                  <h3>Record Learner Assessment</h3>
+                </div>
+                <button className="button button-ghost" type="button" onClick={() => setShowAssessmentForm(false)}>Cancel</button>
+              </div>
+              <form className="form-grid" onSubmit={submitAssessment}>
+                <h3 className="full-width" style={{ marginTop: '1rem', color: 'var(--md-sys-color-secondary)' }}>Learner Profile</h3>
+                <label>
+                  Child Name (Internal Only)
+                  <input name="childName" required />
+                </label>
+                <label>
+                  Child ID (Anonymized)
+                  <input name="childId" required />
+                </label>
+                <label>
+                  Gender
+                  <select name="gender" required>
+                    <option value="Boy">Boy</option>
+                    <option value="Girl">Girl</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label>
+                  Age
+                  <input name="age" type="number" min={3} max={20} required />
+                </label>
+                <label>
+                  School ID (Number)
+                  <input name="schoolId" type="number" min={1} required />
+                </label>
+                <label>
+                  Class / Grade
+                  <select name="classGrade" required>
+                    <option value="P1">P1</option>
+                    <option value="P2">P2</option>
+                    <option value="P3">P3</option>
+                    <option value="P4">P4</option>
+                  </select>
+                </label>
+                <h3 className="full-width" style={{ marginTop: '1rem', color: 'var(--md-sys-color-secondary)' }}>Assessment Results</h3>
+                <label>
+                  Assessment Date
+                  <input type="date" name="assessmentDate" defaultValue={today} required />
+                </label>
+                <label>
+                  Type
+                  <select name="assessmentType" required>
+                    <option value="baseline">Baseline</option>
+                    <option value="progress">Progress Check</option>
+                    <option value="endline">Endline</option>
+                  </select>
+                </label>
+                <label>
+                  Letter Identification Score (0-100)
+                  <input name="letterIdentificationScore" type="number" min={0} max={100} />
+                </label>
+                <label>
+                  Sound Identification Score (0-100)
+                  <input name="soundIdentificationScore" type="number" min={0} max={100} />
+                </label>
+                <label>
+                  Decodable Words Score (0-100)
+                  <input name="decodableWordsScore" type="number" min={0} max={100} />
+                </label>
+                <label>
+                  Undecodable Words Score (0-100)
+                  <input name="undecodableWordsScore" type="number" min={0} max={100} />
+                </label>
+                <label>
+                  Made Up Words Score (0-100)
+                  <input name="madeUpWordsScore" type="number" min={0} max={100} />
+                </label>
+                <label>
+                  Story Reading Score (0-150 wcpm)
+                  <input name="storyReadingScore" type="number" min={0} max={150} />
+                </label>
+                <label>
+                  Reading Comprehension Score (0-100)
+                  <input name="readingComprehensionScore" type="number" min={0} max={100} />
+                </label>
+                <label className="full-width">
+                  Notes
+                  <textarea name="notes" rows={2} />
+                </label>
+                <button className="button full-width" type="submit" disabled={savingAssessment}>
+                  {savingAssessment ? "Saving..." : "Save child assessment"}
+                </button>
+              </form>
+              {assessmentStatus ? <p className="form-message success">{assessmentStatus}</p> : null}
+            </div>
+          </div>,
+          document.body,
+        )
+        : null}
 
       <section className="section">
         <div className="container card">
@@ -430,64 +507,65 @@ export function TrainingPortalManager({
             Schedule live online sessions, send calendar invites, and generate Google Meet
             links for actual training delivery.
           </p>
-
-          <form className="form-grid" onSubmit={submitOnlineTraining}>
-            <label>
-              Session Title
-              <input name="title" required placeholder="Phonics Coaching Masterclass" />
-            </label>
-            <label>
-              Audience
-              <input name="audience" required placeholder="Teachers and School Leaders" />
-            </label>
-
-            <label>
-              Start Date
-              <input type="date" name="startDate" defaultValue={today} required />
-            </label>
-            <label>
-              Start Time
-              <input type="time" name="startTime" required />
-            </label>
-
-            <label>
-              Duration (minutes)
-              <input
-                name="durationMinutes"
-                type="number"
-                min={15}
-                max={720}
-                defaultValue={90}
-                required
-              />
-            </label>
-
-            <label className="full-width">
-              Description
-              <textarea
-                name="description"
-                rows={3}
-                placeholder="Agenda, preparation notes, and expected outcomes."
-              />
-            </label>
-
-            <label className="full-width">
-              Attendee Emails (comma, semicolon, or new line separated)
-              <textarea
-                name="attendeeEmails"
-                rows={4}
-                placeholder="teacher1@school.org, headteacher@school.org"
-              />
-            </label>
-
-            <button className="button" type="submit" disabled={savingOnline}>
-              {savingOnline ? "Scheduling..." : "Schedule online training"}
+          <div className="action-row">
+            <button className="button" type="button" onClick={() => setShowOnlineForm(true)}>
+              Schedule Online Training
             </button>
-          </form>
-
+          </div>
           {onlineStatus ? <p className="form-message success">{onlineStatus}</p> : null}
         </div>
       </section>
+
+      {showOnlineForm
+        ? createPortal(
+          <div className="floating-donor-overlay" role="dialog" aria-modal="true" aria-label="Online Training Form" onClick={() => setShowOnlineForm(false)}>
+            <div className="card floating-donor-dialog floating-dialog-wide" onClick={(e) => e.stopPropagation()}>
+              <div className="floating-donor-header">
+                <div>
+                  <p className="kicker">Scheduler</p>
+                  <h3>Online Training Session</h3>
+                </div>
+                <button className="button button-ghost" type="button" onClick={() => setShowOnlineForm(false)}>Cancel</button>
+              </div>
+              <form className="form-grid" onSubmit={submitOnlineTraining}>
+                <label>
+                  Session Title
+                  <input name="title" required placeholder="Phonics Coaching Masterclass" />
+                </label>
+                <label>
+                  Audience
+                  <input name="audience" required placeholder="Teachers and School Leaders" />
+                </label>
+                <label>
+                  Start Date
+                  <input type="date" name="startDate" defaultValue={today} required />
+                </label>
+                <label>
+                  Start Time
+                  <input type="time" name="startTime" required />
+                </label>
+                <label>
+                  Duration (minutes)
+                  <input name="durationMinutes" type="number" min={15} max={720} defaultValue={90} required />
+                </label>
+                <label className="full-width">
+                  Description
+                  <textarea name="description" rows={3} placeholder="Agenda, preparation notes, and expected outcomes." />
+                </label>
+                <label className="full-width">
+                  Attendee Emails (comma, semicolon, or new line separated)
+                  <textarea name="attendeeEmails" rows={4} placeholder="teacher1@school.org, headteacher@school.org" />
+                </label>
+                <button className="button" type="submit" disabled={savingOnline}>
+                  {savingOnline ? "Scheduling..." : "Schedule online training"}
+                </button>
+              </form>
+              {onlineStatus ? <p className="form-message success">{onlineStatus}</p> : null}
+            </div>
+          </div>,
+          document.body,
+        )
+        : null}
 
       <section className="section">
         <div className="container split">
@@ -530,29 +608,33 @@ export function TrainingPortalManager({
           </article>
 
           <article className="card">
-            <h2>Recent Assessment Records</h2>
+            <h2>Recent Assessments</h2>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
                     <th>Date</th>
-                    <th>School</th>
-                    <th>Learners Assessed</th>
-                    <th>Stories Published</th>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Grade</th>
+                    <th>Story Reading</th>
+                    <th>Comprehension</th>
                   </tr>
                 </thead>
                 <tbody>
                   {assessments.length === 0 ? (
                     <tr>
-                      <td colSpan={4}>No assessment records recorded yet.</td>
+                      <td colSpan={6}>No assessment records yet.</td>
                     </tr>
                   ) : (
                     assessments.map((assessment) => (
                       <tr key={assessment.id}>
                         <td>{new Date(assessment.assessmentDate).toLocaleDateString()}</td>
-                        <td>{assessment.schoolName}</td>
-                        <td>{assessment.learnersAssessed.toLocaleString()}</td>
-                        <td>{assessment.storiesPublished.toLocaleString()}</td>
+                        <td>{assessment.childId}</td>
+                        <td style={{ textTransform: 'capitalize' }}>{assessment.assessmentType}</td>
+                        <td>{assessment.classGrade}</td>
+                        <td>{assessment.storyReadingScore ?? '-'}</td>
+                        <td>{assessment.readingComprehensionScore ?? '-'}</td>
                       </tr>
                     ))
                   )}

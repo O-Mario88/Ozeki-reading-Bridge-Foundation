@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import storyProjectPhoto from "../../../assets/photos/Training In Agago Lukole Sub-County.jpg";
+import storyProjectPhoto from "../../../assets/photos/PXL_20260217_124359226.jpg";
 
 export const metadata = {
   title: "The 1001 Story Project",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function StoryProjectPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -48,8 +48,8 @@ export default function StoryProjectPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>How the 1001 Story Project promotes literacy (why it works)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">How the 1001 Story Project promotes literacy (why it works)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -90,7 +90,7 @@ export default function StoryProjectPage() {
       </section>
 
       <section className="section">
-        <div className="container cards-grid">
+        <div className="container">
           <article className="card">
             <h3>How it boosts school academics (beyond English)</h3>
             <p>The project improves:</p>
@@ -116,8 +116,8 @@ export default function StoryProjectPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>How Schools Join (Step-by-Step)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">How Schools Join (Step-by-Step)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">

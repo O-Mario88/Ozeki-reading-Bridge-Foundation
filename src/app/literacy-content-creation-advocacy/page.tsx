@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import contentAdvocacyPhoto from "../../../assets/photos/Training In Agago Lukole Sub-County.jpg";
+import contentAdvocacyPhoto from "../../../assets/photos/PXL_20260217_124415441.MP.jpg";
 
 export const metadata = {
   title: "Literacy Content Creation & Advocacy",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function LiteracyContentCreationAdvocacyPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -48,8 +48,8 @@ export default function LiteracyContentCreationAdvocacyPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>What We Produce (Focus Areas)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">What We Produce (Focus Areas)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -109,8 +109,8 @@ export default function LiteracyContentCreationAdvocacyPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>Outputs (What Schools and Educators Receive)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">Outputs (What Schools and Educators Receive)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -208,7 +208,7 @@ export default function LiteracyContentCreationAdvocacyPage() {
       </section>
 
       <section className="section">
-        <div className="container cards-grid">
+        <div className="container">
           <article className="card">
             <h3>Outcome</h3>
             <p>

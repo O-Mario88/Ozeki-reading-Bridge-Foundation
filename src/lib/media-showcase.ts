@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { testimonials } from "@/lib/content";
 import { listPublishedPortalTestimonials } from "@/lib/db";
 
@@ -14,6 +15,10 @@ export interface MediaShowcaseItem {
   quote: string;
   person: string;
   role: string;
+  playback: "file" | "youtube";
+  youtubeEmbedUrl: string | null;
+  youtubeThumbnailUrl: string | null;
+  youtubeVideoId: string | null;
 }
 
 export interface MediaShowcaseData {
@@ -23,7 +28,6 @@ export interface MediaShowcaseData {
 }
 
 const imageExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
-const videoExtensions = new Set([".mp4", ".mov", ".webm", ".m4v"]);
 const fallbackStory = {
   quote:
     "Our teachers now deliver practical phonics routines with stronger learner participation.",
@@ -69,6 +73,19 @@ async function isReadableFile(filePath: string | null | undefined) {
   }
 }
 
+async function createFileSignature(filePath: string | null | undefined) {
+  if (!filePath) {
+    return null;
+  }
+
+  try {
+    const fileBuffer = await fs.readFile(filePath);
+    return createHash("sha1").update(fileBuffer).digest("hex");
+  } catch {
+    return null;
+  }
+}
+
 function getMappedStory(index: number) {
   if (testimonials.length === 0) {
     return fallbackStory;
@@ -101,6 +118,10 @@ function buildUniqueItems(
       quote: mappedTestimonial.quote,
       person: mappedTestimonial.name,
       role: mappedTestimonial.role,
+      playback: "file",
+      youtubeEmbedUrl: null,
+      youtubeThumbnailUrl: null,
+      youtubeVideoId: null,
     } satisfies MediaShowcaseItem;
   });
 }
@@ -142,14 +163,18 @@ async function buildSubmittedItems() {
   const submissions = listPublishedPortalTestimonials(240);
   const photoItems: MediaShowcaseItem[] = [];
   const videoItems: MediaShowcaseItem[] = [];
+  const photoSignatures = new Set<string>();
   const availability = await Promise.all(
     submissions.map(async (record) => ({
       id: record.id,
       hasPhoto: await isReadableFile(record.photoStoredPath),
       hasVideo: await isReadableFile(record.videoStoredPath),
+      photoSignature: await createFileSignature(record.photoStoredPath),
     })),
   );
-  const availabilityById = new Map(availability.map((item) => [item.id, item]));
+  const availabilityById = new Map(
+    availability.map((item) => [item.id, item]),
+  );
 
   submissions.forEach((record, index) => {
     const mediaAvailability = availabilityById.get(record.id);
@@ -164,21 +189,37 @@ async function buildSubmittedItems() {
     });
     const caption = `${record.schoolName}, ${record.district} • ${createdOn}`;
 
-    if (mediaAvailability.hasVideo) {
-      const cacheBust = encodeURIComponent(record.createdAt);
+    if (record.videoSourceType === "youtube" && record.youtubeEmbedUrl) {
       videoItems.push({
-        id: `submitted-video-${record.id}`,
+        id: `submitted-youtube-video-${record.id}`,
         kind: "video",
-        url: `/api/testimonials/${record.id}/video?v=${cacheBust}`,
-        alt: `Video testimonial by ${record.storytellerName}`,
+        url: record.youtubeEmbedUrl,
+        alt: record.youtubeVideoTitle
+          ? `Video testimonial: ${record.youtubeVideoTitle}`
+          : `Video testimonial by ${record.storytellerName}`,
         caption,
         quote: record.storyText,
         person: record.storytellerName,
         role: record.storytellerRole,
+        playback: "youtube",
+        youtubeEmbedUrl: record.youtubeEmbedUrl,
+        youtubeThumbnailUrl:
+          record.youtubeThumbnailUrl ??
+          (record.youtubeVideoId
+            ? `https://img.youtube.com/vi/${record.youtubeVideoId}/hqdefault.jpg`
+            : null),
+        youtubeVideoId: record.youtubeVideoId,
       });
     }
 
     if (mediaAvailability.hasPhoto) {
+      const signatureKey =
+        mediaAvailability.photoSignature ??
+        `submitted-photo:${String(record.photoStoredPath ?? record.photoFileName ?? record.id).toLowerCase()}`;
+      if (photoSignatures.has(signatureKey)) {
+        return;
+      }
+      photoSignatures.add(signatureKey);
       const cacheBust = encodeURIComponent(record.createdAt);
       photoItems.push({
         id: `submitted-photo-${record.id}-${index}`,
@@ -189,28 +230,47 @@ async function buildSubmittedItems() {
         quote: record.storyText,
         person: record.storytellerName,
         role: record.storytellerRole,
+        playback: "file",
+        youtubeEmbedUrl: null,
+        youtubeThumbnailUrl: null,
+        youtubeVideoId: null,
       });
     }
   });
 
-  return { photoItems, videoItems };
+  return { photoItems, videoItems, photoSignatures };
 }
 
 export async function getMediaShowcase(): Promise<MediaShowcaseData> {
   const photoDirectory = path.join(process.cwd(), "assets", "photos");
-  const videoDirectory = path.join(process.cwd(), "assets", "videos");
+  const photoFiles = await readMediaFiles(photoDirectory, imageExtensions);
 
-  const [photoFiles, videoFiles] = await Promise.all([
-    readMediaFiles(photoDirectory, imageExtensions),
-    readMediaFiles(videoDirectory, videoExtensions),
-  ]);
-
-  const assetPhotos = buildUniqueItems("photo", photoFiles, "photos");
-  const assetVideos = buildUniqueItems("video", videoFiles, "videos");
   const submitted = await buildSubmittedItems();
+  const seenPhotoSignatures = new Set(submitted.photoSignatures);
+
+  const uniqueAssetPhotoFiles = (
+    await Promise.all(
+      photoFiles.map(async (fileName) => ({
+        fileName,
+        signature:
+          (await createFileSignature(path.join(photoDirectory, fileName))) ??
+          `asset-photo:${fileName.toLowerCase()}`,
+      })),
+    )
+  )
+    .filter((entry) => {
+      if (seenPhotoSignatures.has(entry.signature)) {
+        return false;
+      }
+      seenPhotoSignatures.add(entry.signature);
+      return true;
+    })
+    .map((entry) => entry.fileName);
+
+  const assetPhotos = buildUniqueItems("photo", uniqueAssetPhotoFiles, "photos");
 
   const uniquePhotos = [...submitted.photoItems, ...assetPhotos];
-  const uniqueVideos = [...submitted.videoItems, ...assetVideos];
+  const uniqueVideos = [...submitted.videoItems];
 
   return {
     uniquePhotos,

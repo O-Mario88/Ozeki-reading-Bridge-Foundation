@@ -24,9 +24,9 @@ export default async function MediaPage() {
       <section className="section">
         <div className="container">
           <div className="media-wall-head">
-            <div className="section-head">
+            <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
               <p className="kicker">Live evidence gallery</p>
-              <h2>Photos + videos mapped to testimonials</h2>
+              <h2 className="tpd-page-title">Photos + videos mapped to testimonials</h2>
               <p>
                 This page is configured to display as many uploaded photos and videos as
                 available and pair them with implementation testimonials automatically.

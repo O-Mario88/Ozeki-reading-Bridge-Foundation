@@ -144,8 +144,8 @@ export default function ProblemPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>The Problem Behind Reading Struggle</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">The Problem Behind Reading Struggle</h2>
             <p>
               Reading difficulties are rarely caused by laziness. In most cases,
               learners are missing one or more building blocks.

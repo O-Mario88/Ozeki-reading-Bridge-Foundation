@@ -108,10 +108,13 @@ export async function GET(
   const formatMetric = (label: string, value: { baseline: number | null; endline: number | null; change: number | null }) =>
     `${label}: baseline=${value.baseline ?? "Data not available"}, endline=${value.endline ?? "Data not available"}, change=${value.change ?? "Data not available"}`;
   drawSection("Learning Outcomes", [
-    formatMetric("Letter-sound knowledge", outcomes.letterSoundKnowledge),
-    formatMetric("Decoding accuracy", outcomes.decodingAccuracy),
-    formatMetric("Oral reading fluency (WCPM)", outcomes.oralReadingFluencyWcpm),
-    formatMetric("Comprehension", outcomes.comprehension),
+    formatMetric("Letter Identification", outcomes.letterIdentification),
+    formatMetric("Sound Identification", outcomes.soundIdentification),
+    formatMetric("Decodable Words", outcomes.decodableWords),
+    formatMetric("Undecodable Words", outcomes.undecodableWords),
+    formatMetric("Made Up Words", outcomes.madeUpWords),
+    formatMetric("Story Reading", outcomes.storyReading),
+    formatMetric("Reading Comprehension", outcomes.readingComprehension),
     `Proficiency band movement (%): ${outcomes.proficiencyBandMovementPercent ?? "Data not available"}`,
     `Reduction in non-readers (%): ${outcomes.reductionInNonReadersPercent ?? "Data not available"}`,
   ]);
@@ -119,10 +122,9 @@ export async function GET(
   drawSection("Instruction Quality", [
     `Routine adoption rate: ${report.factPack.instructionQuality.routineAdoptionRate ?? "Data not available"}`,
     `Observation score change: ${report.factPack.instructionQuality.observationScoreChange ?? "Data not available"}`,
-    `Top gaps: ${
-      report.factPack.instructionQuality.topGaps.length > 0
-        ? report.factPack.instructionQuality.topGaps.join(", ")
-        : "Data not available"
+    `Top gaps: ${report.factPack.instructionQuality.topGaps.length > 0
+      ? report.factPack.instructionQuality.topGaps.join(", ")
+      : "Data not available"
     }`,
   ]);
 

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 import { PortalLogoutButton } from "@/components/PortalLogoutButton";
-import { PortalUser } from "@/lib/types";
+import { PortalUser, PortalUserRole } from "@/lib/types";
 
 type PortalNavItem = {
   href: string;
   label: string;
   staffOnly?: boolean;
   superAdminOnly?: boolean;
+  roles?: PortalUserRole[];
 };
 
 const portalNavItems: PortalNavItem[] = [
@@ -23,7 +24,7 @@ const portalNavItems: PortalNavItem[] = [
   { href: "/portal/events", label: "Events", staffOnly: true },
   { href: "/portal/testimonials", label: "Testimonials" },
   { href: "/portal/schools", label: "Schools", staffOnly: true },
-  { href: "/portal/reports", label: "Reports", staffOnly: true },
+  { href: "/portal/reports", label: "Reports", roles: ["Staff", "Volunteer", "Admin"] },
   { href: "/portal/superadmin", label: "Super Admin", superAdminOnly: true },
 ];
 
@@ -51,6 +52,9 @@ export function PortalShell({
       return false;
     }
     if (item.staffOnly && user.role === "Volunteer") {
+      return false;
+    }
+    if (item.roles && !item.roles.includes(user.role)) {
       return false;
     }
     return true;

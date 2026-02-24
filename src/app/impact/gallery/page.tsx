@@ -39,6 +39,20 @@ function inferYear(caption: string) {
   return matched?.[1] ?? "Unspecified";
 }
 
+function toYouTubeWatchUrl(embedUrl: string | null, videoId: string | null) {
+  if (videoId) {
+    return `https://www.youtube.com/watch?v=${videoId}`;
+  }
+  if (!embedUrl) {
+    return "https://www.youtube.com/@ozekiRead";
+  }
+  const matched = embedUrl.match(/\/embed\/([^?&/]+)/i);
+  if (matched?.[1]) {
+    return `https://www.youtube.com/watch?v=${matched[1]}`;
+  }
+  return "https://www.youtube.com/@ozekiRead";
+}
+
 export default async function ImpactGalleryPage({
   searchParams,
 }: {
@@ -136,10 +150,35 @@ export default async function ImpactGalleryPage({
                 {item.kind === "photo" ? (
                   <img src={item.url} alt={item.alt} loading="lazy" decoding="async" />
                 ) : (
-                  <video controls preload="metadata" playsInline>
-                    <source src={item.url} />
-                    Your browser does not support this video format.
-                  </video>
+                  <a
+                    className="media-showcase-thumbnail-button"
+                    href={toYouTubeWatchUrl(item.youtubeEmbedUrl, item.youtubeVideoId)}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Watch ${item.alt} on YouTube`}
+                  >
+                    <img
+                      src={
+                        item.youtubeThumbnailUrl ||
+                        (item.youtubeVideoId
+                          ? `https://img.youtube.com/vi/${item.youtubeVideoId}/hqdefault.jpg`
+                          : "/images/ozeki-logo.jpg")
+                      }
+                      alt={item.alt}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <span className="media-showcase-play-overlay">
+                      <svg width="16" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path
+                          d="M23 7.5A4.5 4.5 0 0 0 19.5 4C16.7 3.5 12 3.5 12 3.5s-4.7 0-7.5.5A4.5 4.5 0 0 0 1 7.5 47 47 0 0 0 .5 12 47 47 0 0 0 1 16.5 4.5 4.5 0 0 0 4.5 20c2.8.5 7.5.5 7.5.5s4.7 0 7.5-.5a4.5 4.5 0 0 0 3.5-3.5A47 47 0 0 0 23.5 12 47 47 0 0 0 23 7.5Z"
+                          fill="#FF0000"
+                        />
+                        <path d="M10 15.5V8.5L16.25 12L10 15.5Z" fill="#fff" />
+                      </svg>
+                      YouTube
+                    </span>
+                  </a>
                 )}
               </div>
               <div className="media-showcase-content">

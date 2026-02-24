@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import readingMaterialsPhoto from "../../../assets/photos/Training In Agago Lukole Sub-County.jpg";
+import readingMaterialsPhoto from "../../../assets/photos/PXL_20260217_110748302.jpg";
 
 export const metadata = {
   title: "Reading Materials Development (Learners)",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function ReadingMaterialsDevelopmentPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -49,8 +49,8 @@ export default function ReadingMaterialsDevelopmentPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>What We Provide (Focus Areas)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">What We Provide (Focus Areas)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">

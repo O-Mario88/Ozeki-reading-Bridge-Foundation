@@ -3,6 +3,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { getSchoolDirectoryRecord } from "@/lib/db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,20 @@ export default async function SchoolProfilePage({ params }: PageProps) {
             activeHref="/portal/schools"
             title={`${school.name}`}
             description={`School Profile for ${school.schoolCode}`}
+            actions={
+                <div className="action-row">
+                    <Link
+                        href={`/portal/reports?module=all&district=${encodeURIComponent(
+                            school.district,
+                        )}&subCounty=${encodeURIComponent(school.subCounty)}&parish=${encodeURIComponent(
+                            school.parish,
+                        )}&search=${encodeURIComponent(school.name)}`}
+                        className="button button-ghost"
+                    >
+                        Open School Report
+                    </Link>
+                </div>
+            }
         >
             <SchoolProfileView school={school} />
         </PortalShell>

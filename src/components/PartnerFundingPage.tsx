@@ -192,9 +192,9 @@ export function PartnerFundingPage() {
 
   return (
     <>
-      <section className="hero hero-unified">
-        <div className="container hero-layout hero-layout-single">
-          <div className="hero-copy hero-copy-with-photo page-hero-copy">
+      <section className="section page-hero bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)', padding: '5rem 0 3rem' }}>
+        <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <div style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
             <p className="kicker">Partner with us</p>
             <h1 className="partner-hero-title">
               Fund Literacy That Shows Results - by Country, Region, or District

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import merPhoto from "../../../assets/photos/Phonics training in Alebtong.jpg";
+import merPhoto from "../../../assets/photos/Literacy Training in Loro - Oyam District.jpg";
 import { listPublicImpactReports } from "@/lib/db";
 
 export const metadata = {
@@ -16,7 +16,7 @@ export default function MonitoringEvaluationReportingPage() {
 
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -54,8 +54,8 @@ export default function MonitoringEvaluationReportingPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>What We Monitor (Focus Areas)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">What We Monitor (Focus Areas)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -179,7 +179,7 @@ export default function MonitoringEvaluationReportingPage() {
       </section>
 
       <section className="section">
-        <div className="container cards-grid">
+        <div className="container cards-grid-two">
           <article className="card" id="impact-reports">
             <h3>Impact Reports Library</h3>
             <p>
@@ -229,7 +229,7 @@ export default function MonitoringEvaluationReportingPage() {
             </ul>
           </article>
 
-          <article className="card">
+          <article className="card full-width">
             <h3>Primary CTA</h3>
             <p>
               Request an impact report or partner with us to scale evidence-led
@@ -245,7 +245,7 @@ export default function MonitoringEvaluationReportingPage() {
             </div>
           </article>
 
-          <article className="card">
+          <article className="card full-width">
             <h3>Outcome</h3>
             <p>
               Partners get accountability, transparency, and credible evidence of

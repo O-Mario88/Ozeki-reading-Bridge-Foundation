@@ -178,8 +178,8 @@ export default function TransparencyPage() {
 
       <section className="section" id="governance-oversight">
         <div className="container">
-          <div className="section-head">
-            <h2>1) Governance &amp; Oversight</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">1) Governance &amp; Oversight</h2>
             <p>
               We maintain clear oversight and role separation to ensure
               integrity, quality delivery, and accountability.
@@ -221,8 +221,8 @@ export default function TransparencyPage() {
 
       <section className="section" id="legal-compliance">
         <div className="container">
-          <div className="section-head">
-            <h2>2) Legal &amp; Compliance</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">2) Legal &amp; Compliance</h2>
             <p>
               We operate under formal registration and compliance processes and
               provide documentation for partner verification.
@@ -270,8 +270,8 @@ export default function TransparencyPage() {
 
       <section className="section" id="safeguarding-child-protection">
         <div className="container">
-          <div className="section-head">
-            <h2>3) Safeguarding &amp; Child Protection</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">3) Safeguarding &amp; Child Protection</h2>
             <p>We work in school environments. Safeguarding is non-negotiable.</p>
           </div>
           <div className="cards-grid">
@@ -327,8 +327,8 @@ export default function TransparencyPage() {
 
       <section className="section" id="data-privacy-ethics">
         <div className="container">
-          <div className="section-head">
-            <h2>4) Data Privacy &amp; Ethics</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">4) Data Privacy &amp; Ethics</h2>
             <p>
               We collect learning data to improve instruction and demonstrate
               outcomes while protecting learners and schools.
@@ -370,8 +370,8 @@ export default function TransparencyPage() {
 
       <section className="section" id="anti-fraud-financial-controls">
         <div className="container">
-          <div className="section-head">
-            <h2>5) Anti-Fraud &amp; Financial Controls</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">5) Anti-Fraud &amp; Financial Controls</h2>
             <p>
               We use practical controls to keep funds traceable, approved, and
               aligned to agreed program purposes.
@@ -415,8 +415,8 @@ export default function TransparencyPage() {
 
       <section className="section" id="transparency-hub">
         <div className="container">
-          <div className="section-head">
-            <h2>6) Transparency Hub: How Funds Are Used</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">6) Transparency Hub: How Funds Are Used</h2>
             <p>
               Partners deserve clarity. We show how funding converts into
               delivery and measurable literacy outcomes.
@@ -467,8 +467,8 @@ export default function TransparencyPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>7) FAQs</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">7) FAQs</h2>
           </div>
           <div className="trust-faq-list">
             {faqs.map((item) => (

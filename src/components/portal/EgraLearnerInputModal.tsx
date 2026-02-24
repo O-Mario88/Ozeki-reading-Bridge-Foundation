@@ -3,14 +3,16 @@ import { useState, useEffect } from "react";
 export interface EgraLearner {
     no: number;
     learnerId: string;
+    learnerName: string;
     sex: string;
     age: number | string; // Allow string for empty state
-    letterNames: number | string;
-    letterSounds: number | string;
-    realWords: number | string;
+    letterIdentification: number | string;
+    soundIdentification: number | string;
+    decodableWords: number | string;
+    undecodableWords: number | string;
     madeUpWords: number | string;
     storyReading: number | string;
-    readingComp: number | string;
+    readingComprehension: number | string;
     fluencyLevel: string;
 }
 
@@ -32,14 +34,16 @@ export function EgraLearnerInputModal({
     const [learner, setLearner] = useState<EgraLearner>({
         no: nextNo,
         learnerId: nextLearnerId,
+        learnerName: "",
         sex: "M",
         age: "",
-        letterNames: "",
-        letterSounds: "",
-        realWords: "",
+        letterIdentification: "",
+        soundIdentification: "",
+        decodableWords: "",
+        undecodableWords: "",
         madeUpWords: "",
         storyReading: "",
-        readingComp: "",
+        readingComprehension: "",
         fluencyLevel: "Non-Reader",
     });
 
@@ -49,14 +53,16 @@ export function EgraLearnerInputModal({
             setLearner({
                 no: nextNo,
                 learnerId: nextLearnerId,
+                learnerName: "",
                 sex: "M",
                 age: "",
-                letterNames: "",
-                letterSounds: "",
-                realWords: "",
+                letterIdentification: "",
+                soundIdentification: "",
+                decodableWords: "",
+                undecodableWords: "",
                 madeUpWords: "",
                 storyReading: "",
-                readingComp: "",
+                readingComprehension: "",
                 fluencyLevel: "Non-Reader",
             });
         }
@@ -90,6 +96,18 @@ export function EgraLearnerInputModal({
                             <input value={learner.learnerId} readOnly className="bg-slate-100" />
                         </label>
                         <label>
+                            <span className="label-text">Learner Name</span>
+                            <input
+                                value={learner.learnerName}
+                                onChange={(e) => updateField("learnerName", e.target.value)}
+                                required
+                                placeholder="Enter learner name"
+                            />
+                        </label>
+                    </div>
+
+                    <div className="full-width grid grid-cols-2 gap-4">
+                        <label>
                             <span className="label-text">Sex</span>
                             <select
                                 value={learner.sex}
@@ -115,29 +133,38 @@ export function EgraLearnerInputModal({
                     </label>
 
                     <label>
-                        <span className="label-text">Letter Names</span>
+                        <span className="label-text">Letter Identification</span>
                         <input
                             type="number" min="0"
-                            value={learner.letterNames}
-                            onChange={(e) => updateField("letterNames", e.target.value)}
+                            value={learner.letterIdentification}
+                            onChange={(e) => updateField("letterIdentification", e.target.value)}
                         />
                     </label>
 
                     <label>
-                        <span className="label-text">Letter Sounds</span>
+                        <span className="label-text">Sound Identification</span>
                         <input
                             type="number" min="0"
-                            value={learner.letterSounds}
-                            onChange={(e) => updateField("letterSounds", e.target.value)}
+                            value={learner.soundIdentification}
+                            onChange={(e) => updateField("soundIdentification", e.target.value)}
                         />
                     </label>
 
                     <label>
-                        <span className="label-text">Real Words</span>
+                        <span className="label-text">Decodable Words</span>
                         <input
                             type="number" min="0"
-                            value={learner.realWords}
-                            onChange={(e) => updateField("realWords", e.target.value)}
+                            value={learner.decodableWords}
+                            onChange={(e) => updateField("decodableWords", e.target.value)}
+                        />
+                    </label>
+
+                    <label>
+                        <span className="label-text">Undecodable Words</span>
+                        <input
+                            type="number" min="0"
+                            value={learner.undecodableWords}
+                            onChange={(e) => updateField("undecodableWords", e.target.value)}
                         />
                     </label>
 
@@ -160,11 +187,11 @@ export function EgraLearnerInputModal({
                     </label>
 
                     <label>
-                        <span className="label-text">Reading Comp</span>
+                        <span className="label-text">Reading Comprehension</span>
                         <input
                             type="number" min="0"
-                            value={learner.readingComp}
-                            onChange={(e) => updateField("readingComp", e.target.value)}
+                            value={learner.readingComprehension}
+                            onChange={(e) => updateField("readingComprehension", e.target.value)}
                         />
                     </label>
 
@@ -199,7 +226,8 @@ export function EgraLearnerInputModal({
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
+          background: rgba(13, 51, 48, 0.4);
+          backdrop-filter: blur(4px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -211,24 +239,35 @@ export function EgraLearnerInputModal({
           max-height: 90vh;
           overflow-y: auto;
           background: white;
-          padding: 1.5rem;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          padding: 2rem;
+          border-radius: 24px;
+          box-shadow: var(--elevation-3);
+          border: 1px solid var(--md-sys-color-outline-variant);
         }
         .portal-modal-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 1rem;
-          border-bottom: 1px solid #eee;
-          padding-bottom: 0.5rem;
+          margin-bottom: 1.5rem;
+          border-bottom: 1px solid var(--md-sys-color-surface-container);
+          padding-bottom: 1rem;
+        }
+        .portal-modal-header h2 {
+          color: var(--md-sys-color-primary);
+          font-weight: 700;
+          font-size: 1.25rem;
+          margin: 0;
         }
         .grid-cols-2 {
           display: grid;
           grid-template-columns: 1fr 1fr;
         }
         .gap-4 {
-          gap: 1rem;
+          gap: 1.25rem;
+        }
+        .bg-slate-100 {
+          background-color: var(--md-sys-color-surface-container);
+          border: 1px solid var(--md-sys-color-outline-variant);
         }
       `}</style>
         </div>

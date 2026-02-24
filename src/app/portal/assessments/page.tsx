@@ -7,6 +7,7 @@ import {
 } from "@/lib/db";
 import { portalModuleConfigByModule } from "@/lib/portal-config";
 import { requirePortalUser } from "@/lib/portal-auth";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,13 @@ export default async function PortalAssessmentsPage() {
       activeHref={config.route}
       title={config.pageTitle}
       description={config.description}
+      actions={
+        <div className="action-row">
+          <Link href="/portal/reports?module=learner-assessment" className="button button-ghost">
+            Open Assessments Report
+          </Link>
+        </div>
+      }
     >
       <PortalModuleManager
         config={config}

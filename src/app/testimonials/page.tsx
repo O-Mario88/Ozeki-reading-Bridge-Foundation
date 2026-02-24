@@ -25,9 +25,9 @@ export default async function TestimonialsPage() {
       <section className="section">
         <div className="container">
           <div className="media-wall-head">
-            <div className="section-head">
+            <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
               <p className="kicker">Media-backed stories</p>
-              <h2>Testimonial wall with photos and videos</h2>
+              <h2 className="tpd-page-title">Testimonial wall with photos and videos</h2>
             </div>
           </div>
           <MediaTestimonialGrid items={mediaShowcase.featuredItems} />

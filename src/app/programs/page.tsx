@@ -110,8 +110,9 @@ export default async function ProgramsPage() {
 
       <section className="section program-headline-metrics">
         <div className="container">
-          <div className="section-head">
-            <h2>Headline Metrics</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <p className="kicker">REAL-TIME IMPACT</p>
+            <h2 className="tpd-page-title">Headline Metrics</h2>
             <p>Live values from the backend data system.</p>
           </div>
           <div className="program-metrics-grid">
@@ -127,9 +128,10 @@ export default async function ProgramsPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>Program Directory</h2>
-            <p>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <p className="kicker">WHAT WE DO</p>
+            <h2 className="tpd-page-title">Program Directory</h2>
+            <p style={{ textAlign: 'center', maxWidth: '600px' }}>
               Browse every program and service, then open the full page for
               implementation details, outcomes, and participation options.
             </p>

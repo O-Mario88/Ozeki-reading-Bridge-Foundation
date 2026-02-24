@@ -129,50 +129,51 @@ export default async function ImpactReportsLibraryPage({
 
       <section className="section">
         <div className="container cards-grid">
-          {reports.map((report) => (
-            <article className="card" key={report.reportCode}>
-              <p className="meta-pill">{report.reportType}</p>
-              <h3>{report.title}</h3>
-              <p className="meta-line">
-                Scope: {report.scopeType} - {report.scopeValue}
-                <br />
-                Period: {report.periodStart} to {report.periodEnd}
-              </p>
+          {reports.map((report) => {
+            const schoolsImpacted = Number(report.factPack?.coverageDelivery?.schoolsImpacted ?? 0);
+            const teachersTrained = Number(report.factPack?.coverageDelivery?.teachersTrained ?? 0);
+            const learnersAssessed = Number(
+              report.factPack?.coverageDelivery?.assessmentsConducted?.endline ?? 0,
+            );
+            const resourcesDownloaded = Number(report.factPack?.engagement?.resourcesDownloaded ?? 0);
+            const readingChange =
+              report.factPack?.learningOutcomes?.readingComprehension?.change ?? "Data not available";
 
-              <ul>
-                <li>
-                  Schools impacted: {report.factPack.coverageDelivery.schoolsImpacted.toLocaleString()}
-                </li>
-                <li>
-                  Teachers trained: {report.factPack.coverageDelivery.teachersTrained.toLocaleString()}
-                </li>
-                <li>
-                  Learners assessed: {report.factPack.coverageDelivery.assessmentsConducted.endline.toLocaleString()}
-                </li>
-                <li>
-                  Resources downloaded: {report.factPack.engagement.resourcesDownloaded.toLocaleString()}
-                </li>
-                <li>
-                  Key learning change: {report.factPack.learningOutcomes.comprehension.change ?? "Data not available"}
-                </li>
-              </ul>
+            return (
+              <article className="card" key={report.reportCode}>
+                <p className="meta-pill">{report.reportType}</p>
+                <h3>{report.title}</h3>
+                <p className="meta-line">
+                  Scope: {report.scopeType} - {report.scopeValue}
+                  <br />
+                  Period: {report.periodStart} to {report.periodEnd}
+                </p>
 
-              <p className="meta-line">
-                Version {report.version} | Generated {new Date(report.generatedAt).toLocaleDateString()}
-              </p>
+                <ul>
+                  <li>Schools impacted: {schoolsImpacted.toLocaleString()}</li>
+                  <li>Teachers trained: {teachersTrained.toLocaleString()}</li>
+                  <li>Learners assessed: {learnersAssessed.toLocaleString()}</li>
+                  <li>Resources downloaded: {resourcesDownloaded.toLocaleString()}</li>
+                  <li>Key learning change: {readingChange}</li>
+                </ul>
 
-              <p>
-                <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
-                  Download PDF
-                </a>
-              </p>
-              <p>
-                <Link className="inline-download-link" href={`/impact/reports/${report.reportCode}`}>
-                  View Web Version
-                </Link>
-              </p>
-            </article>
-          ))}
+                <p className="meta-line">
+                  Version {report.version} | Generated {new Date(report.generatedAt).toLocaleDateString()}
+                </p>
+
+                <p>
+                  <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
+                    Download PDF
+                  </a>
+                </p>
+                <p>
+                  <Link className="inline-download-link" href={`/impact/reports/${report.reportCode}`}>
+                    View Web Version
+                  </Link>
+                </p>
+              </article>
+            );
+          })}
 
           {reports.length === 0 ? (
             <article className="card">

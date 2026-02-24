@@ -14,7 +14,10 @@ export default async function PortalTestimonialsPage() {
   const user = await requirePortalUser();
   const testimonials = listPortalTestimonials(user, 180).map((item) => ({
     ...item,
-    videoUrl: `/api/testimonials/${item.id}/video`,
+    videoUrl:
+      item.videoSourceType === "youtube"
+        ? item.youtubeEmbedUrl || item.youtubeWatchUrl || `/api/testimonials/${item.id}/video`
+        : `/api/testimonials/${item.id}/video`,
     photoUrl: item.photoFileName ? `/api/testimonials/${item.id}/photo` : null,
   }));
 

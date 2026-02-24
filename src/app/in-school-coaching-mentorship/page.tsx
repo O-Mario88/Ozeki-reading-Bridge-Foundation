@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import coachingPhoto from "../../../assets/photos/Training In Agago Lukole Sub-County.jpg";
+import coachingPhoto from "../../../assets/photos/PXL_20260217_110739688.jpg";
 
 export const metadata = {
   title: "In-School Teacher Evaluation, Coaching & Mentorship",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function InSchoolCoachingMentorshipPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -51,8 +51,8 @@ export default function InSchoolCoachingMentorshipPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>How We Do It (Our Coaching Model)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">How We Do It (Our Coaching Model)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -220,7 +220,7 @@ export default function InSchoolCoachingMentorshipPage() {
       </section>
 
       <section className="section">
-        <div className="container cards-grid">
+        <div className="container cards-grid-two">
           <article className="card">
             <h3>Outcome</h3>
             <p>
@@ -231,7 +231,7 @@ export default function InSchoolCoachingMentorshipPage() {
           </article>
 
           <article className="card">
-            <h3>Book Coaching Support</h3>
+            <h3>Book Coaching Visit</h3>
             <p>
               Schedule a school coaching visit for lesson observation, targeted
               feedback, and follow-up implementation support.

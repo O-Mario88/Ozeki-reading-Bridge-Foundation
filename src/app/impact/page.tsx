@@ -15,6 +15,51 @@ function asNumber(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+type ImpactMetricLike = {
+  baseline?: number | null;
+  progress?: number | null;
+  endline?: number | null;
+  baselineScore?: number | null;
+  progressScore?: number | null;
+  endlineScore?: number | null;
+  change?: number | null;
+};
+
+type NormalizedImpactMetric = {
+  baseline: number | null;
+  progress: number | null;
+  endline: number | null;
+  change: number | null;
+};
+
+function normalizeImpactMetric(metric: ImpactMetricLike | null | undefined): NormalizedImpactMetric {
+  const baseline = asNumber(metric?.baseline ?? metric?.baselineScore ?? null);
+  const progress = asNumber(metric?.progress ?? metric?.progressScore ?? null);
+  const endline = asNumber(metric?.endline ?? metric?.endlineScore ?? null);
+  const explicitChange = asNumber(metric?.change ?? null);
+
+  if (explicitChange !== null) {
+    return { baseline, progress, endline, change: explicitChange };
+  }
+  if (baseline !== null && endline !== null) {
+    return {
+      baseline,
+      progress,
+      endline,
+      change: Number((endline - baseline).toFixed(2)),
+    };
+  }
+  if (progress !== null && endline !== null) {
+    return {
+      baseline,
+      progress,
+      endline,
+      change: Number((endline - progress).toFixed(2)),
+    };
+  }
+  return { baseline, progress, endline, change: null };
+}
+
 function formatValue(value: number | string | null) {
   if (typeof value === "number") {
     return value.toLocaleString();
@@ -33,16 +78,25 @@ export default async function ImpactHubPage() {
 
   const summaryMap = new Map(summary.metrics.map((metric) => [metric.label, metric.value]));
   const outcomes = latestReport?.factPack.learningOutcomes;
+  const outcomeMetrics = {
+    letterIdentification: normalizeImpactMetric(outcomes?.letterIdentification),
+    soundIdentification: normalizeImpactMetric(outcomes?.soundIdentification),
+    decodableWords: normalizeImpactMetric(outcomes?.decodableWords),
+    undecodableWords: normalizeImpactMetric(outcomes?.undecodableWords),
+    madeUpWords: normalizeImpactMetric(outcomes?.madeUpWords),
+    storyReading: normalizeImpactMetric(outcomes?.storyReading),
+    readingComprehension: normalizeImpactMetric(outcomes?.readingComprehension),
+  };
 
   const averageImprovement = (() => {
-    if (!outcomes) {
-      return "Data not available";
-    }
     const changes = [
-      outcomes.letterSoundKnowledge.change,
-      outcomes.decodingAccuracy.change,
-      outcomes.oralReadingFluencyWcpm.change,
-      outcomes.comprehension.change,
+      outcomeMetrics.letterIdentification.change,
+      outcomeMetrics.soundIdentification.change,
+      outcomeMetrics.decodableWords.change,
+      outcomeMetrics.undecodableWords.change,
+      outcomeMetrics.madeUpWords.change,
+      outcomeMetrics.storyReading.change,
+      outcomeMetrics.readingComprehension.change,
     ].filter((value): value is number => typeof value === "number");
 
     if (changes.length === 0) {
@@ -105,22 +159,13 @@ export default async function ImpactHubPage() {
   ];
 
   const trendBlocks = [
-    {
-      label: "Letter-sound knowledge",
-      metric: outcomes?.letterSoundKnowledge ?? null,
-    },
-    {
-      label: "Blending/decoding accuracy",
-      metric: outcomes?.decodingAccuracy ?? null,
-    },
-    {
-      label: "Oral reading fluency",
-      metric: outcomes?.oralReadingFluencyWcpm ?? null,
-    },
-    {
-      label: "Comprehension",
-      metric: outcomes?.comprehension ?? null,
-    },
+    { label: "Letter Identification", metric: outcomeMetrics.letterIdentification },
+    { label: "Sound Identification", metric: outcomeMetrics.soundIdentification },
+    { label: "Decodable Words", metric: outcomeMetrics.decodableWords },
+    { label: "Undecodable Words", metric: outcomeMetrics.undecodableWords },
+    { label: "Made Up Words", metric: outcomeMetrics.madeUpWords },
+    { label: "Story Reading", metric: outcomeMetrics.storyReading },
+    { label: "Reading Comprehension", metric: outcomeMetrics.readingComprehension },
   ];
 
   return (
@@ -149,8 +194,8 @@ export default async function ImpactHubPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>Headline metrics</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">Headline metrics</h2>
           </div>
           <div className="impact-kpi-grid">
             {kpis.map((kpi) => (
@@ -168,8 +213,8 @@ export default async function ImpactHubPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>Results snapshot</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">Results snapshot</h2>
             <p>
               Baseline to endline learning trends from public reports, where available.
             </p>
@@ -225,8 +270,8 @@ export default async function ImpactHubPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>Download reports</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">Download reports</h2>
           </div>
           <div className="cards-grid">
             {reports.slice(0, 3).map((report) => (
@@ -279,8 +324,8 @@ export default async function ImpactHubPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>Proof from the field</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">Proof from the field</h2>
             <p>
               Evidence gallery preview with captions, location context, and dates from
               implementation activity.

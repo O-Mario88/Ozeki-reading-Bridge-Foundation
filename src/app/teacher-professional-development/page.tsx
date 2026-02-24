@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import trainingPhoto from "../../../assets/photos/Phonics training in Alebtong.jpg";
+import trainingPhoto from "../../../assets/photos/PXL_20260217_124455266.MP.jpg";
 
 export const metadata = {
   title: "Teacher Professional Development",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function TeacherProfessionalDevelopmentPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -53,8 +53,8 @@ export default function TeacherProfessionalDevelopmentPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>Our Training Model: How We Do It (What Makes It Work)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">Our Training Model: How We Do It (What Makes It Work)</h2>
           </div>
 
           <div className="cards-grid">
@@ -185,8 +185,8 @@ export default function TeacherProfessionalDevelopmentPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>Last FY Results (2025): What We Have Done So Far</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">Last FY Results (2025): What We Have Done So Far</h2>
           </div>
           <div className="cards-grid">
             <article className="card">

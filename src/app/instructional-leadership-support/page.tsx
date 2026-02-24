@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import leadershipPhoto from "../../../assets/photos/PXL_20250531_090804621.jpg";
+import leadershipPhoto from "../../../assets/photos/PXL_20260217_124357146.jpg";
 
 export const metadata = {
   title: "Instructional Leadership Support (Headteachers & Directors of Studies)",
@@ -11,7 +11,7 @@ export const metadata = {
 export default function InstructionalLeadershipSupportPage() {
   return (
     <>
-      <section className="section tpd-hero-section">
+      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
             <p className="kicker">Program spotlight</p>
@@ -52,8 +52,8 @@ export default function InstructionalLeadershipSupportPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <h2>How We Support School Leaders (What We Do)</h2>
+          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
+            <h2 className="tpd-page-title">How We Support School Leaders (What We Do)</h2>
           </div>
           <div className="cards-grid">
             <article className="card">
@@ -194,7 +194,7 @@ export default function InstructionalLeadershipSupportPage() {
 
       <section className="section">
         <div className="container cards-grid">
-          <article className="card">
+          <article className="card full-width">
             <h3>Primary CTA</h3>
             <p>
               Book coaching support for Headteachers and Directors of Studies to
@@ -207,7 +207,7 @@ export default function InstructionalLeadershipSupportPage() {
             </div>
           </article>
 
-          <article className="card">
+          <article className="card full-width">
             <h3>Outcome</h3>
             <p>
               Leaders drive consistent, high-quality reading instruction by

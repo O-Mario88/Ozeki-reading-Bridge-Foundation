@@ -77,27 +77,41 @@ export async function POST(request: Request) {
     let meetLink: string | null = null;
     let calendarWarning: string | undefined;
 
-    if (isGoogleCalendarConfigured()) {
-      try {
-        const event = await createGoogleCalendarEvent({
-          summary: payload.title,
-          description: payload.description,
-          startDateTime: dateRange.startDateTime,
-          endDateTime: dateRange.endDateTime,
-          attendeeEmails,
-          createMeet: true,
-        });
+    if (!isGoogleCalendarConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Google Calendar integration is not configured. Online events require Google Meet.",
+        },
+        { status: 503 },
+      );
+    }
 
-        calendarEventId = event.eventId;
-        calendarLink = event.htmlLink;
-        meetLink = event.meetLink;
-      } catch {
-        calendarWarning =
-          "Online training saved, but Google Calendar/Meet integration failed.";
+    try {
+      const event = await createGoogleCalendarEvent({
+        summary: payload.title,
+        description: payload.description,
+        startDateTime: dateRange.startDateTime,
+        endDateTime: dateRange.endDateTime,
+        attendeeEmails,
+        createMeet: true,
+      });
+
+      calendarEventId = event.eventId;
+      calendarLink = event.htmlLink;
+      meetLink = event.meetLink;
+
+      if (!meetLink) {
+        return NextResponse.json(
+          { error: "Google Meet link was not generated. Please retry scheduling." },
+          { status: 502 },
+        );
       }
-    } else {
-      calendarWarning =
-        "Google Calendar integration is not configured. Session saved without invite/Meet link.";
+    } catch {
+      return NextResponse.json(
+        { error: "Could not create Google Calendar event and Google Meet link." },
+        { status: 502 },
+      );
     }
 
     const event = saveOnlineTrainingEvent(

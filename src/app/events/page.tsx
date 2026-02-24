@@ -11,33 +11,30 @@ export const metadata = {
 };
 
 export default function EventsPage() {
-  const scheduledEvents = listOnlineTrainingEvents(30).map((event) => ({
-    title: event.title,
-    date: event.startDateTime,
-    mode: event.meetLink ? "Online (Google Meet)" : "Online session",
-    audience: event.audience,
-    calendarLink: event.calendarLink,
-    meetLink: event.meetLink,
-  }));
-  const events =
-    scheduledEvents.length > 0
-      ? scheduledEvents
-      : [
-          {
-            title: "Monthly Literacy Webinar: Practical Phonics in P1-P2",
-            date: "2026-03-12T10:00:00",
-            mode: "Online (Google Meet)",
-            audience: "Teachers and literacy coaches",
-            calendarLink: null,
-            meetLink: null,
-          },
-        ];
+  const allEvents = listOnlineTrainingEvents(60)
+    .slice()
+    .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
+    .map((event) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.startDateTime,
+      mode: "Online (Google Meet)",
+      audience: event.audience,
+      calendarLink: event.calendarLink,
+      meetLink: event.meetLink,
+    }));
+  const now = Date.now();
+  const upcomingEvents = allEvents.filter((event) => new Date(event.date).getTime() >= now);
+  const events = upcomingEvents.length > 0 ? upcomingEvents : allEvents;
+
+  const leadEvent = events[0];
 
   const eventSchema = {
     "@context": "https://schema.org",
     "@type": "Event",
-    name: events[0]?.title,
-    startDate: events[0]?.date,
+    name: leadEvent?.title,
+    startDate: leadEvent?.date,
     eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
     eventStatus: "https://schema.org/EventScheduled",
     organizer: {
@@ -48,10 +45,12 @@ export default function EventsPage() {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
-      />
+      {leadEvent ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
+        />
+      ) : null}
       <PageHero
         kicker="Live learning"
         title="Events & Webinars"
@@ -60,39 +59,52 @@ export default function EventsPage() {
 
       <section className="section">
         <div className="container cards-grid">
-          {events.map((event) => (
-            <article className="card" key={event.title}>
-              <h2>{event.title}</h2>
+          {events.length === 0 ? (
+            <article className="card">
+              <h2>No events scheduled yet</h2>
               <p>
-                <strong>Date:</strong>{" "}
-                {new Date(event.date).toLocaleString(undefined, {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                Upcoming webinars appear here automatically after staff schedule them
+                in the portal.
               </p>
-              <p>
-                <strong>Mode:</strong> {event.mode}
-              </p>
-              <p>
-                <strong>Audience:</strong> {event.audience}
-              </p>
-              <div className="action-row">
-                {event.calendarLink ? (
-                  <a className="button button-ghost" href={event.calendarLink} target="_blank" rel="noreferrer">
-                    Calendar
-                  </a>
-                ) : null}
-                {event.meetLink ? (
-                  <a className="button" href={event.meetLink} target="_blank" rel="noreferrer">
-                    Join meet
-                  </a>
-                ) : null}
-              </div>
             </article>
-          ))}
+          ) : (
+            events.map((event) => (
+              <article className="card" key={event.id}>
+                <h2>{event.title}</h2>
+                <p>
+                  <strong>Date:</strong>{" "}
+                  {new Date(event.date).toLocaleString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+                <p>
+                  <strong>Mode:</strong> {event.mode}
+                </p>
+                <p>
+                  <strong>Audience:</strong> {event.audience}
+                </p>
+                {event.description ? <p>{event.description}</p> : null}
+                <div className="action-row">
+                  {event.calendarLink ? (
+                    <a className="button button-ghost" href={event.calendarLink} target="_blank" rel="noreferrer">
+                      Calendar
+                    </a>
+                  ) : null}
+                  {event.meetLink ? (
+                    <a className="button" href={event.meetLink} target="_blank" rel="noreferrer">
+                      Join meet
+                    </a>
+                  ) : (
+                    <span className="meta-line">Google Meet link pending calendar sync.</span>
+                  )}
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </section>
 

@@ -18,11 +18,13 @@ export default async function ImpactReportDetailPage({
 
   const outcomes = report.factPack.learningOutcomes;
   const outcomeRows = [
-    { label: "Letter-sound knowledge", value: outcomes.letterSoundKnowledge },
-    { label: "Decoding accuracy", value: outcomes.decodingAccuracy },
-    { label: "Oral reading fluency (WCPM)", value: outcomes.oralReadingFluencyWcpm },
-    { label: "Oral reading accuracy", value: outcomes.oralReadingAccuracy },
-    { label: "Comprehension", value: outcomes.comprehension },
+    { label: "Letter Identification", value: outcomes.letterIdentification },
+    { label: "Sound Identification", value: outcomes.soundIdentification },
+    { label: "Decodable Words", value: outcomes.decodableWords },
+    { label: "Undecodable Words", value: outcomes.undecodableWords },
+    { label: "Made Up Words", value: outcomes.madeUpWords },
+    { label: "Story Reading", value: outcomes.storyReading },
+    { label: "Reading Comprehension", value: outcomes.readingComprehension },
   ];
 
   return (
