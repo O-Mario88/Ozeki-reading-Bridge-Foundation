@@ -1,322 +1,47 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { MediaTestimonialGrid } from "@/components/MediaTestimonialGrid";
-import { getImpactSummary, listPublicImpactReports } from "@/lib/db";
-import { getMediaShowcase } from "@/lib/media-showcase";
+import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Impact",
   description:
-    "Explore verified literacy impact—schools supported, teachers trained, coaching visits completed, learner outcomes improved, and downloadable reports for partners.",
+    "Explore live aggregated literacy impact by Uganda, sub-region, district, and school.",
 };
 
 export const dynamic = "force-dynamic";
 
-function asNumber(value: number | null | undefined) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function firstValue(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+  return value ?? "";
 }
 
-type ImpactMetricLike = {
-  baseline?: number | null;
-  progress?: number | null;
-  endline?: number | null;
-  baselineScore?: number | null;
-  progressScore?: number | null;
-  endlineScore?: number | null;
-  change?: number | null;
-};
-
-type NormalizedImpactMetric = {
-  baseline: number | null;
-  progress: number | null;
-  endline: number | null;
-  change: number | null;
-};
-
-function normalizeImpactMetric(metric: ImpactMetricLike | null | undefined): NormalizedImpactMetric {
-  const baseline = asNumber(metric?.baseline ?? metric?.baselineScore ?? null);
-  const progress = asNumber(metric?.progress ?? metric?.progressScore ?? null);
-  const endline = asNumber(metric?.endline ?? metric?.endlineScore ?? null);
-  const explicitChange = asNumber(metric?.change ?? null);
-
-  if (explicitChange !== null) {
-    return { baseline, progress, endline, change: explicitChange };
-  }
-  if (baseline !== null && endline !== null) {
-    return {
-      baseline,
-      progress,
-      endline,
-      change: Number((endline - baseline).toFixed(2)),
-    };
-  }
-  if (progress !== null && endline !== null) {
-    return {
-      baseline,
-      progress,
-      endline,
-      change: Number((endline - progress).toFixed(2)),
-    };
-  }
-  return { baseline, progress, endline, change: null };
-}
-
-function formatValue(value: number | string | null) {
-  if (typeof value === "number") {
-    return value.toLocaleString();
-  }
-  if (typeof value === "string" && value.trim()) {
-    return value;
-  }
-  return "Data not available";
-}
-
-export default async function ImpactHubPage() {
-  const summary = getImpactSummary();
-  const reports = listPublicImpactReports({ limit: 24 });
-  const latestReport = reports[0] ?? null;
-  const mediaShowcase = await getMediaShowcase();
-
-  const summaryMap = new Map(summary.metrics.map((metric) => [metric.label, metric.value]));
-  const outcomes = latestReport?.factPack.learningOutcomes;
-  const outcomeMetrics = {
-    letterIdentification: normalizeImpactMetric(outcomes?.letterIdentification),
-    soundIdentification: normalizeImpactMetric(outcomes?.soundIdentification),
-    decodableWords: normalizeImpactMetric(outcomes?.decodableWords),
-    undecodableWords: normalizeImpactMetric(outcomes?.undecodableWords),
-    madeUpWords: normalizeImpactMetric(outcomes?.madeUpWords),
-    storyReading: normalizeImpactMetric(outcomes?.storyReading),
-    readingComprehension: normalizeImpactMetric(outcomes?.readingComprehension),
-  };
-
-  const averageImprovement = (() => {
-    const changes = [
-      outcomeMetrics.letterIdentification.change,
-      outcomeMetrics.soundIdentification.change,
-      outcomeMetrics.decodableWords.change,
-      outcomeMetrics.undecodableWords.change,
-      outcomeMetrics.madeUpWords.change,
-      outcomeMetrics.storyReading.change,
-      outcomeMetrics.readingComprehension.change,
-    ].filter((value): value is number => typeof value === "number");
-
-    if (changes.length === 0) {
-      return "Data not available";
-    }
-
-    const average = changes.reduce((sum, value) => sum + value, 0) / changes.length;
-    return `${average.toFixed(1)} avg change`;
-  })();
-
-  const kpis = [
-    {
-      label: "Schools impacted",
-      value:
-        latestReport?.factPack.coverageDelivery.schoolsImpacted ??
-        summaryMap.get("Schools trained") ??
-        null,
-    },
-    {
-      label: "Schools coached/visited",
-      value: latestReport?.factPack.coverageDelivery.schoolsCoachedVisited ?? null,
-    },
-    {
-      label: "Teachers trained",
-      value:
-        latestReport?.factPack.coverageDelivery.teachersTrained ??
-        summaryMap.get("Teachers trained") ??
-        null,
-    },
-    {
-      label: "School leaders trained",
-      value: latestReport?.factPack.coverageDelivery.schoolLeadersTrained ?? null,
-    },
-    {
-      label: "Learners reached",
-      value:
-        latestReport?.factPack.coverageDelivery.learnersReached ??
-        summaryMap.get("Learners enrolled") ??
-        summaryMap.get("Learners assessed") ??
-        null,
-    },
-    {
-      label: "Learners enrolled",
-      value: summaryMap.get("Learners enrolled") ?? null,
-    },
-    {
-      label: "Resources downloaded",
-      value:
-        latestReport?.factPack.engagement.resourcesDownloaded ??
-        summary.engagement.toolkitLeads,
-    },
-    {
-      label: "Learners assessed",
-      value: summaryMap.get("Learners assessed") ?? null,
-    },
-    {
-      label: "Average improvement (key skills)",
-      value: averageImprovement,
-    },
-  ];
-
-  const trendBlocks = [
-    { label: "Letter Identification", metric: outcomeMetrics.letterIdentification },
-    { label: "Sound Identification", metric: outcomeMetrics.soundIdentification },
-    { label: "Decodable Words", metric: outcomeMetrics.decodableWords },
-    { label: "Undecodable Words", metric: outcomeMetrics.undecodableWords },
-    { label: "Made Up Words", metric: outcomeMetrics.madeUpWords },
-    { label: "Story Reading", metric: outcomeMetrics.storyReading },
-    { label: "Reading Comprehension", metric: outcomeMetrics.readingComprehension },
-  ];
+export default async function ImpactHubPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
 
   return (
     <>
       <section className="page-hero">
         <div className="container">
-          <p className="kicker">Impact hub</p>
-          <h1>Evidence-Based Literacy Impact</h1>
+          <p className="kicker">Impact overview</p>
+          <h1>Live Literacy Impact Dashboard</h1>
           <p>
-            We track delivery, teaching quality, and learner outcomes, then publish
-            credible reports partners can verify.
+            Public dashboard data is aggregated from verified staff submissions and published
+            with privacy controls.
           </p>
-          <div className="action-row">
-            <Link className="button" href="/impact/dashboard">
-              View Live Impact Dashboard
-            </Link>
-            <Link className="inline-download-link" href="/impact/reports">
-              Download Latest Impact Report
-            </Link>
-            <Link className="button button-ghost" href="/impact/case-studies">
-              Explore Case Studies
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">Headline metrics</h2>
-          </div>
-          <div className="impact-kpi-grid">
-            {kpis.map((kpi) => (
-              <article className="card impact-kpi-card" key={kpi.label}>
-                <strong>{formatValue(kpi.value)}</strong>
-                <span>{kpi.label}</span>
-              </article>
-            ))}
-          </div>
-          <p className="meta-line impact-trust-line">
-            All public statistics are aggregated. No learner personal data is shared.
-          </p>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">Results snapshot</h2>
-            <p>
-              Baseline to endline learning trends from public reports, where available.
-            </p>
-          </div>
-          <div className="cards-grid impact-trend-grid">
-            {trendBlocks.map((block) => {
-              const values = [
-                asNumber(block.metric?.baseline),
-                asNumber(block.metric?.progress),
-                asNumber(block.metric?.endline),
-              ];
-              const numericValues = values.filter((value): value is number => value !== null);
-              const maxValue = numericValues.length > 0 ? Math.max(...numericValues) : 1;
-              return (
-                <article className="card" key={block.label}>
-                  <h3>{block.label}</h3>
-                  {numericValues.length === 0 ? (
-                    <p className="meta-line">Data not available for this period.</p>
-                  ) : (
-                    <div className="impact-trend-stack">
-                      {[
-                        { label: "Baseline", value: values[0] },
-                        { label: "Progress", value: values[1] },
-                        { label: "Endline", value: values[2] },
-                      ].map((point) => (
-                        <div className="impact-trend-row" key={`${block.label}-${point.label}`}>
-                          <span>{point.label}</span>
-                          <div className="impact-trend-track" aria-hidden>
-                            <i
-                              style={{
-                                width:
-                                  typeof point.value === "number"
-                                    ? `${Math.max(7, (point.value / maxValue) * 100)}%`
-                                    : "0%",
-                              }}
-                            />
-                          </div>
-                          <strong>
-                            {typeof point.value === "number"
-                              ? point.value.toLocaleString()
-                              : "N/A"}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">Download reports</h2>
-          </div>
-          <div className="cards-grid">
-            {reports.slice(0, 3).map((report) => (
-              <article className="card" key={report.reportCode}>
-                <p className="meta-pill">{report.reportType}</p>
-                <h3>{report.title}</h3>
-                <p className="meta-line">
-                  {report.scopeType}: {report.scopeValue} | {report.periodStart} to {report.periodEnd}
-                </p>
-                <ul>
-                  <li>
-                    Schools impacted: {report.factPack.coverageDelivery.schoolsImpacted.toLocaleString()}
-                  </li>
-                  <li>
-                    Teachers trained: {report.factPack.coverageDelivery.teachersTrained.toLocaleString()}
-                  </li>
-                  <li>
-                    Learners assessed: {report.factPack.coverageDelivery.assessmentsConducted.endline.toLocaleString()}
-                  </li>
-                </ul>
-                <p>
-                  <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
-                    Download PDF
-                  </a>
-                </p>
-                <p>
-                  <Link className="inline-download-link" href={`/impact/reports/${report.reportCode}`}>
-                    View Web Version
-                  </Link>
-                </p>
-              </article>
-            ))}
-            {reports.length === 0 ? (
-              <article className="card">
-                <h3>No public reports yet</h3>
-                <p>
-                  Public reports appear here once a report is generated and marked as
-                  public from the staff dashboard.
-                </p>
-              </article>
-            ) : null}
-          </div>
           <div className="action-row">
             <Link className="button button-ghost" href="/impact/reports">
-              View All Reports
+              Download Latest Impact Report
+            </Link>
+            <Link className="inline-download-link" href="/impact/methodology">
+              Methodology
             </Link>
           </div>
         </div>
@@ -324,22 +49,16 @@ export default async function ImpactHubPage() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">Proof from the field</h2>
-            <p>
-              Evidence gallery preview with captions, location context, and dates from
-              implementation activity.
-            </p>
-          </div>
-          <MediaTestimonialGrid items={mediaShowcase.featuredItems.slice(0, 3)} />
-          <div className="action-row">
-            <Link className="button" href="/impact/gallery">
-              View Impact Gallery
-            </Link>
-            <Link className="button button-ghost" href="/partner">
-              Partner With Us
-            </Link>
-          </div>
+          <PublicImpactMapExplorer
+            syncUrl
+            initialPeriod={firstValue(params.period) || "FY"}
+            initialSelection={{
+              region: firstValue(params.region),
+              subRegion: firstValue(params.subRegion),
+              district: firstValue(params.district),
+              school: firstValue(params.school),
+            }}
+          />
         </div>
       </section>
     </>

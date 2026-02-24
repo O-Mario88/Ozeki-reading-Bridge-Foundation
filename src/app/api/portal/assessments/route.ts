@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   getPortalUserFromSession,
   listAssessmentRecords,
+  logAuditEvent,
   saveAssessmentRecord,
 } from "@/lib/db";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
@@ -19,9 +20,10 @@ const optionalScore = (max: number) =>
 
 const assessmentSchema = z.object({
   childName: z.string().min(2),
-  childId: z.string().min(2),
+  childId: z.string().trim().optional(),
+  learnerUid: z.string().trim().optional(),
   gender: z.enum(["Boy", "Girl", "Other"]),
-  age: z.coerce.number().int().min(3).max(20),
+  age: z.coerce.number().int().min(3).max(25),
   schoolId: z.coerce.number().int().min(1),
   classGrade: z.string().min(1),
   assessmentDate: z.string().min(6),
@@ -58,6 +60,18 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (user.role === "Volunteer") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  logAuditEvent(
+    user.id,
+    user.fullName,
+    "view_learner_details",
+    "assessment_records",
+    null,
+    "Viewed learner-level assessment records.",
+  );
 
   return NextResponse.json({ assessments: listAssessmentRecords(20) });
 }
@@ -74,6 +88,7 @@ export async function POST(request: Request) {
     const normalizedPayload: AssessmentRecordInput = {
       childName: payload.childName,
       childId: payload.childId,
+      learnerUid: payload.learnerUid,
       gender: payload.gender,
       age: payload.age,
       schoolId: payload.schoolId,

@@ -15,6 +15,8 @@ const participantSchema = z.object({
   role: z.enum(["Classroom teacher", "School Leader"]),
   phone: z.string().min(7),
   email: z.string().email(),
+  gender: z.enum(["Male", "Female"]).optional(),
+  schoolId: z.coerce.number().int().positive().optional(),
 });
 
 const sessionSchema = z.object({

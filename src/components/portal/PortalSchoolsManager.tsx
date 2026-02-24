@@ -283,6 +283,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
       parish: String(formData.get("parish") ?? ""),
       village: String(formData.get("village") ?? ""),
       notes: String(formData.get("notes") ?? ""),
+      enrollmentTotal: String(formData.get("enrollmentTotal") ?? "0"),
       enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
       enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
       enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
@@ -338,6 +339,15 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
     }
     const enrolledBoys = toWholeNumber(payload.enrolledBoys);
     const enrolledGirls = toWholeNumber(payload.enrolledGirls);
+    const enrollmentTotal = toWholeNumber(payload.enrollmentTotal);
+    if (Number.isNaN(enrollmentTotal) || enrollmentTotal <= 0) {
+      setCreateFeedback({
+        kind: "error",
+        message: "Enrollment total is required and must be a whole number greater than 0.",
+      });
+      setSavingSchool(false);
+      return;
+    }
     if (Number.isNaN(enrolledBoys)) {
       setCreateFeedback({
         kind: "error",
@@ -361,6 +371,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...payload,
+          enrollmentTotal,
           enrolledBoys,
           enrolledGirls,
           enrolledBaby: toWholeNumber(payload.enrolledBaby),
@@ -392,7 +403,10 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
       setCreateContactName("");
       setCreateContactPhone("");
       setIsCreateFormOpen(false);
-      setCreateFeedback({ kind: "success", message: `School ${data.school.schoolCode} saved.` });
+      setCreateFeedback({
+        kind: "success",
+        message: `School ${data.school.schoolCode} saved. Next: add reading teachers, schedule first visit, and create a baseline assessment session from the school profile actions.`,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not save school.";
       setCreateFeedback({ kind: "error", message });
@@ -421,6 +435,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
       notes: String(formData.get("notes") ?? ""),
       enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
       enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
+      enrollmentTotal: String(formData.get("enrollmentTotal") ?? selectedSchool.enrollmentTotal ?? "0"),
       enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
       enrolledMiddle: String(formData.get("enrolledMiddle") ?? "0"),
       enrolledTop: String(formData.get("enrolledTop") ?? "0"),
@@ -466,10 +481,19 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
 
     const enrolledBoys = toWholeNumber(payload.enrolledBoys);
     const enrolledGirls = toWholeNumber(payload.enrolledGirls);
+    const enrollmentTotal = toWholeNumber(payload.enrollmentTotal);
     if (Number.isNaN(enrolledBoys) || Number.isNaN(enrolledGirls)) {
       setProfileFeedback({
         kind: "error",
         message: "Enrollment values must be whole numbers greater than or equal to 0.",
+      });
+      setSavingProfile(false);
+      return;
+    }
+    if (Number.isNaN(enrollmentTotal) || enrollmentTotal <= 0) {
+      setProfileFeedback({
+        kind: "error",
+        message: "Enrollment total is required and must be greater than 0.",
       });
       setSavingProfile(false);
       return;
@@ -487,6 +511,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
           parish: payload.parish.trim(),
           village: payload.village.trim() || null,
           notes: payload.notes.trim() || null,
+          enrollmentTotal,
           enrolledBoys,
           enrolledGirls,
           enrolledBaby: toWholeNumber(payload.enrolledBaby),
@@ -610,30 +635,37 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
             </label>
             <label>
               <span className="portal-field-label">
-                <span>Sub-county</span>
+                <span>Enrollment Total</span>
                 <span className="portal-required-indicator">
                   *<span className="visually-hidden">required</span>
                 </span>
               </span>
               <input
-                name="subCounty"
+                name="enrollmentTotal"
+                type="number"
+                min={1}
+                step={1}
                 required
-                minLength={2}
+                defaultValue={0}
+                inputMode="numeric"
+              />
+            </label>
+            <label>
+              <span className="portal-field-label">
+                <span>Sub-county (optional)</span>
+              </span>
+              <input
+                name="subCounty"
                 placeholder="e.g. Loro"
                 autoComplete="address-level2"
               />
             </label>
             <label>
               <span className="portal-field-label">
-                <span>Parish</span>
-                <span className="portal-required-indicator">
-                  *<span className="visually-hidden">required</span>
-                </span>
+                <span>Parish (optional)</span>
               </span>
               <input
                 name="parish"
-                required
-                minLength={2}
                 placeholder="e.g. Corner Parish"
                 autoComplete="address-level3"
               />
@@ -650,18 +682,6 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 placeholder="School metadata notes, access details, or additional context."
               />
             </label>
-            <label>
-              <span className="portal-field-label">Enrolled Boys</span>
-              <input
-                name="enrolledBoys"
-                type="number"
-                min={0}
-                step={1}
-                defaultValue={0}
-                inputMode="numeric"
-              />
-            </label>
-
             <fieldset className="portal-fieldset">
               <legend>Class Enrollment</legend>
               <div className="form-grid-3">
@@ -948,6 +968,16 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 </fieldset>
 
                 <div className="form-grid-2 full-width">
+                  <label>
+                    <span className="portal-field-label">Enrollment Total</span>
+                    <input
+                      name="enrollmentTotal"
+                      type="number"
+                      min={1}
+                      defaultValue={selectedSchool.enrollmentTotal ?? selectedSchool.enrolledLearners ?? 0}
+                      required
+                    />
+                  </label>
                   <label>
                     <span className="portal-field-label">Total Boys</span>
                     <input name="enrolledBoys" type="number" defaultValue={selectedSchool.enrolledBoys ?? 0} />

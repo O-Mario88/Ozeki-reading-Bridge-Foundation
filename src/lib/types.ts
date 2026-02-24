@@ -414,6 +414,8 @@ export interface TrainingParticipantInput {
   role: ParticipantRole;
   phone: string;
   email: string;
+  gender?: "Male" | "Female";
+  schoolId?: number;
 }
 
 export interface TrainingSessionInput {
@@ -440,12 +442,44 @@ export interface TrainingSessionRecord {
   createdAt: string;
 }
 
+export interface TeacherRosterInput {
+  schoolId: number;
+  fullName: string;
+  gender: "Male" | "Female";
+  isReadingTeacher: boolean;
+  phone?: string;
+}
+
+export interface TeacherRosterRecord extends TeacherRosterInput {
+  teacherUid: string;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LearnerRosterInput {
+  schoolId: number;
+  fullName: string;
+  internalChildId?: string;
+  gender: LearnerGender;
+  age: number;
+  classGrade: string;
+  consentFlag?: boolean;
+}
+
+export interface LearnerRosterRecord extends LearnerRosterInput {
+  learnerUid: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AssessmentType = "baseline" | "progress" | "endline";
 export type LearnerGender = "Boy" | "Girl" | "Other";
 
 export interface AssessmentRecordInput {
   childName: string;
-  childId: string;
+  childId?: string;
+  learnerUid?: string;
   gender: LearnerGender;
   age: number;
   schoolId: number;
@@ -499,7 +533,81 @@ export interface AggregatedImpactData {
     schoolsTrained: number;
     schoolsVisited: number;
     schoolsAssessedBaseline: number;
-    schoolsAssessedEndline: number;
+      schoolsAssessedEndline: number;
+  };
+}
+
+export interface PublicImpactDomainAggregate {
+  baseline: number | null;
+  latest: number | null;
+  endline: number | null;
+  benchmarkPct: number | null;
+  n: number;
+}
+
+export interface PublicImpactAggregate {
+  scope: {
+    level: "country" | "subregion" | "district" | "school";
+    id: string;
+    name: string;
+    parent?: string;
+  };
+  period: {
+    label: string;
+    startDate: string | null;
+    endDate: string | null;
+  };
+  kpis: {
+    schoolsSupported: number;
+    teachersSupportedMale: number;
+    teachersSupportedFemale: number;
+    enrollmentEstimatedReach: number;
+    learnersAssessedUnique: number;
+    learnersReachedEstimated: number;
+    coachingVisitsCompleted: number;
+    assessmentCycleCompletionPct: number;
+    assessmentsBaselineCount: number;
+    assessmentsProgressCount: number;
+    assessmentsEndlineCount: number;
+  };
+  outcomes: {
+    letterSounds: PublicImpactDomainAggregate;
+    decoding: PublicImpactDomainAggregate;
+    fluency: PublicImpactDomainAggregate;
+    comprehension: PublicImpactDomainAggregate;
+  };
+  funnel: {
+    trained: number;
+    coached: number;
+    baselineAssessed: number;
+    endlineAssessed: number;
+  };
+  fidelity: {
+    score: number;
+    band: FidelityBand;
+    drivers: Array<{ key: string; label: string; score: number }>;
+  };
+  rankings: {
+    mostImproved: Array<{ name: string; score: number }>;
+    prioritySupport: Array<{ name: string; score: number }>;
+    mostActive: Array<{ name: string; score: number }>;
+  };
+  meta: {
+    lastUpdated: string;
+    dataCompleteness: "Complete" | "Partial";
+    sampleSize: number;
+  };
+  navigator: {
+    regions: string[];
+    subRegions: string[];
+    districts: string[];
+    schools: Array<{
+      id: number;
+      name: string;
+      district: string;
+      subRegion: string;
+      region: string;
+    }>;
   };
 }
 
@@ -791,10 +899,12 @@ export interface PortalOperationalReportsData {
 export interface SchoolDirectoryInput {
   name: string;
   district: string;
-  subCounty: string;
-  parish: string;
+  subCounty?: string;
+  parish?: string;
   village?: string;
   notes?: string;
+  enrollmentTotal?: number;
+  enrollmentByGrade?: string;
   enrolledBoys?: number;
   enrolledGirls?: number;
   enrolledBaby?: number;
@@ -815,13 +925,18 @@ export interface SchoolDirectoryInput {
 
 export interface SchoolDirectoryRecord {
   id: number;
+  schoolUid: string;
   schoolCode: string;
   name: string;
+  region: string;
+  subRegion: string;
   district: string;
   subCounty: string;
   parish: string;
   village: string | null;
   notes: string | null;
+  enrollmentTotal: number;
+  enrollmentByGrade: string | null;
   enrolledBoys: number;
   enrolledGirls: number;
   enrolledLearners: number;

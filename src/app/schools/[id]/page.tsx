@@ -1,135 +1,188 @@
-import { getImpactDrilldownData, calculateFidelityScore, getLearningGainsData } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getPublicImpactAggregate } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
 
-export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-    const { id } = await params;
-    const name = decodeURIComponent(id);
-    return {
-        title: `${name} — School Impact Profile | Ozeki Reading Bridge Foundation`,
-        description: `Aggregated literacy program data for ${name}: enrollment, coaching visits, assessment outcomes, and implementation fidelity.`,
-        openGraph: {
-            title: `${name} — School Impact Profile`,
-            description: `Aggregated literacy program data for ${name}.`,
-            type: "website",
-        },
-    };
+type DomainCardProps = {
+  title: string;
+  baseline: number | null;
+  latest: number | null;
+  sampleSize: number;
+  benchmarkPct: number | null;
+};
+
+function DomainCard({
+  title,
+  baseline,
+  latest,
+  sampleSize,
+  benchmarkPct,
+}: DomainCardProps) {
+  return (
+    <article className="impact-domain-mini-card">
+      <h4>{title}</h4>
+      <p>
+        <strong>{latest ?? "Data not available"}</strong>
+      </p>
+      <p className="impact-domain-mini-meta">
+        Baseline: {baseline ?? "Data not available"} → Latest: {latest ?? "Data not available"}
+      </p>
+      <p className="impact-domain-mini-meta">n = {sampleSize.toLocaleString()}</p>
+      <p className="impact-domain-mini-meta">
+        Benchmark: {benchmarkPct !== null ? `${benchmarkPct.toFixed(1)}%` : "Data not available"}
+      </p>
+    </article>
+  );
+}
+
+function decodeSchoolId(value: string) {
+  return decodeURIComponent(value);
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Params;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const scopeId = decodeSchoolId(id);
+  const aggregate = getPublicImpactAggregate("school", scopeId, "FY");
+  const schoolName = aggregate.scope.name;
+
+  return {
+    title: `${schoolName} — School Impact Profile | Ozeki Reading Bridge Foundation`,
+    description: `Aggregated public literacy implementation data for ${schoolName}: enrollment reach, visits, assessments, and outcomes.`,
+    openGraph: {
+      title: `${schoolName} — School Impact Profile`,
+      description: `Aggregated public literacy implementation data for ${schoolName}.`,
+      type: "website",
+    },
+  };
 }
 
 export default async function SchoolPage({ params }: { params: Params }) {
-    const { id } = await params;
-    const name = decodeURIComponent(id);
-    const drilldown = getImpactDrilldownData("school", name);
-    const fidelity = calculateFidelityScore("school", name);
-    const gains = getLearningGainsData("school", name);
+  const { id } = await params;
+  const scopeId = decodeSchoolId(id);
+  const aggregate = getPublicImpactAggregate("school", scopeId, "FY");
+  const kpis = aggregate.kpis;
 
-    return (
-        <>
-            <section className="page-hero">
-                <div className="container">
-                    <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
-                        <Link href="/impact/dashboard">Dashboard</Link>
-                        <span aria-hidden>›</span>
-                        <span>{name}</span>
-                    </nav>
-                    <p className="kicker">School Profile</p>
-                    <h1>{name}</h1>
-                    <p>Aggregated implementation and outcome data.</p>
-                </div>
-            </section>
+  return (
+    <>
+      <section className="page-hero">
+        <div className="container">
+          <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
+            <Link href="/impact">Dashboard</Link>
+            <span aria-hidden>›</span>
+            <span>{aggregate.scope.name}</span>
+          </nav>
+          <p className="kicker">School Profile</p>
+          <h1>{aggregate.scope.name}</h1>
+          <p>Aggregated public implementation and outcomes only.</p>
+        </div>
+      </section>
 
-            <section className="section" style={{ backgroundColor: "var(--md-sys-color-surface-container-low, #f6f6f6)" }}>
-                <div className="container" style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+      <section
+        className="section"
+        style={{ backgroundColor: "var(--md-sys-color-surface-container-low, #f6f6f6)" }}
+      >
+        <div className="container" style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
+          <div className="headline-stats-grid">
+            <article>
+              <span>Enrollment (estimated reach)</span>
+              <strong>{kpis.enrollmentEstimatedReach.toLocaleString()}</strong>
+            </article>
+            <article>
+              <span>Learners assessed (n)</span>
+              <strong>{kpis.learnersAssessedUnique.toLocaleString()}</strong>
+            </article>
+            <article>
+              <span>Coaching visits</span>
+              <strong>{kpis.coachingVisitsCompleted.toLocaleString()}</strong>
+            </article>
+            <article>
+              <span>Assessments (B / P / E)</span>
+              <strong>
+                {kpis.assessmentsBaselineCount.toLocaleString()} /{" "}
+                {kpis.assessmentsProgressCount.toLocaleString()} /{" "}
+                {kpis.assessmentsEndlineCount.toLocaleString()}
+              </strong>
+            </article>
+          </div>
 
-                    {/* KPI Cards */}
-                    <div className="impact-dash-kpi-grid">
-                        <article className="impact-dash-kpi" style={{ "--kpi-accent": "#0d7c66" } as React.CSSProperties}>
-                            <div className="impact-dash-kpi-body">
-                                <span className="impact-dash-kpi-label">Learners Enrolled</span>
-                                <span className="impact-dash-kpi-value">{drilldown.kpis.learnersEnrolled.toLocaleString()}</span>
-                            </div>
-                        </article>
-                        <article className="impact-dash-kpi" style={{ "--kpi-accent": "#7c3aed" } as React.CSSProperties}>
-                            <div className="impact-dash-kpi-body">
-                                <span className="impact-dash-kpi-label">Learners Assessed</span>
-                                <span className="impact-dash-kpi-value">{drilldown.kpis.learnersAssessed.toLocaleString()}</span>
-                            </div>
-                        </article>
-                        <article className="impact-dash-kpi" style={{
-                            "--kpi-accent": fidelity.band === "Strong" ? "#16a34a" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
-                        } as React.CSSProperties}>
-                            <div className="impact-dash-kpi-body">
-                                <span className="impact-dash-kpi-label">Fidelity ({fidelity.band})</span>
-                                <span className="impact-dash-kpi-value">{fidelity.totalScore}/100</span>
-                            </div>
-                        </article>
-                    </div>
+          <article className="card" style={{ padding: "1.2rem" }}>
+            <h3 style={{ marginTop: 0 }}>Learning Outcomes</h3>
+            <div className="impact-domain-mini-grid">
+              <DomainCard
+                title="Letter sounds"
+                baseline={aggregate.outcomes.letterSounds.baseline}
+                latest={aggregate.outcomes.letterSounds.latest ?? aggregate.outcomes.letterSounds.endline}
+                sampleSize={aggregate.outcomes.letterSounds.n}
+                benchmarkPct={aggregate.outcomes.letterSounds.benchmarkPct}
+              />
+              <DomainCard
+                title="Decoding"
+                baseline={aggregate.outcomes.decoding.baseline}
+                latest={aggregate.outcomes.decoding.latest ?? aggregate.outcomes.decoding.endline}
+                sampleSize={aggregate.outcomes.decoding.n}
+                benchmarkPct={aggregate.outcomes.decoding.benchmarkPct}
+              />
+              <DomainCard
+                title="Fluency"
+                baseline={aggregate.outcomes.fluency.baseline}
+                latest={aggregate.outcomes.fluency.latest ?? aggregate.outcomes.fluency.endline}
+                sampleSize={aggregate.outcomes.fluency.n}
+                benchmarkPct={aggregate.outcomes.fluency.benchmarkPct}
+              />
+              <DomainCard
+                title="Comprehension"
+                baseline={aggregate.outcomes.comprehension.baseline}
+                latest={
+                  aggregate.outcomes.comprehension.latest ?? aggregate.outcomes.comprehension.endline
+                }
+                sampleSize={aggregate.outcomes.comprehension.n}
+                benchmarkPct={aggregate.outcomes.comprehension.benchmarkPct}
+              />
+            </div>
+          </article>
 
-                    {/* Fidelity drivers */}
-                    <div className="card" style={{ padding: "1.5rem" }}>
-                        <h3 style={{ marginTop: 0 }}>Implementation Fidelity</h3>
-                        {fidelity.drivers.map((d) => (
-                            <div key={d.driver} style={{ marginBottom: "0.75rem" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-                                    <span style={{ fontWeight: 600 }}>{d.label}</span>
-                                    <span style={{ fontWeight: 700, color: d.score >= 75 ? "#16a34a" : d.score >= 50 ? "#e8a317" : "#dc2626" }}>{d.score}%</span>
-                                </div>
-                                <div style={{ height: "6px", borderRadius: "4px", background: "#e8e8e8", overflow: "hidden", marginTop: "0.15rem" }}>
-                                    <div style={{ width: `${d.score}%`, height: "100%", borderRadius: "4px", background: d.score >= 75 ? "#16a34a" : d.score >= 50 ? "#e8a317" : "#dc2626" }} />
-                                </div>
-                                <div style={{ fontSize: "0.72rem", color: "#999" }}>{d.detail}</div>
-                            </div>
-                        ))}
-                    </div>
+          <article className="card" style={{ padding: "1.2rem" }}>
+            <h3 style={{ marginTop: 0 }}>Implementation Summary</h3>
+            <div className="impact-funnel-mini">
+              <div>
+                <span>Trained</span>
+                <strong>{aggregate.funnel.trained.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Coached / Visited</span>
+                <strong>{aggregate.funnel.coached.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Baseline assessed</span>
+                <strong>{aggregate.funnel.baselineAssessed.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Endline assessed</span>
+                <strong>{aggregate.funnel.endlineAssessed.toLocaleString()}</strong>
+              </div>
+            </div>
+            <p className="impact-map-sheet-meta">
+              Data completeness: {aggregate.meta.dataCompleteness}
+            </p>
+            <p className="impact-map-sheet-meta">
+              Last updated: {new Date(aggregate.meta.lastUpdated).toLocaleString()}
+            </p>
+          </article>
 
-                    {/* Learning outcomes */}
-                    <div className="card" style={{ padding: "1.5rem" }}>
-                        <h3 style={{ marginTop: 0 }}>Learning Outcomes</h3>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
-                            {gains.domains.map((d) => (
-                                <div key={d.domain} className="impact-dash-domain">
-                                    <div className="impact-dash-domain-head">
-                                        <span className="impact-dash-domain-label">{d.domain}</span>
-                                        {d.change !== null && (
-                                            <span
-                                                className="impact-dash-domain-change"
-                                                data-positive={d.change > 0 ? "" : undefined}
-                                                data-negative={d.change < 0 ? "" : undefined}
-                                            >
-                                                {d.change > 0 ? "+" : ""}{d.change.toFixed(1)}pp
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div style={{ fontSize: "0.8rem", color: "#666" }}>
-                                        {d.baselineAvg?.toFixed(0) ?? "—"} → {d.endlineAvg?.toFixed(0) ?? "—"} (n={d.sampleSize})
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        {gains.schoolImprovementIndex !== null && (
-                            <div style={{
-                                marginTop: "1rem", textAlign: "center", padding: "0.5rem",
-                                borderRadius: "12px",
-                                background: gains.schoolImprovementIndex > 0 ? "#dcfce7" : "#fee2e2",
-                                color: gains.schoolImprovementIndex > 0 ? "#16a34a" : "#dc2626",
-                                fontWeight: 700, fontSize: "0.9rem",
-                            }}>
-                                School Improvement Index: {gains.schoolImprovementIndex > 0 ? "+" : ""}{gains.schoolImprovementIndex.toFixed(1)}pp
-                            </div>
-                        )}
-                    </div>
-
-                    <p className="note-box impact-compliance-note">
-                        School profiles display group-level aggregated data only. No individual learner
-                        information is shown. For learner-level data, authorized staff must access
-                        the secure portal.
-                    </p>
-                </div>
-            </section>
-        </>
-    );
+          <p className="note-box impact-compliance-note">
+            School profiles display group-level aggregated data only. No individual learner
+            information is shown. Learner-level views remain in secure staff tools with role-based
+            access and audit logging.
+          </p>
+        </div>
+      </section>
+    </>
+  );
 }

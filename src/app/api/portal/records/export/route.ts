@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { listPortalRecords } from "@/lib/db";
+import { listPortalRecords, logAuditEvent } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { PortalRecordFilters } from "@/lib/types";
 
@@ -53,6 +53,14 @@ export async function GET(request: Request) {
   try {
     const filters = parseFilters(request);
     const rows = listPortalRecords(filters, user);
+    logAuditEvent(
+      user.id,
+      user.fullName,
+      filters.module === "assessment" ? "export_learner_data" : "export_portal_records",
+      "portal_records",
+      null,
+      `Exported ${filters.module} records to CSV.`,
+    );
 
     const header = [
       "Record ID",

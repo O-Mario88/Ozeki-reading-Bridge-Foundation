@@ -124,8 +124,8 @@ export function EgraLearnerInputModal({
                         <span className="label-text">Age</span>
                         <input
                             type="number"
-                            min="0"
-                            max="20"
+                            min="3"
+                            max="25"
                             value={learner.age}
                             onChange={(e) => updateField("age", e.target.value)}
                             required

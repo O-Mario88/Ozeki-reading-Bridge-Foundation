@@ -72,6 +72,10 @@ import {
   ImpactReportVariant,
   SchoolDirectoryInput,
   SchoolDirectoryRecord,
+  TeacherRosterInput,
+  TeacherRosterRecord,
+  LearnerRosterInput,
+  LearnerRosterRecord,
   PortalResourceRecord,
   PortalResourceSection,
   portalResourceSections,
@@ -82,6 +86,8 @@ import {
   AggregatedImpactData,
   DistrictLeagueRow,
   GovernmentViewData,
+  PublicImpactAggregate,
+  PublicImpactDomainAggregate,
 } from "@/lib/types";
 import {
   getDistrictsByRegion,
@@ -89,6 +95,7 @@ import {
   inferSubRegionFromDistrict,
   ugandaRegions,
 } from "@/lib/uganda-locations";
+import { getDistrictsByAnySubRegionName } from "@/lib/uganda-map-taxonomy";
 
 const dataDir = path.join(process.cwd(), "data");
 const dbFile = path.join(dataDir, "app.db");
@@ -163,6 +170,8 @@ function ensurePortalResourceColumns(db: Database.Database) {
 
 function ensureSchoolDirectoryColumns(db: Database.Database) {
   ensureColumn(db, "schools_directory", "enrolled_learners", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrollment_total", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "enrollment_by_grade", "TEXT");
   ensureColumn(db, "schools_directory", "enrolled_boys", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrolled_girls", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrolled_baby", "INTEGER NOT NULL DEFAULT 0");
@@ -178,10 +187,422 @@ function ensureSchoolDirectoryColumns(db: Database.Database) {
   ensureColumn(db, "schools_directory", "notes", "TEXT");
   db.exec(`
     UPDATE schools_directory
+    SET enrollment_total = CASE
+      WHEN COALESCE(enrollment_total, 0) > 0 THEN COALESCE(enrollment_total, 0)
+      WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+        THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+      ELSE COALESCE(enrolled_learners, 0)
+    END
+    WHERE COALESCE(enrollment_total, 0) = 0;
+
+    UPDATE schools_directory
     SET enrolled_boys = COALESCE(enrolled_learners, 0)
     WHERE COALESCE(enrolled_boys, 0) = 0
       AND COALESCE(enrolled_girls, 0) = 0
       AND COALESCE(enrolled_learners, 0) > 0;
+  `);
+}
+
+function createGeneratedUid(prefix: string) {
+  return `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;
+}
+
+function stableIdFromText(prefix: string, value: string) {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${prefix}_${normalized || "unknown"}`;
+}
+
+function ensureSchoolIdentityColumns(db: Database.Database) {
+  ensureColumn(db, "schools_directory", "school_uid", "TEXT");
+  ensureColumn(db, "schools_directory", "region", "TEXT");
+  ensureColumn(db, "schools_directory", "sub_region", "TEXT");
+  ensureColumn(db, "schools_directory", "region_id", "TEXT");
+  ensureColumn(db, "schools_directory", "subregion_id", "TEXT");
+  ensureColumn(db, "schools_directory", "district_id", "TEXT");
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_schools_directory_school_uid
+      ON schools_directory(school_uid);
+    CREATE INDEX IF NOT EXISTS idx_schools_directory_region_id
+      ON schools_directory(region_id);
+    CREATE INDEX IF NOT EXISTS idx_schools_directory_subregion_id
+      ON schools_directory(subregion_id);
+    CREATE INDEX IF NOT EXISTS idx_schools_directory_district_id
+      ON schools_directory(district_id);
+  `);
+
+  const schoolRows = db
+    .prepare(
+      `
+      SELECT id, district, school_uid AS schoolUid, region, sub_region AS subRegion,
+             region_id AS regionId, subregion_id AS subregionId, district_id AS districtId
+      FROM schools_directory
+    `,
+    )
+    .all() as Array<{
+      id: number;
+      district: string | null;
+      schoolUid: string | null;
+      region: string | null;
+      subRegion: string | null;
+      regionId: string | null;
+      subregionId: string | null;
+      districtId: string | null;
+    }>;
+
+  const updateStmt = db.prepare(
+    `
+    UPDATE schools_directory
+    SET school_uid = @schoolUid,
+        region = @region,
+        sub_region = @subRegion,
+        region_id = @regionId,
+        subregion_id = @subregionId,
+        district_id = @districtId
+    WHERE id = @id
+  `,
+  );
+
+  const tx = db.transaction(
+    (
+      rows: Array<{
+        id: number;
+        district: string | null;
+        schoolUid: string | null;
+        region: string | null;
+        subRegion: string | null;
+        regionId: string | null;
+        subregionId: string | null;
+        districtId: string | null;
+      }>,
+    ) => {
+      rows.forEach((row) => {
+        const district = String(row.district ?? "").trim();
+        const region = row.region?.trim() || inferRegionFromDistrict(district) || "";
+        const subRegion = row.subRegion?.trim() || inferSubRegionFromDistrict(district) || "";
+        const regionId = row.regionId?.trim() || stableIdFromText("reg", region);
+        const subregionId = row.subregionId?.trim() || stableIdFromText("sub", subRegion);
+        const districtId = row.districtId?.trim() || stableIdFromText("dist", district);
+        const schoolUid = row.schoolUid?.trim() || createGeneratedUid("sch");
+
+        updateStmt.run({
+          id: row.id,
+          schoolUid,
+          region,
+          subRegion,
+          regionId,
+          subregionId,
+          districtId,
+        });
+      });
+    },
+  );
+
+  tx(schoolRows);
+}
+
+function ensureTeacherLearnerRosterTables(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS teacher_roster (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      teacher_uid TEXT NOT NULL UNIQUE,
+      school_id INTEGER NOT NULL,
+      full_name TEXT NOT NULL,
+      gender TEXT NOT NULL CHECK(gender IN ('Male', 'Female')),
+      is_reading_teacher INTEGER NOT NULL DEFAULT 1,
+      phone TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_teacher_roster_school
+      ON teacher_roster(school_id);
+
+    CREATE TABLE IF NOT EXISTS learner_roster (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      learner_uid TEXT NOT NULL UNIQUE,
+      school_id INTEGER NOT NULL,
+      full_name TEXT NOT NULL,
+      internal_child_id TEXT,
+      gender TEXT NOT NULL CHECK(gender IN ('Boy', 'Girl', 'Other')),
+      age INTEGER NOT NULL DEFAULT 6,
+      class_grade TEXT NOT NULL,
+      consent_flag INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_learner_roster_school
+      ON learner_roster(school_id, class_grade);
+  `);
+
+  ensureColumn(db, "training_participants", "school_id", "INTEGER");
+  ensureColumn(db, "training_participants", "teacher_uid", "TEXT");
+  ensureColumn(db, "training_participants", "gender", "TEXT");
+  ensureColumn(db, "assessment_records", "learner_uid", "TEXT");
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_training_participants_teacher_uid
+      ON training_participants(teacher_uid);
+    CREATE INDEX IF NOT EXISTS idx_training_participants_school_id
+      ON training_participants(school_id);
+    CREATE INDEX IF NOT EXISTS idx_assessment_records_learner_uid
+      ON assessment_records(learner_uid);
+  `);
+}
+
+function ensureDistrictMasterData(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS district_master (
+      district_id TEXT PRIMARY KEY,
+      district_name TEXT NOT NULL UNIQUE,
+      subregion_id TEXT NOT NULL,
+      region_id TEXT NOT NULL,
+      sub_counties_count INTEGER,
+      parishes_count INTEGER,
+      villages_count INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_district_master_region_id
+      ON district_master(region_id);
+    CREATE INDEX IF NOT EXISTS idx_district_master_subregion_id
+      ON district_master(subregion_id);
+  `);
+
+  const upsert = db.prepare(`
+    INSERT INTO district_master (
+      district_id,
+      district_name,
+      subregion_id,
+      region_id,
+      updated_at
+    ) VALUES (
+      @districtId,
+      @districtName,
+      @subregionId,
+      @regionId,
+      datetime('now')
+    )
+    ON CONFLICT(district_id) DO UPDATE SET
+      district_name = excluded.district_name,
+      subregion_id = excluded.subregion_id,
+      region_id = excluded.region_id,
+      updated_at = datetime('now')
+  `);
+
+  const tx = db.transaction(() => {
+    ugandaRegions.forEach((region) => {
+      const regionId = stableIdFromText("reg", region.region);
+      region.subRegions.forEach((subRegion) => {
+        const subregionId = stableIdFromText("sub", subRegion.subRegion);
+        subRegion.districts.forEach((districtName) => {
+          upsert.run({
+            districtId: stableIdFromText("dist", districtName),
+            districtName,
+            subregionId,
+            regionId,
+          });
+        });
+      });
+    });
+  });
+
+  tx();
+}
+
+function ensureProgramLinkageTables(db: Database.Database) {
+  ensureColumn(db, "assessment_records", "school_id", "INTEGER");
+  ensureColumn(db, "assessment_records", "assessment_date", "TEXT");
+  ensureColumn(db, "assessment_records", "assessment_type", "TEXT");
+  ensureColumn(db, "assessment_records", "sound_identification_score", "REAL");
+  ensureColumn(db, "assessment_records", "decodable_words_score", "REAL");
+  ensureColumn(db, "assessment_records", "undecodable_words_score", "REAL");
+  ensureColumn(db, "assessment_records", "made_up_words_score", "REAL");
+  ensureColumn(db, "assessment_records", "story_reading_score", "REAL");
+  ensureColumn(db, "assessment_records", "reading_comprehension_score", "REAL");
+  ensureColumn(db, "assessment_records", "source_portal_record_id", "INTEGER");
+  ensureColumn(db, "assessment_records", "source_row_key", "TEXT");
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_assessment_records_source_portal
+      ON assessment_records(source_portal_record_id);
+    CREATE INDEX IF NOT EXISTS idx_assessment_records_school_date
+      ON assessment_records(school_id, assessment_date);
+    CREATE INDEX IF NOT EXISTS idx_assessment_records_type
+      ON assessment_records(assessment_type);
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS portal_training_attendance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      portal_record_id INTEGER NOT NULL,
+      school_id INTEGER,
+      participant_name TEXT NOT NULL,
+      participant_role TEXT NOT NULL,
+      gender TEXT,
+      teacher_uid TEXT,
+      phone TEXT,
+      email TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(portal_record_id) REFERENCES portal_records(id) ON DELETE CASCADE,
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_portal_training_attendance_record
+      ON portal_training_attendance(portal_record_id);
+    CREATE INDEX IF NOT EXISTS idx_portal_training_attendance_teacher
+      ON portal_training_attendance(teacher_uid);
+    CREATE INDEX IF NOT EXISTS idx_portal_training_attendance_school
+      ON portal_training_attendance(school_id);
+
+    CREATE TABLE IF NOT EXISTS coaching_visits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      visit_uid TEXT NOT NULL UNIQUE,
+      portal_record_id INTEGER UNIQUE,
+      school_id INTEGER NOT NULL,
+      visit_date TEXT NOT NULL,
+      visit_type TEXT NOT NULL,
+      coaching_cycle_number INTEGER,
+      coach_user_id INTEGER NOT NULL,
+      focus_areas_json TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(portal_record_id) REFERENCES portal_records(id) ON DELETE SET NULL,
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(coach_user_id) REFERENCES portal_users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_coaching_visits_school
+      ON coaching_visits(school_id, visit_date);
+    CREATE INDEX IF NOT EXISTS idx_coaching_visits_date
+      ON coaching_visits(visit_date);
+
+    CREATE TABLE IF NOT EXISTS assessment_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_uid TEXT NOT NULL UNIQUE,
+      portal_record_id INTEGER UNIQUE,
+      school_id INTEGER NOT NULL,
+      assessment_date TEXT NOT NULL,
+      assessment_type TEXT NOT NULL CHECK(assessment_type IN ('baseline', 'progress', 'endline')),
+      class_grade TEXT NOT NULL,
+      tool_version TEXT NOT NULL DEFAULT 'EGRA-v1',
+      assessor_user_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(portal_record_id) REFERENCES portal_records(id) ON DELETE SET NULL,
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(assessor_user_id) REFERENCES portal_users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_assessment_sessions_school
+      ON assessment_sessions(school_id, assessment_date);
+    CREATE INDEX IF NOT EXISTS idx_assessment_sessions_type
+      ON assessment_sessions(assessment_type);
+
+    CREATE TABLE IF NOT EXISTS assessment_session_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      assessment_session_id INTEGER NOT NULL,
+      source_row_key TEXT NOT NULL,
+      learner_uid TEXT NOT NULL,
+      letter_sounds_score REAL,
+      decoding_score REAL,
+      fluency_score REAL,
+      comprehension_score REAL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(assessment_session_id) REFERENCES assessment_sessions(id) ON DELETE CASCADE,
+      FOREIGN KEY(learner_uid) REFERENCES learner_roster(learner_uid) ON DELETE CASCADE,
+      UNIQUE(assessment_session_id, source_row_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_assessment_session_results_session
+      ON assessment_session_results(assessment_session_id);
+    CREATE INDEX IF NOT EXISTS idx_assessment_session_results_learner
+      ON assessment_session_results(learner_uid);
+  `);
+}
+
+function ensurePublicImpactViews(db: Database.Database) {
+  db.exec(`
+    CREATE VIEW IF NOT EXISTS impact_public_school_scope AS
+    SELECT
+      id AS school_id,
+      school_uid,
+      school_code,
+      name AS school_name,
+      district,
+      COALESCE(sub_region, '') AS sub_region,
+      COALESCE(region, '') AS region,
+      COALESCE(district_id, '') AS district_id,
+      COALESCE(subregion_id, '') AS subregion_id,
+      COALESCE(region_id, '') AS region_id,
+      CASE
+        WHEN COALESCE(enrollment_total, 0) > 0 THEN COALESCE(enrollment_total, 0)
+        WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+          THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+        ELSE COALESCE(enrolled_learners, 0)
+      END AS enrollment_total
+    FROM schools_directory;
+
+    CREATE VIEW IF NOT EXISTS impact_public_training_events AS
+    SELECT
+      id AS portal_record_id,
+      school_id,
+      date AS event_date,
+      status
+    FROM portal_records
+    WHERE module = 'training' AND school_id IS NOT NULL;
+
+    CREATE VIEW IF NOT EXISTS impact_public_visit_events AS
+    SELECT
+      id AS portal_record_id,
+      school_id,
+      date AS visit_date,
+      status
+    FROM portal_records
+    WHERE module = 'visit' AND school_id IS NOT NULL;
+
+    CREATE VIEW IF NOT EXISTS impact_public_assessment_events AS
+    SELECT
+      ar.id AS assessment_record_id,
+      ar.school_id,
+      ar.assessment_date,
+      ar.assessment_type,
+      ar.learner_uid,
+      ar.sound_identification_score AS letter_sounds_score,
+      (
+        COALESCE(ar.decodable_words_score, 0) +
+        COALESCE(ar.undecodable_words_score, 0) +
+        COALESCE(ar.made_up_words_score, 0)
+      ) / 3.0 AS decoding_score,
+      ar.story_reading_score AS fluency_score,
+      ar.reading_comprehension_score AS comprehension_score
+    FROM assessment_records ar
+    WHERE ar.school_id IS NOT NULL;
+
+    CREATE VIEW IF NOT EXISTS impact_public_teacher_support AS
+    SELECT DISTINCT
+      tr.teacher_uid,
+      tr.school_id,
+      tr.gender
+    FROM teacher_roster tr
+    WHERE tr.teacher_uid IN (
+      SELECT DISTINCT teacher_uid
+      FROM training_participants
+      WHERE teacher_uid IS NOT NULL AND trim(teacher_uid) != ''
+    )
+    OR tr.teacher_uid IN (
+      SELECT DISTINCT teacher_uid
+      FROM portal_training_attendance
+      WHERE teacher_uid IS NOT NULL AND trim(teacher_uid) != ''
+    )
+    OR tr.teacher_uid IN (
+      SELECT DISTINCT teacher_uid
+      FROM observation_rubrics
+      WHERE teacher_uid IS NOT NULL AND trim(teacher_uid) != ''
+    );
   `);
 }
 
@@ -910,10 +1331,15 @@ function getDb() {
   ensureImpactReportColumns(db);
   ensurePortalResourceColumns(db);
   ensureSchoolDirectoryColumns(db);
+  ensureSchoolIdentityColumns(db);
+  ensureDistrictMasterData(db);
+  ensureTeacherLearnerRosterTables(db);
+  ensureProgramLinkageTables(db);
   ensurePortalRecordColumns(db);
   ensureGeographyColumns(db);
   ensurePortalTestimonialVideoColumns(db);
   ensureAssessmentDomainsColumns(db);
+  ensurePublicImpactViews(db);
   seedPortalUsers(db);
 
   dbInstance = db;
@@ -1995,8 +2421,292 @@ export function deletePortalSession(token: string) {
   getDb().prepare("DELETE FROM portal_sessions WHERE token = @token").run({ token });
 }
 
+function normalizePersonName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function findTeacherRosterByName(
+  db: Database.Database,
+  schoolId: number,
+  fullName: string,
+): TeacherRosterRecord | null {
+  const row = db
+    .prepare(
+      `
+      SELECT
+        teacher_uid AS teacherUid,
+        school_id AS schoolId,
+        full_name AS fullName,
+        gender,
+        is_reading_teacher AS isReadingTeacher,
+        phone,
+        status,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM teacher_roster
+      WHERE school_id = @schoolId
+        AND lower(trim(full_name)) = lower(trim(@fullName))
+      LIMIT 1
+    `,
+    )
+    .get({ schoolId, fullName }) as
+    | {
+      teacherUid: string;
+      schoolId: number;
+      fullName: string;
+      gender: "Male" | "Female";
+      isReadingTeacher: number;
+      phone: string | null;
+      status: "active" | "inactive";
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    teacherUid: row.teacherUid,
+    schoolId: Number(row.schoolId),
+    fullName: row.fullName,
+    gender: row.gender,
+    isReadingTeacher: Boolean(row.isReadingTeacher),
+    phone: row.phone ?? undefined,
+    status: row.status,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export function createTeacherRosterRecord(input: TeacherRosterInput): TeacherRosterRecord {
+  const db = getDb();
+  const fullName = normalizePersonName(input.fullName);
+  if (!fullName) {
+    throw new Error("Teacher full name is required.");
+  }
+
+  const existing = findTeacherRosterByName(db, input.schoolId, fullName);
+  if (existing) {
+    db.prepare(
+      `
+      UPDATE teacher_roster
+      SET
+        gender = @gender,
+        is_reading_teacher = @isReadingTeacher,
+        phone = @phone,
+        updated_at = datetime('now')
+      WHERE teacher_uid = @teacherUid
+    `,
+    ).run({
+      teacherUid: existing.teacherUid,
+      gender: input.gender,
+      isReadingTeacher: input.isReadingTeacher ? 1 : 0,
+      phone: input.phone?.trim() ? input.phone.trim() : null,
+    });
+
+    const updated = findTeacherRosterByName(db, input.schoolId, fullName);
+    if (!updated) {
+      throw new Error("Could not load teacher record.");
+    }
+    return updated;
+  }
+
+  const teacherUid = createGeneratedUid("tch");
+  db.prepare(
+    `
+    INSERT INTO teacher_roster (
+      teacher_uid,
+      school_id,
+      full_name,
+      gender,
+      is_reading_teacher,
+      phone,
+      status
+    ) VALUES (
+      @teacherUid,
+      @schoolId,
+      @fullName,
+      @gender,
+      @isReadingTeacher,
+      @phone,
+      'active'
+    )
+  `,
+  ).run({
+    teacherUid,
+    schoolId: input.schoolId,
+    fullName,
+    gender: input.gender,
+    isReadingTeacher: input.isReadingTeacher ? 1 : 0,
+    phone: input.phone?.trim() ? input.phone.trim() : null,
+  });
+
+  const created = findTeacherRosterByName(db, input.schoolId, fullName);
+  if (!created) {
+    throw new Error("Could not load teacher record.");
+  }
+  return created;
+}
+
+function findLearnerRosterRecord(
+  db: Database.Database,
+  input: LearnerRosterInput,
+): LearnerRosterRecord | null {
+  const normalizedName = normalizePersonName(input.fullName);
+  const row = db
+    .prepare(
+      `
+      SELECT
+        learner_uid AS learnerUid,
+        school_id AS schoolId,
+        full_name AS fullName,
+        internal_child_id AS internalChildId,
+        gender,
+        age,
+        class_grade AS classGrade,
+        consent_flag AS consentFlag,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM learner_roster
+      WHERE school_id = @schoolId
+        AND class_grade = @classGrade
+        AND lower(trim(full_name)) = lower(trim(@fullName))
+      LIMIT 1
+    `,
+    )
+    .get({
+      schoolId: input.schoolId,
+      classGrade: input.classGrade,
+      fullName: normalizedName,
+    }) as
+    | {
+      learnerUid: string;
+      schoolId: number;
+      fullName: string;
+      internalChildId: string | null;
+      gender: "Boy" | "Girl" | "Other";
+      age: number;
+      classGrade: string;
+      consentFlag: number;
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    learnerUid: row.learnerUid,
+    schoolId: Number(row.schoolId),
+    fullName: row.fullName,
+    internalChildId: row.internalChildId ?? undefined,
+    gender: row.gender,
+    age: Number(row.age),
+    classGrade: row.classGrade,
+    consentFlag: Boolean(row.consentFlag),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export function createOrUpdateLearnerRosterRecord(input: LearnerRosterInput): LearnerRosterRecord {
+  const db = getDb();
+  const normalizedName = normalizePersonName(input.fullName);
+  if (!normalizedName) {
+    throw new Error("Learner name is required.");
+  }
+
+  const existing = findLearnerRosterRecord(db, { ...input, fullName: normalizedName });
+  if (existing) {
+    db.prepare(
+      `
+      UPDATE learner_roster
+      SET
+        internal_child_id = @internalChildId,
+        gender = @gender,
+        age = @age,
+        class_grade = @classGrade,
+        consent_flag = @consentFlag,
+        updated_at = datetime('now')
+      WHERE learner_uid = @learnerUid
+    `,
+    ).run({
+      learnerUid: existing.learnerUid,
+      internalChildId: input.internalChildId?.trim() ? input.internalChildId.trim() : null,
+      gender: input.gender,
+      age: Math.max(3, Math.min(25, Math.floor(Number(input.age)))),
+      classGrade: input.classGrade,
+      consentFlag: input.consentFlag ? 1 : 0,
+    });
+    const updated = findLearnerRosterRecord(db, { ...input, fullName: normalizedName });
+    if (!updated) {
+      throw new Error("Could not load learner record.");
+    }
+    return updated;
+  }
+
+  const learnerUid = createGeneratedUid("lrn");
+  db.prepare(
+    `
+    INSERT INTO learner_roster (
+      learner_uid,
+      school_id,
+      full_name,
+      internal_child_id,
+      gender,
+      age,
+      class_grade,
+      consent_flag
+    ) VALUES (
+      @learnerUid,
+      @schoolId,
+      @fullName,
+      @internalChildId,
+      @gender,
+      @age,
+      @classGrade,
+      @consentFlag
+    )
+  `,
+  ).run({
+    learnerUid,
+    schoolId: input.schoolId,
+    fullName: normalizedName,
+    internalChildId: input.internalChildId?.trim() ? input.internalChildId.trim() : null,
+    gender: input.gender,
+    age: Math.max(3, Math.min(25, Math.floor(Number(input.age)))),
+    classGrade: input.classGrade,
+    consentFlag: input.consentFlag ? 1 : 0,
+  });
+
+  const created = findLearnerRosterRecord(db, { ...input, fullName: normalizedName });
+  if (!created) {
+    throw new Error("Could not load learner record.");
+  }
+  return created;
+}
+
 export function saveTrainingSession(payload: TrainingSessionInput, createdByUserId: number) {
   const db = getDb();
+
+  const linkedSchool = db
+    .prepare(
+      `
+      SELECT id
+      FROM schools_directory
+      WHERE lower(trim(name)) = lower(trim(@schoolName))
+        AND lower(trim(district)) = lower(trim(@district))
+      LIMIT 1
+    `,
+    )
+    .get({
+      schoolName: payload.schoolName,
+      district: payload.district,
+    }) as { id: number } | undefined;
 
   const insertSession = db.prepare(`
     INSERT INTO training_sessions (
@@ -2024,13 +2734,19 @@ export function saveTrainingSession(payload: TrainingSessionInput, createdByUser
       participant_name,
       participant_role,
       phone,
-      email
+      email,
+      school_id,
+      teacher_uid,
+      gender
     ) VALUES (
       @sessionId,
       @name,
       @role,
       @phone,
-      @email
+      @email,
+      @schoolId,
+      @teacherUid,
+      @gender
     )
   `);
 
@@ -2048,12 +2764,35 @@ export function saveTrainingSession(payload: TrainingSessionInput, createdByUser
     const sessionId = Number(sessionInsert.lastInsertRowid);
 
     input.participants.forEach((participant) => {
+      const participantSchoolId =
+        participant.schoolId && participant.schoolId > 0
+          ? participant.schoolId
+          : linkedSchool?.id ?? null;
+      let teacherUid: string | null = null;
+      if (
+        participantSchoolId &&
+        participant.role === "Classroom teacher" &&
+        (participant.gender === "Male" || participant.gender === "Female")
+      ) {
+        const teacher = createTeacherRosterRecord({
+          schoolId: participantSchoolId,
+          fullName: participant.name,
+          gender: participant.gender,
+          isReadingTeacher: true,
+          phone: participant.phone,
+        });
+        teacherUid = teacher.teacherUid;
+      }
+
       insertParticipant.run({
         sessionId,
         name: participant.name,
         role: participant.role,
         phone: participant.phone,
         email: participant.email,
+        schoolId: participantSchoolId,
+        teacherUid,
+        gender: participant.gender ?? null,
       });
     });
 
@@ -2134,10 +2873,39 @@ export function listTrainingSessions(limit = 20): TrainingSessionRecord[] {
 export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUserId: number) {
   const db = getDb();
 
+  const learnerRecord =
+    payload.learnerUid && payload.learnerUid.trim()
+      ? (db
+          .prepare(
+            `
+            SELECT learner_uid AS learnerUid, school_id AS schoolId, full_name AS fullName,
+                   internal_child_id AS internalChildId, gender, age, class_grade AS classGrade,
+                   consent_flag AS consentFlag, created_at AS createdAt, updated_at AS updatedAt
+            FROM learner_roster
+            WHERE learner_uid = @learnerUid
+            LIMIT 1
+          `,
+          )
+          .get({ learnerUid: payload.learnerUid.trim() }) as LearnerRosterRecord | undefined) ?? null
+      : createOrUpdateLearnerRosterRecord({
+          schoolId: payload.schoolId,
+          fullName: payload.childName,
+          internalChildId: payload.childId?.trim() || undefined,
+          gender: payload.gender,
+          age: payload.age,
+          classGrade: payload.classGrade,
+          consentFlag: false,
+        });
+
+  if (!learnerRecord) {
+    throw new Error("Could not resolve learner roster record.");
+  }
+
   const insertResult = db
     .prepare(
       `
       INSERT INTO assessment_records (
+        learner_uid,
         child_name,
         child_id,
         gender,
@@ -2156,6 +2924,7 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
         notes,
         created_by_user_id
       ) VALUES (
+        @learnerUid,
         @childName,
         @childId,
         @gender,
@@ -2177,12 +2946,16 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
     `,
     )
     .run({
-      childName: payload.childName,
-      childId: payload.childId,
-      gender: payload.gender,
-      age: payload.age,
-      schoolId: payload.schoolId,
-      classGrade: payload.classGrade,
+      learnerUid: learnerRecord.learnerUid,
+      childName: learnerRecord.fullName,
+      childId:
+        payload.childId?.trim() ||
+        learnerRecord.internalChildId ||
+        `${learnerRecord.schoolId}-${learnerRecord.learnerUid.slice(-6)}`,
+      gender: learnerRecord.gender,
+      age: learnerRecord.age,
+      schoolId: learnerRecord.schoolId,
+      classGrade: learnerRecord.classGrade,
       assessmentDate: payload.assessmentDate,
       assessmentType: payload.assessmentType,
       letterIdentificationScore: payload.letterIdentificationScore,
@@ -2202,6 +2975,7 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
       `
       SELECT
         id,
+        learner_uid AS learnerUid,
         child_name AS childName,
         child_id AS childId,
         gender,
@@ -2239,6 +3013,7 @@ export function listAssessmentRecords(limit = 20): AssessmentRecord[] {
       `
       SELECT
         id,
+        learner_uid AS learnerUid,
         child_name AS childName,
         child_id AS childId,
         gender,
@@ -2556,8 +3331,556 @@ function parsePortalRecord(
   };
 }
 
+function asRecordArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>;
+  }
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>;
+      }
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function toNumberOrNull(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function normalizeTeacherGender(value: unknown): "Male" | "Female" | null {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (normalized === "male" || normalized === "m") {
+    return "Male";
+  }
+  if (normalized === "female" || normalized === "f") {
+    return "Female";
+  }
+  return null;
+}
+
+function normalizeLearnerGender(value: unknown): "Boy" | "Girl" | "Other" {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (normalized === "boy" || normalized === "male" || normalized === "m") {
+    return "Boy";
+  }
+  if (normalized === "girl" || normalized === "female" || normalized === "f") {
+    return "Girl";
+  }
+  return "Other";
+}
+
+function normalizeAssessmentType(value: unknown): "baseline" | "progress" | "endline" {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (normalized.includes("end")) {
+    return "endline";
+  }
+  if (
+    normalized.includes("progress") ||
+    normalized.includes("midline") ||
+    normalized.includes("year 1") ||
+    normalized.includes("year 2")
+  ) {
+    return "progress";
+  }
+  return "baseline";
+}
+
+function normalizeParticipantRole(value: unknown) {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (normalized === "classroom teacher" || normalized === "teacher") {
+    return "Classroom teacher";
+  }
+  if (normalized === "school leader" || normalized === "leader") {
+    return "School Leader";
+  }
+  return String(value ?? "").trim() || "School Leader";
+}
+
+function normalizeLinkedPayload(module: PortalRecordModule, payload: PortalRecordInput["payload"], fallbackSchoolId: number) {
+  const linkedPayload: Record<string, unknown> = { ...(payload ?? {}) };
+
+  if (module === "training") {
+    const participantRows = asRecordArray(linkedPayload.participants);
+    const normalizedRows = participantRows.map((row) => {
+      const participantName = String(row.participantName ?? row.name ?? "").trim();
+      const role = normalizeParticipantRole(row.role);
+      const gender = normalizeTeacherGender(row.gender);
+      const schoolIdRaw = Number(row.schoolAccountId ?? row.schoolId ?? fallbackSchoolId);
+      const schoolId = Number.isInteger(schoolIdRaw) && schoolIdRaw > 0 ? schoolIdRaw : fallbackSchoolId;
+      let teacherUid: string | null = null;
+      if (
+        schoolId > 0 &&
+        participantName &&
+        role === "Classroom teacher" &&
+        gender
+      ) {
+        teacherUid = createTeacherRosterRecord({
+          schoolId,
+          fullName: participantName,
+          gender,
+          isReadingTeacher: true,
+          phone: String(row.phoneContact ?? row.phone ?? "").trim() || undefined,
+        }).teacherUid;
+      }
+
+      const school = schoolId > 0 ? getSchoolDirectoryRecordById(schoolId) : null;
+      return {
+        participantName,
+        role,
+        gender: gender ?? "",
+        schoolAccountId: schoolId > 0 ? schoolId : null,
+        schoolAttachedTo: school?.name ?? String(row.schoolAttachedTo ?? "").trim(),
+        teacherUid,
+        phoneContact: String(row.phoneContact ?? row.phone ?? "").trim(),
+        email: String(row.email ?? "").trim(),
+      };
+    });
+
+    linkedPayload.participants = JSON.stringify(normalizedRows);
+    linkedPayload.participantsTotal = normalizedRows.length;
+    linkedPayload.classroomTeachers = normalizedRows.filter((row) => row.role === "Classroom teacher").length;
+    linkedPayload.schoolLeaders = normalizedRows.filter((row) => row.role === "School Leader").length;
+    linkedPayload.maleCount = normalizedRows.filter((row) => row.gender === "Male").length;
+    linkedPayload.femaleCount = normalizedRows.filter((row) => row.gender === "Female").length;
+    linkedPayload.numberAttended = normalizedRows.length;
+  }
+
+  if (module === "visit") {
+    const teacherName = String(linkedPayload.teacherObserved ?? "").trim();
+    const teacherGender = normalizeTeacherGender(linkedPayload.teacherGender);
+    if (fallbackSchoolId > 0 && teacherName && teacherGender) {
+      const teacher = createTeacherRosterRecord({
+        schoolId: fallbackSchoolId,
+        fullName: teacherName,
+        gender: teacherGender,
+        isReadingTeacher: true,
+      });
+      linkedPayload.teacherUid = teacher.teacherUid;
+    }
+  }
+
+  if (module === "assessment") {
+    const classGrade = String(linkedPayload.classLevel ?? linkedPayload.classGrade ?? "").trim() || "Unspecified";
+    const learnerRows = asRecordArray(linkedPayload.egraLearnersData).filter((row) => {
+      const learnerName = String(row.learnerName ?? row.childName ?? "").trim();
+      return Boolean(learnerName);
+    });
+
+    const normalizedRows = learnerRows.map((row, index) => {
+      const learnerName = String(row.learnerName ?? row.childName ?? "").trim();
+      const learnerId = String(row.learnerId ?? row.childId ?? `LRN-${index + 1}`).trim();
+      const age = Math.max(3, Math.min(25, Math.floor(Number(row.age ?? 6) || 6)));
+      const learner = createOrUpdateLearnerRosterRecord({
+        schoolId: fallbackSchoolId,
+        fullName: learnerName,
+        internalChildId: learnerId || undefined,
+        gender: normalizeLearnerGender(row.sex ?? row.gender),
+        age,
+        classGrade,
+        consentFlag: false,
+      });
+
+      return {
+        ...row,
+        learnerUid: learner.learnerUid,
+        learnerName: learner.fullName,
+        learnerId: learnerId || learner.internalChildId || learner.learnerUid.slice(-8),
+        age: learner.age,
+        classGrade,
+      };
+    });
+
+    linkedPayload.egraLearnersData = JSON.stringify(normalizedRows);
+    linkedPayload.learnersAssessed = normalizedRows.length;
+  }
+
+  return linkedPayload;
+}
+
+function clearPortalRecordLinkages(db: Database.Database, recordId: number) {
+  db.prepare("DELETE FROM portal_training_attendance WHERE portal_record_id = @recordId").run({ recordId });
+  db.prepare("DELETE FROM coaching_visits WHERE portal_record_id = @recordId").run({ recordId });
+  db.prepare("DELETE FROM assessment_records WHERE source_portal_record_id = @recordId").run({ recordId });
+  db.prepare("DELETE FROM assessment_sessions WHERE portal_record_id = @recordId").run({ recordId });
+}
+
+function syncPortalRecordLinkages(
+  db: Database.Database,
+  args: {
+    recordId: number;
+    module: PortalRecordModule;
+    payload: Record<string, unknown>;
+    schoolId: number;
+    date: string;
+    programType: string | null | undefined;
+    userId: number;
+  },
+) {
+  clearPortalRecordLinkages(db, args.recordId);
+
+  if (args.module === "training") {
+    const participantRows = asRecordArray(args.payload.participants);
+    const insertAttendance = db.prepare(`
+      INSERT INTO portal_training_attendance (
+        portal_record_id,
+        school_id,
+        participant_name,
+        participant_role,
+        gender,
+        teacher_uid,
+        phone,
+        email
+      ) VALUES (
+        @portalRecordId,
+        @schoolId,
+        @participantName,
+        @participantRole,
+        @gender,
+        @teacherUid,
+        @phone,
+        @email
+      )
+    `);
+
+    participantRows.forEach((row) => {
+      const participantName = String(row.participantName ?? row.name ?? "").trim();
+      if (!participantName) {
+        return;
+      }
+      const schoolIdRaw = Number(row.schoolAccountId ?? row.schoolId ?? args.schoolId);
+      const schoolId = Number.isInteger(schoolIdRaw) && schoolIdRaw > 0 ? schoolIdRaw : args.schoolId;
+      insertAttendance.run({
+        portalRecordId: args.recordId,
+        schoolId: schoolId > 0 ? schoolId : null,
+        participantName,
+        participantRole: normalizeParticipantRole(row.role),
+        gender: normalizeTeacherGender(row.gender),
+        teacherUid: String(row.teacherUid ?? "").trim() || null,
+        phone: String(row.phoneContact ?? row.phone ?? "").trim() || null,
+        email: String(row.email ?? "").trim() || null,
+      });
+    });
+  }
+
+  if (args.module === "visit") {
+    const visitType = String(
+      args.payload.visitType ?? args.programType ?? "Coaching visit",
+    ).trim() || "Coaching visit";
+    const cycleRaw = Number(args.payload.coachingCycleNumber ?? args.payload.coachingCycle);
+    const coachingCycleNumber = Number.isInteger(cycleRaw) && cycleRaw >= 1 && cycleRaw <= 4 ? cycleRaw : null;
+    const focusAreas = args.payload.focusAreas ?? args.payload.objectivesCovered ?? [];
+    const focusAreasJson = Array.isArray(focusAreas)
+      ? JSON.stringify(focusAreas.map((item) => String(item).trim()).filter(Boolean))
+      : JSON.stringify(
+          String(focusAreas ?? "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
+        );
+
+    db.prepare(`
+      INSERT INTO coaching_visits (
+        visit_uid,
+        portal_record_id,
+        school_id,
+        visit_date,
+        visit_type,
+        coaching_cycle_number,
+        coach_user_id,
+        focus_areas_json,
+        updated_at
+      ) VALUES (
+        @visitUid,
+        @portalRecordId,
+        @schoolId,
+        @visitDate,
+        @visitType,
+        @coachingCycleNumber,
+        @coachUserId,
+        @focusAreasJson,
+        datetime('now')
+      )
+      ON CONFLICT(portal_record_id) DO UPDATE SET
+        school_id = excluded.school_id,
+        visit_date = excluded.visit_date,
+        visit_type = excluded.visit_type,
+        coaching_cycle_number = excluded.coaching_cycle_number,
+        coach_user_id = excluded.coach_user_id,
+        focus_areas_json = excluded.focus_areas_json,
+        updated_at = datetime('now')
+    `).run({
+      visitUid: `vis_${args.recordId}`,
+      portalRecordId: args.recordId,
+      schoolId: args.schoolId,
+      visitDate: args.date,
+      visitType,
+      coachingCycleNumber,
+      coachUserId: args.userId,
+      focusAreasJson,
+    });
+  }
+
+  if (args.module === "assessment") {
+    const classGrade = String(args.payload.classLevel ?? args.payload.classGrade ?? "").trim() || "Unspecified";
+    const toolVersion = String(args.payload.toolVersion ?? "EGRA-v1").trim() || "EGRA-v1";
+    const assessmentType = normalizeAssessmentType(args.payload.assessmentType ?? args.programType);
+    const rows = asRecordArray(args.payload.egraLearnersData);
+
+    const existingSession = db
+      .prepare(
+        `
+        SELECT id, session_uid AS sessionUid
+        FROM assessment_sessions
+        WHERE portal_record_id = @portalRecordId
+        LIMIT 1
+      `,
+      )
+      .get({ portalRecordId: args.recordId }) as { id: number; sessionUid: string } | undefined;
+
+    let sessionId = existingSession?.id ?? null;
+    if (!sessionId) {
+      const insert = db
+        .prepare(
+          `
+          INSERT INTO assessment_sessions (
+            session_uid,
+            portal_record_id,
+            school_id,
+            assessment_date,
+            assessment_type,
+            class_grade,
+            tool_version,
+            assessor_user_id
+          ) VALUES (
+            @sessionUid,
+            @portalRecordId,
+            @schoolId,
+            @assessmentDate,
+            @assessmentType,
+            @classGrade,
+            @toolVersion,
+            @assessorUserId
+          )
+        `,
+        )
+        .run({
+          sessionUid: `sess_${args.recordId}`,
+          portalRecordId: args.recordId,
+          schoolId: args.schoolId,
+          assessmentDate: args.date,
+          assessmentType,
+          classGrade,
+          toolVersion,
+          assessorUserId: args.userId,
+        });
+      sessionId = Number(insert.lastInsertRowid);
+    } else {
+      db.prepare(
+        `
+        UPDATE assessment_sessions
+        SET
+          school_id = @schoolId,
+          assessment_date = @assessmentDate,
+          assessment_type = @assessmentType,
+          class_grade = @classGrade,
+          tool_version = @toolVersion,
+          assessor_user_id = @assessorUserId,
+          updated_at = datetime('now')
+        WHERE id = @sessionId
+      `,
+      ).run({
+        sessionId,
+        schoolId: args.schoolId,
+        assessmentDate: args.date,
+        assessmentType,
+        classGrade,
+        toolVersion,
+        assessorUserId: args.userId,
+      });
+    }
+
+    if (!sessionId) {
+      return;
+    }
+
+    db.prepare("DELETE FROM assessment_session_results WHERE assessment_session_id = @sessionId").run({
+      sessionId,
+    });
+    db.prepare("DELETE FROM assessment_records WHERE source_portal_record_id = @recordId").run({
+      recordId: args.recordId,
+    });
+
+    const insertResult = db.prepare(`
+      INSERT INTO assessment_session_results (
+        assessment_session_id,
+        source_row_key,
+        learner_uid,
+        letter_sounds_score,
+        decoding_score,
+        fluency_score,
+        comprehension_score
+      ) VALUES (
+        @assessmentSessionId,
+        @sourceRowKey,
+        @learnerUid,
+        @letterSoundsScore,
+        @decodingScore,
+        @fluencyScore,
+        @comprehensionScore
+      )
+    `);
+
+    const insertAssessment = db.prepare(`
+      INSERT INTO assessment_records (
+        learner_uid,
+        child_name,
+        child_id,
+        gender,
+        age,
+        school_id,
+        class_grade,
+        assessment_date,
+        assessment_type,
+        letter_identification_score,
+        sound_identification_score,
+        decodable_words_score,
+        undecodable_words_score,
+        made_up_words_score,
+        story_reading_score,
+        reading_comprehension_score,
+        notes,
+        created_by_user_id,
+        source_portal_record_id,
+        source_row_key
+      ) VALUES (
+        @learnerUid,
+        @childName,
+        @childId,
+        @gender,
+        @age,
+        @schoolId,
+        @classGrade,
+        @assessmentDate,
+        @assessmentType,
+        @letterIdentificationScore,
+        @soundIdentificationScore,
+        @decodableWordsScore,
+        @undecodableWordsScore,
+        @madeUpWordsScore,
+        @storyReadingScore,
+        @readingComprehensionScore,
+        @notes,
+        @createdByUserId,
+        @sourcePortalRecordId,
+        @sourceRowKey
+      )
+    `);
+
+    rows.forEach((row, index) => {
+      const learnerName = String(row.learnerName ?? row.childName ?? "").trim();
+      if (!learnerName) {
+        return;
+      }
+
+      const childId = String(row.learnerId ?? row.childId ?? "").trim() || `LRN-${index + 1}`;
+      const age = Math.max(3, Math.min(25, Math.floor(Number(row.age ?? 6) || 6)));
+      const learnerUidFromRow = String(row.learnerUid ?? "").trim();
+      const learnerUid = learnerUidFromRow
+        ? learnerUidFromRow
+        : createOrUpdateLearnerRosterRecord({
+            schoolId: args.schoolId,
+            fullName: learnerName,
+            internalChildId: childId,
+            gender: normalizeLearnerGender(row.sex ?? row.gender),
+            age,
+            classGrade,
+            consentFlag: false,
+          }).learnerUid;
+
+      const letterIdentificationScore = toNumberOrNull(
+        row.letterIdentification ?? row.letterIdentication ?? row.letterSoundsScore,
+      );
+      const soundIdentificationScore = toNumberOrNull(
+        row.soundIdentification ?? row.letterSoundScore ?? row.letterSoundsScore,
+      );
+      const decodableWordsScore = toNumberOrNull(row.decodableWords);
+      const undecodableWordsScore = toNumberOrNull(row.undecodableWords);
+      const madeUpWordsScore = toNumberOrNull(row.madeUpWords);
+      const fluencyScore = toNumberOrNull(row.storyReading ?? row.fluencyScore);
+      const comprehensionScore = toNumberOrNull(
+        row.readingComprehension ?? row.comprehensionScore,
+      );
+      const decodingCandidates = [
+        decodableWordsScore,
+        undecodableWordsScore,
+        madeUpWordsScore,
+      ].filter((score): score is number => score !== null);
+      const decodingScore =
+        decodingCandidates.length > 0
+          ? decodingCandidates.reduce((sum, score) => sum + score, 0) / decodingCandidates.length
+          : toNumberOrNull(row.decodingScore);
+
+      const sourceRowKey = String(row.no ?? index + 1);
+      insertResult.run({
+        assessmentSessionId: sessionId,
+        sourceRowKey,
+        learnerUid,
+        letterSoundsScore:
+          toNumberOrNull(soundIdentificationScore ?? letterIdentificationScore) ?? null,
+        decodingScore: decodingScore ?? null,
+        fluencyScore: fluencyScore ?? null,
+        comprehensionScore: comprehensionScore ?? null,
+      });
+
+      insertAssessment.run({
+        learnerUid,
+        childName: learnerName,
+        childId,
+        gender: normalizeLearnerGender(row.sex ?? row.gender),
+        age,
+        schoolId: args.schoolId,
+        classGrade,
+        assessmentDate: args.date,
+        assessmentType,
+        letterIdentificationScore: letterIdentificationScore ?? null,
+        soundIdentificationScore: soundIdentificationScore ?? null,
+        decodableWordsScore: decodableWordsScore ?? null,
+        undecodableWordsScore: undecodableWordsScore ?? null,
+        madeUpWordsScore: madeUpWordsScore ?? null,
+        storyReadingScore: fluencyScore ?? null,
+        readingComprehensionScore: comprehensionScore ?? null,
+        notes: null,
+        createdByUserId: args.userId,
+        sourcePortalRecordId: args.recordId,
+        sourceRowKey,
+      });
+    });
+  }
+}
+
 function normalizePayload(input: PortalRecordInput) {
-  return JSON.stringify(input.payload ?? {});
+  const linkedPayload = normalizeLinkedPayload(input.module, input.payload ?? {}, input.schoolId ?? 0);
+  return JSON.stringify(linkedPayload);
 }
 
 function getSchoolDirectoryRecordById(id: number) {
@@ -2566,14 +3889,34 @@ function getSchoolDirectoryRecordById(id: number) {
       `
       SELECT
         id,
+        school_uid AS schoolUid,
         school_code AS schoolCode,
         name,
+        COALESCE(region, '') AS region,
+        COALESCE(sub_region, '') AS subRegion,
         district,
         sub_county AS subCounty,
         parish,
         village,
+        CASE
+          WHEN COALESCE(enrollment_total, 0) > 0 THEN COALESCE(enrollment_total, 0)
+          WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+            THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+          ELSE COALESCE(enrolled_learners, 0)
+        END AS enrollmentTotal,
+        enrollment_by_grade AS enrollmentByGrade,
         enrolled_boys AS enrolledBoys,
         enrolled_girls AS enrolledGirls,
+        COALESCE(enrolled_baby, 0) AS enrolledBaby,
+        COALESCE(enrolled_middle, 0) AS enrolledMiddle,
+        COALESCE(enrolled_top, 0) AS enrolledTop,
+        COALESCE(enrolled_p1, 0) AS enrolledP1,
+        COALESCE(enrolled_p2, 0) AS enrolledP2,
+        COALESCE(enrolled_p3, 0) AS enrolledP3,
+        COALESCE(enrolled_p4, 0) AS enrolledP4,
+        COALESCE(enrolled_p5, 0) AS enrolledP5,
+        COALESCE(enrolled_p6, 0) AS enrolledP6,
+        COALESCE(enrolled_p7, 0) AS enrolledP7,
         CASE
           WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
             THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
@@ -2665,59 +4008,75 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
     );
   }
 
-  const insertResult = db
-    .prepare(
-      `
-      INSERT INTO portal_records (
-        record_code,
-        module,
-        date,
-        district,
-        school_id,
-        school_name,
-        program_type,
-        status,
-        follow_up_date,
-        payload_json,
-        created_by_user_id,
-        updated_by_user_id
-      ) VALUES (
-        @recordCode,
-        @module,
-        @date,
-        @district,
-        @schoolId,
-        @schoolName,
-        @programType,
-        @status,
-        @followUpDate,
-        @payloadJson,
-        @createdByUserId,
-        @updatedByUserId
+  const payloadJson = normalizePayload(input);
+  const payloadData = JSON.parse(payloadJson) as Record<string, unknown>;
+
+  const id = db.transaction(() => {
+    const insertResult = db
+      .prepare(
+        `
+        INSERT INTO portal_records (
+          record_code,
+          module,
+          date,
+          district,
+          school_id,
+          school_name,
+          program_type,
+          status,
+          follow_up_date,
+          payload_json,
+          created_by_user_id,
+          updated_by_user_id
+        ) VALUES (
+          @recordCode,
+          @module,
+          @date,
+          @district,
+          @schoolId,
+          @schoolName,
+          @programType,
+          @status,
+          @followUpDate,
+          @payloadJson,
+          @createdByUserId,
+          @updatedByUserId
+        )
+      `,
       )
-    `,
-    )
-    .run({
-      recordCode: `${recordCodePrefix[input.module]}-PENDING`,
+      .run({
+        recordCode: `${recordCodePrefix[input.module]}-PENDING`,
+        module: input.module,
+        date: input.date,
+        district: school.district,
+        schoolId: school.id,
+        schoolName: school.name,
+        programType: input.programType ?? null,
+        status: input.status,
+        followUpDate: input.followUpDate ?? null,
+        payloadJson,
+        createdByUserId: user.id,
+        updatedByUserId: user.id,
+      });
+
+    const createdId = Number(insertResult.lastInsertRowid);
+    const recordCode = formatRecordCode(input.module, createdId);
+    db.prepare("UPDATE portal_records SET record_code = @recordCode WHERE id = @id").run({
+      id: createdId,
+      recordCode,
+    });
+    syncPortalRecordLinkages(db, {
+      recordId: createdId,
       module: input.module,
-      date: input.date,
-      district: school.district,
+      payload: payloadData,
       schoolId: school.id,
-      schoolName: school.name,
-      programType: input.programType ?? null,
-      status: input.status,
-      followUpDate: input.followUpDate ?? null,
-      payloadJson: normalizePayload(input),
-      createdByUserId: user.id,
-      updatedByUserId: user.id,
+      date: input.date,
+      programType: input.programType,
+      userId: user.id,
     });
 
-  const id = Number(insertResult.lastInsertRowid);
-  const recordCode = formatRecordCode(input.module, id);
-  db.prepare("UPDATE portal_records SET record_code = @recordCode WHERE id = @id").run({
-    id,
-    recordCode,
-  });
+    return createdId;
+  })();
 
   const record = getPortalRecordById(id, user);
   if (!record) {
@@ -2768,36 +4127,51 @@ export function updatePortalRecord(
     );
   }
 
-  db.prepare(
-    `
-    UPDATE portal_records
-    SET
-      module = @module,
-      date = @date,
-      district = @district,
-      school_id = @schoolId,
-      school_name = @schoolName,
-      program_type = @programType,
-      status = @status,
-      follow_up_date = @followUpDate,
-      payload_json = @payloadJson,
-      updated_by_user_id = @updatedByUserId,
-      updated_at = datetime('now')
-    WHERE id = @id
-  `,
-  ).run({
-    id,
-    module: input.module,
-    date: input.date,
-    district: school.district,
-    schoolId: school.id,
-    schoolName: school.name,
-    programType: input.programType ?? null,
-    status: input.status,
-    followUpDate: input.followUpDate ?? null,
-    payloadJson: normalizePayload(input),
-    updatedByUserId: user.id,
-  });
+  const payloadJson = normalizePayload(input);
+  const payloadData = JSON.parse(payloadJson) as Record<string, unknown>;
+
+  db.transaction(() => {
+    db.prepare(
+      `
+      UPDATE portal_records
+      SET
+        module = @module,
+        date = @date,
+        district = @district,
+        school_id = @schoolId,
+        school_name = @schoolName,
+        program_type = @programType,
+        status = @status,
+        follow_up_date = @followUpDate,
+        payload_json = @payloadJson,
+        updated_by_user_id = @updatedByUserId,
+        updated_at = datetime('now')
+      WHERE id = @id
+    `,
+    ).run({
+      id,
+      module: input.module,
+      date: input.date,
+      district: school.district,
+      schoolId: school.id,
+      schoolName: school.name,
+      programType: input.programType ?? null,
+      status: input.status,
+      followUpDate: input.followUpDate ?? null,
+      payloadJson,
+      updatedByUserId: user.id,
+    });
+
+    syncPortalRecordLinkages(db, {
+      recordId: id,
+      module: input.module,
+      payload: payloadData,
+      schoolId: school.id,
+      date: input.date,
+      programType: input.programType,
+      userId: user.id,
+    });
+  })();
 
   const updated = getPortalRecordById(id, user);
   if (!updated) {
@@ -3123,8 +4497,49 @@ export function getPortalDashboardData(user: PortalUser): PortalDashboardData {
 export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): SchoolDirectoryRecord {
   const db = getDb();
   const normalizedName = input.name.trim();
+  const normalizedDistrict = input.district.trim();
+  const normalizedSubCounty = input.subCounty?.trim() || "Unspecified";
+  const normalizedParish = input.parish?.trim() || "Unspecified";
+  const normalizedRegion = inferRegionFromDistrict(normalizedDistrict) ?? "";
+  const normalizedSubRegion = inferSubRegionFromDistrict(normalizedDistrict) ?? "";
+  const enrolledBoys = Math.max(0, Math.floor(Number(input.enrolledBoys ?? 0)));
+  const enrolledGirls = Math.max(0, Math.floor(Number(input.enrolledGirls ?? 0)));
+  const enrolledBaby = Math.max(0, Math.floor(Number(input.enrolledBaby ?? 0)));
+  const enrolledMiddle = Math.max(0, Math.floor(Number(input.enrolledMiddle ?? 0)));
+  const enrolledTop = Math.max(0, Math.floor(Number(input.enrolledTop ?? 0)));
+  const enrolledP1 = Math.max(0, Math.floor(Number(input.enrolledP1 ?? 0)));
+  const enrolledP2 = Math.max(0, Math.floor(Number(input.enrolledP2 ?? 0)));
+  const enrolledP3 = Math.max(0, Math.floor(Number(input.enrolledP3 ?? 0)));
+  const enrolledP4 = Math.max(0, Math.floor(Number(input.enrolledP4 ?? 0)));
+  const enrolledP5 = Math.max(0, Math.floor(Number(input.enrolledP5 ?? 0)));
+  const enrolledP6 = Math.max(0, Math.floor(Number(input.enrolledP6 ?? 0)));
+  const enrolledP7 = Math.max(0, Math.floor(Number(input.enrolledP7 ?? 0)));
+  const computedEnrollment =
+    enrolledBoys +
+    enrolledGirls +
+    enrolledBaby +
+    enrolledMiddle +
+    enrolledTop +
+    enrolledP1 +
+    enrolledP2 +
+    enrolledP3 +
+    enrolledP4 +
+    enrolledP5 +
+    enrolledP6 +
+    enrolledP7;
+  const enrollmentTotal = Math.max(
+    0,
+    Math.floor(Number(input.enrollmentTotal ?? computedEnrollment)),
+  );
+
   if (!normalizedName) {
     throw new Error("School name is required.");
+  }
+  if (!normalizedDistrict) {
+    throw new Error("District is required.");
+  }
+  if (!Number.isFinite(enrollmentTotal) || enrollmentTotal <= 0) {
+    throw new Error("Enrollment total is required and must be greater than 0.");
   }
 
   const duplicateSchool = findSchoolByNormalizedName(normalizedName);
@@ -3138,12 +4553,20 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
     .prepare(
       `
       INSERT INTO schools_directory (
+        school_uid,
         school_code,
         name,
+        region,
+        sub_region,
+        region_id,
+        subregion_id,
+        district_id,
         district,
         sub_county,
         parish,
         village,
+        enrollment_total,
+        enrollment_by_grade,
         enrolled_boys,
         enrolled_girls,
         enrolled_baby,
@@ -3163,12 +4586,20 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         contact_phone,
         notes
       ) VALUES (
+        @schoolUid,
         @schoolCode,
         @name,
+        @region,
+        @subRegion,
+        @regionId,
+        @subregionId,
+        @districtId,
         @district,
         @subCounty,
         @parish,
         @village,
+        @enrollmentTotal,
+        @enrollmentByGrade,
         @enrolledBoys,
         @enrolledGirls,
         @enrolledBaby,
@@ -3191,31 +4622,33 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
     `,
     )
     .run({
+      schoolUid: createGeneratedUid("sch"),
       schoolCode: "SCH-PENDING",
       name: normalizedName,
-      district: input.district,
-      subCounty: input.subCounty,
-      parish: input.parish,
+      region: normalizedRegion,
+      subRegion: normalizedSubRegion,
+      regionId: stableIdFromText("reg", normalizedRegion),
+      subregionId: stableIdFromText("sub", normalizedSubRegion),
+      districtId: stableIdFromText("dist", normalizedDistrict),
+      district: normalizedDistrict,
+      subCounty: normalizedSubCounty,
+      parish: normalizedParish,
       village: input.village?.trim() ? input.village : null,
-      enrolledBoys: Math.max(0, Math.floor(Number(input.enrolledBoys ?? 0))),
-      enrolledGirls: Math.max(0, Math.floor(Number(input.enrolledGirls ?? 0))),
-      enrolledBaby: Math.max(0, Math.floor(Number(input.enrolledBaby ?? 0))),
-      enrolledMiddle: Math.max(0, Math.floor(Number(input.enrolledMiddle ?? 0))),
-      enrolledTop: Math.max(0, Math.floor(Number(input.enrolledTop ?? 0))),
-      enrolledP1: Math.max(0, Math.floor(Number(input.enrolledP1 ?? 0))),
-      enrolledP2: Math.max(0, Math.floor(Number(input.enrolledP2 ?? 0))),
-      enrolledP3: Math.max(0, Math.floor(Number(input.enrolledP3 ?? 0))),
-      enrolledP4: Math.max(0, Math.floor(Number(input.enrolledP4 ?? 0))),
-      enrolledP5: Math.max(0, Math.floor(Number(input.enrolledP5 ?? 0))),
-      enrolledP6: Math.max(0, Math.floor(Number(input.enrolledP6 ?? 0))),
-      enrolledP7: Math.max(0, Math.floor(Number(input.enrolledP7 ?? 0))),
-      enrolledLearners:
-        Math.max(0, Math.floor(Number(input.enrolledBaby ?? 0))) +
-        Math.max(0, Math.floor(Number(input.enrolledMiddle ?? 0))) +
-        Math.max(0, Math.floor(Number(input.enrolledTop ?? 0))) +
-        Math.max(0, Math.floor(Number(input.enrolledP1 ?? 0))) +
-        Math.max(0, Math.floor(Number(input.enrolledP2 ?? 0))) +
-        Math.max(0, Math.floor(Number(input.enrolledP3 ?? 0))),
+      enrollmentTotal,
+      enrollmentByGrade: input.enrollmentByGrade?.trim() ? input.enrollmentByGrade.trim() : null,
+      enrolledBoys,
+      enrolledGirls,
+      enrolledBaby,
+      enrolledMiddle,
+      enrolledTop,
+      enrolledP1,
+      enrolledP2,
+      enrolledP3,
+      enrolledP4,
+      enrolledP5,
+      enrolledP6,
+      enrolledP7,
+      enrolledLearners: enrollmentTotal,
       gpsLat: input.gpsLat?.trim() ? input.gpsLat : null,
       gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
       contactName: input.contactName?.trim() ? input.contactName : null,
@@ -3246,6 +4679,8 @@ export function updateSchoolDirectoryRecord(
     subCounty?: string;
     parish?: string;
     village?: string | null;
+    enrollmentTotal?: number;
+    enrollmentByGrade?: string | null;
     enrolledBoys?: number;
     enrolledGirls?: number;
     enrolledBaby?: number;
@@ -3293,7 +4728,19 @@ export function updateSchoolDirectoryRecord(
       throw new Error("District is required.");
     }
     updates.push("district = @district");
+    updates.push("region = @region");
+    updates.push("sub_region = @subRegion");
+    updates.push("district_id = @districtId");
+    updates.push("region_id = @regionId");
+    updates.push("subregion_id = @subregionId");
     params.district = value;
+    const region = inferRegionFromDistrict(value) ?? "";
+    const subRegion = inferSubRegionFromDistrict(value) ?? "";
+    params.region = region;
+    params.subRegion = subRegion;
+    params.districtId = stableIdFromText("dist", value);
+    params.regionId = stableIdFromText("reg", region);
+    params.subregionId = stableIdFromText("sub", subRegion);
   }
   if (input.subCounty !== undefined) {
     const value = input.subCounty.trim();
@@ -3315,6 +4762,21 @@ export function updateSchoolDirectoryRecord(
     const value = input.village?.trim();
     updates.push("village = @village");
     params.village = value ? value : null;
+  }
+  if (input.enrollmentByGrade !== undefined) {
+    const value = input.enrollmentByGrade?.trim();
+    updates.push("enrollment_by_grade = @enrollmentByGrade");
+    params.enrollmentByGrade = value ? value : null;
+  }
+  if (input.enrollmentTotal !== undefined) {
+    const value = Math.max(0, Math.floor(Number(input.enrollmentTotal)));
+    if (!Number.isFinite(value)) {
+      throw new Error("Enrollment total must be a valid number.");
+    }
+    updates.push("enrollment_total = @enrollmentTotal");
+    updates.push("enrolled_learners = @enrolledLearners");
+    params.enrollmentTotal = value;
+    params.enrolledLearners = value;
   }
   if (input.enrolledBoys !== undefined) {
     const value = Math.max(0, Math.floor(Number(input.enrolledBoys)));
@@ -3413,16 +4875,33 @@ export function updateSchoolDirectoryRecord(
     params.enrolledP7 = value;
   }
 
-  // Recalculate learners reached (Baby-P3)
+  // Recalculate learners reached (all available enrollment buckets)
+  const enrolledBoys =
+    input.enrolledBoys !== undefined
+      ? Math.max(0, Math.floor(Number(input.enrolledBoys)))
+      : current.enrolledBoys;
+  const enrolledGirls =
+    input.enrolledGirls !== undefined
+      ? Math.max(0, Math.floor(Number(input.enrolledGirls)))
+      : current.enrolledGirls;
   const baby = input.enrolledBaby !== undefined ? Math.max(0, Math.floor(Number(input.enrolledBaby))) : current.enrolledBaby;
   const middle = input.enrolledMiddle !== undefined ? Math.max(0, Math.floor(Number(input.enrolledMiddle))) : current.enrolledMiddle;
   const top = input.enrolledTop !== undefined ? Math.max(0, Math.floor(Number(input.enrolledTop))) : current.enrolledTop;
   const p1 = input.enrolledP1 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP1))) : current.enrolledP1;
   const p2 = input.enrolledP2 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP2))) : current.enrolledP2;
   const p3 = input.enrolledP3 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP3))) : current.enrolledP3;
+  const p4 = input.enrolledP4 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP4))) : current.enrolledP4;
+  const p5 = input.enrolledP5 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP5))) : current.enrolledP5;
+  const p6 = input.enrolledP6 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP6))) : current.enrolledP6;
+  const p7 = input.enrolledP7 !== undefined ? Math.max(0, Math.floor(Number(input.enrolledP7))) : current.enrolledP7;
 
-  updates.push("enrolled_learners = @enrolledLearners");
-  params.enrolledLearners = baby + middle + top + p1 + p2 + p3;
+  if (input.enrollmentTotal === undefined) {
+    const autoEnrollment = enrolledBoys + enrolledGirls + baby + middle + top + p1 + p2 + p3 + p4 + p5 + p6 + p7;
+    updates.push("enrollment_total = @enrollmentTotal");
+    updates.push("enrolled_learners = @enrolledLearners");
+    params.enrollmentTotal = autoEnrollment;
+    params.enrolledLearners = autoEnrollment;
+  }
 
   getDb()
     .prepare(
@@ -3464,14 +4943,34 @@ export function listSchoolDirectoryRecords(filters?: {
       `
       SELECT
         id,
+        school_uid AS schoolUid,
         school_code AS schoolCode,
         name,
+        COALESCE(region, '') AS region,
+        COALESCE(sub_region, '') AS subRegion,
         district,
         sub_county AS subCounty,
         parish,
         village,
+        CASE
+          WHEN COALESCE(enrollment_total, 0) > 0 THEN COALESCE(enrollment_total, 0)
+          WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
+            THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
+          ELSE COALESCE(enrolled_learners, 0)
+        END AS enrollmentTotal,
+        enrollment_by_grade AS enrollmentByGrade,
         enrolled_boys AS enrolledBoys,
         enrolled_girls AS enrolledGirls,
+        COALESCE(enrolled_baby, 0) AS enrolledBaby,
+        COALESCE(enrolled_middle, 0) AS enrolledMiddle,
+        COALESCE(enrolled_top, 0) AS enrolledTop,
+        COALESCE(enrolled_p1, 0) AS enrolledP1,
+        COALESCE(enrolled_p2, 0) AS enrolledP2,
+        COALESCE(enrolled_p3, 0) AS enrolledP3,
+        COALESCE(enrolled_p4, 0) AS enrolledP4,
+        COALESCE(enrolled_p5, 0) AS enrolledP5,
+        COALESCE(enrolled_p6, 0) AS enrolledP6,
+        COALESCE(enrolled_p7, 0) AS enrolledP7,
         CASE
           WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
             THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
@@ -8221,13 +9720,18 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
       `
       SELECT
         id,
+        school_uid,
         school_code,
         name,
+        COALESCE(region, '') AS region,
+        COALESCE(sub_region, '') AS sub_region,
         district,
         sub_county,
         parish,
         village,
         notes,
+        COALESCE(enrollment_total, 0) AS enrollment_total,
+        enrollment_by_grade,
 
         enrolled_boys,
         enrolled_girls,
@@ -8254,13 +9758,18 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
     .get(id) as
     | {
       id: number;
+      school_uid: string | null;
       school_code: string;
       name: string;
+      region: string;
+      sub_region: string;
       district: string;
       sub_county: string;
       parish: string;
       village: string | null;
       notes: string | null;
+      enrollment_total: number;
+      enrollment_by_grade: string | null;
       enrolled_boys: number;
       enrolled_girls: number;
       enrolled_baby: number;
@@ -8286,13 +9795,18 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
 
   return {
     id: row.id,
+    schoolUid: row.school_uid ?? createGeneratedUid("sch"),
     schoolCode: row.school_code,
     name: row.name,
+    region: row.region,
+    subRegion: row.sub_region,
     district: row.district,
     subCounty: row.sub_county,
     parish: row.parish,
     village: row.village,
     notes: row.notes,
+    enrollmentTotal: Number(row.enrollment_total ?? 0),
+    enrollmentByGrade: row.enrollment_by_grade ?? null,
     enrolledBoys: row.enrolled_boys,
     enrolledGirls: row.enrolled_girls,
     enrolledBaby: row.enrolled_baby,
@@ -8305,7 +9819,10 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
     enrolledP5: row.enrolled_p5,
     enrolledP6: row.enrolled_p6,
     enrolledP7: row.enrolled_p7,
-    enrolledLearners: row.enrolled_learners,
+    enrolledLearners:
+      Number(row.enrollment_total ?? 0) > 0
+        ? Number(row.enrollment_total ?? 0)
+        : Number(row.enrolled_learners ?? 0),
     gpsLat: row.gps_lat,
     gpsLng: row.gps_lng,
     contactName: row.contact_name,
@@ -8738,6 +10255,766 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
   };
 }
 
+type PublicImpactScopeLevel = PublicImpactAggregate["scope"]["level"];
+
+function buildSqlInClause(values: Array<number | string>, prefix: string) {
+  if (values.length === 0) {
+    return { clause: "(NULL)", params: {} as Record<string, string | number> };
+  }
+  const params: Record<string, string | number> = {};
+  const keys = values.map((value, index) => {
+    const key = `${prefix}${index}`;
+    params[key] = value;
+    return `@${key}`;
+  });
+  return {
+    clause: `(${keys.join(", ")})`,
+    params,
+  };
+}
+
+function periodWindowFromLabel(label: string | null | undefined) {
+  const normalized = String(label ?? "FY")
+    .trim()
+    .toUpperCase();
+  const now = new Date();
+  const isoDate = now.toISOString().slice(0, 10);
+  const yearStart = `${now.getUTCFullYear()}-01-01`;
+  if (normalized.startsWith("QTR")) {
+    const start = new Date(now);
+    start.setUTCDate(start.getUTCDate() - 90);
+    return {
+      label: normalized,
+      startDate: start.toISOString().slice(0, 10),
+      endDate: isoDate,
+    };
+  }
+  if (normalized.startsWith("TERM")) {
+    const start = new Date(now);
+    start.setUTCDate(start.getUTCDate() - 120);
+    return {
+      label: normalized,
+      startDate: start.toISOString().slice(0, 10),
+      endDate: isoDate,
+    };
+  }
+  return {
+    label: normalized || "FY",
+    startDate: yearStart,
+    endDate: isoDate,
+  };
+}
+
+function isDateInWindow(
+  value: string | null | undefined,
+  startDate: string | null,
+  endDate: string | null,
+) {
+  if (!value) {
+    return false;
+  }
+  if (startDate && value < startDate) {
+    return false;
+  }
+  if (endDate && value > endDate) {
+    return false;
+  }
+  return true;
+}
+
+function average(values: Array<number | null>) {
+  const numeric = values.filter((value): value is number => value !== null && Number.isFinite(value));
+  if (numeric.length === 0) {
+    return null;
+  }
+  return Number((numeric.reduce((sum, value) => sum + value, 0) / numeric.length).toFixed(1));
+}
+
+function benchmarkPercentage(values: Array<number | null>, threshold: number) {
+  const numeric = values.filter((value): value is number => value !== null && Number.isFinite(value));
+  if (numeric.length === 0) {
+    return null;
+  }
+  const meeting = numeric.filter((value) => value >= threshold).length;
+  return Number(((meeting / numeric.length) * 100).toFixed(1));
+}
+
+function toPublicDomainAggregate(
+  baselineValues: Array<number | null>,
+  latestValues: Array<number | null>,
+  threshold: number,
+): PublicImpactDomainAggregate {
+  const baseline = average(baselineValues);
+  const latest = average(latestValues);
+  const latestNumeric = latestValues.filter(
+    (value): value is number => value !== null && Number.isFinite(value),
+  );
+  return {
+    baseline,
+    latest,
+    endline: latest,
+    benchmarkPct: benchmarkPercentage(latestValues, threshold),
+    n: latestNumeric.length,
+  };
+}
+
+function fidelityBandFromScore(score: number): FidelityBand {
+  if (score >= 75) {
+    return "Strong";
+  }
+  if (score >= 55) {
+    return "Developing";
+  }
+  if (score >= 35) {
+    return "Needs support";
+  }
+  return "High priority";
+}
+
+function assertPublicAggregateSafe(payload: PublicImpactAggregate) {
+  const restricted = new Set([
+    "child_name",
+    "child_id",
+    "internal_child_id",
+    "full_name",
+    "age",
+    "learner_uid",
+    "teacher_uid",
+  ]);
+
+  const queue: unknown[] = [payload];
+  while (queue.length > 0) {
+    const value = queue.shift();
+    if (!value || typeof value !== "object") {
+      continue;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => queue.push(item));
+      continue;
+    }
+
+    Object.entries(value as Record<string, unknown>).forEach(([key, nested]) => {
+      if (restricted.has(key.toLowerCase())) {
+        throw new Error(`Restricted field detected in public payload: ${key}`);
+      }
+      queue.push(nested);
+    });
+  }
+}
+
+function listSchoolsForPublicScope(level: PublicImpactScopeLevel, id: string) {
+  const db = getDb();
+  if (level === "country") {
+    return db
+      .prepare(
+        `
+        SELECT
+          school_id AS schoolId,
+          school_uid AS schoolUid,
+          school_name AS schoolName,
+          district,
+          sub_region AS subRegion,
+          region,
+          enrollment_total AS enrollmentTotal
+        FROM impact_public_school_scope
+      `,
+      )
+      .all() as Array<{
+      schoolId: number;
+      schoolUid: string;
+      schoolName: string;
+      district: string;
+      subRegion: string;
+      region: string;
+      enrollmentTotal: number;
+    }>;
+  }
+
+  if (level === "subregion") {
+    return db
+      .prepare(
+        `
+        SELECT
+          school_id AS schoolId,
+          school_uid AS schoolUid,
+          school_name AS schoolName,
+          district,
+          sub_region AS subRegion,
+          region,
+          enrollment_total AS enrollmentTotal
+        FROM impact_public_school_scope
+        WHERE lower(sub_region) = lower(@id) OR lower(subregion_id) = lower(@id)
+      `,
+      )
+      .all({ id }) as Array<{
+      schoolId: number;
+      schoolUid: string;
+      schoolName: string;
+      district: string;
+      subRegion: string;
+      region: string;
+      enrollmentTotal: number;
+    }>;
+  }
+
+  if (level === "district") {
+    return db
+      .prepare(
+        `
+        SELECT
+          school_id AS schoolId,
+          school_uid AS schoolUid,
+          school_name AS schoolName,
+          district,
+          sub_region AS subRegion,
+          region,
+          enrollment_total AS enrollmentTotal
+        FROM impact_public_school_scope
+        WHERE lower(district) = lower(@id) OR lower(district_id) = lower(@id)
+      `,
+      )
+      .all({ id }) as Array<{
+      schoolId: number;
+      schoolUid: string;
+      schoolName: string;
+      district: string;
+      subRegion: string;
+      region: string;
+      enrollmentTotal: number;
+    }>;
+  }
+
+  return db
+    .prepare(
+      `
+      SELECT
+        school_id AS schoolId,
+        school_uid AS schoolUid,
+        school_name AS schoolName,
+        district,
+        sub_region AS subRegion,
+        region,
+        enrollment_total AS enrollmentTotal
+      FROM impact_public_school_scope
+      WHERE school_id = @numericId
+         OR lower(school_uid) = lower(@id)
+         OR lower(school_name) = lower(@id)
+      LIMIT 1
+    `,
+    )
+    .all({
+      id,
+      numericId: Number.isInteger(Number(id)) ? Number(id) : -1,
+    }) as Array<{
+    schoolId: number;
+    schoolUid: string;
+    schoolName: string;
+    district: string;
+    subRegion: string;
+    region: string;
+    enrollmentTotal: number;
+  }>;
+}
+
+export function getPublicImpactAggregate(
+  scopeLevel: PublicImpactScopeLevel,
+  scopeId: string,
+  periodLabel?: string | null,
+): PublicImpactAggregate {
+  const db = getDb();
+  const period = periodWindowFromLabel(periodLabel);
+  const scopedSchools = listSchoolsForPublicScope(scopeLevel, scopeId);
+  const schoolIds = scopedSchools.map((school) => school.schoolId);
+  const { clause: schoolClause, params: schoolParams } = buildSqlInClause(schoolIds, "school");
+
+  const portalRecords =
+    schoolIds.length === 0
+      ? []
+      : (db
+          .prepare(
+            `
+            SELECT
+              id,
+              module,
+              school_id AS schoolId,
+              date,
+              status,
+              program_type AS programType,
+              payload_json AS payloadJson,
+              updated_at AS updatedAt
+            FROM portal_records
+            WHERE school_id IN ${schoolClause}
+              AND module IN ('training', 'visit', 'assessment', 'story')
+          `,
+          )
+          .all(schoolParams) as Array<{
+          id: number;
+          module: PortalRecordModule;
+          schoolId: number;
+          date: string;
+          status: PortalRecordStatus;
+          programType: string | null;
+          payloadJson: string;
+          updatedAt: string;
+        }>);
+
+  const scopedPortalRecords = portalRecords.filter((row) =>
+    isDateInWindow(row.date, period.startDate, period.endDate),
+  );
+  const supportedPortalRecords = scopedPortalRecords.filter((row) => row.status !== "Returned");
+  const supportedSchools = new Set<number>(supportedPortalRecords.map((row) => row.schoolId));
+
+  const attendanceRows =
+    schoolIds.length === 0
+      ? []
+      : (db
+          .prepare(
+            `
+            SELECT
+              pta.portal_record_id AS portalRecordId,
+              pta.school_id AS schoolId,
+              pta.participant_name AS participantName,
+              pta.participant_role AS participantRole,
+              pta.gender,
+              pta.teacher_uid AS teacherUid,
+              pr.date AS recordDate
+            FROM portal_training_attendance pta
+            LEFT JOIN portal_records pr ON pr.id = pta.portal_record_id
+            WHERE pta.school_id IN ${schoolClause}
+          `,
+          )
+          .all(schoolParams) as Array<{
+          portalRecordId: number;
+          schoolId: number;
+          participantName: string;
+          participantRole: string;
+          gender: string | null;
+          teacherUid: string | null;
+          recordDate: string | null;
+        }>);
+
+  const scopedAttendance = attendanceRows.filter((row) =>
+    isDateInWindow(row.recordDate, period.startDate, period.endDate),
+  );
+
+  const teacherKeyByGender = {
+    Male: new Set<string>(),
+    Female: new Set<string>(),
+  };
+  scopedAttendance.forEach((row) => {
+    if (!String(row.participantRole ?? "").toLowerCase().includes("teacher")) {
+      return;
+    }
+    const gender = normalizeTeacherGender(row.gender);
+    if (!gender) {
+      return;
+    }
+    const key = row.teacherUid?.trim()
+      ? row.teacherUid.trim()
+      : `${row.schoolId}:${row.participantName.trim().toLowerCase()}`;
+    teacherKeyByGender[gender].add(key);
+  });
+
+  if (teacherKeyByGender.Male.size === 0 && teacherKeyByGender.Female.size === 0) {
+    const teacherRows =
+      schoolIds.length === 0
+        ? []
+        : (db
+            .prepare(
+              `
+              SELECT teacher_uid AS teacherUid, school_id AS schoolId, gender
+              FROM impact_public_teacher_support
+              WHERE school_id IN ${schoolClause}
+            `,
+            )
+            .all(schoolParams) as Array<{
+            teacherUid: string;
+            schoolId: number;
+            gender: "Male" | "Female";
+          }>);
+    teacherRows.forEach((row) => {
+      teacherKeyByGender[row.gender].add(row.teacherUid || `${row.schoolId}:unknown`);
+    });
+  }
+
+  const assessmentRows =
+    schoolIds.length === 0
+      ? []
+      : (db
+          .prepare(
+            `
+            SELECT
+              id,
+              school_id AS schoolId,
+              assessment_date AS assessmentDate,
+              assessment_type AS assessmentType,
+              learner_uid AS learnerUid,
+              letter_identification_score AS letterIdentificationScore,
+              sound_identification_score AS soundIdentificationScore,
+              decodable_words_score AS decodableWordsScore,
+              undecodable_words_score AS undecodableWordsScore,
+              made_up_words_score AS madeUpWordsScore,
+              story_reading_score AS storyReadingScore,
+              reading_comprehension_score AS readingComprehensionScore,
+              created_at AS createdAt
+            FROM assessment_records
+            WHERE school_id IN ${schoolClause}
+          `,
+          )
+          .all(schoolParams) as Array<{
+          id: number;
+          schoolId: number;
+          assessmentDate: string;
+          assessmentType: "baseline" | "progress" | "endline";
+          learnerUid: string | null;
+          letterIdentificationScore: number | null;
+          soundIdentificationScore: number | null;
+          decodableWordsScore: number | null;
+          undecodableWordsScore: number | null;
+          madeUpWordsScore: number | null;
+          storyReadingScore: number | null;
+          readingComprehensionScore: number | null;
+          createdAt: string;
+        }>);
+
+  const scopedAssessments = assessmentRows.filter((row) =>
+    isDateInWindow(row.assessmentDate, period.startDate, period.endDate),
+  );
+
+  const assessmentSessionRows =
+    schoolIds.length === 0
+      ? []
+      : (db
+          .prepare(
+            `
+            SELECT
+              id,
+              school_id AS schoolId,
+              assessment_date AS assessmentDate,
+              assessment_type AS assessmentType
+            FROM assessment_sessions
+            WHERE school_id IN ${schoolClause}
+          `,
+          )
+          .all(schoolParams) as Array<{
+          id: number;
+          schoolId: number;
+          assessmentDate: string;
+          assessmentType: "baseline" | "progress" | "endline";
+        }>);
+
+  const scopedSessions = assessmentSessionRows.filter((row) =>
+    isDateInWindow(row.assessmentDate, period.startDate, period.endDate),
+  );
+  const sessionsForCounts = scopedSessions.length > 0 ? scopedSessions : scopedAssessments;
+
+  const visitsTotal = supportedPortalRecords.filter((row) => row.module === "visit").length;
+  const assessmentsBaselineCount = sessionsForCounts.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "baseline",
+  ).length;
+  const assessmentsProgressCount = sessionsForCounts.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "progress",
+  ).length;
+  const assessmentsEndlineCount = sessionsForCounts.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "endline",
+  ).length;
+
+  const learnerUnique = new Set(
+    scopedAssessments
+      .map((row) => row.learnerUid?.trim() ?? "")
+      .filter((value) => value),
+  );
+
+  const baselineRows = scopedAssessments.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "baseline",
+  );
+  const endlineRows = scopedAssessments.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "endline",
+  );
+  const latestDate = scopedAssessments.reduce((current, candidate) => {
+    if (!current || candidate.assessmentDate > current) {
+      return candidate.assessmentDate;
+    }
+    return current;
+  }, "" as string);
+  const latestRows =
+    endlineRows.length > 0
+      ? endlineRows
+      : scopedAssessments.filter((row) => row.assessmentDate === latestDate);
+
+  const baselineLetterValues = baselineRows.map((row) =>
+    row.soundIdentificationScore ?? row.letterIdentificationScore ?? null,
+  );
+  const latestLetterValues = latestRows.map((row) =>
+    row.soundIdentificationScore ?? row.letterIdentificationScore ?? null,
+  );
+  const baselineDecodingValues = baselineRows.map((row) => {
+    const values = [
+      row.decodableWordsScore,
+      row.undecodableWordsScore,
+      row.madeUpWordsScore,
+    ].filter((value): value is number => value !== null && Number.isFinite(value));
+    if (values.length === 0) {
+      return null;
+    }
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  });
+  const latestDecodingValues = latestRows.map((row) => {
+    const values = [
+      row.decodableWordsScore,
+      row.undecodableWordsScore,
+      row.madeUpWordsScore,
+    ].filter((value): value is number => value !== null && Number.isFinite(value));
+    if (values.length === 0) {
+      return null;
+    }
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  });
+  const baselineFluencyValues = baselineRows.map((row) => row.storyReadingScore ?? null);
+  const latestFluencyValues = latestRows.map((row) => row.storyReadingScore ?? null);
+  const baselineComprehensionValues = baselineRows.map((row) => row.readingComprehensionScore ?? null);
+  const latestComprehensionValues = latestRows.map((row) => row.readingComprehensionScore ?? null);
+
+  const trainedSchools = new Set(
+    supportedPortalRecords
+      .filter((row) => row.module === "training")
+      .map((row) => row.schoolId),
+  );
+  const coachedSchools = new Set(
+    supportedPortalRecords
+      .filter((row) => row.module === "visit")
+      .map((row) => row.schoolId),
+  );
+  const baselineSchools = new Set(
+    scopedAssessments
+      .filter((row) => normalizeAssessmentType(row.assessmentType) === "baseline")
+      .map((row) => row.schoolId),
+  );
+  const endlineSchools = new Set(
+    scopedAssessments
+      .filter((row) => normalizeAssessmentType(row.assessmentType) === "endline")
+      .map((row) => row.schoolId),
+  );
+
+  const enrollmentScopeSchoolIds = supportedSchools.size > 0 ? [...supportedSchools] : schoolIds;
+  const enrollmentTotal = scopedSchools
+    .filter((school) => enrollmentScopeSchoolIds.includes(school.schoolId))
+    .reduce((sum, school) => sum + Number(school.enrollmentTotal ?? 0), 0);
+
+  const observationScores = supportedPortalRecords
+    .filter((row) => row.module === "visit")
+    .map((row) => {
+      try {
+        const parsed = JSON.parse(row.payloadJson || "{}") as Record<string, unknown>;
+        return toNumberOrNull(parsed.observationScorePercent);
+      } catch {
+        return null;
+      }
+    })
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+
+  const coachingCoverage =
+    scopedSchools.length > 0 ? (coachedSchools.size / scopedSchools.length) * 100 : 0;
+  const assessmentCoverage =
+    scopedSchools.length > 0 ? (baselineSchools.size / scopedSchools.length) * 100 : 0;
+  const visitQuality = average(observationScores.map((value) => value)) ?? 0;
+  const fidelityScore = Math.round((coachingCoverage + assessmentCoverage + visitQuality) / 3);
+
+  const districtDelta = new Map<
+    string,
+    { baseline: number[]; latest: number[]; activity: number; priority: number }
+  >();
+  scopedSchools.forEach((school) => {
+    districtDelta.set(school.district, { baseline: [], latest: [], activity: 0, priority: 0 });
+  });
+  baselineRows.forEach((row) => {
+    const school = scopedSchools.find((item) => item.schoolId === row.schoolId);
+    if (!school) {
+      return;
+    }
+    const bucket = districtDelta.get(school.district);
+    const value = row.readingComprehensionScore ?? row.storyReadingScore ?? null;
+    if (bucket && value !== null && Number.isFinite(value)) {
+      bucket.baseline.push(value);
+    }
+  });
+  latestRows.forEach((row) => {
+    const school = scopedSchools.find((item) => item.schoolId === row.schoolId);
+    if (!school) {
+      return;
+    }
+    const bucket = districtDelta.get(school.district);
+    const value = row.readingComprehensionScore ?? row.storyReadingScore ?? null;
+    if (bucket && value !== null && Number.isFinite(value)) {
+      bucket.latest.push(value);
+    }
+  });
+  supportedPortalRecords.forEach((row) => {
+    const school = scopedSchools.find((item) => item.schoolId === row.schoolId);
+    if (!school) {
+      return;
+    }
+    const bucket = districtDelta.get(school.district);
+    if (!bucket) {
+      return;
+    }
+    bucket.activity += 1;
+    if (row.module === "visit" || row.module === "assessment") {
+      bucket.priority += 1;
+    }
+  });
+
+  const rankingRows = [...districtDelta.entries()].map(([name, values]) => {
+    const baselineAvg = average(values.baseline.map((value) => value));
+    const latestAvg = average(values.latest.map((value) => value));
+    const improvement =
+      baselineAvg !== null && latestAvg !== null ? Number((latestAvg - baselineAvg).toFixed(1)) : 0;
+    return {
+      name,
+      improvement,
+      activity: values.activity,
+      priority: values.priority,
+    };
+  });
+
+  const allUpdatedAtValues = [
+    ...portalRecords.map((row) => row.updatedAt),
+    ...assessmentRows.map((row) => row.createdAt),
+  ]
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a));
+
+  const scopeName =
+    scopeLevel === "country"
+      ? "Uganda"
+      : scopeLevel === "school"
+        ? scopedSchools[0]?.schoolName ?? scopeId
+        : scopeId;
+  const scopeParent =
+    scopeLevel === "district"
+      ? scopedSchools[0]?.subRegion ?? undefined
+      : scopeLevel === "school"
+        ? scopedSchools[0]?.district ?? undefined
+        : scopeLevel === "subregion"
+          ? scopedSchools[0]?.region ?? undefined
+          : undefined;
+  const navigatorRegions = [...new Set(scopedSchools.map((school) => school.region))]
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => left.localeCompare(right));
+  const navigatorSubRegions = [...new Set(scopedSchools.map((school) => school.subRegion))]
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => left.localeCompare(right));
+  const navigatorDistricts = [...new Set(scopedSchools.map((school) => school.district))]
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => left.localeCompare(right));
+  const navigatorSchools = [...scopedSchools]
+    .filter((school) => Number.isInteger(school.schoolId) && school.schoolId > 0)
+    .sort((left, right) => left.schoolName.localeCompare(right.schoolName))
+    .map((school) => ({
+      id: school.schoolId,
+      name: school.schoolName,
+      district: school.district,
+      subRegion: school.subRegion,
+      region: school.region,
+    }));
+
+  const aggregate: PublicImpactAggregate = {
+    scope: {
+      level: scopeLevel,
+      id: scopeId,
+      name: scopeName,
+      parent: scopeParent,
+    },
+    period: {
+      label: period.label,
+      startDate: period.startDate,
+      endDate: period.endDate,
+    },
+    kpis: {
+      schoolsSupported: supportedSchools.size,
+      teachersSupportedMale: teacherKeyByGender.Male.size,
+      teachersSupportedFemale: teacherKeyByGender.Female.size,
+      enrollmentEstimatedReach: enrollmentTotal,
+      learnersAssessedUnique: learnerUnique.size,
+      learnersReachedEstimated: enrollmentTotal,
+      coachingVisitsCompleted: visitsTotal,
+      assessmentCycleCompletionPct:
+        supportedSchools.size > 0
+          ? Number(((endlineSchools.size / supportedSchools.size) * 100).toFixed(1))
+          : 0,
+      assessmentsBaselineCount,
+      assessmentsProgressCount,
+      assessmentsEndlineCount,
+    },
+    outcomes: {
+      letterSounds: toPublicDomainAggregate(baselineLetterValues, latestLetterValues, 60),
+      decoding: toPublicDomainAggregate(baselineDecodingValues, latestDecodingValues, 60),
+      fluency: toPublicDomainAggregate(baselineFluencyValues, latestFluencyValues, 45),
+      comprehension: toPublicDomainAggregate(
+        baselineComprehensionValues,
+        latestComprehensionValues,
+        50,
+      ),
+    },
+    funnel: {
+      trained: trainedSchools.size,
+      coached: coachedSchools.size,
+      baselineAssessed: baselineSchools.size,
+      endlineAssessed: endlineSchools.size,
+    },
+    fidelity: {
+      score: fidelityScore,
+      band: fidelityBandFromScore(fidelityScore),
+      drivers: [
+        {
+          key: "coaching_coverage",
+          label: "Coaching coverage",
+          score: Number(coachingCoverage.toFixed(1)),
+        },
+        {
+          key: "assessment_coverage",
+          label: "Assessment coverage",
+          score: Number(assessmentCoverage.toFixed(1)),
+        },
+        {
+          key: "visit_quality",
+          label: "Visit quality",
+          score: Number(visitQuality.toFixed(1)),
+        },
+      ],
+    },
+    rankings: {
+      mostImproved: rankingRows
+        .sort((left, right) => right.improvement - left.improvement)
+        .slice(0, 5)
+        .map((row) => ({ name: row.name, score: row.improvement })),
+      prioritySupport: rankingRows
+        .sort((left, right) => right.priority - left.priority)
+        .slice(0, 5)
+        .map((row) => ({ name: row.name, score: row.priority })),
+      mostActive: rankingRows
+        .sort((left, right) => right.activity - left.activity)
+        .slice(0, 5)
+        .map((row) => ({ name: row.name, score: row.activity })),
+    },
+    meta: {
+      lastUpdated: allUpdatedAtValues[0] ?? new Date().toISOString(),
+      dataCompleteness:
+        supportedSchools.size > 0 && learnerUnique.size > 0 ? "Complete" : "Partial",
+      sampleSize: learnerUnique.size,
+    },
+    navigator: {
+      regions: navigatorRegions,
+      subRegions: navigatorSubRegions,
+      districts: navigatorDistricts,
+      schools: navigatorSchools,
+    },
+  };
+
+  assertPublicAggregateSafe(aggregate);
+  return aggregate;
+}
+
 /**
  * Resolves geography filters for any hierarchy level.
  * Returns { schoolWhere, legacyWhere, assessWhere, params } for use in SQL queries.
@@ -8761,14 +11038,7 @@ function resolveGeoHierarchy(
       assessWhere = `district IN (${placeholders})`;
     }
   } else if (level === "sub_region") {
-    const subRegionDistricts: string[] = [];
-    for (const r of ugandaRegions) {
-      for (const sr of r.subRegions) {
-        if (sr.subRegion === idFilter) {
-          subRegionDistricts.push(...sr.districts);
-        }
-      }
-    }
+    const subRegionDistricts = getDistrictsByAnySubRegionName(idFilter);
     if (subRegionDistricts.length > 0) {
       const placeholders = subRegionDistricts.map((_, i) => `@d${i}`).join(", ");
       subRegionDistricts.forEach((d, i) => { params[`d${i}`] = d; });
@@ -9288,14 +11558,7 @@ export function calculateFidelityScore(
       districtList.forEach((d, i) => { params[`d${i}`] = d.toLowerCase().trim(); });
     }
   } else if (scopeType === "sub_region") {
-    const subRegionDistricts: string[] = [];
-    for (const r of ugandaRegions) {
-      for (const sr of r.subRegions) {
-        if (sr.subRegion === scopeId) {
-          subRegionDistricts.push(...sr.districts);
-        }
-      }
-    }
+    const subRegionDistricts = getDistrictsByAnySubRegionName(scopeId);
     if (subRegionDistricts.length > 0) {
       schoolsWhere = `WHERE lower(trim(sd.district)) IN (${subRegionDistricts.map((_, i) => `@d${i}`).join(",")})`;
       subRegionDistricts.forEach((d, i) => { params[`d${i}`] = d.toLowerCase().trim(); });
