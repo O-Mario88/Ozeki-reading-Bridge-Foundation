@@ -23,9 +23,11 @@ export function toPublicImpactResponse(payload: PublicImpactAggregate) {
     },
     outcomes: {
       ...payload.outcomes,
-      sounds: payload.outcomes.letterSounds,
-      decoding: payload.outcomes.decoding,
-      fluency: payload.outcomes.fluency,
+      letter_names: payload.outcomes.letterNames,
+      letter_sounds: payload.outcomes.letterSounds,
+      real_words: payload.outcomes.realWords,
+      made_up_words: payload.outcomes.madeUpWords,
+      story_reading: payload.outcomes.storyReading,
       comprehension: payload.outcomes.comprehension,
     },
     funnel: {

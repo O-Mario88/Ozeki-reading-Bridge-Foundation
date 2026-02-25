@@ -476,6 +476,8 @@ export interface LearnerRosterRecord extends LearnerRosterInput {
 export type AssessmentType = "baseline" | "progress" | "endline";
 export type LearnerGender = "Boy" | "Girl" | "Other";
 
+export type { ReadingLevel } from "@/lib/reading-assessment-utils";
+
 export interface AssessmentRecordInput {
   childName: string;
   childId?: string;
@@ -500,6 +502,8 @@ export interface AssessmentRecord extends AssessmentRecordInput {
   id: number;
   createdByUserId: number;
   createdAt: string;
+  /** Auto-computed reading level based on domain scores */
+  readingLevel?: import("@/lib/reading-assessment-utils").ReadingLevel;
 }
 
 export interface DomainOutcomes {
@@ -533,7 +537,7 @@ export interface AggregatedImpactData {
     schoolsTrained: number;
     schoolsVisited: number;
     schoolsAssessedBaseline: number;
-      schoolsAssessedEndline: number;
+    schoolsAssessedEndline: number;
   };
 }
 
@@ -571,9 +575,11 @@ export interface PublicImpactAggregate {
     assessmentsEndlineCount: number;
   };
   outcomes: {
+    letterNames: PublicImpactDomainAggregate;
     letterSounds: PublicImpactDomainAggregate;
-    decoding: PublicImpactDomainAggregate;
-    fluency: PublicImpactDomainAggregate;
+    realWords: PublicImpactDomainAggregate;
+    madeUpWords: PublicImpactDomainAggregate;
+    storyReading: PublicImpactDomainAggregate;
     comprehension: PublicImpactDomainAggregate;
   };
   funnel: {

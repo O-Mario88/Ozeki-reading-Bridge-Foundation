@@ -114,27 +114,41 @@ export default async function SchoolPage({ params }: { params: Params }) {
 
           <article className="card" style={{ padding: "1.2rem" }}>
             <h3 style={{ marginTop: 0 }}>Learning Outcomes</h3>
-            <div className="impact-domain-mini-grid">
+            <div className="impact-domain-mini-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
               <DomainCard
-                title="Letter sounds"
+                title="Letter Names"
+                baseline={aggregate.outcomes.letterNames.baseline}
+                latest={aggregate.outcomes.letterNames.latest ?? aggregate.outcomes.letterNames.endline}
+                sampleSize={aggregate.outcomes.letterNames.n}
+                benchmarkPct={aggregate.outcomes.letterNames.benchmarkPct}
+              />
+              <DomainCard
+                title="Letter Sounds"
                 baseline={aggregate.outcomes.letterSounds.baseline}
                 latest={aggregate.outcomes.letterSounds.latest ?? aggregate.outcomes.letterSounds.endline}
                 sampleSize={aggregate.outcomes.letterSounds.n}
                 benchmarkPct={aggregate.outcomes.letterSounds.benchmarkPct}
               />
               <DomainCard
-                title="Decoding"
-                baseline={aggregate.outcomes.decoding.baseline}
-                latest={aggregate.outcomes.decoding.latest ?? aggregate.outcomes.decoding.endline}
-                sampleSize={aggregate.outcomes.decoding.n}
-                benchmarkPct={aggregate.outcomes.decoding.benchmarkPct}
+                title="Real Words"
+                baseline={aggregate.outcomes.realWords.baseline}
+                latest={aggregate.outcomes.realWords.latest ?? aggregate.outcomes.realWords.endline}
+                sampleSize={aggregate.outcomes.realWords.n}
+                benchmarkPct={aggregate.outcomes.realWords.benchmarkPct}
               />
               <DomainCard
-                title="Fluency"
-                baseline={aggregate.outcomes.fluency.baseline}
-                latest={aggregate.outcomes.fluency.latest ?? aggregate.outcomes.fluency.endline}
-                sampleSize={aggregate.outcomes.fluency.n}
-                benchmarkPct={aggregate.outcomes.fluency.benchmarkPct}
+                title="Made Up Words"
+                baseline={aggregate.outcomes.madeUpWords.baseline}
+                latest={aggregate.outcomes.madeUpWords.latest ?? aggregate.outcomes.madeUpWords.endline}
+                sampleSize={aggregate.outcomes.madeUpWords.n}
+                benchmarkPct={aggregate.outcomes.madeUpWords.benchmarkPct}
+              />
+              <DomainCard
+                title="Story Reading"
+                baseline={aggregate.outcomes.storyReading.baseline}
+                latest={aggregate.outcomes.storyReading.latest ?? aggregate.outcomes.storyReading.endline}
+                sampleSize={aggregate.outcomes.storyReading.n}
+                benchmarkPct={aggregate.outcomes.storyReading.benchmarkPct}
               />
               <DomainCard
                 title="Comprehension"

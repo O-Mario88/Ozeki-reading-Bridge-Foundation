@@ -289,11 +289,13 @@ export function PublicImpactMapExplorer({
 
       <div className="cards-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
         <article className="card">
-          <h3>Learning outcomes by domain</h3>
-          <div className="impact-domain-mini-grid">
-            <DomainOutcomeCard title="Sounds" domain={payload?.outcomes.letterSounds ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
-            <DomainOutcomeCard title="Decoding" domain={payload?.outcomes.decoding ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
-            <DomainOutcomeCard title="Fluency" domain={payload?.outcomes.fluency ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
+          <h3>Learning Outcomes by Domain</h3>
+          <div className="impact-domain-mini-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+            <DomainOutcomeCard title="Letter Names" domain={payload?.outcomes.letterNames ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
+            <DomainOutcomeCard title="Letter Sounds" domain={payload?.outcomes.letterSounds ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
+            <DomainOutcomeCard title="Real Words" domain={payload?.outcomes.realWords ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
+            <DomainOutcomeCard title="Made Up Words" domain={payload?.outcomes.madeUpWords ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
+            <DomainOutcomeCard title="Story Reading" domain={payload?.outcomes.storyReading ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
             <DomainOutcomeCard title="Comprehension" domain={payload?.outcomes.comprehension ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
           </div>
         </article>

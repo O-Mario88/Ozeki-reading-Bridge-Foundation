@@ -18,14 +18,13 @@ export default async function ImpactReportDetailPage({
 
   const outcomes = report.factPack.learningOutcomes;
   const outcomeRows = [
-    { label: "Letter Identification", value: outcomes.letterIdentification },
-    { label: "Sound Identification", value: outcomes.soundIdentification },
-    { label: "Decodable Words", value: outcomes.decodableWords },
-    { label: "Undecodable Words", value: outcomes.undecodableWords },
+    { label: "Letter Names", value: outcomes.letterIdentification },
+    { label: "Letter Sounds", value: outcomes.soundIdentification },
+    { label: "Real Words", value: outcomes.decodableWords },
     { label: "Made Up Words", value: outcomes.madeUpWords },
     { label: "Story Reading", value: outcomes.storyReading },
-    { label: "Reading Comprehension", value: outcomes.readingComprehension },
-  ];
+    { label: "Comprehension", value: outcomes.readingComprehension },
+  ].filter((row) => row.value != null);
 
   return (
     <>
@@ -124,7 +123,7 @@ export default async function ImpactReportDetailPage({
       <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h3>Coverage & Delivery</h3>
+            <h3>Coverage &amp; Delivery</h3>
             <ul>
               <li>Schools impacted: {report.factPack.coverageDelivery.schoolsImpacted.toLocaleString()}</li>
               <li>
@@ -207,10 +206,10 @@ export default async function ImpactReportDetailPage({
                 {outcomeRows.map((row) => (
                   <tr key={row.label}>
                     <td>{row.label}</td>
-                    <td>{row.value.baseline ?? "Data not available"}</td>
-                    <td>{row.value.progress ?? "Data not available"}</td>
-                    <td>{row.value.endline ?? "Data not available"}</td>
-                    <td>{row.value.change ?? "Data not available"}</td>
+                    <td>{row.value?.baseline ?? "Data not available"}</td>
+                    <td>{row.value?.progress ?? "Data not available"}</td>
+                    <td>{row.value?.endline ?? "Data not available"}</td>
+                    <td>{row.value?.change ?? "Data not available"}</td>
                   </tr>
                 ))}
               </tbody>

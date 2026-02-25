@@ -2876,8 +2876,8 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
   const learnerRecord =
     payload.learnerUid && payload.learnerUid.trim()
       ? (db
-          .prepare(
-            `
+        .prepare(
+          `
             SELECT learner_uid AS learnerUid, school_id AS schoolId, full_name AS fullName,
                    internal_child_id AS internalChildId, gender, age, class_grade AS classGrade,
                    consent_flag AS consentFlag, created_at AS createdAt, updated_at AS updatedAt
@@ -2885,17 +2885,17 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
             WHERE learner_uid = @learnerUid
             LIMIT 1
           `,
-          )
-          .get({ learnerUid: payload.learnerUid.trim() }) as LearnerRosterRecord | undefined) ?? null
+        )
+        .get({ learnerUid: payload.learnerUid.trim() }) as LearnerRosterRecord | undefined) ?? null
       : createOrUpdateLearnerRosterRecord({
-          schoolId: payload.schoolId,
-          fullName: payload.childName,
-          internalChildId: payload.childId?.trim() || undefined,
-          gender: payload.gender,
-          age: payload.age,
-          classGrade: payload.classGrade,
-          consentFlag: false,
-        });
+        schoolId: payload.schoolId,
+        fullName: payload.childName,
+        internalChildId: payload.childId?.trim() || undefined,
+        gender: payload.gender,
+        age: payload.age,
+        classGrade: payload.classGrade,
+        consentFlag: false,
+      });
 
   if (!learnerRecord) {
     throw new Error("Could not resolve learner roster record.");
@@ -3592,11 +3592,11 @@ function syncPortalRecordLinkages(
     const focusAreasJson = Array.isArray(focusAreas)
       ? JSON.stringify(focusAreas.map((item) => String(item).trim()).filter(Boolean))
       : JSON.stringify(
-          String(focusAreas ?? "")
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
-        );
+        String(focusAreas ?? "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      );
 
     db.prepare(`
       INSERT INTO coaching_visits (
@@ -3808,14 +3808,14 @@ function syncPortalRecordLinkages(
       const learnerUid = learnerUidFromRow
         ? learnerUidFromRow
         : createOrUpdateLearnerRosterRecord({
-            schoolId: args.schoolId,
-            fullName: learnerName,
-            internalChildId: childId,
-            gender: normalizeLearnerGender(row.sex ?? row.gender),
-            age,
-            classGrade,
-            consentFlag: false,
-          }).learnerUid;
+          schoolId: args.schoolId,
+          fullName: learnerName,
+          internalChildId: childId,
+          gender: normalizeLearnerGender(row.sex ?? row.gender),
+          age,
+          classGrade,
+          consentFlag: false,
+        }).learnerUid;
 
       const letterIdentificationScore = toNumberOrNull(
         row.letterIdentification ?? row.letterIdentication ?? row.letterSoundsScore,
@@ -10420,14 +10420,14 @@ function listSchoolsForPublicScope(level: PublicImpactScopeLevel, id: string) {
       `,
       )
       .all() as Array<{
-      schoolId: number;
-      schoolUid: string;
-      schoolName: string;
-      district: string;
-      subRegion: string;
-      region: string;
-      enrollmentTotal: number;
-    }>;
+        schoolId: number;
+        schoolUid: string;
+        schoolName: string;
+        district: string;
+        subRegion: string;
+        region: string;
+        enrollmentTotal: number;
+      }>;
   }
 
   if (level === "subregion") {
@@ -10447,14 +10447,14 @@ function listSchoolsForPublicScope(level: PublicImpactScopeLevel, id: string) {
       `,
       )
       .all({ id }) as Array<{
-      schoolId: number;
-      schoolUid: string;
-      schoolName: string;
-      district: string;
-      subRegion: string;
-      region: string;
-      enrollmentTotal: number;
-    }>;
+        schoolId: number;
+        schoolUid: string;
+        schoolName: string;
+        district: string;
+        subRegion: string;
+        region: string;
+        enrollmentTotal: number;
+      }>;
   }
 
   if (level === "district") {
@@ -10474,14 +10474,14 @@ function listSchoolsForPublicScope(level: PublicImpactScopeLevel, id: string) {
       `,
       )
       .all({ id }) as Array<{
-      schoolId: number;
-      schoolUid: string;
-      schoolName: string;
-      district: string;
-      subRegion: string;
-      region: string;
-      enrollmentTotal: number;
-    }>;
+        schoolId: number;
+        schoolUid: string;
+        schoolName: string;
+        district: string;
+        subRegion: string;
+        region: string;
+        enrollmentTotal: number;
+      }>;
   }
 
   return db
@@ -10506,14 +10506,14 @@ function listSchoolsForPublicScope(level: PublicImpactScopeLevel, id: string) {
       id,
       numericId: Number.isInteger(Number(id)) ? Number(id) : -1,
     }) as Array<{
-    schoolId: number;
-    schoolUid: string;
-    schoolName: string;
-    district: string;
-    subRegion: string;
-    region: string;
-    enrollmentTotal: number;
-  }>;
+      schoolId: number;
+      schoolUid: string;
+      schoolName: string;
+      district: string;
+      subRegion: string;
+      region: string;
+      enrollmentTotal: number;
+    }>;
 }
 
 export function getPublicImpactAggregate(
@@ -10531,8 +10531,8 @@ export function getPublicImpactAggregate(
     schoolIds.length === 0
       ? []
       : (db
-          .prepare(
-            `
+        .prepare(
+          `
             SELECT
               id,
               module,
@@ -10546,8 +10546,8 @@ export function getPublicImpactAggregate(
             WHERE school_id IN ${schoolClause}
               AND module IN ('training', 'visit', 'assessment', 'story')
           `,
-          )
-          .all(schoolParams) as Array<{
+        )
+        .all(schoolParams) as Array<{
           id: number;
           module: PortalRecordModule;
           schoolId: number;
@@ -10568,8 +10568,8 @@ export function getPublicImpactAggregate(
     schoolIds.length === 0
       ? []
       : (db
-          .prepare(
-            `
+        .prepare(
+          `
             SELECT
               pta.portal_record_id AS portalRecordId,
               pta.school_id AS schoolId,
@@ -10582,8 +10582,8 @@ export function getPublicImpactAggregate(
             LEFT JOIN portal_records pr ON pr.id = pta.portal_record_id
             WHERE pta.school_id IN ${schoolClause}
           `,
-          )
-          .all(schoolParams) as Array<{
+        )
+        .all(schoolParams) as Array<{
           portalRecordId: number;
           schoolId: number;
           participantName: string;
@@ -10620,14 +10620,14 @@ export function getPublicImpactAggregate(
       schoolIds.length === 0
         ? []
         : (db
-            .prepare(
-              `
+          .prepare(
+            `
               SELECT teacher_uid AS teacherUid, school_id AS schoolId, gender
               FROM impact_public_teacher_support
               WHERE school_id IN ${schoolClause}
             `,
-            )
-            .all(schoolParams) as Array<{
+          )
+          .all(schoolParams) as Array<{
             teacherUid: string;
             schoolId: number;
             gender: "Male" | "Female";
@@ -10641,8 +10641,8 @@ export function getPublicImpactAggregate(
     schoolIds.length === 0
       ? []
       : (db
-          .prepare(
-            `
+        .prepare(
+          `
             SELECT
               id,
               school_id AS schoolId,
@@ -10660,8 +10660,8 @@ export function getPublicImpactAggregate(
             FROM assessment_records
             WHERE school_id IN ${schoolClause}
           `,
-          )
-          .all(schoolParams) as Array<{
+        )
+        .all(schoolParams) as Array<{
           id: number;
           schoolId: number;
           assessmentDate: string;
@@ -10685,8 +10685,8 @@ export function getPublicImpactAggregate(
     schoolIds.length === 0
       ? []
       : (db
-          .prepare(
-            `
+        .prepare(
+          `
             SELECT
               id,
               school_id AS schoolId,
@@ -10695,8 +10695,8 @@ export function getPublicImpactAggregate(
             FROM assessment_sessions
             WHERE school_id IN ${schoolClause}
           `,
-          )
-          .all(schoolParams) as Array<{
+        )
+        .all(schoolParams) as Array<{
           id: number;
           schoolId: number;
           assessmentDate: string;
@@ -10742,36 +10742,17 @@ export function getPublicImpactAggregate(
       ? endlineRows
       : scopedAssessments.filter((row) => row.assessmentDate === latestDate);
 
-  const baselineLetterValues = baselineRows.map((row) =>
-    row.soundIdentificationScore ?? row.letterIdentificationScore ?? null,
-  );
-  const latestLetterValues = latestRows.map((row) =>
-    row.soundIdentificationScore ?? row.letterIdentificationScore ?? null,
-  );
-  const baselineDecodingValues = baselineRows.map((row) => {
-    const values = [
-      row.decodableWordsScore,
-      row.undecodableWordsScore,
-      row.madeUpWordsScore,
-    ].filter((value): value is number => value !== null && Number.isFinite(value));
-    if (values.length === 0) {
-      return null;
-    }
-    return values.reduce((sum, value) => sum + value, 0) / values.length;
-  });
-  const latestDecodingValues = latestRows.map((row) => {
-    const values = [
-      row.decodableWordsScore,
-      row.undecodableWordsScore,
-      row.madeUpWordsScore,
-    ].filter((value): value is number => value !== null && Number.isFinite(value));
-    if (values.length === 0) {
-      return null;
-    }
-    return values.reduce((sum, value) => sum + value, 0) / values.length;
-  });
-  const baselineFluencyValues = baselineRows.map((row) => row.storyReadingScore ?? null);
-  const latestFluencyValues = latestRows.map((row) => row.storyReadingScore ?? null);
+  // 6-domain extraction: each domain maps to its own DB column
+  const baselineLetterNameValues = baselineRows.map((row) => row.letterIdentificationScore ?? null);
+  const latestLetterNameValues = latestRows.map((row) => row.letterIdentificationScore ?? null);
+  const baselineLetterSoundValues = baselineRows.map((row) => row.soundIdentificationScore ?? null);
+  const latestLetterSoundValues = latestRows.map((row) => row.soundIdentificationScore ?? null);
+  const baselineRealWordValues = baselineRows.map((row) => row.decodableWordsScore ?? null);
+  const latestRealWordValues = latestRows.map((row) => row.decodableWordsScore ?? null);
+  const baselineMadeUpWordValues = baselineRows.map((row) => row.madeUpWordsScore ?? null);
+  const latestMadeUpWordValues = latestRows.map((row) => row.madeUpWordsScore ?? null);
+  const baselineStoryReadingValues = baselineRows.map((row) => row.storyReadingScore ?? null);
+  const latestStoryReadingValues = latestRows.map((row) => row.storyReadingScore ?? null);
   const baselineComprehensionValues = baselineRows.map((row) => row.readingComprehensionScore ?? null);
   const latestComprehensionValues = latestRows.map((row) => row.readingComprehensionScore ?? null);
 
@@ -10947,9 +10928,11 @@ export function getPublicImpactAggregate(
       assessmentsEndlineCount,
     },
     outcomes: {
-      letterSounds: toPublicDomainAggregate(baselineLetterValues, latestLetterValues, 60),
-      decoding: toPublicDomainAggregate(baselineDecodingValues, latestDecodingValues, 60),
-      fluency: toPublicDomainAggregate(baselineFluencyValues, latestFluencyValues, 45),
+      letterNames: toPublicDomainAggregate(baselineLetterNameValues, latestLetterNameValues, 60),
+      letterSounds: toPublicDomainAggregate(baselineLetterSoundValues, latestLetterSoundValues, 60),
+      realWords: toPublicDomainAggregate(baselineRealWordValues, latestRealWordValues, 60),
+      madeUpWords: toPublicDomainAggregate(baselineMadeUpWordValues, latestMadeUpWordValues, 60),
+      storyReading: toPublicDomainAggregate(baselineStoryReadingValues, latestStoryReadingValues, 45),
       comprehension: toPublicDomainAggregate(
         baselineComprehensionValues,
         latestComprehensionValues,
