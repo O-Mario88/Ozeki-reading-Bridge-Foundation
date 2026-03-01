@@ -21,6 +21,7 @@ import {
   PortalUser,
 } from "@/lib/types";
 import { EgraLearnerInputModal, EgraLearner } from "./EgraLearnerInputModal";
+import { SchoolRosterPicker, RosterEntry } from "./SchoolRosterPicker";
 
 type FilterState = {
   region: string;
@@ -720,17 +721,34 @@ export function PortalModuleManager({
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>({ kind: "idle", message: "" });
-  const [filters, setFilters] = useState<FilterState>({
-    region: "",
-    dateFrom: "",
-    dateTo: "",
-    district: "",
-    school: "",
-    status: "",
-    createdBy: "",
-    programType: "",
+  const [filters, setFilters] = useState<FilterState>(() => {
+    let initialRegion = "";
+    let initialDistrict = "";
+
+    if (currentUser.geographyScope && !canReview) {
+      const [scopeType, scopeValue] = currentUser.geographyScope.split(":");
+      if (scopeType === "district") {
+        initialDistrict = scopeValue;
+        initialRegion = inferRegionFromDistrict(scopeValue) ?? "";
+      } else if (scopeType === "region") {
+        initialRegion = scopeValue;
+      }
+    }
+
+    return {
+      region: initialRegion,
+      dateFrom: "",
+      dateTo: "",
+      district: initialDistrict,
+      school: "",
+      status: "",
+      createdBy: "",
+      programType: "",
+    };
   });
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [urlInitialized, setUrlInitialized] = useState(false);
   const [autosaveAt, setAutosaveAt] = useState("");
@@ -853,9 +871,22 @@ export function PortalModuleManager({
           : null;
 
       if (!school) {
+        let scopedRegion = defaultRegion;
+        let scopedDistrict = "";
+
+        if (currentUser.geographyScope && !canReview) {
+          const [scopeType, scopeValue] = currentUser.geographyScope.split(":");
+          if (scopeType === "district") {
+            scopedDistrict = scopeValue;
+            scopedRegion = inferRegionFromDistrict(scopeValue) ?? defaultRegion;
+          } else if (scopeType === "region") {
+            scopedRegion = scopeValue;
+          }
+        }
+
         return {
-          region: defaultRegion,
-          district: "",
+          region: scopedRegion,
+          district: scopedDistrict,
           schoolId: "",
           schoolName: "",
         };
@@ -868,7 +899,7 @@ export function PortalModuleManager({
         schoolName: school.name,
       };
     },
-    [schoolsById],
+    [schoolsById, currentUser.geographyScope, canReview],
   );
 
   const newFormState = useCallback(
@@ -2103,129 +2134,174 @@ export function PortalModuleManager({
         </div>
       </section>
 
-      <section className="card portal-filter-card">
-        <form className="portal-filter-grid portal-filter-grid-pretty" onSubmit={handleFiltersSubmit}>
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">Date from</span>
-            <span className="portal-filter-field-hint">dd/mm/yyyy</span>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(event) => setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))}
-            />
-          </label>
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">Date to</span>
-            <span className="portal-filter-field-hint">dd/mm/yyyy</span>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(event) => setFilters((prev) => ({ ...prev, dateTo: event.target.value }))}
-            />
-          </label>
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">Region</span>
-            <select
-              value={filters.region}
-              onChange={(event) =>
-                setFilters((prev) => {
-                  const nextRegion = event.target.value;
-                  const nextDistrictOptions = nextRegion
-                    ? getDistrictsByRegion(nextRegion)
-                    : allUgandaDistricts;
-                  return {
-                    ...prev,
-                    region: nextRegion,
-                    district: nextDistrictOptions.includes(prev.district) ? prev.district : "",
-                  };
-                })
-              }
-            >
-              <option value="">All regions</option>
-              {ugandaRegions.map((entry) => (
-                <option key={entry.region} value={entry.region}>
-                  {entry.region}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">District</span>
-            <select
-              value={filters.district}
-              onChange={(event) => setFilters((prev) => ({ ...prev, district: event.target.value }))}
-            >
-              <option value="">All districts</option>
-              {filterDistrictOptions.map((district) => (
-                <option key={district} value={district}>
-                  {district}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">School</span>
-            <input
-              placeholder="School name"
-              value={filters.school}
-              onChange={(event) => setFilters((prev) => ({ ...prev, school: event.target.value }))}
-            />
-          </label>
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">Status</span>
-            <select
-              value={filters.status}
-              onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
-            >
-              <option value="">All</option>
-              {portalStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">Created by</span>
-            <select
-              value={filters.createdBy}
-              onChange={(event) => setFilters((prev) => ({ ...prev, createdBy: event.target.value }))}
-              disabled={!canReview}
-            >
-              <option value="">All</option>
-              {initialUsers.map((user) => (
-                <option key={user.id} value={String(user.id)}>
-                  {user.fullName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">Program type</span>
-            <input
-              placeholder="e.g. Coaching"
-              value={filters.programType}
-              onChange={(event) =>
-                setFilters((prev) => ({ ...prev, programType: event.target.value }))
-              }
-            />
-          </label>
+      <section className="portal-table-toolbar">
+        <div className="portal-search-box">
+          <input
+            type="text"
+            placeholder="Search records (School, District, Status...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-          <div className="action-row portal-filter-actions">
-            <button className="button" type="submit" disabled={loadingRecords}>
-              {loadingRecords ? "Applying..." : "Apply"}
-            </button>
-            <button className="button button-ghost" type="button" onClick={() => void resetFilters()}>
-              Reset
-            </button>
-            {canExport ? (
-              <a href={exportUrl} className="button button-ghost">
-                Export
-              </a>
-            ) : null}
-          </div>
-        </form>
+        <div className="portal-toolbar-actions">
+          <button
+            className={`portal-filter-chip ${filters.status === "Submitted" ? "active" : ""}`}
+            onClick={() => {
+              const nextStatus = filters.status === "Submitted" ? "" : "Submitted";
+              const nextFilters = { ...filters, status: nextStatus };
+              setFilters(nextFilters);
+              void fetchRecords(nextFilters);
+            }}
+          >
+            Submitted
+          </button>
+          <button
+            className={`portal-filter-chip ${filters.status === "Draft" ? "active" : ""}`}
+            onClick={() => {
+              const nextStatus = filters.status === "Draft" ? "" : "Draft";
+              const nextFilters = { ...filters, status: nextStatus };
+              setFilters(nextFilters);
+              void fetchRecords(nextFilters);
+            }}
+          >
+            Drafts
+          </button>
+          <button
+            className="button button-ghost"
+            type="button"
+            onClick={() => setIsAdvancedFiltersOpen(!isAdvancedFiltersOpen)}
+          >
+            {isAdvancedFiltersOpen ? "Hide Filters" : "Advanced Filters"}
+          </button>
+          {canExport ? (
+            <a href={exportUrl} className="button button-ghost">
+              Export
+            </a>
+          ) : null}
+        </div>
       </section>
+
+      {isAdvancedFiltersOpen && (
+        <section className="portal-advanced-filters-panel">
+          <form className="portal-filter-grid portal-filter-grid-pretty" onSubmit={handleFiltersSubmit}>
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Date from</span>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(event) =>
+                  setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))
+                }
+              />
+            </label>
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Date to</span>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(event) => setFilters((prev) => ({ ...prev, dateTo: event.target.value }))}
+              />
+            </label>
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Region</span>
+              <select
+                value={filters.region}
+                onChange={(event) =>
+                  setFilters((prev) => {
+                    const nextRegion = event.target.value;
+                    const nextDistrictOptions = nextRegion
+                      ? getDistrictsByRegion(nextRegion)
+                      : allUgandaDistricts;
+                    return {
+                      ...prev,
+                      region: nextRegion,
+                      district: nextDistrictOptions.includes(prev.district) ? prev.district : "",
+                    };
+                  })
+                }
+              >
+                <option value="">All regions</option>
+                {ugandaRegions.map((entry) => (
+                  <option key={entry.region} value={entry.region}>
+                    {entry.region}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">District</span>
+              <select
+                value={filters.district}
+                onChange={(event) =>
+                  setFilters((prev) => ({ ...prev, district: event.target.value }))
+                }
+              >
+                <option value="">All districts</option>
+                {filterDistrictOptions.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Program Type</span>
+              <input
+                placeholder="e.g. Coaching"
+                value={filters.programType}
+                onChange={(event) =>
+                  setFilters((prev) => ({ ...prev, programType: event.target.value }))
+                }
+              />
+            </label>
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Status</span>
+              <select
+                value={filters.status}
+                onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
+              >
+                <option value="">All</option>
+                {portalStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {canReview && initialUsers && initialUsers.length > 0 && (
+              <label className="portal-filter-field">
+                <span className="portal-filter-field-label">Created by</span>
+                <select
+                  value={filters.createdBy}
+                  onChange={(event) =>
+                    setFilters((prev) => ({ ...prev, createdBy: event.target.value }))
+                  }
+                >
+                  <option value="">All staff</option>
+                  {initialUsers.map((user) => (
+                    <option key={user.id} value={String(user.id)}>
+                      {user.fullName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="action-row portal-filter-actions">
+              <button className="button" type="submit" disabled={loadingRecords}>
+                {loadingRecords ? "Applying..." : "Apply Filters"}
+              </button>
+              <button
+                className="button button-ghost"
+                type="button"
+                onClick={() => void resetFilters()}
+              >
+                Reset
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
       {feedback.message ? (
         <p
@@ -2252,34 +2328,54 @@ export function PortalModuleManager({
               </tr>
             </thead>
             <tbody>
-              {records.length === 0 ? (
+              {records.filter(r => {
+                if (!searchTerm) return true;
+                const search = searchTerm.toLowerCase();
+                return (
+                  r.recordCode.toLowerCase().includes(search) ||
+                  r.schoolName.toLowerCase().includes(search) ||
+                  r.district.toLowerCase().includes(search) ||
+                  r.status.toLowerCase().includes(search)
+                );
+              }).length === 0 ? (
                 <tr>
-                  <td colSpan={8}>No records found for this module.</td>
+                  <td colSpan={8}>No records match your search or filters.</td>
                 </tr>
               ) : (
-                records.map((record) => (
-                  <tr key={record.id}>
-                    <td>{record.recordCode}</td>
-                    <td>{new Date(record.date).toLocaleDateString()}</td>
-                    <td>{record.district}</td>
-                    <td>{record.schoolName}</td>
-                    <td>{record.programType ?? "-"}</td>
-                    <td>{record.status}</td>
-                    <td>{new Date(record.updatedAt).toLocaleString()}</td>
-                    <td>
-                      <button
-                        className="button button-ghost"
-                        type="button"
-                        onClick={() => {
-                          openRecordForm(record);
-                          void loadEvidence(record.id);
-                        }}
-                      >
-                        View/Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                records
+                  .filter(r => {
+                    if (!searchTerm) return true;
+                    const search = searchTerm.toLowerCase();
+                    return (
+                      r.recordCode.toLowerCase().includes(search) ||
+                      r.schoolName.toLowerCase().includes(search) ||
+                      r.district.toLowerCase().includes(search) ||
+                      r.status.toLowerCase().includes(search)
+                    );
+                  })
+                  .map((record) => (
+                    <tr key={record.id}>
+                      <td>{record.recordCode}</td>
+                      <td>{new Date(record.date).toLocaleDateString()}</td>
+                      <td>{record.district}</td>
+                      <td>{record.schoolName}</td>
+                      <td>{record.programType ?? "-"}</td>
+                      <td>{record.status}</td>
+                      <td>{new Date(record.updatedAt).toLocaleString()}</td>
+                      <td>
+                        <button
+                          className="button button-ghost"
+                          type="button"
+                          onClick={() => {
+                            openRecordForm(record);
+                            void loadEvidence(record.id);
+                          }}
+                        >
+                          View/Edit
+                        </button>
+                      </td>
+                    </tr>
+                  ))
               )}
             </tbody>
           </table>
@@ -2314,188 +2410,205 @@ export function PortalModuleManager({
                   </button>
                 </div>
 
-                <form className="form-grid portal-form-grid" onSubmit={(event) => event.preventDefault()}>
-                  <label>
-                    {renderLabel("Date", true)}
-                    <input
-                      type="date"
-                      value={formState.date}
-                      onChange={(event) =>
-                        setFormState((prev) => {
-                          const nextDate = event.target.value;
-                          if (!nextDate) {
-                            return { ...prev, date: nextDate };
-                          }
+                <form
+                  className="portal-form-grid"
+                  onSubmit={(event) => event.preventDefault()}
+                >
+                  <div className="portal-modal-context-header">
+                    <h4>Context & Location</h4>
+                    <p className="portal-muted">Standard data entry context</p>
 
-                          if (config.module === "training") {
-                            const minimumFollowUp = addDaysToDate(nextDate, 14);
-                            const nextFollowUp =
-                              prev.followUpDate && prev.followUpDate >= minimumFollowUp
-                                ? prev.followUpDate
-                                : minimumFollowUp;
-                            return {
-                              ...prev,
-                              date: nextDate,
-                              followUpDate: nextFollowUp,
-                            };
+                    <div className="portal-context-selectors">
+                      <label>
+                        {renderLabel("Region", true)}
+                        <select
+                          value={formState.region}
+                          onChange={(event) =>
+                            setFormState((prev) => {
+                              const nextRegion = event.target.value;
+                              const options = getDistrictsByRegion(nextRegion);
+                              const nextDistrict = options.includes(prev.district) ? prev.district : "";
+                              const selectedSchool = prev.schoolId
+                                ? schoolsById.get(Number(prev.schoolId))
+                                : undefined;
+                              const keepSchool = Boolean(
+                                selectedSchool &&
+                                (!nextRegion ||
+                                  inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
+                                (!nextDistrict || selectedSchool.district === nextDistrict),
+                              );
+                              return {
+                                ...prev,
+                                region: nextRegion,
+                                district: nextDistrict,
+                                schoolId: keepSchool ? prev.schoolId : "",
+                                schoolName: keepSchool
+                                  ? selectedSchool?.name ?? prev.schoolName
+                                  : "",
+                              };
+                            })
                           }
-
-                          if (prev.followUpDate && prev.followUpDate < nextDate) {
-                            return { ...prev, date: nextDate, followUpDate: nextDate };
+                          required
+                        >
+                          <option value="">Select region</option>
+                          {ugandaRegions.map((entry) => (
+                            <option key={entry.region} value={entry.region}>
+                              {entry.region}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        {renderLabel("District", true)}
+                        <select
+                          value={formState.district}
+                          onChange={(event) =>
+                            setFormState((prev) => {
+                              const nextDistrict = event.target.value;
+                              const selectedSchool = prev.schoolId
+                                ? schoolsById.get(Number(prev.schoolId))
+                                : undefined;
+                              const keepSchool = Boolean(
+                                selectedSchool &&
+                                (!nextDistrict || selectedSchool.district === nextDistrict),
+                              );
+                              return {
+                                ...prev,
+                                district: nextDistrict,
+                                schoolId: keepSchool ? prev.schoolId : "",
+                                schoolName: keepSchool
+                                  ? selectedSchool?.name ?? prev.schoolName
+                                  : "",
+                              };
+                            })
                           }
+                          required
+                        >
+                          <option value="">Select district</option>
+                          {formDistrictOptions.map((district) => (
+                            <option key={district} value={district}>
+                              {district}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {config.module !== "training" ? (
+                        <label>
+                          {renderLabel("School Account", true)}
+                          <select
+                            value={formState.schoolId}
+                            onChange={(event) =>
+                              setFormState((prev) => {
+                                const nextSchoolId = event.target.value;
+                                const selectedSchool = nextSchoolId
+                                  ? schoolsById.get(Number(nextSchoolId))
+                                  : undefined;
 
-                          return { ...prev, date: nextDate };
-                        })
-                      }
-                      required
-                    />
-                  </label>
-                  <label>
-                    {renderLabel("Region", true)}
-                    <select
-                      value={formState.region}
-                      onChange={(event) =>
-                        setFormState((prev) => {
-                          const nextRegion = event.target.value;
-                          const options = getDistrictsByRegion(nextRegion);
-                          const nextDistrict = options.includes(prev.district) ? prev.district : "";
-                          const selectedSchool = prev.schoolId
-                            ? schoolsById.get(Number(prev.schoolId))
-                            : undefined;
-                          const keepSchool = Boolean(
-                            selectedSchool &&
-                            (!nextRegion ||
-                              inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
-                            (!nextDistrict || selectedSchool.district === nextDistrict),
-                          );
-                          return {
-                            ...prev,
-                            region: nextRegion,
-                            district: nextDistrict,
-                            schoolId: keepSchool ? prev.schoolId : "",
-                            schoolName: keepSchool ? selectedSchool?.name ?? prev.schoolName : "",
-                          };
-                        })
-                      }
-                      required
-                    >
-                      <option value="">Select region</option>
-                      {ugandaRegions.map((entry) => (
-                        <option key={entry.region} value={entry.region}>
-                          {entry.region}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {renderLabel("District", true)}
-                    <select
-                      value={formState.district}
-                      onChange={(event) =>
-                        setFormState((prev) => {
-                          const nextDistrict = event.target.value;
-                          const selectedSchool = prev.schoolId
-                            ? schoolsById.get(Number(prev.schoolId))
-                            : undefined;
-                          const keepSchool = Boolean(
-                            selectedSchool &&
-                            (!nextDistrict || selectedSchool.district === nextDistrict),
-                          );
-                          return {
-                            ...prev,
-                            district: nextDistrict,
-                            schoolId: keepSchool ? prev.schoolId : "",
-                            schoolName: keepSchool ? selectedSchool?.name ?? prev.schoolName : "",
-                          };
-                        })
-                      }
-                      required
-                    >
-                      <option value="">Select district</option>
-                      {formDistrictOptions.map((district) => (
-                        <option key={district} value={district}>
-                          {district}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {config.module !== "training" ? (
+                                return {
+                                  ...prev,
+                                  schoolId: nextSchoolId,
+                                  schoolName: selectedSchool?.name ?? "",
+                                  district: selectedSchool?.district ?? prev.district,
+                                  region: selectedSchool
+                                    ? inferRegionFromDistrict(selectedSchool.district) ??
+                                    prev.region
+                                    : prev.region,
+                                };
+                              })
+                            }
+                            required
+                          >
+                            <option value="">Select school account</option>
+                            {formSchoolOptions.map((school) => (
+                              <option key={school.id} value={String(school.id)}>
+                                {school.name} ({school.schoolCode})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <div style={{ alignSelf: "end", paddingBottom: "0.5rem" }}>
+                          <span className="portal-muted">Training session (Scale)</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-grid">
                     <label>
-                      {renderLabel("School Account", true)}
-                      <select
-                        value={formState.schoolId}
+                      {renderLabel("Activity Date", true)}
+                      <input
+                        type="date"
+                        value={formState.date}
                         onChange={(event) =>
                           setFormState((prev) => {
-                            const nextSchoolId = event.target.value;
-                            const selectedSchool = nextSchoolId
-                              ? schoolsById.get(Number(nextSchoolId))
-                              : undefined;
+                            const nextDate = event.target.value;
+                            if (!nextDate) {
+                              return { ...prev, date: nextDate };
+                            }
 
-                            return {
-                              ...prev,
-                              schoolId: nextSchoolId,
-                              schoolName: selectedSchool?.name ?? "",
-                              district: selectedSchool?.district ?? prev.district,
-                              region: selectedSchool
-                                ? inferRegionFromDistrict(selectedSchool.district) ?? prev.region
-                                : prev.region,
-                            };
+                            if (config.module === "training") {
+                              const minimumFollowUp = addDaysToDate(nextDate, 14);
+                              const nextFollowUp =
+                                prev.followUpDate && prev.followUpDate >= minimumFollowUp
+                                  ? prev.followUpDate
+                                  : minimumFollowUp;
+                              return {
+                                ...prev,
+                                date: nextDate,
+                                followUpDate: nextFollowUp,
+                              };
+                            }
+
+                            if (prev.followUpDate && prev.followUpDate < nextDate) {
+                              return { ...prev, date: nextDate, followUpDate: nextDate };
+                            }
+
+                            return { ...prev, date: nextDate };
                           })
                         }
                         required
+                      />
+                    </label>
+                    <label>
+                      {renderLabel(config.programTypeLabel, true)}
+                      <select
+                        value={formState.programType}
+                        onChange={(event) =>
+                          setFormState((prev) => ({ ...prev, programType: event.target.value }))
+                        }
+                        required
                       >
-                        <option value="">Select school account</option>
-                        {formSchoolOptions.map((school) => (
-                          <option key={school.id} value={String(school.id)}>
-                            {school.name} ({school.schoolCode})
+                        <option value="">Select</option>
+                        {config.programTypeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
                           </option>
                         ))}
                       </select>
-                      {formSchoolOptions.length === 0 ? (
-                        <span className="portal-muted">
-                          No school account matches the selected region/district.
-                        </span>
-                      ) : null}
                     </label>
-                  ) : null}
-                  <label>
-                    {renderLabel(config.programTypeLabel, true)}
-                    <select
-                      value={formState.programType}
-                      onChange={(event) =>
-                        setFormState((prev) => ({ ...prev, programType: event.target.value }))
-                      }
-                      required
-                    >
-                      <option value="">Select</option>
-                      {config.programTypeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
 
-                  <label>
-                    {renderLabel(
-                      config.module === "training"
-                        ? "Next follow-up date (minimum 2 weeks)"
-                        : "Follow-up date",
-                    )}
-                    <input
-                      type="date"
-                      value={formState.followUpDate}
-                      min={followUpMinDate}
-                      onChange={(event) =>
-                        setFormState((prev) => ({ ...prev, followUpDate: event.target.value }))
-                      }
-                      required={config.module === "training"}
-                    />
-                  </label>
-                  <label>
-                    {renderLabel("Workflow status")}
-                    <input value={formState.status} readOnly />
-                  </label>
+                    <label>
+                      {renderLabel(
+                        config.module === "training"
+                          ? "Next follow-up date (minimum 2 weeks)"
+                          : "Follow-up date",
+                      )}
+                      <input
+                        type="date"
+                        value={formState.followUpDate}
+                        min={followUpMinDate}
+                        onChange={(event) =>
+                          setFormState((prev) => ({ ...prev, followUpDate: event.target.value }))
+                        }
+                        required={config.module === "training"}
+                      />
+                    </label>
+                    <label>
+                      {renderLabel("Workflow status")}
+                      <input value={formState.status} readOnly />
+                    </label>
+                  </div>
 
 
                   {config.sections.map((section) => {
@@ -2634,6 +2747,7 @@ export function PortalModuleManager({
                           }
 
                           if (field.type === "participants") {
+                            const selectedSchoolId = formState.schoolId ? Number(formState.schoolId) : null;
                             return (
                               <div key={field.key} className="full-width portal-participants-block">
                                 <div className="portal-participants-header">
@@ -2646,17 +2760,21 @@ export function PortalModuleManager({
                                     + Add participant
                                   </button>
                                 </div>
+                                {!selectedSchoolId && (
+                                  <p style={{ color: "#b45309", fontSize: "0.82rem", fontStyle: "italic", margin: "0.25rem 0 0.5rem" }}>
+                                    Select a school first to load participants from the school roster.
+                                  </p>
+                                )}
                                 <div className="table-wrap">
                                   <table className="portal-participants-table">
                                     <thead>
                                       <tr>
                                         <th>#</th>
-                                        <th>Participant Name</th>
-                                        <th>School ID</th>
-                                        <th>School Attached To</th>
+                                        <th>Participant (from School Roster)</th>
+                                        <th>School</th>
                                         <th>Role</th>
                                         <th>Gender</th>
-                                        <th>Phone Contact</th>
+                                        <th>Phone</th>
                                         <th>Action</th>
                                       </tr>
                                     </thead>
@@ -2664,23 +2782,41 @@ export function PortalModuleManager({
                                       {trainingParticipants.map((row, index) => (
                                         <tr key={`participant-${index + 1}`}>
                                           <td>{index + 1}</td>
-                                          <td>
-                                            <input
-                                              value={row.participantName}
-                                              placeholder="Full name"
-                                              onChange={(event) =>
-                                                updateTrainingParticipant(
-                                                  index,
-                                                  "participantName",
-                                                  event.target.value,
-                                                )
-                                              }
+                                          <td style={{ minWidth: 280 }}>
+                                            <SchoolRosterPicker
+                                              schoolId={row.schoolAccountId ? Number(row.schoolAccountId) : selectedSchoolId}
+                                              schoolName={row.schoolAttachedTo || formState.schoolName}
+                                              participantType="teacher"
+                                              selectedUid={row.participantName ? "" : ""}
+                                              label=""
+                                              onSelect={(entry: RosterEntry | null) => {
+                                                if (!entry) {
+                                                  updateTrainingParticipant(index, "participantName", "");
+                                                  return;
+                                                }
+                                                const teacher = entry as { teacherUid: string; fullName: string; gender: string; isReadingTeacher: boolean; phone: string | null };
+                                                setTrainingParticipants((prev) =>
+                                                  prev.map((p, i) =>
+                                                    i !== index
+                                                      ? p
+                                                      : {
+                                                        ...p,
+                                                        participantName: teacher.fullName,
+                                                        role: teacher.isReadingTeacher ? "Teacher" as const : "Teacher" as const,
+                                                        gender: teacher.gender as TrainingParticipantGender,
+                                                        phoneContact: teacher.phone ?? "",
+                                                        schoolAccountId: row.schoolAccountId || String(selectedSchoolId ?? ""),
+                                                        schoolAttachedTo: row.schoolAttachedTo || formState.schoolName,
+                                                      },
+                                                  ),
+                                                );
+                                              }}
                                             />
-                                          </td>
-                                          <td>
-                                            {row.schoolAccountId
-                                              ? schoolsById.get(Number(row.schoolAccountId))?.schoolCode ?? "-"
-                                              : "-"}
+                                            {row.participantName && (
+                                              <div style={{ fontSize: "0.78rem", color: "#0f5d4f", marginTop: 2 }}>
+                                                ✓ {row.participantName}
+                                              </div>
+                                            )}
                                           </td>
                                           <td>
                                             <select
@@ -2693,7 +2829,7 @@ export function PortalModuleManager({
                                                 )
                                               }
                                             >
-                                              <option value="">Select school account</option>
+                                              <option value="">Select school</option>
                                               {participantSchoolOptions.map((school) => (
                                                 <option key={school.id} value={String(school.id)}>
                                                   {school.name} ({school.schoolCode})
@@ -2708,7 +2844,7 @@ export function PortalModuleManager({
                                                 updateTrainingParticipant(index, "role", event.target.value)
                                               }
                                             >
-                                              <option value="">Select role</option>
+                                              <option value="">Role</option>
                                               <option value="Teacher">Teacher</option>
                                               <option value="Leader">Leader</option>
                                             </select>
@@ -2720,7 +2856,7 @@ export function PortalModuleManager({
                                                 updateTrainingParticipant(index, "gender", event.target.value)
                                               }
                                             >
-                                              <option value="">Select gender</option>
+                                              <option value="">Gender</option>
                                               <option value="Male">Male</option>
                                               <option value="Female">Female</option>
                                             </select>
@@ -3030,6 +3166,8 @@ export function PortalModuleManager({
         onSave={handleSaveLearner}
         nextLearnerId={modalLearnerId}
         nextNo={modalLearnerNo}
+        schoolId={formState.schoolId ? Number(formState.schoolId) : null}
+        schoolName={formState.schoolName}
       />
     </>
   );

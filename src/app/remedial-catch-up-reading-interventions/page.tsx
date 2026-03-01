@@ -137,13 +137,18 @@ export default function RemedialCatchUpReadingInterventionsPage() {
                 do not build fast guessing habits.
               </p>
             </article>
+          </div>
 
-            <article className="card">
+          {/* Full-width horizontal Progress Monitoring card */}
+          <article className="card" style={{ marginTop: "1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "start" }}>
+            <div>
               <h3>5) Progress Monitoring (We track growth and adjust quickly)</h3>
               <p>
                 Every intervention includes a simple way to measure improvement
                 and guide next steps.
               </p>
+            </div>
+            <div>
               <p>We monitor:</p>
               <ul>
                 <li>Sound mastery (accuracy and speed)</li>
@@ -155,8 +160,8 @@ export default function RemedialCatchUpReadingInterventionsPage() {
                 Teachers can see who is improving, who is stuck, and which
                 routine needs adjustment.
               </p>
-            </article>
-          </div>
+            </div>
+          </article>
 
           <div className="cards-grid-two" style={{ marginTop: "2rem" }}>
             <article className="card">

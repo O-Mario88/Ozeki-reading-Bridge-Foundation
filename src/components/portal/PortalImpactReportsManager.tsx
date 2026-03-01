@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ImpactReportProgramType,
   ImpactReportRecord,
@@ -15,15 +15,21 @@ interface PortalImpactReportsManagerProps {
 const reportTypeOptions: ImpactReportType[] = [
   "FY Impact Report",
   "Regional Impact Report",
+  "Sub-region Report",
   "District Report",
   "School Report",
+  "School Coaching Pack",
+  "Headteacher Summary",
   "Partner Snapshot Report",
 ];
 
 const scopeTypeOptions: ImpactReportScopeType[] = [
   "National",
   "Region",
+  "Sub-region",
   "District",
+  "Sub-county",
+  "Parish",
   "School",
 ];
 
@@ -56,7 +62,6 @@ function buildUgandaSchoolFyRange(reference: Date) {
 export function PortalImpactReportsManager({
   initialReports,
 }: PortalImpactReportsManagerProps) {
-  const currentFyRange = useMemo(() => buildUgandaSchoolFyRange(new Date()), []);
   const [reports, setReports] = useState(initialReports);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
@@ -67,10 +72,32 @@ export function PortalImpactReportsManager({
     "story",
   ]);
   const [selectedReportType, setSelectedReportType] = useState<ImpactReportType>("FY Impact Report");
-  const [periodStart, setPeriodStart] = useState(currentFyRange.startDate);
-  const [periodEnd, setPeriodEnd] = useState(currentFyRange.endDate);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
   const [scopeType, setScopeType] = useState<ImpactReportScopeType>("National");
+
+  const [regions, setRegions] = useState<Array<{ id: string; name: string }>>([]);
+  const [subregions, setSubregions] = useState<Array<{ id: string; name: string }>>([]);
+  const [districts, setDistricts] = useState<Array<{ id: string; name: string }>>([]);
+  const [subcounties, setSubcounties] = useState<Array<{ id: string; name: string }>>([]);
+  const [parishes, setParishes] = useState<Array<{ id: string; name: string }>>([]);
+
+  const [selectedRegionId, setSelectedRegionId] = useState("");
+  const [selectedSubRegionId, setSelectedSubRegionId] = useState("");
+  const [selectedDistrictId, setSelectedDistrictId] = useState("");
+  const [selectedSubCountyId, setSelectedSubCountyId] = useState("");
+  const [selectedParishId, setSelectedParishId] = useState("");
+  const [selectedSchoolId, setSelectedSchoolId] = useState("");
+
+  const [schools, setSchools] = useState<Array<{ id: number; name: string }>>([]);
   const [publicOnly, setPublicOnly] = useState(false);
+  const [previewStats, setPreviewStats] = useState<{
+    schoolsIncluded: number;
+    learnersAssessed: number;
+    dataCompleteness: string;
+  } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const stats = useMemo(() => {
     const total = reports.length;
@@ -92,11 +119,125 @@ export function PortalImpactReportsManager({
     setPeriodEnd(range.endDate);
   }
 
+  const computedScopeValue = useMemo(() => {
+    if (scopeType === "School") return selectedSchoolId;
+    if (scopeType === "Parish") return selectedParishId;
+    if (scopeType === "Sub-county") return selectedSubCountyId;
+    if (scopeType === "District") return selectedDistrictId;
+    if (scopeType === "Sub-region") return selectedSubRegionId;
+    if (scopeType === "Region") return selectedRegionId;
+    return "";
+  }, [scopeType, selectedDistrictId, selectedRegionId, selectedSchoolId, selectedSubRegionId, selectedSubCountyId, selectedParishId]);
+
+  // Initial FY window setup
+  useEffect(() => {
+    const start = `${selectedYear}-02-01`;
+    const end = `${selectedYear}-11-30`;
+    setPeriodStart(start);
+    setPeriodEnd(end);
+  }, [selectedYear]);
+
+  // Cascading Fetchers
+  useEffect(() => {
+    fetch("/api/geo/regions")
+      .then(r => r.json())
+      .then(data => setRegions(data.regions || []));
+  }, []);
+
+  useEffect(() => {
+    if (selectedRegionId) {
+      fetch(`/api/geo/subregions?regionId=${selectedRegionId}`)
+        .then(r => r.json())
+        .then(data => setSubregions(data.subregions || []));
+    } else {
+      setSubregions([]);
+    }
+    setSelectedSubRegionId("");
+  }, [selectedRegionId]);
+
+  useEffect(() => {
+    if (selectedSubRegionId) {
+      fetch(`/api/geo/districts?subregionId=${selectedSubRegionId}`)
+        .then(r => r.json())
+        .then(data => setDistricts(data.districts || []));
+    } else {
+      setDistricts([]);
+    }
+    setSelectedDistrictId("");
+  }, [selectedSubRegionId]);
+
+  useEffect(() => {
+    if (selectedDistrictId) {
+      fetch(`/api/geo/subcounties?districtId=${selectedDistrictId}`)
+        .then(r => r.json())
+        .then(data => setSubcounties(data.subcounties || []));
+    } else {
+      setSubcounties([]);
+    }
+    setSelectedSubCountyId("");
+  }, [selectedDistrictId]);
+
+  useEffect(() => {
+    if (selectedSubCountyId) {
+      fetch(`/api/geo/parishes?subcountyId=${selectedSubCountyId}`)
+        .then(r => r.json())
+        .then(data => setParishes(data.parishes || []));
+    } else {
+      setParishes([]);
+    }
+    setSelectedParishId("");
+  }, [selectedSubCountyId]);
+
+  useEffect(() => {
+    if (scopeType === "School" && selectedDistrictId) {
+      // Find district name from ID for legacy API compatibility or update API
+      const districtName = districts.find(d => d.id === selectedDistrictId)?.name;
+      if (districtName) {
+        fetch(`/api/portal/schools?district=${encodeURIComponent(districtName)}`)
+          .then((r) => r.json())
+          .then((data) => setSchools(data.schools || []))
+          .catch(() => setSchools([]));
+      }
+    } else {
+      setSchools([]);
+    }
+    setSelectedSchoolId("");
+  }, [scopeType, selectedDistrictId, districts]);
+
+  useEffect(() => {
+    if (scopeType !== "National" && !computedScopeValue) {
+      setPreviewStats(null);
+      return;
+    }
+
+    setPreviewLoading(true);
+    fetch("/api/portal/reports/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scopeType,
+        scopeValue: computedScopeValue,
+        periodStart,
+        periodEnd,
+        programsIncluded: selectedPrograms,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok) setPreviewStats(data.stats);
+        else setPreviewStats(null);
+      })
+      .catch(() => setPreviewStats(null))
+      .finally(() => setPreviewLoading(false));
+  }, [scopeType, computedScopeValue, periodStart, periodEnd, selectedPrograms]);
+
+  // Replaced with dynamic cascading fetchers above
+
   async function handleBuildReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const scopeValue = String(formData.get("scopeValue") ?? "").trim();
+    const scopeValue = computedScopeValue;
     const version = String(formData.get("version") ?? "v1.0").trim() || "v1.0";
     const title = String(formData.get("title") ?? "").trim();
     const partnerName = String(formData.get("partnerName") ?? "").trim();
@@ -142,10 +283,14 @@ export function PortalImpactReportsManager({
       form.reset();
       setSelectedPrograms(["training", "visit", "assessment", "story"]);
       setSelectedReportType("FY Impact Report");
-      const resetRange = buildUgandaSchoolFyRange(new Date());
-      setPeriodStart(resetRange.startDate);
-      setPeriodEnd(resetRange.endDate);
+      setSelectedYear(new Date().getFullYear());
       setScopeType("National");
+      setSelectedRegionId("");
+      setSelectedSubRegionId("");
+      setSelectedDistrictId("");
+      setSelectedSubCountyId("");
+      setSelectedParishId("");
+      setSelectedSchoolId("");
       setPublicOnly(false);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not generate report.");
@@ -219,6 +364,18 @@ export function PortalImpactReportsManager({
           </label>
 
           <label className="portal-filter-field">
+            <span className="portal-filter-field-label">Year</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {Array.from({ length: 2050 - 2024 + 1 }, (_, i) => 2024 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="portal-filter-field">
             <span className="portal-filter-field-label">Scope</span>
             <select
               name="scopeType"
@@ -233,23 +390,112 @@ export function PortalImpactReportsManager({
             </select>
           </label>
 
-          <label className="portal-filter-field">
-            <span className="portal-filter-field-label">
-              {scopeType === "National" ? "Scope Value (Optional)" : "Scope Value"}
-            </span>
-            <input
-              name="scopeValue"
-              placeholder={
-                scopeType === "National"
-                  ? "All"
-                  : scopeType === "Region"
-                    ? "e.g. Northern Region"
-                    : scopeType === "District"
-                      ? "e.g. Gulu"
-                      : "School name"
-              }
-            />
-          </label>
+          {scopeType !== "National" ? (
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Region</span>
+              <select
+                value={selectedRegionId}
+                onChange={(e) => setSelectedRegionId(e.target.value)}
+              >
+                <option value="">Select Region...</option>
+                {regions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {scopeType === "Sub-region" || scopeType === "District" || scopeType === "Sub-county" || scopeType === "Parish" || scopeType === "School" ? (
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Sub-region</span>
+              <select
+                value={selectedSubRegionId}
+                onChange={(e) => setSelectedSubRegionId(e.target.value)}
+                disabled={!selectedRegionId}
+              >
+                <option value="">{selectedRegionId ? "Select Sub-region..." : "Select Region first"}</option>
+                {subregions.map((sr) => (
+                  <option key={sr.id} value={sr.id}>
+                    {sr.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {scopeType === "District" || scopeType === "Sub-county" || scopeType === "Parish" || scopeType === "School" ? (
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">District</span>
+              <select
+                value={selectedDistrictId}
+                onChange={(e) => setSelectedDistrictId(e.target.value)}
+                disabled={!selectedSubRegionId}
+              >
+                <option value="">{selectedSubRegionId ? "Select District..." : "Select Sub-region first"}</option>
+                {districts.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {scopeType === "Sub-county" || scopeType === "Parish" || scopeType === "School" ? (
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Sub-county</span>
+              <select
+                value={selectedSubCountyId}
+                onChange={(e) => setSelectedSubCountyId(e.target.value)}
+                disabled={!selectedDistrictId}
+              >
+                <option value="">{selectedDistrictId ? "Select Sub-county..." : "Select District first"}</option>
+                {subcounties.map((sc) => (
+                  <option key={sc.id} value={sc.id}>
+                    {sc.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {scopeType === "Parish" || scopeType === "School" ? (
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Parish</span>
+              <select
+                value={selectedParishId}
+                onChange={(e) => setSelectedParishId(e.target.value)}
+                disabled={!selectedSubCountyId}
+              >
+                <option value="">{selectedSubCountyId ? "Select Parish..." : "Select Sub-county first"}</option>
+                {parishes.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {scopeType === "School" ? (
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">School</span>
+              <select
+                value={selectedSchoolId}
+                onChange={(e) => setSelectedSchoolId(e.target.value)}
+                disabled={!selectedDistrictId}
+              >
+                <option value="">{selectedDistrictId ? "Select School..." : "Select District first"}</option>
+                {schools.map((s) => (
+                  <option key={String(s.id)} value={String(s.id)}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           <label className="portal-filter-field">
             <span className="portal-filter-field-label">Version</span>
@@ -331,18 +577,47 @@ export function PortalImpactReportsManager({
             </select>
           </label>
 
-          <div className="action-row full-width">
-            <button className="button" type="submit" disabled={saving}>
-              {saving ? "Generating..." : "Generate Impact Report"}
-            </button>
-            <a
-              className="button button-ghost"
-              href="/impact/reports"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open public reports library
-            </a>
+          <div className="report-preview-box">
+            <h4>Live Preview</h4>
+            {previewLoading ? (
+              <p className="preview-loading">Calculating scope metrics...</p>
+            ) : previewStats ? (
+              <ul className="preview-stats-list">
+                <li>
+                  <span className="preview-stat-label">Coverage</span>
+                  <span className="preview-stat-value">
+                    {previewStats.schoolsIncluded.toLocaleString()} schools
+                  </span>
+                </li>
+                <li>
+                  <span className="preview-stat-label">Assessments</span>
+                  <span className="preview-stat-value">
+                    {previewStats.learnersAssessed.toLocaleString()} learners
+                  </span>
+                </li>
+                <li>
+                  <span className="preview-stat-label">Completeness</span>
+                  <span className="preview-stat-value">
+                    {previewStats.dataCompleteness}
+                  </span>
+                </li>
+              </ul>
+            ) : (
+              <p className="preview-empty">Select scope definitions to view impact size.</p>
+            )}
+            <div className="action-row full-width" style={{ marginTop: "1rem" }}>
+              <button className="button" type="submit" disabled={saving || (scopeType !== "National" && !computedScopeValue)}>
+                {saving ? "Generating..." : "Generate Impact Report"}
+              </button>
+              <a
+                className="button button-ghost"
+                href="/impact/reports"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open public reports library
+              </a>
+            </div>
           </div>
         </form>
         {status ? <p className="form-message success">{status}</p> : null}

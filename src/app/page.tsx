@@ -3,7 +3,6 @@ import Image from "next/image";
 import heroImg1 from "../../assets/photos/PXL_20260218_124656123.jpg";
 import heroImg2 from "../../assets/photos/PXL_20260218_133341852.jpg";
 import { MediaTestimonialGrid } from "@/components/MediaTestimonialGrid";
-import LiveImpactDashboard from "@/components/LiveImpactDashboard";
 import { officialContact } from "@/lib/contact";
 import { getMediaShowcase } from "@/lib/media-showcase";
 import {
@@ -52,22 +51,21 @@ export default async function HomePage() {
       <section className="hero section">
         <div className="container hero-grid-dribbble">
           <div className="hero-content flow">
-            <p className="kicker">Northern Uganda literacy recovery</p>
+            <p className="kicker">Build Readers. Restore Learning. Prove Results.</p>
             <h1>{organizationName}</h1>
             <p className="hero-description">
-              Based in Gulu City, we work with schools across Northern Uganda where
-              more than 20 years of conflict disrupted foundational learning and left
-              many children behind in reading.
+              Ozeki Reading Bridge Foundation strengthens how reading is taught in Ugandan
+              primary schools—through structured phonics training, classroom coaching, learner
+              assessments, and aligned materials. We work across Uganda, with a special focus on
+              learning recovery where foundations were most disrupted. In 2025, we supported 601
+              schools, trained 1,191 teachers, and equipped 1,090 school leaders.
             </p>
             <div className="hero-actions">
               <Link className="button" href="/programs">
                 Our Programs
               </Link>
-              <Link className="button button-ghost hero-play-btn" href="/media">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 5V19L19 12L8 5Z" fill="currentColor" />
-                </svg>
-                Watch Video
+              <Link className="button button-ghost" href="/impact">
+                See the Evidence
               </Link>
             </div>
 
@@ -193,7 +191,17 @@ export default async function HomePage() {
 
       <section className="section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-background)', padding: '5rem 0' }}>
         <div className="container">
-          <LiveImpactDashboard />
+          <div style={{ textAlign: 'center', maxWidth: '640px', margin: '0 auto' }}>
+            <p className="kicker">LIVE DATA</p>
+            <h2 className="tpd-page-title">Live Literacy Impact Dashboard</h2>
+            <p style={{ fontSize: '1.1rem', marginBottom: '2rem' }}>
+              Explore aggregated, privacy-protected literacy data from across Uganda —
+              drill down by region, district, and school.
+            </p>
+            <Link className="button" href="/impact" style={{ fontSize: '1.1rem', padding: '0.9rem 2.5rem' }}>
+              📊 Open Live Dashboard
+            </Link>
+          </div>
         </div>
       </section>
 

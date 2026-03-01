@@ -31,12 +31,14 @@ export default function ImpactMethodologyPage() {
       <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h2>A) What we measure</h2>
+            <h2>A) Learning Outcomes by Domain</h2>
             <ul>
-              <li>Letter-sound knowledge</li>
-              <li>Blending and decoding accuracy</li>
-              <li>Oral reading fluency (WCPM and accuracy where used)</li>
-              <li>Comprehension (grade-appropriate)</li>
+              <li>Letter Names</li>
+              <li>Letter Sounds</li>
+              <li>Real Words</li>
+              <li>Made Up Words</li>
+              <li>Story Reading</li>
+              <li>Comprehension</li>
             </ul>
           </article>
           <article className="card">

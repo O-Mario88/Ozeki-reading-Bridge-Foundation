@@ -40,6 +40,7 @@ export function toPublicImpactResponse(payload: PublicImpactAggregate) {
       last_updated: payload.meta.lastUpdated,
       data_completeness: payload.meta.dataCompleteness,
     },
+    reading_levels: payload.readingLevels ?? null,
   };
 }
 

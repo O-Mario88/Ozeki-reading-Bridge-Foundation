@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { listPublishedStories } from "@/lib/db";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://ozekireadingbridge.org";
@@ -8,8 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/problem",
     "/programs",
     "/impact",
-    "/impact/dashboard",
-    "/impact/reports",
     "/impact/case-studies",
     "/impact/methodology",
     "/impact/gallery",
@@ -29,6 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/reading-materials-development",
     "/phonics-training",
     "/story-project",
+    "/stories",
     "/resources",
 
     "/book-visit",
@@ -49,8 +49,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${base}${path}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
-    priority: path === "" ? 1 : 0.7,
+    priority: path === "" ? 1 : path === "/stories" ? 0.8 : 0.7,
   }));
 
-  return [...routes];
+  // Dynamic story entries
+  let storyRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const { stories } = listPublishedStories({ limit: 100 });
+    storyRoutes = stories.map((s) => ({
+      url: `${base}/stories/${s.slug}`,
+      lastModified: s.publishedAt ? new Date(s.publishedAt) : new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }));
+  } catch {
+    // DB may not be ready during build
+  }
+
+  return [...routes, ...storyRoutes];
 }
+

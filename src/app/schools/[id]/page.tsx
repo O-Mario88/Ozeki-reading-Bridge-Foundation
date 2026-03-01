@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getPublicImpactAggregate } from "@/lib/db";
+import { getPublicImpactAggregate, listPublishedStoriesBySchool, listPublishedAnthologiesBySchool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -189,6 +189,58 @@ export default async function SchoolPage({ params }: { params: Params }) {
               Last updated: {new Date(aggregate.meta.lastUpdated).toLocaleString()}
             </p>
           </article>
+
+          {/* 1001 Story Library Section */}
+          {(() => {
+            const schoolAnthologies = listPublishedAnthologiesBySchool(Number(scopeId), 4);
+            const schoolStories = listPublishedStoriesBySchool(Number(scopeId), 4);
+            if (schoolStories.length === 0 && schoolAnthologies.length === 0) return null;
+            return (
+              <article className="card impact-map-school-sheet" style={{ marginTop: "1.5rem" }}>
+                <h2>1001 Story Library</h2>
+                <p style={{ color: "var(--md-sys-color-on-surface-variant)" }}>
+                  Stories and Anthologies by learners at this school through the 1001 Story Project.
+                </p>
+
+                {schoolAnthologies.length > 0 && (
+                  <div style={{ marginTop: "1rem" }}>
+                    <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Full Anthologies</h3>
+                    <div className="school-stories-grid">
+                      {schoolAnthologies.map(anth => (
+                        <Link key={anth.slug} href={`/anthologies/${anth.slug}`} className="school-story-card">
+                          <h4>{anth.title}</h4>
+                          <p>{anth.edition ? `${anth.edition} • ` : ""}{anth.pdfPageCount} pages</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {schoolStories.length > 0 && (
+                  <div style={{ marginTop: "1.5rem" }}>
+                    <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Individual Stories</h3>
+                    <div className="school-stories-grid">
+                      {schoolStories.map(story => (
+                        <Link key={story.slug} href={`/stories/${story.slug}`} className="school-story-card">
+                          <h4>{story.title}</h4>
+                          <p>{story.publicAuthorDisplay}{story.grade ? ` • ${story.grade}` : ""}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ marginTop: "1.5rem" }}>
+                  <Link
+                    href={`/stories?schoolId=${scopeId}`}
+                    style={{ color: "var(--md-sys-color-secondary)", fontWeight: 600, fontSize: "0.9rem" }}
+                  >
+                    View all stories from this school →
+                  </Link>
+                </div>
+              </article>
+            );
+          })()}
 
           <p className="note-box impact-compliance-note">
             School profiles display group-level aggregated data only. No individual learner

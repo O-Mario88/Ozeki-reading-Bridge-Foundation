@@ -233,7 +233,9 @@ export interface AuditLogEntry {
   userName: string;
   action: string;
   targetTable: string;
-  targetId: number | null;
+  targetId: number | string | null;
+  payloadBefore: string | null;
+  payloadAfter: string | null;
   detail: string | null;
   ipAddress: string | null;
   timestamp: string;
@@ -354,6 +356,47 @@ export interface DataQualitySummary {
   lastChecked: string;
 }
 
+/* ─── NLIS Reading Levels ─────────────────────────── */
+
+export interface ReadingLevelCycleDist {
+  cycle: "baseline" | "progress" | "endline" | "latest";
+  n: number;
+  counts: Record<string, number>;
+  percents: Record<string, number>;
+}
+
+export interface ReadingLevelGradeDist {
+  grade: string;
+  cycle: "baseline" | "progress" | "endline" | "latest";
+  n: number;
+  counts: Record<string, number>;
+  percents: Record<string, number>;
+}
+
+export interface ReadingLevelTransition {
+  from: string;
+  to: string;
+  count: number;
+  percent: number;
+}
+
+export interface ReadingLevelMovementSummary {
+  n_matched: number;
+  moved_up_1plus_count: number;
+  moved_up_1plus_percent: number;
+  stayed_same_percent: number;
+  moved_down_percent: number;
+  top_transitions: ReadingLevelTransition[];
+}
+
+export interface ReadingLevelsBlock {
+  definition_version: string;
+  levels: Array<{ level: number; label: string }>;
+  distribution: ReadingLevelCycleDist[];
+  by_grade: ReadingLevelGradeDist[];
+  movement: ReadingLevelMovementSummary | null;
+}
+
 /* ─── NLIS Learning Gains ─────────────────────────── */
 
 export interface DomainGainData {
@@ -373,6 +416,7 @@ export interface LearningGainsData {
   period: string;
   domains: DomainGainData[];
   schoolImprovementIndex: number | null;
+  readingLevels?: ReadingLevelsBlock;
   lastUpdated: string;
 }
 
@@ -538,6 +582,7 @@ export interface AggregatedImpactData {
     schoolsVisited: number;
     schoolsAssessedBaseline: number;
     schoolsAssessedEndline: number;
+    schoolsStoryActive: number;
   };
 }
 
@@ -587,6 +632,7 @@ export interface PublicImpactAggregate {
     coached: number;
     baselineAssessed: number;
     endlineAssessed: number;
+    storyActive: number;
   };
   fidelity: {
     score: number;
@@ -598,6 +644,7 @@ export interface PublicImpactAggregate {
     prioritySupport: Array<{ name: string; score: number }>;
     mostActive: Array<{ name: string; score: number }>;
   };
+  readingLevels?: ReadingLevelsBlock;
   meta: {
     lastUpdated: string;
     dataCompleteness: "Complete" | "Partial";
@@ -651,7 +698,7 @@ export interface PortalUserAdminRecord extends PortalUser {
   createdAt: string;
 }
 
-export type PortalRecordModule = "training" | "visit" | "assessment" | "story";
+export type PortalRecordModule = "training" | "visit" | "assessment" | "story" | "story_activity";
 export type PortalRecordStatus = "Draft" | "Submitted" | "Returned" | "Approved";
 
 export interface PortalRecordPayload {
@@ -679,6 +726,9 @@ export interface PortalRecord extends Omit<PortalRecordInput, "schoolId"> {
   reviewNote: string | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
+  deletedByUserId: number | null;
+  deleteReason: string | null;
 }
 
 export interface PortalRecordFilters {
@@ -741,6 +791,50 @@ export interface PortalAnalyticsModuleStatus {
   returned: number;
   approved: number;
   total: number;
+}
+
+export type StorySessionType = "upload" | "review" | "editing" | "feedback";
+
+export interface StoryActivityInput {
+  schoolId: number;
+  date: string;
+  sessionType: StorySessionType;
+  learnersCount: number;
+  draftsCount: number;
+  revisionsCount: number;
+  notes?: string;
+}
+
+export interface StoryActivityRecord extends StoryActivityInput {
+  id: number;
+  recordCode: string;
+  createdByUserId: number;
+  createdByName: string;
+  createdAt: string;
+}
+
+/* ─── NLIS Support Requests ───────────────────────── */
+
+export type SupportRequestStatus = "New" | "Contacted" | "Scheduled" | "Delivered" | "Closed";
+export type SupportType = "phonics training" | "coaching visit" | "learner assessment" | "1001 story";
+
+export interface SupportRequestInput {
+  schoolId?: number;
+  locationText?: string;
+  contactName: string;
+  contactRole: string;
+  contactInfo: string;
+  supportTypes: SupportType[];
+  urgency: "low" | "medium" | "high";
+  message: string;
+}
+
+export interface SupportRequestRecord extends SupportRequestInput {
+  id: number;
+  status: SupportRequestStatus;
+  assignedStaffId?: number;
+  assignedStaffName?: string;
+  createdAt: string;
 }
 
 export interface PortalAnalyticsMonthlyPoint {
@@ -1008,11 +1102,14 @@ export interface PortalTestimonialRecord {
 export type ImpactReportType =
   | "FY Impact Report"
   | "Regional Impact Report"
+  | "Sub-region Report"
   | "District Report"
   | "School Report"
+  | "School Coaching Pack"
+  | "Headteacher Summary"
   | "Partner Snapshot Report";
 
-export type ImpactReportScopeType = "National" | "Region" | "District" | "School";
+export type ImpactReportScopeType = "National" | "Region" | "Sub-region" | "District" | "Sub-county" | "Parish" | "School";
 
 export type ImpactReportProgramType =
   | "training"
@@ -1146,6 +1243,7 @@ export interface ImpactReportFactPack {
   coverageDelivery: ImpactReportCoverageBlock;
   engagement: ImpactReportEngagementBlock;
   learningOutcomes: ImpactReportLearningOutcomesBlock;
+  readingLevels?: ReadingLevelsBlock;
   instructionQuality: ImpactReportInstructionQualityBlock;
   dataQuality: ImpactReportDataQualityBlock;
 }
@@ -1203,4 +1301,183 @@ export interface DistrictStats {
   totalSchools: number;
   totalZapSchools: number;
   totalLearners: number;
+}
+
+/* ─── 1001 Story Library ─────────────────────────── */
+
+export type StoryPublishStatus = "draft" | "review" | "published";
+export type StoryConsentStatus = "pending" | "approved" | "denied";
+
+export type StoryContentBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "heading"; text: string }
+  | {
+    type: "illustration";
+    image_url: string;
+    alt_text: string;
+    caption?: string;
+    layout?: "full" | "center" | "inset-left" | "inset-right";
+    max_height_px?: number;
+    keep_with_next?: boolean;
+  };
+
+export interface AuthorProfile {
+  id: number;
+  storyId: number;
+  authorName?: string;
+  authorPhotoUrl?: string;
+  age?: number;
+  className?: string;
+  schoolDisplay?: string;
+  authorBioShort?: string;
+  showNamePublic: boolean;
+  showPhotoPublic: boolean;
+  showAgePublic: boolean;
+  showClassPublic: boolean;
+}
+
+export interface ConsentRecord {
+  id: number;
+  schoolId: number;
+  guardianConsentDocumentUrl?: string;
+  schoolConsentDocumentUrl?: string;
+  consentDate?: string;
+  consentScope: string[]; // e.g., ["story", "author_photo", "author_name", "author_age", "author_class"]
+  approvedByUserId?: number;
+  status: "pending" | "approved" | "rejected";
+  notes?: string;
+}
+
+export interface StoryView {
+  id: number;
+  storyId: number;
+  viewedAt: string;
+  sessionId: string;
+  userId?: number;
+  geoHint?: string;
+  durationSeconds?: number;
+}
+
+export interface StoryRating {
+  id: number;
+  storyId: number;
+  userId?: number;
+  anonymousId?: string;
+  stars: number;
+  createdAt: string;
+  status: "visible" | "hidden";
+}
+
+export interface StoryComment {
+  id: number;
+  storyId: number;
+  userId?: number;
+  anonymousId?: string;
+  displayName?: string;
+  commentText: string;
+  createdAt: string;
+  status: "visible" | "hidden" | "flagged";
+  flaggedReason?: string;
+}
+
+export interface StoryRecord {
+  id: number;
+  slug: string;
+  schoolId: number;
+  anthologyId: number | null;
+  authorProfileId: number | null;
+  consentRecordId: number | null;
+  title: string;
+  excerpt: string;
+  contentText: string | null;
+  storyContentBlocks: StoryContentBlock[];
+  hasIllustrations: boolean;
+  pdfStoredPath: string | null;
+  coverImagePath: string | null;
+  grade: string;
+  language: string;
+  tags: string[];
+  pageStart: number;
+  pageEnd: number;
+  publishStatus: StoryPublishStatus;
+  consentStatus: StoryConsentStatus;
+  publicAuthorDisplay: string;
+  learnerUid: string | null;
+  viewCount: number;
+  sortOrder: number;
+  createdByUserId: number;
+  createdAt: string;
+  publishedAt: string | null;
+  schoolName?: string;
+  district?: string;
+  subRegion?: string;
+  region?: string;
+}
+
+/** Public-safe projection — never contains learnerUid */
+export interface PublishedStory {
+  id: number;
+  slug: string;
+  anthologyId: number | null;
+  anthologySlug?: string | null;
+  authorProfileId?: number | null;
+  title: string;
+  excerpt: string;
+  contentText: string | null;
+  storyContentBlocks: StoryContentBlock[];
+  hasIllustrations: boolean;
+  pdfStoredPath: string | null;
+  coverImagePath: string | null;
+  grade: string;
+  language: string;
+  tags: string[];
+  pageStart: number;
+  pageEnd: number;
+  publicAuthorDisplay: string;
+  viewCount: number;
+  averageStars?: number;
+  ratingCount?: number;
+  commentCount?: number;
+  latestCommentSnippet?: string;
+  publishedAt: string | null;
+  schoolName: string;
+  district: string;
+  subRegion: string;
+  schoolId: number;
+}
+
+export interface AnthologyRecord {
+  id: number;
+  slug: string;
+  title: string;
+  scopeType: "school" | "district" | "subregion" | "region";
+  scopeId: number | null;
+  schoolId: number | null;
+  districtScope: string | null;
+  edition: string;
+  pdfStoredPath: string | null;
+  pdfPageCount: number;
+  coverImagePath: string | null;
+  publishStatus: "draft" | "review" | "published";
+  consentStatus: StoryConsentStatus;
+  featured: boolean;
+  featuredRank: number | null;
+  downloadCount: number;
+  createdByUserId: number;
+  createdAt: string;
+  publishedAt: string | null;
+  schoolName?: string;
+}
+
+export interface StoryLibraryFilters {
+  q?: string;
+  region?: string;
+  district?: string;
+  schoolId?: number;
+  grade?: string;
+  tag?: string;
+  language?: string;
+  sort?: "newest" | "views" | "school";
+  page?: number;
+  limit?: number;
 }

@@ -109,6 +109,7 @@ export function PublicImpactMapExplorer({
   const [payload, setPayload] = useState<PublicImpactAggregate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"outcomes" | "implementation" | "teaching" | "equity" | "quality">("outcomes");
 
   const scope = useMemo(() => resolveScope(selection), [selection]);
 
@@ -225,7 +226,18 @@ export function PublicImpactMapExplorer({
       </header>
 
       <div className="impact-explorer-breadcrumbs">
-        <p>{breadcrumb.join(" > ")}</p>
+        <div className="flex items-center gap-2">
+          <p>{breadcrumb.join(" > ")}</p>
+          {payload?.meta.dataCompleteness === "Complete" ? (
+            <span className="badge badge-success" title="All schools in this scope have submitted reports for this period">
+              ✓ Data Complete
+            </span>
+          ) : (
+            <span className="badge badge-warning" title="Some schools in this scope haven't submitted report yet">
+              ⚠ Partial Data ({payload?.meta.sampleSize} reports)
+            </span>
+          )}
+        </div>
         <button type="button" className="impact-map-clear-link" onClick={onReset}>
           Clear
         </button>
@@ -287,40 +299,253 @@ export function PublicImpactMapExplorer({
         </article>
       ) : null}
 
-      <div className="cards-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-        <article className="card">
-          <h3>Learning Outcomes by Domain</h3>
-          <div className="impact-domain-mini-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-            <DomainOutcomeCard title="Letter Names" domain={payload?.outcomes.letterNames ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
-            <DomainOutcomeCard title="Letter Sounds" domain={payload?.outcomes.letterSounds ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
-            <DomainOutcomeCard title="Real Words" domain={payload?.outcomes.realWords ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
-            <DomainOutcomeCard title="Made Up Words" domain={payload?.outcomes.madeUpWords ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
-            <DomainOutcomeCard title="Story Reading" domain={payload?.outcomes.storyReading ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
-            <DomainOutcomeCard title="Comprehension" domain={payload?.outcomes.comprehension ?? { baseline: null, latest: null, endline: null, benchmarkPct: null, n: 0 }} />
-          </div>
-        </article>
+      <div className="impact-tabs">
+        <button
+          className={activeTab === "outcomes" ? "active" : ""}
+          onClick={() => setActiveTab("outcomes")}
+        >
+          Learning Outcomes
+        </button>
+        <button
+          className={activeTab === "implementation" ? "active" : ""}
+          onClick={() => setActiveTab("implementation")}
+        >
+          Implementation Funnel
+        </button>
+        <button
+          className={activeTab === "teaching" ? "active" : ""}
+          onClick={() => setActiveTab("teaching")}
+        >
+          Teaching Quality
+        </button>
+        <button
+          className={activeTab === "equity" ? "active" : ""}
+          onClick={() => setActiveTab("equity")}
+        >
+          Equity & Segments
+        </button>
+        <button
+          className={activeTab === "quality" ? "active" : ""}
+          onClick={() => setActiveTab("quality")}
+        >
+          Data Completeness
+        </button>
+      </div>
 
-        <article className="card">
-          <h3>Implementation funnel</h3>
-          <div className="impact-funnel-mini">
-            <div>
-              <span>Trained</span>
-              <strong>{loading ? "Loading..." : (payload?.funnel.trained ?? 0).toLocaleString()}</strong>
+      <div className="impact-tab-content">
+        {activeTab === "outcomes" && (
+          <article className="card">
+            <h3>Learning Outcomes by Domain</h3>
+            <div
+              className="impact-domain-mini-grid"
+              style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
+            >
+              <DomainOutcomeCard
+                title="Letter Names"
+                domain={
+                  payload?.outcomes.letterNames ?? {
+                    baseline: null,
+                    latest: null,
+                    endline: null,
+                    benchmarkPct: null,
+                    n: 0,
+                  }
+                }
+              />
+              <DomainOutcomeCard
+                title="Letter Sounds"
+                domain={
+                  payload?.outcomes.letterSounds ?? {
+                    baseline: null,
+                    latest: null,
+                    endline: null,
+                    benchmarkPct: null,
+                    n: 0,
+                  }
+                }
+              />
+              <DomainOutcomeCard
+                title="Real Words"
+                domain={
+                  payload?.outcomes.realWords ?? {
+                    baseline: null,
+                    latest: null,
+                    endline: null,
+                    benchmarkPct: null,
+                    n: 0,
+                  }
+                }
+              />
+              <DomainOutcomeCard
+                title="Made Up Words"
+                domain={
+                  payload?.outcomes.madeUpWords ?? {
+                    baseline: null,
+                    latest: null,
+                    endline: null,
+                    benchmarkPct: null,
+                    n: 0,
+                  }
+                }
+              />
+              <DomainOutcomeCard
+                title="Story Reading"
+                domain={
+                  payload?.outcomes.storyReading ?? {
+                    baseline: null,
+                    latest: null,
+                    endline: null,
+                    benchmarkPct: null,
+                    n: 0,
+                  }
+                }
+              />
+              <DomainOutcomeCard
+                title="Comprehension"
+                domain={
+                  payload?.outcomes.comprehension ?? {
+                    baseline: null,
+                    latest: null,
+                    endline: null,
+                    benchmarkPct: null,
+                    n: 0,
+                  }
+                }
+              />
             </div>
-            <div>
-              <span>Coached / Visited</span>
-              <strong>{loading ? "Loading..." : (payload?.funnel.coached ?? 0).toLocaleString()}</strong>
+            <p className="impact-mini-footer">
+              Scores reflect average learner performance. Benchmark: 60%.
+            </p>
+          </article>
+        )}
+
+        {activeTab === "implementation" && (
+          <article className="card">
+            <h3>Program Implementation Funnel</h3>
+            <div className="impact-funnel-mini">
+              <div>
+                <span>Schools Trained</span>
+                <strong>
+                  {loading ? "Loading..." : (payload?.funnel.trained ?? 0).toLocaleString()}
+                </strong>
+                <span>Direct capacity building</span>
+              </div>
+              <div>
+                <span>Coached / Visited</span>
+                <strong>
+                  {loading ? "Loading..." : (payload?.funnel.coached ?? 0).toLocaleString()}
+                </strong>
+                <span>Ongoing field support</span>
+              </div>
+              <div>
+                <span>Baseline Assessed</span>
+                <strong>
+                  {loading ? "Loading..." : (payload?.funnel.baselineAssessed ?? 0).toLocaleString()}
+                </strong>
+                <span>Initial learner data</span>
+              </div>
+              <div>
+                <span>Endline Assessed</span>
+                <strong>
+                  {loading ? "Loading..." : (payload?.funnel.endlineAssessed ?? 0).toLocaleString()}
+                </strong>
+                <span>Impact measurement</span>
+              </div>
+              <div>
+                <span>1001 Story Active</span>
+                <strong>
+                  {loading ? "Loading..." : (payload?.funnel.storyActive ?? 0).toLocaleString()}
+                </strong>
+                <span>Creative literacy extension</span>
+              </div>
             </div>
-            <div>
-              <span>Baseline assessed</span>
-              <strong>{loading ? "Loading..." : (payload?.funnel.baselineAssessed ?? 0).toLocaleString()}</strong>
+          </article>
+        )}
+
+        {activeTab === "teaching" && (
+          <article className="card">
+            <h3>Teaching Quality & Fidelity</h3>
+            <div className="flex gap-8 items-start">
+              <div className="flex-1">
+                <h4>Fidelity Score</h4>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="text-4xl font-bold">{payload?.fidelity.score}%</div>
+                  <div className={`badge badge-${payload?.fidelity.band.toLowerCase().replace(" ", "-")}`}>
+                    {payload?.fidelity.band}
+                  </div>
+                </div>
+                <p className="mt-4 text-gray-600">
+                  Combined metric of coaching coverage, assessment compliance, and observed teaching
+                  standards.
+                </p>
+              </div>
+              <div className="flex-1 flex flex-col gap-2">
+                {payload?.fidelity.drivers.map((driver) => (
+                  <div key={driver.key} className="flex justify-between p-2 bg-gray-50 rounded">
+                    <span>{driver.label}</span>
+                    <span className="font-bold">{driver.score}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <span>Endline assessed</span>
-              <strong>{loading ? "Loading..." : (payload?.funnel.endlineAssessed ?? 0).toLocaleString()}</strong>
+          </article>
+        )}
+
+        {activeTab === "equity" && (
+          <article className="card">
+            <h3>Equity & Geographic Insights</h3>
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <h4>Most Improved (by outcome)</h4>
+                <div className="mt-2 flex flex-col gap-2">
+                  {payload?.rankings.mostImproved.map((item) => (
+                    <div key={item.name} className="flex justify-between p-2 border-b">
+                      <span>{item.name}</span>
+                      <span className="text-green-600 font-bold">+{item.score} pts</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4>Support Priority Score</h4>
+                <div className="mt-2 flex flex-col gap-2">
+                  {payload?.rankings.prioritySupport.map((item) => (
+                    <div key={item.name} className="flex justify-between p-2 border-b">
+                      <span>{item.name}</span>
+                      <span className="text-orange-600 font-bold">{item.score}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </article>
+          </article>
+        )}
+
+        {activeTab === "quality" && (
+          <article className="card">
+            <h3>Data Completeness & Audit</h3>
+            <div className="flex gap-8">
+              <div className="flex-1">
+                <h4>Sample Size (n)</h4>
+                <div className="text-3xl font-bold mt-2">{payload?.meta.sampleSize}</div>
+                <p className="text-gray-600">Total verified record submissions in this period.</p>
+              </div>
+              <div className="flex-1">
+                <h4>Completeness Status</h4>
+                <div className="mt-2">
+                  {payload?.meta.dataCompleteness === "Complete" ? (
+                    <span className="text-green-600 font-bold">✓ High (100% submission)</span>
+                  ) : (
+                    <span className="text-orange-600 font-bold">⚠ Partial (Reporting in progress)</span>
+                  )}
+                </div>
+                <p className="text-gray-600 mt-2">
+                  Last updated: {new Date(payload?.meta.lastUpdated ?? "").toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </article>
+        )}
       </div>
     </section>
   );

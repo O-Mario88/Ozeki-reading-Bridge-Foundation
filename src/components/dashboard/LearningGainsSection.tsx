@@ -1,6 +1,7 @@
 "use client";
 
 import type { LearningGainsData, DomainGainData } from "@/lib/types";
+import { ReadingLevelMovementVisual } from "./ReadingLevelMovementVisual";
 
 function GainIndicator({ value }: { value: number | null }) {
     if (value === null) return <span style={{ color: "#aaa" }}>—</span>;
@@ -106,7 +107,13 @@ export default function LearningGainsSection({ data }: { data: LearningGainsData
                 ))}
             </div>
 
-            <div style={{ fontSize: "0.75rem", color: "#999", textAlign: "right" }}>
+            {data.readingLevels && (
+                <div style={{ marginTop: "2rem" }}>
+                    <ReadingLevelMovementVisual data={data.readingLevels} />
+                </div>
+            )}
+
+            <div style={{ fontSize: "0.75rem", color: "#999", textAlign: "right", marginTop: "1rem" }}>
                 Period: {data.period} · Last updated: {new Date(data.lastUpdated).toLocaleDateString()}
             </div>
         </section>

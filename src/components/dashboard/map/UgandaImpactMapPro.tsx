@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   stableDistrictId,
   stableSubRegionId,
@@ -18,6 +18,8 @@ import { FloatingMetric, FloatingStatCard } from "./FloatingStatCard";
 import { MapStatsBottomSheet } from "./MapStatsBottomSheet";
 import { useHoverIntent } from "./useHoverIntent";
 import { useSmartPositioning } from "./useSmartPositioning";
+import { useMapZoom } from "./useMapZoom";
+import { DistrictSearchInput } from "./DistrictSearchInput";
 
 /** Sub-region fill colors inspired by the UBOS reference map. */
 const SUB_REGION_COLORS: Record<UgandaMapSubRegionName, string> = {
@@ -155,7 +157,15 @@ export function UgandaImpactMapPro({
   compact = false,
   className,
 }: UgandaImpactMapProProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const {
+    containerRef,
+    svgGroupRef,
+    scale,
+    zoomIn,
+    zoomOut,
+    resetView,
+    fitBounds,
+  } = useMapZoom({ minScale: 1, maxScale: 8 });
   const [hoverLevel, setHoverLevel] = useState<HoverLevel>("district");
   const [hoveredTarget, setHoveredTarget] = useState<MapTarget | null>(null);
   const [pinnedTarget, setPinnedTarget] = useState<MapTarget | null>(null);
@@ -170,6 +180,27 @@ export function UgandaImpactMapPro({
     closeDelayMs: 300,
   });
   const smartPosition = useSmartPositioning();
+
+  /** Compute bounding box of district paths for fitBounds. */
+  const computePathsBbox = useCallback((districts: GeoDistrictBoundary[]) => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const d of districts) {
+      const nums = d.pathData.match(/[\d.]+/g);
+      if (!nums) continue;
+      for (let i = 0; i < nums.length - 1; i += 2) {
+        const x = parseFloat(nums[i] as string);
+        const y = parseFloat(nums[i + 1] as string);
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (!Number.isFinite(minX)) return null;
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  }, []);
 
   useEffect(() => {
     const updateMedia = () => {
@@ -191,57 +222,17 @@ export function UgandaImpactMapPro({
     return GEO_DISTRICT_BOUNDARIES;
   }, [selection.subRegion]);
 
-  /* ── Compute viewBox: zoom into selected sub-region ── */
-  const viewBox = useMemo(() => {
-    if (!selection.subRegion) {
-      return `0 0 ${GEO_MAP_VIEWBOX.width} ${GEO_MAP_VIEWBOX.height}`;
-    }
-    // Get all districts in the selected sub-region to compute bounding box
-    const srDistricts = GEO_DISTRICT_BOUNDARIES.filter(
-      (d) => d.subRegion === selection.subRegion,
-    );
-    if (srDistricts.length === 0) {
-      return `0 0 ${GEO_MAP_VIEWBOX.width} ${GEO_MAP_VIEWBOX.height}`;
-    }
-    // Parse paths to extract coordinate bounds
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const d of srDistricts) {
-      const nums = d.pathData.match(/[\d.]+/g);
-      if (!nums) continue;
-      for (let i = 0; i < nums.length - 1; i += 2) {
-        const x = parseFloat(nums[i] as string);
-        const y = parseFloat(nums[i + 1] as string);
-        if (Number.isFinite(x) && Number.isFinite(y)) {
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
-    }
-    if (!Number.isFinite(minX)) {
-      return `0 0 ${GEO_MAP_VIEWBOX.width} ${GEO_MAP_VIEWBOX.height}`;
-    }
-    // Add padding (15% of dimensions)
-    const w = maxX - minX;
-    const h = maxY - minY;
-    const padX = w * 0.15;
-    const padY = h * 0.15;
-    return `${minX - padX} ${minY - padY} ${w + padX * 2} ${h + padY * 2}`;
-  }, [selection.subRegion]);
+  /* ── Fixed viewBox — zoom/pan is handled by CSS transform ── */
+  const viewBox = `0 0 ${GEO_MAP_VIEWBOX.width} ${GEO_MAP_VIEWBOX.height}`;
 
-  /* ── Compute font size for district labels based on zoom ── */
+  /* ── Compute font size for district labels scaled inversely to zoom ── */
   const districtLabelSize = useMemo(() => {
-    if (!selection.subRegion) return 8;
-    // When zoomed the viewBox is smaller, so font-size in SVG units appears larger
-    const srDistricts = GEO_DISTRICT_BOUNDARIES.filter(
-      (d) => d.subRegion === selection.subRegion,
-    );
-    // Smaller sub-regions with fewer districts get smaller font
-    if (srDistricts.length <= 4) return 8;
-    if (srDistricts.length <= 8) return 7;
-    return 6;
-  }, [selection.subRegion]);
+    // At higher zoom, shrink SVG-unit font so labels stay readable
+    if (scale >= 4) return 4;
+    if (scale >= 2.5) return 5;
+    if (scale >= 1.5) return 6;
+    return 8;
+  }, [scale]);
 
   const currentTarget = pinnedTarget ?? hoveredTarget ?? getTargetFromSelection(selection);
   const currentKey = `${currentTarget.level}:${currentTarget.id}:${periodLabel}`;
@@ -334,7 +325,8 @@ export function UgandaImpactMapPro({
     setHoveredTarget(null);
     forceClose();
     onSelectionChange({ region: "", subRegion: "", district: "" });
-  }, [forceClose, onSelectionChange]);
+    resetView();
+  }, [forceClose, onSelectionChange, resetView]);
 
   const selectSubRegion = useCallback(
     (subRegion: UgandaMapSubRegionName) => {
@@ -353,8 +345,12 @@ export function UgandaImpactMapPro({
       fetchStats(target).catch(() => {
         // noop
       });
+      // Fit map to sub-region bounding box
+      const srDistricts = GEO_DISTRICT_BOUNDARIES.filter((d) => d.subRegion === subRegion);
+      const bbox = computePathsBbox(srDistricts);
+      if (bbox) fitBounds(bbox, 0.15);
     },
-    [fetchStats, forceOpen, onSelectionChange],
+    [computePathsBbox, fetchStats, fitBounds, forceOpen, onSelectionChange],
   );
 
   const selectDistrict = useCallback(
@@ -374,8 +370,12 @@ export function UgandaImpactMapPro({
       fetchStats(target).catch(() => {
         // noop
       });
+      // Fit map to district bounding box
+      const dMatch = GEO_DISTRICT_BOUNDARIES.filter((d) => d.name === district);
+      const bbox = computePathsBbox(dMatch);
+      if (bbox) fitBounds(bbox, 0.2);
     },
-    [fetchStats, forceOpen, onSelectionChange],
+    [computePathsBbox, fetchStats, fitBounds, forceOpen, onSelectionChange],
   );
 
   const mobileOpenTarget = useCallback(
@@ -459,173 +459,188 @@ export function UgandaImpactMapPro({
         </button>
       </div>
 
+      <DistrictSearchInput
+        onSelectDistrict={(name, subRegion) => selectDistrict(name, subRegion)}
+        className="impact-map-search-above"
+      />
+
       <div ref={containerRef} className="impact-map-canvas" onMouseLeave={endHover}>
+        {/* Zoom controls */}
+        <div className="impact-map-zoom-controls">
+          <button type="button" title="Zoom in" aria-label="Zoom in" onClick={zoomIn}>+</button>
+          <button type="button" title="Zoom out" aria-label="Zoom out" onClick={zoomOut}>−</button>
+          <button type="button" title="Reset zoom" aria-label="Reset zoom" onClick={() => { resetView(); clearSelection(); }}>⟲</button>
+        </div>
+        <p className="impact-map-hint">Scroll to zoom · Drag to pan</p>
+
         <svg
           viewBox={viewBox}
           className="impact-map-svg"
           role="img"
           aria-label="Uganda literacy implementation map"
         >
-          {/* Sub-region filled shapes (real GeoJSON boundaries) */}
-          <g className={`impact-map-subregions impact-map-subregions--${mapMode}`}>
-            {GEO_SUBREGION_BOUNDARIES.map((overlay) => {
-              const srId = stableSubRegionId(overlay.subRegion);
-              const active = selectedSubRegionId === srId;
-              const dimmed = selection.subRegion && !active;
-              const target: MapTarget = {
-                level: "subregion",
-                id: overlay.subRegion,
-                label: overlay.subRegion,
-                chip: "Sub-region",
-                profileHref: `/sub-regions/${encodeURIComponent(overlay.subRegion)}`,
-              };
+          <g ref={svgGroupRef}>
+            {/* Sub-region filled shapes (real GeoJSON boundaries) */}
+            <g className={`impact-map-subregions impact-map-subregions--${mapMode}`}>
+              {GEO_SUBREGION_BOUNDARIES.map((overlay) => {
+                const srId = stableSubRegionId(overlay.subRegion);
+                const active = selectedSubRegionId === srId;
+                const dimmed = selection.subRegion && !active;
+                const target: MapTarget = {
+                  level: "subregion",
+                  id: overlay.subRegion,
+                  label: overlay.subRegion,
+                  chip: "Sub-region",
+                  profileHref: `/sub-regions/${encodeURIComponent(overlay.subRegion)}`,
+                };
 
-              return (
-                <g key={overlay.subRegion} style={dimmed ? { opacity: 0.12 } : undefined}>
-                  <path
-                    d={overlay.pathData}
-                    className="impact-map-subregion-shape"
-                    style={{ fill: SUB_REGION_COLORS[overlay.subRegion] }}
-                    data-subregion-id={srId}
-                    data-subregion-name={overlay.subRegion}
-                    data-selected={active ? "" : undefined}
-                    role="button"
-                    tabIndex={dimmed ? -1 : 0}
-                    aria-label={`${overlay.subRegion} sub-region. Click to view aggregated impact stats and filter dashboard.`}
-                    onMouseEnter={(event) => {
-                      if (hoverLevel === "subregion" && !dimmed) {
-                        beginHover(event, target);
-                      }
-                    }}
-                    onMouseMove={(event) => {
-                      if (hoverLevel === "subregion" && !dimmed) {
-                        moveHover(event);
-                      }
-                    }}
-                    onFocus={() => {
-                      if (!dimmed) {
-                        setHoveredTarget(target);
-                        forceOpen();
-                      }
-                    }}
-                    onBlur={() => {
-                      endHover();
-                    }}
-                    onClick={() => {
-                      if (dimmed) return;
-                      if (isMobile) {
-                        mobileOpenTarget(target);
-                      }
-                      selectSubRegion(overlay.subRegion);
-                    }}
-                    onKeyDown={(event) => {
-                      if (dimmed) return;
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
+                return (
+                  <g key={overlay.subRegion} style={dimmed ? { opacity: 0.12 } : undefined}>
+                    <path
+                      d={overlay.pathData}
+                      className="impact-map-subregion-shape"
+                      style={{ fill: SUB_REGION_COLORS[overlay.subRegion] }}
+                      data-subregion-id={srId}
+                      data-subregion-name={overlay.subRegion}
+                      data-selected={active ? "" : undefined}
+                      role="button"
+                      tabIndex={dimmed ? -1 : 0}
+                      aria-label={`${overlay.subRegion} sub-region. Click to view aggregated impact stats and filter dashboard.`}
+                      onMouseEnter={(event) => {
+                        if (hoverLevel === "subregion" && !dimmed) {
+                          beginHover(event, target);
+                        }
+                      }}
+                      onMouseMove={(event) => {
+                        if (hoverLevel === "subregion" && !dimmed) {
+                          moveHover(event);
+                        }
+                      }}
+                      onFocus={() => {
+                        if (!dimmed) {
+                          setHoveredTarget(target);
+                          forceOpen();
+                        }
+                      }}
+                      onBlur={() => {
+                        endHover();
+                      }}
+                      onClick={() => {
+                        if (dimmed) return;
+                        if (isMobile) {
+                          mobileOpenTarget(target);
+                        }
                         selectSubRegion(overlay.subRegion);
-                      }
-                    }}
-                  />
-                  {!dimmed && (
-                    <text
-                      x={overlay.labelX}
-                      y={overlay.labelY}
-                      className="impact-map-subregion-label"
-                      textAnchor="middle"
-                    >
-                      {overlay.subRegion}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </g>
+                      }}
+                      onKeyDown={(event) => {
+                        if (dimmed) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          selectSubRegion(overlay.subRegion);
+                        }
+                      }}
+                    />
+                    {!dimmed && (
+                      <text
+                        x={overlay.labelX}
+                        y={overlay.labelY}
+                        className="impact-map-subregion-label"
+                        textAnchor="middle"
+                      >
+                        {overlay.subRegion}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
 
-          {/* District boundary shapes (real GeoJSON boundaries) */}
-          <g
-            className={`impact-map-district-shapes impact-map-district-shapes--${mapMode}`}
-            data-visible={hoverLevel === "district" ? "" : undefined}
-          >
-            {districtPaths.map((districtShape) => {
-              const dId = stableDistrictId(districtShape.name);
-              const srId = stableSubRegionId(districtShape.subRegion);
-              const markerTarget: MapTarget = {
-                level: "district",
-                id: districtShape.name,
-                label: districtShape.name,
-                chip: "District",
-                profileHref: `/districts/${encodeURIComponent(districtShape.name)}`,
-              };
-              const selected = selectedDistrictId === dId;
-              const hiddenBySubRegion =
-                selection.subRegion && selection.subRegion !== districtShape.subRegion;
-              const inFocusedSubRegion = !selection.subRegion || selection.subRegion === districtShape.subRegion;
+            {/* District boundary shapes (real GeoJSON boundaries) */}
+            <g
+              className={`impact-map-district-shapes impact-map-district-shapes--${mapMode}`}
+              data-visible={hoverLevel === "district" ? "" : undefined}
+            >
+              {districtPaths.map((districtShape) => {
+                const dId = stableDistrictId(districtShape.name);
+                const srId = stableSubRegionId(districtShape.subRegion);
+                const markerTarget: MapTarget = {
+                  level: "district",
+                  id: districtShape.name,
+                  label: districtShape.name,
+                  chip: "District",
+                  profileHref: `/districts/${encodeURIComponent(districtShape.name)}`,
+                };
+                const selected = selectedDistrictId === dId;
+                const hiddenBySubRegion =
+                  selection.subRegion && selection.subRegion !== districtShape.subRegion;
+                const inFocusedSubRegion = !selection.subRegion || selection.subRegion === districtShape.subRegion;
 
-              return (
-                <g key={`${districtShape.subRegion}-${districtShape.name}`}>
-                  <path
-                    d={districtShape.pathData}
-                    className="impact-map-district-shape"
-                    style={{
-                      fill: hiddenBySubRegion
-                        ? "transparent"
-                        : SUB_REGION_COLORS[districtShape.subRegion],
-                      opacity: hiddenBySubRegion ? 0.08 : undefined,
-                    }}
-                    data-district-id={dId}
-                    data-district-name={districtShape.name}
-                    data-subregion-id={srId}
-                    data-subregion-name={districtShape.subRegion}
-                    data-selected={selected ? "" : undefined}
-                    role="button"
-                    tabIndex={hiddenBySubRegion ? -1 : 0}
-                    aria-label={`${districtShape.name} District. Click to view aggregated impact stats and filter dashboard.`}
-                    onMouseEnter={(event) => {
-                      if (!hiddenBySubRegion) beginHover(event, markerTarget);
-                    }}
-                    onMouseMove={(event) => {
-                      if (!hiddenBySubRegion) moveHover(event);
-                    }}
-                    onFocus={() => {
-                      if (!hiddenBySubRegion) {
-                        setHoveredTarget(markerTarget);
-                        forceOpen();
-                      }
-                    }}
-                    onBlur={() => {
-                      endHover();
-                    }}
-                    onClick={() => {
-                      if (hiddenBySubRegion) return;
-                      if (isMobile) {
-                        mobileOpenTarget(markerTarget);
-                      }
-                      selectDistrict(districtShape.name, districtShape.subRegion);
-                    }}
-                    onKeyDown={(event) => {
-                      if (hiddenBySubRegion) return;
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
+                return (
+                  <g key={`${districtShape.subRegion}-${districtShape.name}`}>
+                    <path
+                      d={districtShape.pathData}
+                      className="impact-map-district-shape"
+                      style={{
+                        fill: hiddenBySubRegion
+                          ? "transparent"
+                          : SUB_REGION_COLORS[districtShape.subRegion],
+                        opacity: hiddenBySubRegion ? 0.08 : undefined,
+                      }}
+                      data-district-id={dId}
+                      data-district-name={districtShape.name}
+                      data-subregion-id={srId}
+                      data-subregion-name={districtShape.subRegion}
+                      data-selected={selected ? "" : undefined}
+                      role="button"
+                      tabIndex={hiddenBySubRegion ? -1 : 0}
+                      aria-label={`${districtShape.name} District. Click to view aggregated impact stats and filter dashboard.`}
+                      onMouseEnter={(event) => {
+                        if (!hiddenBySubRegion) beginHover(event, markerTarget);
+                      }}
+                      onMouseMove={(event) => {
+                        if (!hiddenBySubRegion) moveHover(event);
+                      }}
+                      onFocus={() => {
+                        if (!hiddenBySubRegion) {
+                          setHoveredTarget(markerTarget);
+                          forceOpen();
+                        }
+                      }}
+                      onBlur={() => {
+                        endHover();
+                      }}
+                      onClick={() => {
+                        if (hiddenBySubRegion) return;
+                        if (isMobile) {
+                          mobileOpenTarget(markerTarget);
+                        }
                         selectDistrict(districtShape.name, districtShape.subRegion);
-                      }
-                    }}
-                  />
-                  {/* District label */}
-                  {inFocusedSubRegion && (
-                    <text
-                      x={districtShape.centroidX}
-                      y={districtShape.centroidY}
-                      className="impact-map-district-label"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      style={{ fontSize: selection.subRegion ? districtLabelSize : 5.5 }}
-                    >
-                      {districtShape.name}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
+                      }}
+                      onKeyDown={(event) => {
+                        if (hiddenBySubRegion) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          selectDistrict(districtShape.name, districtShape.subRegion);
+                        }
+                      }}
+                    />
+                    {/* District label */}
+                    {inFocusedSubRegion && (
+                      <text
+                        x={districtShape.centroidX}
+                        y={districtShape.centroidY}
+                        className="impact-map-district-label"
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        style={{ fontSize: selection.subRegion ? districtLabelSize : 5.5 }}
+                      >
+                        {districtShape.name}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
           </g>
         </svg>
 

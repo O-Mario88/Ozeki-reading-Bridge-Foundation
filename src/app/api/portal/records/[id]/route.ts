@@ -143,3 +143,30 @@ export async function PUT(
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const user = await getAuthenticatedPortalUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const params = await context.params;
+    const id = toId(params.id);
+    const { searchParams } = new URL(request.url);
+    const reason = searchParams.get("reason") || "User requested deletion via API";
+
+    const { softDeletePortalRecord } = await import("@/lib/db");
+    softDeletePortalRecord(id, user, reason);
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Server error." }, { status: 500 });
+  }
+}

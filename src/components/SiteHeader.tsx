@@ -34,7 +34,7 @@ type NavItem =
   };
 
 const utilityLinks = [
-
+  { href: "/request-support", label: "Request School Support" },
   { href: "/portal/login", label: "Staff Portal" },
 ];
 
@@ -76,7 +76,7 @@ const resourcesGroup: NavGroup = {
   description: "Practical downloads, webinars, and knowledge content for literacy implementation.",
   links: [
     { href: "/resources", label: "Resource Library" },
-
+    { href: "/stories", label: "1001 Story Library" },
     { href: "/events", label: "Events & Webinars" },
     { href: "/media", label: "Media & Press" },
   ],
@@ -87,9 +87,8 @@ const impactGroup: NavGroup = {
   href: "/impact",
   description: "Public impact evidence, dashboards, reports, case studies, and methodology.",
   links: [
-    { href: "/impact", label: "Impact Hub" },
-    { href: "/impact/dashboard", label: "Live Dashboard" },
-    { href: "/impact/reports", label: "Reports Library" },
+    { href: "/impact", label: "Live Dashboard" },
+    { href: "/impact#reports", label: "Reports Library" },
     { href: "/impact/case-studies", label: "Case Studies" },
     { href: "/impact/gallery", label: "Evidence Gallery" },
   ],
@@ -111,6 +110,7 @@ const navItems: NavItem[] = [
   { type: "group", key: "programs", group: programsGroup },
   { type: "group", key: "resources", group: resourcesGroup },
   { type: "group", key: "impact", group: impactGroup },
+  { type: "link", label: "Stories", href: "/stories" },
   { type: "link", label: "Partner With Us", href: "/partner" },
   { type: "group", key: "about", group: aboutGroup },
 ];

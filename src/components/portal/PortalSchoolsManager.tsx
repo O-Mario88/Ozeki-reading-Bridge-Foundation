@@ -9,6 +9,7 @@ import {
   ugandaRegions,
 } from "@/lib/uganda-locations";
 import { SchoolDirectoryRecord } from "@/lib/types";
+import { SchoolRosterPicker } from "./SchoolRosterPicker";
 
 interface PortalSchoolsManagerProps {
   initialSchools: SchoolDirectoryRecord[];
@@ -877,6 +878,33 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 </strong>
                 <span>School GPS</span>
               </article>
+            </div>
+
+            {/* ── School Roster Tabs ── */}
+            <div className="portal-school-roster-tabs" style={{ marginTop: "1rem" }}>
+              <h4 style={{ marginBottom: "0.5rem", fontSize: "0.95rem" }}>School Roster</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div>
+                  <SchoolRosterPicker
+                    schoolId={selectedSchool.id}
+                    schoolName={selectedSchool.name}
+                    participantType="teacher"
+                    selectedUid=""
+                    onSelect={() => { }}
+                    label="Teachers"
+                  />
+                </div>
+                <div>
+                  <SchoolRosterPicker
+                    schoolId={selectedSchool.id}
+                    schoolName={selectedSchool.name}
+                    participantType="learner"
+                    selectedUid=""
+                    onSelect={() => { }}
+                    label="Learners"
+                  />
+                </div>
+              </div>
             </div>
 
             {!editingProfile ? (

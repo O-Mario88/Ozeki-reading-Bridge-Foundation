@@ -6,6 +6,7 @@ import {
   listAssessmentRecords,
   logAuditEvent,
   saveAssessmentRecord,
+  validateParticipantBelongsToSchool,
 } from "@/lib/db";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 import { AssessmentRecordInput } from "@/lib/types";
@@ -85,6 +86,18 @@ export async function POST(request: Request) {
 
   try {
     const payload = assessmentSchema.parse(await request.json());
+
+    // Enforce: learner must belong to the specified school
+    if (payload.learnerUid && payload.learnerUid.trim()) {
+      const isValid = validateParticipantBelongsToSchool("learner", payload.learnerUid.trim(), payload.schoolId);
+      if (!isValid) {
+        return NextResponse.json(
+          { error: `Learner "${payload.childName}" is not registered in this school's roster. Add them to the School Account first.` },
+          { status: 400 },
+        );
+      }
+    }
+
     const normalizedPayload: AssessmentRecordInput = {
       childName: payload.childName,
       childId: payload.childId,

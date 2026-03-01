@@ -21,3 +21,27 @@ export function canReview(user: {
 }) {
   return user.isSupervisor || user.isME || user.isAdmin || user.isSuperAdmin;
 }
+
+export async function requireAuthenticatedUser() {
+  const user = await getAuthenticatedPortalUser();
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+  return user;
+}
+
+export async function requireSuperAdmin() {
+  const user = await requireAuthenticatedUser();
+  if (!user.isSuperAdmin) {
+    throw new Error("Forbidden: Super Admin access required");
+  }
+  return user;
+}
+
+export async function requireAdmin() {
+  const user = await requireAuthenticatedUser();
+  if (!user.isAdmin && !user.isSuperAdmin) {
+    throw new Error("Forbidden: Admin access required");
+  }
+  return user;
+}

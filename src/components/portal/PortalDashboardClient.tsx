@@ -23,14 +23,16 @@ const moduleRoute: Record<PortalRecordModule, string> = {
   training: "/portal/trainings",
   visit: "/portal/visits",
   assessment: "/portal/assessments",
-  story: "/portal/story",
+  story: "/portal/stories",
+  story_activity: "/portal/stories",
 };
 
 const moduleLabel: Record<PortalRecordModule, string> = {
   training: "Training",
-  visit: "Visit",
+  visit: "Coaching Visit",
   assessment: "Assessment",
-  story: "1001 Story",
+  story: "Story Collection",
+  story_activity: "Story Activity",
 };
 
 function formatDay(dateValue: string) {

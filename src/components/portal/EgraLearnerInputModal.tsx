@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SchoolRosterPicker, RosterEntry, RosterLearner } from "./SchoolRosterPicker";
 
 export interface EgraLearner {
     no: number;
@@ -22,6 +23,8 @@ interface EgraLearnerInputModalProps {
     onSave: (learner: EgraLearner) => void;
     nextLearnerId: string;
     nextNo: number;
+    schoolId?: number | null;
+    schoolName?: string;
 }
 
 export function EgraLearnerInputModal({
@@ -30,6 +33,8 @@ export function EgraLearnerInputModal({
     onSave,
     nextLearnerId,
     nextNo,
+    schoolId,
+    schoolName,
 }: EgraLearnerInputModalProps) {
     const [learner, setLearner] = useState<EgraLearner>({
         no: nextNo,
@@ -46,6 +51,8 @@ export function EgraLearnerInputModal({
         readingComprehension: "",
         fluencyLevel: "Non-Reader",
     });
+
+    const [selectedLearnerUid, setSelectedLearnerUid] = useState("");
 
     // Reset form when modal opens or nextLearnerId changes
     useEffect(() => {
@@ -65,6 +72,7 @@ export function EgraLearnerInputModal({
                 readingComprehension: "",
                 fluencyLevel: "Non-Reader",
             });
+            setSelectedLearnerUid("");
         }
     }, [isOpen, nextLearnerId, nextNo]);
 
@@ -79,6 +87,23 @@ export function EgraLearnerInputModal({
         setLearner((prev) => ({ ...prev, [field]: value }));
     };
 
+    const handleLearnerSelect = (entry: RosterEntry | null) => {
+        if (!entry) {
+            setSelectedLearnerUid("");
+            setLearner((prev) => ({ ...prev, learnerName: "", sex: "M", age: "" }));
+            return;
+        }
+        const l = entry as RosterLearner;
+        setSelectedLearnerUid(l.learnerUid);
+        setLearner((prev) => ({
+            ...prev,
+            learnerId: l.learnerUid,
+            learnerName: l.fullName,
+            sex: l.gender === "Boy" ? "M" : l.gender === "Girl" ? "F" : "",
+            age: l.age,
+        }));
+    };
+
     return (
         <div className="portal-modal-overlay">
             <div className="portal-modal-content card">
@@ -90,47 +115,91 @@ export function EgraLearnerInputModal({
                 </div>
 
                 <form onSubmit={handleSubmit} className="form-grid">
-                    <div className="full-width grid grid-cols-2 gap-4">
-                        <label>
-                            <span className="label-text">Learner ID</span>
-                            <input value={learner.learnerId} readOnly className="bg-slate-100" />
-                        </label>
-                        <label>
-                            <span className="label-text">Learner Name</span>
-                            <input
-                                value={learner.learnerName}
-                                onChange={(e) => updateField("learnerName", e.target.value)}
-                                required
-                                placeholder="Enter learner name"
+                    {/* Roster Picker for learner selection */}
+                    {schoolId ? (
+                        <div className="full-width" style={{ marginBottom: "0.75rem" }}>
+                            <SchoolRosterPicker
+                                schoolId={schoolId}
+                                schoolName={schoolName}
+                                participantType="learner"
+                                selectedUid={selectedLearnerUid}
+                                onSelect={handleLearnerSelect}
+                                label="Select Learner from School Roster"
                             />
-                        </label>
-                    </div>
+                            {!selectedLearnerUid && (
+                                <p style={{ color: "#b45309", fontSize: "0.78rem", fontStyle: "italic", margin: "0.3rem 0 0" }}>
+                                    Learner must be in the school roster. Use &quot;Add Learner to School Account&quot; if not listed.
+                                </p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="full-width" style={{ marginBottom: "0.75rem" }}>
+                            <p style={{ color: "#b45309", fontSize: "0.82rem", fontStyle: "italic" }}>
+                                Select a school first to load learners from the school roster.
+                            </p>
+                            <div className="full-width grid grid-cols-2 gap-4">
+                                <label>
+                                    <span className="label-text">Learner ID</span>
+                                    <input value={learner.learnerId} readOnly className="bg-slate-100" />
+                                </label>
+                                <label>
+                                    <span className="label-text">Learner Name</span>
+                                    <input
+                                        value={learner.learnerName}
+                                        onChange={(e) => updateField("learnerName", e.target.value)}
+                                        required
+                                        placeholder="Enter learner name"
+                                    />
+                                </label>
+                            </div>
+                            <div className="full-width grid grid-cols-2 gap-4" style={{ marginTop: "0.5rem" }}>
+                                <label>
+                                    <span className="label-text">Sex</span>
+                                    <select
+                                        value={learner.sex}
+                                        onChange={(e) => updateField("sex", e.target.value)}
+                                        required
+                                    >
+                                        <option value="M">Male</option>
+                                        <option value="F">Female</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span className="label-text">Age</span>
+                                    <input
+                                        type="number"
+                                        min="3"
+                                        max="25"
+                                        value={learner.age}
+                                        onChange={(e) => updateField("age", e.target.value)}
+                                        required
+                                    />
+                                </label>
+                            </div>
+                        </div>
+                    )}
 
-                    <div className="full-width grid grid-cols-2 gap-4">
-                        <label>
-                            <span className="label-text">Sex</span>
-                            <select
-                                value={learner.sex}
-                                onChange={(e) => updateField("sex", e.target.value)}
-                                required
-                            >
-                                <option value="M">Male</option>
-                                <option value="F">Female</option>
-                            </select>
-                        </label>
-                    </div>
-
-                    <label>
-                        <span className="label-text">Age</span>
-                        <input
-                            type="number"
-                            min="3"
-                            max="25"
-                            value={learner.age}
-                            onChange={(e) => updateField("age", e.target.value)}
-                            required
-                        />
-                    </label>
+                    {/* Auto-filled learner info when from roster */}
+                    {schoolId && selectedLearnerUid && (
+                        <div className="full-width grid grid-cols-2 gap-4" style={{ marginBottom: "0.5rem" }}>
+                            <label>
+                                <span className="label-text">Learner ID</span>
+                                <input value={learner.learnerId} readOnly className="bg-slate-100" />
+                            </label>
+                            <label>
+                                <span className="label-text">Name</span>
+                                <input value={learner.learnerName} readOnly className="bg-slate-100" />
+                            </label>
+                            <label>
+                                <span className="label-text">Sex</span>
+                                <input value={learner.sex === "M" ? "Male" : learner.sex === "F" ? "Female" : "-"} readOnly className="bg-slate-100" />
+                            </label>
+                            <label>
+                                <span className="label-text">Age</span>
+                                <input value={String(learner.age)} readOnly className="bg-slate-100" />
+                            </label>
+                        </div>
+                    )}
 
                     <label>
                         <span className="label-text">Letter Identification</span>

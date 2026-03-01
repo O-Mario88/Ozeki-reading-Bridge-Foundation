@@ -3,6 +3,7 @@ export const officialContact = {
   phone: "+256773397375",
   phoneDisplay: "+256 773 397 375",
   address: "Acholi Lane, Gulu City, Uganda",
+  postalAddress: "P.O. Box 204743, Kampala, Uganda",
   tin: "1057023312",
   regNo: "80034783181112",
 } as const;

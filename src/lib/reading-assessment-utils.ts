@@ -280,3 +280,123 @@ export function readingLevelDistribution(
 
     return dist;
 }
+
+/* ─── Reading Level Version & Extended Aggregation ─── */
+
+/** Deterministic rule version for reading-level classification. */
+export const READING_LEVEL_DEFINITION_VERSION = "RLv1.0";
+
+/** Level metadata used in report payloads. */
+export const READING_LEVEL_METADATA = READING_LEVELS.map((label, idx) => ({
+    level: idx,
+    label,
+}));
+
+/**
+ * Compute reading-level distribution with both counts and percents.
+ * Returns { counts, percents, n } where percents are rounded to 1 decimal.
+ */
+export function readingLevelDistributionWithPercents(
+    scoresList: ReadingDomainScores[],
+): { counts: Record<string, number>; percents: Record<string, number>; n: number } {
+    const counts: Record<string, number> = {};
+    const percents: Record<string, number> = {};
+    const n = scoresList.length;
+
+    for (const label of READING_LEVELS) {
+        counts[label] = 0;
+        percents[label] = 0;
+    }
+
+    for (const scores of scoresList) {
+        const level = computeReadingLevel(scores);
+        counts[level] += 1;
+    }
+
+    if (n > 0) {
+        for (const label of READING_LEVELS) {
+            percents[label] = Math.round((counts[label] / n) * 1000) / 10;
+        }
+    }
+
+    return { counts, percents, n };
+}
+
+/**
+ * Compute reading-level movement between baseline and endline for matched learners.
+ *
+ * @param baselineMap  Map of learnerUid → ReadingDomainScores at baseline
+ * @param endlineMap   Map of learnerUid → ReadingDomainScores at endline
+ * @returns Movement summary with upgrade/downgrade/stable percents and top transitions
+ */
+export function computeReadingLevelMovement(
+    baselineMap: Map<string, ReadingDomainScores>,
+    endlineMap: Map<string, ReadingDomainScores>,
+): {
+    n_matched: number;
+    moved_up_1plus_count: number;
+    moved_up_1plus_percent: number;
+    stayed_same_percent: number;
+    moved_down_percent: number;
+    top_transitions: Array<{ from: string; to: string; count: number; percent: number }>;
+} | null {
+    // Find matched learners (present in both baseline and endline)
+    const matchedUids: string[] = [];
+    for (const uid of baselineMap.keys()) {
+        if (endlineMap.has(uid)) {
+            matchedUids.push(uid);
+        }
+    }
+
+    if (matchedUids.length === 0) {
+        return null;
+    }
+
+    let movedUp = 0;
+    let stayedSame = 0;
+    let movedDown = 0;
+    const transitionCounts = new Map<string, number>();
+
+    for (const uid of matchedUids) {
+        const baselineScores = baselineMap.get(uid)!;
+        const endlineScores = endlineMap.get(uid)!;
+        const baselineLevel = computeReadingLevel(baselineScores);
+        const endlineLevel = computeReadingLevel(endlineScores);
+        const baselineOrd = readingLevelOrdinal(baselineLevel);
+        const endlineOrd = readingLevelOrdinal(endlineLevel);
+
+        if (endlineOrd > baselineOrd) {
+            movedUp += 1;
+        } else if (endlineOrd === baselineOrd) {
+            stayedSame += 1;
+        } else {
+            movedDown += 1;
+        }
+
+        const key = `${baselineLevel}→${endlineLevel}`;
+        transitionCounts.set(key, (transitionCounts.get(key) ?? 0) + 1);
+    }
+
+    const n = matchedUids.length;
+    const sortedTransitions = [...transitionCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([key, count]) => {
+            const [from, to] = key.split("→");
+            return {
+                from,
+                to,
+                count,
+                percent: Math.round((count / n) * 1000) / 10,
+            };
+        });
+
+    return {
+        n_matched: n,
+        moved_up_1plus_count: movedUp,
+        moved_up_1plus_percent: Math.round((movedUp / n) * 1000) / 10,
+        stayed_same_percent: Math.round((stayedSame / n) * 1000) / 10,
+        moved_down_percent: Math.round((movedDown / n) * 1000) / 10,
+        top_transitions: sortedTransitions,
+    };
+}

@@ -15,6 +15,7 @@ const quickLinks = [
   { href: "/about", label: "About Ozeki" },
   { href: "/impact", label: "Impact Hub" },
   { href: "/impact/reports", label: "Impact Reports" },
+  { href: "/stories", label: "1001 Story Library" },
   { href: "/media", label: "Evidence Gallery" },
   { href: "/resources", label: "Resources" },
   { href: "/partner", label: "Partner With Us" },
@@ -61,6 +62,7 @@ export function SiteFooter() {
         <section>
           <h3>Northern Uganda Focus</h3>
           <p>{officialContact.address}</p>
+          <p>{officialContact.postalAddress}</p>
           <p>
             TIN: {officialContact.tin} <br />
             Registration No: {officialContact.regNo}

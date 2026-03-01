@@ -35,14 +35,16 @@ export function FloatingStatCard({
   dataCompleteness,
   onClearSelection,
 }: FloatingStatCardProps) {
-  if (!open || !position) {
-    return null;
-  }
+  const show = open && position;
 
   return (
     <aside
       className="impact-map-floating-card"
-      style={{ left: position.left, top: position.top }}
+      style={{
+        left: position?.left ?? 0,
+        top: position?.top ?? 0,
+      }}
+      data-open={show ? "" : undefined}
       aria-live="polite"
     >
       <header className="impact-map-floating-card-header">
@@ -88,3 +90,4 @@ export function FloatingStatCard({
     </aside>
   );
 }
+

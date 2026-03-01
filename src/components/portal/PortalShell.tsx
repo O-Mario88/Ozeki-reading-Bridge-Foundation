@@ -19,11 +19,13 @@ const portalNavItems: PortalNavItem[] = [
   { href: "/portal/visits", label: "Visits" },
   { href: "/portal/assessments", label: "Assessments" },
   { href: "/portal/story", label: "1001 Story" },
+  { href: "/portal/stories", label: "Story Library", staffOnly: true },
   { href: "/portal/resources", label: "Resources", staffOnly: true },
 
   { href: "/portal/events", label: "Events", staffOnly: true },
   { href: "/portal/testimonials", label: "Testimonials" },
   { href: "/portal/schools", label: "Schools", staffOnly: true },
+  { href: "/portal/support", label: "Support Tickets", staffOnly: true },
   { href: "/portal/reports", label: "Reports", roles: ["Staff", "Volunteer", "Admin"] },
   { href: "/portal/superadmin", label: "Super Admin", superAdminOnly: true },
 ];

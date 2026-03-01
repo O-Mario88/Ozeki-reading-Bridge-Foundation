@@ -727,6 +727,13 @@ export const portalModuleConfigByModule: Record<PortalRecordModule, PortalModule
   visit: visitConfig,
   assessment: assessmentConfig,
   story: storyConfig,
+  story_activity: {
+    ...storyConfig,
+    module: "story_activity",
+    navLabel: "Story Activities",
+    pageTitle: "Story Activities",
+    newLabel: "+ New Story Activity",
+  },
 };
 
 export const portalStatusOptions = [

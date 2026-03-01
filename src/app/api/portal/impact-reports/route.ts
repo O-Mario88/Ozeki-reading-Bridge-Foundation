@@ -8,12 +8,15 @@ export const runtime = "nodejs";
 const reportTypeSchema = z.enum([
   "FY Impact Report",
   "Regional Impact Report",
+  "Sub-region Report",
   "District Report",
   "School Report",
+  "School Coaching Pack",
+  "Headteacher Summary",
   "Partner Snapshot Report",
 ]);
 
-const scopeTypeSchema = z.enum(["National", "Region", "District", "School"]);
+const scopeTypeSchema = z.enum(["National", "Region", "Sub-region", "District", "Sub-county", "Parish", "School"]);
 const programSchema = z.enum([
   "training",
   "visit",
@@ -41,7 +44,7 @@ const payloadSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["scopeValue"],
-        message: "Scope value is required for Region, District, or School reports.",
+        message: "Scope value is required for Region, Sub-region, District, or School reports.",
       });
     }
   });
@@ -70,7 +73,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = payloadSchema.parse(await request.json());
-    const report = createImpactReport(payload, user);
+    const report = await createImpactReport(payload, user);
     return NextResponse.json({ ok: true, report });
   } catch (error) {
     if (error instanceof z.ZodError) {

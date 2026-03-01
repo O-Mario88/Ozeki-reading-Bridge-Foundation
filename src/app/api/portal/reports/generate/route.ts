@@ -6,7 +6,9 @@ import {
     getCostEffectivenessData,
     getDataQualitySummary,
     getImpactSummary,
+    getPublicImpactAggregate,
 } from "@/lib/db";
+import type { ReadingLevelsBlock } from "@/lib/types";
 import {
     getApplicableRecommendations,
     buildReportPromptContext,
@@ -65,6 +67,10 @@ export async function POST(request: Request) {
     }, recommendations);
 
     // Generate structured report (without external AI — uses template-based approach)
+    const impactAggregate = getPublicImpactAggregate(
+        (scopeType === "country" ? "country" : scopeType === "region" ? "subregion" : scopeType === "district" ? "district" : "school") as "country" | "subregion" | "district" | "school",
+        scopeId,
+    );
     const reportSections = generateTemplateReport(
         scopeType,
         scopeId,
@@ -74,6 +80,7 @@ export async function POST(request: Request) {
         cost,
         quality,
         recommendations,
+        impactAggregate.readingLevels ?? null,
     );
 
     // Validate each section against guardrails
@@ -115,6 +122,7 @@ function generateTemplateReport(
     cost: ReturnType<typeof getCostEffectivenessData>,
     quality: ReturnType<typeof getDataQualitySummary>,
     recommendations: ReturnType<typeof getApplicableRecommendations>,
+    readingLevels: ReadingLevelsBlock | null,
 ) {
     const sections = [];
 
@@ -157,6 +165,36 @@ function generateTemplateReport(
                 : ""),
     });
 
+    // Reading Levels Profile and Movement
+    if (readingLevels && readingLevels.distribution.length > 0) {
+        const lines: string[] = [
+            `Reading Level Classification Version: ${readingLevels.definition_version}.`,
+        ];
+        for (const dist of readingLevels.distribution) {
+            const levelParts = readingLevels.levels
+                .map((l) => `${l.label}: ${dist.percents[l.label] ?? 0}% (n=${dist.counts[l.label] ?? 0})`)
+                .join(", ");
+            lines.push(`${dist.cycle.charAt(0).toUpperCase() + dist.cycle.slice(1)} distribution (n=${dist.n}): ${levelParts}.`);
+        }
+        if (readingLevels.movement) {
+            const m = readingLevels.movement;
+            lines.push(
+                `Baseline to endline movement (n=${m.n_matched} matched): ${m.moved_up_1plus_percent}% moved up ≥1 level, ` +
+                `${m.stayed_same_percent}% stayed same, ${m.moved_down_percent}% moved down.`,
+            );
+            if (m.top_transitions.length > 0) {
+                const topTrans = m.top_transitions
+                    .slice(0, 3)
+                    .map((t) => `${t.from} → ${t.to}: ${t.count} (${t.percent}%)`)
+                    .join("; ");
+                lines.push(`Top transitions: ${topTrans}.`);
+            }
+        }
+        sections.push({
+            heading: "Reading Levels Profile and Movement",
+            content: lines.join(" "),
+        });
+    }
     // Cost-effectiveness (only if there's cost data)
     if (cost.totalCost > 0) {
         sections.push({

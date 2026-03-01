@@ -28,7 +28,8 @@ const moduleLabels: Record<PortalRecordModule, string> = {
   training: "Training",
   visit: "Visit",
   assessment: "Assessment",
-  story: "1001 Story",
+  story: "Story Collection",
+  story_activity: "Story Activity",
 };
 
 const regionColors: Record<string, string> = {
