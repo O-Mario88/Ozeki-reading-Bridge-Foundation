@@ -2009,20 +2009,20 @@ export function getDb() {
   ensurePortalResourceColumns(db);
   ensureSchoolDirectoryColumns(db);
   ensureSchoolIdentityColumns(db);
+  ensureGeoHierarchyTables(db);
+  ensurePortalRecordColumns(db);
+  ensureGeographyColumns(db);
   ensureDistrictMasterData(db);
   ensureTeacherLearnerRosterTables(db);
   ensureProgramLinkageTables(db);
   ensureLessonEvaluationTables(db);
   ensureTeachingImprovementSettingsTable(db);
   ensureGraduationTables(db);
-  ensurePortalRecordColumns(db);
-  ensureGeographyColumns(db);
   ensurePortalTestimonialVideoColumns(db);
   ensureAssessmentDomainsColumns(db);
   ensureStoryLibraryColumns(db);
   ensurePaginatedReaderColumns(db);
   ensurePublicImpactViews(db);
-  ensureGeoHierarchyTables(db);
   ensureSupportRequestTables(db);
   if (shouldAutoSeedPortalUsers()) {
     seedPortalUsers(db);
