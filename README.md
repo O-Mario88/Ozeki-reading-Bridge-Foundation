@@ -80,16 +80,20 @@ SQLite database file is created at `data/app.db`.
   teachers trained, schools trained, learners assessed, stories published, and training sessions completed.
 
 ## Staff/Volunteer Login
-Default seeded accounts are created automatically if not already present:
-- Staff: `staff@ozekireadingbridge.org`
-- Volunteer: `volunteer@ozekireadingbridge.org`
-- Passwords can be set through environment variables.
+User auto-seeding is controlled by `PORTAL_AUTO_SEED_USERS`:
+- `false` (recommended for deployment): do not auto-create accounts.
+- `true` (development convenience): seed baseline portal accounts if missing.
 
 Set custom credentials in `.env.local` (or copy from `.env.example`):
 - `PORTAL_STAFF_EMAIL`
 - `PORTAL_STAFF_PASSWORD`
 - `PORTAL_VOLUNTEER_EMAIL`
 - `PORTAL_VOLUNTEER_PASSWORD`
+- `PORTAL_ADMIN_EMAIL`
+- `PORTAL_ADMIN_PASSWORD`
+- `PORTAL_SUPERADMIN_EMAIL`
+- `PORTAL_SUPERADMIN_PASSWORD`
+- `PORTAL_AUTO_SEED_USERS`
 - `PORTAL_PASSWORD_SALT`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
@@ -132,3 +136,9 @@ npm run build
 ```
 
 Both commands currently pass.
+
+## Deployment Prep
+1. Set `PORTAL_AUTO_SEED_USERS=false`.
+2. Set strong real credentials and secrets in environment variables.
+3. Purge test/dummy records from Super Admin > Data Management.
+4. Start from a clean runtime `data/` volume (or remove old local runtime artifacts).

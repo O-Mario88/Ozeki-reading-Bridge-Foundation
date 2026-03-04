@@ -1440,15 +1440,7 @@ function seedPortalUsers(db: Database.Database) {
       @isAdmin,
       @isSuperAdmin
     )
-    ON CONFLICT(email) DO UPDATE SET
-      full_name = excluded.full_name,
-      role = excluded.role,
-      password_hash = excluded.password_hash,
-      phone = excluded.phone,
-      is_supervisor = excluded.is_supervisor,
-      is_me = excluded.is_me,
-      is_admin = excluded.is_admin,
-      is_superadmin = excluded.is_superadmin
+    ON CONFLICT(email) DO NOTHING
   `);
 
   accounts.forEach((account) => {
@@ -1486,6 +1478,15 @@ function seedPortalUsers(db: Database.Database) {
       passwordHash: hashPassword(`${seededSuperAdminEmail}:disabled`),
     });
   }
+}
+
+function shouldAutoSeedPortalUsers() {
+  const explicit = process.env.PORTAL_AUTO_SEED_USERS;
+  if (explicit !== undefined) {
+    const normalized = explicit.trim().toLowerCase();
+    return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  }
+  return process.env.NODE_ENV !== "production";
 }
 
 export function getDb() {
@@ -2023,7 +2024,9 @@ export function getDb() {
   ensurePublicImpactViews(db);
   ensureGeoHierarchyTables(db);
   ensureSupportRequestTables(db);
-  seedPortalUsers(db);
+  if (shouldAutoSeedPortalUsers()) {
+    seedPortalUsers(db);
+  }
 
   dbInstance = db;
   return db;
@@ -17947,6 +17950,18 @@ export interface TableRowCount {
   count: number;
 }
 
+function purgeRuntimeArtifactFiles() {
+  const runtimeDirs = ["blog", "evidence", "finance", "testimonials"];
+  runtimeDirs.forEach((dirName) => {
+    const fullPath = path.join(dataDir, dirName);
+    try {
+      fs.rmSync(fullPath, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup only.
+    }
+  });
+}
+
 const PURGEABLE_TABLES: { table: string; label: string }[] = [
   // children first (FK dependants)
   { table: "finance_email_logs", label: "Finance Email Logs" },
@@ -18045,8 +18060,12 @@ export function purgeAllData(): TableRowCount[] {
   ensurePublicImpactViews(db);
   ensureGraduationTables(db);
 
-  // Re-seed the default portal user accounts so admins can still log in
-  seedPortalUsers(db);
+  // Optional dev-only auto-seed for convenience.
+  if (shouldAutoSeedPortalUsers()) {
+    seedPortalUsers(db);
+  }
+
+  purgeRuntimeArtifactFiles();
 
   return getTableRowCounts();
 }
