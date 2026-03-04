@@ -49,3 +49,11 @@ export async function requirePortalSuperAdminUser() {
   }
   return user;
 }
+
+export async function requirePortalFinanceReceiptEditorUser() {
+  const user = await requirePortalUser();
+  if (!user.isSuperAdmin && !user.isAdmin) {
+    redirect(getPortalHomePath(user));
+  }
+  return user;
+}
