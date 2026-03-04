@@ -6,6 +6,8 @@ import {
   ugandaRegions,
 } from "@/lib/uganda-locations";
 import { PortalTestimonialRecord } from "@/lib/types";
+import { buildVideoThumbnailFallback } from "@/lib/media-placeholders";
+import { FloatingSurface } from "@/components/FloatingSurface";
 
 type PortalTestimonialView = PortalTestimonialRecord & {
   videoUrl: string;
@@ -22,11 +24,16 @@ type FeedbackState = {
 };
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
-  });
+    timeZone: "UTC",
+  }).format(parsed);
 }
 
 export function PortalTestimonialsManager({
@@ -45,6 +52,7 @@ export function PortalTestimonialsManager({
   const [playingVideoIds, setPlayingVideoIds] = useState<Record<number, boolean>>({});
   const districtOptions = region ? getDistrictsByRegion(region) : [];
   const [formKey, setFormKey] = useState(0);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,6 +93,7 @@ export function PortalTestimonialsManager({
         kind: "success",
         message: "Testimonial submitted and published successfully.",
       });
+      setIsCreateOpen(false);
     } catch (error) {
       const fallback = "Could not submit testimonial.";
       setFeedback({
@@ -105,7 +114,116 @@ export function PortalTestimonialsManager({
           to a matching video on the Ozeki YouTube channel by title.
           New submissions appear on the public testimonials page automatically.
         </p>
+        <div className="action-row portal-form-actions">
+          <button className="button" type="button" onClick={() => setIsCreateOpen(true)}>
+            + New Testimonial
+          </button>
+        </div>
+        {feedback.message ? (
+          <p
+            role="status"
+            className={`form-message ${feedback.kind === "error" ? "error" : "success"}`}
+          >
+            {feedback.message}
+          </p>
+        ) : null}
+      </section>
 
+      <section className="card">
+        <h2>Recent Testimonial Submissions</h2>
+        {testimonials.length === 0 ? (
+          <p>No testimonial submissions yet.</p>
+        ) : (
+          <div className="media-showcase-grid">
+            {testimonials.map((item) => (
+              <article className="card media-showcase-card video" key={item.id}>
+                <div className="media-showcase-asset">
+                  {item.photoUrl ? (
+                    <img
+                      src={item.photoUrl}
+                      alt={`Testimonial by ${item.storytellerName}`}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : item.videoSourceType === "youtube" &&
+                    item.youtubeEmbedUrl ? (
+                    playingVideoIds[item.id] ? (
+                      <iframe
+                        src={`${item.youtubeEmbedUrl}${item.youtubeEmbedUrl.includes("?") ? "&" : "?"}autoplay=1&rel=0&modestbranding=1`}
+                        title={item.youtubeVideoTitle ?? `Testimonial video by ${item.storytellerName}`}
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="media-showcase-thumbnail-button"
+                        onClick={() =>
+                          setPlayingVideoIds((prev) => ({ ...prev, [item.id]: true }))
+                        }
+                        aria-label={`Play testimonial video by ${item.storytellerName}`}
+                      >
+                        <img
+                          src={
+                            item.youtubeThumbnailUrl ||
+                            (item.youtubeVideoId
+                              ? `https://img.youtube.com/vi/${item.youtubeVideoId}/hqdefault.jpg`
+                              : buildVideoThumbnailFallback(`portal-testimonial-${item.id}`, "Video thumbnail unavailable"))
+                          }
+                          alt={item.youtubeVideoTitle ?? `Testimonial video by ${item.storytellerName}`}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <span className="media-showcase-play-overlay">
+                          <svg width="16" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <path
+                              d="M23 7.5A4.5 4.5 0 0 0 19.5 4C16.7 3.5 12 3.5 12 3.5s-4.7 0-7.5.5A4.5 4.5 0 0 0 1 7.5 47 47 0 0 0 .5 12 47 47 0 0 0 1 16.5 4.5 4.5 0 0 0 4.5 20c2.8.5 7.5.5 7.5.5s4.7 0 7.5-.5a4.5 4.5 0 0 0 3.5-3.5A47 47 0 0 0 23.5 12 47 47 0 0 0 23 7.5Z"
+                              fill="#FF0000"
+                            />
+                            <path d="M10 15.5V8.5L16.25 12L10 15.5Z" fill="#fff" />
+                          </svg>
+                          YouTube
+                        </span>
+                      </button>
+                    )
+                  ) : (
+                    <div className="media-showcase-missing-video">
+                      <p>Linked YouTube video metadata is missing for this entry.</p>
+                    </div>
+                  )}
+                </div>
+                <div className="media-showcase-content">
+                  <p className="meta-pill">Portal testimonial</p>
+                  <p className="media-showcase-quote">"{item.storyText}"</p>
+                  <p className="media-showcase-meta">
+                    <strong>{item.storytellerName}</strong> · {item.storytellerRole}
+                  </p>
+                  <p className="media-showcase-caption">
+                    {item.schoolName}, {item.district} · {formatDate(item.createdAt)}
+                  </p>
+                  {item.videoSourceType === "youtube" && item.youtubeWatchUrl ? (
+                    <a className="button button-ghost" href={item.youtubeWatchUrl} target="_blank" rel="noreferrer">
+                      Open source
+                    </a>
+                  ) : (
+                    <span className="meta-line">Set a YouTube title to link this video.</span>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <FloatingSurface
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Submit Testimonial Story"
+        description="Capture a field story and publish it to the public testimonials wall."
+        closeLabel="Close"
+        maxWidth="980px"
+      >
         <form
           key={formKey}
           className="form-grid portal-form-grid portal-testimonial-form"
@@ -312,104 +430,17 @@ export function PortalTestimonialsManager({
             >
               Reset form
             </button>
+            <button
+              className="button button-ghost"
+              type="button"
+              disabled={saving}
+              onClick={() => setIsCreateOpen(false)}
+            >
+              Cancel
+            </button>
           </div>
         </form>
-        {feedback.message ? (
-          <p
-            role="status"
-            className={`form-message ${feedback.kind === "error" ? "error" : "success"}`}
-          >
-            {feedback.message}
-          </p>
-        ) : null}
-      </section>
-
-      <section className="card">
-        <h2>Recent Testimonial Submissions</h2>
-        {testimonials.length === 0 ? (
-          <p>No testimonial submissions yet.</p>
-        ) : (
-          <div className="media-showcase-grid">
-            {testimonials.map((item) => (
-              <article className="card media-showcase-card video" key={item.id}>
-                <div className="media-showcase-asset">
-                  {item.photoUrl ? (
-                    <img
-                      src={item.photoUrl}
-                      alt={`Testimonial by ${item.storytellerName}`}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : item.videoSourceType === "youtube" &&
-                    item.youtubeEmbedUrl ? (
-                    playingVideoIds[item.id] ? (
-                      <iframe
-                        src={`${item.youtubeEmbedUrl}${item.youtubeEmbedUrl.includes("?") ? "&" : "?"}autoplay=1&rel=0&modestbranding=1`}
-                        title={item.youtubeVideoTitle ?? `Testimonial video by ${item.storytellerName}`}
-                        loading="lazy"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        className="media-showcase-thumbnail-button"
-                        onClick={() =>
-                          setPlayingVideoIds((prev) => ({ ...prev, [item.id]: true }))
-                        }
-                        aria-label={`Play testimonial video by ${item.storytellerName}`}
-                      >
-                        <img
-                          src={
-                            item.youtubeThumbnailUrl ||
-                            (item.youtubeVideoId
-                              ? `https://img.youtube.com/vi/${item.youtubeVideoId}/hqdefault.jpg`
-                              : "/images/ozeki-logo.jpg")
-                          }
-                          alt={item.youtubeVideoTitle ?? `Testimonial video by ${item.storytellerName}`}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                        <span className="media-showcase-play-overlay">
-                          <svg width="16" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
-                            <path
-                              d="M23 7.5A4.5 4.5 0 0 0 19.5 4C16.7 3.5 12 3.5 12 3.5s-4.7 0-7.5.5A4.5 4.5 0 0 0 1 7.5 47 47 0 0 0 .5 12 47 47 0 0 0 1 16.5 4.5 4.5 0 0 0 4.5 20c2.8.5 7.5.5 7.5.5s4.7 0 7.5-.5a4.5 4.5 0 0 0 3.5-3.5A47 47 0 0 0 23.5 12 47 47 0 0 0 23 7.5Z"
-                              fill="#FF0000"
-                            />
-                            <path d="M10 15.5V8.5L16.25 12L10 15.5Z" fill="#fff" />
-                          </svg>
-                          YouTube
-                        </span>
-                      </button>
-                    )
-                  ) : (
-                    <div className="media-showcase-missing-video">
-                      <p>Linked YouTube video metadata is missing for this entry.</p>
-                    </div>
-                  )}
-                </div>
-                <div className="media-showcase-content">
-                  <p className="meta-pill">Portal testimonial</p>
-                  <p className="media-showcase-quote">"{item.storyText}"</p>
-                  <p className="media-showcase-meta">
-                    <strong>{item.storytellerName}</strong> · {item.storytellerRole}
-                  </p>
-                  <p className="media-showcase-caption">
-                    {item.schoolName}, {item.district} · {formatDate(item.createdAt)}
-                  </p>
-                  {item.videoSourceType === "youtube" && item.youtubeWatchUrl ? (
-                    <a className="button button-ghost" href={item.youtubeWatchUrl} target="_blank" rel="noreferrer">
-                      Open source
-                    </a>
-                  ) : (
-                    <span className="meta-line">Set a YouTube title to link this video.</span>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      </FloatingSurface>
     </div>
   );
 }

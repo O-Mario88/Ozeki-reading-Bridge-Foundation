@@ -35,13 +35,15 @@ const moduleLabel: Record<PortalRecordModule, string> = {
   story_activity: "Story Activity",
 };
 
+const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
 function formatDay(dateValue: string) {
   const date = new Date(dateValue);
-  return date.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+  return `${weekdayLabels[date.getUTCDay()]} ${date.getUTCDate()} ${monthLabels[date.getUTCMonth()]}`;
 }
 
 function readQueueCount() {
@@ -79,6 +81,9 @@ function readDraftModules() {
 export function PortalDashboardClient({ dashboard, performanceData }: PortalDashboardClientProps) {
   const [offlineCount, setOfflineCount] = useState(0);
   const [draftModules, setDraftModules] = useState<string[]>([]);
+  const [graduationEligibleCount, setGraduationEligibleCount] = useState(0);
+  const [graduationSchools, setGraduationSchools] = useState<Array<{ schoolId: number; schoolName: string }>>([]);
+  const [showGraduationToast, setShowGraduationToast] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
@@ -91,6 +96,41 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
     const interval = window.setInterval(refresh, 3000);
     return () => {
       window.removeEventListener("storage", refresh);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function loadGraduationAlerts(refresh: boolean) {
+      try {
+        const response = await fetch(
+          `/api/portal/graduation/queue?summary=1&limit=5&refresh=${refresh ? "1" : "0"}`,
+          {
+            cache: "no-store",
+          },
+        );
+        const json = (await response.json()) as {
+          eligibleCount?: number;
+          schools?: Array<{ schoolId: number; schoolName: string }>;
+        };
+        if (!response.ok || !active) {
+          return;
+        }
+        const count = Number(json.eligibleCount ?? 0);
+        setGraduationEligibleCount(count);
+        setGraduationSchools(Array.isArray(json.schools) ? json.schools : []);
+        if (count > 0) {
+          setShowGraduationToast(true);
+        }
+      } catch {
+        // Swallow alert-fetch failures to keep dashboard resilient.
+      }
+    }
+    loadGraduationAlerts(true);
+    const interval = window.setInterval(() => loadGraduationAlerts(false), 90_000);
+    return () => {
+      active = false;
       window.clearInterval(interval);
     };
   }, []);
@@ -144,6 +184,31 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
           </p>
         </div>
       </section>
+
+      {graduationEligibleCount > 0 ? (
+        <section className="card">
+          <h2>Graduation Alerts</h2>
+          <p>
+            {graduationEligibleCount.toLocaleString()} schools are currently graduation-eligible
+            based on live criteria.
+          </p>
+          <ul className="portal-list">
+            {graduationSchools.map((school) => (
+              <li key={school.schoolId}>
+                <div>
+                  <strong>{school.schoolName}</strong>
+                </div>
+                <Link href={`/portal/schools/${school.schoolId}`}>Review</Link>
+              </li>
+            ))}
+          </ul>
+          <div className="action-row">
+            <Link href="/portal/graduation-queue" className="button">
+              Open Graduation Queue
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       <section className="card">
         <h2>Due Follow-ups</h2>
@@ -226,6 +291,27 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
           </table>
         </div>
       </section>
+
+      {showGraduationToast && graduationEligibleCount > 0 ? (
+        <div className="portal-graduation-toast" role="status" aria-live="polite">
+          <p>
+            New: {graduationEligibleCount.toLocaleString()} school
+            {graduationEligibleCount === 1 ? "" : "s"} are graduation eligible.
+          </p>
+          <div className="action-row">
+            <Link href="/portal/graduation-queue" className="button button-ghost">
+              Review now
+            </Link>
+            <button
+              type="button"
+              className="button button-ghost"
+              onClick={() => setShowGraduationToast(false)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

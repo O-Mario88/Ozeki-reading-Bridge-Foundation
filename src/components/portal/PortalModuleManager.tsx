@@ -22,6 +22,7 @@ import {
 } from "@/lib/types";
 import { EgraLearnerInputModal, EgraLearner } from "./EgraLearnerInputModal";
 import { SchoolRosterPicker, RosterEntry } from "./SchoolRosterPicker";
+import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
 
 type FilterState = {
   region: string;
@@ -3045,6 +3046,25 @@ export function PortalModuleManager({
                       </fieldset>
                     );
                   })}
+
+                  {config.module === "visit" ? (
+                    <div className="full-width">
+                      {formState.schoolId ? (
+                        <LessonEvaluationPanel
+                          schoolId={Number(formState.schoolId)}
+                          schoolName={formState.schoolName}
+                          defaultVisitId={formState.id}
+                          title="Lesson Evaluations"
+                          description="Add Ozeki Phonics Lesson Evaluation Tool entries linked to this school visit."
+                          allowVoid={currentUser.isSuperAdmin}
+                        />
+                      ) : (
+                        <p className="portal-muted">
+                          Select a school account first, then save this visit to attach lesson evaluations.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
 
                   <fieldset className="card full-width portal-form-section">
                     <legend>Evidence Locker</legend>

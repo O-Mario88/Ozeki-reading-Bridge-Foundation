@@ -25,8 +25,10 @@ const portalNavItems: PortalNavItem[] = [
   { href: "/portal/events", label: "Events", staffOnly: true },
   { href: "/portal/testimonials", label: "Testimonials" },
   { href: "/portal/schools", label: "Schools", staffOnly: true },
+  { href: "/portal/graduation-queue", label: "Graduation Queue", staffOnly: true },
   { href: "/portal/support", label: "Support Tickets", staffOnly: true },
   { href: "/portal/reports", label: "Reports", roles: ["Staff", "Volunteer", "Admin"] },
+  { href: "/portal/finance", label: "Finance", superAdminOnly: true },
   { href: "/portal/superadmin", label: "Super Admin", superAdminOnly: true },
 ];
 

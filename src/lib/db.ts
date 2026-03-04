@@ -95,15 +95,42 @@ import {
   StoryLibraryFilters,
   SupportRequestRecord,
   SupportRequestInput,
+  SupportRequestUrgency,
   SupportRequestStatus,
+  LessonEvaluationInput,
+  LessonEvaluationRecord,
+  LessonEvaluationDomainKey,
+  LessonEvaluationItemInput,
+  LessonEvaluationOverallLevel,
+  PublicTeachingQualitySummary,
+  ImpactReportTeacherEvaluationBlock,
+  LessonEvaluationPassA,
+  TeacherImprovementComparison,
+  TeacherImprovementDomainDelta,
+  TeacherImprovementItemDelta,
+  TeacherImprovementProfile,
+  SchoolTeachingQualityImprovementSummary,
+  TeachingLearningAlignmentAggregate,
+  TeachingLearningAlignmentPoint,
+  ImpactReportTeacherImprovementSummary,
+  GraduationAssessmentCycleMode,
+  GraduationDomainKey,
+  GraduationEligibilityDomainMetric,
+  GraduationEligibilityRecord,
+  GraduationEligibilityScorecard,
+  GraduationQueueSummary,
+  GraduationSettingsRecord,
+  GraduationWorkflowState,
 } from "@/lib/types";
 import {
+  computeReadingLevel,
   extractReadingDomainScores,
   readingLevelDistributionWithPercents,
   computeReadingLevelMovement,
   READING_LEVEL_DEFINITION_VERSION,
   READING_LEVEL_METADATA,
   ReadingDomainScores,
+  readingLevelOrdinal,
 } from "@/lib/reading-assessment-utils";
 import {
   getDistrictsByRegion,
@@ -113,6 +140,13 @@ import {
 } from "@/lib/uganda-locations";
 import { getDistrictsByAnySubRegionName } from "@/lib/uganda-map-taxonomy";
 import { generateImpactNarrativeFromAI } from "@/lib/openai";
+import {
+  LESSON_EVALUATION_DOMAIN_LABELS,
+  LESSON_EVALUATION_ITEM_LOOKUP,
+  LESSON_EVALUATION_ITEMS,
+  scoreLabel,
+} from "@/lib/lesson-evaluation";
+import { EXTENDED_RECOMMENDATION_CATALOG } from "@/lib/recommendations";
 
 const dataDir = path.join(process.cwd(), "data");
 const dbFile = path.join(dataDir, "app.db");
@@ -210,6 +244,16 @@ function ensureSchoolDirectoryColumns(db: Database.Database) {
   ensureColumn(db, "schools_directory", "enrolled_p5", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrolled_p6", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrolled_p7", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(
+    db,
+    "schools_directory",
+    "program_status",
+    "TEXT NOT NULL DEFAULT 'active' CHECK(program_status IN ('active', 'graduated', 'paused', 'monitoring'))",
+  );
+  ensureColumn(db, "schools_directory", "graduated_at", "TEXT");
+  ensureColumn(db, "schools_directory", "graduated_by_user_id", "INTEGER");
+  ensureColumn(db, "schools_directory", "graduation_notes", "TEXT");
+  ensureColumn(db, "schools_directory", "graduation_version", "TEXT");
   ensureColumn(db, "schools_directory", "notes", "TEXT");
   db.exec(`
     UPDATE schools_directory
@@ -657,6 +701,254 @@ function ensureProgramLinkageTables(db: Database.Database) {
   `);
 }
 
+function ensureLessonEvaluationTables(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS lesson_evaluations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER NOT NULL,
+      teacher_uid TEXT NOT NULL,
+      grade TEXT NOT NULL CHECK(grade IN ('P1','P2','P3','P4','P5','P6','P7')),
+      stream TEXT,
+      class_size INTEGER,
+      lesson_date TEXT NOT NULL,
+      lesson_focus_json TEXT NOT NULL DEFAULT '[]',
+      observer_id INTEGER NOT NULL,
+      visit_id INTEGER,
+      overall_score REAL NOT NULL DEFAULT 0,
+      overall_level TEXT NOT NULL DEFAULT 'Needs Support',
+      domain_scores_json TEXT NOT NULL DEFAULT '{}',
+      top_gap_domain TEXT,
+      top_strength_domain TEXT,
+      strengths_text TEXT NOT NULL,
+      priority_gap_text TEXT NOT NULL,
+      next_coaching_action TEXT NOT NULL,
+      teacher_commitment TEXT NOT NULL,
+      catchup_estimate_count INTEGER,
+      catchup_estimate_percent REAL,
+      next_visit_date TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'void')),
+      void_reason TEXT,
+      voided_by_user_id INTEGER,
+      voided_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(teacher_uid) REFERENCES teacher_roster(teacher_uid) ON DELETE CASCADE,
+      FOREIGN KEY(observer_id) REFERENCES portal_users(id),
+      FOREIGN KEY(voided_by_user_id) REFERENCES portal_users(id),
+      FOREIGN KEY(visit_id) REFERENCES coaching_visits(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_lesson_evaluations_school_date
+      ON lesson_evaluations(school_id, lesson_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_lesson_evaluations_teacher
+      ON lesson_evaluations(teacher_uid, lesson_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_lesson_evaluations_visit
+      ON lesson_evaluations(visit_id);
+    CREATE INDEX IF NOT EXISTS idx_lesson_evaluations_status
+      ON lesson_evaluations(status, lesson_date DESC);
+
+    CREATE TABLE IF NOT EXISTS lesson_evaluation_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      evaluation_id INTEGER NOT NULL,
+      domain_key TEXT NOT NULL CHECK(domain_key IN ('setup','new_sound','decoding','reading_practice','tricky_words','check_next')),
+      item_key TEXT NOT NULL CHECK(item_key IN ('A1','A2','A3','B4','B5','B6','B7','B8','C9','C10','C11','C12','D13','D14','D15','D16','E17','E18','F19','F20','F21')),
+      score INTEGER NOT NULL CHECK(score >= 1 AND score <= 4),
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(evaluation_id) REFERENCES lesson_evaluations(id) ON DELETE CASCADE,
+      UNIQUE(evaluation_id, item_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_lesson_evaluation_items_eval
+      ON lesson_evaluation_items(evaluation_id);
+    CREATE INDEX IF NOT EXISTS idx_lesson_evaluation_items_domain
+      ON lesson_evaluation_items(domain_key);
+  `);
+}
+
+function ensureTeachingImprovementSettingsTable(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS teaching_improvement_settings (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      teacher_delta_threshold REAL NOT NULL DEFAULT 0.3,
+      min_domains_improved INTEGER NOT NULL DEFAULT 2,
+      school_delta_threshold REAL NOT NULL DEFAULT 0.2,
+      school_improved_teachers_percent_threshold REAL NOT NULL DEFAULT 50,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  const row = db
+    .prepare("SELECT id FROM teaching_improvement_settings WHERE id = 1 LIMIT 1")
+    .get() as { id: number } | undefined;
+  if (!row) {
+    db.prepare(
+      `
+      INSERT INTO teaching_improvement_settings (
+        id,
+        teacher_delta_threshold,
+        min_domains_improved,
+        school_delta_threshold,
+        school_improved_teachers_percent_threshold,
+        updated_at
+      ) VALUES (1, 0.3, 2, 0.2, 50, @updatedAt)
+      `,
+    ).run({ updatedAt: new Date().toISOString() });
+  }
+}
+
+const DEFAULT_SUSTAINABILITY_CHECKLIST_ITEMS = [
+  "School reading routines are embedded and observed consistently",
+  "Head teacher actively leads literacy instruction monitoring",
+  "Teachers demonstrate independent lesson planning for phonics",
+  "Community/parent engagement supports reading at home",
+  "Reading materials are available and actively used in classrooms",
+  "School has a succession plan for sustaining reading outcomes",
+];
+
+function ensureGraduationTables(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS graduation_settings (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      graduation_enabled INTEGER NOT NULL DEFAULT 1,
+      target_domain_proficiency_pct REAL NOT NULL DEFAULT 90,
+      required_domains_json TEXT NOT NULL DEFAULT '["letter_sounds","decoding","fluency","comprehension"]',
+      required_reading_level TEXT NOT NULL DEFAULT 'Fluent',
+      required_fluent_pct REAL NOT NULL DEFAULT 100,
+      min_published_stories INTEGER NOT NULL DEFAULT 15,
+      target_teaching_quality_pct REAL NOT NULL DEFAULT 90,
+      require_teaching_domains INTEGER NOT NULL DEFAULT 0,
+      latest_assessment_required INTEGER NOT NULL DEFAULT 1,
+      latest_evaluation_required INTEGER NOT NULL DEFAULT 1,
+      assessment_cycle_mode TEXT NOT NULL DEFAULT 'latest_or_endline' CHECK(assessment_cycle_mode IN ('latest_or_endline', 'latest', 'endline')),
+      dismiss_snooze_days INTEGER NOT NULL DEFAULT 30,
+      criteria_version TEXT NOT NULL DEFAULT 'GRAD-v1.0',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS school_graduation_eligibility_cache (
+      school_id INTEGER PRIMARY KEY,
+      is_eligible INTEGER NOT NULL DEFAULT 0,
+      domains_ok INTEGER NOT NULL DEFAULT 0,
+      reading_levels_ok INTEGER NOT NULL DEFAULT 0,
+      stories_ok INTEGER NOT NULL DEFAULT 0,
+      teaching_ok INTEGER NOT NULL DEFAULT 0,
+      domain_values_json TEXT NOT NULL DEFAULT '[]',
+      scorecard_json TEXT NOT NULL DEFAULT '{}',
+      missing_data_json TEXT NOT NULL DEFAULT '[]',
+      fluent_pct REAL,
+      published_story_count INTEGER NOT NULL DEFAULT 0,
+      teaching_quality_pct REAL,
+      assessment_sample_size INTEGER NOT NULL DEFAULT 0,
+      evaluations_count INTEGER NOT NULL DEFAULT 0,
+      criteria_version TEXT NOT NULL DEFAULT 'GRAD-v1.0',
+      last_updated_source TEXT,
+      computed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_school_graduation_cache_eligible
+      ON school_graduation_eligibility_cache(is_eligible, computed_at DESC);
+
+    CREATE TABLE IF NOT EXISTS school_graduation_workflow (
+      school_id INTEGER PRIMARY KEY,
+      state TEXT NOT NULL DEFAULT 'pending' CHECK(state IN ('pending', 'kept_supporting', 'needs_review', 'graduated', 'monitoring')),
+      snoozed_until TEXT,
+      assigned_supervisor_user_id INTEGER,
+      reason TEXT,
+      updated_by_user_id INTEGER,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(assigned_supervisor_user_id) REFERENCES portal_users(id),
+      FOREIGN KEY(updated_by_user_id) REFERENCES portal_users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_school_graduation_workflow_state
+      ON school_graduation_workflow(state, snoozed_until);
+
+    CREATE TABLE IF NOT EXISTS school_graduation_validation_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER NOT NULL,
+      pass_number INTEGER NOT NULL,
+      scorecard_json TEXT NOT NULL,
+      assessment_event_label TEXT,
+      computed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_grad_validation_history_school
+      ON school_graduation_validation_history(school_id, pass_number);
+  `);
+
+  /* ── V2 columns (added via ensureColumn for upgrade safety) ── */
+  ensureColumn(db, "graduation_settings", "min_learners_assessed_n", "INTEGER NOT NULL DEFAULT 30");
+  ensureColumn(db, "graduation_settings", "target_grades_json", `TEXT NOT NULL DEFAULT '["P2","P3","P4"]'`);
+  ensureColumn(db, "graduation_settings", "min_teacher_evaluations_total", "INTEGER NOT NULL DEFAULT 3");
+  ensureColumn(db, "graduation_settings", "min_evaluations_per_reading_teacher", "INTEGER NOT NULL DEFAULT 2");
+  ensureColumn(db, "graduation_settings", "data_completeness_threshold", "REAL NOT NULL DEFAULT 80");
+  ensureColumn(db, "graduation_settings", "require_sustainability_validation", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(
+    db,
+    "graduation_settings",
+    "sustainability_checklist_json",
+    `TEXT NOT NULL DEFAULT '${JSON.stringify(DEFAULT_SUSTAINABILITY_CHECKLIST_ITEMS)}'`,
+  );
+
+  ensureColumn(db, "school_graduation_eligibility_cache", "evidence_gates_ok", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "school_graduation_eligibility_cache", "sustainability_status", "TEXT NOT NULL DEFAULT 'pending'");
+  ensureColumn(db, "school_graduation_eligibility_cache", "validation_pass_count", "INTEGER NOT NULL DEFAULT 0");
+
+  ensureColumn(db, "school_graduation_workflow", "checklist_answers_json", "TEXT");
+  ensureColumn(db, "school_graduation_workflow", "checklist_completed_at", "TEXT");
+  ensureColumn(db, "school_graduation_workflow", "checklist_completed_by_user_id", "INTEGER");
+
+  const row = db
+    .prepare("SELECT id FROM graduation_settings WHERE id = 1 LIMIT 1")
+    .get() as { id: number } | undefined;
+  if (!row) {
+    db.prepare(
+      `
+      INSERT INTO graduation_settings (
+        id,
+        graduation_enabled,
+        target_domain_proficiency_pct,
+        required_domains_json,
+        required_reading_level,
+        required_fluent_pct,
+        min_published_stories,
+        target_teaching_quality_pct,
+        require_teaching_domains,
+        latest_assessment_required,
+        latest_evaluation_required,
+        assessment_cycle_mode,
+        dismiss_snooze_days,
+        criteria_version,
+        updated_at
+      ) VALUES (
+        1,
+        1,
+        90,
+        '["letter_sounds","decoding","fluency","comprehension"]',
+        'Fluent',
+        100,
+        15,
+        90,
+        0,
+        1,
+        1,
+        'latest_or_endline',
+        30,
+        'GRAD-v1.0',
+        @updatedAt
+      )
+      `,
+    ).run({
+      updatedAt: new Date().toISOString(),
+    });
+  }
+}
+
 function ensurePublicImpactViews(db: Database.Database) {
   db.exec(`
     CREATE VIEW IF NOT EXISTS impact_public_school_scope AS
@@ -735,7 +1027,199 @@ function ensurePublicImpactViews(db: Database.Database) {
       SELECT DISTINCT teacher_uid
       FROM observation_rubrics
       WHERE teacher_uid IS NOT NULL AND trim(teacher_uid) != ''
+    )
+    OR tr.teacher_uid IN (
+      SELECT DISTINCT teacher_uid
+      FROM lesson_evaluations
+      WHERE status = 'active'
+        AND teacher_uid IS NOT NULL
+        AND trim(teacher_uid) != ''
     );
+
+    CREATE VIEW IF NOT EXISTS impact_public_lesson_evaluation_events AS
+    SELECT
+      le.id AS evaluation_id,
+      le.school_id,
+      le.lesson_date,
+      le.overall_score,
+      le.overall_level,
+      le.top_gap_domain,
+      le.updated_at
+    FROM lesson_evaluations le
+    WHERE le.status = 'active';
+
+    CREATE VIEW IF NOT EXISTS teacher_improvement_by_teacher AS
+    WITH active_evals AS (
+      SELECT
+        le.id,
+        le.school_id,
+        le.teacher_uid,
+        le.lesson_date,
+        le.overall_score,
+        le.domain_scores_json,
+        ROW_NUMBER() OVER (
+          PARTITION BY le.school_id, le.teacher_uid
+          ORDER BY le.lesson_date ASC, le.id ASC
+        ) AS rn_first,
+        ROW_NUMBER() OVER (
+          PARTITION BY le.school_id, le.teacher_uid
+          ORDER BY le.lesson_date DESC, le.id DESC
+        ) AS rn_latest,
+        COUNT(*) OVER (
+          PARTITION BY le.school_id, le.teacher_uid
+        ) AS evaluations_count
+      FROM lesson_evaluations le
+      WHERE le.status = 'active'
+    )
+    SELECT
+      first.school_id,
+      first.teacher_uid,
+      first.id AS first_evaluation_id,
+      first.lesson_date AS first_evaluation_date,
+      latest.id AS latest_evaluation_id,
+      latest.lesson_date AS latest_evaluation_date,
+      first.evaluations_count AS evaluations_count,
+      first.overall_score AS overall_score_baseline,
+      latest.overall_score AS overall_score_latest,
+      ROUND(latest.overall_score - first.overall_score, 2) AS delta_overall,
+      first.domain_scores_json AS baseline_domain_scores_json,
+      latest.domain_scores_json AS latest_domain_scores_json
+    FROM active_evals first
+    JOIN active_evals latest
+      ON latest.school_id = first.school_id
+     AND latest.teacher_uid = first.teacher_uid
+    WHERE first.rn_first = 1
+      AND latest.rn_latest = 1;
+
+    CREATE VIEW IF NOT EXISTS teaching_quality_by_school_period AS
+    SELECT
+      le.school_id,
+      substr(le.lesson_date, 1, 7) AS period_month,
+      COUNT(*) AS evaluations_count,
+      AVG(le.overall_score) AS average_overall_score,
+      SUM(CASE WHEN le.overall_level = 'Strong' THEN 1 ELSE 0 END) AS strong_count,
+      SUM(CASE WHEN le.overall_level = 'Good' THEN 1 ELSE 0 END) AS good_count,
+      SUM(CASE WHEN le.overall_level = 'Developing' THEN 1 ELSE 0 END) AS developing_count,
+      SUM(CASE WHEN le.overall_level = 'Needs Support' THEN 1 ELSE 0 END) AS needs_support_count
+    FROM lesson_evaluations le
+    WHERE le.status = 'active'
+    GROUP BY le.school_id, substr(le.lesson_date, 1, 7);
+
+    CREATE VIEW IF NOT EXISTS story_participation_by_school_period AS
+    WITH
+      story_sessions AS (
+        SELECT
+          sa.school_id,
+          substr(sa.date, 1, 7) AS period_month,
+          COUNT(*) AS sessions_count
+        FROM story_activities sa
+        GROUP BY sa.school_id, substr(sa.date, 1, 7)
+      ),
+      published_stories AS (
+        SELECT
+          sl.school_id,
+          substr(COALESCE(sl.published_at, sl.created_at), 1, 7) AS period_month,
+          COUNT(*) AS stories_published
+        FROM story_library sl
+        WHERE sl.publish_status = 'published'
+        GROUP BY sl.school_id, substr(COALESCE(sl.published_at, sl.created_at), 1, 7)
+      ),
+      published_anthologies AS (
+        SELECT
+          sa.school_id,
+          substr(COALESCE(sa.published_at, sa.created_at), 1, 7) AS period_month,
+          COUNT(*) AS anthologies_published
+        FROM story_anthologies sa
+        WHERE sa.publish_status = 'published'
+          AND sa.school_id IS NOT NULL
+        GROUP BY sa.school_id, substr(COALESCE(sa.published_at, sa.created_at), 1, 7)
+      ),
+      periods AS (
+        SELECT school_id, period_month FROM story_sessions
+        UNION
+        SELECT school_id, period_month FROM published_stories
+        UNION
+        SELECT school_id, period_month FROM published_anthologies
+      )
+    SELECT
+      p.school_id,
+      p.period_month,
+      COALESCE(ss.sessions_count, 0) AS sessions_count,
+      COALESCE(ps.stories_published, 0) AS stories_published,
+      COALESCE(pa.anthologies_published, 0) AS anthologies_published,
+      CASE
+        WHEN COALESCE(ss.sessions_count, 0) > 0
+          OR COALESCE(ps.stories_published, 0) > 0
+          OR COALESCE(pa.anthologies_published, 0) > 0
+        THEN 1
+        ELSE 0
+      END AS active_flag
+    FROM periods p
+    LEFT JOIN story_sessions ss
+      ON ss.school_id = p.school_id
+     AND ss.period_month = p.period_month
+    LEFT JOIN published_stories ps
+      ON ps.school_id = p.school_id
+     AND ps.period_month = p.period_month
+    LEFT JOIN published_anthologies pa
+      ON pa.school_id = p.school_id
+     AND pa.period_month = p.period_month;
+
+    CREATE VIEW IF NOT EXISTS teaching_learning_alignment_by_school_period AS
+    WITH
+      assessment_by_period AS (
+        SELECT
+          ar.school_id,
+          substr(ar.assessment_date, 1, 7) AS period_month,
+          COUNT(*) AS sample_size,
+          AVG(ar.decodable_words_score) AS decoding_avg,
+          AVG(ar.story_reading_score) AS fluency_avg,
+          AVG(ar.reading_comprehension_score) AS comprehension_avg,
+          CASE
+            WHEN COUNT(ar.story_reading_score) > 0
+            THEN SUM(CASE WHEN ar.story_reading_score < 20 THEN 1 ELSE 0 END) * 100.0 / COUNT(ar.story_reading_score)
+            ELSE NULL
+          END AS non_reader_pct,
+          CASE
+            WHEN COUNT(ar.story_reading_score) > 0
+            THEN SUM(CASE WHEN ar.story_reading_score >= 20 THEN 1 ELSE 0 END) * 100.0 / COUNT(ar.story_reading_score)
+            ELSE NULL
+          END AS cwpm20_plus_pct
+        FROM assessment_records ar
+        GROUP BY ar.school_id, substr(ar.assessment_date, 1, 7)
+      ),
+      periods AS (
+        SELECT school_id, period_month FROM teaching_quality_by_school_period
+        UNION
+        SELECT school_id, period_month FROM assessment_by_period
+        UNION
+        SELECT school_id, period_month FROM story_participation_by_school_period
+      )
+    SELECT
+      p.school_id,
+      p.period_month,
+      tq.evaluations_count AS teaching_evaluations_count,
+      tq.average_overall_score AS teaching_quality_avg,
+      abp.sample_size AS learner_sample_size,
+      abp.decoding_avg,
+      abp.fluency_avg,
+      abp.comprehension_avg,
+      abp.non_reader_pct,
+      abp.cwpm20_plus_pct,
+      COALESCE(sp.sessions_count, 0) AS story_sessions_count,
+      COALESCE(sp.stories_published, 0) AS stories_published_count,
+      COALESCE(sp.anthologies_published, 0) AS anthologies_published_count,
+      COALESCE(sp.active_flag, 0) AS story_active_flag
+    FROM periods p
+    LEFT JOIN teaching_quality_by_school_period tq
+      ON tq.school_id = p.school_id
+     AND tq.period_month = p.period_month
+    LEFT JOIN assessment_by_period abp
+      ON abp.school_id = p.school_id
+     AND abp.period_month = p.period_month
+    LEFT JOIN story_participation_by_school_period sp
+      ON sp.school_id = p.school_id
+     AND sp.period_month = p.period_month;
   `);
 }
 
@@ -1488,6 +1972,7 @@ export function getDb() {
     school_id INTEGER NOT NULL,
     anthology_id INTEGER,
     title TEXT NOT NULL,
+    author_about TEXT NOT NULL DEFAULT '',
     excerpt TEXT NOT NULL DEFAULT '',
     content_text TEXT,
     pdf_stored_path TEXT,
@@ -1526,6 +2011,9 @@ export function getDb() {
   ensureDistrictMasterData(db);
   ensureTeacherLearnerRosterTables(db);
   ensureProgramLinkageTables(db);
+  ensureLessonEvaluationTables(db);
+  ensureTeachingImprovementSettingsTable(db);
+  ensureGraduationTables(db);
   ensurePortalRecordColumns(db);
   ensureGeographyColumns(db);
   ensurePortalTestimonialVideoColumns(db);
@@ -1556,6 +2044,7 @@ function ensureStoryLibraryColumns(db: Database.Database) {
   try { db.prepare("ALTER TABLE story_library ADD COLUMN page_start INTEGER NOT NULL DEFAULT 1").run(); } catch { /* ignore */ }
   try { db.prepare("ALTER TABLE story_library ADD COLUMN page_end INTEGER NOT NULL DEFAULT 1").run(); } catch { /* ignore */ }
   try { db.prepare("ALTER TABLE story_library ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0").run(); } catch { /* ignore */ }
+  try { db.prepare("ALTER TABLE story_library ADD COLUMN author_about TEXT NOT NULL DEFAULT ''").run(); } catch { /* ignore */ }
 
   // ensure index exists for featured anthologies
   try { db.prepare("CREATE INDEX IF NOT EXISTS idx_story_anth_featured ON story_anthologies(featured, featured_rank)").run(); } catch { /* ignore */ }
@@ -1674,6 +2163,10 @@ function ensureSupportRequestTables(db: Database.Database) {
       FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
     );
   `);
+
+  ensureColumn(db, "support_requests", "follow_up_started", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "support_requests", "follow_up_notes", "TEXT");
+  ensureColumn(db, "support_requests", "created_by_user_id", "INTEGER");
 
   // Handle portal_record_id migration for story_activities
   if (!hasColumn(db, "story_activities", "portal_record_id")) {
@@ -4314,6 +4807,11 @@ function getSchoolDirectoryRecordById(id: number) {
         gps_lng AS gpsLng,
           contact_name AS contactName,
             contact_phone AS contactPhone,
+              COALESCE(program_status, 'active') AS programStatus,
+                graduated_at AS graduatedAt,
+                  graduated_by_user_id AS graduatedByUserId,
+                    graduation_notes AS graduationNotes,
+                      graduation_version AS graduationVersion,
               notes,
               created_at AS createdAt
       FROM schools_directory
@@ -4482,6 +4980,10 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
     throw new Error("Could not load newly created record.");
   }
 
+  if (input.module === "assessment" || input.module === "story" || input.module === "story_activity") {
+    refreshSchoolGraduationEligibilityCache(school.id);
+  }
+
   return record;
 }
 
@@ -4504,12 +5006,15 @@ export function updatePortalRecord(
     .prepare(
       `
       SELECT id, created_by_user_id AS createdByUserId, status
+      , school_id AS schoolId
       FROM portal_records
       WHERE id = @id
       LIMIT 1
     `,
     )
-    .get({ id }) as { id: number; createdByUserId: number; status: PortalRecordStatus } | undefined;
+    .get({ id }) as
+    | { id: number; createdByUserId: number; status: PortalRecordStatus; schoolId: number | null }
+    | undefined;
 
   if (!current) {
     throw new Error("Record not found.");
@@ -4586,6 +5091,13 @@ export function updatePortalRecord(
   const updated = getPortalRecordById(id, user);
   if (!updated) {
     throw new Error("Could not load updated record.");
+  }
+
+  if (input.module === "assessment" || input.module === "story" || input.module === "story_activity") {
+    refreshSchoolGraduationEligibilityCache(school.id);
+    if (current.schoolId && Number(current.schoolId) !== school.id) {
+      refreshSchoolGraduationEligibilityCache(Number(current.schoolId));
+    }
   }
 
   return updated;
@@ -5568,6 +6080,11 @@ export function listSchoolDirectoryRecords(
         gps_lng AS gpsLng,
           contact_name AS contactName,
             contact_phone AS contactPhone,
+              COALESCE(program_status, 'active') AS programStatus,
+                graduated_at AS graduatedAt,
+                  graduated_by_user_id AS graduatedByUserId,
+                    graduation_notes AS graduationNotes,
+                      graduation_version AS graduationVersion,
               notes,
               created_at AS createdAt
       FROM schools_directory
@@ -9051,6 +9568,386 @@ function listScopedLegacyTrainingSessions(
   return rows.filter((row) => scopeSetMatches(scopeType, scopeSet, row.district, row.schoolName));
 }
 
+function listScopedLessonEvaluations(
+  user: PortalUser,
+  startDate: string,
+  endDate: string,
+  scopeType: ImpactReportScopeType,
+  scopeSet: GeoScopeSet | null,
+): LessonEvaluationRecord[] {
+  const db = getDb();
+  const canViewAll = canViewAllRecords(user);
+  const userFilter = canViewAll ? "" : "AND le.observer_id = @currentUserId";
+  const params = canViewAll
+    ? { startDate, endDate }
+    : { startDate, endDate, currentUserId: user.id };
+
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        le.id,
+        le.school_id AS schoolId,
+        sd.name AS schoolName,
+        sd.district AS district,
+        le.teacher_uid AS teacherUid,
+        tr.full_name AS teacherName,
+        le.grade,
+        le.stream,
+        le.class_size AS classSize,
+        le.lesson_date AS lessonDate,
+        le.lesson_focus_json AS lessonFocusJson,
+        le.observer_id AS observerId,
+        pu.full_name AS observerName,
+        le.visit_id AS visitId,
+        le.overall_score AS overallScore,
+        le.overall_level AS overallLevel,
+        le.domain_scores_json AS domainScoresJson,
+        le.top_gap_domain AS topGapDomain,
+        le.top_strength_domain AS topStrengthDomain,
+        le.strengths_text AS strengthsText,
+        le.priority_gap_text AS priorityGapText,
+        le.next_coaching_action AS nextCoachingAction,
+        le.teacher_commitment AS teacherCommitment,
+        le.catchup_estimate_count AS catchupEstimateCount,
+        le.catchup_estimate_percent AS catchupEstimatePercent,
+        le.next_visit_date AS nextVisitDate,
+        le.status,
+        le.created_at AS createdAt,
+        le.updated_at AS updatedAt
+      FROM lesson_evaluations le
+      JOIN schools_directory sd ON sd.id = le.school_id
+      LEFT JOIN teacher_roster tr ON tr.teacher_uid = le.teacher_uid
+      LEFT JOIN portal_users pu ON pu.id = le.observer_id
+      WHERE le.status = 'active'
+        AND le.lesson_date >= @startDate
+        AND le.lesson_date <= @endDate
+        ${userFilter}
+      ORDER BY le.lesson_date DESC, le.updated_at DESC
+    `,
+    )
+    .all(params) as Array<{
+      id: number;
+      schoolId: number;
+      schoolName: string;
+      district: string;
+      teacherUid: string;
+      teacherName: string | null;
+      grade: LessonEvaluationRecord["grade"];
+      stream: string | null;
+      classSize: number | null;
+      lessonDate: string;
+      lessonFocusJson: string;
+      observerId: number;
+      observerName: string | null;
+      visitId: number | null;
+      overallScore: number;
+      overallLevel: LessonEvaluationOverallLevel;
+      domainScoresJson: string;
+      topGapDomain: LessonEvaluationDomainKey | null;
+      topStrengthDomain: LessonEvaluationDomainKey | null;
+      strengthsText: string;
+      priorityGapText: string;
+      nextCoachingAction: string;
+      teacherCommitment: string;
+      catchupEstimateCount: number | null;
+      catchupEstimatePercent: number | null;
+      nextVisitDate: string | null;
+      status: "active" | "void";
+      createdAt: string;
+      updatedAt: string;
+    }>;
+
+  const scopedRows = rows.filter((row) =>
+    scopeSetMatches(scopeType, scopeSet, row.district, row.schoolName)
+  );
+  const itemMap = loadLessonEvaluationItemsByEvaluationIds(scopedRows.map((row) => row.id));
+  return scopedRows.map((row) => parseLessonEvaluationRow(row, itemMap.get(row.id) ?? []));
+}
+
+function summarizeTeacherLessonEvaluation(
+  records: LessonEvaluationRecord[],
+  includeTeacherDetails: boolean,
+): ImpactReportTeacherEvaluationBlock {
+  const totalEvaluations = records.length;
+  const levelCounts = {
+    strong: 0,
+    good: 0,
+    developing: 0,
+    needsSupport: 0,
+  };
+  const domainBuckets: Record<LessonEvaluationDomainKey, number[]> = {
+    setup: [],
+    new_sound: [],
+    decoding: [],
+    reading_practice: [],
+    tricky_words: [],
+    check_next: [],
+  };
+  const gapCounts = new Map<LessonEvaluationDomainKey, number>();
+  const strengthCounts = new Map<LessonEvaluationDomainKey, number>();
+
+  records.forEach((record) => {
+    if (record.overallLevel === "Strong") levelCounts.strong += 1;
+    else if (record.overallLevel === "Good") levelCounts.good += 1;
+    else if (record.overallLevel === "Developing") levelCounts.developing += 1;
+    else levelCounts.needsSupport += 1;
+
+    (Object.keys(domainBuckets) as LessonEvaluationDomainKey[]).forEach((domainKey) => {
+      const value = record.domainScores[domainKey];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        domainBuckets[domainKey].push(Number(value));
+      }
+    });
+
+    if (record.topGapDomain) {
+      gapCounts.set(record.topGapDomain, (gapCounts.get(record.topGapDomain) ?? 0) + 1);
+    }
+    if (record.topStrengthDomain) {
+      strengthCounts.set(
+        record.topStrengthDomain,
+        (strengthCounts.get(record.topStrengthDomain) ?? 0) + 1,
+      );
+    }
+  });
+
+  const domainAverages = {
+    setup:
+      domainBuckets.setup.length > 0
+        ? Number(
+          (domainBuckets.setup.reduce((sum, value) => sum + value, 0) / domainBuckets.setup.length).toFixed(
+            2,
+          ),
+        )
+        : null,
+    newSound:
+      domainBuckets.new_sound.length > 0
+        ? Number(
+          (
+            domainBuckets.new_sound.reduce((sum, value) => sum + value, 0) /
+            domainBuckets.new_sound.length
+          ).toFixed(2),
+        )
+        : null,
+    decoding:
+      domainBuckets.decoding.length > 0
+        ? Number(
+          (
+            domainBuckets.decoding.reduce((sum, value) => sum + value, 0) /
+            domainBuckets.decoding.length
+          ).toFixed(2),
+        )
+        : null,
+    readingPractice:
+      domainBuckets.reading_practice.length > 0
+        ? Number(
+          (
+            domainBuckets.reading_practice.reduce((sum, value) => sum + value, 0) /
+            domainBuckets.reading_practice.length
+          ).toFixed(2),
+        )
+        : null,
+    trickyWords:
+      domainBuckets.tricky_words.length > 0
+        ? Number(
+          (
+            domainBuckets.tricky_words.reduce((sum, value) => sum + value, 0) /
+            domainBuckets.tricky_words.length
+          ).toFixed(2),
+        )
+        : null,
+    checkNext:
+      domainBuckets.check_next.length > 0
+        ? Number(
+          (
+            domainBuckets.check_next.reduce((sum, value) => sum + value, 0) /
+            domainBuckets.check_next.length
+          ).toFixed(2),
+        )
+        : null,
+  };
+
+  const averageOverallScore =
+    totalEvaluations > 0
+      ? Number(
+        (
+          records.reduce((sum, record) => sum + Number(record.overallScore ?? 0), 0) / totalEvaluations
+        ).toFixed(2),
+      )
+      : null;
+
+  const topGapDomains = [...gapCounts.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .map(([domainKey]) => LESSON_EVALUATION_DOMAIN_LABELS[domainKey]);
+  const topStrengthDomains = [...strengthCounts.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 2)
+    .map(([domainKey]) => LESSON_EVALUATION_DOMAIN_LABELS[domainKey]);
+
+  const weakestDomain = (
+    Object.entries({
+      setup: domainAverages.setup,
+      new_sound: domainAverages.newSound,
+      decoding: domainAverages.decoding,
+      reading_practice: domainAverages.readingPractice,
+      tricky_words: domainAverages.trickyWords,
+      check_next: domainAverages.checkNext,
+    }) as Array<[LessonEvaluationDomainKey, number | null]>
+  )
+    .filter((entry): entry is [LessonEvaluationDomainKey, number] => typeof entry[1] === "number")
+    .sort((left, right) => left[1] - right[1])[0] ?? null;
+
+  const strongestDomain = (
+    Object.entries({
+      setup: domainAverages.setup,
+      new_sound: domainAverages.newSound,
+      decoding: domainAverages.decoding,
+      reading_practice: domainAverages.readingPractice,
+      tricky_words: domainAverages.trickyWords,
+      check_next: domainAverages.checkNext,
+    }) as Array<[LessonEvaluationDomainKey, number | null]>
+  )
+    .filter((entry): entry is [LessonEvaluationDomainKey, number] => typeof entry[1] === "number")
+    .sort((left, right) => right[1] - left[1])[0] ?? null;
+
+  const findingLines: LessonEvaluationPassA["keyFindings"] = [];
+
+  if (totalEvaluations === 0) {
+    findingLines.push({
+      finding: "Data not available.",
+      metricPath: "teacherLessonEvaluation.totalEvaluations",
+      value: 0,
+      evidenceLines: ["No active lesson evaluations were found for the selected scope and period."],
+    });
+  } else {
+    findingLines.push({
+      finding: `${totalEvaluations} lesson evaluations were recorded with an average overall score of ${averageOverallScore?.toFixed(2) ?? "Data not available"}/4.`,
+      metricPath: "teacherLessonEvaluation.averageOverallScore",
+      value: averageOverallScore,
+      evidenceLines: [
+        `totalEvaluations=${totalEvaluations}`,
+        `averageOverallScore=${averageOverallScore?.toFixed(2) ?? "Data not available"}`,
+      ],
+    });
+
+    if (weakestDomain) {
+      findingLines.push({
+        finding: `The weakest domain is ${LESSON_EVALUATION_DOMAIN_LABELS[weakestDomain[0]]} (${weakestDomain[1].toFixed(2)}/4).`,
+        metricPath: `teacherLessonEvaluation.domainAverages.${weakestDomain[0]}`,
+        value: weakestDomain[1],
+        evidenceLines: [
+          `${weakestDomain[0]}=${weakestDomain[1].toFixed(2)}/4`,
+          `topGapDomains=${topGapDomains.join(", ") || "Data not available"}`,
+        ],
+      });
+    }
+
+    if (strongestDomain) {
+      findingLines.push({
+        finding: `The strongest domain is ${LESSON_EVALUATION_DOMAIN_LABELS[strongestDomain[0]]} (${strongestDomain[1].toFixed(2)}/4).`,
+        metricPath: `teacherLessonEvaluation.domainAverages.${strongestDomain[0]}`,
+        value: strongestDomain[1],
+        evidenceLines: [`${strongestDomain[0]}=${strongestDomain[1].toFixed(2)}/4`],
+      });
+    }
+  }
+
+  const recById = new Map(EXTENDED_RECOMMENDATION_CATALOG.map((rec) => [rec.id, rec]));
+  const recMapping: Record<LessonEvaluationDomainKey, string> = {
+    setup: "REC-04",
+    new_sound: "REC-09",
+    decoding: "REC-09",
+    reading_practice: "REC-10",
+    tricky_words: "REC-09",
+    check_next: "REC-17",
+  };
+  const selectedRecIds = new Set<string>();
+
+  if (weakestDomain) {
+    selectedRecIds.add(recMapping[weakestDomain[0]]);
+  }
+  if ((averageOverallScore ?? 0) < 2.5 || levelCounts.needsSupport > 0) {
+    selectedRecIds.add("REC-03");
+  }
+  if (levelCounts.developing > levelCounts.strong + levelCounts.good) {
+    selectedRecIds.add("REC-04");
+  }
+
+  const recommendations = [...selectedRecIds]
+    .map((recId) => recById.get(recId))
+    .filter((rec): rec is (typeof EXTENDED_RECOMMENDATION_CATALOG)[number] => Boolean(rec))
+    .slice(0, 3)
+    .map((rec) => ({
+      recId: rec.id,
+      recTitle: rec.title,
+      priority: rec.priority === "Low" ? "Medium" : rec.priority,
+      why:
+        weakestDomain !== null
+          ? `Triggered by ${LESSON_EVALUATION_DOMAIN_LABELS[weakestDomain[0]]} (${weakestDomain[1].toFixed(2)}/4) and level distribution.`
+          : "Triggered by available lesson evaluation evidence.",
+      whatToDoThisWeek: rec.actions.slice(0, 4),
+      successMetric:
+        weakestDomain !== null
+          ? `${LESSON_EVALUATION_DOMAIN_LABELS[weakestDomain[0]]} average score improves by next visit.`
+          : "Average overall score improves by next visit.",
+      evidenceLines: findingLines.flatMap((finding) => finding.evidenceLines).slice(0, 4),
+    }));
+
+  const passA: LessonEvaluationPassA = {
+    keyFindings: findingLines,
+    recommendations,
+  };
+
+  const whatWeObserved =
+    passA.keyFindings.length > 0
+      ? passA.keyFindings.map((finding) => finding.finding).join(" ")
+      : "Data not available.";
+  const whatItMeans =
+    totalEvaluations > 0
+      ? `Teaching quality signals show ${levelCounts.strong + levelCounts.good} evaluations at Good/Strong and ${levelCounts.developing + levelCounts.needsSupport} at Developing/Needs Support.`
+      : "Data not available.";
+  const whatToDoNext30Days =
+    passA.recommendations.length > 0
+      ? passA.recommendations
+        .map((recommendation) => `[${recommendation.recId}] ${recommendation.recTitle}`)
+        .join(" | ")
+      : "Data not available.";
+  const howToCheckNextVisit =
+    passA.recommendations.length > 0
+      ? passA.recommendations.map((recommendation) => recommendation.successMetric).join(" ")
+      : "Data not available.";
+
+  return {
+    totalEvaluations,
+    averageOverallScore,
+    levelDistribution: levelCounts,
+    domainAverages,
+    topGapDomains,
+    passA,
+    narrative: {
+      whatWeObserved,
+      whatItMeans,
+      whatToDoNext30Days,
+      howToCheckNextVisit,
+    },
+    records: includeTeacherDetails
+      ? records.map((record) => ({
+        teacherName: record.teacherName,
+        classObserved: `${record.grade}${record.stream ? ` ${record.stream}` : ""}`,
+        lessonDate: record.lessonDate,
+        overallScore: Number(record.overallScore.toFixed(2)),
+        overallLevel: record.overallLevel,
+        strengthsText: record.strengthsText,
+        priorityGapText: record.priorityGapText,
+        nextCoachingAction: record.nextCoachingAction,
+        teacherCommitment: record.teacherCommitment,
+        nextVisitDate: record.nextVisitDate,
+      }))
+      : [],
+  };
+}
+
 function buildLearningMetric(
   stageSums: Record<AssessmentStage, number>,
   stageCounts: Record<AssessmentStage, number>,
@@ -9208,7 +10105,7 @@ function calculateImpactFactPack(input: {
       ar.district,
       ar.learners_assessed AS learnersAssessed,
         ar.stories_published AS storiesPublished
-        FROM assessment_records ar
+        FROM legacy_assessment_records ar
         WHERE ar.assessment_date >= @startDate
           AND ar.assessment_date <= @endDate
           ${legacyFilter}
@@ -9514,6 +10411,159 @@ function calculateImpactFactPack(input: {
     topGaps,
   };
 
+  const lessonEvaluations = listScopedLessonEvaluations(
+    input.user,
+    startDate,
+    endDate,
+    input.scopeType,
+    scopeSet,
+  );
+  const includeTeacherDetails =
+    input.scopeType === "School" &&
+    (input.reportType === "School Coaching Pack" ||
+      input.reportType === "School Report" ||
+      input.reportType === "Headteacher Summary");
+  const teacherLessonEvaluation = summarizeTeacherLessonEvaluation(
+    lessonEvaluations,
+    includeTeacherDetails,
+  );
+
+  const scopedSchoolRows = db
+    .prepare(
+      `
+      SELECT id, name, district
+      FROM schools_directory
+    `,
+    )
+    .all() as Array<{ id: number; name: string; district: string }>;
+  const scopedSchoolIds = scopedSchoolRows
+    .filter((row) => scopeSetMatches(input.scopeType, scopeSet, row.district, row.name))
+    .map((row) => row.id);
+  const settings = getTeachingImprovementSettings();
+
+  const teacherBuckets = new Map<string, LessonEvaluationRecord[]>();
+  lessonEvaluations.forEach((record) => {
+    const key = `${record.schoolId}:${record.teacherUid}`;
+    const bucket = teacherBuckets.get(key) ?? [];
+    bucket.push(record);
+    teacherBuckets.set(key, bucket);
+  });
+  const teacherComparisons = [...teacherBuckets.values()]
+    .map((records) => buildTeacherComparisonFromRecords(records, settings))
+    .filter(
+      (entry): entry is TeacherImprovementComparison => Boolean(entry && entry.evaluationsCount >= 2),
+    );
+
+  const teachersCompared = teacherComparisons.length;
+  const improvedTeachersCount = teacherComparisons.filter(
+    (comparison) => comparison.improvementStatus === "improved",
+  ).length;
+  const improvedTeachersPercent =
+    teachersCompared > 0 ? Number(((improvedTeachersCount / teachersCompared) * 100).toFixed(1)) : null;
+  const averageOverallDelta =
+    teachersCompared > 0
+      ? Number(
+        (
+          teacherComparisons.reduce((sum, comparison) => sum + comparison.deltaOverall, 0) /
+          teachersCompared
+        ).toFixed(2),
+      )
+      : null;
+
+  const schoolSummaries = new Map<number, SchoolTeachingQualityImprovementSummary>();
+  const schoolRecords = new Map<number, LessonEvaluationRecord[]>();
+  lessonEvaluations.forEach((record) => {
+    const bucket = schoolRecords.get(record.schoolId) ?? [];
+    bucket.push(record);
+    schoolRecords.set(record.schoolId, bucket);
+  });
+  schoolRecords.forEach((records, schoolId) => {
+    const schoolName =
+      scopedSchoolRows.find((row) => row.id === schoolId)?.name ??
+      records[0]?.schoolName ??
+      `School ${schoolId}`;
+    schoolSummaries.set(
+      schoolId,
+      buildSchoolTeachingImprovementSummary(
+        schoolId,
+        schoolName,
+        records,
+        settings,
+      ),
+    );
+  });
+
+  const schoolsWithComparisons = [...schoolSummaries.values()].filter(
+    (summary) => summary.teachersCompared > 0,
+  );
+  const schoolImprovedPercent =
+    schoolsWithComparisons.length > 0
+      ? Number(
+        (
+          (schoolsWithComparisons.filter((summary) => summary.schoolImproved).length /
+            schoolsWithComparisons.length) *
+          100
+        ).toFixed(1),
+      )
+      : null;
+  const avgDomainDeltas = averageTeacherDomainDeltas(teacherComparisons);
+
+  const domainDeltaEntries: Array<{ domain: string; avgDelta: number }> = [
+    { domain: LESSON_EVALUATION_DOMAIN_LABELS.setup, avgDelta: avgDomainDeltas.setup ?? 0 },
+    { domain: LESSON_EVALUATION_DOMAIN_LABELS.new_sound, avgDelta: avgDomainDeltas.newSound ?? 0 },
+    { domain: LESSON_EVALUATION_DOMAIN_LABELS.decoding, avgDelta: avgDomainDeltas.decoding ?? 0 },
+    {
+      domain: LESSON_EVALUATION_DOMAIN_LABELS.reading_practice,
+      avgDelta: avgDomainDeltas.readingPractice ?? 0,
+    },
+    { domain: LESSON_EVALUATION_DOMAIN_LABELS.tricky_words, avgDelta: avgDomainDeltas.trickyWords ?? 0 },
+    { domain: LESSON_EVALUATION_DOMAIN_LABELS.check_next, avgDelta: avgDomainDeltas.checkNext ?? 0 },
+  ]
+    .filter((entry) => entry.avgDelta > 0)
+    .sort((left, right) => right.avgDelta - left.avgDelta)
+    .slice(0, 3)
+    .map((entry) => ({
+      domain: entry.domain,
+      avgDelta: Number(entry.avgDelta.toFixed(2)),
+    }));
+
+  const teacherImprovementSummary: ImpactReportTeacherImprovementSummary = {
+    teachersCompared,
+    improvedTeachersCount,
+    improvedTeachersPercent,
+    averageOverallDelta,
+    schoolImprovedPercent,
+    topImprovingDomains: domainDeltaEntries,
+    teacherComparisons: includeTeacherDetails
+      ? teacherComparisons.slice(0, 20).map((comparison) => {
+        const comparisonPoint =
+          comparison.timeline.find(
+            (point) => point.evaluationId === comparison.comparisonEvaluationId,
+          ) ?? comparison.timeline[comparison.timeline.length - 1];
+        const classObserved = comparisonPoint
+          ? `${comparisonPoint.grade}${comparisonPoint.stream ? ` ${comparisonPoint.stream}` : ""}`
+          : "Data not available";
+        return {
+          teacherName: comparison.teacherName,
+          classObserved,
+          baselineDate: comparison.firstEvaluationDate,
+          comparisonDate: comparison.comparisonEvaluationDate,
+          latestDate: comparison.latestEvaluationDate,
+          deltaOverall: comparison.deltaOverall,
+          improvementStatus: comparison.improvementStatus,
+          domainDeltas: comparison.domainDeltas,
+        };
+      })
+      : [],
+    disclaimer: "Baseline-to-latest comparisons use staff-entered lesson evaluations only.",
+  };
+
+  const teachingLearningAlignment = buildTeachingLearningAlignmentBySchoolIds(
+    scopedSchoolIds,
+    startDate,
+    endDate,
+  );
+
   const approvedRecords = portalRows.filter((row) => row.status === "Approved").length;
   const missingPayloadRows = portalRows.filter((row) => Object.keys(row.payload).length === 0).length;
   const dataQuality: ImpactReportDataQualityBlock = {
@@ -9546,6 +10596,9 @@ function calculateImpactFactPack(input: {
     engagement,
     learningOutcomes,
     instructionQuality,
+    teacherLessonEvaluation,
+    teacherImprovementSummary,
+    teachingLearningAlignment,
     dataQuality,
   };
 }
@@ -9576,6 +10629,9 @@ function buildSectionSummary(
   const outcomes = factPack.learningOutcomes;
   const quality = factPack.instructionQuality;
   const engagement = factPack.engagement;
+  const teacherEvaluation = factPack.teacherLessonEvaluation;
+  const teacherImprovement = factPack.teacherImprovementSummary;
+  const alignment = factPack.teachingLearningAlignment;
 
   switch (sectionId) {
     case "cover-page":
@@ -9593,9 +10649,9 @@ function buildSectionSummary(
     case "5-training-results":
       return `Training and classroom support outputs are reported with attendance, completion, and coverage summaries for the selected scope.`;
     case "6-coaching-results":
-      return `Routine adoption rate: ${quality.routineAdoptionRate ?? "Data not available for this period."}; top gaps: ${quality.topGaps.slice(0, 3).join(", ") || "Data not available for this period."} `;
+      return `Routine adoption rate: ${quality.routineAdoptionRate ?? "Data not available for this period."}; top gaps: ${quality.topGaps.slice(0, 3).join(", ") || "Data not available for this period."}; lesson evaluations: ${teacherEvaluation?.totalEvaluations ?? 0}, average score ${teacherEvaluation?.averageOverallScore ?? "Data not available for this period."}; teachers improved: ${teacherImprovement?.improvedTeachersPercent ?? "Data not available"}%. `;
     case "7-learner-outcomes":
-      return `Learning outcomes include changes in sound identification(${outcomes.soundIdentification.change ?? "N/A"}), decodable words(${outcomes.decodableWords.change ?? "N/A"}), and reading comprehension(${outcomes.readingComprehension.change ?? "N/A"}).`;
+      return `Learning outcomes include changes in sound identification(${outcomes.soundIdentification.change ?? "N/A"}), decodable words(${outcomes.decodableWords.change ?? "N/A"}), and reading comprehension(${outcomes.readingComprehension.change ?? "N/A"}). Teaching-learning alignment delta: ${alignment?.summary.teachingDelta ?? "Data not available"}, non-reader reduction: ${alignment?.summary.nonReaderReductionPp ?? "Data not available"} pp.`;
     case "8-remedial-results":
       return "Remedial and catch-up evidence is summarized from intervention-linked records and progress indicators where available.";
     case "9-resource-utilization":
@@ -9624,6 +10680,9 @@ export function buildImpactNarrative(
   const coverage = factPack.coverageDelivery;
   const outcomes = factPack.learningOutcomes;
   const quality = factPack.instructionQuality;
+  const teacherEvaluation = factPack.teacherLessonEvaluation;
+  const teacherImprovement = factPack.teacherImprovementSummary;
+  const alignment = factPack.teachingLearningAlignment;
   const template = buildImpactTemplatePackage(factPack.reportType, factPack.generatedAt);
   const factsLockInstruction =
     "Use only numbers in this Fact Pack. If a metric is missing, return: Data not available for this period.";
@@ -9660,6 +10719,34 @@ export function buildImpactNarrative(
       `Coaching completion is ${coverage.coachingVisitsCompleted}/${coverage.coachingVisitsPlanned}, below full plan execution.`,
     );
   }
+  if (
+    teacherEvaluation &&
+    teacherEvaluation.totalEvaluations > 0 &&
+    teacherEvaluation.averageOverallScore !== null &&
+    teacherEvaluation.averageOverallScore < 2.75
+  ) {
+    keyChallenges.push(
+      `Teacher lesson evaluations average ${teacherEvaluation.averageOverallScore.toFixed(2)}/4, showing coaching quality gaps in ${teacherEvaluation.topGapDomains.slice(0, 2).join(", ") || "priority domains"}.`,
+    );
+  }
+  if (
+    teacherImprovement &&
+    teacherImprovement.improvedTeachersPercent !== null &&
+    teacherImprovement.improvedTeachersPercent < 50
+  ) {
+    keyChallenges.push(
+      `Only ${teacherImprovement.improvedTeachersPercent.toFixed(1)}% of compared teachers met the improvement threshold from baseline to latest follow-up.`,
+    );
+  }
+  if (
+    alignment &&
+    alignment.summary.nonReaderReductionPp !== null &&
+    alignment.summary.nonReaderReductionPp < 0
+  ) {
+    keyChallenges.push(
+      `Aligned trend review shows non-reader share increased by ${Math.abs(alignment.summary.nonReaderReductionPp).toFixed(2)} percentage points.`,
+    );
+  }
   if (keyChallenges.length === 0) {
     keyChallenges.push("No critical implementation constraints were flagged in the selected period.");
   }
@@ -9673,6 +10760,13 @@ export function buildImpactNarrative(
   if (quality.topGaps.length > 0) {
     nextPriorities.unshift(
       `Address top observed gaps first: ${quality.topGaps.slice(0, 3).join(", ")}.`,
+    );
+  }
+  if (teacherEvaluation && teacherEvaluation.passA.recommendations.length > 0) {
+    nextPriorities.unshift(
+      `Implement REC actions from lesson evaluation evidence: ${teacherEvaluation.passA.recommendations
+        .map((recommendation) => recommendation.recId)
+        .join(", ")}.`,
     );
   }
 
@@ -9938,6 +11032,30 @@ function parseImpactReportRow(row: {
   };
 }
 
+function redactImpactReportTeacherDetails(report: ImpactReportRecord): ImpactReportRecord {
+  if (!report.factPack.teacherLessonEvaluation && !report.factPack.teacherImprovementSummary) {
+    return report;
+  }
+  return {
+    ...report,
+    factPack: {
+      ...report.factPack,
+      teacherLessonEvaluation: report.factPack.teacherLessonEvaluation
+        ? {
+          ...report.factPack.teacherLessonEvaluation,
+          records: [],
+        }
+        : undefined,
+      teacherImprovementSummary: report.factPack.teacherImprovementSummary
+        ? {
+          ...report.factPack.teacherImprovementSummary,
+          teacherComparisons: [],
+        }
+        : undefined,
+    },
+  };
+}
+
 export async function createImpactReport(
   input: ImpactReportBuildInput,
   user: PortalUser,
@@ -9946,8 +11064,10 @@ export async function createImpactReport(
   const normalizedScopeValue = normalizeScopeValue(input.scopeType, input.scopeValue);
   const normalizedPartnerName = input.partnerName?.trim() ? input.partnerName.trim() : null;
   const { startDate, endDate } = normalizeDateRange(input.periodStart, input.periodEnd);
+  const generatedAt = new Date().toISOString();
+  const reportVersion = input.version.trim() || "v1.0";
 
-  const factPack = calculateImpactFactPack({
+  const baseFactPack = calculateImpactFactPack({
     user,
     reportType: input.reportType,
     scopeType: input.scopeType,
@@ -9956,6 +11076,19 @@ export async function createImpactReport(
     periodEnd: endDate,
     programsIncluded: input.programsIncluded,
   });
+
+  const factPack: ImpactReportFactPack = {
+    ...baseFactPack,
+    audit: {
+      generatedByUserId: user.id,
+      generatedByName: user.fullName,
+      generatedAt,
+      dataTimestamp: baseFactPack.generatedAt,
+      scopeLabel: `${input.scopeType} • ${normalizedScopeValue}`,
+      periodLabel: `${startDate} to ${endDate}`,
+      reportVersion,
+    },
+  };
 
   const narrative = await generateImpactNarrativeFromAI(factPack, { partnerName: normalizedPartnerName });
   const reportCode = buildImpactReportCode(input.reportType);
@@ -10018,11 +11151,23 @@ export async function createImpactReport(
       factPackJson: JSON.stringify(factPack),
       narrativeJson: JSON.stringify(narrative),
       isPublic: input.isPublic ? 1 : 0,
-      version: input.version.trim() || "v1.0",
-      generatedAt: new Date().toISOString(),
+      version: reportVersion,
+      generatedAt,
       createdByUserId: user.id,
-      updatedAt: new Date().toISOString(),
+      updatedAt: generatedAt,
     });
+
+  db.prepare(
+    `
+      INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, detail)
+      VALUES (@userId, @userName, 'generate', 'impact_reports', @targetId, @detail)
+    `,
+  ).run({
+    userId: user.id,
+    userName: user.fullName,
+    targetId: result.lastInsertRowid,
+    detail: `${input.reportType} generated for ${input.scopeType}: ${normalizedScopeValue}`,
+  });
 
   const row = db
     .prepare(
@@ -10164,6 +11309,204 @@ export function listPortalImpactReports(user: PortalUser, limit = 120): ImpactRe
   return rows.map(parseImpactReportRow);
 }
 
+type ImpactReportGeoContext = {
+  region: string | null;
+  subRegion: string | null;
+  district: string | null;
+  schoolId: number | null;
+};
+
+type ImpactReportGeoLookups = {
+  regionsById: Map<string, string>;
+  regionsByName: Map<string, string>;
+  subRegionsById: Map<string, { name: string; region: string }>;
+  subRegionsByName: Map<string, { name: string; region: string }>;
+  districtsById: Map<string, { name: string; subRegion: string; region: string }>;
+  districtsByName: Map<string, { name: string; subRegion: string; region: string }>;
+  schoolsById: Map<number, { id: number; name: string; district: string; subRegion: string; region: string }>;
+  schoolsByName: Map<string, { id: number; name: string; district: string; subRegion: string; region: string }>;
+};
+
+function normalizeGeoValue(value: string | null | undefined) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function buildImpactReportGeoLookups(db: Database.Database): ImpactReportGeoLookups {
+  const regionsById = new Map<string, string>();
+  const regionsByName = new Map<string, string>();
+  const subRegionsById = new Map<string, { name: string; region: string }>();
+  const subRegionsByName = new Map<string, { name: string; region: string }>();
+  const districtsById = new Map<string, { name: string; subRegion: string; region: string }>();
+  const districtsByName = new Map<string, { name: string; subRegion: string; region: string }>();
+  const schoolsById = new Map<number, { id: number; name: string; district: string; subRegion: string; region: string }>();
+  const schoolsByName = new Map<string, { id: number; name: string; district: string; subRegion: string; region: string }>();
+
+  const geoRows = db.prepare(
+    `
+      SELECT
+        r.id AS regionId,
+        r.name AS regionName,
+        sr.id AS subRegionId,
+        sr.name AS subRegionName,
+        d.id AS districtId,
+        d.name AS districtName
+      FROM geo_districts d
+      JOIN geo_subregions sr ON sr.id = d.subregion_id
+      JOIN geo_regions r ON r.id = sr.region_id
+    `,
+  ).all() as Array<{
+    regionId: string;
+    regionName: string;
+    subRegionId: string;
+    subRegionName: string;
+    districtId: string;
+    districtName: string;
+  }>;
+
+  geoRows.forEach((row) => {
+    regionsById.set(row.regionId, row.regionName);
+    regionsByName.set(normalizeGeoValue(row.regionName), row.regionName);
+
+    subRegionsById.set(row.subRegionId, {
+      name: row.subRegionName,
+      region: row.regionName,
+    });
+    subRegionsByName.set(normalizeGeoValue(row.subRegionName), {
+      name: row.subRegionName,
+      region: row.regionName,
+    });
+
+    districtsById.set(row.districtId, {
+      name: row.districtName,
+      subRegion: row.subRegionName,
+      region: row.regionName,
+    });
+    districtsByName.set(normalizeGeoValue(row.districtName), {
+      name: row.districtName,
+      subRegion: row.subRegionName,
+      region: row.regionName,
+    });
+  });
+
+  const schoolRows = db.prepare(
+    `
+      SELECT
+        id,
+        name,
+        COALESCE(district, '') AS district,
+        COALESCE(sub_region, '') AS subRegion,
+        COALESCE(region, '') AS region
+      FROM schools_directory
+      WHERE name IS NOT NULL
+    `,
+  ).all() as Array<{
+    id: number;
+    name: string;
+    district: string;
+    subRegion: string;
+    region: string;
+  }>;
+
+  schoolRows.forEach((row) => {
+    const district = row.district.trim();
+    const subRegion = row.subRegion.trim() || inferSubRegionFromDistrict(district) || "";
+    const region = row.region.trim() || inferRegionFromDistrict(district) || "";
+    const school = {
+      id: row.id,
+      name: row.name.trim(),
+      district,
+      subRegion,
+      region,
+    };
+    schoolsById.set(row.id, school);
+    schoolsByName.set(normalizeGeoValue(school.name), school);
+  });
+
+  return {
+    regionsById,
+    regionsByName,
+    subRegionsById,
+    subRegionsByName,
+    districtsById,
+    districtsByName,
+    schoolsById,
+    schoolsByName,
+  };
+}
+
+function resolveScopeValueFromLookup(
+  value: string | undefined,
+  byId: Map<string, string>,
+  byName: Map<string, string>,
+) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+  return byId.get(raw) || byName.get(normalizeGeoValue(raw)) || raw;
+}
+
+function resolveImpactReportGeoContext(
+  report: ImpactReportRecord,
+  lookups: ImpactReportGeoLookups,
+): ImpactReportGeoContext {
+  const rawScopeValue = report.scopeValue.trim();
+  const normalizedScopeValue = normalizeGeoValue(rawScopeValue);
+
+  if (report.scopeType === "Region") {
+    const region = lookups.regionsById.get(rawScopeValue)
+      || lookups.regionsByName.get(normalizedScopeValue)
+      || rawScopeValue;
+    return { region, subRegion: null, district: null, schoolId: null };
+  }
+
+  if (report.scopeType === "Sub-region") {
+    const subRegionMeta = lookups.subRegionsById.get(rawScopeValue)
+      || lookups.subRegionsByName.get(normalizedScopeValue);
+    if (subRegionMeta) {
+      return {
+        region: subRegionMeta.region,
+        subRegion: subRegionMeta.name,
+        district: null,
+        schoolId: null,
+      };
+    }
+    return { region: null, subRegion: rawScopeValue, district: null, schoolId: null };
+  }
+
+  if (report.scopeType === "District") {
+    const districtMeta = lookups.districtsById.get(rawScopeValue)
+      || lookups.districtsByName.get(normalizedScopeValue);
+    if (districtMeta) {
+      return {
+        region: districtMeta.region,
+        subRegion: districtMeta.subRegion,
+        district: districtMeta.name,
+        schoolId: null,
+      };
+    }
+    return { region: null, subRegion: null, district: rawScopeValue, schoolId: null };
+  }
+
+  if (report.scopeType === "School") {
+    const numericSchoolId = Number(rawScopeValue);
+    const school =
+      (Number.isFinite(numericSchoolId) ? lookups.schoolsById.get(numericSchoolId) : undefined)
+      || lookups.schoolsByName.get(normalizedScopeValue);
+    if (school) {
+      return {
+        region: school.region || null,
+        subRegion: school.subRegion || null,
+        district: school.district || null,
+        schoolId: school.id,
+      };
+    }
+    return { region: null, subRegion: null, district: null, schoolId: null };
+  }
+
+  return { region: null, subRegion: null, district: null, schoolId: null };
+}
+
 export function listPublicImpactReports(filters?: {
   year?: string;
   scopeType?: ImpactReportScopeType;
@@ -10194,27 +11537,62 @@ export function listPublicImpactReports(filters?: {
     clauses.push("ir.report_type = @reportType");
     params.reportType = filters.reportType;
   }
-  // Geographic filters — match scope_value against geographic names
-  if (filters?.schoolId) {
-    // School-level: match school name in scope_value
-    const schoolRow = getDb().prepare("SELECT name FROM schools_directory WHERE id = @id").get({ id: filters.schoolId }) as { name: string } | undefined;
-    if (schoolRow) {
-      clauses.push("lower(ir.scope_value) = lower(@geoValue)");
-      params.geoValue = schoolRow.name;
-    }
-  } else if (filters?.district && filters.district.trim()) {
-    clauses.push("(lower(ir.scope_value) = lower(@geoDistrict) OR (ir.scope_type = 'National'))");
-    params.geoDistrict = filters.district.trim();
-  } else if (filters?.subRegion && filters.subRegion.trim()) {
-    clauses.push("(lower(ir.scope_value) = lower(@geoSubRegion) OR ir.scope_type IN ('National', 'Region'))");
-    params.geoSubRegion = filters.subRegion.trim();
-  } else if (filters?.region && filters.region.trim()) {
-    clauses.push("(lower(ir.scope_value) = lower(@geoRegion) OR ir.scope_type = 'National')");
-    params.geoRegion = filters.region.trim();
-  }
 
   const rows = listImpactReportRows(clauses.join(" AND "), params, Math.min(filters?.limit ?? 60, 200));
-  return rows.map(parseImpactReportRow);
+  const reports = rows.map(parseImpactReportRow).map(redactImpactReportTeacherDetails);
+
+  const hasGeoFilters = Boolean(
+    filters?.region?.trim()
+    || filters?.subRegion?.trim()
+    || filters?.district?.trim()
+    || filters?.schoolId,
+  );
+  if (!hasGeoFilters) {
+    return reports;
+  }
+
+  const db = getDb();
+  const lookups = buildImpactReportGeoLookups(db);
+  const requestedRegion = resolveScopeValueFromLookup(
+    filters?.region,
+    lookups.regionsById,
+    lookups.regionsByName,
+  );
+  const requestedSubRegion = resolveScopeValueFromLookup(
+    filters?.subRegion,
+    new Map([...lookups.subRegionsById.entries()].map(([key, value]) => [key, value.name])),
+    new Map([...lookups.subRegionsByName.entries()].map(([key, value]) => [key, value.name])),
+  );
+  const requestedDistrict = resolveScopeValueFromLookup(
+    filters?.district,
+    new Map([...lookups.districtsById.entries()].map(([key, value]) => [key, value.name])),
+    new Map([...lookups.districtsByName.entries()].map(([key, value]) => [key, value.name])),
+  );
+  const requestedSchoolId = filters?.schoolId && Number.isFinite(filters.schoolId)
+    ? Number(filters.schoolId)
+    : null;
+
+  return reports.filter((report) => {
+    const context = resolveImpactReportGeoContext(report, lookups);
+
+    if (requestedSchoolId !== null) {
+      return context.schoolId === requestedSchoolId;
+    }
+
+    if (requestedDistrict) {
+      return normalizeGeoValue(context.district) === normalizeGeoValue(requestedDistrict);
+    }
+
+    if (requestedSubRegion) {
+      return normalizeGeoValue(context.subRegion) === normalizeGeoValue(requestedSubRegion);
+    }
+
+    if (requestedRegion) {
+      return normalizeGeoValue(context.region) === normalizeGeoValue(requestedRegion);
+    }
+
+    return true;
+  });
 }
 
 export function getImpactReportByCode(
@@ -10286,7 +11664,7 @@ export function getImpactReportByCode(
 
   const parsed = parseImpactReportRow(row);
   if (parsed.isPublic) {
-    return parsed;
+    return redactImpactReportTeacherDetails(parsed);
   }
 
   if (!user) {
@@ -10354,10 +11732,64 @@ export function getImpactReportFilterFacets() {
   const years = [...new Set(reportRows.map((row) => row.year))];
   const scopeValues = [...new Set(reportRows.map((row) => row.scopeValue))];
 
-  // Geographic facets from schools_directory
-  const regions = (db.prepare(`SELECT DISTINCT region FROM schools_directory WHERE region IS NOT NULL AND region != '' ORDER BY region`).all() as Array<{ region: string }>).map((r) => r.region);
-  const subRegions = (db.prepare(`SELECT DISTINCT sub_region FROM schools_directory WHERE sub_region IS NOT NULL AND sub_region != '' ORDER BY sub_region`).all() as Array<{ sub_region: string }>).map((r) => r.sub_region);
-  const districts = (db.prepare(`SELECT DISTINCT district FROM schools_directory WHERE district IS NOT NULL AND district != '' ORDER BY district`).all() as Array<{ district: string }>).map((r) => r.district);
+  const pushIfPresent = (set: Set<string>, raw: unknown) => {
+    const value = String(raw ?? "").trim();
+    if (value) {
+      set.add(value);
+    }
+  };
+
+  // Geographic facets should cover the full Uganda hierarchy, not only schools that currently
+  // have records in schools_directory.
+  const regionSet = new Set<string>();
+  const subRegionSet = new Set<string>();
+  const districtSet = new Set<string>();
+
+  listGeoRegions().forEach((row) => pushIfPresent(regionSet, row.name));
+  listGeoSubregions().forEach((row) => pushIfPresent(subRegionSet, row.name));
+  listGeoDistricts().forEach((row) => pushIfPresent(districtSet, row.name));
+
+  ugandaRegions.forEach((region) => {
+    pushIfPresent(regionSet, region.region);
+    region.subRegions.forEach((subRegion) => {
+      pushIfPresent(subRegionSet, subRegion.subRegion);
+      subRegion.districts.forEach((district) => pushIfPresent(districtSet, district));
+    });
+  });
+
+  const schoolGeoRows = db
+    .prepare(
+      `
+      SELECT DISTINCT region, sub_region AS subRegion, district
+      FROM schools_directory
+    `,
+    )
+    .all() as Array<{
+      region: string | null;
+      subRegion: string | null;
+      district: string | null;
+    }>;
+  schoolGeoRows.forEach((row) => {
+    pushIfPresent(regionSet, row.region);
+    pushIfPresent(subRegionSet, row.subRegion);
+    pushIfPresent(districtSet, row.district);
+  });
+
+  reportRows.forEach((row) => {
+    if (row.scopeType === "Region") {
+      pushIfPresent(regionSet, row.scopeValue);
+    }
+    if (row.scopeType === "Sub-region") {
+      pushIfPresent(subRegionSet, row.scopeValue);
+    }
+    if (row.scopeType === "District") {
+      pushIfPresent(districtSet, row.scopeValue);
+    }
+  });
+
+  const regions = [...regionSet].sort((a, b) => a.localeCompare(b));
+  const subRegions = [...subRegionSet].sort((a, b) => a.localeCompare(b));
+  const districts = [...districtSet].sort((a, b) => a.localeCompare(b));
   const schools = db.prepare(`SELECT id, name, district FROM schools_directory WHERE name IS NOT NULL ORDER BY name`).all() as Array<{ id: number; name: string; district: string }>;
 
   return {
@@ -10686,6 +12118,11 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
         gps_lng,
         contact_name,
         contact_phone,
+        COALESCE(program_status, 'active') AS program_status,
+        graduated_at,
+        graduated_by_user_id,
+        graduation_notes,
+        graduation_version,
         created_at
       FROM schools_directory
       WHERE id = ?
@@ -10723,6 +12160,11 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
       gps_lng: string | null;
       contact_name: string | null;
       contact_phone: string | null;
+      program_status: "active" | "graduated" | "paused";
+      graduated_at: string | null;
+      graduated_by_user_id: number | null;
+      graduation_notes: string | null;
+      graduation_version: string | null;
       created_at: string;
     }
     | undefined;
@@ -10763,6 +12205,11 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
     gpsLng: row.gps_lng,
     contactName: row.contact_name,
     contactPhone: row.contact_phone,
+    programStatus: row.program_status ?? "active",
+    graduatedAt: row.graduated_at ?? null,
+    graduatedByUserId: row.graduated_by_user_id ?? null,
+    graduationNotes: row.graduation_notes ?? null,
+    graduationVersion: row.graduation_version ?? null,
     createdAt: row.created_at,
   };
 }
@@ -11266,6 +12713,2120 @@ function average(values: Array<number | null>) {
   return Number((numeric.reduce((sum, value) => sum + value, 0) / numeric.length).toFixed(1));
 }
 
+type TeachingImprovementSettings = {
+  teacherDeltaThreshold: number;
+  minDomainsImproved: number;
+  schoolDeltaThreshold: number;
+  schoolImprovedTeachersPercentThreshold: number;
+};
+
+const DEFAULT_TEACHING_IMPROVEMENT_SETTINGS: TeachingImprovementSettings = {
+  teacherDeltaThreshold: 0.3,
+  minDomainsImproved: 2,
+  schoolDeltaThreshold: 0.2,
+  schoolImprovedTeachersPercentThreshold: 50,
+};
+
+const GRADUATION_DOMAIN_LABELS: Record<GraduationDomainKey, string> = {
+  letter_sounds: "Letter sounds",
+  decoding: "Decoding",
+  fluency: "Fluency",
+  comprehension: "Comprehension",
+};
+
+const DEFAULT_GRADUATION_SETTINGS: GraduationSettingsRecord = {
+  graduationEnabled: true,
+  targetDomainProficiencyPct: 90,
+  requiredDomains: ["letter_sounds", "decoding", "fluency", "comprehension"],
+  requiredReadingLevel: "Fluent",
+  requiredFluentPct: 100,
+  minPublishedStories: 15,
+  targetTeachingQualityPct: 90,
+  requireTeachingDomains: false,
+  latestAssessmentRequired: true,
+  latestEvaluationRequired: true,
+  assessmentCycleMode: "latest_or_endline",
+  dismissSnoozeDays: 30,
+  criteriaVersion: "GRAD-v1.0",
+  updatedAt: null,
+  /* V2 evidence gates */
+  minLearnersAssessedN: 30,
+  targetGrades: ["P2", "P3", "P4"],
+  minTeacherEvaluationsTotal: 3,
+  minEvaluationsPerReadingTeacher: 2,
+  dataCompletenessThreshold: 80,
+  /* V2 sustainability */
+  requireSustainabilityValidation: true,
+  sustainabilityChecklistItems: DEFAULT_SUSTAINABILITY_CHECKLIST_ITEMS,
+};
+
+function isGraduationDomainKey(value: string): value is GraduationDomainKey {
+  return (
+    value === "letter_sounds" ||
+    value === "decoding" ||
+    value === "fluency" ||
+    value === "comprehension"
+  );
+}
+
+function parseGraduationRequiredDomains(value: string | null | undefined): GraduationDomainKey[] {
+  if (!value) {
+    return DEFAULT_GRADUATION_SETTINGS.requiredDomains;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) {
+      return DEFAULT_GRADUATION_SETTINGS.requiredDomains;
+    }
+    const domains = parsed
+      .map((entry) => String(entry ?? "").trim().toLowerCase())
+      .filter((entry): entry is GraduationDomainKey => isGraduationDomainKey(entry));
+    return domains.length > 0 ? domains : DEFAULT_GRADUATION_SETTINGS.requiredDomains;
+  } catch {
+    return DEFAULT_GRADUATION_SETTINGS.requiredDomains;
+  }
+}
+
+function roundPercent(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return null;
+  }
+  return Number(value.toFixed(1));
+}
+
+function parseSchoolProgramStatus(
+  value: string | null | undefined,
+): "active" | "graduated" | "paused" | "monitoring" {
+  if (value === "graduated" || value === "paused" || value === "monitoring") {
+    return value;
+  }
+  return "active";
+}
+
+function score4ToPercent(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return null;
+  }
+  return Number(((value / 4) * 100).toFixed(1));
+}
+
+function normalizeReadingLevel(
+  value: string | null | undefined,
+): GraduationSettingsRecord["requiredReadingLevel"] {
+  if (
+    value === "Non-Reader" ||
+    value === "Emerging" ||
+    value === "Developing" ||
+    value === "Transitional" ||
+    value === "Fluent"
+  ) {
+    return value;
+  }
+  return "Fluent";
+}
+
+export function getTeachingImprovementSettings(): TeachingImprovementSettings {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `
+      SELECT
+        teacher_delta_threshold AS teacherDeltaThreshold,
+        min_domains_improved AS minDomainsImproved,
+        school_delta_threshold AS schoolDeltaThreshold,
+        school_improved_teachers_percent_threshold AS schoolImprovedTeachersPercentThreshold
+      FROM teaching_improvement_settings
+      WHERE id = 1
+      LIMIT 1
+    `,
+    )
+    .get() as
+    | {
+      teacherDeltaThreshold: number | null;
+      minDomainsImproved: number | null;
+      schoolDeltaThreshold: number | null;
+      schoolImprovedTeachersPercentThreshold: number | null;
+    }
+    | undefined;
+
+  if (!row) {
+    return DEFAULT_TEACHING_IMPROVEMENT_SETTINGS;
+  }
+
+  return {
+    teacherDeltaThreshold:
+      row.teacherDeltaThreshold !== null && Number.isFinite(Number(row.teacherDeltaThreshold))
+        ? Number(row.teacherDeltaThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.teacherDeltaThreshold,
+    minDomainsImproved:
+      row.minDomainsImproved !== null && Number.isFinite(Number(row.minDomainsImproved))
+        ? Math.max(1, Math.round(Number(row.minDomainsImproved)))
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.minDomainsImproved,
+    schoolDeltaThreshold:
+      row.schoolDeltaThreshold !== null && Number.isFinite(Number(row.schoolDeltaThreshold))
+        ? Number(row.schoolDeltaThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.schoolDeltaThreshold,
+    schoolImprovedTeachersPercentThreshold:
+      row.schoolImprovedTeachersPercentThreshold !== null &&
+        Number.isFinite(Number(row.schoolImprovedTeachersPercentThreshold))
+        ? Number(row.schoolImprovedTeachersPercentThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.schoolImprovedTeachersPercentThreshold,
+  };
+}
+
+export function getGraduationSettings(): GraduationSettingsRecord {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `
+      SELECT
+        graduation_enabled AS graduationEnabled,
+        target_domain_proficiency_pct AS targetDomainProficiencyPct,
+        required_domains_json AS requiredDomainsJson,
+        required_reading_level AS requiredReadingLevel,
+        required_fluent_pct AS requiredFluentPct,
+        min_published_stories AS minPublishedStories,
+        target_teaching_quality_pct AS targetTeachingQualityPct,
+        require_teaching_domains AS requireTeachingDomains,
+        latest_assessment_required AS latestAssessmentRequired,
+        latest_evaluation_required AS latestEvaluationRequired,
+        assessment_cycle_mode AS assessmentCycleMode,
+        dismiss_snooze_days AS dismissSnoozeDays,
+        criteria_version AS criteriaVersion,
+        updated_at AS updatedAt,
+        min_learners_assessed_n AS minLearnersAssessedN,
+        target_grades_json AS targetGradesJson,
+        min_teacher_evaluations_total AS minTeacherEvaluationsTotal,
+        min_evaluations_per_reading_teacher AS minEvaluationsPerReadingTeacher,
+        data_completeness_threshold AS dataCompletenessThreshold,
+        require_sustainability_validation AS requireSustainabilityValidation,
+        sustainability_checklist_json AS sustainabilityChecklistJson
+      FROM graduation_settings
+      WHERE id = 1
+      LIMIT 1
+    `,
+    )
+    .get() as
+    | {
+      graduationEnabled: number;
+      targetDomainProficiencyPct: number;
+      requiredDomainsJson: string;
+      requiredReadingLevel: string;
+      requiredFluentPct: number;
+      minPublishedStories: number;
+      targetTeachingQualityPct: number;
+      requireTeachingDomains: number;
+      latestAssessmentRequired: number;
+      latestEvaluationRequired: number;
+      assessmentCycleMode: GraduationAssessmentCycleMode;
+      dismissSnoozeDays: number;
+      criteriaVersion: string;
+      updatedAt: string | null;
+      minLearnersAssessedN: number | null;
+      targetGradesJson: string | null;
+      minTeacherEvaluationsTotal: number | null;
+      minEvaluationsPerReadingTeacher: number | null;
+      dataCompletenessThreshold: number | null;
+      requireSustainabilityValidation: number | null;
+      sustainabilityChecklistJson: string | null;
+    }
+    | undefined;
+
+  if (!row) {
+    return DEFAULT_GRADUATION_SETTINGS;
+  }
+
+  const mode = String(row.assessmentCycleMode ?? "").trim().toLowerCase();
+  const assessmentCycleMode: GraduationAssessmentCycleMode =
+    mode === "latest" || mode === "endline" || mode === "latest_or_endline"
+      ? mode
+      : DEFAULT_GRADUATION_SETTINGS.assessmentCycleMode;
+
+  let targetGrades = DEFAULT_GRADUATION_SETTINGS.targetGrades;
+  try {
+    const parsed = JSON.parse(row.targetGradesJson ?? "[]");
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      targetGrades = parsed.map((v: unknown) => String(v ?? "").trim()).filter(Boolean);
+    }
+  } catch { /* use default */ }
+
+  let sustainabilityChecklistItems = DEFAULT_GRADUATION_SETTINGS.sustainabilityChecklistItems;
+  try {
+    const parsed = JSON.parse(row.sustainabilityChecklistJson ?? "[]");
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      sustainabilityChecklistItems = parsed.map((v: unknown) => String(v ?? "").trim()).filter(Boolean);
+    }
+  } catch { /* use default */ }
+
+  return {
+    graduationEnabled: Number(row.graduationEnabled ?? 0) === 1,
+    targetDomainProficiencyPct:
+      Number.isFinite(Number(row.targetDomainProficiencyPct)) &&
+        Number(row.targetDomainProficiencyPct) >= 0
+        ? Number(row.targetDomainProficiencyPct)
+        : DEFAULT_GRADUATION_SETTINGS.targetDomainProficiencyPct,
+    requiredDomains: parseGraduationRequiredDomains(row.requiredDomainsJson),
+    requiredReadingLevel: normalizeReadingLevel(row.requiredReadingLevel),
+    requiredFluentPct:
+      Number.isFinite(Number(row.requiredFluentPct)) && Number(row.requiredFluentPct) >= 0
+        ? Number(row.requiredFluentPct)
+        : DEFAULT_GRADUATION_SETTINGS.requiredFluentPct,
+    minPublishedStories:
+      Number.isFinite(Number(row.minPublishedStories)) && Number(row.minPublishedStories) >= 0
+        ? Math.round(Number(row.minPublishedStories))
+        : DEFAULT_GRADUATION_SETTINGS.minPublishedStories,
+    targetTeachingQualityPct:
+      Number.isFinite(Number(row.targetTeachingQualityPct)) &&
+        Number(row.targetTeachingQualityPct) >= 0
+        ? Number(row.targetTeachingQualityPct)
+        : DEFAULT_GRADUATION_SETTINGS.targetTeachingQualityPct,
+    requireTeachingDomains: Number(row.requireTeachingDomains ?? 0) === 1,
+    latestAssessmentRequired: Number(row.latestAssessmentRequired ?? 0) === 1,
+    latestEvaluationRequired: Number(row.latestEvaluationRequired ?? 0) === 1,
+    assessmentCycleMode,
+    dismissSnoozeDays:
+      Number.isFinite(Number(row.dismissSnoozeDays)) && Number(row.dismissSnoozeDays) >= 1
+        ? Math.round(Number(row.dismissSnoozeDays))
+        : DEFAULT_GRADUATION_SETTINGS.dismissSnoozeDays,
+    criteriaVersion: String(row.criteriaVersion ?? DEFAULT_GRADUATION_SETTINGS.criteriaVersion),
+    updatedAt: row.updatedAt ?? null,
+    /* V2 */
+    minLearnersAssessedN:
+      Number.isFinite(Number(row.minLearnersAssessedN)) && Number(row.minLearnersAssessedN) >= 0
+        ? Math.round(Number(row.minLearnersAssessedN))
+        : DEFAULT_GRADUATION_SETTINGS.minLearnersAssessedN,
+    targetGrades,
+    minTeacherEvaluationsTotal:
+      Number.isFinite(Number(row.minTeacherEvaluationsTotal)) && Number(row.minTeacherEvaluationsTotal) >= 0
+        ? Math.round(Number(row.minTeacherEvaluationsTotal))
+        : DEFAULT_GRADUATION_SETTINGS.minTeacherEvaluationsTotal,
+    minEvaluationsPerReadingTeacher:
+      Number.isFinite(Number(row.minEvaluationsPerReadingTeacher)) && Number(row.minEvaluationsPerReadingTeacher) >= 0
+        ? Math.round(Number(row.minEvaluationsPerReadingTeacher))
+        : DEFAULT_GRADUATION_SETTINGS.minEvaluationsPerReadingTeacher,
+    dataCompletenessThreshold:
+      Number.isFinite(Number(row.dataCompletenessThreshold)) && Number(row.dataCompletenessThreshold) >= 0
+        ? Number(row.dataCompletenessThreshold)
+        : DEFAULT_GRADUATION_SETTINGS.dataCompletenessThreshold,
+    requireSustainabilityValidation: Number(row.requireSustainabilityValidation ?? 1) === 1,
+    sustainabilityChecklistItems,
+  };
+}
+
+export function updateGraduationSettings(
+  input: Partial<Omit<GraduationSettingsRecord, "updatedAt">>,
+  actor: PortalUser,
+): GraduationSettingsRecord {
+  const current = getGraduationSettings();
+  const next: GraduationSettingsRecord = {
+    ...current,
+    ...input,
+    requiredDomains:
+      input.requiredDomains && input.requiredDomains.length > 0
+        ? input.requiredDomains.filter((domain) => isGraduationDomainKey(domain))
+        : current.requiredDomains,
+    assessmentCycleMode:
+      input.assessmentCycleMode &&
+        (input.assessmentCycleMode === "latest" ||
+          input.assessmentCycleMode === "endline" ||
+          input.assessmentCycleMode === "latest_or_endline")
+        ? input.assessmentCycleMode
+        : current.assessmentCycleMode,
+    requiredReadingLevel: normalizeReadingLevel(input.requiredReadingLevel ?? current.requiredReadingLevel),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (next.requiredDomains.length === 0) {
+    next.requiredDomains = DEFAULT_GRADUATION_SETTINGS.requiredDomains;
+  }
+
+  const db = getDb();
+  db.prepare(
+    `
+      UPDATE graduation_settings
+      SET
+        graduation_enabled = @graduationEnabled,
+        target_domain_proficiency_pct = @targetDomainProficiencyPct,
+        required_domains_json = @requiredDomainsJson,
+        required_reading_level = @requiredReadingLevel,
+        required_fluent_pct = @requiredFluentPct,
+        min_published_stories = @minPublishedStories,
+        target_teaching_quality_pct = @targetTeachingQualityPct,
+        require_teaching_domains = @requireTeachingDomains,
+        latest_assessment_required = @latestAssessmentRequired,
+        latest_evaluation_required = @latestEvaluationRequired,
+        assessment_cycle_mode = @assessmentCycleMode,
+        dismiss_snooze_days = @dismissSnoozeDays,
+        criteria_version = @criteriaVersion,
+        updated_at = @updatedAt,
+        min_learners_assessed_n = @minLearnersAssessedN,
+        target_grades_json = @targetGradesJson,
+        min_teacher_evaluations_total = @minTeacherEvaluationsTotal,
+        min_evaluations_per_reading_teacher = @minEvaluationsPerReadingTeacher,
+        data_completeness_threshold = @dataCompletenessThreshold,
+        require_sustainability_validation = @requireSustainabilityValidation,
+        sustainability_checklist_json = @sustainabilityChecklistJson
+      WHERE id = 1
+    `,
+  ).run({
+    graduationEnabled: next.graduationEnabled ? 1 : 0,
+    targetDomainProficiencyPct: next.targetDomainProficiencyPct,
+    requiredDomainsJson: JSON.stringify(next.requiredDomains),
+    requiredReadingLevel: next.requiredReadingLevel,
+    requiredFluentPct: next.requiredFluentPct,
+    minPublishedStories: next.minPublishedStories,
+    targetTeachingQualityPct: next.targetTeachingQualityPct,
+    requireTeachingDomains: next.requireTeachingDomains ? 1 : 0,
+    latestAssessmentRequired: next.latestAssessmentRequired ? 1 : 0,
+    latestEvaluationRequired: next.latestEvaluationRequired ? 1 : 0,
+    assessmentCycleMode: next.assessmentCycleMode,
+    dismissSnoozeDays: next.dismissSnoozeDays,
+    criteriaVersion: next.criteriaVersion.trim() || DEFAULT_GRADUATION_SETTINGS.criteriaVersion,
+    updatedAt: next.updatedAt,
+    minLearnersAssessedN: next.minLearnersAssessedN,
+    targetGradesJson: JSON.stringify(next.targetGrades),
+    minTeacherEvaluationsTotal: next.minTeacherEvaluationsTotal,
+    minEvaluationsPerReadingTeacher: next.minEvaluationsPerReadingTeacher,
+    dataCompletenessThreshold: next.dataCompletenessThreshold,
+    requireSustainabilityValidation: next.requireSustainabilityValidation ? 1 : 0,
+    sustainabilityChecklistJson: JSON.stringify(next.sustainabilityChecklistItems),
+  });
+
+  logAuditEvent(
+    actor.id,
+    actor.fullName,
+    "update",
+    "graduation_settings",
+    1,
+    JSON.stringify(current),
+    JSON.stringify(next),
+    "Updated school graduation criteria settings.",
+  );
+
+  return getGraduationSettings();
+}
+
+function toNullableNumber(value: number | string | null | undefined) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function selectAssessmentRowsForGraduation<
+  T extends {
+    assessmentDate: string;
+    assessmentType: string;
+  },
+>(
+  rows: T[],
+  mode: GraduationAssessmentCycleMode,
+): T[] {
+  if (rows.length === 0) {
+    return [] as T[];
+  }
+  const latestDate = [...rows]
+    .map((row) => String(row.assessmentDate ?? ""))
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a))[0];
+
+  const latestRows = rows.filter((row) => String(row.assessmentDate ?? "") === latestDate);
+  const endlineRows = rows.filter((row) => normalizeAssessmentType(String(row.assessmentType ?? "")) === "endline");
+  const latestEndlineDate = [...endlineRows]
+    .map((row) => String(row.assessmentDate ?? ""))
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a))[0];
+  const latestEndlineRows = latestEndlineDate
+    ? endlineRows.filter((row) => String(row.assessmentDate ?? "") === latestEndlineDate)
+    : [];
+
+  if (mode === "endline") {
+    return latestEndlineRows;
+  }
+  if (mode === "latest") {
+    return latestRows;
+  }
+  return latestEndlineRows.length > 0 ? latestEndlineRows : latestRows;
+}
+
+function computeDomainProficiency(
+  values: number[],
+  threshold: number,
+): { pct: number | null; n: number } {
+  if (values.length === 0) {
+    return { pct: null, n: 0 };
+  }
+  const met = values.filter((value) => value >= threshold).length;
+  return {
+    pct: roundPercent((met / values.length) * 100),
+    n: values.length,
+  };
+}
+
+function parseGraduationWorkflowState(
+  value: string | null | undefined,
+): GraduationWorkflowState {
+  if (
+    value === "pending" ||
+    value === "kept_supporting" ||
+    value === "needs_review" ||
+    value === "graduated" ||
+    value === "monitoring"
+  ) {
+    return value;
+  }
+  return "pending";
+}
+
+function parseGraduationScorecardJson(value: string | null | undefined): GraduationEligibilityScorecard {
+  if (!value) {
+    return {
+      domainsOk: false,
+      domainsValues: [],
+      readingLevelsOk: false,
+      fluentPct: null,
+      requiredFluentPct: 100,
+      readingSampleSize: 0,
+      storiesOk: false,
+      publishedStoryCount: 0,
+      requiredStories: 15,
+      teachingOk: false,
+      teachingQualityPct: null,
+      requiredTeachingQualityPct: 90,
+      teachingEvaluationsCount: 0,
+      evidenceGatesOk: false,
+      learnersAssessedCount: 0,
+      requiredLearnersAssessedN: 30,
+      teacherEvaluationsTotalCount: 0,
+      requiredTeacherEvaluationsTotal: 3,
+      perTeacherEvaluationsOk: false,
+      dataCompletenessPct: null,
+      requiredDataCompletenessPct: 80,
+      sustainabilityValidationStatus: "pending",
+      validationPassCount: 0,
+    };
+  }
+  try {
+    const parsed = JSON.parse(value) as GraduationEligibilityScorecard;
+    return {
+      domainsOk: Boolean(parsed.domainsOk),
+      domainsValues: Array.isArray(parsed.domainsValues) ? parsed.domainsValues : [],
+      readingLevelsOk: Boolean(parsed.readingLevelsOk),
+      fluentPct: parsed.fluentPct ?? null,
+      requiredFluentPct: Number(parsed.requiredFluentPct ?? 100),
+      readingSampleSize: Number(parsed.readingSampleSize ?? 0),
+      storiesOk: Boolean(parsed.storiesOk),
+      publishedStoryCount: Number(parsed.publishedStoryCount ?? 0),
+      requiredStories: Number(parsed.requiredStories ?? 15),
+      teachingOk: Boolean(parsed.teachingOk),
+      teachingQualityPct: parsed.teachingQualityPct ?? null,
+      requiredTeachingQualityPct: Number(parsed.requiredTeachingQualityPct ?? 90),
+      teachingEvaluationsCount: Number(parsed.teachingEvaluationsCount ?? 0),
+      evidenceGatesOk: Boolean(parsed.evidenceGatesOk),
+      learnersAssessedCount: Number(parsed.learnersAssessedCount ?? 0),
+      requiredLearnersAssessedN: Number(parsed.requiredLearnersAssessedN ?? 30),
+      teacherEvaluationsTotalCount: Number(parsed.teacherEvaluationsTotalCount ?? 0),
+      requiredTeacherEvaluationsTotal: Number(parsed.requiredTeacherEvaluationsTotal ?? 3),
+      perTeacherEvaluationsOk: Boolean(parsed.perTeacherEvaluationsOk),
+      dataCompletenessPct: parsed.dataCompletenessPct ?? null,
+      requiredDataCompletenessPct: Number(parsed.requiredDataCompletenessPct ?? 80),
+      sustainabilityValidationStatus: parsed.sustainabilityValidationStatus ?? "pending",
+      validationPassCount: Number(parsed.validationPassCount ?? 0),
+    };
+  } catch {
+    return {
+      domainsOk: false,
+      domainsValues: [],
+      readingLevelsOk: false,
+      fluentPct: null,
+      requiredFluentPct: 100,
+      readingSampleSize: 0,
+      storiesOk: false,
+      publishedStoryCount: 0,
+      requiredStories: 15,
+      teachingOk: false,
+      teachingQualityPct: null,
+      requiredTeachingQualityPct: 90,
+      teachingEvaluationsCount: 0,
+      evidenceGatesOk: false,
+      learnersAssessedCount: 0,
+      requiredLearnersAssessedN: 30,
+      teacherEvaluationsTotalCount: 0,
+      requiredTeacherEvaluationsTotal: 3,
+      perTeacherEvaluationsOk: false,
+      dataCompletenessPct: null,
+      requiredDataCompletenessPct: 80,
+      sustainabilityValidationStatus: "pending",
+      validationPassCount: 0,
+    };
+  }
+}
+
+function parseStringArrayJson(value: string | null | undefined) {
+  if (!value) {
+    return [] as string[];
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) {
+      return [] as string[];
+    }
+    return parsed.map((entry) => String(entry ?? "").trim()).filter(Boolean);
+  } catch {
+    return [] as string[];
+  }
+}
+
+function buildSchoolGraduationEligibilitySnapshot(
+  school: {
+    id: number;
+    name: string;
+    district: string;
+    subRegion: string;
+    region: string;
+    programStatus: "active" | "graduated" | "paused" | "monitoring";
+    graduatedAt: string | null;
+    graduationVersion: string | null;
+  },
+  settings: GraduationSettingsRecord,
+) {
+  const db = getDb();
+  const assessmentRows = db
+    .prepare(
+      `
+      SELECT
+        assessment_date AS assessmentDate,
+        assessment_type AS assessmentType,
+        learner_uid AS learnerUid,
+        sound_identification_score AS letterSoundsScore,
+        decodable_words_score AS decodableWordsScore,
+        undecodable_words_score AS undecodableWordsScore,
+        made_up_words_score AS madeUpWordsScore,
+        story_reading_score AS storyReadingScore,
+        reading_comprehension_score AS comprehensionScore,
+        letter_identification_score AS letterIdentificationScore
+      FROM assessment_records
+      WHERE school_id = @schoolId
+      `,
+    )
+    .all({ schoolId: school.id }) as Array<{
+      assessmentDate: string;
+      assessmentType: string;
+      learnerUid: string | null;
+      letterSoundsScore: number | null;
+      decodableWordsScore: number | null;
+      undecodableWordsScore: number | null;
+      madeUpWordsScore: number | null;
+      storyReadingScore: number | null;
+      comprehensionScore: number | null;
+      letterIdentificationScore: number | null;
+    }>;
+
+  const selectedAssessmentRows = selectAssessmentRowsForGraduation(
+    assessmentRows,
+    settings.assessmentCycleMode,
+  );
+
+  const domainBuckets: Record<GraduationDomainKey, number[]> = {
+    letter_sounds: [],
+    decoding: [],
+    fluency: [],
+    comprehension: [],
+  };
+  const readingScores: ReadingDomainScores[] = [];
+
+  selectedAssessmentRows.forEach((row) => {
+    const letterSounds = toNullableNumber(row.letterSoundsScore);
+    if (letterSounds !== null) {
+      domainBuckets.letter_sounds.push(letterSounds);
+    }
+    const decodingParts = [
+      toNullableNumber(row.decodableWordsScore),
+      toNullableNumber(row.undecodableWordsScore),
+      toNullableNumber(row.madeUpWordsScore),
+    ].filter((value): value is number => value !== null);
+    if (decodingParts.length > 0) {
+      domainBuckets.decoding.push(decodingParts.reduce((sum, value) => sum + value, 0) / decodingParts.length);
+    }
+    const fluency = toNullableNumber(row.storyReadingScore);
+    if (fluency !== null) {
+      domainBuckets.fluency.push(fluency);
+    }
+    const comprehension = toNullableNumber(row.comprehensionScore);
+    if (comprehension !== null) {
+      domainBuckets.comprehension.push(comprehension);
+    }
+
+    const extracted = extractReadingDomainScores({
+      childName: "",
+      gender: "Boy",
+      age: 0,
+      schoolId: school.id,
+      classGrade: "",
+      assessmentDate: row.assessmentDate,
+      assessmentType: normalizeAssessmentType(row.assessmentType) as "baseline" | "progress" | "endline",
+      letterIdentificationScore: toNullableNumber(row.letterIdentificationScore),
+      soundIdentificationScore: toNullableNumber(row.letterSoundsScore),
+      decodableWordsScore: toNullableNumber(row.decodableWordsScore),
+      undecodableWordsScore: toNullableNumber(row.undecodableWordsScore),
+      madeUpWordsScore: toNullableNumber(row.madeUpWordsScore),
+      storyReadingScore: toNullableNumber(row.storyReadingScore),
+      readingComprehensionScore: toNullableNumber(row.comprehensionScore),
+    });
+    if (extracted) {
+      readingScores.push(extracted);
+    }
+  });
+
+  const domainScoreThresholds: Record<GraduationDomainKey, number> = {
+    letter_sounds: 60,
+    decoding: 60,
+    fluency: 45,
+    comprehension: 50,
+  };
+
+  const domainsValues: GraduationEligibilityDomainMetric[] = settings.requiredDomains.map((key) => {
+    const proficiency = computeDomainProficiency(
+      domainBuckets[key],
+      domainScoreThresholds[key],
+    );
+    const met = proficiency.pct !== null && proficiency.pct >= settings.targetDomainProficiencyPct;
+    return {
+      key,
+      label: GRADUATION_DOMAIN_LABELS[key],
+      proficiencyPct: proficiency.pct,
+      targetPct: settings.targetDomainProficiencyPct,
+      sampleSize: proficiency.n,
+      met,
+    };
+  });
+
+  const domainsOk =
+    domainsValues.length > 0 &&
+    domainsValues.every((domain) => domain.met);
+
+  const requiredReadingOrdinal = readingLevelOrdinal(settings.requiredReadingLevel);
+  const fluentCount = readingScores.filter(
+    (scores) => readingLevelOrdinal(computeReadingLevel(scores)) >= requiredReadingOrdinal,
+  ).length;
+  const fluentPct =
+    readingScores.length > 0 ? roundPercent((fluentCount / readingScores.length) * 100) : null;
+  const readingLevelsOk =
+    fluentPct !== null && fluentPct >= Number(settings.requiredFluentPct);
+
+  const publishedStoriesRow = db
+    .prepare(
+      `
+      SELECT COUNT(*) AS count
+      FROM story_library
+      WHERE school_id = @schoolId
+        AND publish_status = 'published'
+      `,
+    )
+    .get({ schoolId: school.id }) as { count: number } | undefined;
+  const publishedStoryCount = Number(publishedStoriesRow?.count ?? 0);
+  const storiesOk = publishedStoryCount >= settings.minPublishedStories;
+
+  const lessonRows = db
+    .prepare(
+      `
+      SELECT
+        id,
+        lesson_date AS lessonDate,
+        overall_score AS overallScore,
+        updated_at AS updatedAt
+      FROM lesson_evaluations
+      WHERE school_id = @schoolId
+        AND status = 'active'
+      ORDER BY lesson_date DESC, id DESC
+      `,
+    )
+    .all({ schoolId: school.id }) as Array<{
+      id: number;
+      lessonDate: string;
+      overallScore: number;
+      updatedAt: string;
+    }>;
+
+  const latestLessonMonth = lessonRows[0]?.lessonDate?.slice(0, 7) ?? null;
+  const scopedLessonRows = latestLessonMonth
+    ? lessonRows.filter((row) => String(row.lessonDate ?? "").startsWith(latestLessonMonth))
+    : [];
+  const lessonScorePercents = scopedLessonRows
+    .map((row) => score4ToPercent(Number(row.overallScore)))
+    .filter((value): value is number => value !== null);
+  const teachingQualityPct =
+    lessonScorePercents.length > 0
+      ? roundPercent(lessonScorePercents.reduce((sum, value) => sum + value, 0) / lessonScorePercents.length)
+      : null;
+
+  let teachingDomainsOk = true;
+  if (settings.requireTeachingDomains && scopedLessonRows.length > 0) {
+    const { clause: evalClause, params: evalParams } = buildSqlInClause(
+      scopedLessonRows.map((row) => row.id),
+      "gradEval",
+    );
+    const domainRows = db
+      .prepare(
+        `
+        SELECT
+          domain_key AS domainKey,
+          AVG(score) AS avgScore
+        FROM lesson_evaluation_items
+        WHERE evaluation_id IN ${evalClause}
+        GROUP BY domain_key
+        `,
+      )
+      .all(evalParams) as Array<{ domainKey: LessonEvaluationDomainKey; avgScore: number | null }>;
+
+    const domainPctMap = new Map<string, number>();
+    domainRows.forEach((row) => {
+      const pct = score4ToPercent(row.avgScore === null ? null : Number(row.avgScore));
+      if (pct !== null) {
+        domainPctMap.set(row.domainKey, pct);
+      }
+    });
+    teachingDomainsOk = (
+      ["setup", "new_sound", "decoding", "reading_practice", "tricky_words", "check_next"] as const
+    ).every((domainKey) => (domainPctMap.get(domainKey) ?? 0) >= settings.targetTeachingQualityPct);
+  } else if (settings.requireTeachingDomains && scopedLessonRows.length === 0) {
+    teachingDomainsOk = false;
+  }
+
+  const teachingOk =
+    teachingQualityPct !== null &&
+    teachingQualityPct >= settings.targetTeachingQualityPct &&
+    teachingDomainsOk;
+
+  const missingDataFlags: string[] = [];
+  if (settings.latestAssessmentRequired && selectedAssessmentRows.length === 0) {
+    missingDataFlags.push("no_latest_assessment");
+  }
+  if (settings.latestEvaluationRequired && scopedLessonRows.length === 0) {
+    missingDataFlags.push("no_latest_evaluation");
+  }
+  domainsValues.forEach((domain) => {
+    if (domain.proficiencyPct === null) {
+      missingDataFlags.push(`missing_${domain.key}_data`);
+    }
+  });
+  if (readingScores.length === 0) {
+    missingDataFlags.push("no_reading_levels_sample");
+  }
+
+  /* ── V2: Evidence gates ── */
+  const learnersAssessedCount = selectedAssessmentRows.length;
+  const learnersGateOk = learnersAssessedCount >= settings.minLearnersAssessedN;
+
+  const teacherEvaluationsTotalCount = lessonRows.length;
+  const totalEvalsGateOk = teacherEvaluationsTotalCount >= settings.minTeacherEvaluationsTotal;
+
+  /* Per-teacher evaluation check */
+  const teacherEvalCounts = new Map<string, number>();
+  lessonRows.forEach((row) => {
+    const rawRow = row as Record<string, unknown>;
+    const teacherUid = String(rawRow.teacherUid ?? rawRow.teacher_uid ?? "unknown").trim() || "unknown";
+    teacherEvalCounts.set(teacherUid, (teacherEvalCounts.get(teacherUid) ?? 0) + 1);
+  });
+  const perTeacherEvaluationsOk =
+    teacherEvalCounts.size === 0
+      ? false
+      : [...teacherEvalCounts.values()].every(
+        (count) => count >= settings.minEvaluationsPerReadingTeacher,
+      );
+
+  /* Data completeness */
+  const totalExpectedFields = selectedAssessmentRows.length * 6; /* 6 score fields per row */
+  const totalFilledFields = selectedAssessmentRows.reduce((sum, row) => {
+    let filled = 0;
+    if (toNullableNumber(row.letterSoundsScore) !== null) filled++;
+    if (toNullableNumber(row.decodableWordsScore) !== null) filled++;
+    if (toNullableNumber(row.undecodableWordsScore) !== null) filled++;
+    if (toNullableNumber(row.madeUpWordsScore) !== null) filled++;
+    if (toNullableNumber(row.storyReadingScore) !== null) filled++;
+    if (toNullableNumber(row.comprehensionScore) !== null) filled++;
+    return sum + filled;
+  }, 0);
+  const dataCompletenessPct =
+    totalExpectedFields > 0
+      ? roundPercent((totalFilledFields / totalExpectedFields) * 100)
+      : null;
+  const dataCompletenessOk =
+    dataCompletenessPct !== null && dataCompletenessPct >= settings.dataCompletenessThreshold;
+
+  const evidenceGatesOk = learnersGateOk && totalEvalsGateOk && perTeacherEvaluationsOk && dataCompletenessOk;
+
+  if (!learnersGateOk) {
+    missingDataFlags.push("insufficient_learners_assessed");
+  }
+  if (!totalEvalsGateOk) {
+    missingDataFlags.push("insufficient_teacher_evaluations");
+  }
+  if (!perTeacherEvaluationsOk) {
+    missingDataFlags.push("insufficient_per_teacher_evaluations");
+  }
+  if (!dataCompletenessOk) {
+    missingDataFlags.push("data_completeness_below_threshold");
+  }
+
+  /* ── V2: Sustainability validation (two-pass) ── */
+  const v1EligibleNow =
+    settings.graduationEnabled &&
+    domainsOk &&
+    readingLevelsOk &&
+    storiesOk &&
+    teachingOk &&
+    evidenceGatesOk &&
+    (!settings.latestAssessmentRequired || selectedAssessmentRows.length > 0) &&
+    (!settings.latestEvaluationRequired || scopedLessonRows.length > 0);
+
+  let sustainabilityValidationStatus: import("@/lib/types").GraduationSustainabilityStatus = "not_required";
+  let validationPassCount = 0;
+
+  if (settings.requireSustainabilityValidation) {
+    const existingPasses = db
+      .prepare(
+        `SELECT pass_number FROM school_graduation_validation_history
+         WHERE school_id = @schoolId ORDER BY pass_number ASC`,
+      )
+      .all({ schoolId: school.id }) as Array<{ pass_number: number }>;
+    validationPassCount = existingPasses.length;
+
+    if (v1EligibleNow && validationPassCount === 0) {
+      /* First time meeting all criteria → record pass 1 */
+      db.prepare(
+        `INSERT INTO school_graduation_validation_history
+         (school_id, pass_number, scorecard_json, assessment_event_label, computed_at)
+         VALUES (@schoolId, 1, @scorecardJson, @eventLabel, @computedAt)`,
+      ).run({
+        schoolId: school.id,
+        scorecardJson: JSON.stringify({ domainsOk, readingLevelsOk, storiesOk, teachingOk, evidenceGatesOk }),
+        eventLabel: "endline_or_latest",
+        computedAt: new Date().toISOString(),
+      });
+      validationPassCount = 1;
+      sustainabilityValidationStatus = "first_pass";
+    } else if (v1EligibleNow && validationPassCount === 1) {
+      /* Still meeting criteria on a later check → record pass 2 */
+      db.prepare(
+        `INSERT INTO school_graduation_validation_history
+         (school_id, pass_number, scorecard_json, assessment_event_label, computed_at)
+         VALUES (@schoolId, 2, @scorecardJson, @eventLabel, @computedAt)`,
+      ).run({
+        schoolId: school.id,
+        scorecardJson: JSON.stringify({ domainsOk, readingLevelsOk, storiesOk, teachingOk, evidenceGatesOk }),
+        eventLabel: "validation_check",
+        computedAt: new Date().toISOString(),
+      });
+      validationPassCount = 2;
+      sustainabilityValidationStatus = "validated";
+    } else if (validationPassCount >= 2) {
+      sustainabilityValidationStatus = "validated";
+    } else if (validationPassCount === 1) {
+      sustainabilityValidationStatus = "first_pass";
+    } else {
+      sustainabilityValidationStatus = "pending";
+    }
+  }
+
+  const isEligible =
+    v1EligibleNow &&
+    (!settings.requireSustainabilityValidation || sustainabilityValidationStatus === "validated");
+
+  const scorecard: GraduationEligibilityScorecard = {
+    domainsOk,
+    domainsValues,
+    readingLevelsOk,
+    fluentPct,
+    requiredFluentPct: settings.requiredFluentPct,
+    readingSampleSize: readingScores.length,
+    storiesOk,
+    publishedStoryCount,
+    requiredStories: settings.minPublishedStories,
+    teachingOk,
+    teachingQualityPct,
+    requiredTeachingQualityPct: settings.targetTeachingQualityPct,
+    teachingEvaluationsCount: scopedLessonRows.length,
+    /* V2 */
+    evidenceGatesOk,
+    learnersAssessedCount,
+    requiredLearnersAssessedN: settings.minLearnersAssessedN,
+    teacherEvaluationsTotalCount,
+    requiredTeacherEvaluationsTotal: settings.minTeacherEvaluationsTotal,
+    perTeacherEvaluationsOk,
+    dataCompletenessPct,
+    requiredDataCompletenessPct: settings.dataCompletenessThreshold,
+    sustainabilityValidationStatus,
+    validationPassCount,
+  };
+
+  const lastAssessmentSource = selectedAssessmentRows
+    .map((row) => row.assessmentDate)
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a))[0];
+  const lastStorySource = db
+    .prepare(
+      `
+      SELECT COALESCE(MAX(published_at), MAX(created_at)) AS lastStoryDate
+      FROM story_library
+      WHERE school_id = @schoolId
+        AND publish_status = 'published'
+      `,
+    )
+    .get({ schoolId: school.id }) as { lastStoryDate: string | null } | undefined;
+  const lastEvalSource = scopedLessonRows
+    .map((row) => row.updatedAt)
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a))[0];
+  const lastUpdatedSource = [lastAssessmentSource, lastStorySource?.lastStoryDate, lastEvalSource]
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => b.localeCompare(a))[0] ?? null;
+
+  const workflow = db
+    .prepare(
+      `
+      SELECT
+        state,
+        snoozed_until AS snoozedUntil,
+        assigned_supervisor_user_id AS assignedSupervisorUserId,
+        reason
+      FROM school_graduation_workflow
+      WHERE school_id = @schoolId
+      LIMIT 1
+      `,
+    )
+    .get({ schoolId: school.id }) as
+    | {
+      state: string | null;
+      snoozedUntil: string | null;
+      assignedSupervisorUserId: number | null;
+      reason: string | null;
+    }
+    | undefined;
+
+  const workflowState =
+    school.programStatus === "graduated"
+      ? "graduated" as const
+      : school.programStatus === "monitoring"
+        ? "monitoring" as const
+        : parseGraduationWorkflowState(workflow?.state);
+
+  return {
+    schoolId: school.id,
+    schoolName: school.name,
+    district: school.district,
+    subRegion: school.subRegion,
+    region: school.region,
+    programStatus: school.programStatus,
+    isEligible,
+    eligibilityScorecard: scorecard,
+    missingDataFlags,
+    workflowState,
+    snoozedUntil: workflow?.snoozedUntil ?? null,
+    assignedSupervisorUserId: workflow?.assignedSupervisorUserId ?? null,
+    workflowReason: workflow?.reason ?? null,
+    graduatedAt: school.graduatedAt,
+    graduationVersion: school.graduationVersion,
+    computedAt: new Date().toISOString(),
+    lastUpdatedSource,
+    checklistCompleted: false,
+    checklistAnswers: null,
+  };
+}
+
+export function refreshSchoolGraduationEligibilityCache(schoolId?: number | null) {
+  const db = getDb();
+  const settings = getGraduationSettings();
+  const whereClause =
+    schoolId && Number.isInteger(Number(schoolId)) && Number(schoolId) > 0
+      ? "WHERE sd.id = @schoolId"
+      : "";
+  const params =
+    schoolId && Number.isInteger(Number(schoolId)) && Number(schoolId) > 0
+      ? { schoolId: Number(schoolId) }
+      : {};
+
+  const schools = db
+    .prepare(
+      `
+      SELECT
+        sd.id,
+        sd.name,
+        sd.district,
+        COALESCE(sd.sub_region, '') AS subRegion,
+        COALESCE(sd.region, '') AS region,
+        COALESCE(sd.program_status, 'active') AS programStatus,
+        sd.graduated_at AS graduatedAt,
+        sd.graduation_version AS graduationVersion
+      FROM schools_directory sd
+      ${whereClause}
+      ORDER BY sd.name ASC
+      `,
+    )
+    .all(params) as Array<{
+      id: number;
+      name: string;
+      district: string;
+      subRegion: string;
+      region: string;
+      programStatus: string | null;
+      graduatedAt: string | null;
+      graduationVersion: string | null;
+    }>;
+
+  if (schools.length === 0) {
+    return;
+  }
+
+  const { clause: schoolClause, params: schoolParams } = buildSqlInClause(
+    schools.map((row) => row.id),
+    "gradSchool",
+  );
+  const existingRows = db
+    .prepare(
+      `
+      SELECT school_id AS schoolId, is_eligible AS isEligible, scorecard_json AS scorecardJson
+      FROM school_graduation_eligibility_cache
+      WHERE school_id IN ${schoolClause}
+      `,
+    )
+    .all(schoolParams) as Array<{
+      schoolId: number;
+      isEligible: number;
+      scorecardJson: string;
+    }>;
+  const existingBySchool = new Map(existingRows.map((row) => [row.schoolId, row]));
+
+  const upsert = db.prepare(
+    `
+    INSERT INTO school_graduation_eligibility_cache (
+      school_id,
+      is_eligible,
+      domains_ok,
+      reading_levels_ok,
+      stories_ok,
+      teaching_ok,
+      domain_values_json,
+      scorecard_json,
+      missing_data_json,
+      fluent_pct,
+      published_story_count,
+      teaching_quality_pct,
+      assessment_sample_size,
+      evaluations_count,
+      criteria_version,
+      last_updated_source,
+      computed_at,
+      updated_at,
+      evidence_gates_ok,
+      sustainability_status,
+      validation_pass_count
+    ) VALUES (
+      @schoolId,
+      @isEligible,
+      @domainsOk,
+      @readingLevelsOk,
+      @storiesOk,
+      @teachingOk,
+      @domainValuesJson,
+      @scorecardJson,
+      @missingDataJson,
+      @fluentPct,
+      @publishedStoryCount,
+      @teachingQualityPct,
+      @assessmentSampleSize,
+      @evaluationsCount,
+      @criteriaVersion,
+      @lastUpdatedSource,
+      @computedAt,
+      @updatedAt,
+      @evidenceGatesOk,
+      @sustainabilityStatus,
+      @validationPassCount
+    )
+    ON CONFLICT(school_id) DO UPDATE SET
+      is_eligible = excluded.is_eligible,
+      domains_ok = excluded.domains_ok,
+      reading_levels_ok = excluded.reading_levels_ok,
+      stories_ok = excluded.stories_ok,
+      teaching_ok = excluded.teaching_ok,
+      domain_values_json = excluded.domain_values_json,
+      scorecard_json = excluded.scorecard_json,
+      missing_data_json = excluded.missing_data_json,
+      fluent_pct = excluded.fluent_pct,
+      published_story_count = excluded.published_story_count,
+      teaching_quality_pct = excluded.teaching_quality_pct,
+      assessment_sample_size = excluded.assessment_sample_size,
+      evaluations_count = excluded.evaluations_count,
+      criteria_version = excluded.criteria_version,
+      last_updated_source = excluded.last_updated_source,
+      computed_at = excluded.computed_at,
+      updated_at = excluded.updated_at,
+      evidence_gates_ok = excluded.evidence_gates_ok,
+      sustainability_status = excluded.sustainability_status,
+      validation_pass_count = excluded.validation_pass_count
+    `,
+  );
+
+  schools.forEach((schoolRow) => {
+    const school = {
+      ...schoolRow,
+      programStatus: parseSchoolProgramStatus(schoolRow.programStatus),
+    };
+    const snapshot = buildSchoolGraduationEligibilitySnapshot(school, settings);
+    upsert.run({
+      schoolId: snapshot.schoolId,
+      isEligible: snapshot.isEligible ? 1 : 0,
+      domainsOk: snapshot.eligibilityScorecard.domainsOk ? 1 : 0,
+      readingLevelsOk: snapshot.eligibilityScorecard.readingLevelsOk ? 1 : 0,
+      storiesOk: snapshot.eligibilityScorecard.storiesOk ? 1 : 0,
+      teachingOk: snapshot.eligibilityScorecard.teachingOk ? 1 : 0,
+      domainValuesJson: JSON.stringify(snapshot.eligibilityScorecard.domainsValues),
+      scorecardJson: JSON.stringify(snapshot.eligibilityScorecard),
+      missingDataJson: JSON.stringify(snapshot.missingDataFlags),
+      fluentPct: snapshot.eligibilityScorecard.fluentPct,
+      publishedStoryCount: snapshot.eligibilityScorecard.publishedStoryCount,
+      teachingQualityPct: snapshot.eligibilityScorecard.teachingQualityPct,
+      assessmentSampleSize: snapshot.eligibilityScorecard.readingSampleSize,
+      evaluationsCount: snapshot.eligibilityScorecard.teachingEvaluationsCount,
+      criteriaVersion: settings.criteriaVersion,
+      lastUpdatedSource: snapshot.lastUpdatedSource,
+      computedAt: snapshot.computedAt,
+      updatedAt: snapshot.computedAt,
+      evidenceGatesOk: snapshot.eligibilityScorecard.evidenceGatesOk ? 1 : 0,
+      sustainabilityStatus: snapshot.eligibilityScorecard.sustainabilityValidationStatus,
+      validationPassCount: snapshot.eligibilityScorecard.validationPassCount,
+    });
+
+    const previous = existingBySchool.get(snapshot.schoolId);
+    const previousEligible = previous ? Number(previous.isEligible ?? 0) === 1 : false;
+    if (previous && previousEligible !== snapshot.isEligible) {
+      logAuditEvent(
+        0,
+        "System",
+        "eligibility_change",
+        "school_graduation_eligibility_cache",
+        snapshot.schoolId,
+        JSON.stringify({
+          isEligible: previousEligible,
+          scorecard: parseGraduationScorecardJson(previous.scorecardJson),
+        }),
+        JSON.stringify({
+          isEligible: snapshot.isEligible,
+          scorecard: snapshot.eligibilityScorecard,
+        }),
+        "School graduation eligibility changed.",
+      );
+    }
+  });
+}
+
+function mapGraduationEligibilityRow(
+  row: {
+    schoolId: number;
+    schoolName: string;
+    district: string;
+    subRegion: string;
+    region: string;
+    programStatus: string | null;
+    graduatedAt: string | null;
+    graduationVersion: string | null;
+    isEligible: number | null;
+    scorecardJson: string | null;
+    missingDataJson: string | null;
+    workflowState: string | null;
+    snoozedUntil: string | null;
+    assignedSupervisorUserId: number | null;
+    assignedSupervisorName: string | null;
+    workflowReason: string | null;
+    computedAt: string | null;
+    lastUpdatedSource: string | null;
+    checklistAnswersJson?: string | null;
+  },
+): GraduationEligibilityRecord {
+  const scorecard = parseGraduationScorecardJson(row.scorecardJson);
+  return {
+    schoolId: row.schoolId,
+    schoolName: row.schoolName,
+    district: row.district,
+    subRegion: row.subRegion,
+    region: row.region,
+    programStatus: parseSchoolProgramStatus(row.programStatus),
+    isEligible: Number(row.isEligible ?? 0) === 1,
+    eligibilityScorecard: scorecard,
+    missingDataFlags: parseStringArrayJson(row.missingDataJson),
+    workflowState: parseGraduationWorkflowState(row.workflowState),
+    snoozedUntil: row.snoozedUntil ?? null,
+    assignedSupervisorUserId: row.assignedSupervisorUserId ?? null,
+    assignedSupervisorName: row.assignedSupervisorName ?? null,
+    workflowReason: row.workflowReason ?? null,
+    graduatedAt: row.graduatedAt ?? null,
+    graduationVersion: row.graduationVersion ?? null,
+    computedAt: row.computedAt ?? new Date().toISOString(),
+    lastUpdatedSource: row.lastUpdatedSource ?? null,
+    checklistCompleted: Boolean(row.checklistAnswersJson),
+    checklistAnswers: row.checklistAnswersJson ? (() => { try { return JSON.parse(row.checklistAnswersJson) as Record<string, boolean>; } catch { return null; } })() : null,
+  };
+}
+
+export function getSchoolGraduationEligibility(
+  schoolId: number,
+  options?: { refresh?: boolean },
+): GraduationEligibilityRecord | null {
+  if (!Number.isInteger(Number(schoolId)) || Number(schoolId) <= 0) {
+    return null;
+  }
+  if (options?.refresh !== false) {
+    refreshSchoolGraduationEligibilityCache(Number(schoolId));
+  }
+  const db = getDb();
+  const row = db
+    .prepare(
+      `
+      SELECT
+        sd.id AS schoolId,
+        sd.name AS schoolName,
+        sd.district AS district,
+        COALESCE(sd.sub_region, '') AS subRegion,
+        COALESCE(sd.region, '') AS region,
+        COALESCE(sd.program_status, 'active') AS programStatus,
+        sd.graduated_at AS graduatedAt,
+        sd.graduation_version AS graduationVersion,
+        COALESCE(c.is_eligible, 0) AS isEligible,
+        c.scorecard_json AS scorecardJson,
+        c.missing_data_json AS missingDataJson,
+        c.computed_at AS computedAt,
+        c.last_updated_source AS lastUpdatedSource,
+        COALESCE(w.state, CASE WHEN COALESCE(sd.program_status, 'active') IN ('graduated','monitoring') THEN sd.program_status ELSE 'pending' END) AS workflowState,
+        w.snoozed_until AS snoozedUntil,
+        w.assigned_supervisor_user_id AS assignedSupervisorUserId,
+        supervisor.full_name AS assignedSupervisorName,
+        w.reason AS workflowReason,
+        w.checklist_answers_json AS checklistAnswersJson
+      FROM schools_directory sd
+      LEFT JOIN school_graduation_eligibility_cache c ON c.school_id = sd.id
+      LEFT JOIN school_graduation_workflow w ON w.school_id = sd.id
+      LEFT JOIN portal_users supervisor ON supervisor.id = w.assigned_supervisor_user_id
+      WHERE sd.id = @schoolId
+      LIMIT 1
+      `,
+    )
+    .get({ schoolId: Number(schoolId) }) as
+    | {
+      schoolId: number;
+      schoolName: string;
+      district: string;
+      subRegion: string;
+      region: string;
+      programStatus: string | null;
+      graduatedAt: string | null;
+      graduationVersion: string | null;
+      isEligible: number | null;
+      scorecardJson: string | null;
+      missingDataJson: string | null;
+      workflowState: string | null;
+      snoozedUntil: string | null;
+      assignedSupervisorUserId: number | null;
+      assignedSupervisorName: string | null;
+      workflowReason: string | null;
+      computedAt: string | null;
+      lastUpdatedSource: string | null;
+      checklistAnswersJson: string | null;
+    }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+  return mapGraduationEligibilityRow(row);
+}
+
+export function listGraduationQueue(options?: {
+  limit?: number;
+  includeSnoozed?: boolean;
+  refresh?: boolean;
+}): GraduationQueueSummary {
+  if (options?.refresh !== false) {
+    refreshSchoolGraduationEligibilityCache();
+  }
+
+  const db = getDb();
+  const limit = Math.min(Math.max(1, Number(options?.limit ?? 200)), 1000);
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        sd.id AS schoolId,
+        sd.name AS schoolName,
+        sd.district AS district,
+        COALESCE(sd.sub_region, '') AS subRegion,
+        COALESCE(sd.region, '') AS region,
+        COALESCE(sd.program_status, 'active') AS programStatus,
+        sd.graduated_at AS graduatedAt,
+        sd.graduation_version AS graduationVersion,
+        COALESCE(c.is_eligible, 0) AS isEligible,
+        c.scorecard_json AS scorecardJson,
+        c.missing_data_json AS missingDataJson,
+        c.computed_at AS computedAt,
+        c.last_updated_source AS lastUpdatedSource,
+        COALESCE(w.state, CASE WHEN COALESCE(sd.program_status, 'active') IN ('graduated','monitoring') THEN sd.program_status ELSE 'pending' END) AS workflowState,
+        w.snoozed_until AS snoozedUntil,
+        w.assigned_supervisor_user_id AS assignedSupervisorUserId,
+        supervisor.full_name AS assignedSupervisorName,
+        w.reason AS workflowReason,
+        w.checklist_answers_json AS checklistAnswersJson
+      FROM schools_directory sd
+      LEFT JOIN school_graduation_eligibility_cache c ON c.school_id = sd.id
+      LEFT JOIN school_graduation_workflow w ON w.school_id = sd.id
+      LEFT JOIN portal_users supervisor ON supervisor.id = w.assigned_supervisor_user_id
+      WHERE COALESCE(c.is_eligible, 0) = 1
+        AND COALESCE(sd.program_status, 'active') NOT IN ('graduated', 'monitoring')
+      ORDER BY c.computed_at DESC, lower(sd.name) ASC
+      LIMIT @limit
+      `,
+    )
+    .all({ limit }) as Array<{
+      schoolId: number;
+      schoolName: string;
+      district: string;
+      subRegion: string;
+      region: string;
+      programStatus: string | null;
+      graduatedAt: string | null;
+      graduationVersion: string | null;
+      isEligible: number | null;
+      scorecardJson: string | null;
+      missingDataJson: string | null;
+      workflowState: string | null;
+      snoozedUntil: string | null;
+      assignedSupervisorUserId: number | null;
+      assignedSupervisorName: string | null;
+      workflowReason: string | null;
+      computedAt: string | null;
+      lastUpdatedSource: string | null;
+      checklistAnswersJson: string | null;
+    }>;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const includeSnoozed = Boolean(options?.includeSnoozed);
+  const items = rows
+    .map((row) => mapGraduationEligibilityRow(row))
+    .filter((item) => {
+      if (includeSnoozed) {
+        return true;
+      }
+      if (item.workflowState !== "kept_supporting") {
+        return true;
+      }
+      if (!item.snoozedUntil) {
+        return true;
+      }
+      return item.snoozedUntil < today;
+    });
+
+  const updatedAt = items
+    .map((item) => item.computedAt)
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a))[0] ?? null;
+
+  return {
+    eligibleCount: items.length,
+    updatedAt,
+    items,
+  };
+}
+
+export function listGraduationReviewSupervisors() {
+  return getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        full_name AS fullName
+      FROM portal_users
+      WHERE role IN ('Staff', 'Admin')
+        AND (COALESCE(is_supervisor, 0) = 1 OR COALESCE(is_admin, 0) = 1 OR COALESCE(is_superadmin, 0) = 1)
+      ORDER BY full_name ASC
+      `,
+    )
+    .all() as Array<{ id: number; fullName: string }>;
+}
+
+export function reviewSchoolGraduation(
+  input: {
+    schoolId: number;
+    action: "confirm_graduation" | "keep_supporting" | "needs_review";
+    reason?: string | null;
+    snoozeDays?: number | null;
+    assignedSupervisorUserId?: number | null;
+    checklistAnswers?: Record<string, boolean> | null;
+  },
+  actor: PortalUser,
+) {
+  const schoolId = Number(input.schoolId);
+  if (!Number.isInteger(schoolId) || schoolId <= 0) {
+    throw new Error("Invalid school id.");
+  }
+  refreshSchoolGraduationEligibilityCache(schoolId);
+  const current = getSchoolGraduationEligibility(schoolId, { refresh: false });
+  if (!current) {
+    throw new Error("School graduation snapshot not found.");
+  }
+  const settings = getGraduationSettings();
+  const reason = String(input.reason ?? "").trim() || null;
+  const now = new Date().toISOString();
+  const db = getDb();
+
+  if (input.action === "confirm_graduation" && !current.isEligible) {
+    throw new Error("This school is not currently eligible for graduation.");
+  }
+
+  /* V2: Validate sustainability checklist */
+  if (input.action === "confirm_graduation") {
+    const checklistItems = settings.sustainabilityChecklistItems;
+    const answers = input.checklistAnswers;
+    if (!answers || typeof answers !== "object") {
+      throw new Error("Sustainability checklist must be completed before confirming graduation.");
+    }
+    const allChecked = checklistItems.every((item) => answers[item] === true);
+    if (!allChecked) {
+      throw new Error("All sustainability checklist items must be checked before confirming graduation.");
+    }
+  }
+
+  const before = {
+    programStatus: current.programStatus,
+    workflowState: current.workflowState,
+    snoozedUntil: current.snoozedUntil,
+    assignedSupervisorUserId: current.assignedSupervisorUserId,
+    graduationVersion: current.graduationVersion,
+  };
+
+  db.transaction(() => {
+    if (input.action === "confirm_graduation") {
+      /* V2: Set to 'monitoring' instead of 'graduated' — school enters post-graduation monitoring */
+      db.prepare(
+        `
+        UPDATE schools_directory
+        SET
+          program_status = 'monitoring',
+          graduated_at = @graduatedAt,
+          graduated_by_user_id = @graduatedByUserId,
+          graduation_notes = @graduationNotes,
+          graduation_version = @graduationVersion
+        WHERE id = @schoolId
+        `,
+      ).run({
+        schoolId,
+        graduatedAt: now,
+        graduatedByUserId: actor.id,
+        graduationNotes: reason,
+        graduationVersion: settings.criteriaVersion,
+      });
+
+      db.prepare(
+        `
+        INSERT INTO school_graduation_workflow (
+          school_id,
+          state,
+          snoozed_until,
+          assigned_supervisor_user_id,
+          reason,
+          updated_by_user_id,
+          updated_at,
+          checklist_answers_json,
+          checklist_completed_at,
+          checklist_completed_by_user_id
+        ) VALUES (
+          @schoolId,
+          'monitoring',
+          NULL,
+          @assignedSupervisorUserId,
+          @reason,
+          @updatedByUserId,
+          @updatedAt,
+          @checklistAnswersJson,
+          @checklistCompletedAt,
+          @checklistCompletedByUserId
+        )
+        ON CONFLICT(school_id) DO UPDATE SET
+          state = 'monitoring',
+          snoozed_until = NULL,
+          assigned_supervisor_user_id = excluded.assigned_supervisor_user_id,
+          reason = excluded.reason,
+          updated_by_user_id = excluded.updated_by_user_id,
+          updated_at = excluded.updated_at,
+          checklist_answers_json = excluded.checklist_answers_json,
+          checklist_completed_at = excluded.checklist_completed_at,
+          checklist_completed_by_user_id = excluded.checklist_completed_by_user_id
+        `,
+      ).run({
+        schoolId,
+        assignedSupervisorUserId: input.assignedSupervisorUserId ?? null,
+        reason,
+        updatedByUserId: actor.id,
+        updatedAt: now,
+        checklistAnswersJson: JSON.stringify(input.checklistAnswers),
+        checklistCompletedAt: now,
+        checklistCompletedByUserId: actor.id,
+      });
+    }
+
+    if (input.action === "keep_supporting") {
+      const snoozeDays =
+        input.snoozeDays && Number.isFinite(Number(input.snoozeDays)) && Number(input.snoozeDays) > 0
+          ? Math.round(Number(input.snoozeDays))
+          : settings.dismissSnoozeDays;
+      const snoozedUntil = new Date(Date.now() + snoozeDays * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+
+      db.prepare(
+        `
+        UPDATE schools_directory
+        SET
+          program_status = CASE
+            WHEN program_status = 'graduated' THEN 'graduated'
+            ELSE 'active'
+          END
+        WHERE id = @schoolId
+        `,
+      ).run({ schoolId });
+
+      db.prepare(
+        `
+        INSERT INTO school_graduation_workflow (
+          school_id,
+          state,
+          snoozed_until,
+          assigned_supervisor_user_id,
+          reason,
+          updated_by_user_id,
+          updated_at
+        ) VALUES (
+          @schoolId,
+          'kept_supporting',
+          @snoozedUntil,
+          @assignedSupervisorUserId,
+          @reason,
+          @updatedByUserId,
+          @updatedAt
+        )
+        ON CONFLICT(school_id) DO UPDATE SET
+          state = 'kept_supporting',
+          snoozed_until = excluded.snoozed_until,
+          assigned_supervisor_user_id = excluded.assigned_supervisor_user_id,
+          reason = excluded.reason,
+          updated_by_user_id = excluded.updated_by_user_id,
+          updated_at = excluded.updated_at
+        `,
+      ).run({
+        schoolId,
+        snoozedUntil,
+        assignedSupervisorUserId: input.assignedSupervisorUserId ?? null,
+        reason,
+        updatedByUserId: actor.id,
+        updatedAt: now,
+      });
+    }
+
+    if (input.action === "needs_review") {
+      db.prepare(
+        `
+        INSERT INTO school_graduation_workflow (
+          school_id,
+          state,
+          snoozed_until,
+          assigned_supervisor_user_id,
+          reason,
+          updated_by_user_id,
+          updated_at
+        ) VALUES (
+          @schoolId,
+          'needs_review',
+          NULL,
+          @assignedSupervisorUserId,
+          @reason,
+          @updatedByUserId,
+          @updatedAt
+        )
+        ON CONFLICT(school_id) DO UPDATE SET
+          state = 'needs_review',
+          snoozed_until = NULL,
+          assigned_supervisor_user_id = excluded.assigned_supervisor_user_id,
+          reason = excluded.reason,
+          updated_by_user_id = excluded.updated_by_user_id,
+          updated_at = excluded.updated_at
+        `,
+      ).run({
+        schoolId,
+        assignedSupervisorUserId: input.assignedSupervisorUserId ?? actor.id,
+        reason,
+        updatedByUserId: actor.id,
+        updatedAt: now,
+      });
+    }
+  })();
+
+  const after = getSchoolGraduationEligibility(schoolId, { refresh: true });
+  logAuditEvent(
+    actor.id,
+    actor.fullName,
+    input.action,
+    "schools_directory",
+    schoolId,
+    JSON.stringify(before),
+    JSON.stringify({
+      programStatus: after?.programStatus ?? null,
+      workflowState: after?.workflowState ?? null,
+      snoozedUntil: after?.snoozedUntil ?? null,
+      assignedSupervisorUserId: after?.assignedSupervisorUserId ?? null,
+      graduationVersion: after?.graduationVersion ?? null,
+      criteriaSnapshot: after?.eligibilityScorecard ?? null,
+      reason,
+    }),
+    `Graduation workflow action: ${input.action}.`,
+  );
+
+  return after;
+}
+
+function toPeriodMonth(value: string | null | undefined) {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw.length < 7) {
+    return null;
+  }
+  return raw.slice(0, 7);
+}
+
+function emptyTeacherDomainDelta(): TeacherImprovementDomainDelta {
+  return {
+    setup: null,
+    newSound: null,
+    decoding: null,
+    readingPractice: null,
+    trickyWords: null,
+    checkNext: null,
+  };
+}
+
+function mapDomainKeyToDeltaField(
+  domainKey: LessonEvaluationDomainKey,
+): keyof TeacherImprovementDomainDelta {
+  if (domainKey === "new_sound") return "newSound";
+  if (domainKey === "reading_practice") return "readingPractice";
+  if (domainKey === "tricky_words") return "trickyWords";
+  if (domainKey === "check_next") return "checkNext";
+  return domainKey;
+}
+
+function computeTeacherDomainDelta(
+  baseline: LessonEvaluationRecord,
+  comparison: LessonEvaluationRecord,
+): TeacherImprovementDomainDelta {
+  const delta = emptyTeacherDomainDelta();
+  (Object.keys(baseline.domainScores) as LessonEvaluationDomainKey[]).forEach((domainKey) => {
+    const field = mapDomainKeyToDeltaField(domainKey);
+    const baselineValue = baseline.domainScores[domainKey];
+    const comparisonValue = comparison.domainScores[domainKey];
+    if (
+      typeof baselineValue === "number" &&
+      Number.isFinite(baselineValue) &&
+      typeof comparisonValue === "number" &&
+      Number.isFinite(comparisonValue)
+    ) {
+      delta[field] = Number((comparisonValue - baselineValue).toFixed(2));
+    } else {
+      delta[field] = null;
+    }
+  });
+  return delta;
+}
+
+function countImprovedDomains(delta: TeacherImprovementDomainDelta) {
+  return (Object.values(delta) as Array<number | null>).filter(
+    (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
+  ).length;
+}
+
+function classifyImprovementStatus(
+  deltaOverall: number,
+  improvedDomainsCount: number,
+  settings: TeachingImprovementSettings,
+): "improved" | "flat" | "declined" {
+  if (
+    deltaOverall >= settings.teacherDeltaThreshold &&
+    improvedDomainsCount >= settings.minDomainsImproved
+  ) {
+    return "improved";
+  }
+  if (deltaOverall <= -settings.teacherDeltaThreshold) {
+    return "declined";
+  }
+  return "flat";
+}
+
+function computeTeacherItemDelta(
+  baseline: LessonEvaluationRecord,
+  comparison: LessonEvaluationRecord,
+) {
+  const baselineItems = new Map(baseline.items.map((item) => [item.itemKey, item]));
+  const comparisonItems = new Map(comparison.items.map((item) => [item.itemKey, item]));
+  const deltas: TeacherImprovementItemDelta[] = [];
+
+  LESSON_EVALUATION_ITEMS.forEach((definition) => {
+    const baselineItem = baselineItems.get(definition.itemKey);
+    const comparisonItem = comparisonItems.get(definition.itemKey);
+    if (!baselineItem || !comparisonItem) {
+      return;
+    }
+    const baselineScore = Number(baselineItem.score);
+    const comparisonScore = Number(comparisonItem.score);
+    if (!Number.isFinite(baselineScore) || !Number.isFinite(comparisonScore)) {
+      return;
+    }
+    deltas.push({
+      itemKey: definition.itemKey,
+      prompt: definition.prompt,
+      baselineScore,
+      comparisonScore,
+      delta: Number((comparisonScore - baselineScore).toFixed(2)),
+    });
+  });
+
+  const topImprovedItems = [...deltas]
+    .filter((item) => item.delta > 0)
+    .sort((left, right) => right.delta - left.delta)
+    .slice(0, 5);
+
+  const stubbornGapItems = [...deltas]
+    .filter((item) => item.comparisonScore <= 2)
+    .sort((left, right) => {
+      if (left.comparisonScore !== right.comparisonScore) {
+        return left.comparisonScore - right.comparisonScore;
+      }
+      return left.delta - right.delta;
+    })
+    .slice(0, 3);
+
+  return { topImprovedItems, stubbornGapItems };
+}
+
+function buildTeacherComparisonFromRecords(
+  records: LessonEvaluationRecord[],
+  settings: TeachingImprovementSettings,
+  options?: {
+    comparisonEvaluationId?: number | null;
+    gradeFilter?: string | null;
+  },
+): TeacherImprovementComparison | null {
+  const gradeFilter = options?.gradeFilter?.trim();
+  const filtered = gradeFilter
+    ? records.filter((record) => record.grade === gradeFilter)
+    : records;
+
+  if (filtered.length === 0) {
+    return null;
+  }
+
+  const timeline = [...filtered].sort((left, right) => {
+    const byDate = left.lessonDate.localeCompare(right.lessonDate);
+    if (byDate !== 0) return byDate;
+    return left.id - right.id;
+  });
+
+  const baseline = timeline[0];
+  const latest = timeline[timeline.length - 1];
+  const comparison =
+    options?.comparisonEvaluationId && Number.isInteger(options.comparisonEvaluationId)
+      ? timeline.find((record) => record.id === options.comparisonEvaluationId) ?? latest
+      : latest;
+
+  const deltaOverall = Number((comparison.overallScore - baseline.overallScore).toFixed(2));
+  const domainDeltas = computeTeacherDomainDelta(baseline, comparison);
+  const improvedDomainsCount = countImprovedDomains(domainDeltas);
+  const improvementStatus = classifyImprovementStatus(deltaOverall, improvedDomainsCount, settings);
+  const itemDeltas = computeTeacherItemDelta(baseline, comparison);
+
+  return {
+    teacherUid: baseline.teacherUid,
+    teacherName: baseline.teacherName,
+    schoolId: baseline.schoolId,
+    schoolName: baseline.schoolName,
+    gradeFilter: gradeFilter || null,
+    firstEvaluationId: baseline.id,
+    firstEvaluationDate: baseline.lessonDate,
+    comparisonEvaluationId: comparison.id,
+    comparisonEvaluationDate: comparison.lessonDate,
+    latestEvaluationId: latest.id,
+    latestEvaluationDate: latest.lessonDate,
+    evaluationsCount: timeline.length,
+    overallScoreBaseline: Number(baseline.overallScore.toFixed(2)),
+    overallScoreComparison: Number(comparison.overallScore.toFixed(2)),
+    overallScoreLatest: Number(latest.overallScore.toFixed(2)),
+    deltaOverall,
+    domainDeltas,
+    improvedDomainsCount,
+    improvementStatus,
+    topImprovedItems: itemDeltas.topImprovedItems,
+    stubbornGapItems: itemDeltas.stubbornGapItems,
+    timeline: timeline.map((record) => ({
+      evaluationId: record.id,
+      lessonDate: record.lessonDate,
+      visitId: record.visitId,
+      grade: record.grade,
+      stream: record.stream,
+      overallScore: Number(record.overallScore.toFixed(2)),
+      overallLevel: record.overallLevel,
+    })),
+  };
+}
+
+function averageTeacherDomainDeltas(
+  comparisons: TeacherImprovementComparison[],
+): TeacherImprovementDomainDelta {
+  const buckets: Record<keyof TeacherImprovementDomainDelta, number[]> = {
+    setup: [],
+    newSound: [],
+    decoding: [],
+    readingPractice: [],
+    trickyWords: [],
+    checkNext: [],
+  };
+
+  comparisons.forEach((comparison) => {
+    (Object.keys(buckets) as Array<keyof TeacherImprovementDomainDelta>).forEach((key) => {
+      const value = comparison.domainDeltas[key];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        buckets[key].push(value);
+      }
+    });
+  });
+
+  const delta = emptyTeacherDomainDelta();
+  (Object.keys(buckets) as Array<keyof TeacherImprovementDomainDelta>).forEach((key) => {
+    const values = buckets[key];
+    delta[key] =
+      values.length > 0
+        ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
+        : null;
+  });
+  return delta;
+}
+
+function buildSchoolTeachingImprovementSummary(
+  schoolId: number,
+  schoolName: string,
+  records: LessonEvaluationRecord[],
+  settings: TeachingImprovementSettings,
+  options?: {
+    gradeFilter?: string | null;
+    comparisonEvaluationIdByTeacher?: Record<string, number | undefined>;
+  },
+): SchoolTeachingQualityImprovementSummary {
+  const byTeacher = new Map<string, LessonEvaluationRecord[]>();
+  records.forEach((record) => {
+    const bucket = byTeacher.get(record.teacherUid) ?? [];
+    bucket.push(record);
+    byTeacher.set(record.teacherUid, bucket);
+  });
+
+  const teacherComparisons: TeacherImprovementComparison[] = [];
+  byTeacher.forEach((teacherRecords, teacherUid) => {
+    const comparison = buildTeacherComparisonFromRecords(teacherRecords, settings, {
+      gradeFilter: options?.gradeFilter ?? null,
+      comparisonEvaluationId: options?.comparisonEvaluationIdByTeacher?.[teacherUid] ?? null,
+    });
+    if (comparison && comparison.evaluationsCount >= 2) {
+      teacherComparisons.push(comparison);
+    }
+  });
+
+  const teachersCompared = teacherComparisons.length;
+  const improvedTeachersCount = teacherComparisons.filter(
+    (comparison) => comparison.improvementStatus === "improved",
+  ).length;
+  const improvedTeachersPercent =
+    teachersCompared > 0
+      ? Number(((improvedTeachersCount / teachersCompared) * 100).toFixed(1))
+      : 0;
+  const averageOverallDelta =
+    teachersCompared > 0
+      ? Number(
+        (
+          teacherComparisons.reduce((sum, comparison) => sum + comparison.deltaOverall, 0) /
+          teachersCompared
+        ).toFixed(2),
+      )
+      : null;
+
+  const domainAverageDeltas = averageTeacherDomainDeltas(teacherComparisons);
+  const topImprovingDomains = (Object.entries(domainAverageDeltas) as Array<
+    [keyof TeacherImprovementDomainDelta, number | null]
+  >)
+    .filter((entry): entry is [keyof TeacherImprovementDomainDelta, number] =>
+      typeof entry[1] === "number" && Number.isFinite(entry[1]),
+    )
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .filter((entry) => entry[1] > 0)
+    .map(([domainKey, avgDelta]) => ({
+      domain: (() => {
+        if (domainKey === "setup") return LESSON_EVALUATION_DOMAIN_LABELS.setup;
+        if (domainKey === "newSound") return LESSON_EVALUATION_DOMAIN_LABELS.new_sound;
+        if (domainKey === "decoding") return LESSON_EVALUATION_DOMAIN_LABELS.decoding;
+        if (domainKey === "readingPractice") return LESSON_EVALUATION_DOMAIN_LABELS.reading_practice;
+        if (domainKey === "trickyWords") return LESSON_EVALUATION_DOMAIN_LABELS.tricky_words;
+        return LESSON_EVALUATION_DOMAIN_LABELS.check_next;
+      })(),
+      avgDelta: Number(avgDelta.toFixed(2)),
+    }));
+
+  const teachersNeedingSupport = teacherComparisons
+    .filter((comparison) => comparison.improvementStatus !== "improved")
+    .sort((left, right) => left.deltaOverall - right.deltaOverall)
+    .slice(0, 8)
+    .map((comparison) => ({
+      teacherUid: comparison.teacherUid,
+      teacherName: comparison.teacherName,
+      deltaOverall: comparison.deltaOverall,
+      improvementStatus: comparison.improvementStatus,
+    }));
+
+  const schoolImproved =
+    teachersCompared > 0 &&
+    ((averageOverallDelta !== null && averageOverallDelta >= settings.schoolDeltaThreshold) ||
+      improvedTeachersPercent >= settings.schoolImprovedTeachersPercentThreshold);
+
+  return {
+    schoolId,
+    schoolName,
+    teachersCompared,
+    improvedTeachersCount,
+    improvedTeachersPercent,
+    averageOverallDelta,
+    schoolImproved,
+    topImprovingDomains,
+    teachersNeedingSupport,
+    teacherComparisons: teacherComparisons.sort((left, right) =>
+      left.teacherName.localeCompare(right.teacherName),
+    ),
+  };
+}
+
+function buildTeachingLearningAlignmentBySchoolIds(
+  schoolIds: number[],
+  startDate: string | null,
+  endDate: string | null,
+): TeachingLearningAlignmentAggregate {
+  const caveat =
+    "These trends are aligned in time and may be associated; they do not prove causation.";
+  if (schoolIds.length === 0) {
+    return {
+      caveat,
+      points: [],
+      summary: {
+        teachingDelta: null,
+        nonReaderReductionPp: null,
+        cwpm20PlusDeltaPp: null,
+        storyActiveLatest: null,
+        storySessionsLatest: 0,
+      },
+    };
+  }
+
+  const db = getDb();
+  const { clause, params } = buildSqlInClause(schoolIds, "alignmentSchool");
+
+  const dateFilter =
+    startDate && endDate
+      ? "AND period_month >= @startDateMonth AND period_month <= @endDateMonth"
+      : "";
+  const monthParams = {
+    ...params,
+    startDateMonth: startDate?.slice(0, 7) ?? null,
+    endDateMonth: endDate?.slice(0, 7) ?? null,
+  };
+
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        period_month AS periodMonth,
+        AVG(teaching_quality_avg) AS teachingQualityAvg,
+        AVG(decoding_avg) AS decodingAvg,
+        AVG(fluency_avg) AS fluencyAvg,
+        AVG(comprehension_avg) AS comprehensionAvg,
+        AVG(non_reader_pct) AS nonReaderPct,
+        AVG(cwpm20_plus_pct) AS cwpm20PlusPct,
+        SUM(story_sessions_count) AS storySessionsCount,
+        SUM(stories_published_count) AS storyPublishedCount,
+        COUNT(DISTINCT CASE WHEN story_active_flag = 1 THEN school_id END) AS activeSchoolsCount
+      FROM teaching_learning_alignment_by_school_period
+      WHERE school_id IN ${clause}
+        ${dateFilter}
+      GROUP BY period_month
+      ORDER BY period_month ASC
+    `,
+    )
+    .all(monthParams) as Array<{
+      periodMonth: string;
+      teachingQualityAvg: number | null;
+      decodingAvg: number | null;
+      fluencyAvg: number | null;
+      comprehensionAvg: number | null;
+      nonReaderPct: number | null;
+      cwpm20PlusPct: number | null;
+      storySessionsCount: number | null;
+      storyPublishedCount: number | null;
+      activeSchoolsCount: number | null;
+    }>;
+
+  const points: TeachingLearningAlignmentPoint[] = rows.map((row) => ({
+    period: row.periodMonth,
+    teachingQualityAvg:
+      row.teachingQualityAvg === null ? null : Number(Number(row.teachingQualityAvg).toFixed(2)),
+    decodingAvg: row.decodingAvg === null ? null : Number(Number(row.decodingAvg).toFixed(2)),
+    fluencyAvg: row.fluencyAvg === null ? null : Number(Number(row.fluencyAvg).toFixed(2)),
+    comprehensionAvg:
+      row.comprehensionAvg === null ? null : Number(Number(row.comprehensionAvg).toFixed(2)),
+    nonReaderPct:
+      row.nonReaderPct === null ? null : Number(Number(row.nonReaderPct).toFixed(2)),
+    cwpm20PlusPct:
+      row.cwpm20PlusPct === null ? null : Number(Number(row.cwpm20PlusPct).toFixed(2)),
+    storySessionsCount: Number(row.storySessionsCount ?? 0),
+    storyPublishedCount: Number(row.storyPublishedCount ?? 0),
+    storyActiveSchoolsPct:
+      schoolIds.length > 0
+        ? Number((((Number(row.activeSchoolsCount ?? 0) / schoolIds.length) * 100)).toFixed(1))
+        : null,
+  }));
+
+  const first = points[0] ?? null;
+  const last = points[points.length - 1] ?? null;
+
+  return {
+    caveat,
+    points,
+    summary: {
+      teachingDelta:
+        first && last && first.teachingQualityAvg !== null && last.teachingQualityAvg !== null
+          ? Number((last.teachingQualityAvg - first.teachingQualityAvg).toFixed(2))
+          : null,
+      nonReaderReductionPp:
+        first && last && first.nonReaderPct !== null && last.nonReaderPct !== null
+          ? Number((first.nonReaderPct - last.nonReaderPct).toFixed(2))
+          : null,
+      cwpm20PlusDeltaPp:
+        first && last && first.cwpm20PlusPct !== null && last.cwpm20PlusPct !== null
+          ? Number((last.cwpm20PlusPct - first.cwpm20PlusPct).toFixed(2))
+          : null,
+      storyActiveLatest: last
+        ? (last.storySessionsCount > 0 || last.storyPublishedCount > 0)
+        : null,
+      storySessionsLatest: last?.storySessionsCount ?? 0,
+    },
+  };
+}
+
 function benchmarkPercentage(values: Array<number | null>, threshold: number) {
   const numeric = values.filter((value): value is number => value !== null && Number.isFinite(value));
   if (numeric.length === 0) {
@@ -11733,6 +15294,251 @@ export function getPublicImpactAggregate(
   );
   const sessionsForCounts = scopedSessions.length > 0 ? scopedSessions : scopedAssessments;
 
+  const lessonEvaluationRows =
+    schoolIds.length === 0
+      ? []
+      : (db
+        .prepare(
+          `
+            SELECT
+              le.id,
+              le.school_id AS schoolId,
+              le.lesson_date AS lessonDate,
+              le.overall_score AS overallScore,
+              le.overall_level AS overallLevel,
+              le.top_gap_domain AS topGapDomain,
+              le.updated_at AS updatedAt
+            FROM lesson_evaluations le
+            WHERE le.status = 'active'
+              AND le.school_id IN ${schoolClause}
+          `,
+        )
+        .all(schoolParams) as Array<{
+          id: number;
+          schoolId: number;
+          lessonDate: string;
+          overallScore: number;
+          overallLevel: LessonEvaluationOverallLevel;
+          topGapDomain: LessonEvaluationDomainKey | null;
+          updatedAt: string;
+        }>);
+
+  const scopedLessonEvaluations = lessonEvaluationRows.filter((row) =>
+    isDateInWindow(row.lessonDate, period.startDate, period.endDate),
+  );
+  const lessonEvaluationIds = scopedLessonEvaluations.map((row) => row.id);
+  const lessonDomainAccumulator = {
+    setup: [] as number[],
+    new_sound: [] as number[],
+    decoding: [] as number[],
+    reading_practice: [] as number[],
+    tricky_words: [] as number[],
+    check_next: [] as number[],
+  };
+
+  if (lessonEvaluationIds.length > 0) {
+    const { clause: lessonEvalClause, params: lessonEvalParams } = buildSqlInClause(
+      lessonEvaluationIds,
+      "lesEval",
+    );
+    const lessonItemRows = db
+      .prepare(
+        `
+          SELECT domain_key AS domainKey, score
+          FROM lesson_evaluation_items
+          WHERE evaluation_id IN ${lessonEvalClause}
+        `,
+      )
+      .all(lessonEvalParams) as Array<{
+        domainKey: LessonEvaluationDomainKey;
+        score: number;
+      }>;
+
+    lessonItemRows.forEach((row) => {
+      const domain = row.domainKey;
+      if (!Object.prototype.hasOwnProperty.call(lessonDomainAccumulator, domain)) {
+        return;
+      }
+      const numericScore = Number(row.score);
+      if (!Number.isFinite(numericScore)) {
+        return;
+      }
+      lessonDomainAccumulator[domain].push(numericScore);
+    });
+  }
+
+  const levelCounts = {
+    strong: 0,
+    good: 0,
+    developing: 0,
+    needsSupport: 0,
+  };
+  const gapFrequency = new Map<string, number>();
+  const trendBuckets = new Map<string, { total: number; count: number }>();
+
+  scopedLessonEvaluations.forEach((row) => {
+    if (row.overallLevel === "Strong") levelCounts.strong += 1;
+    if (row.overallLevel === "Good") levelCounts.good += 1;
+    if (row.overallLevel === "Developing") levelCounts.developing += 1;
+    if (row.overallLevel === "Needs Support") levelCounts.needsSupport += 1;
+
+    if (row.topGapDomain) {
+      const key = row.topGapDomain;
+      gapFrequency.set(key, (gapFrequency.get(key) ?? 0) + 1);
+    }
+
+    const periodKey = String(row.lessonDate ?? "").slice(0, 7);
+    if (periodKey.length === 7) {
+      const bucket = trendBuckets.get(periodKey) ?? { total: 0, count: 0 };
+      bucket.total += Number(row.overallScore ?? 0);
+      bucket.count += 1;
+      trendBuckets.set(periodKey, bucket);
+    }
+  });
+
+  const lessonTotal = scopedLessonEvaluations.length;
+  const teachingImprovementSettings = getTeachingImprovementSettings();
+  const scopedSchoolIdSet = new Set(schoolIds);
+  const scopedLessonEvaluationRecords = listLessonEvaluations({
+    startDate: period.startDate ?? undefined,
+    endDate: period.endDate ?? undefined,
+    status: "active",
+    limit: 10000,
+  }).filter((record) => scopedSchoolIdSet.has(record.schoolId));
+  const teacherRecordBuckets = new Map<string, LessonEvaluationRecord[]>();
+  scopedLessonEvaluationRecords.forEach((record) => {
+    const key = `${record.schoolId}:${record.teacherUid}`;
+    const bucket = teacherRecordBuckets.get(key) ?? [];
+    bucket.push(record);
+    teacherRecordBuckets.set(key, bucket);
+  });
+
+  const teacherComparisons = [...teacherRecordBuckets.values()]
+    .map((records) => buildTeacherComparisonFromRecords(records, teachingImprovementSettings))
+    .filter(
+      (entry): entry is TeacherImprovementComparison => Boolean(entry && entry.evaluationsCount >= 2),
+    );
+
+  const teacherImprovedCount = teacherComparisons.filter(
+    (comparison) => comparison.improvementStatus === "improved",
+  ).length;
+  const improvedTeachersPercent =
+    teacherComparisons.length > 0
+      ? Number(((teacherImprovedCount / teacherComparisons.length) * 100).toFixed(1))
+      : null;
+  const deltaOverall =
+    teacherComparisons.length > 0
+      ? Number(
+        (
+          teacherComparisons.reduce((sum, comparison) => sum + comparison.deltaOverall, 0) /
+          teacherComparisons.length
+        ).toFixed(2),
+      )
+      : null;
+  const domainDeltas = averageTeacherDomainDeltas(teacherComparisons);
+
+  const schoolRowsById = new Map(scopedSchools.map((school) => [school.schoolId, school]));
+  const schoolSummaryList = new Map<number, SchoolTeachingQualityImprovementSummary>();
+  const schoolRecordBuckets = new Map<number, LessonEvaluationRecord[]>();
+  scopedLessonEvaluationRecords.forEach((record) => {
+    const bucket = schoolRecordBuckets.get(record.schoolId) ?? [];
+    bucket.push(record);
+    schoolRecordBuckets.set(record.schoolId, bucket);
+  });
+  schoolRecordBuckets.forEach((records, scopedSchoolId) => {
+    const schoolName = schoolRowsById.get(scopedSchoolId)?.schoolName ?? `School ${scopedSchoolId}`;
+    schoolSummaryList.set(
+      scopedSchoolId,
+      buildSchoolTeachingImprovementSummary(
+        scopedSchoolId,
+        schoolName,
+        records,
+        teachingImprovementSettings,
+      ),
+    );
+  });
+  const schoolsWithComparisons = [...schoolSummaryList.values()].filter(
+    (summary) => summary.teachersCompared > 0,
+  );
+  const schoolsImprovedPercent =
+    schoolsWithComparisons.length > 0
+      ? Number(
+        (
+          (schoolsWithComparisons.filter((summary) => summary.schoolImproved).length /
+            schoolsWithComparisons.length) *
+          100
+        ).toFixed(1),
+      )
+      : null;
+
+  const toPercent = (count: number) =>
+    lessonTotal > 0 ? Number(((count / lessonTotal) * 100).toFixed(1)) : 0;
+  const domainAverageValue = (values: number[]) =>
+    values.length > 0
+      ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
+      : null;
+  const teachingQualitySummary: PublicTeachingQualitySummary = {
+    evaluationsCount: lessonTotal,
+    avgOverallScore:
+      lessonTotal > 0
+        ? Number(
+          (
+            scopedLessonEvaluations.reduce((sum, row) => sum + Number(row.overallScore ?? 0), 0) /
+            lessonTotal
+          ).toFixed(2),
+        )
+        : null,
+    deltaOverall,
+    improvedTeachersPercent,
+    schoolsImprovedPercent,
+    levelDistribution: {
+      strong: { count: levelCounts.strong, percent: toPercent(levelCounts.strong) },
+      good: { count: levelCounts.good, percent: toPercent(levelCounts.good) },
+      developing: { count: levelCounts.developing, percent: toPercent(levelCounts.developing) },
+      needsSupport: {
+        count: levelCounts.needsSupport,
+        percent: toPercent(levelCounts.needsSupport),
+      },
+    },
+    domainAverages: {
+      setup: domainAverageValue(lessonDomainAccumulator.setup),
+      newSound: domainAverageValue(lessonDomainAccumulator.new_sound),
+      decoding: domainAverageValue(lessonDomainAccumulator.decoding),
+      readingPractice: domainAverageValue(lessonDomainAccumulator.reading_practice),
+      trickyWords: domainAverageValue(lessonDomainAccumulator.tricky_words),
+      checkNext: domainAverageValue(lessonDomainAccumulator.check_next),
+    },
+    domainDeltas: {
+      setup: domainDeltas.setup,
+      newSound: domainDeltas.newSound,
+      decoding: domainDeltas.decoding,
+      readingPractice: domainDeltas.readingPractice,
+      trickyWords: domainDeltas.trickyWords,
+      checkNext: domainDeltas.checkNext,
+    },
+    trend: [...trendBuckets.entries()]
+      .sort((left, right) => left[0].localeCompare(right[0]))
+      .map(([periodKey, bucket]) => ({
+        period: periodKey,
+        averageScore: bucket.count > 0 ? Number((bucket.total / bucket.count).toFixed(2)) : null,
+        evaluations: bucket.count,
+      })),
+    topCoachingFocusAreas: [...gapFrequency.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 2)
+      .map(([domainKey]) => LESSON_EVALUATION_DOMAIN_LABELS[domainKey as LessonEvaluationDomainKey] ?? domainKey),
+    lastUpdated:
+      scopedLessonEvaluations
+        .map((row) => row.updatedAt)
+        .filter(Boolean)
+        .sort((a, b) => b.localeCompare(a))[0] ?? new Date().toISOString(),
+  };
+  const teachingLearningAlignment = buildTeachingLearningAlignmentBySchoolIds(
+    schoolIds,
+    period.startDate,
+    period.endDate,
+  );
+
   const visitsTotal = supportedPortalRecords.filter((row) => row.module === "visit").length;
   const assessmentsBaselineCount = sessionsForCounts.filter(
     (row) => normalizeAssessmentType(row.assessmentType) === "baseline",
@@ -11910,6 +15716,7 @@ export function getPublicImpactAggregate(
   const allUpdatedAtValues = [
     ...portalRecords.map((row) => row.updatedAt),
     ...assessmentRows.map((row) => row.createdAt),
+    ...lessonEvaluationRows.map((row) => row.updatedAt),
   ]
     .filter(Boolean)
     .sort((a, b) => b.localeCompare(a));
@@ -12030,6 +15837,8 @@ export function getPublicImpactAggregate(
         .slice(0, 5)
         .map((row) => ({ name: row.name, score: row.activity })),
     },
+    teachingQuality: teachingQualitySummary,
+    teachingLearningAlignment,
     readingLevels: buildReadingLevelsBlock(baselineRows, endlineRows, latestRows),
     meta: {
       lastUpdated: allUpdatedAtValues[0] ?? new Date().toISOString(),
@@ -12069,7 +15878,7 @@ function resolveGeoHierarchy(
       districts.forEach((d, i) => { params[`d${i}`] = d; });
       schoolWhere = `district IN (${placeholders})`;
       legacyWhere = `district IN (${placeholders})`;
-      assessWhere = `district IN (${placeholders})`;
+      assessWhere = `sd.district IN (${placeholders})`;
     }
   } else if (level === "sub_region") {
     const subRegionDistricts = getDistrictsByAnySubRegionName(idFilter);
@@ -12078,32 +15887,40 @@ function resolveGeoHierarchy(
       subRegionDistricts.forEach((d, i) => { params[`d${i}`] = d; });
       schoolWhere = `district IN (${placeholders})`;
       legacyWhere = `district IN (${placeholders})`;
-      assessWhere = `district IN (${placeholders})`;
+      assessWhere = `sd.district IN (${placeholders})`;
     }
   } else if (level === "district") {
     schoolWhere = "district = @id";
     legacyWhere = "district = @id";
-    assessWhere = "district = @id";
+    assessWhere = "sd.district = @id";
     params = { id: idFilter };
   } else if (level === "sub_county") {
     // idFilter format: "District::SubCounty"
     const [district, subCounty] = idFilter.split("::");
     schoolWhere = "district = @district AND sub_county = @subCounty";
     legacyWhere = "district = @district AND sub_county = @subCounty";
-    assessWhere = "district = @district AND sub_county = @subCounty";
+    assessWhere = "sd.district = @district AND sd.sub_county = @subCounty";
     params = { district: district ?? "", subCounty: subCounty ?? "" };
   } else if (level === "parish") {
     // idFilter format: "District::SubCounty::Parish"
     const [district, subCounty, parish] = idFilter.split("::");
     schoolWhere = "district = @district AND sub_county = @subCounty AND parish = @parish";
     legacyWhere = "district = @district AND sub_county = @subCounty AND parish = @parish";
-    assessWhere = "district = @district AND sub_county = @subCounty AND parish = @parish";
+    assessWhere = "sd.district = @district AND sd.sub_county = @subCounty AND sd.parish = @parish";
     params = { district: district ?? "", subCounty: subCounty ?? "", parish: parish ?? "" };
   } else if (level === "school") {
-    schoolWhere = "id = @id";
-    legacyWhere = "school_name = (SELECT name FROM schools_directory WHERE id = @id)";
-    assessWhere = "school_name = (SELECT name FROM schools_directory WHERE id = @id) AND district = (SELECT district FROM schools_directory WHERE id = @id)";
-    params = { id: Number(idFilter) };
+    const numericId = Number(idFilter);
+    if (Number.isFinite(numericId) && numericId > 0) {
+      schoolWhere = "id = @id";
+      legacyWhere = "school_name = (SELECT name FROM schools_directory WHERE id = @id)";
+      assessWhere = "ar.school_id = @id";
+      params = { id: numericId };
+    } else {
+      schoolWhere = "lower(trim(name)) = lower(trim(@schoolName))";
+      legacyWhere = "lower(trim(school_name)) = lower(trim(@schoolName))";
+      assessWhere = "lower(trim(sd.name)) = lower(trim(@schoolName))";
+      params = { schoolName: idFilter };
+    }
   }
   // level === "country" → no filters (1=1)
 
@@ -12126,12 +15943,24 @@ export function getImpactDrilldownData(
     .get(params) as { count: number } | undefined;
 
   const newAssRow = db
-    .prepare(`SELECT COUNT(*) as count FROM assessment_records WHERE ${assessWhere}`)
+    .prepare(`
+      SELECT COUNT(*) as count
+      FROM assessment_records ar
+      JOIN schools_directory sd ON sd.id = ar.school_id
+      WHERE ${assessWhere}
+    `)
     .get(params) as { count: number } | undefined;
 
   function getDomainAverages(domain: string) {
     // assessment_records has no assessment_type column; query overall averages
-    const row = db.prepare(`SELECT AVG(${domain}) as score, COUNT(${domain}) as ss FROM assessment_records WHERE ${assessWhere}`).get(params) as { score: number | null; ss: number } | undefined;
+    const row = db
+      .prepare(`
+        SELECT AVG(ar.${domain}) as score, COUNT(ar.${domain}) as ss
+        FROM assessment_records ar
+        JOIN schools_directory sd ON sd.id = ar.school_id
+        WHERE ${assessWhere}
+      `)
+      .get(params) as { score: number | null; ss: number } | undefined;
 
     return {
       baselineName: "Baseline",
@@ -12440,6 +16269,968 @@ export function listObservationRubrics(filters?: {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Lesson Evaluation (Coaching Standard)
+   ═══════════════════════════════════════════════════════ */
+
+function emptyLessonDomainScores(): Record<LessonEvaluationDomainKey, number | null> {
+  return {
+    setup: null,
+    new_sound: null,
+    decoding: null,
+    reading_practice: null,
+    tricky_words: null,
+    check_next: null,
+  };
+}
+
+function normalizeLessonEvaluationItems(
+  items: LessonEvaluationItemInput[],
+): LessonEvaluationItemInput[] {
+  const normalized = items.map((item) => {
+    const score = Number(item.score);
+    const normalizedItem = {
+      domainKey: item.domainKey,
+      itemKey: item.itemKey,
+      score: (Number.isFinite(score) ? Math.max(1, Math.min(4, Math.round(score))) : 1) as
+        | 1
+        | 2
+        | 3
+        | 4,
+      note: item.note?.trim() || null,
+    } satisfies LessonEvaluationItemInput;
+    return normalizedItem;
+  });
+
+  const valid = normalized.filter((item) => {
+    const definition = LESSON_EVALUATION_ITEM_LOOKUP.get(item.itemKey);
+    return Boolean(definition && definition.domainKey === item.domainKey);
+  });
+
+  const deduped = new Map<string, LessonEvaluationItemInput>();
+  valid.forEach((item) => {
+    deduped.set(item.itemKey, item);
+  });
+
+  const ordered = LESSON_EVALUATION_ITEMS.map((definition) => {
+    const existing = deduped.get(definition.itemKey);
+    if (existing) {
+      return existing;
+    }
+    return {
+      domainKey: definition.domainKey,
+      itemKey: definition.itemKey,
+      score: 1,
+      note: null,
+    } satisfies LessonEvaluationItemInput;
+  });
+
+  return ordered;
+}
+
+function computeLessonEvaluationScores(items: LessonEvaluationItemInput[]) {
+  const domainBuckets = {
+    setup: [] as number[],
+    new_sound: [] as number[],
+    decoding: [] as number[],
+    reading_practice: [] as number[],
+    tricky_words: [] as number[],
+    check_next: [] as number[],
+  };
+
+  items.forEach((item) => {
+    domainBuckets[item.domainKey].push(Number(item.score));
+  });
+
+  const domainScores = emptyLessonDomainScores();
+  (Object.keys(domainBuckets) as LessonEvaluationDomainKey[]).forEach((domainKey) => {
+    const values = domainBuckets[domainKey];
+    if (values.length === 0) {
+      domainScores[domainKey] = null;
+      return;
+    }
+    const averageValue = values.reduce((sum, value) => sum + value, 0) / values.length;
+    domainScores[domainKey] = Number(averageValue.toFixed(2));
+  });
+
+  const allScores = items.map((item) => Number(item.score));
+  const overallScore =
+    allScores.length > 0
+      ? Number((allScores.reduce((sum, value) => sum + value, 0) / allScores.length).toFixed(2))
+      : 0;
+  const overallLevel = scoreLabel(overallScore) as LessonEvaluationOverallLevel;
+
+  const orderedDomains = (Object.entries(domainScores) as Array<
+    [LessonEvaluationDomainKey, number | null]
+  >).filter((entry): entry is [LessonEvaluationDomainKey, number] => entry[1] !== null);
+
+  const topGapDomain =
+    orderedDomains.length > 0
+      ? orderedDomains.reduce((lowest, current) => (current[1] < lowest[1] ? current : lowest))[0]
+      : null;
+  const topStrengthDomain =
+    orderedDomains.length > 0
+      ? orderedDomains.reduce((highest, current) => (current[1] > highest[1] ? current : highest))[0]
+      : null;
+
+  return {
+    domainScores,
+    overallScore,
+    overallLevel,
+    topGapDomain,
+    topStrengthDomain,
+  };
+}
+
+function parseLessonEvaluationItemsJson(value: string | null | undefined): LessonEvaluationItemInput[] {
+  if (!value) {
+    return normalizeLessonEvaluationItems([]);
+  }
+  try {
+    const parsed = JSON.parse(value) as LessonEvaluationItemInput[];
+    return normalizeLessonEvaluationItems(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return normalizeLessonEvaluationItems([]);
+  }
+}
+
+function parseLessonEvaluationDomainScoresJson(
+  value: string | null | undefined,
+): Record<LessonEvaluationDomainKey, number | null> {
+  const empty = emptyLessonDomainScores();
+  if (!value) {
+    return empty;
+  }
+  try {
+    const parsed = JSON.parse(value) as Partial<Record<LessonEvaluationDomainKey, number | null>>;
+    return {
+      setup: typeof parsed.setup === "number" ? Number(parsed.setup) : null,
+      new_sound: typeof parsed.new_sound === "number" ? Number(parsed.new_sound) : null,
+      decoding: typeof parsed.decoding === "number" ? Number(parsed.decoding) : null,
+      reading_practice:
+        typeof parsed.reading_practice === "number" ? Number(parsed.reading_practice) : null,
+      tricky_words: typeof parsed.tricky_words === "number" ? Number(parsed.tricky_words) : null,
+      check_next: typeof parsed.check_next === "number" ? Number(parsed.check_next) : null,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+function resolveCoachingVisitId(value: number | null | undefined) {
+  if (!Number.isInteger(value) || Number(value) <= 0) {
+    return null;
+  }
+  const visitId = Number(value);
+  const db = getDb();
+  const row = db
+    .prepare(
+      `
+      SELECT id
+      FROM coaching_visits
+      WHERE id = @visitId OR portal_record_id = @visitId
+      LIMIT 1
+    `,
+    )
+    .get({ visitId }) as { id: number } | undefined;
+  return row?.id ?? null;
+}
+
+function loadLessonEvaluationItemsByEvaluationIds(
+  evaluationIds: number[],
+): Map<number, LessonEvaluationItemInput[]> {
+  const itemMap = new Map<number, LessonEvaluationItemInput[]>();
+  if (evaluationIds.length === 0) {
+    return itemMap;
+  }
+  const { clause, params } = buildSqlInClause(evaluationIds, "eval");
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        evaluation_id AS evaluationId,
+        domain_key AS domainKey,
+        item_key AS itemKey,
+        score,
+        note
+      FROM lesson_evaluation_items
+      WHERE evaluation_id IN ${clause}
+      ORDER BY evaluation_id ASC, id ASC
+    `,
+    )
+    .all(params) as Array<{
+      evaluationId: number;
+      domainKey: LessonEvaluationDomainKey;
+      itemKey: LessonEvaluationItemInput["itemKey"];
+      score: number;
+      note: string | null;
+    }>;
+
+  rows.forEach((row) => {
+    const bucket = itemMap.get(row.evaluationId) ?? [];
+    bucket.push({
+      domainKey: row.domainKey,
+      itemKey: row.itemKey,
+      score: Math.max(1, Math.min(4, Number(row.score))) as 1 | 2 | 3 | 4,
+      note: row.note,
+    });
+    itemMap.set(row.evaluationId, bucket);
+  });
+
+  return itemMap;
+}
+
+function parseLessonEvaluationRow(row: {
+  id: number;
+  schoolId: number;
+  schoolName: string;
+  district: string;
+  teacherUid: string;
+  teacherName: string | null;
+  grade: LessonEvaluationRecord["grade"];
+  stream: string | null;
+  classSize: number | null;
+  lessonDate: string;
+  lessonFocusJson: string;
+  observerId: number;
+  observerName: string | null;
+  visitId: number | null;
+  overallScore: number;
+  overallLevel: LessonEvaluationOverallLevel;
+  domainScoresJson: string;
+  topGapDomain: LessonEvaluationDomainKey | null;
+  topStrengthDomain: LessonEvaluationDomainKey | null;
+  strengthsText: string;
+  priorityGapText: string;
+  nextCoachingAction: string;
+  teacherCommitment: string;
+  catchupEstimateCount: number | null;
+  catchupEstimatePercent: number | null;
+  nextVisitDate: string | null;
+  status: "active" | "void";
+  createdAt: string;
+  updatedAt: string;
+}, items: LessonEvaluationItemInput[]): LessonEvaluationRecord {
+  let lessonFocus: string[] = [];
+  try {
+    const parsed = JSON.parse(row.lessonFocusJson);
+    if (Array.isArray(parsed)) {
+      lessonFocus = parsed
+        .map((entry) => String(entry ?? "").trim())
+        .filter(Boolean);
+    }
+  } catch {
+    lessonFocus = [];
+  }
+
+  return {
+    id: row.id,
+    schoolId: row.schoolId,
+    schoolName: row.schoolName,
+    district: row.district,
+    teacherUid: row.teacherUid,
+    teacherName: row.teacherName ?? "Teacher",
+    grade: row.grade,
+    stream: row.stream,
+    classSize: row.classSize,
+    lessonDate: row.lessonDate,
+    lessonFocus,
+    observerId: row.observerId,
+    observerName: row.observerName ?? "Observer",
+    visitId: row.visitId,
+    overallScore: Number(row.overallScore ?? 0),
+    overallLevel: row.overallLevel,
+    domainScores: parseLessonEvaluationDomainScoresJson(row.domainScoresJson),
+    topGapDomain: row.topGapDomain,
+    topStrengthDomain: row.topStrengthDomain,
+    strengthsText: row.strengthsText,
+    priorityGapText: row.priorityGapText,
+    nextCoachingAction: row.nextCoachingAction,
+    teacherCommitment: row.teacherCommitment,
+    catchupEstimateCount: row.catchupEstimateCount,
+    catchupEstimatePercent:
+      row.catchupEstimatePercent === null ? null : Number(row.catchupEstimatePercent),
+    nextVisitDate: row.nextVisitDate,
+    status: row.status,
+    items: normalizeLessonEvaluationItems(items),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export function getLessonEvaluationById(
+  evaluationId: number,
+): LessonEvaluationRecord | null {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `
+      SELECT
+        le.id,
+        le.school_id AS schoolId,
+        sd.name AS schoolName,
+        sd.district AS district,
+        le.teacher_uid AS teacherUid,
+        tr.full_name AS teacherName,
+        le.grade,
+        le.stream,
+        le.class_size AS classSize,
+        le.lesson_date AS lessonDate,
+        le.lesson_focus_json AS lessonFocusJson,
+        le.observer_id AS observerId,
+        pu.full_name AS observerName,
+        le.visit_id AS visitId,
+        le.overall_score AS overallScore,
+        le.overall_level AS overallLevel,
+        le.domain_scores_json AS domainScoresJson,
+        le.top_gap_domain AS topGapDomain,
+        le.top_strength_domain AS topStrengthDomain,
+        le.strengths_text AS strengthsText,
+        le.priority_gap_text AS priorityGapText,
+        le.next_coaching_action AS nextCoachingAction,
+        le.teacher_commitment AS teacherCommitment,
+        le.catchup_estimate_count AS catchupEstimateCount,
+        le.catchup_estimate_percent AS catchupEstimatePercent,
+        le.next_visit_date AS nextVisitDate,
+        le.status,
+        le.created_at AS createdAt,
+        le.updated_at AS updatedAt
+      FROM lesson_evaluations le
+      JOIN schools_directory sd ON sd.id = le.school_id
+      LEFT JOIN teacher_roster tr ON tr.teacher_uid = le.teacher_uid
+      LEFT JOIN portal_users pu ON pu.id = le.observer_id
+      WHERE le.id = @evaluationId
+      LIMIT 1
+    `,
+    )
+    .get({ evaluationId }) as
+    | {
+      id: number;
+      schoolId: number;
+      schoolName: string;
+      district: string;
+      teacherUid: string;
+      teacherName: string | null;
+      grade: LessonEvaluationRecord["grade"];
+      stream: string | null;
+      classSize: number | null;
+      lessonDate: string;
+      lessonFocusJson: string;
+      observerId: number;
+      observerName: string | null;
+      visitId: number | null;
+      overallScore: number;
+      overallLevel: LessonEvaluationOverallLevel;
+      domainScoresJson: string;
+      topGapDomain: LessonEvaluationDomainKey | null;
+      topStrengthDomain: LessonEvaluationDomainKey | null;
+      strengthsText: string;
+      priorityGapText: string;
+      nextCoachingAction: string;
+      teacherCommitment: string;
+      catchupEstimateCount: number | null;
+      catchupEstimatePercent: number | null;
+      nextVisitDate: string | null;
+      status: "active" | "void";
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  const itemMap = loadLessonEvaluationItemsByEvaluationIds([row.id]);
+  const items = itemMap.get(row.id) ?? [];
+  return parseLessonEvaluationRow(row, items);
+}
+
+export function listLessonEvaluations(filters?: {
+  schoolId?: number;
+  visitId?: number;
+  teacherUid?: string;
+  observerId?: number;
+  status?: "active" | "void";
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+}): LessonEvaluationRecord[] {
+  const clauses: string[] = [];
+  const params: Record<string, string | number> = {};
+
+  if (filters?.schoolId && Number.isInteger(filters.schoolId) && filters.schoolId > 0) {
+    clauses.push("le.school_id = @schoolId");
+    params.schoolId = filters.schoolId;
+  }
+  if (filters?.visitId && Number.isInteger(filters.visitId) && filters.visitId > 0) {
+    clauses.push("(le.visit_id = @visitId OR le.visit_id = (SELECT id FROM coaching_visits WHERE portal_record_id = @visitId LIMIT 1))");
+    params.visitId = filters.visitId;
+  }
+  if (filters?.teacherUid?.trim()) {
+    clauses.push("le.teacher_uid = @teacherUid");
+    params.teacherUid = filters.teacherUid.trim();
+  }
+  if (filters?.observerId && Number.isInteger(filters.observerId) && filters.observerId > 0) {
+    clauses.push("le.observer_id = @observerId");
+    params.observerId = filters.observerId;
+  }
+  if (filters?.status) {
+    clauses.push("le.status = @status");
+    params.status = filters.status;
+  }
+  if (filters?.startDate?.trim()) {
+    clauses.push("le.lesson_date >= @startDate");
+    params.startDate = filters.startDate.trim();
+  }
+  if (filters?.endDate?.trim()) {
+    clauses.push("le.lesson_date <= @endDate");
+    params.endDate = filters.endDate.trim();
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const limit = Math.min(filters?.limit ?? 200, 1000);
+
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        le.id,
+        le.school_id AS schoolId,
+        sd.name AS schoolName,
+        sd.district AS district,
+        le.teacher_uid AS teacherUid,
+        tr.full_name AS teacherName,
+        le.grade,
+        le.stream,
+        le.class_size AS classSize,
+        le.lesson_date AS lessonDate,
+        le.lesson_focus_json AS lessonFocusJson,
+        le.observer_id AS observerId,
+        pu.full_name AS observerName,
+        le.visit_id AS visitId,
+        le.overall_score AS overallScore,
+        le.overall_level AS overallLevel,
+        le.domain_scores_json AS domainScoresJson,
+        le.top_gap_domain AS topGapDomain,
+        le.top_strength_domain AS topStrengthDomain,
+        le.strengths_text AS strengthsText,
+        le.priority_gap_text AS priorityGapText,
+        le.next_coaching_action AS nextCoachingAction,
+        le.teacher_commitment AS teacherCommitment,
+        le.catchup_estimate_count AS catchupEstimateCount,
+        le.catchup_estimate_percent AS catchupEstimatePercent,
+        le.next_visit_date AS nextVisitDate,
+        le.status,
+        le.created_at AS createdAt,
+        le.updated_at AS updatedAt
+      FROM lesson_evaluations le
+      JOIN schools_directory sd ON sd.id = le.school_id
+      LEFT JOIN teacher_roster tr ON tr.teacher_uid = le.teacher_uid
+      LEFT JOIN portal_users pu ON pu.id = le.observer_id
+      ${whereClause}
+      ORDER BY le.lesson_date DESC, le.updated_at DESC
+      LIMIT ${limit}
+    `,
+    )
+    .all(params) as Array<{
+      id: number;
+      schoolId: number;
+      schoolName: string;
+      district: string;
+      teacherUid: string;
+      teacherName: string | null;
+      grade: LessonEvaluationRecord["grade"];
+      stream: string | null;
+      classSize: number | null;
+      lessonDate: string;
+      lessonFocusJson: string;
+      observerId: number;
+      observerName: string | null;
+      visitId: number | null;
+      overallScore: number;
+      overallLevel: LessonEvaluationOverallLevel;
+      domainScoresJson: string;
+      topGapDomain: LessonEvaluationDomainKey | null;
+      topStrengthDomain: LessonEvaluationDomainKey | null;
+      strengthsText: string;
+      priorityGapText: string;
+      nextCoachingAction: string;
+      teacherCommitment: string;
+      catchupEstimateCount: number | null;
+      catchupEstimatePercent: number | null;
+      nextVisitDate: string | null;
+      status: "active" | "void";
+      createdAt: string;
+      updatedAt: string;
+    }>;
+
+  const itemMap = loadLessonEvaluationItemsByEvaluationIds(rows.map((row) => row.id));
+  return rows.map((row) => parseLessonEvaluationRow(row, itemMap.get(row.id) ?? []));
+}
+
+function listScopedSchoolsByIds(schoolIds: number[]) {
+  if (schoolIds.length === 0) {
+    return [] as Array<{ schoolId: number; schoolName: string }>;
+  }
+  const { clause, params } = buildSqlInClause(schoolIds, "teacherImpSchool");
+  return getDb()
+    .prepare(
+      `
+      SELECT id AS schoolId, name AS schoolName
+      FROM schools_directory
+      WHERE id IN ${clause}
+      ORDER BY name ASC
+    `,
+    )
+    .all(params) as Array<{ schoolId: number; schoolName: string }>;
+}
+
+export function listTeacherImprovementComparisons(filters: {
+  schoolId: number;
+  teacherUid?: string;
+  grade?: string;
+  startDate?: string;
+  endDate?: string;
+  comparisonEvaluationId?: number;
+}): TeacherImprovementComparison[] {
+  const settings = getTeachingImprovementSettings();
+  const evaluations = listLessonEvaluations({
+    schoolId: filters.schoolId,
+    teacherUid: filters.teacherUid?.trim() || undefined,
+    status: "active",
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    limit: 4000,
+  });
+
+  const grouped = new Map<string, LessonEvaluationRecord[]>();
+  evaluations.forEach((record) => {
+    const bucket = grouped.get(record.teacherUid) ?? [];
+    bucket.push(record);
+    grouped.set(record.teacherUid, bucket);
+  });
+
+  const comparisons: TeacherImprovementComparison[] = [];
+  grouped.forEach((records) => {
+    const comparison = buildTeacherComparisonFromRecords(records, settings, {
+      gradeFilter: filters.grade ?? null,
+      comparisonEvaluationId: filters.comparisonEvaluationId ?? null,
+    });
+    if (comparison && comparison.evaluationsCount >= 2) {
+      comparisons.push(comparison);
+    }
+  });
+
+  return comparisons.sort((left, right) => left.teacherName.localeCompare(right.teacherName));
+}
+
+export function getSchoolTeachingQualityImprovementSummary(input: {
+  schoolId: number;
+  grade?: string;
+  startDate?: string;
+  endDate?: string;
+}): SchoolTeachingQualityImprovementSummary {
+  const schools = listScopedSchoolsByIds([input.schoolId]);
+  const schoolName = schools[0]?.schoolName ?? `School ${input.schoolId}`;
+  const settings = getTeachingImprovementSettings();
+  const evaluations = listLessonEvaluations({
+    schoolId: input.schoolId,
+    status: "active",
+    startDate: input.startDate,
+    endDate: input.endDate,
+    limit: 5000,
+  });
+  return buildSchoolTeachingImprovementSummary(
+    input.schoolId,
+    schoolName,
+    evaluations,
+    settings,
+    {
+      gradeFilter: input.grade ?? null,
+    },
+  );
+}
+
+export function getTeacherImprovementProfile(input: {
+  schoolId: number;
+  teacherUid: string;
+  grade?: string;
+  comparisonEvaluationId?: number;
+  startDate?: string;
+  endDate?: string;
+}): TeacherImprovementProfile {
+  const settings = getTeachingImprovementSettings();
+  const allSchoolEvaluations = listLessonEvaluations({
+    schoolId: input.schoolId,
+    status: "active",
+    startDate: input.startDate,
+    endDate: input.endDate,
+    limit: 5000,
+  });
+  const schoolName = allSchoolEvaluations[0]?.schoolName ?? `School ${input.schoolId}`;
+  const schoolSummary = buildSchoolTeachingImprovementSummary(
+    input.schoolId,
+    schoolName,
+    allSchoolEvaluations,
+    settings,
+    {
+      gradeFilter: input.grade ?? null,
+    },
+  );
+
+  const teacherRecords = allSchoolEvaluations.filter(
+    (record) => record.teacherUid === input.teacherUid,
+  );
+  const teacherComparison = buildTeacherComparisonFromRecords(teacherRecords, settings, {
+    gradeFilter: input.grade ?? null,
+    comparisonEvaluationId: input.comparisonEvaluationId ?? null,
+  });
+
+  const alignment = buildTeachingLearningAlignmentBySchoolIds(
+    [input.schoolId],
+    input.startDate ?? null,
+    input.endDate ?? null,
+  );
+
+  return {
+    teacherComparison,
+    schoolSummary,
+    alignment,
+  };
+}
+
+export function createLessonEvaluation(
+  input: LessonEvaluationInput,
+  userId: number,
+): LessonEvaluationRecord {
+  const db = getDb();
+  const normalizedItems = normalizeLessonEvaluationItems(input.items);
+  if (normalizedItems.length !== LESSON_EVALUATION_ITEMS.length) {
+    throw new Error("All lesson evaluation items are required.");
+  }
+  if (!validateParticipantBelongsToSchool("teacher", input.teacherUid, input.schoolId)) {
+    throw new Error("Selected teacher is not linked to this school. Add Teacher to School first.");
+  }
+
+  const computed = computeLessonEvaluationScores(normalizedItems);
+  const visitId = resolveCoachingVisitId(input.visitId ?? null);
+  const lessonFocus = input.lessonFocus
+    .map((entry) => String(entry ?? "").trim())
+    .filter(Boolean);
+
+  const createTx = db.transaction(() => {
+    const result = db
+      .prepare(
+        `
+        INSERT INTO lesson_evaluations (
+          school_id,
+          teacher_uid,
+          grade,
+          stream,
+          class_size,
+          lesson_date,
+          lesson_focus_json,
+          observer_id,
+          visit_id,
+          overall_score,
+          overall_level,
+          domain_scores_json,
+          top_gap_domain,
+          top_strength_domain,
+          strengths_text,
+          priority_gap_text,
+          next_coaching_action,
+          teacher_commitment,
+          catchup_estimate_count,
+          catchup_estimate_percent,
+          next_visit_date,
+          status,
+          created_at,
+          updated_at
+        ) VALUES (
+          @schoolId,
+          @teacherUid,
+          @grade,
+          @stream,
+          @classSize,
+          @lessonDate,
+          @lessonFocusJson,
+          @observerId,
+          @visitId,
+          @overallScore,
+          @overallLevel,
+          @domainScoresJson,
+          @topGapDomain,
+          @topStrengthDomain,
+          @strengthsText,
+          @priorityGapText,
+          @nextCoachingAction,
+          @teacherCommitment,
+          @catchupEstimateCount,
+          @catchupEstimatePercent,
+          @nextVisitDate,
+          'active',
+          @now,
+          @now
+        )
+      `,
+      )
+      .run({
+        schoolId: input.schoolId,
+        teacherUid: input.teacherUid.trim(),
+        grade: input.grade,
+        stream: input.stream?.trim() || null,
+        classSize:
+          input.classSize !== null &&
+            input.classSize !== undefined &&
+            Number.isInteger(Number(input.classSize))
+            ? Number(input.classSize)
+            : null,
+        lessonDate: input.lessonDate,
+        lessonFocusJson: JSON.stringify(lessonFocus),
+        observerId: input.observerId && Number.isInteger(input.observerId) ? input.observerId : userId,
+        visitId,
+        overallScore: computed.overallScore,
+        overallLevel: computed.overallLevel,
+        domainScoresJson: JSON.stringify(computed.domainScores),
+        topGapDomain: computed.topGapDomain,
+        topStrengthDomain: computed.topStrengthDomain,
+        strengthsText: input.strengthsText.trim(),
+        priorityGapText: input.priorityGapText.trim(),
+        nextCoachingAction: input.nextCoachingAction.trim(),
+        teacherCommitment: input.teacherCommitment.trim(),
+        catchupEstimateCount:
+          input.catchupEstimateCount !== null &&
+            input.catchupEstimateCount !== undefined &&
+            Number.isFinite(Number(input.catchupEstimateCount))
+            ? Number(input.catchupEstimateCount)
+            : null,
+        catchupEstimatePercent:
+          input.catchupEstimatePercent !== null &&
+            input.catchupEstimatePercent !== undefined &&
+            Number.isFinite(Number(input.catchupEstimatePercent))
+            ? Number(input.catchupEstimatePercent)
+            : null,
+        nextVisitDate: input.nextVisitDate?.trim() || null,
+        now: new Date().toISOString(),
+      });
+
+    const evaluationId = Number(result.lastInsertRowid);
+    const insertItem = db.prepare(
+      `
+      INSERT INTO lesson_evaluation_items (
+        evaluation_id,
+        domain_key,
+        item_key,
+        score,
+        note
+      ) VALUES (
+        @evaluationId,
+        @domainKey,
+        @itemKey,
+        @score,
+        @note
+      )
+    `,
+    );
+    normalizedItems.forEach((item) => {
+      insertItem.run({
+        evaluationId,
+        domainKey: item.domainKey,
+        itemKey: item.itemKey,
+        score: item.score,
+        note: item.note?.trim() || null,
+      });
+    });
+
+    return evaluationId;
+  });
+
+  const evaluationId = createTx();
+  const saved = getLessonEvaluationById(evaluationId);
+  if (!saved) {
+    throw new Error("Could not load lesson evaluation after save.");
+  }
+  refreshSchoolGraduationEligibilityCache(saved.schoolId);
+  return saved;
+}
+
+export function updateLessonEvaluation(
+  evaluationId: number,
+  input: LessonEvaluationInput,
+  userId: number,
+): LessonEvaluationRecord {
+  const existing = getLessonEvaluationById(evaluationId);
+  if (!existing) {
+    throw new Error("Lesson evaluation not found.");
+  }
+  if (existing.status !== "active") {
+    throw new Error("Voided lesson evaluations cannot be edited.");
+  }
+  if (!validateParticipantBelongsToSchool("teacher", input.teacherUid, input.schoolId)) {
+    throw new Error("Selected teacher is not linked to this school. Add Teacher to School first.");
+  }
+
+  const db = getDb();
+  const normalizedItems = normalizeLessonEvaluationItems(input.items);
+  if (normalizedItems.length !== LESSON_EVALUATION_ITEMS.length) {
+    throw new Error("All lesson evaluation items are required.");
+  }
+  const computed = computeLessonEvaluationScores(normalizedItems);
+  const visitId = resolveCoachingVisitId(input.visitId ?? null);
+  const lessonFocus = input.lessonFocus
+    .map((entry) => String(entry ?? "").trim())
+    .filter(Boolean);
+
+  const updateTx = db.transaction(() => {
+    db.prepare(
+      `
+      UPDATE lesson_evaluations
+      SET
+        school_id = @schoolId,
+        teacher_uid = @teacherUid,
+        grade = @grade,
+        stream = @stream,
+        class_size = @classSize,
+        lesson_date = @lessonDate,
+        lesson_focus_json = @lessonFocusJson,
+        observer_id = @observerId,
+        visit_id = @visitId,
+        overall_score = @overallScore,
+        overall_level = @overallLevel,
+        domain_scores_json = @domainScoresJson,
+        top_gap_domain = @topGapDomain,
+        top_strength_domain = @topStrengthDomain,
+        strengths_text = @strengthsText,
+        priority_gap_text = @priorityGapText,
+        next_coaching_action = @nextCoachingAction,
+        teacher_commitment = @teacherCommitment,
+        catchup_estimate_count = @catchupEstimateCount,
+        catchup_estimate_percent = @catchupEstimatePercent,
+        next_visit_date = @nextVisitDate,
+        updated_at = @updatedAt
+      WHERE id = @evaluationId
+    `,
+    ).run({
+      evaluationId,
+      schoolId: input.schoolId,
+      teacherUid: input.teacherUid.trim(),
+      grade: input.grade,
+      stream: input.stream?.trim() || null,
+      classSize:
+        input.classSize !== null &&
+          input.classSize !== undefined &&
+          Number.isInteger(Number(input.classSize))
+          ? Number(input.classSize)
+          : null,
+      lessonDate: input.lessonDate,
+      lessonFocusJson: JSON.stringify(lessonFocus),
+      observerId: input.observerId && Number.isInteger(input.observerId) ? input.observerId : userId,
+      visitId,
+      overallScore: computed.overallScore,
+      overallLevel: computed.overallLevel,
+      domainScoresJson: JSON.stringify(computed.domainScores),
+      topGapDomain: computed.topGapDomain,
+      topStrengthDomain: computed.topStrengthDomain,
+      strengthsText: input.strengthsText.trim(),
+      priorityGapText: input.priorityGapText.trim(),
+      nextCoachingAction: input.nextCoachingAction.trim(),
+      teacherCommitment: input.teacherCommitment.trim(),
+      catchupEstimateCount:
+        input.catchupEstimateCount !== null &&
+          input.catchupEstimateCount !== undefined &&
+          Number.isFinite(Number(input.catchupEstimateCount))
+          ? Number(input.catchupEstimateCount)
+          : null,
+      catchupEstimatePercent:
+        input.catchupEstimatePercent !== null &&
+          input.catchupEstimatePercent !== undefined &&
+          Number.isFinite(Number(input.catchupEstimatePercent))
+          ? Number(input.catchupEstimatePercent)
+          : null,
+      nextVisitDate: input.nextVisitDate?.trim() || null,
+      updatedAt: new Date().toISOString(),
+    });
+
+    db.prepare("DELETE FROM lesson_evaluation_items WHERE evaluation_id = @evaluationId").run({
+      evaluationId,
+    });
+
+    const insertItem = db.prepare(
+      `
+      INSERT INTO lesson_evaluation_items (
+        evaluation_id,
+        domain_key,
+        item_key,
+        score,
+        note
+      ) VALUES (
+        @evaluationId,
+        @domainKey,
+        @itemKey,
+        @score,
+        @note
+      )
+    `,
+    );
+    normalizedItems.forEach((item) => {
+      insertItem.run({
+        evaluationId,
+        domainKey: item.domainKey,
+        itemKey: item.itemKey,
+        score: item.score,
+        note: item.note?.trim() || null,
+      });
+    });
+  });
+
+  updateTx();
+  const saved = getLessonEvaluationById(evaluationId);
+  if (!saved) {
+    throw new Error("Could not load lesson evaluation after update.");
+  }
+  refreshSchoolGraduationEligibilityCache(saved.schoolId);
+  if (saved.schoolId !== existing.schoolId) {
+    refreshSchoolGraduationEligibilityCache(existing.schoolId);
+  }
+  return saved;
+}
+
+export function voidLessonEvaluation(
+  evaluationId: number,
+  userId: number,
+  reason: string,
+): LessonEvaluationRecord | null {
+  const trimmedReason = reason.trim();
+  if (!trimmedReason) {
+    throw new Error("A reason is required to void a lesson evaluation.");
+  }
+  const db = getDb();
+  db.prepare(
+    `
+      UPDATE lesson_evaluations
+      SET
+        status = 'void',
+        void_reason = @reason,
+        voided_by_user_id = @userId,
+        voided_at = @now,
+        updated_at = @now
+      WHERE id = @evaluationId
+    `,
+  ).run({
+    evaluationId,
+    reason: trimmedReason,
+    userId,
+    now: new Date().toISOString(),
+  });
+  const updated = getLessonEvaluationById(evaluationId);
+  if (updated) {
+    refreshSchoolGraduationEligibilityCache(updated.schoolId);
+  }
+  return updated;
+}
+
+/* ═══════════════════════════════════════════════════════
    NLIS — Intervention Groups & Sessions
    ═══════════════════════════════════════════════════════ */
 
@@ -12678,10 +17469,10 @@ export function calculateFidelityScore(
   // 4. Assessment completeness: % schools with assessment records
   const assessCompRow = db
     .prepare(
-      `SELECT COUNT(DISTINCT a.school_name) AS complete
+      `SELECT COUNT(DISTINCT a.school_id) AS complete
        FROM assessment_records a
-       WHERE 1=1
-       ${scopeType === "district" ? "AND lower(trim(a.district)) = lower(trim(@scopeId))" : ""}`,
+       JOIN schools_directory sd ON sd.id = a.school_id
+       ${schoolsWhere}`,
     )
     .get(params) as { complete: number };
   const assessCompPct = totalSchools > 0 ? Math.min(100, (assessCompRow.complete / totalSchools) * 100) : 0;
@@ -12789,18 +17580,24 @@ export function getLearningGainsData(
   const db = getDb();
 
   let assessWhere = "";
-  const params: Record<string, string> = {};
+  const params: Record<string, string | number> = {};
   if (scopeType === "district") {
     assessWhere =
-      "AND lower(trim(a.district)) = lower(trim(@scopeId))";
+      "AND lower(trim(sd.district)) = lower(trim(@scopeId))";
     params.scopeId = scopeId;
   } else if (scopeType === "school") {
-    assessWhere = "AND lower(trim(a.school_name)) = lower(trim(@scopeId))";
-    params.scopeId = scopeId;
+    const schoolId = Number(scopeId);
+    if (Number.isFinite(schoolId) && schoolId > 0) {
+      assessWhere = "AND a.school_id = @schoolId";
+      params.schoolId = schoolId;
+    } else {
+      assessWhere = "AND lower(trim(sd.name)) = lower(trim(@scopeId))";
+      params.scopeId = scopeId;
+    }
   } else if (scopeType === "region") {
     const districts = getDistrictsByRegion(scopeId);
     if (districts.length > 0) {
-      assessWhere = `AND lower(trim(a.district)) IN (${districts.map((_, i) => `@d${i}`).join(",")})`;
+      assessWhere = `AND lower(trim(sd.district)) IN (${districts.map((_, i) => `@d${i}`).join(",")})`;
       districts.forEach((d, i) => { params[`d${i}`] = d.toLowerCase().trim(); });
     }
   }
@@ -12821,6 +17618,7 @@ export function getLearningGainsData(
       .prepare(
         `SELECT AVG(${domain.col}) AS avg, COUNT(${domain.col}) AS n
          FROM assessment_records a
+         JOIN schools_directory sd ON sd.id = a.school_id
          WHERE ${domain.col} IS NOT NULL ${assessWhere}`,
       )
       .get(params) as { avg: number | null; n: number };
@@ -12842,6 +17640,7 @@ export function getLearningGainsData(
              SUM(CASE WHEN ${domain.col} >= ${benchmarkThreshold} THEN 1 ELSE 0 END) AS above,
              COUNT(*) AS total
            FROM assessment_records a
+           JOIN schools_directory sd ON sd.id = a.school_id
            WHERE ${domain.col} IS NOT NULL ${assessWhere}`,
         )
         .get(params) as { below: number; approaching: number; above: number; total: number };
@@ -12887,6 +17686,7 @@ export function getLearningGainsData(
          story_reading_score AS storyReadingScore,
          reading_comprehension_score AS readingComprehensionScore
        FROM assessment_records a
+       JOIN schools_directory sd ON sd.id = a.school_id
        WHERE 1=1 ${assessWhere}`,
     )
     .all(params) as Array<AssessmentRowForRL & { assessmentType: string; assessmentDate: string }>;
@@ -13026,10 +17826,10 @@ export function getDataQualitySummary(
 
   const schoolsWithBaseline = (db
     .prepare(
-      `SELECT COUNT(DISTINCT a.school_name) AS c
+      `SELECT COUNT(DISTINCT a.school_id) AS c
        FROM assessment_records a
-       WHERE 1=1
-       ${scopeType === "district" ? "AND lower(trim(a.district)) = lower(trim(@scopeId))" : ""}`,
+       JOIN schools_directory sd ON sd.id = a.school_id
+       ${schoolsWhere}`,
     )
     .get(params) as { c: number })?.c ?? 0;
 
@@ -13044,8 +17844,14 @@ export function getDataQualitySummary(
   const outliers = (db
     .prepare(
       `SELECT COUNT(*) AS c FROM assessment_records
-       WHERE letter_sound_score > 100 OR decoding_score > 100 OR fluency_score > 200 OR comprehension_score > 100
-          OR letter_sound_score < 0 OR decoding_score < 0 OR fluency_score < 0 OR comprehension_score < 0`,
+       WHERE sound_identification_score > 100
+          OR decodable_words_score > 100
+          OR story_reading_score > 200
+          OR reading_comprehension_score > 100
+          OR sound_identification_score < 0
+          OR decodable_words_score < 0
+          OR story_reading_score < 0
+          OR reading_comprehension_score < 0`,
     )
     .get() as { c: number })?.c ?? 0;
 
@@ -13143,8 +17949,24 @@ export interface TableRowCount {
 
 const PURGEABLE_TABLES: { table: string; label: string }[] = [
   // children first (FK dependants)
+  { table: "finance_email_logs", label: "Finance Email Logs" },
+  { table: "finance_files", label: "Finance Files" },
+  { table: "finance_transactions_ledger", label: "Finance Ledger" },
+  { table: "finance_payments", label: "Finance Payments" },
+  { table: "finance_invoice_items", label: "Finance Invoice Items" },
+  { table: "finance_receipts", label: "Finance Receipts" },
+  { table: "finance_expenses", label: "Finance Expenses" },
+  { table: "finance_monthly_statements", label: "Finance Monthly Statements" },
+  { table: "finance_invoices", label: "Finance Invoices" },
+  { table: "finance_contacts", label: "Finance Contacts" },
+  { table: "finance_settings", label: "Finance Settings" },
   { table: "assessment_session_results", label: "Assessment Session Results" },
   { table: "assessment_sessions", label: "Assessment Sessions" },
+  { table: "school_graduation_workflow", label: "School Graduation Workflow" },
+  { table: "school_graduation_eligibility_cache", label: "School Graduation Eligibility Cache" },
+  { table: "graduation_settings", label: "Graduation Settings" },
+  { table: "lesson_evaluation_items", label: "Lesson Evaluation Items" },
+  { table: "lesson_evaluations", label: "Lesson Evaluations" },
   { table: "coaching_visits", label: "Coaching Visits" },
   { table: "portal_training_attendance", label: "Portal Training Attendance" },
   { table: "intervention_sessions", label: "Intervention Sessions" },
@@ -13198,6 +18020,11 @@ export function purgeAllData(): TableRowCount[] {
     DROP VIEW IF EXISTS impact_public_visit_events;
     DROP VIEW IF EXISTS impact_public_assessment_events;
     DROP VIEW IF EXISTS impact_public_teacher_support;
+    DROP VIEW IF EXISTS impact_public_lesson_evaluation_events;
+    DROP VIEW IF EXISTS teacher_improvement_by_teacher;
+    DROP VIEW IF EXISTS teaching_quality_by_school_period;
+    DROP VIEW IF EXISTS story_participation_by_school_period;
+    DROP VIEW IF EXISTS teaching_learning_alignment_by_school_period;
   `);
 
   // Disable FK checks temporarily for a clean wipe
@@ -13216,6 +18043,7 @@ export function purgeAllData(): TableRowCount[] {
 
   // Recreate the impact views
   ensurePublicImpactViews(db);
+  ensureGraduationTables(db);
 
   // Re-seed the default portal user accounts so admins can still log in
   seedPortalUsers(db);
@@ -13234,6 +18062,7 @@ function parseStoryRow(row: Record<string, unknown>): StoryRecord {
     authorProfileId: (row.author_profile_id as number | null) ?? null,
     consentRecordId: (row.consent_record_id as number | null) ?? null,
     title: row.title as string,
+    authorAbout: (row.author_about as string) ?? "",
     excerpt: (row.excerpt as string) ?? "",
     contentText: (row.content_text as string | null) ?? null,
     storyContentBlocks: JSON.parse((row.story_content_blocks as string) || "[]"),
@@ -13269,6 +18098,7 @@ function parsePublishedStory(row: Record<string, unknown>): PublishedStory {
     anthologySlug: (row.anthology_slug as string | null) ?? null,
     authorProfileId: (row.author_profile_id as number | null) ?? null,
     title: row.title as string,
+    authorAbout: (row.author_about as string) ?? "",
     excerpt: (row.excerpt as string) ?? "",
     contentText: (row.content_text as string | null) ?? null,
     storyContentBlocks: JSON.parse((row.story_content_blocks as string) || "[]"),
@@ -13324,6 +18154,7 @@ export function saveStoryEntry(input: {
   schoolId: number;
   anthologyId?: number | null;
   title: string;
+  authorAbout?: string;
   excerpt?: string;
   contentText?: string | null;
   storyContentBlocks?: import("./types").StoryContentBlock[];
@@ -13367,6 +18198,7 @@ export function saveStoryEntry(input: {
         school_id = @schoolId,
         anthology_id = @anthologyId,
         title = @title,
+        author_about = @authorAbout,
         excerpt = @excerpt,
         content_text = @contentText,
         story_content_blocks = @storyContentBlocks,
@@ -13388,6 +18220,7 @@ export function saveStoryEntry(input: {
       schoolId: input.schoolId,
       anthologyId: input.anthologyId ?? null,
       title: input.title,
+      authorAbout: input.authorAbout ?? "",
       excerpt: input.excerpt ?? "",
       contentText: input.contentText ?? null,
       storyContentBlocks: blocksJson,
@@ -13407,13 +18240,13 @@ export function saveStoryEntry(input: {
   } else {
     const result = db.prepare(`
       INSERT INTO story_library (
-        slug, school_id, anthology_id, title, excerpt, content_text,
+        slug, school_id, anthology_id, title, author_about, excerpt, content_text,
         story_content_blocks, has_illustrations,
         pdf_stored_path, cover_image_path, grade, language, tags,
         page_start, page_end, sort_order,
         consent_status, public_author_display, learner_uid, created_by_user_id
       ) VALUES (
-        @slug, @schoolId, @anthologyId, @title, @excerpt, @contentText,
+        @slug, @schoolId, @anthologyId, @title, @authorAbout, @excerpt, @contentText,
         @storyContentBlocks, @hasIllustrations,
         @pdfStoredPath, @coverImagePath, @grade, @language, @tags,
         @pageStart, @pageEnd, @sortOrder,
@@ -13424,6 +18257,7 @@ export function saveStoryEntry(input: {
       schoolId: input.schoolId,
       anthologyId: input.anthologyId ?? null,
       title: input.title,
+      authorAbout: input.authorAbout ?? "",
       excerpt: input.excerpt ?? "",
       contentText: input.contentText ?? null,
       storyContentBlocks: blocksJson,
@@ -13453,7 +18287,9 @@ export function saveStoryEntry(input: {
     WHERE sl.id = ?
   `).get(input.id) as Record<string, unknown>;
 
-  return parseStoryRow(row);
+  const parsed = parseStoryRow(row);
+  refreshSchoolGraduationEligibilityCache(parsed.schoolId);
+  return parsed;
 }
 
 export function listStoryEntries(filters?: {
@@ -13497,7 +18333,7 @@ export function listStoryEntries(filters?: {
 export function getStoryBySlug(slug: string): PublishedStory | null {
   const db = getDb();
   const row = db.prepare(`
-    SELECT sl.id, sl.slug, sl.anthology_id, sl.title, sl.excerpt, sl.content_text,
+    SELECT sl.id, sl.slug, sl.anthology_id, sl.title, sl.author_about, sl.excerpt, sl.content_text,
            sl.story_content_blocks, sl.has_illustrations,
            sl.pdf_stored_path, sl.cover_image_path, sl.grade, sl.language,
            sl.tags, sl.page_start, sl.page_end, sl.public_author_display, sl.view_count, sl.published_at,
@@ -13589,7 +18425,7 @@ export function listPublishedStories(filters: StoryLibraryFilters = {}): {
   `).get(params) as { c: number };
 
   const rows = db.prepare(`
-    SELECT sl.id, sl.slug, sl.title, sl.excerpt, sl.content_text,
+    SELECT sl.id, sl.slug, sl.title, sl.author_about, sl.excerpt, sl.content_text,
            sl.story_content_blocks, sl.has_illustrations,
            sl.pdf_stored_path, sl.cover_image_path, sl.grade, sl.language,
            sl.tags, sl.public_author_display, sl.view_count, sl.published_at,
@@ -13615,7 +18451,7 @@ export function listPublishedStories(filters: StoryLibraryFilters = {}): {
 export function listPublishedStoriesBySchool(schoolId: number, limit = 6): PublishedStory[] {
   const db = getDb();
   const rows = db.prepare(`
-    SELECT sl.id, sl.slug, sl.title, sl.excerpt, sl.content_text,
+    SELECT sl.id, sl.slug, sl.title, sl.author_about, sl.excerpt, sl.content_text,
            sl.story_content_blocks, sl.has_illustrations,
            sl.pdf_stored_path, sl.cover_image_path, sl.grade, sl.language,
            sl.tags, sl.public_author_display, sl.view_count, sl.published_at,
@@ -13640,7 +18476,7 @@ export function listPublishedStoriesBySchool(schoolId: number, limit = 6): Publi
 export function listPublishedStoriesByAnthology(anthologyId: number): PublishedStory[] {
   const db = getDb();
   const rows = db.prepare(`
-    SELECT sl.id, sl.slug, sl.title, sl.excerpt, sl.content_text,
+    SELECT sl.id, sl.slug, sl.title, sl.author_about, sl.excerpt, sl.content_text,
            sl.story_content_blocks, sl.has_illustrations,
            sl.pdf_stored_path, sl.cover_image_path, sl.grade, sl.language,
            sl.tags, sl.public_author_display, sl.view_count, sl.published_at,
@@ -13669,8 +18505,10 @@ export function publishStoryEntry(
 ): { success: boolean; error?: string } {
   const db = getDb();
   const row = db.prepare(
-    "SELECT consent_status, publish_status FROM story_library WHERE id = ?"
-  ).get(storyId) as { consent_status: string; publish_status: string } | undefined;
+    "SELECT consent_status, publish_status, school_id AS schoolId FROM story_library WHERE id = ?"
+  ).get(storyId) as
+    | { consent_status: string; publish_status: string; schoolId: number }
+    | undefined;
 
   if (!row) return { success: false, error: "Story not found" };
   if (row.consent_status !== "approved") {
@@ -13689,6 +18527,8 @@ export function publishStoryEntry(
     VALUES (@userId, @userName, 'publish', 'story_library', @targetId, 'Story published')
   `).run({ userId, userName, targetId: storyId });
 
+  refreshSchoolGraduationEligibilityCache(row.schoolId);
+
   return { success: true };
 }
 
@@ -13698,6 +18538,9 @@ export function unpublishStoryEntry(
   userName: string,
 ): { success: boolean } {
   const db = getDb();
+  const story = db.prepare("SELECT school_id AS schoolId FROM story_library WHERE id = ?").get(storyId) as
+    | { schoolId: number }
+    | undefined;
   db.prepare(`
     UPDATE story_library
     SET publish_status = 'draft', published_at = NULL
@@ -13708,6 +18551,10 @@ export function unpublishStoryEntry(
     INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, detail)
     VALUES (@userId, @userName, 'unpublish', 'story_library', @targetId, 'Story unpublished')
   `).run({ userId, userName, targetId: storyId });
+
+  if (story?.schoolId) {
+    refreshSchoolGraduationEligibilityCache(story.schoolId);
+  }
 
   return { success: true };
 }
@@ -13905,11 +18752,17 @@ export function listStoryTags(): string[] {
 
 export function deleteStoryEntry(storyId: number, userId: number, userName: string): void {
   const db = getDb();
+  const story = db
+    .prepare("SELECT school_id AS schoolId FROM story_library WHERE id = ?")
+    .get(storyId) as { schoolId: number } | undefined;
   db.prepare("DELETE FROM story_library WHERE id = ?").run(storyId);
   db.prepare(`
     INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, detail)
     VALUES (@userId, @userName, 'delete', 'story_library', @targetId, 'Story deleted')
   `).run({ userId, userName, targetId: storyId });
+  if (story?.schoolId) {
+    refreshSchoolGraduationEligibilityCache(story.schoolId);
+  }
 }
 
 /* ─── Story Analytics & Feedback (Views, Ratings, Comments) ─── */
@@ -14012,34 +18865,118 @@ export function listStoryComments(storyId: number, limit = 50): import("./types"
 
 /* ─── NLIS — Support Requests ───────────────────────── */
 
-export function createSupportRequest(input: SupportRequestInput): SupportRequestRecord {
+type SupportRequestCreateInput = SupportRequestInput & {
+  contactPhone?: string;
+  consentFollowUp?: boolean;
+};
+
+function normalizeSupportRequestUrgency(value: SupportRequestUrgency): "low" | "medium" | "high" {
+  if (value === "high" || value === "this_term") return "high";
+  if (value === "low") return "low";
+  return "medium";
+}
+
+function resolveSupportRequestDistrict(
+  db: Database.Database,
+  input: Pick<SupportRequestCreateInput, "schoolId" | "locationText">,
+) {
+  if (typeof input.schoolId === "number" && input.schoolId > 0) {
+    const row = db
+      .prepare("SELECT district FROM schools_directory WHERE id = @schoolId LIMIT 1")
+      .get({ schoolId: input.schoolId }) as { district: string | null } | undefined;
+    const district = String(row?.district ?? "").trim();
+    if (district) {
+      return district;
+    }
+  }
+
+  const location = String(input.locationText ?? "").trim();
+  if (location) {
+    return location.split(",")[0]?.trim() ?? "";
+  }
+  return "";
+}
+
+function findAutoAssignedStaffId(
+  db: Database.Database,
+  district: string,
+) {
+  if (!district) return null;
+  const row = db
+    .prepare(
+      `
+      SELECT id
+      FROM portal_users
+      WHERE role IN ('Staff', 'Volunteer', 'Super Admin')
+        AND lower(trim(COALESCE(geography_scope, ''))) LIKE lower(trim(@scope))
+      ORDER BY
+        CASE role
+          WHEN 'Staff' THEN 0
+          WHEN 'Volunteer' THEN 1
+          ELSE 2
+        END,
+        id ASC
+      LIMIT 1
+    `,
+    )
+    .get({ scope: `%district:${district}%` }) as { id: number } | undefined;
+  return row?.id ?? null;
+}
+
+export function createSupportRequest(
+  input: SupportRequestCreateInput,
+  options?: { createdByUserId?: number | null },
+): SupportRequestRecord {
   const db = getDb();
+  const contactInfo = String(input.contactInfo ?? input.contactPhone ?? "").trim();
+  const district = resolveSupportRequestDistrict(db, input);
+  const autoAssignedStaffId = findAutoAssignedStaffId(db, district);
+
   const result = db.prepare(`
     INSERT INTO support_requests (
       school_id, location_text, contact_name, contact_role, contact_info, 
-      support_types_json, urgency, message, status
+      support_types_json, urgency, message, status, assigned_staff_id, created_by_user_id
     ) VALUES (
       @schoolId, @locationText, @contactName, @contactRole, @contactInfo, 
-      @supportTypesJson, @urgency, @message, 'New'
+      @supportTypesJson, @urgency, @message, 'New', @assignedStaffId, @createdByUserId
     )
   `).run({
     schoolId: input.schoolId ?? null,
     locationText: input.locationText ?? null,
     contactName: input.contactName,
     contactRole: input.contactRole,
-    contactInfo: input.contactInfo,
+    contactInfo: contactInfo || "Not provided",
     supportTypesJson: JSON.stringify(input.supportTypes),
-    urgency: input.urgency,
-    message: input.message
+    urgency: normalizeSupportRequestUrgency(input.urgency),
+    message: input.message,
+    assignedStaffId: autoAssignedStaffId,
+    createdByUserId: options?.createdByUserId ?? null,
   });
 
   const id = Number(result.lastInsertRowid);
-  const row = db.prepare("SELECT status, created_at FROM support_requests WHERE id = ?").get(id) as { status: string; created_at: string };
+  const row = db
+    .prepare(
+      `SELECT status, created_at, assigned_staff_id, follow_up_started, follow_up_notes
+       FROM support_requests
+       WHERE id = ?`,
+    )
+    .get(id) as {
+      status: string;
+      created_at: string;
+      assigned_staff_id: number | null;
+      follow_up_started: number | null;
+      follow_up_notes: string | null;
+    };
   return {
     ...input,
+    contactInfo: contactInfo || "Not provided",
+    urgency: normalizeSupportRequestUrgency(input.urgency),
     id,
     status: row.status as SupportRequestStatus,
-    createdAt: row.created_at as string
+    assignedStaffId: row.assigned_staff_id ?? undefined,
+    followUpStarted: Boolean(row.follow_up_started),
+    followUpNotes: row.follow_up_notes ?? undefined,
+    createdAt: row.created_at as string,
   };
 }
 
@@ -14081,6 +19018,8 @@ export function listSupportRequests(filters?: { status?: SupportRequestStatus; d
     status: string;
     assigned_staff_id: number | null;
     assignedStaffName: string | null;
+    follow_up_started: number | null;
+    follow_up_notes: string | null;
     created_at: string;
   }>;
   return rows.map(row => ({
@@ -14091,16 +19030,22 @@ export function listSupportRequests(filters?: { status?: SupportRequestStatus; d
     contactRole: row.contact_role as string,
     contactInfo: row.contact_info as string,
     supportTypes: JSON.parse(row.support_types_json) as SupportRequestInput["supportTypes"],
-    urgency: row.urgency as "low" | "medium" | "high",
+    urgency: row.urgency as SupportRequestUrgency,
     message: row.message,
     status: row.status as SupportRequestStatus,
     assignedStaffId: (row.assigned_staff_id as number) ?? undefined,
     assignedStaffName: (row.assignedStaffName as string) ?? undefined,
+    followUpStarted: Boolean(row.follow_up_started),
+    followUpNotes: (row.follow_up_notes as string) ?? undefined,
     createdAt: row.created_at as string
   }));
 }
 
-export function updateSupportRequest(id: number, updates: Partial<SupportRequestRecord>): void {
+export function updateSupportRequest(
+  id: number,
+  updates: Partial<SupportRequestRecord>,
+  _options?: { updatedByUserId?: number | null },
+): SupportRequestRecord | null {
   const db = getDb();
   const fields = [];
   const params: Record<string, unknown> = { id };
@@ -14113,8 +19058,18 @@ export function updateSupportRequest(id: number, updates: Partial<SupportRequest
     fields.push("assigned_staff_id = @assignedStaffId");
     params.assignedStaffId = updates.assignedStaffId;
   }
+  if (updates.followUpStarted !== undefined) {
+    fields.push("follow_up_started = @followUpStarted");
+    params.followUpStarted = updates.followUpStarted ? 1 : 0;
+  }
+  if (updates.followUpNotes !== undefined) {
+    fields.push("follow_up_notes = @followUpNotes");
+    params.followUpNotes = updates.followUpNotes;
+  }
 
-  if (fields.length === 0) return;
+  if (fields.length === 0) {
+    return listSupportRequests().find((item) => item.id === id) ?? null;
+  }
 
   const query = `UPDATE support_requests SET ${fields.join(", ")} WHERE id = @id`;
   try {
@@ -14123,28 +19078,149 @@ export function updateSupportRequest(id: number, updates: Partial<SupportRequest
     console.error("Failed to update support request:", err);
     throw err;
   }
+
+  const row = db
+    .prepare(
+      `
+      SELECT sr.*, pu.full_name as assignedStaffName
+      FROM support_requests sr
+      LEFT JOIN portal_users pu ON pu.id = sr.assigned_staff_id
+      WHERE sr.id = @id
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as {
+      id: number;
+      school_id: number | null;
+      location_text: string | null;
+      contact_name: string;
+      contact_role: string;
+      contact_info: string;
+      support_types_json: string;
+      urgency: string;
+      message: string;
+      status: string;
+      assigned_staff_id: number | null;
+      assignedStaffName: string | null;
+      follow_up_started: number | null;
+      follow_up_notes: string | null;
+      created_at: string;
+    } | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    schoolId: row.school_id ?? undefined,
+    locationText: row.location_text ?? undefined,
+    contactName: row.contact_name,
+    contactRole: row.contact_role,
+    contactInfo: row.contact_info,
+    supportTypes: JSON.parse(row.support_types_json) as SupportRequestInput["supportTypes"],
+    urgency: row.urgency as SupportRequestUrgency,
+    message: row.message,
+    status: row.status as SupportRequestStatus,
+    assignedStaffId: row.assigned_staff_id ?? undefined,
+    assignedStaffName: row.assignedStaffName ?? undefined,
+    followUpStarted: Boolean(row.follow_up_started),
+    followUpNotes: row.follow_up_notes ?? undefined,
+    createdAt: row.created_at,
+  };
 }
 
 // Geo Hierarchy Fetch Helpers
-export function listGeoRegions(): { id: string, name: string }[] {
-  const db = getDb();
-  return db.prepare("SELECT id, name FROM geo_regions ORDER BY name ASC").all() as { id: string, name: string }[];
+function normalizeGeoYear(year?: number | string | null) {
+  if (year === undefined || year === null || year === "") {
+    return null;
+  }
+  const parsed = Number(year);
+  if (!Number.isFinite(parsed) || parsed < 1900 || parsed > 9999) {
+    return null;
+  }
+  return Math.trunc(parsed);
 }
 
-export function listGeoSubregions(regionId?: string): { id: string, name: string }[] {
+export function listGeoRegions(year?: number | string | null): { id: string, name: string }[] {
   const db = getDb();
+  const normalizedYear = normalizeGeoYear(year);
+  if (normalizedYear === null) {
+    return db.prepare("SELECT id, name FROM geo_regions ORDER BY name ASC").all() as { id: string, name: string }[];
+  }
+  return db.prepare(
+    `
+      SELECT id, name
+      FROM geo_regions
+      WHERE valid_from_year <= @year
+        AND (valid_to_year IS NULL OR valid_to_year >= @year)
+      ORDER BY name ASC
+    `,
+  ).all({ year: normalizedYear }) as { id: string, name: string }[];
+}
+
+export function listGeoSubregions(regionId?: string, year?: number | string | null): { id: string, name: string }[] {
+  const db = getDb();
+  const normalizedYear = normalizeGeoYear(year);
   if (regionId) {
-    return db.prepare("SELECT id, name FROM geo_subregions WHERE region_id = ? ORDER BY name ASC").all(regionId) as { id: string, name: string }[];
+    if (normalizedYear === null) {
+      return db.prepare("SELECT id, name FROM geo_subregions WHERE region_id = ? ORDER BY name ASC").all(regionId) as { id: string, name: string }[];
+    }
+    return db.prepare(
+      `
+        SELECT id, name
+        FROM geo_subregions
+        WHERE region_id = @regionId
+          AND valid_from_year <= @year
+          AND (valid_to_year IS NULL OR valid_to_year >= @year)
+        ORDER BY name ASC
+      `,
+    ).all({ regionId, year: normalizedYear }) as { id: string, name: string }[];
   }
-  return db.prepare("SELECT id, name FROM geo_subregions ORDER BY name ASC").all() as { id: string, name: string }[];
+  if (normalizedYear === null) {
+    return db.prepare("SELECT id, name FROM geo_subregions ORDER BY name ASC").all() as { id: string, name: string }[];
+  }
+  return db.prepare(
+    `
+      SELECT id, name
+      FROM geo_subregions
+      WHERE valid_from_year <= @year
+        AND (valid_to_year IS NULL OR valid_to_year >= @year)
+      ORDER BY name ASC
+    `,
+  ).all({ year: normalizedYear }) as { id: string, name: string }[];
 }
 
-export function listGeoDistricts(subregionId?: string): { id: string, name: string }[] {
+export function listGeoDistricts(subregionId?: string, year?: number | string | null): { id: string, name: string }[] {
   const db = getDb();
+  const normalizedYear = normalizeGeoYear(year);
   if (subregionId) {
-    return db.prepare("SELECT id, name FROM geo_districts WHERE subregion_id = ? ORDER BY name ASC").all(subregionId) as { id: string, name: string }[];
+    if (normalizedYear === null) {
+      return db.prepare("SELECT id, name FROM geo_districts WHERE subregion_id = ? ORDER BY name ASC").all(subregionId) as { id: string, name: string }[];
+    }
+    return db.prepare(
+      `
+        SELECT id, name
+        FROM geo_districts
+        WHERE subregion_id = @subregionId
+          AND valid_from_year <= @year
+          AND (valid_to_year IS NULL OR valid_to_year >= @year)
+        ORDER BY name ASC
+      `,
+    ).all({ subregionId, year: normalizedYear }) as { id: string, name: string }[];
   }
-  return db.prepare("SELECT id, name FROM geo_districts ORDER BY name ASC").all() as { id: string, name: string }[];
+  if (normalizedYear === null) {
+    return db.prepare("SELECT id, name FROM geo_districts ORDER BY name ASC").all() as { id: string, name: string }[];
+  }
+  return db.prepare(
+    `
+      SELECT id, name
+      FROM geo_districts
+      WHERE valid_from_year <= @year
+        AND (valid_to_year IS NULL OR valid_to_year >= @year)
+      ORDER BY name ASC
+    `,
+  ).all({ year: normalizedYear }) as { id: string, name: string }[];
 }
 
 export function listGeoSubcounties(districtId?: string): { id: string, name: string, type?: string }[] {
@@ -14161,6 +19237,39 @@ export function listGeoParishes(subcountyId?: string): { id: string, name: strin
     return db.prepare("SELECT id, name FROM geo_parishes WHERE subcounty_id = ? ORDER BY name ASC").all(subcountyId) as { id: string, name: string }[];
   }
   return db.prepare("SELECT id, name FROM geo_parishes ORDER BY name ASC").all() as { id: string, name: string }[];
+}
+
+export function listGeoSchools(districtId?: string, _year?: number | string | null): Array<{
+  id: number;
+  name: string;
+  district: string;
+}> {
+  const db = getDb();
+  if (!districtId) {
+    return db.prepare(
+      `
+        SELECT id, name, COALESCE(district, '') AS district
+        FROM schools_directory
+        WHERE name IS NOT NULL AND trim(name) != ''
+        ORDER BY name ASC
+      `,
+    ).all() as Array<{ id: number; name: string; district: string }>;
+  }
+
+  return db.prepare(
+    `
+      SELECT id, name, COALESCE(district, '') AS district
+      FROM schools_directory
+      WHERE name IS NOT NULL
+        AND trim(name) != ''
+        AND (
+          COALESCE(geo_district_id, '') = @districtId
+          OR COALESCE(district_id, '') = @districtId
+          OR lower(trim(district)) = lower(trim((SELECT name FROM geo_districts WHERE id = @districtId)))
+        )
+      ORDER BY name ASC
+    `,
+  ).all({ districtId }) as Array<{ id: number; name: string; district: string }>;
 }
 
 export function searchGeoDistricts(q: string): { id: string, name: string, subregionName: string, regionName: string, regionId: string, subregionId: string }[] {

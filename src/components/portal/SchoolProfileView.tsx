@@ -1,15 +1,68 @@
 "use client";
 
-import { SchoolDirectoryRecord } from "@/lib/types";
+import { GraduationEligibilityRecord, SchoolDirectoryRecord } from "@/lib/types";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
+import { GraduationReviewModal } from "./GraduationReviewModal";
+
+type SupervisorOption = {
+  id: number;
+  fullName: string;
+};
 
 interface SchoolProfileViewProps {
   school: SchoolDirectoryRecord;
+  canVoidLessonEvaluations?: boolean;
 }
 
-export function SchoolProfileView({ school }: SchoolProfileViewProps) {
+export function SchoolProfileView({
+  school,
+  canVoidLessonEvaluations = false,
+}: SchoolProfileViewProps) {
   const [activeTab, setActiveTab] = useState<"details" | "related" | "activity">("details");
+  const [graduationLoading, setGraduationLoading] = useState(false);
+  const [graduationError, setGraduationError] = useState("");
+  const [graduationOpen, setGraduationOpen] = useState(false);
+  const [graduationEligibility, setGraduationEligibility] = useState<GraduationEligibilityRecord | null>(null);
+  const [graduationSupervisors, setGraduationSupervisors] = useState<SupervisorOption[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    setGraduationLoading(true);
+    setGraduationError("");
+    fetch(`/api/portal/graduation/school/${school.id}`, { cache: "no-store" })
+      .then(async (response) => {
+        const json = (await response.json()) as {
+          eligibility?: GraduationEligibilityRecord;
+          supervisors?: SupervisorOption[];
+          error?: string;
+        };
+        if (!response.ok || !json.eligibility) {
+          throw new Error(json.error ?? "Could not load graduation status.");
+        }
+        if (!active) {
+          return;
+        }
+        setGraduationEligibility(json.eligibility);
+        setGraduationSupervisors(Array.isArray(json.supervisors) ? json.supervisors : []);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+        setGraduationError(error instanceof Error ? error.message : "Could not load graduation status.");
+      })
+      .finally(() => {
+        if (active) {
+          setGraduationLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [school.id]);
 
   return (
     <div className="school-profile-container">
@@ -61,8 +114,40 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
             <span className="label">Phone</span>
             <span className="value">{school.contactPhone || "-"}</span>
           </div>
+          <div className="highlight-item">
+            <span className="label">Program Status</span>
+            <span className="value">{graduationEligibility?.programStatus ?? school.programStatus}</span>
+          </div>
         </div>
       </div>
+
+      {graduationEligibility?.isEligible ? (
+        <section className="card graduation-alert-banner">
+          <div>
+            <h3>Graduation Eligible</h3>
+            <p>
+              This school currently meets configured graduation criteria. Review evidence before confirming
+              graduation.
+            </p>
+            <p className="portal-muted">
+              {graduationEligibility.eligibilityScorecard.readingSampleSize.toLocaleString()} assessed learners •{" "}
+              {graduationEligibility.eligibilityScorecard.teachingEvaluationsCount.toLocaleString()} lesson
+              evaluations • {graduationEligibility.eligibilityScorecard.publishedStoryCount.toLocaleString()}{" "}
+              published stories
+            </p>
+          </div>
+          <div className="action-row">
+            <button className="button" onClick={() => setGraduationOpen(true)}>
+              Review Graduation
+            </button>
+            <Link href="/portal/graduation-queue" className="button button-ghost">
+              Open Queue
+            </Link>
+          </div>
+        </section>
+      ) : null}
+      {graduationLoading ? <p className="portal-muted">Checking graduation eligibility…</p> : null}
+      {!graduationLoading && graduationError ? <p className="portal-muted">{graduationError}</p> : null}
 
       {/* Main Content Area */}
       <div className="school-content-grid">
@@ -109,6 +194,12 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
             </Link>
           </div>
 
+          <LessonEvaluationPanel
+            schoolId={school.id}
+            schoolName={school.name}
+            allowVoid={canVoidLessonEvaluations}
+          />
+
           {/* Tabs */}
           <div className="tabs-container">
             <div className="tabs-header">
@@ -154,7 +245,9 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
                       </div>
                       <div className="detail-group">
                         <label>School Status</label>
-                        <div className="detail-value">Open</div>
+                        <div className="detail-value">
+                          {graduationEligibility?.programStatus ?? school.programStatus}
+                        </div>
                       </div>
                     </div>
                     <div className="detail-row">
@@ -281,6 +374,14 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
 
       </div>
 
+      <GraduationReviewModal
+        open={graduationOpen}
+        eligibility={graduationEligibility}
+        supervisors={graduationSupervisors}
+        onClose={() => setGraduationOpen(false)}
+        onUpdated={(next) => setGraduationEligibility(next)}
+      />
+
       <style jsx>{`
         .school-profile-container {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
@@ -295,6 +396,15 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
           border-bottom: 1px solid #e5e7eb;
           padding: 1rem 1.5rem;
           margin-bottom: 1.5rem;
+        }
+
+        .graduation-alert-banner {
+          margin: 0 1.5rem 1.5rem;
+          border-left: 4px solid #16a34a;
+          display: flex;
+          justify-content: space-between;
+          gap: 1rem;
+          align-items: center;
         }
 
         .school-header-top {

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
 import { getImpactReportByCode, incrementImpactReportDownloadCount } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { embedPdfSerifFonts } from "@/lib/pdf-fonts";
+import {
+  drawBrandFrame,
+  drawBrandHeader,
+  drawBrandWatermark,
+  loadBrandLogo,
+} from "@/lib/pdf-branding";
 
 function wrapText(text: string, maxChars = 95) {
   const words = text.split(/\s+/).filter(Boolean);
@@ -39,10 +46,28 @@ export async function GET(
 
   const doc = await PDFDocument.create();
   const page = doc.addPage([842, 1191]); // A4 landscape-ish readability
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const serifFonts = await embedPdfSerifFonts(doc);
+  const font = serifFonts.regular;
+  const bold = serifFonts.bold;
+  const logo = await loadBrandLogo(doc);
 
-  let y = 1145;
+  drawBrandFrame(page);
+  drawBrandWatermark(page, logo);
+  drawBrandHeader({
+    page,
+    font,
+    fontBold: bold,
+    logo,
+    title: "IMPACT REPORT",
+    documentNumber: report.reportCode,
+    subtitle: `${report.scopeType} • ${report.scopeValue} • ${report.periodStart} to ${report.periodEnd}`,
+    titleColor: rgb(0.04, 0.31, 0.4),
+    titleSize: 24,
+    numberSize: 14,
+    subtitleSize: 9.5,
+  });
+
+  let y = 930;
   const left = 36;
   const lineHeight = 15;
 
@@ -67,9 +92,6 @@ export async function GET(
     });
   };
 
-  drawLine("Ozeki Reading Bridge Foundation", 16, true, rgb(0.04, 0.31, 0.4));
-  drawLine("Impact Report", 13, true, rgb(0.04, 0.31, 0.4));
-  y -= 4;
   drawLine(`Report Code: ${report.reportCode}`, 10);
   drawLine(`Title: ${report.title}`, 10);
   drawLine(`Type: ${report.reportType}`, 10);
@@ -127,6 +149,78 @@ export async function GET(
       : "Data not available"
     }`,
   ]);
+
+  if (report.factPack.teacherLessonEvaluation) {
+    const teacherEval = report.factPack.teacherLessonEvaluation;
+    drawSection("Teacher Lesson Evaluation", [
+      `Total evaluations: ${teacherEval.totalEvaluations.toLocaleString()}`,
+      `Average overall score: ${teacherEval.averageOverallScore ?? "Data not available"}`,
+      `Level distribution: Strong ${teacherEval.levelDistribution.strong}, Good ${teacherEval.levelDistribution.good}, Developing ${teacherEval.levelDistribution.developing}, Needs Support ${teacherEval.levelDistribution.needsSupport}`,
+      `Top coaching focus: ${teacherEval.topGapDomains.join(", ") || "Data not available"}`,
+      `What we observed: ${teacherEval.narrative.whatWeObserved || "Data not available."}`,
+      `What it means: ${teacherEval.narrative.whatItMeans || "Data not available."}`,
+      `What to do next (30 days): ${teacherEval.narrative.whatToDoNext30Days || "Data not available."}`,
+      `How to check next visit: ${teacherEval.narrative.howToCheckNextVisit || "Data not available."}`,
+    ]);
+
+    if (teacherEval.records.length > 0) {
+      drawSection(
+        "Teacher Observation Records (Private)",
+        teacherEval.records.slice(0, 12).flatMap((record, index) => [
+          `${index + 1}. ${record.teacherName} • ${record.classObserved} • ${record.lessonDate} • ${record.overallLevel} (${record.overallScore}/4)`,
+          ...wrapText(`Strength: ${record.strengthsText}`, 86),
+          ...wrapText(`Gap: ${record.priorityGapText}`, 86),
+          ...wrapText(`Next action: ${record.nextCoachingAction}`, 86),
+          ...wrapText(`Teacher commitment: ${record.teacherCommitment}`, 86),
+        ]),
+      );
+    }
+  }
+
+  if (report.factPack.teacherImprovementSummary) {
+    const summary = report.factPack.teacherImprovementSummary;
+    drawSection("Teacher Improvement Since First Visit", [
+      `Teachers compared: ${summary.teachersCompared.toLocaleString()}`,
+      `Improved teachers: ${summary.improvedTeachersCount.toLocaleString()} (${summary.improvedTeachersPercent ?? "Data not available"}%)`,
+      `Average overall delta: ${summary.averageOverallDelta ?? "Data not available"}`,
+      `Schools improving (%): ${summary.schoolImprovedPercent ?? "Data not available"}`,
+      `Top improving domains: ${summary.topImprovingDomains.length > 0
+        ? summary.topImprovingDomains.map((entry) => `${entry.domain} (+${entry.avgDelta})`).join(", ")
+        : "Data not available"
+      }`,
+      `Note: ${summary.disclaimer}`,
+    ]);
+
+    if (summary.teacherComparisons.length > 0) {
+      drawSection(
+        "Teacher Improvement Records (Private)",
+        summary.teacherComparisons.slice(0, 12).flatMap((entry, index) => [
+          `${index + 1}. ${entry.teacherName} • ${entry.classObserved} • Δ overall ${entry.deltaOverall > 0 ? "+" : ""}${entry.deltaOverall.toFixed(2)} • ${entry.improvementStatus}`,
+          `Baseline: ${entry.baselineDate} • Comparison: ${entry.comparisonDate} • Latest: ${entry.latestDate}`,
+        ]),
+      );
+    }
+  }
+
+  if (report.factPack.teachingLearningAlignment) {
+    const alignment = report.factPack.teachingLearningAlignment;
+    drawSection("Teaching → Learning Alignment", [
+      `Teaching quality delta: ${alignment.summary.teachingDelta ?? "Data not available"}`,
+      `Non-reader reduction (pp): ${alignment.summary.nonReaderReductionPp ?? "Data not available"}`,
+      `20+ CWPM delta (pp): ${alignment.summary.cwpm20PlusDeltaPp ?? "Data not available"}`,
+      `Story sessions (latest period): ${alignment.summary.storySessionsLatest.toLocaleString()}`,
+      alignment.caveat,
+    ]);
+    if (alignment.points.length > 0) {
+      drawSection(
+        "Aligned Timeline Points",
+        alignment.points.slice(-8).flatMap((point) => [
+          `${point.period}: Teaching ${point.teachingQualityAvg ?? "N/A"} | Decoding ${point.decodingAvg ?? "N/A"} | Fluency ${point.fluencyAvg ?? "N/A"} | Comprehension ${point.comprehensionAvg ?? "N/A"}`,
+          `Non-reader ${point.nonReaderPct ?? "N/A"}% | 20+ CWPM ${point.cwpm20PlusPct ?? "N/A"}% | Story sessions ${point.storySessionsCount}`,
+        ]),
+      );
+    }
+  }
 
   drawSection("Priorities", report.narrative.nextPriorities.flatMap((item) => wrapText(`- ${item}`)));
   drawSection(

@@ -13,13 +13,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     const { slug } = await params;
     const story = getStoryBySlug(slug);
     if (!story) return { title: "Story Not Found" };
+    const safeAuthorName = story.publicAuthorDisplay?.trim() || "Learner Author";
 
     return {
         title: `${story.title} — 1001 Story Library`,
-        description: story.excerpt || `A story by ${story.publicAuthorDisplay} from the 1001 Story Project.`,
+        description: story.excerpt || `A story by ${safeAuthorName} from the 1001 Story Project.`,
         openGraph: {
             title: story.title,
-            description: story.excerpt || `A story by ${story.publicAuthorDisplay}.`,
+            description: story.excerpt || `A story by ${safeAuthorName}.`,
             type: "article",
         },
     };
@@ -35,6 +36,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
     const moreStories = listPublishedStoriesBySchool(story.schoolId, 4).filter(s => s.slug !== story.slug);
     const comments = listStoryComments(story.id);
     const ratingStats = getStoryRatingStats(story.id);
+    const safeAuthorName = story.publicAuthorDisplay?.trim() || "Learner Author";
 
     const articleSchema = {
         "@context": "https://schema.org",
@@ -43,7 +45,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
         description: story.excerpt,
         author: {
             "@type": "Person",
-            name: story.publicAuthorDisplay,
+            name: safeAuthorName,
         },
         publisher: {
             "@type": "Organization",
@@ -69,8 +71,13 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                     </nav>
                     <p className="kicker">1001 Story Project</p>
                     <h1>{story.title}</h1>
+                    {story.excerpt ? (
+                        <p style={{ maxWidth: "760px", margin: "0.75rem auto 0", fontSize: "1.05rem", color: "var(--md-sys-color-on-surface-variant)" }}>
+                            {story.excerpt}
+                        </p>
+                    ) : null}
                     <div className="story-detail-meta" style={{ marginBottom: story.anthologySlug ? "1.5rem" : "0" }}>
-                        <span className="story-detail-author">{story.publicAuthorDisplay}</span>
+                        <span className="story-detail-author">{safeAuthorName}</span>
                         <span className="story-detail-divider">•</span>
                         <Link href={`/schools/${story.schoolId}`} className="story-detail-school">
                             {story.schoolName}
@@ -84,6 +91,44 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                             </>
                         )}
                     </div>
+                    <div style={{
+                        display: "inline-grid",
+                        gridTemplateColumns: "40px 1fr",
+                        gap: "0.6rem",
+                        alignItems: "center",
+                        marginTop: "0.85rem",
+                        padding: "0.55rem 0.8rem",
+                        borderRadius: "12px",
+                        border: "1px solid var(--md-sys-color-outline-variant)",
+                        background: "var(--md-sys-color-surface)"
+                    }}>
+                        <div
+                            aria-hidden
+                            style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "999px",
+                                display: "grid",
+                                placeItems: "center",
+                                fontWeight: 800,
+                                color: "var(--md-sys-color-primary)",
+                                background: "color-mix(in oklab, var(--md-sys-color-secondary), white 75%)"
+                            }}
+                        >
+                            {safeAuthorName.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ textAlign: "left" }}>
+                            <p style={{ margin: 0, fontWeight: 700 }}>{safeAuthorName}</p>
+                            <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--md-sys-color-on-surface-variant)" }}>
+                                {story.grade || "Class not set"} • {story.schoolName}
+                            </p>
+                        </div>
+                    </div>
+                    <p style={{ margin: "0.5rem auto 0", maxWidth: "760px", fontSize: "0.82rem", color: "var(--md-sys-color-on-surface-variant)" }}>
+                        <em>
+                            Learner name, photo, age, and school details are published with written consent from the parent/guardian and the school.
+                        </em>
+                    </p>
 
                     {story.anthologySlug && (
                         <div>
@@ -104,7 +149,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                         </div>
 
                         {story.storyContentBlocks && story.storyContentBlocks.length > 0 ? (
-                            <StoryReader title={story.title} author={story.publicAuthorDisplay} blocks={story.storyContentBlocks} />
+                            <StoryReader title={story.title} author={safeAuthorName} blocks={story.storyContentBlocks} />
                         ) : story.contentText ? (
                             <div className="card" style={{ padding: "2rem" }}>
                                 <div className="story-detail-body">
@@ -137,9 +182,14 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                         <div className="card" style={{ padding: "1.2rem" }}>
                             <h3 style={{ marginTop: 0, fontSize: "1rem" }}>About this story</h3>
                             <p style={{ fontSize: "0.9rem" }}>
-                                This story was written by <strong>{story.publicAuthorDisplay}</strong> as part of the{" "}
+                                This story was written by <strong>{safeAuthorName}</strong> as part of the{" "}
                                 <Link href="/story-project" style={{ color: "var(--md-sys-color-secondary)", textDecoration: "underline" }}>1001 Story Project</Link>.
                             </p>
+                            {story.authorAbout ? (
+                                <p style={{ fontSize: "0.85rem", color: "var(--md-sys-color-on-surface-variant)" }}>
+                                    {story.authorAbout}
+                                </p>
+                            ) : null}
                             <p style={{ fontSize: "0.85rem", color: "var(--md-sys-color-on-surface-variant)" }}>
                                 {story.viewCount.toLocaleString()} {story.viewCount === 1 ? "view" : "views"}
                             </p>

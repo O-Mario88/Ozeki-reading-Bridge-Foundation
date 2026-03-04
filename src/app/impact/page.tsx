@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
+import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
 import { getImpactReportFilterFacets, listPublicImpactReports, getSchoolLearnerAnalysis } from "@/lib/db";
 import { ImpactReportScopeType, ImpactReportType } from "@/lib/types";
 
@@ -33,8 +34,35 @@ function parseReportType(value: string): ImpactReportType | undefined {
 }
 
 function parseScopeType(value: string): ImpactReportScopeType | undefined {
-  const allowed: ImpactReportScopeType[] = ["National", "Region", "District", "School"];
+  const allowed: ImpactReportScopeType[] = [
+    "National",
+    "Region",
+    "Sub-region",
+    "District",
+    "Sub-county",
+    "Parish",
+    "School",
+  ];
   return (allowed as string[]).includes(value) ? (value as ImpactReportScopeType) : undefined;
+}
+
+function resolveReportYear(rawYear: string, availableYears: string[]) {
+  const parsed = Number(rawYear);
+  if (Number.isFinite(parsed) && parsed >= 2025 && parsed <= 2050) {
+    return String(parsed);
+  }
+  const nowYear = new Date().getFullYear();
+  if (nowYear >= 2025 && nowYear <= 2050) {
+    return String(nowYear);
+  }
+  const latestDataYear = availableYears
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => b - a)[0];
+  if (latestDataYear && latestDataYear >= 2025 && latestDataYear <= 2050) {
+    return String(latestDataYear);
+  }
+  return "2025";
 }
 
 function scoreColor(score: number | null): string {
@@ -59,7 +87,7 @@ export default async function ImpactDashboardPage({
   const params = await searchParams;
 
   /* ── Report filters ── */
-  const selectedYear = firstValue(params.year);
+  const selectedYearParam = firstValue(params.year);
   const selectedType = firstValue(params.reportType);
   const selectedScopeType = firstValue(params.scopeType);
   const selectedScopeValue = firstValue(params.scopeValue);
@@ -69,8 +97,9 @@ export default async function ImpactDashboardPage({
   const selectedSchoolId = firstValue(params.schoolId);
 
   const facets = getImpactReportFilterFacets();
+  const selectedYear = resolveReportYear(selectedYearParam, facets.years);
   const reports = listPublicImpactReports({
-    year: selectedYear && /^\d{4}$/.test(selectedYear) ? selectedYear : undefined,
+    year: selectedYear,
     reportType: parseReportType(selectedType),
     scopeType: parseScopeType(selectedScopeType),
     scopeValue: selectedScopeValue || undefined,
@@ -135,74 +164,16 @@ export default async function ImpactDashboardPage({
 
           <div className="card impact-filter-card" style={{ marginBottom: "2rem" }}>
             <h2>Filter Reports</h2>
-            <form method="GET" action="/impact" className="filters impact-filter-grid">
-              {/* Preserve dashboard params */}
-              {firstValue(params.period) && <input type="hidden" name="period" value={firstValue(params.period)} />}
-
-              <label>
-                <span>Year/FY</span>
-                <select name="year" defaultValue={selectedYear}>
-                  <option value="">All years</option>
-                  {facets.years.map((year) => (
-                    <option value={year} key={year}>{year}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                <span>Report Type</span>
-                <select name="reportType" defaultValue={selectedType}>
-                  <option value="">All report types</option>
-                  {facets.reportTypes.map((type) => (
-                    <option value={type} key={type}>{type}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                <span>Region</span>
-                <select name="region" defaultValue={selectedRegion}>
-                  <option value="">All regions</option>
-                  {facets.regions.map((r) => (
-                    <option value={r} key={r}>{r}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                <span>Sub-region</span>
-                <select name="subRegion" defaultValue={selectedSubRegion}>
-                  <option value="">All sub-regions</option>
-                  {facets.subRegions.map((sr) => (
-                    <option value={sr} key={sr}>{sr}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                <span>District</span>
-                <select name="district" defaultValue={selectedDistrict}>
-                  <option value="">All districts</option>
-                  {facets.districts.map((d) => (
-                    <option value={d} key={d}>{d}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                <span>School</span>
-                <select name="schoolId" defaultValue={selectedSchoolId}>
-                  <option value="">All schools</option>
-                  {facets.schools.map((s) => (
-                    <option value={s.id} key={s.id}>{s.name} ({s.district})</option>
-                  ))}
-                </select>
-              </label>
-
-              <button className="button" type="submit">
-                Apply Filters
-              </button>
-            </form>
+            <ImpactReportFilters
+              initialYear={selectedYear}
+              initialReportType={selectedType}
+              initialRegion={selectedRegion}
+              initialSubRegion={selectedSubRegion}
+              initialDistrict={selectedDistrict}
+              initialSchoolId={selectedSchoolId}
+              reportTypes={facets.reportTypes}
+              period={firstValue(params.period) || undefined}
+            />
           </div>
 
           {/* Report cards */}

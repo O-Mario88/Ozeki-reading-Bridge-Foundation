@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getMediaShowcase } from "@/lib/media-showcase";
 import { allUgandaDistricts, inferRegionFromDistrict, ugandaRegions } from "@/lib/uganda-locations";
+import { buildVideoThumbnailFallback } from "@/lib/media-placeholders";
 
 export const metadata = {
   title: "Impact Gallery",
@@ -162,7 +163,7 @@ export default async function ImpactGalleryPage({
                         item.youtubeThumbnailUrl ||
                         (item.youtubeVideoId
                           ? `https://img.youtube.com/vi/${item.youtubeVideoId}/hqdefault.jpg`
-                          : "/images/ozeki-logo.jpg")
+                          : buildVideoThumbnailFallback(`impact-gallery-${item.id}`, "Video thumbnail unavailable"))
                       }
                       alt={item.alt}
                       loading="lazy"

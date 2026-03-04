@@ -60,7 +60,10 @@ export default async function SchoolProfilePage({ params }: PageProps) {
                 </div>
             }
         >
-            <SchoolProfileView school={school} />
+            <SchoolProfileView
+                school={school}
+                canVoidLessonEvaluations={user.isSuperAdmin}
+            />
         </PortalShell>
     );
 }

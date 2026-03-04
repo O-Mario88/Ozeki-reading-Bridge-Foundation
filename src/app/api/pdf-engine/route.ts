@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStoryBySlug } from "@/lib/db";
 import puppeteer from "puppeteer";
+import { buildBrowserPdfBranding } from "@/lib/browser-pdf-branding";
+import type { StoryContentBlock } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
     const slug = request.nextUrl.searchParams.get("slug");
@@ -10,6 +12,14 @@ export async function GET(request: NextRequest) {
     if (!story) return new NextResponse("Story not found", { status: 404 });
 
     const baseUrl = request.nextUrl.origin;
+    const branding = await buildBrowserPdfBranding({
+        title: "Story Anthology",
+        documentNumber: `#${story.slug}`,
+        subtitle: `${story.schoolName} • ${story.publicAuthorDisplay}`,
+        footerNote:
+            "This story has been published with guardian and school consent. Standard safeguarding policies apply.",
+        accentHex: "#0f5d4f",
+    });
 
     // Generate HTML for the PDF
     const html = `
@@ -19,18 +29,29 @@ export async function GET(request: NextRequest) {
         <meta charset="UTF-8">
         <base href="${baseUrl}">
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Nunito:wght@700;800&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap');
-            
+            ${branding.css}
+
+            @page {
+                size: A4;
+                margin: 22mm 16mm 24mm 16mm;
+            }
+
             body {
-                font-family: 'Lexend', sans-serif;
-                font-size: 14pt;
-                line-height: 1.6;
-                color: #1a1c1e;
+                font-size: 11.5pt;
+                line-height: 1.45;
                 margin: 0;
                 padding: 0;
             }
+
+            .story-document {
+                position: relative;
+                z-index: 2;
+                padding-top: 90mm;
+                padding-bottom: 34mm;
+            }
+
             .cover-page {
-                height: 100vh;
+                min-height: calc(100vh - 130mm);
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -39,7 +60,6 @@ export async function GET(request: NextRequest) {
                 page-break-after: always;
             }
             .cover-title {
-                font-family: 'Nunito', sans-serif;
                 font-size: 36pt;
                 font-weight: 800;
                 margin-bottom: 1rem;
@@ -59,8 +79,7 @@ export async function GET(request: NextRequest) {
                 width: 80%;
             }
             h2 {
-                font-family: 'Nunito', sans-serif;
-                font-size: 20pt;
+                font-size: 17pt;
                 page-break-after: avoid;
                 margin-top: 2rem;
             }
@@ -82,7 +101,7 @@ export async function GET(request: NextRequest) {
                 object-fit: contain;
             }
             .caption {
-                font-size: 10pt;
+                font-size: 9.5pt;
                 color: #555;
                 margin-top: 0.5rem;
                 font-style: italic;
@@ -90,23 +109,30 @@ export async function GET(request: NextRequest) {
         </style>
     </head>
     <body>
-        <div class="cover-page">
-            <div>
-                <h1 class="cover-title">${escapeHtml(story.title)}</h1>
-                <div class="cover-author">By ${escapeHtml(story.publicAuthorDisplay)}</div>
-                <div style="font-size: 12pt; margin-bottom: 0.5rem; color: #777;">${escapeHtml(story.schoolName)}</div>
-                <div style="font-size: 12pt; color: #777;">1001 Story Project</div>
-            </div>
-            
-            <div class="disclaimer">
-                This story has been published with the explicit written consent of the author's guardian and school.<br/>
-                Standard safeguarding policies apply.
-            </div>
-        </div>
+        ${branding.frameHtml}
+        ${branding.watermarkHtml}
+        ${branding.headerHtml}
+        ${branding.footerHtml}
 
-        <div class="story-content">
-            ${(story.storyContentBlocks || []).map(renderBlock).join('\n')}
-        </div>
+        <main class="story-document">
+            <div class="cover-page">
+                <div>
+                    <h1 class="cover-title">${escapeHtml(story.title)}</h1>
+                    <div class="cover-author">By ${escapeHtml(story.publicAuthorDisplay)}</div>
+                    <div style="font-size: 12pt; margin-bottom: 0.5rem; color: #777;">${escapeHtml(story.schoolName)}</div>
+                    <div style="font-size: 12pt; color: #777;">1001 Story Project</div>
+                </div>
+                
+                <div class="disclaimer">
+                    This story has been published with the explicit written consent of the author's guardian and school.<br/>
+                    Standard safeguarding policies apply.
+                </div>
+            </div>
+
+            <div class="story-content">
+                ${(story.storyContentBlocks || []).map(renderBlock).join('\n')}
+            </div>
+        </main>
     </body>
     </html>
     `;
@@ -120,11 +146,16 @@ export async function GET(request: NextRequest) {
 
         // Wait until network is idle to ensure valid fonts/images loads
         await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+        await page.evaluate(async () => {
+            if ("fonts" in document) {
+                await (document as Document & { fonts: FontFaceSet }).fonts.ready;
+            }
+        });
 
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' },
+            margin: { top: '22mm', right: '16mm', bottom: '24mm', left: '16mm' },
             displayHeaderFooter: true,
             headerTemplate: "<div></div>",
             footerTemplate: `<div style="font-size: 10px; text-align: center; width: 100%;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>`
@@ -149,7 +180,7 @@ function escapeHtml(unsafe: string) {
     return (unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-function renderBlock(block: any) {
+function renderBlock(block: StoryContentBlock) {
     if (block.type === "paragraph") {
         return `<p>${escapeHtml(block.text)}</p>`;
     }

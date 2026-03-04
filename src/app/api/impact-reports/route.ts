@@ -3,7 +3,15 @@ import { z } from "zod";
 import { getImpactReportFilterFacets, listPublicImpactReports } from "@/lib/db";
 import { ImpactReportScopeType, ImpactReportType } from "@/lib/types";
 
-const scopeTypeSchema = z.enum(["National", "Region", "District", "School"]);
+const scopeTypeSchema = z.enum([
+  "National",
+  "Region",
+  "Sub-region",
+  "District",
+  "Sub-county",
+  "Parish",
+  "School",
+]);
 const reportTypeSchema = z.enum([
   "FY Impact Report",
   "Regional Impact Report",

@@ -8,6 +8,7 @@ import {
   ResourceSkill,
   ResourceType,
 } from "@/lib/types";
+import { FloatingSurface } from "@/components/FloatingSurface";
 
 type PortalResourceView = {
   id: number;
@@ -50,12 +51,26 @@ const typeOptions: ResourceType[] = [
 ];
 const sectionOptions: PortalResourceSection[] = [...portalResourceSections];
 
+function formatDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(parsed);
+}
+
 export function PortalResourcesManager({ initialResources }: PortalResourcesManagerProps) {
   const [resources, setResources] = useState(initialResources);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [formKey, setFormKey] = useState(0);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const counts = useMemo(
     () => ({
@@ -92,6 +107,7 @@ export function PortalResourcesManager({ initialResources }: PortalResourcesMana
       setSelectedFileName("");
       setFormKey((value) => value + 1);
       setStatus("Resource saved. Download button now points to the uploaded file/link.");
+      setIsCreateOpen(false);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not save resource.");
     } finally {
@@ -122,6 +138,68 @@ export function PortalResourcesManager({ initialResources }: PortalResourcesMana
           Upload a file or provide an external URL, then choose where it should
           appear on the public website.
         </p>
+        <div className="action-row portal-form-actions">
+          <button className="button" type="button" onClick={() => setIsCreateOpen(true)}>
+            + Upload Resource
+          </button>
+        </div>
+        {status ? <p className="form-message success">{status}</p> : null}
+      </section>
+
+      <section className="card">
+        <h2>Recent Resource Entries</h2>
+        {resources.length === 0 ? (
+          <p>No resources uploaded yet.</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Grade / Skill</th>
+                  <th>Type</th>
+                  <th>Area</th>
+                  <th>Source</th>
+                  <th>Download</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resources.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <strong>{item.title}</strong>
+                    </td>
+                    <td>
+                      {item.grade} / {item.skill}
+                    </td>
+                    <td>{item.type}</td>
+                    <td>{item.section}</td>
+                    <td>{item.fileName ? "Uploaded file" : "External URL"}</td>
+                    <td>
+                      <a href={item.downloadUrl} target="_blank" rel="noreferrer">
+                        {item.downloadLabel || "Open download"}
+                      </a>
+                    </td>
+                    <td>
+                      {item.createdByName} · {formatDate(item.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <FloatingSurface
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Upload Resource / Configure Download Link"
+        description="Add a file or URL and publish it to the selected resource area."
+        closeLabel="Close"
+        maxWidth="960px"
+      >
         <form key={formKey} className="form-grid portal-form-grid" onSubmit={handleSubmit}>
           <label>
             <span className="portal-field-label">Title</span>
@@ -235,56 +313,17 @@ export function PortalResourcesManager({ initialResources }: PortalResourcesMana
             >
               Reset form
             </button>
+            <button
+              className="button button-ghost"
+              type="button"
+              disabled={saving}
+              onClick={() => setIsCreateOpen(false)}
+            >
+              Cancel
+            </button>
           </div>
         </form>
-        {status ? <p className="form-message success">{status}</p> : null}
-      </section>
-
-      <section className="card">
-        <h2>Recent Resource Entries</h2>
-        {resources.length === 0 ? (
-          <p>No resources uploaded yet.</p>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Grade / Skill</th>
-                  <th>Type</th>
-                  <th>Area</th>
-                  <th>Source</th>
-                  <th>Download</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resources.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <strong>{item.title}</strong>
-                    </td>
-                    <td>
-                      {item.grade} / {item.skill}
-                    </td>
-                    <td>{item.type}</td>
-                    <td>{item.section}</td>
-                    <td>{item.fileName ? "Uploaded file" : "External URL"}</td>
-                    <td>
-                      <a href={item.downloadUrl} target="_blank" rel="noreferrer">
-                        {item.downloadLabel || "Open download"}
-                      </a>
-                    </td>
-                    <td>
-                      {item.createdByName} · {new Date(item.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      </FloatingSurface>
     </div>
   );
 }

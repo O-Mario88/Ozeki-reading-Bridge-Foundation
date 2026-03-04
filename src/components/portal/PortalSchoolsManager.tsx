@@ -10,9 +10,12 @@ import {
 } from "@/lib/uganda-locations";
 import { SchoolDirectoryRecord } from "@/lib/types";
 import { SchoolRosterPicker } from "./SchoolRosterPicker";
+import { FloatingSurface } from "@/components/FloatingSurface";
+import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
 
 interface PortalSchoolsManagerProps {
   initialSchools: SchoolDirectoryRecord[];
+  canVoidLessonEvaluations?: boolean;
 }
 
 type Feedback = {
@@ -89,7 +92,10 @@ async function getBrowserCoordinates() {
   });
 }
 
-export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerProps) {
+export function PortalSchoolsManager({
+  initialSchools,
+  canVoidLessonEvaluations = false,
+}: PortalSchoolsManagerProps) {
   const [schools, setSchools] = useState(initialSchools);
   const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(
     initialSchools[0]?.id ?? null,
@@ -563,15 +569,24 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
             className="button button-compact"
             type="button"
             onClick={() => {
-              setIsCreateFormOpen((prev) => !prev);
+              setIsCreateFormOpen(true);
               setCreateFeedback({ kind: "idle", message: "" });
             }}
           >
-            {isCreateFormOpen ? "Hide Form" : "+ New School"}
+            + New School
           </button>
         </div>
+        <p className="portal-muted">Create school records in a floating form without leaving this page.</p>
         {isCreateFormOpen ? (
-          <form ref={createFormRef} className="form-grid portal-form-grid" onSubmit={handleCreateSchool}>
+          <FloatingSurface
+            open={isCreateFormOpen}
+            onClose={() => setIsCreateFormOpen(false)}
+            title="New School Entry"
+            description="Add a new school account and baseline metadata."
+            closeLabel="Close"
+            maxWidth="1080px"
+          >
+            <form ref={createFormRef} className="form-grid portal-form-grid" onSubmit={handleCreateSchool}>
             <label>
               <span className="portal-field-label">
                 <span>School Name</span>
@@ -812,10 +827,9 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 {createFeedback.message}
               </p>
             ) : null}
-          </form>
-        ) : (
-          <p className="portal-muted">Click “+ New School” to open the school metadata form.</p>
-        )}
+            </form>
+          </FloatingSurface>
+        ) : null}
       </section>
 
       <section className="card">
@@ -845,8 +859,8 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 <Link href={`/portal/visits?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New School Visit
                 </Link>
-                <Link href={`/portal/visits?new=1&schoolId=${selectedSchool.id}&programType=Observation`} className="button button-compact">
-                  Teacher Evaluation
+                <Link href="#lesson-evaluations" className="button button-compact">
+                  New Lesson Evaluation
                 </Link>
                 <Link href={`/portal/assessments?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New Assessment
@@ -907,6 +921,12 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
               </div>
             </div>
 
+            <LessonEvaluationPanel
+              schoolId={selectedSchool.id}
+              schoolName={selectedSchool.name}
+              allowVoid={canVoidLessonEvaluations}
+            />
+
             {!editingProfile ? (
               <div className="action-row portal-form-actions">
                 <button
@@ -918,11 +938,19 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 </button>
               </div>
             ) : (
-              <form
-                ref={editFormRef}
-                className="form-grid portal-form-grid"
-                onSubmit={handleUpdateSchoolProfile}
+              <FloatingSurface
+                open={editingProfile}
+                onClose={() => setEditingProfile(false)}
+                title="Edit School Profile"
+                description={`${selectedSchool.name} (${selectedSchool.schoolCode})`}
+                closeLabel="Close"
+                maxWidth="1080px"
               >
+                <form
+                  ref={editFormRef}
+                  className="form-grid portal-form-grid"
+                  onSubmit={handleUpdateSchoolProfile}
+                >
                 <label>
                   <span className="portal-field-label">School Name</span>
                   <input name="name" defaultValue={selectedSchool.name} required minLength={2} />
@@ -1133,7 +1161,8 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                     Cancel
                   </button>
                 </div>
-              </form>
+                </form>
+              </FloatingSurface>
             )}
 
             {profileFeedback.message ? (
@@ -1232,6 +1261,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 <th>Boys</th>
                 <th>Girls</th>
                 <th>Total</th>
+                <th>Status</th>
                 <th>GPS</th>
                 <th>Contact</th>
                 <th>Actions</th>
@@ -1240,7 +1270,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
             <tbody>
               {schools.length === 0 ? (
                 <tr>
-                  <td colSpan={12}>No schools available.</td>
+                  <td colSpan={13}>No schools available.</td>
                 </tr>
               ) : (
                 schools.map((school) => (
@@ -1254,6 +1284,13 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                     <td>{Number(school.enrolledBoys ?? 0).toLocaleString()}</td>
                     <td>{Number(school.enrolledGirls ?? 0).toLocaleString()}</td>
                     <td>{Number(school.enrolledLearners ?? 0).toLocaleString()}</td>
+                    <td>
+                      {school.programStatus === "graduated" ? (
+                        <span className="portal-filter-chip active">Graduated</span>
+                      ) : (
+                        <span className="portal-filter-chip">{school.programStatus ?? "active"}</span>
+                      )}
+                    </td>
                     <td>
                       {school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"}
                     </td>

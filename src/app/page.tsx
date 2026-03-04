@@ -9,6 +9,7 @@ import {
   organizationName,
   tagline,
 } from "@/lib/content";
+import { buildVideoThumbnailFallback } from "@/lib/media-placeholders";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function HomePage() {
     featuredChannelVideo?.youtubeThumbnailUrl ||
     (featuredChannelVideo?.youtubeVideoId
       ? `https://img.youtube.com/vi/${featuredChannelVideo.youtubeVideoId}/hqdefault.jpg`
-      : "/images/ozeki-logo.jpg");
+      : buildVideoThumbnailFallback("home-featured-video", "Watch Ozeki on YouTube"));
   const orgSchema = {
     "@context": "https://schema.org",
     "@type": "NonProfit",

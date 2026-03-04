@@ -1,10 +1,14 @@
+import { redirect } from "next/navigation";
 import { listSupportRequests, listPortalUsersForAdmin } from "@/lib/db";
-import { requireAuthenticatedUser } from "@/lib/portal-api";
+import { getCurrentPortalUser } from "@/lib/portal-auth";
 import SupportManager from "@/components/portal/SupportManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 
 export default async function SupportPage() {
-    const user = await requireAuthenticatedUser();
+    const user = await getCurrentPortalUser();
+    if (!user) {
+        redirect("/portal/login");
+    }
 
     // Fetch initial data
     const initialRequests = listSupportRequests();

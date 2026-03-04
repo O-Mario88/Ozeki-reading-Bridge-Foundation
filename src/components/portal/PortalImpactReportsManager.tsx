@@ -7,6 +7,7 @@ import {
   ImpactReportScopeType,
   ImpactReportType,
 } from "@/lib/types";
+import { FloatingSurface } from "@/components/FloatingSurface";
 
 interface PortalImpactReportsManagerProps {
   initialReports: ImpactReportRecord[];
@@ -89,6 +90,7 @@ export function PortalImpactReportsManager({
   const [selectedSubCountyId, setSelectedSubCountyId] = useState("");
   const [selectedParishId, setSelectedParishId] = useState("");
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
 
   const [schools, setSchools] = useState<Array<{ id: number; name: string }>>([]);
   const [publicOnly, setPublicOnly] = useState(false);
@@ -292,6 +294,7 @@ export function PortalImpactReportsManager({
       setSelectedParishId("");
       setSelectedSchoolId("");
       setPublicOnly(false);
+      setIsBuilderOpen(false);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not generate report.");
     } finally {
@@ -340,7 +343,22 @@ export function PortalImpactReportsManager({
           FY reports follow Uganda school-calendar sessions (Term I, Term II, Term III).
           Current default window: {fyInfoText}.
         </p>
+        <div className="action-row portal-form-actions">
+          <button className="button" type="button" onClick={() => setIsBuilderOpen(true)}>
+            + Generate Report
+          </button>
+        </div>
+        {status ? <p className="form-message success">{status}</p> : null}
+      </section>
 
+      <FloatingSurface
+        open={isBuilderOpen}
+        onClose={() => setIsBuilderOpen(false)}
+        title="Impact Report Engine"
+        description="Generate scope-filtered impact reports from locked aggregated facts."
+        closeLabel="Close"
+        maxWidth="1080px"
+      >
         <form className="form-grid portal-form-grid portal-filter-grid-pretty" onSubmit={handleBuildReport}>
           <label className="portal-filter-field">
             <span className="portal-filter-field-label">Report Type</span>
@@ -620,8 +638,7 @@ export function PortalImpactReportsManager({
             </div>
           </div>
         </form>
-        {status ? <p className="form-message success">{status}</p> : null}
-      </section>
+      </FloatingSurface>
 
       <section className="card">
         <div className="portal-module-header">
