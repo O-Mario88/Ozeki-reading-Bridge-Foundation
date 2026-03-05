@@ -183,7 +183,7 @@ export default async function PublicFinancialsPage() {
                       </div>
                       <div className="mt-auto pt-4 border-t border-gray-50 flex justify-between items-center text-sm">
                         <span className="text-gray-500 text-xs">Net</span>
-                        <span className={`font-medium \${s.net >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        <span className={`font-medium \${s.net >= 0 ? "text-orange-600" : "text-red-500"}`}>
                           {formatMoney(s.currency, s.net)}
                         </span>
                       </div>

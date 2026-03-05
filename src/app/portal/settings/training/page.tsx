@@ -61,7 +61,7 @@ export default function TrainingSettingsPage() {
             </div>
 
             {successMsg && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center text-green-800">
+                <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-center text-orange-800">
                     <CheckCircle2 className="w-5 h-5 mr-3 shrink-0" />
                     {successMsg}
                 </div>
@@ -84,7 +84,7 @@ export default function TrainingSettingsPage() {
                             </div>
                             <div className="mt-1">
                                 {settings.googleConnected ? (
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800 border border-green-200">
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-800 border border-orange-200">
                                         <CheckCircle2 className="w-4 h-4 mr-1.5" /> Connected
                                     </span>
                                 ) : (

@@ -47,7 +47,7 @@ export default async function RegionPage({ params }: { params: Params }) {
 
                     {/* KPI Cards */}
                     <div className="impact-dash-kpi-grid">
-                        <article className="impact-dash-kpi" style={{ "--kpi-accent": "#0d7c66" } as React.CSSProperties}>
+                        <article className="impact-dash-kpi" style={{ "--kpi-accent": "#E64500" } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Schools Supported</span>
                                 <span className="impact-dash-kpi-value">{drilldown.kpis.schoolsSupported}</span>
@@ -66,7 +66,7 @@ export default async function RegionPage({ params }: { params: Params }) {
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{
-                            "--kpi-accent": fidelity.band === "Strong" ? "#16a34a" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
+                            "--kpi-accent": fidelity.band === "Strong" ? "#FF4D00" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
                         } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Fidelity ({fidelity.band})</span>

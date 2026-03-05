@@ -191,7 +191,7 @@ function readingLevelColor(label: string, index: number) {
   if ((READING_LEVELS as string[]).includes(label)) {
     return getReadingLevelColor(label as (typeof READING_LEVELS)[number]);
   }
-  const fallback = ["#c0392b", "#e67e22", "#f1c40f", "#2e8b57", "#1f5fbf", "#6b7280"];
+  const fallback = ["#c0392b", "#e67e22", "#f1c40f", "#E64500", "#1f5fbf", "#6b7280"];
   return fallback[index % fallback.length];
 }
 
@@ -939,7 +939,7 @@ export function PublicImpactMapExplorer({
                   {payload?.rankings.mostImproved.map((item) => (
                     <div key={item.name} className="flex justify-between p-2 border-b">
                       <span>{item.name}</span>
-                      <span className="text-green-600 font-bold">+{item.score} pts</span>
+                      <span className="text-orange-600 font-bold">+{item.score} pts</span>
                     </div>
                   ))}
                 </div>
@@ -972,7 +972,7 @@ export function PublicImpactMapExplorer({
                 <h4>Completeness Status</h4>
                 <div className="mt-2">
                   {payload?.meta.dataCompleteness === "Complete" ? (
-                    <span className="text-green-600 font-bold">✓ High (100% submission)</span>
+                    <span className="text-orange-600 font-bold">✓ High (100% submission)</span>
                   ) : (
                     <span className="text-orange-600 font-bold">⚠ Partial (Reporting in progress)</span>
                   )}

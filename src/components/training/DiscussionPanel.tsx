@@ -4,7 +4,7 @@ import { MessageSquare, Send } from "lucide-react";
 
 export function DiscussionPanel() {
     const posts = [
-        { author: "Teacher Sarah", time: "10 min ago", text: "Will the phonics cards be shared after this session?", initial: "S", color: "bg-emerald-500" },
+        { author: "Teacher Sarah", time: "10 min ago", text: "Will the phonics cards be shared after this session?", initial: "S", color: "bg-orange-500" },
         { author: "Ozeki Trainer", time: "5 min ago", text: "Yes, they will be available in the Resources tab above as soon as we conclude.", initial: "O", color: "bg-[#00155F]", isStaff: true },
     ];
 

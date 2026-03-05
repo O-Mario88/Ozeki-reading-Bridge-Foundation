@@ -12,7 +12,7 @@ const STATUS_COLORS: Record<SupportRequestStatus, string> = {
     New: "#2196f3",
     Contacted: "#ff9800",
     Scheduled: "#9c27b0",
-    Delivered: "#4caf50",
+    Delivered: "#FF7A33",
     Closed: "#757575"
 };
 

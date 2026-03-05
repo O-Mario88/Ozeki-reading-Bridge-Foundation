@@ -5,13 +5,13 @@ import { ReadingLevelMovementVisual } from "./ReadingLevelMovementVisual";
 
 function GainIndicator({ value }: { value: number | null }) {
     if (value === null) return <span style={{ color: "#aaa" }}>—</span>;
-    const color = value > 0 ? "#16a34a" : value < 0 ? "#dc2626" : "#666";
+    const color = value > 0 ? "#FF4D00" : value < 0 ? "#dc2626" : "#666";
     const arrow = value > 0 ? "↑" : value < 0 ? "↓" : "→";
     return <span style={{ color, fontWeight: 700 }}>{arrow} {Math.abs(value).toFixed(1)}pp</span>;
 }
 
 function domainColor(index: number) {
-    const palette = ["#2563eb", "#7c3aed", "#0891b2", "#059669"];
+    const palette = ["#2563eb", "#7c3aed", "#0891b2", "#E64500"];
     return palette[index % palette.length];
 }
 
@@ -64,7 +64,7 @@ function SlopegraphRow({ domain, index }: { domain: DomainGainData; index: numbe
                             {(domain.approachingPct ?? 0) > 8 ? `${domain.approachingPct}%` : ""}
                         </div>
                         <div
-                            style={{ width: `${domain.atBenchmarkPct}%`, background: "#dcfce7", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", minWidth: (domain.atBenchmarkPct ?? 0) > 8 ? undefined : 0 }}
+                            style={{ width: `${domain.atBenchmarkPct}%`, background: "#FFF0E8", color: "#FF4D00", display: "flex", alignItems: "center", justifyContent: "center", minWidth: (domain.atBenchmarkPct ?? 0) > 8 ? undefined : 0 }}
                             title={`At benchmark: ${domain.atBenchmarkPct}%`}
                         >
                             {(domain.atBenchmarkPct ?? 0) > 8 ? `${domain.atBenchmarkPct}%` : ""}
@@ -92,8 +92,8 @@ export default function LearningGainsSection({ data }: { data: LearningGainsData
                 </h3>
                 {data.schoolImprovementIndex !== null && (
                     <div style={{
-                        background: data.schoolImprovementIndex > 0 ? "#dcfce7" : "#fee2e2",
-                        color: data.schoolImprovementIndex > 0 ? "#16a34a" : "#dc2626",
+                        background: data.schoolImprovementIndex > 0 ? "#FFF0E8" : "#fee2e2",
+                        color: data.schoolImprovementIndex > 0 ? "#FF4D00" : "#dc2626",
                         padding: "0.35rem 0.75rem", borderRadius: "20px", fontWeight: 700, fontSize: "0.85rem"
                     }}>
                         School Improvement Index: {data.schoolImprovementIndex > 0 ? "+" : ""}{data.schoolImprovementIndex.toFixed(1)}pp

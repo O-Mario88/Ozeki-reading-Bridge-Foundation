@@ -2814,7 +2814,7 @@ export function PortalModuleManager({
                                               }}
                                             />
                                             {row.participantName && (
-                                              <div style={{ fontSize: "0.78rem", color: "#0f5d4f", marginTop: 2 }}>
+                                              <div style={{ fontSize: "0.78rem", color: "#CC3D00", marginTop: 2 }}>
                                                 ✓ {row.participantName}
                                               </div>
                                             )}

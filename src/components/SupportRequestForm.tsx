@@ -73,8 +73,8 @@ export default function SupportRequestForm() {
 
     if (submitted) {
         return (
-            <div className="bg-green-50 p-8 rounded-2xl border-2 border-green-200 text-center max-w-2xl mx-auto my-12 animate-in fade-in zoom-in duration-500">
-                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="bg-orange-50 p-8 rounded-2xl border-2 border-orange-200 text-center max-w-2xl mx-auto my-12 animate-in fade-in zoom-in duration-500">
+                <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -85,7 +85,7 @@ export default function SupportRequestForm() {
                 </p>
                 <button
                     onClick={() => setSubmitted(false)}
-                    className="mt-6 px-6 py-2 bg-white border border-green-200 text-green-700 rounded-lg hover:bg-green-50 transition-colors"
+                    className="mt-6 px-6 py-2 bg-white border border-orange-200 text-orange-700 rounded-lg hover:bg-orange-50 transition-colors"
                 >
                     Submit another request
                 </button>

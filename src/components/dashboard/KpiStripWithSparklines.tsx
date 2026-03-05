@@ -50,7 +50,7 @@ function KpiCardWithSparkline({ data }: { data: SparklineData }) {
     const prevVal = data.trend[data.trend.length - 2] ?? lastVal;
     const change = lastVal - prevVal;
     const isUp = change >= 0;
-    const trendColor = isUp ? "#16a34a" : "#dc2626";
+    const trendColor = isUp ? "#FF4D00" : "#dc2626";
 
     return (
         <div style={{

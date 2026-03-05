@@ -33,7 +33,7 @@ function ActionCard({ title, children, accent }: { title: string; children: Reac
 
 function GapTag({ domain, change }: { domain: string; change: number | null }) {
     if (change === null) return null;
-    const color = change > 0 ? "#16a34a" : change < -5 ? "#dc2626" : "#b45309";
+    const color = change > 0 ? "#FF4D00" : change < -5 ? "#dc2626" : "#b45309";
     return (
         <span style={{
             display: "inline-flex", alignItems: "center", gap: "0.3rem",
@@ -122,14 +122,14 @@ export default function SchoolActionCenter({
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
                 {/* Fidelity snapshot */}
                 <ActionCard title="Implementation Fidelity" accent={
-                    data.fidelity.band === "Strong" ? "#16a34a" :
+                    data.fidelity.band === "Strong" ? "#FF4D00" :
                         data.fidelity.band === "Developing" ? "#e8a317" :
                             data.fidelity.band === "Needs support" ? "#e85d04" : "#dc2626"
                 }>
                     <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                         <div style={{
                             fontSize: "2rem", fontWeight: 800,
-                            color: data.fidelity.band === "Strong" ? "#16a34a" :
+                            color: data.fidelity.band === "Strong" ? "#FF4D00" :
                                 data.fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
                         }}>
                             {data.fidelity.totalScore}
@@ -167,8 +167,8 @@ export default function SchoolActionCenter({
                 <div style={{
                     textAlign: "center", fontSize: "0.85rem", padding: "0.5rem 1rem",
                     borderRadius: "12px",
-                    background: data.gains.schoolImprovementIndex > 0 ? "#dcfce7" : "#fee2e2",
-                    color: data.gains.schoolImprovementIndex > 0 ? "#16a34a" : "#dc2626",
+                    background: data.gains.schoolImprovementIndex > 0 ? "#FFF0E8" : "#fee2e2",
+                    color: data.gains.schoolImprovementIndex > 0 ? "#FF4D00" : "#dc2626",
                     fontWeight: 700,
                 }}>
                     School Improvement Index: {data.gains.schoolImprovementIndex > 0 ? "+" : ""}

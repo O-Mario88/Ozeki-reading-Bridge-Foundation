@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         subtitle: `${story.schoolName} • ${story.publicAuthorDisplay}`,
         footerNote:
             "This story has been published with guardian and school consent. Standard safeguarding policies apply.",
-        accentHex: "#0f5d4f",
+        accentHex: "#CC3D00",
     });
 
     // Generate HTML for the PDF
