@@ -30,7 +30,7 @@ export function DiscussionPanel() {
                   {post.author}
                 </span>
                 {post.isStaff && (
-                  <span className="text-[10px] uppercase font-bold text-white bg-[#FF4D00] px-1.5 py-0.5 rounded">Staff</span>
+                  <span className="text-[10px] uppercase font-bold text-white bg-[#FA7D15] px-1.5 py-0.5 rounded">Staff</span>
                 )}
                 <span className="text-xs text-gray-400">{post.time}</span>
               </div>

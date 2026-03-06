@@ -14930,6 +14930,33 @@ function listSchoolsForPublicScope(level: PublicImpactScopeLevel, id: string) {
       }>;
   }
 
+  if (level === "region") {
+    return db
+      .prepare(
+        `
+        SELECT
+          school_id AS schoolId,
+          school_uid AS schoolUid,
+          school_name AS schoolName,
+          district,
+          sub_region AS subRegion,
+          region,
+          enrollment_total AS enrollmentTotal
+        FROM impact_public_school_scope
+        WHERE lower(region) = lower(@id) OR lower(region_id) = lower(@id)
+      `,
+      )
+      .all({ id }) as Array<{
+        schoolId: number;
+        schoolUid: string;
+        schoolName: string;
+        district: string;
+        subRegion: string;
+        region: string;
+        enrollmentTotal: number;
+      }>;
+  }
+
   if (level === "subregion") {
     return db
       .prepare(
@@ -15727,17 +15754,21 @@ export function getPublicImpactAggregate(
   const scopeName =
     scopeLevel === "country"
       ? "Uganda"
+      : scopeLevel === "region"
+        ? scopeId
       : scopeLevel === "school"
         ? scopedSchools[0]?.schoolName ?? scopeId
         : scopeId;
   const scopeParent =
-    scopeLevel === "district"
-      ? scopedSchools[0]?.subRegion ?? undefined
-      : scopeLevel === "school"
-        ? scopedSchools[0]?.district ?? undefined
-        : scopeLevel === "subregion"
-          ? scopedSchools[0]?.region ?? undefined
-          : undefined;
+    scopeLevel === "region"
+      ? "Uganda"
+      : scopeLevel === "subregion"
+        ? scopedSchools[0]?.region ?? undefined
+        : scopeLevel === "district"
+          ? scopedSchools[0]?.subRegion ?? undefined
+          : scopeLevel === "school"
+            ? scopedSchools[0]?.district ?? undefined
+            : undefined;
   const navigatorRegions = [...new Set(scopedSchools.map((school) => school.region))]
     .filter((value): value is string => Boolean(value))
     .sort((left, right) => left.localeCompare(right));

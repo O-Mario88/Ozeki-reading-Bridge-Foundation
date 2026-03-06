@@ -11,6 +11,14 @@ type PdfSerifFonts = {
   familyName: "Times New Roman" | "Liberation Serif" | "Times-Roman";
 };
 
+type PdfSansFonts = {
+  regular: PDFFont;
+  bold: PDFFont;
+  italic: PDFFont;
+  boldItalic: PDFFont;
+  familyName: "Calibri" | "Arial" | "Helvetica";
+};
+
 type FontBytesSet = {
   regular: Uint8Array;
   bold: Uint8Array;
@@ -56,6 +64,64 @@ const BUNDLED_LIBERATION_PATHS = {
   boldItalic: path.join(process.cwd(), "public", "assets", "fonts", "pdf", "LiberationSerif-BoldItalic.ttf"),
 } as const;
 
+const SYSTEM_CALIBRI_PATHS = {
+  regular: [
+    "/Library/Fonts/Calibri.ttf",
+    "/System/Library/Fonts/Supplemental/Calibri.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/calibri.ttf",
+    "C:\\Windows\\Fonts\\calibri.ttf",
+  ],
+  bold: [
+    "/Library/Fonts/Calibri Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Calibri Bold.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/calibrib.ttf",
+    "C:\\Windows\\Fonts\\calibrib.ttf",
+  ],
+  italic: [
+    "/Library/Fonts/Calibri Italic.ttf",
+    "/System/Library/Fonts/Supplemental/Calibri Italic.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/calibrii.ttf",
+    "C:\\Windows\\Fonts\\calibrii.ttf",
+  ],
+  boldItalic: [
+    "/Library/Fonts/Calibri Bold Italic.ttf",
+    "/System/Library/Fonts/Supplemental/Calibri Bold Italic.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/calibriz.ttf",
+    "C:\\Windows\\Fonts\\calibriz.ttf",
+  ],
+} as const;
+
+const SYSTEM_ARIAL_PATHS = {
+  regular: [
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+    "/Library/Fonts/Arial.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/arial.ttf",
+    "C:\\Windows\\Fonts\\arial.ttf",
+  ],
+  bold: [
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/Library/Fonts/Arial Bold.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/arialbd.ttf",
+    "C:\\Windows\\Fonts\\arialbd.ttf",
+  ],
+  italic: [
+    "/System/Library/Fonts/Supplemental/Arial Italic.ttf",
+    "/Library/Fonts/Arial Italic.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/Arial_Italic.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/ariali.ttf",
+    "C:\\Windows\\Fonts\\ariali.ttf",
+  ],
+  boldItalic: [
+    "/System/Library/Fonts/Supplemental/Arial Bold Italic.ttf",
+    "/Library/Fonts/Arial Bold Italic.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/Arial_Bold_Italic.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/arialbi.ttf",
+    "C:\\Windows\\Fonts\\arialbi.ttf",
+  ],
+} as const;
+
 async function readFirstExisting(paths: readonly string[]): Promise<Uint8Array | null> {
   for (const candidate of paths) {
     try {
@@ -72,6 +138,24 @@ async function loadSystemTimesFontBytes(): Promise<FontBytesSet | null> {
   const bold = await readFirstExisting(SYSTEM_TIMES_PATHS.bold);
   const italic = await readFirstExisting(SYSTEM_TIMES_PATHS.italic);
   const boldItalic = await readFirstExisting(SYSTEM_TIMES_PATHS.boldItalic);
+  if (!regular || !bold || !italic || !boldItalic) {
+    return null;
+  }
+  return { regular, bold, italic, boldItalic };
+}
+
+async function loadSystemSansFontBytes(
+  paths: {
+    regular: readonly string[];
+    bold: readonly string[];
+    italic: readonly string[];
+    boldItalic: readonly string[];
+  },
+): Promise<FontBytesSet | null> {
+  const regular = await readFirstExisting(paths.regular);
+  const bold = await readFirstExisting(paths.bold);
+  const italic = await readFirstExisting(paths.italic);
+  const boldItalic = await readFirstExisting(paths.boldItalic);
   if (!regular || !bold || !italic || !boldItalic) {
     return null;
   }
@@ -124,5 +208,39 @@ export async function embedPdfSerifFonts(doc: PDFDocument): Promise<PdfSerifFont
     italic: await doc.embedFont(StandardFonts.TimesRomanItalic),
     boldItalic: await doc.embedFont(StandardFonts.TimesRomanBoldItalic),
     familyName: "Times-Roman",
+  };
+}
+
+export async function embedPdfSansFonts(doc: PDFDocument): Promise<PdfSansFonts> {
+  doc.registerFontkit(fontkit);
+
+  const calibri = await loadSystemSansFontBytes(SYSTEM_CALIBRI_PATHS);
+  if (calibri) {
+    return {
+      regular: await doc.embedFont(calibri.regular, { subset: true }),
+      bold: await doc.embedFont(calibri.bold, { subset: true }),
+      italic: await doc.embedFont(calibri.italic, { subset: true }),
+      boldItalic: await doc.embedFont(calibri.boldItalic, { subset: true }),
+      familyName: "Calibri",
+    };
+  }
+
+  const arial = await loadSystemSansFontBytes(SYSTEM_ARIAL_PATHS);
+  if (arial) {
+    return {
+      regular: await doc.embedFont(arial.regular, { subset: true }),
+      bold: await doc.embedFont(arial.bold, { subset: true }),
+      italic: await doc.embedFont(arial.italic, { subset: true }),
+      boldItalic: await doc.embedFont(arial.boldItalic, { subset: true }),
+      familyName: "Arial",
+    };
+  }
+
+  return {
+    regular: await doc.embedFont(StandardFonts.Helvetica),
+    bold: await doc.embedFont(StandardFonts.HelveticaBold),
+    italic: await doc.embedFont(StandardFonts.HelveticaOblique),
+    boldItalic: await doc.embedFont(StandardFonts.HelveticaBoldOblique),
+    familyName: "Helvetica",
   };
 }

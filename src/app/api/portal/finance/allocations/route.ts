@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import {
     allocatePayment,
     deallocatePayment,
@@ -9,7 +9,7 @@ import {
 
 /* GET — list allocations for a payment or invoice */
 export async function GET(request: NextRequest) {
-    const { error, actor } = await requireFinanceSuperAdmin();
+    const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
 
     const url = new URL(request.url);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 /* POST — allocate or deallocate */
 export async function POST(request: NextRequest) {
-    const { error, actor } = await requireFinanceSuperAdmin();
+    const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
 
     const body = await request.json();

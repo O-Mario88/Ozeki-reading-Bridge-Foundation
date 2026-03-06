@@ -1,7 +1,7 @@
 import { PortalFinanceBudgetManager } from "@/components/portal/finance/PortalFinanceBudgetManager";
 import { FinanceShell } from "@/components/portal/finance/FinanceShell";
 import { listMonthlyBudgets } from "@/lib/finance-db";
-import { requirePortalSuperAdminUser } from "@/lib/portal-auth";
+import { requirePortalFinanceReceiptEditorUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 export default async function PortalFinanceBudgetsPage() {
-    const user = await requirePortalSuperAdminUser();
+    const user = await requirePortalFinanceReceiptEditorUser();
     const month = new Date().toISOString().slice(0, 7);
     const budgets = listMonthlyBudgets(month, "UGX");
 

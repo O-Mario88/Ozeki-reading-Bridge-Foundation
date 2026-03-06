@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useMemo, useState } from "react";
+import { FloatingSurface } from "@/components/FloatingSurface";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
 import type {
     FinanceLedgerTransactionRecord,
@@ -132,43 +133,48 @@ export function PortalFinanceReconciliationManager({ initialLines, initialLedger
 
             {msg && <p style={{ color: "var(--fin-primary)", fontWeight: 600, marginBottom: 12 }}>{msg}</p>}
 
-            {/* Create Form */}
-            {showCreate && (
-                <div className="finance-table-card" style={{ marginBottom: 20, padding: 24 }}>
-                    <h3 style={{ marginBottom: 12 }}>New Statement Line ({tab})</h3>
-                    <form onSubmit={handleCreateLine} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                        <label>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>Date</span>
-                            <input type="date" name="date" required style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--fin-border)" }} />
-                        </label>
-                        <label>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>Amount</span>
-                            <input type="number" name="amount" step="0.01" required style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--fin-border)" }} />
-                        </label>
-                        <label>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>Currency</span>
-                            <select name="currency" style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--fin-border)" }}>
-                                <option value="UGX">UGX</option>
-                                <option value="USD">USD</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>Reference</span>
-                            <input type="text" name="reference" style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--fin-border)" }} />
-                        </label>
-                        <label style={{ gridColumn: "span 2" }}>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>Description</span>
-                            <input type="text" name="description" style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--fin-border)" }} />
-                        </label>
-                        <div style={{ gridColumn: "span 3", display: "flex", gap: 8 }}>
-                            <button type="submit" className="finance-btn finance-btn-primary" disabled={saving}>
-                                {saving ? "Saving…" : "Add Line"}
-                            </button>
-                            <button type="button" className="finance-btn finance-btn-outline" onClick={() => setShowCreate(false)}>Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            )}
+            <FloatingSurface
+                open={showCreate}
+                onClose={() => setShowCreate(false)}
+                title={`New Statement Line (${tab.replace("_", " ")})`}
+                description="Add bank, cash, or mobile money statement lines for reconciliation."
+                closeLabel="Close"
+                maxWidth="760px"
+            >
+                <form onSubmit={handleCreateLine} className="form-grid portal-form-grid">
+                    <label>
+                        <span className="portal-field-label">Date</span>
+                        <input type="date" name="date" required />
+                    </label>
+                    <label>
+                        <span className="portal-field-label">Amount</span>
+                        <input type="number" name="amount" step="0.01" required />
+                    </label>
+                    <label>
+                        <span className="portal-field-label">Currency</span>
+                        <select name="currency">
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span className="portal-field-label">Reference</span>
+                        <input type="text" name="reference" />
+                    </label>
+                    <label className="full-width">
+                        <span className="portal-field-label">Description</span>
+                        <input type="text" name="description" />
+                    </label>
+                    <div className="full-width action-row portal-form-actions">
+                        <button type="submit" className="button button-sm" disabled={saving}>
+                            {saving ? "Saving..." : "Add Line"}
+                        </button>
+                        <button type="button" className="button button-ghost button-sm" onClick={() => setShowCreate(false)}>
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </FloatingSurface>
 
             {/* Split View */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { FloatingSurface } from "@/components/FloatingSurface";
 import type { FinanceSettingsRecord } from "@/lib/types";
 
 type PortalFinanceSettingsManagerProps = {
@@ -9,6 +10,7 @@ type PortalFinanceSettingsManagerProps = {
 
 export function PortalFinanceSettingsManager({ initialSettings }: PortalFinanceSettingsManagerProps) {
   const [settings, setSettings] = useState(initialSettings);
+  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -40,10 +42,22 @@ export function PortalFinanceSettingsManager({ initialSettings }: PortalFinanceS
       <section className="card">
         <h2>Finance Settings</h2>
         <p>Manage prefixes, category subcategories, and invoice/receipt email templates.</p>
+        <div className="action-row portal-form-actions">
+          <button type="button" className="button button-sm" onClick={() => setOpen(true)}>
+            Edit Settings
+          </button>
+        </div>
         {statusMessage ? <p className="portal-muted">{statusMessage}</p> : null}
       </section>
 
-      <section className="card">
+      <FloatingSurface
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Finance Settings"
+        description="Update finance controls, prefixes, templates, and audit thresholds."
+        closeLabel="Close settings"
+        maxWidth="980px"
+      >
         <form className="form-grid portal-form-grid" onSubmit={handleSubmit}>
           <label>
             <span className="portal-field-label">From Email</span>
@@ -94,6 +108,85 @@ export function PortalFinanceSettingsManager({ initialSettings }: PortalFinanceS
               }
             />
           </label>
+
+          <label>
+            <span className="portal-field-label">Cash Threshold (UGX)</span>
+            <input
+              type="number"
+              min={0}
+              step="1"
+              value={settings.cashThresholdUgx}
+              onChange={(event) =>
+                setSettings((prev) => ({ ...prev, cashThresholdUgx: Number(event.target.value || 0) }))
+              }
+            />
+          </label>
+          <label>
+            <span className="portal-field-label">Cash Threshold (USD)</span>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={settings.cashThresholdUsd}
+              onChange={(event) =>
+                setSettings((prev) => ({ ...prev, cashThresholdUsd: Number(event.target.value || 0) }))
+              }
+            />
+          </label>
+          <label>
+            <span className="portal-field-label">Backdate Limit (days)</span>
+            <input
+              type="number"
+              min={0}
+              step="1"
+              value={settings.backdateDaysLimit}
+              onChange={(event) =>
+                setSettings((prev) => ({ ...prev, backdateDaysLimit: Number(event.target.value || 0) }))
+              }
+            />
+          </label>
+          <label>
+            <span className="portal-field-label">Outlier Multiplier</span>
+            <input
+              type="number"
+              min={1}
+              step="0.1"
+              value={settings.outlierMultiplier}
+              onChange={(event) =>
+                setSettings((prev) => ({ ...prev, outlierMultiplier: Number(event.target.value || 1) }))
+              }
+            />
+          </label>
+          <label>
+            <span className="portal-field-label">Allow Mismatch Override</span>
+            <select
+              value={settings.allowReceiptMismatchOverride ? "yes" : "no"}
+              onChange={(event) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  allowReceiptMismatchOverride: event.target.value === "yes",
+                }))
+              }
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label>
+            <span className="portal-field-label">Allow Reuse Override</span>
+            <select
+              value={settings.allowReceiptReuseOverride ? "yes" : "no"}
+              onChange={(event) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  allowReceiptReuseOverride: event.target.value === "yes",
+                }))
+              }
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
           <label className="full-width">
             <span className="portal-field-label">Invoice Email Template</span>
             <textarea
@@ -143,7 +236,7 @@ export function PortalFinanceSettingsManager({ initialSettings }: PortalFinanceS
             </button>
           </div>
         </form>
-      </section>
+      </FloatingSurface>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
   drawBrandWatermark,
   loadBrandLogo,
 } from "@/lib/pdf-branding";
-import { embedPdfSerifFonts } from "@/lib/pdf-fonts";
+import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import type {
   FinanceCategory,
   FinanceCurrency,
@@ -230,6 +230,7 @@ function drawFinancialLetterhead(
   numberText: string,
   subtitle: string,
 ) {
+  const black = rgb(0, 0, 0);
   drawBrandHeader({
     page,
     font,
@@ -238,17 +239,19 @@ function drawFinancialLetterhead(
     title,
     documentNumber: numberText,
     subtitle,
+    titleColor: black,
+    mutedColor: black,
   });
 }
 
 export async function generateInvoicePdfFile(input: InvoicePdfInput): Promise<PdfWriteResult> {
   const doc = await PDFDocument.create();
   const page = doc.addPage([595.28, 841.89]); // A4
-  const serifFonts = await embedPdfSerifFonts(doc);
-  const font = serifFonts.regular;
-  const fontBold = serifFonts.bold;
-  const dark = rgb(0.06, 0.1, 0.18);
-  const muted = rgb(0.38, 0.44, 0.55);
+  const sansFonts = await embedPdfSansFonts(doc);
+  const font = sansFonts.regular;
+  const fontBold = sansFonts.bold;
+  const dark = rgb(0, 0, 0);
+  const muted = rgb(0, 0, 0);
   const logo = await loadBrandLogo(doc);
   drawDocumentFrame(page);
   drawDocumentWatermark(page, logo);
@@ -330,8 +333,9 @@ export async function generateInvoicePdfFile(input: InvoicePdfInput): Promise<Pd
   leftY -= 18;
 
   const leftRows = [
-    { label: "Bank", value: "Ozeki Reading Bridge Foundation" },
+    { label: "Bank Name", value: "Equity Bank" },
     { label: "Account Name", value: "Ozeki Reading Bridge Foundation" },
+    { label: "Account Number", value: "1007203565985" },
     { label: "Reference", value: input.invoiceNumber },
   ];
   leftRows.forEach((row) => {
@@ -358,7 +362,7 @@ export async function generateInvoicePdfFile(input: InvoicePdfInput): Promise<Pd
   rightY -= 14;
   const instructionText = input.paymentInstructions && input.paymentInstructions.trim().length > 0
     ? input.paymentInstructions
-    : "Payments can be made via bank transfer or mobile money. Contact support@ozekiread.org for account details.";
+    : "Payments can be made via bank transfer or mobile money. Bank Name: Equity Bank. Account Number: 1007203565985. Account Name: Ozeki Reading Bridge Foundation. Contact support@ozekiread.org for account details.";
   wrapTextByWidth(instructionText, font, 8.6, rightColW).slice(0, 8).forEach((line) => {
     page.drawText(line, { x: rightColX, y: rightY, size: 8.6, font, color: muted });
     rightY -= 10.5;
@@ -404,12 +408,12 @@ export async function generateInvoicePdfFile(input: InvoicePdfInput): Promise<Pd
 export async function generateReceiptPdfFile(input: ReceiptPdfInput): Promise<PdfWriteResult> {
   const doc = await PDFDocument.create();
   const page = doc.addPage([595.28, 841.89]); // A4
-  const serifFonts = await embedPdfSerifFonts(doc);
-  const font = serifFonts.regular;
-  const fontBold = serifFonts.bold;
-  const dark = rgb(0.06, 0.1, 0.18);
-  const muted = rgb(0.38, 0.44, 0.55);
-  const accent = rgb(0.06, 0.29, 0.35);
+  const sansFonts = await embedPdfSansFonts(doc);
+  const font = sansFonts.regular;
+  const fontBold = sansFonts.bold;
+  const dark = rgb(0, 0, 0);
+  const muted = rgb(0, 0, 0);
+  const accent = rgb(0, 0, 0);
   const logo = await loadBrandLogo(doc);
   drawDocumentFrame(page);
   drawDocumentWatermark(page, logo);

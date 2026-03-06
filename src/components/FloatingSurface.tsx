@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, ReactNode, useEffect, useId, useRef } from "react";
+import { CSSProperties, ReactNode, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type FloatingVariant = "modal" | "drawer";
@@ -21,6 +21,7 @@ export type FloatingSurfaceProps = {
   maxWidth?: string;
   className?: string;
   panelClassName?: string;
+  headerIcon?: ReactNode;
 };
 
 const focusableSelector = [
@@ -52,10 +53,12 @@ export function FloatingSurface({
   maxWidth,
   className,
   panelClassName,
+  headerIcon = <span aria-hidden="true">⚡</span>,
 }: FloatingSurfaceProps) {
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const requestClose = () => {
     if (unsavedChanges && typeof window !== "undefined") {
@@ -122,6 +125,12 @@ export function FloatingSurface({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) {
+      setExpanded(false);
+    }
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -145,8 +154,9 @@ export function FloatingSurface({
       <div
         ref={panelRef}
         className={cx("floating-surface-panel", `floating-surface-panel--${variant}`, panelClassName)}
+        data-expanded={expanded ? "true" : "false"}
         style={
-          maxWidth
+          !expanded && maxWidth
             ? ({ "--floating-surface-max-width": maxWidth } as CSSProperties)
             : undefined
         }
@@ -154,7 +164,10 @@ export function FloatingSurface({
       >
         <header className="floating-surface-header">
           <div className="floating-surface-title-wrap">
-            <h2 id={titleId}>{title}</h2>
+            <div className="floating-surface-title-row">
+              <span className="floating-surface-title-icon">{headerIcon}</span>
+              <h2 id={titleId}>{title}</h2>
+            </div>
             {description ? (
               <p id={descriptionId} className="floating-surface-description">
                 {description}
@@ -165,11 +178,30 @@ export function FloatingSurface({
             {statusChip ? <span className="floating-surface-status-chip">{statusChip}</span> : null}
             <button
               type="button"
-              className="button button-ghost floating-surface-close"
+              className="floating-surface-window-btn"
+              onClick={requestClose}
+              aria-label="Minimize"
+              title="Minimize"
+            >
+              <span aria-hidden="true">−</span>
+            </button>
+            <button
+              type="button"
+              className="floating-surface-window-btn"
+              onClick={() => setExpanded((prev) => !prev)}
+              aria-label={expanded ? "Restore" : "Expand"}
+              title={expanded ? "Restore" : "Expand"}
+            >
+              <span aria-hidden="true">{expanded ? "❐" : "□"}</span>
+            </button>
+            <button
+              type="button"
+              className="floating-surface-window-btn"
               onClick={requestClose}
               aria-label={closeLabel}
+              title={closeLabel}
             >
-              {closeLabel}
+              <span aria-hidden="true">&times;</span>
             </button>
           </div>
         </header>

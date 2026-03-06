@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { FloatingSurface } from "@/components/FloatingSurface";
+import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import type { FinanceContactRecord, FinanceInvoiceRecord } from "@/lib/types";
@@ -38,6 +39,9 @@ export function PortalFinanceInvoicesManager({
   const [contacts, setContacts] = useState(initialContacts);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | FinanceInvoiceRecord["status"]>("all");
+  const [destructiveTarget, setDestructiveTarget] = useState<FinanceInvoiceRecord | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -84,6 +88,29 @@ export function PortalFinanceInvoicesManager({
       { count: 0, total: 0, balance: 0 },
     );
   }, [invoices]);
+
+  const filteredInvoices = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return invoices.filter((item) => {
+      if (statusFilter !== "all" && item.status !== statusFilter) {
+        return false;
+      }
+      if (!needle) {
+        return true;
+      }
+      const haystack = [
+        item.invoiceNumber,
+        item.category,
+        item.status,
+        item.createdByName || "",
+        item.lastSentTo || "",
+        item.linkedReceipt?.receiptNumber || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [invoices, search, statusFilter]);
 
   function resetCreateForm() {
     setInvoiceForm({
@@ -268,29 +295,36 @@ export function PortalFinanceInvoicesManager({
     }
   }
 
-  async function handleVoidInvoice(invoiceId: number) {
-    const reason = window.prompt("Enter void reason:");
-    if (!reason) {
+  async function handleDeleteOrVoidInvoice(reason: string) {
+    if (!destructiveTarget) {
       return;
     }
+    const target = destructiveTarget;
     setSaving(true);
     setStatusMessage("");
     try {
-      const response = await fetch(`/api/portal/finance/invoices/${invoiceId}`, {
+      const response = await fetch(`/api/portal/finance/invoices/${target.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to void invoice.");
+        throw new Error(data.error || "Failed to delete/void invoice.");
       }
-      setInvoices((prev) =>
-        prev.map((item) => (item.id === invoiceId ? (data.invoice as FinanceInvoiceRecord) : item)),
-      );
-      setStatusMessage("Invoice voided.");
+
+      if (data.deleted) {
+        setInvoices((prev) => prev.filter((item) => item.id !== target.id));
+        setStatusMessage("Draft invoice deleted.");
+      } else if (data.invoice) {
+        setInvoices((prev) =>
+          prev.map((item) => (item.id === target.id ? (data.invoice as FinanceInvoiceRecord) : item)),
+        );
+        setStatusMessage("Invoice voided.");
+      }
+      setDestructiveTarget(null);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Failed to void invoice.");
+      setStatusMessage(error instanceof Error ? error.message : "Failed to delete/void invoice.");
     } finally {
       setSaving(false);
     }
@@ -370,21 +404,56 @@ export function PortalFinanceInvoicesManager({
 
       <section className="card">
         <h2>Invoices</h2>
-        <p>Create, send, collect, and void invoices with immutable finance audit trails.</p>
+        <p>Create, send, collect, delete drafts, and void posted invoices with immutable audit trails.</p>
         <div className="action-row portal-form-actions">
-          <button type="button" className="button" onClick={() => setCreateOpen(true)}>+ New Invoice</button>
-          <button type="button" className="button button-ghost" onClick={() => setContactOpen(true)}>+ New Contact</button>
-          <a className="button button-ghost" href="/api/portal/finance/invoices?format=csv">Export CSV</a>
+          <button type="button" className="button button-sm" onClick={() => setCreateOpen(true)}>+ New Invoice</button>
+          <button type="button" className="button button-ghost button-sm" onClick={() => setContactOpen(true)}>+ New Contact</button>
+          <a className="button button-ghost button-sm" href="/api/portal/finance/invoices?format=csv">Export CSV</a>
         </div>
         {statusMessage ? <p className="portal-muted">{statusMessage}</p> : null}
       </section>
 
       <section className="card">
         <h2>Invoice Register</h2>
-        {invoices.length === 0 ? (
-          <p>No invoices yet.</p>
+        <div className="finance-list-toolbar">
+          <div className="finance-list-toolbar-left">
+            <input
+              className="finance-search-input"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search invoices"
+              aria-label="Search invoices"
+            />
+            <details className="finance-filter-popover">
+              <summary>Filters</summary>
+              <div className="finance-filter-popover-body">
+                <label>
+                  <span>Status</span>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) =>
+                      setStatusFilter(event.target.value as "all" | FinanceInvoiceRecord["status"])}
+                  >
+                    <option value="all">All</option>
+                    <option value="draft">Draft</option>
+                    <option value="sent">Sent</option>
+                    <option value="partially_paid">Partially paid</option>
+                    <option value="paid">Paid</option>
+                    <option value="overdue">Overdue</option>
+                    <option value="void">Void</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+          </div>
+          <div className="finance-list-toolbar-right portal-muted">
+            {filteredInvoices.length} shown
+          </div>
+        </div>
+        {filteredInvoices.length === 0 ? (
+          <p>No invoices match the current search/filter.</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap finance-table-compact">
             <table>
               <thead>
                 <tr>
@@ -398,7 +467,7 @@ export function PortalFinanceInvoicesManager({
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((item) => (
+                {filteredInvoices.map((item) => (
                   <tr key={item.id}>
                     <td>
                       <strong>{item.invoiceNumber}</strong>
@@ -416,41 +485,44 @@ export function PortalFinanceInvoicesManager({
                     <td>{item.category}</td>
                     <td>{formatMoney(item.currency, item.total)}</td>
                     <td>{formatMoney(item.currency, item.balanceDue)}</td>
-                    <td>{item.status}</td>
+                    <td><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></td>
                     <td>
-                      <div className="action-row">
+                      <div className="action-row finance-row-actions">
                         <button
                           type="button"
-                          className="button button-ghost"
+                          className="button button-ghost button-sm"
                           onClick={() => handleSendInvoice(item.id)}
                           disabled={saving || item.status === "void"}
+                          title="Send invoice"
                         >
                           Send
                         </button>
                         <button
                           type="button"
-                          className="button button-ghost"
+                          className="button button-ghost button-sm"
                           onClick={() => setPaymentOpenFor(item)}
                           disabled={saving || item.status === "void" || item.status === "paid"}
+                          title="Record payment"
                         >
                           Record Payment
                         </button>
                         <button
                           type="button"
-                          className="button button-ghost"
-                          onClick={() => handleVoidInvoice(item.id)}
+                          className="button button-ghost button-sm finance-row-danger"
+                          onClick={() => setDestructiveTarget(item)}
                           disabled={saving || item.status === "void"}
+                          title={item.status === "draft" ? "Delete draft" : "Void posted"}
                         >
-                          Void
+                          {item.status === "draft" ? "Delete" : "Void"}
                         </button>
                         {item.pdfUrl ? (
-                          <a className="button button-ghost" href={item.pdfUrl} target="_blank" rel="noreferrer">
+                          <a className="button button-ghost button-sm" href={item.pdfUrl} target="_blank" rel="noreferrer">
                             PDF
                           </a>
                         ) : null}
                         {item.linkedReceipt?.pdfUrl ? (
                           <a
-                            className="button button-ghost"
+                            className="button button-ghost button-sm"
                             href={item.linkedReceipt.pdfUrl}
                             target="_blank"
                             rel="noreferrer"
@@ -461,7 +533,7 @@ export function PortalFinanceInvoicesManager({
                         {item.linkedReceipt ? (
                           <button
                             type="button"
-                            className="button button-ghost"
+                            className="button button-ghost button-sm"
                             onClick={() => {
                               if (item.linkedReceipt) {
                                 void handleSendReceipt(item.linkedReceipt.id);
@@ -765,6 +837,20 @@ export function PortalFinanceInvoicesManager({
           </div>
         </form>
       </FloatingSurface>
+
+      <FinanceDestructiveActionModal
+        open={Boolean(destructiveTarget)}
+        onClose={() => setDestructiveTarget(null)}
+        title={destructiveTarget?.status === "draft" ? "Delete invoice draft?" : "Void invoice?"}
+        impactText={
+          destructiveTarget?.status === "draft"
+            ? "This removes the draft invoice permanently. Posted records are not deleted."
+            : "This will mark the invoice as void and keep a full audit trail."
+        }
+        confirmLabel={destructiveTarget?.status === "draft" ? "Delete Draft" : "Void Invoice"}
+        loading={saving}
+        onConfirm={handleDeleteOrVoidInvoice}
+      />
     </div>
   );
 }

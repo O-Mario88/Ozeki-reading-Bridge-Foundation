@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
 import { z } from "zod";
-import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import { getFinanceFileById, listFinanceMonthlyStatements } from "@/lib/finance-db";
 
 export const runtime = "nodejs";
@@ -22,7 +22,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireFinanceSuperAdmin();
+  const auth = await requireFinanceEditor();
   if (auth.error) {
     return auth.error;
   }

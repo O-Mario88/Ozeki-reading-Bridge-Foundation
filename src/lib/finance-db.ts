@@ -25,6 +25,8 @@ import type {
   FinanceEmailLogEntry,
   FinanceExpenseInput,
   FinanceExpenseRecord,
+  FinanceExpenseReceiptRecord,
+  FinanceExpenseStatus,
   FinanceFileRecord,
   FinanceInvoiceInput,
   FinanceInvoiceLineItemInput,
@@ -38,6 +40,11 @@ import type {
   FinancePostedStatus,
   FinanceReceiptInput,
   FinanceReceiptRecord,
+  FinanceReceiptRegistryRecord,
+  FinanceAuditExceptionRecord,
+  FinanceAuditComplianceCheckRecord,
+  FinanceAuditRunSummary,
+  FinanceTxnRiskScoreRecord,
   FinanceReconciliationMatchRecord,
   FinanceRestrictedBalanceLine,
   FinanceRestrictedProgram,
@@ -51,6 +58,7 @@ import type {
 type FinanceActor = {
   userId: number;
   userName: string;
+  isSuperAdmin?: boolean;
 };
 
 type FinanceEmailResult = {
@@ -139,6 +147,25 @@ const DEFAULT_RECEIPT_TEMPLATE = [
   "Ozeki Reading Bridge Foundation",
 ].join("\n");
 
+const LEGACY_DEFAULT_PAYMENT_INSTRUCTIONS =
+  "Payments can be made via bank transfer or mobile money. Contact support@ozekiread.org for account details.";
+const DEFAULT_PAYMENT_INSTRUCTIONS = [
+  "Payments can be made via bank transfer or mobile money.",
+  "Bank Name: Equity Bank.",
+  "Account Number: 1007203565985.",
+  "Account Name: Ozeki Reading Bridge Foundation.",
+  "Contact support@ozekiread.org for account details.",
+].join(" ");
+
+const DEFAULT_AUDIT_SETTINGS = {
+  cashThresholdUgx: 2_000_000,
+  cashThresholdUsd: 500,
+  backdateDaysLimit: 30,
+  allowReceiptMismatchOverride: true,
+  allowReceiptReuseOverride: false,
+  outlierMultiplier: 3,
+} as const;
+
 const FINANCE_FILE_SECRET =
   process.env.FINANCE_FILE_SIGNING_SECRET ||
   process.env.PORTAL_PASSWORD_SALT ||
@@ -155,6 +182,153 @@ function hasTableColumn(db: Database.Database, table: string, column: string) {
 function ensureTableColumn(db: Database.Database, table: string, column: string, definition: string) {
   if (!hasTableColumn(db, table, column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+function migrateFinanceExpensesWorkflowSchema(db: Database.Database) {
+  if (hasTableColumn(db, "finance_expenses", "submitted_at")) {
+    return;
+  }
+
+  const hasRestrictedFlag = hasTableColumn(db, "finance_expenses", "restricted_flag");
+  const hasRestrictedProgram = hasTableColumn(db, "finance_expenses", "restricted_program");
+  const hasRestrictedGeoScope = hasTableColumn(db, "finance_expenses", "restricted_geo_scope");
+  const hasRestrictedGeoId = hasTableColumn(db, "finance_expenses", "restricted_geo_id");
+  const hasRestrictionNotes = hasTableColumn(db, "finance_expenses", "restriction_notes");
+
+  db.exec("PRAGMA foreign_keys = OFF;");
+  try {
+    db.exec(`
+      DROP TABLE IF EXISTS finance_expenses__new;
+      CREATE TABLE finance_expenses__new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        expense_number TEXT NOT NULL UNIQUE,
+        vendor_name TEXT NOT NULL,
+        date TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'Expense' CHECK(category = 'Expense'),
+        subcategory TEXT,
+        amount REAL NOT NULL DEFAULT 0,
+        currency TEXT NOT NULL DEFAULT 'UGX',
+        payment_method TEXT NOT NULL CHECK(payment_method IN ('cash', 'bank_transfer', 'mobile_money', 'cheque', 'other')),
+        description TEXT NOT NULL,
+        notes TEXT,
+        status TEXT NOT NULL CHECK(status IN ('draft', 'submitted', 'posted', 'blocked_mismatch', 'void')) DEFAULT 'draft',
+        void_reason TEXT,
+        submitted_at TEXT,
+        submitted_by_user_id INTEGER,
+        posted_at TEXT,
+        posted_by_user_id INTEGER,
+        mismatch_override_reason TEXT,
+        mismatch_override_by INTEGER,
+        mismatch_override_at TEXT,
+        restricted_flag INTEGER DEFAULT 0,
+        restricted_program TEXT,
+        restricted_geo_scope TEXT,
+        restricted_geo_id INTEGER,
+        restriction_notes TEXT,
+        created_by_user_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY(submitted_by_user_id) REFERENCES portal_users(id),
+        FOREIGN KEY(posted_by_user_id) REFERENCES portal_users(id),
+        FOREIGN KEY(mismatch_override_by) REFERENCES portal_users(id),
+        FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
+      );
+    `);
+
+    const restrictedFlagExpr = hasRestrictedFlag ? "COALESCE(restricted_flag, 0)" : "0";
+    const restrictedProgramExpr = hasRestrictedProgram ? "restricted_program" : "NULL";
+    const restrictedGeoScopeExpr = hasRestrictedGeoScope ? "restricted_geo_scope" : "NULL";
+    const restrictedGeoIdExpr = hasRestrictedGeoId ? "restricted_geo_id" : "NULL";
+    const restrictionNotesExpr = hasRestrictionNotes ? "restriction_notes" : "NULL";
+
+    db.exec(`
+      INSERT INTO finance_expenses__new (
+        id,
+        expense_number,
+        vendor_name,
+        date,
+        category,
+        subcategory,
+        amount,
+        currency,
+        payment_method,
+        description,
+        notes,
+        status,
+        void_reason,
+        submitted_at,
+        submitted_by_user_id,
+        posted_at,
+        posted_by_user_id,
+        mismatch_override_reason,
+        mismatch_override_by,
+        mismatch_override_at,
+        restricted_flag,
+        restricted_program,
+        restricted_geo_scope,
+        restricted_geo_id,
+        restriction_notes,
+        created_by_user_id,
+        created_at,
+        updated_at
+      )
+      SELECT
+        id,
+        expense_number,
+        vendor_name,
+        date,
+        category,
+        subcategory,
+        amount,
+        currency,
+        payment_method,
+        description,
+        notes,
+        CASE
+          WHEN status = 'posted' THEN 'posted'
+          WHEN status = 'void' THEN 'void'
+          ELSE 'draft'
+        END AS status,
+        void_reason,
+        CASE
+          WHEN status IN ('posted', 'void') THEN created_at
+          ELSE NULL
+        END AS submitted_at,
+        CASE
+          WHEN status IN ('posted', 'void') THEN created_by_user_id
+          ELSE NULL
+        END AS submitted_by_user_id,
+        CASE
+          WHEN status = 'posted' THEN created_at
+          ELSE NULL
+        END AS posted_at,
+        CASE
+          WHEN status = 'posted' THEN created_by_user_id
+          ELSE NULL
+        END AS posted_by_user_id,
+        NULL AS mismatch_override_reason,
+        NULL AS mismatch_override_by,
+        NULL AS mismatch_override_at,
+        ${restrictedFlagExpr} AS restricted_flag,
+        ${restrictedProgramExpr} AS restricted_program,
+        ${restrictedGeoScopeExpr} AS restricted_geo_scope,
+        ${restrictedGeoIdExpr} AS restricted_geo_id,
+        ${restrictionNotesExpr} AS restriction_notes,
+        created_by_user_id,
+        created_at,
+        updated_at
+      FROM finance_expenses;
+    `);
+
+    db.exec(`
+      DROP TABLE finance_expenses;
+      ALTER TABLE finance_expenses__new RENAME TO finance_expenses;
+      CREATE INDEX IF NOT EXISTS idx_finance_expenses_status ON finance_expenses(status);
+      CREATE INDEX IF NOT EXISTS idx_finance_expenses_date ON finance_expenses(date);
+    `);
+  } finally {
+    db.exec("PRAGMA foreign_keys = ON;");
   }
 }
 
@@ -185,6 +359,25 @@ function normalizeNumber(value: number): number {
     return 0;
   }
   return Math.round(value * 100) / 100;
+}
+
+function normalizeInteger(value: unknown, fallback: number) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.max(0, Math.trunc(numeric));
+}
+
+function toBooleanFlag(value: unknown, fallback = false) {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+  if (typeof value === "number") {
+    return value === 1;
+  }
+  const text = String(value).trim().toLowerCase();
+  return text === "1" || text === "true" || text === "yes" || text === "on";
 }
 
 function parseJsonArray(value: string | null | undefined): string[] {
@@ -342,11 +535,26 @@ function ensureFinanceSchema() {
       payment_method TEXT NOT NULL CHECK(payment_method IN ('cash', 'bank_transfer', 'mobile_money', 'cheque', 'other')),
       description TEXT NOT NULL,
       notes TEXT,
-      status TEXT NOT NULL CHECK(status IN ('draft', 'posted', 'void')) DEFAULT 'draft',
+      status TEXT NOT NULL CHECK(status IN ('draft', 'submitted', 'posted', 'blocked_mismatch', 'void')) DEFAULT 'draft',
       void_reason TEXT,
+      submitted_at TEXT,
+      submitted_by_user_id INTEGER,
+      posted_at TEXT,
+      posted_by_user_id INTEGER,
+      mismatch_override_reason TEXT,
+      mismatch_override_by INTEGER,
+      mismatch_override_at TEXT,
+      restricted_flag INTEGER DEFAULT 0,
+      restricted_program TEXT,
+      restricted_geo_scope TEXT,
+      restricted_geo_id INTEGER,
+      restriction_notes TEXT,
       created_by_user_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(submitted_by_user_id) REFERENCES portal_users(id),
+      FOREIGN KEY(posted_by_user_id) REFERENCES portal_users(id),
+      FOREIGN KEY(mismatch_override_by) REFERENCES portal_users(id),
       FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
     );
 
@@ -396,6 +604,62 @@ function ensureFinanceSchema() {
 
     CREATE INDEX IF NOT EXISTS idx_finance_files_source ON finance_files(source_type, source_id);
 
+    CREATE TABLE IF NOT EXISTS finance_expense_receipts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      expense_id INTEGER NOT NULL,
+      file_id INTEGER NOT NULL,
+      file_url TEXT NOT NULL,
+      file_hash_sha256 TEXT NOT NULL,
+      vendor_name TEXT NOT NULL,
+      receipt_date TEXT NOT NULL,
+      receipt_amount REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'UGX',
+      reference_no TEXT,
+      uploaded_by_user_id INTEGER NOT NULL,
+      uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(expense_id) REFERENCES finance_expenses(id) ON DELETE CASCADE,
+      FOREIGN KEY(file_id) REFERENCES finance_files(id) ON DELETE CASCADE,
+      FOREIGN KEY(uploaded_by_user_id) REFERENCES portal_users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fin_exp_receipts_expense ON finance_expense_receipts(expense_id);
+    CREATE INDEX IF NOT EXISTS idx_fin_exp_receipts_hash ON finance_expense_receipts(file_hash_sha256);
+
+    CREATE TABLE IF NOT EXISTS finance_audit_exceptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('expense', 'receipt', 'invoice', 'payment', 'ledger')),
+      entity_id INTEGER NOT NULL,
+      severity TEXT NOT NULL CHECK(severity IN ('low', 'medium', 'high')),
+      rule_code TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('open', 'acknowledged', 'resolved', 'overridden')) DEFAULT 'open',
+      amount REAL,
+      currency TEXT,
+      created_by_user_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      resolved_at TEXT,
+      resolved_by_user_id INTEGER,
+      resolution_notes TEXT,
+      FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
+      FOREIGN KEY(resolved_by_user_id) REFERENCES portal_users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fin_audit_exceptions_entity ON finance_audit_exceptions(entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS idx_fin_audit_exceptions_status ON finance_audit_exceptions(status);
+    CREATE INDEX IF NOT EXISTS idx_fin_audit_exceptions_rule ON finance_audit_exceptions(rule_code);
+
+    CREATE TABLE IF NOT EXISTS finance_txn_risk_scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('expense', 'receipt', 'invoice', 'payment', 'ledger')),
+      entity_id INTEGER NOT NULL,
+      risk_score INTEGER NOT NULL DEFAULT 0,
+      signals_json TEXT NOT NULL DEFAULT '[]',
+      computed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(entity_type, entity_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fin_risk_scores_entity ON finance_txn_risk_scores(entity_type, entity_id);
+
     CREATE TABLE IF NOT EXISTS finance_monthly_statements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       month TEXT NOT NULL,
@@ -429,6 +693,12 @@ function ensureFinanceSchema() {
       invoice_email_template TEXT NOT NULL,
       receipt_email_template TEXT NOT NULL,
       payment_instructions TEXT NOT NULL DEFAULT '',
+      cash_threshold_ugx REAL NOT NULL DEFAULT 2000000,
+      cash_threshold_usd REAL NOT NULL DEFAULT 500,
+      backdate_days_limit INTEGER NOT NULL DEFAULT 30,
+      allow_receipt_mismatch_override INTEGER NOT NULL DEFAULT 1,
+      allow_receipt_reuse_override INTEGER NOT NULL DEFAULT 0,
+      outlier_multiplier REAL NOT NULL DEFAULT 3,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -449,9 +719,24 @@ function ensureFinanceSchema() {
     CREATE INDEX IF NOT EXISTS idx_finance_email_logs_record ON finance_email_logs(record_type, record_id);
   `);
 
+  migrateFinanceExpensesWorkflowSchema(db);
+
   ensureTableColumn(db, "finance_invoices", "display_category", "TEXT");
   ensureTableColumn(db, "finance_receipts", "display_category", "TEXT");
   ensureTableColumn(db, "finance_receipts", "description", "TEXT");
+  ensureTableColumn(db, "finance_expenses", "submitted_at", "TEXT");
+  ensureTableColumn(db, "finance_expenses", "submitted_by_user_id", "INTEGER");
+  ensureTableColumn(db, "finance_expenses", "posted_at", "TEXT");
+  ensureTableColumn(db, "finance_expenses", "posted_by_user_id", "INTEGER");
+  ensureTableColumn(db, "finance_expenses", "mismatch_override_reason", "TEXT");
+  ensureTableColumn(db, "finance_expenses", "mismatch_override_by", "INTEGER");
+  ensureTableColumn(db, "finance_expenses", "mismatch_override_at", "TEXT");
+  ensureTableColumn(db, "finance_settings", "cash_threshold_ugx", "REAL NOT NULL DEFAULT 2000000");
+  ensureTableColumn(db, "finance_settings", "cash_threshold_usd", "REAL NOT NULL DEFAULT 500");
+  ensureTableColumn(db, "finance_settings", "backdate_days_limit", "INTEGER NOT NULL DEFAULT 30");
+  ensureTableColumn(db, "finance_settings", "allow_receipt_mismatch_override", "INTEGER NOT NULL DEFAULT 1");
+  ensureTableColumn(db, "finance_settings", "allow_receipt_reuse_override", "INTEGER NOT NULL DEFAULT 0");
+  ensureTableColumn(db, "finance_settings", "outlier_multiplier", "REAL NOT NULL DEFAULT 3");
   ensureTableColumn(db, "finance_transactions_ledger", "display_category", "TEXT");
   ensureTableColumn(db, "finance_monthly_statements", "period_type", "TEXT NOT NULL DEFAULT 'monthly'");
   ensureTableColumn(db, "finance_monthly_statements", "balance_sheet_pdf_file_id", "INTEGER");
@@ -471,6 +756,26 @@ function ensureFinanceSchema() {
     SET period_type = COALESCE(NULLIF(TRIM(period_type), ''), 'monthly');
   `);
 
+  db.prepare(
+    `
+      UPDATE finance_settings
+      SET cash_threshold_ugx = COALESCE(cash_threshold_ugx, @cashThresholdUgx),
+          cash_threshold_usd = COALESCE(cash_threshold_usd, @cashThresholdUsd),
+          backdate_days_limit = COALESCE(backdate_days_limit, @backdateDaysLimit),
+          allow_receipt_mismatch_override = COALESCE(allow_receipt_mismatch_override, @allowReceiptMismatchOverride),
+          allow_receipt_reuse_override = COALESCE(allow_receipt_reuse_override, @allowReceiptReuseOverride),
+          outlier_multiplier = COALESCE(outlier_multiplier, @outlierMultiplier)
+      WHERE id = 1
+    `,
+  ).run({
+    cashThresholdUgx: DEFAULT_AUDIT_SETTINGS.cashThresholdUgx,
+    cashThresholdUsd: DEFAULT_AUDIT_SETTINGS.cashThresholdUsd,
+    backdateDaysLimit: DEFAULT_AUDIT_SETTINGS.backdateDaysLimit,
+    allowReceiptMismatchOverride: DEFAULT_AUDIT_SETTINGS.allowReceiptMismatchOverride ? 1 : 0,
+    allowReceiptReuseOverride: DEFAULT_AUDIT_SETTINGS.allowReceiptReuseOverride ? 1 : 0,
+    outlierMultiplier: DEFAULT_AUDIT_SETTINGS.outlierMultiplier,
+  });
+
   const settingsExists = db.prepare("SELECT id FROM finance_settings WHERE id = 1 LIMIT 1").get() as
     | { id: number }
     | undefined;
@@ -488,6 +793,12 @@ function ensureFinanceSchema() {
         invoice_email_template,
         receipt_email_template,
         payment_instructions,
+        cash_threshold_ugx,
+        cash_threshold_usd,
+        backdate_days_limit,
+        allow_receipt_mismatch_override,
+        allow_receipt_reuse_override,
+        outlier_multiplier,
         updated_at
       ) VALUES (
         1,
@@ -500,6 +811,12 @@ function ensureFinanceSchema() {
         @invoiceEmailTemplate,
         @receiptEmailTemplate,
         @paymentInstructions,
+        @cashThresholdUgx,
+        @cashThresholdUsd,
+        @backdateDaysLimit,
+        @allowReceiptMismatchOverride,
+        @allowReceiptReuseOverride,
+        @outlierMultiplier,
         @updatedAt
       )
     `,
@@ -509,11 +826,34 @@ function ensureFinanceSchema() {
       subcategoriesJson: JSON.stringify(DEFAULT_CATEGORY_SUBCATEGORIES),
       invoiceEmailTemplate: DEFAULT_INVOICE_TEMPLATE,
       receiptEmailTemplate: DEFAULT_RECEIPT_TEMPLATE,
-      paymentInstructions:
-        "Payments can be made via bank transfer or mobile money. Contact support@ozekiread.org for account details.",
+      paymentInstructions: DEFAULT_PAYMENT_INSTRUCTIONS,
+      cashThresholdUgx: DEFAULT_AUDIT_SETTINGS.cashThresholdUgx,
+      cashThresholdUsd: DEFAULT_AUDIT_SETTINGS.cashThresholdUsd,
+      backdateDaysLimit: DEFAULT_AUDIT_SETTINGS.backdateDaysLimit,
+      allowReceiptMismatchOverride: DEFAULT_AUDIT_SETTINGS.allowReceiptMismatchOverride ? 1 : 0,
+      allowReceiptReuseOverride: DEFAULT_AUDIT_SETTINGS.allowReceiptReuseOverride ? 1 : 0,
+      outlierMultiplier: DEFAULT_AUDIT_SETTINGS.outlierMultiplier,
       updatedAt: nowIso(),
     });
   }
+
+  db.prepare(
+    `
+      UPDATE finance_settings
+      SET payment_instructions = @paymentInstructions,
+          updated_at = @updatedAt
+      WHERE id = 1
+        AND (
+          payment_instructions IS NULL
+          OR TRIM(payment_instructions) = ''
+          OR TRIM(payment_instructions) = @legacyPaymentInstructions
+        )
+    `,
+  ).run({
+    paymentInstructions: DEFAULT_PAYMENT_INSTRUCTIONS,
+    legacyPaymentInstructions: LEGACY_DEFAULT_PAYMENT_INSTRUCTIONS,
+    updatedAt: nowIso(),
+  });
 
   /* ── V2: New tables for reconciliation, payment allocation, budgets ── */
   db.exec(`
@@ -664,7 +1004,13 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
         subcategories_json AS subcategoriesJson,
         invoice_email_template AS invoiceEmailTemplate,
         receipt_email_template AS receiptEmailTemplate,
-        payment_instructions AS paymentInstructions
+        payment_instructions AS paymentInstructions,
+        cash_threshold_ugx AS cashThresholdUgx,
+        cash_threshold_usd AS cashThresholdUsd,
+        backdate_days_limit AS backdateDaysLimit,
+        allow_receipt_mismatch_override AS allowReceiptMismatchOverride,
+        allow_receipt_reuse_override AS allowReceiptReuseOverride,
+        outlier_multiplier AS outlierMultiplier
       FROM finance_settings
       WHERE id = 1
       LIMIT 1
@@ -680,6 +1026,12 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
       invoiceEmailTemplate: string;
       receiptEmailTemplate: string;
       paymentInstructions: string;
+      cashThresholdUgx: number;
+      cashThresholdUsd: number;
+      backdateDaysLimit: number;
+      allowReceiptMismatchOverride: number;
+      allowReceiptReuseOverride: number;
+      outlierMultiplier: number;
     }
     | undefined;
 
@@ -693,7 +1045,13 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
       categorySubcategories: { ...DEFAULT_CATEGORY_SUBCATEGORIES },
       invoiceEmailTemplate: DEFAULT_INVOICE_TEMPLATE,
       receiptEmailTemplate: DEFAULT_RECEIPT_TEMPLATE,
-      paymentInstructions: "",
+      paymentInstructions: DEFAULT_PAYMENT_INSTRUCTIONS,
+      cashThresholdUgx: DEFAULT_AUDIT_SETTINGS.cashThresholdUgx,
+      cashThresholdUsd: DEFAULT_AUDIT_SETTINGS.cashThresholdUsd,
+      backdateDaysLimit: DEFAULT_AUDIT_SETTINGS.backdateDaysLimit,
+      allowReceiptMismatchOverride: DEFAULT_AUDIT_SETTINGS.allowReceiptMismatchOverride,
+      allowReceiptReuseOverride: DEFAULT_AUDIT_SETTINGS.allowReceiptReuseOverride,
+      outlierMultiplier: DEFAULT_AUDIT_SETTINGS.outlierMultiplier,
     };
   }
 
@@ -723,7 +1081,21 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
     categorySubcategories,
     invoiceEmailTemplate: row.invoiceEmailTemplate || DEFAULT_INVOICE_TEMPLATE,
     receiptEmailTemplate: row.receiptEmailTemplate || DEFAULT_RECEIPT_TEMPLATE,
-    paymentInstructions: row.paymentInstructions || "",
+    paymentInstructions: row.paymentInstructions || DEFAULT_PAYMENT_INSTRUCTIONS,
+    cashThresholdUgx: normalizeNumber(Number(row.cashThresholdUgx || DEFAULT_AUDIT_SETTINGS.cashThresholdUgx)),
+    cashThresholdUsd: normalizeNumber(Number(row.cashThresholdUsd || DEFAULT_AUDIT_SETTINGS.cashThresholdUsd)),
+    backdateDaysLimit: normalizeInteger(row.backdateDaysLimit, DEFAULT_AUDIT_SETTINGS.backdateDaysLimit),
+    allowReceiptMismatchOverride: toBooleanFlag(
+      row.allowReceiptMismatchOverride,
+      DEFAULT_AUDIT_SETTINGS.allowReceiptMismatchOverride,
+    ),
+    allowReceiptReuseOverride: toBooleanFlag(
+      row.allowReceiptReuseOverride,
+      DEFAULT_AUDIT_SETTINGS.allowReceiptReuseOverride,
+    ),
+    outlierMultiplier: Number(row.outlierMultiplier || DEFAULT_AUDIT_SETTINGS.outlierMultiplier) > 0
+      ? Number(row.outlierMultiplier)
+      : DEFAULT_AUDIT_SETTINGS.outlierMultiplier,
   };
 }
 
@@ -904,7 +1276,7 @@ function buildReceiptRecord(row: ReceiptRow): FinanceReceiptRecord {
   };
 }
 
-function buildExpenseRecord(row: {
+type ExpenseRow = {
   id: number;
   expenseNumber: string;
   vendorName: string;
@@ -917,10 +1289,70 @@ function buildExpenseRecord(row: {
   notes: string | null;
   status: string;
   voidReason: string | null;
+  submittedAt: string | null;
+  submittedBy: number | null;
+  submittedByName: string | null;
+  postedAt: string | null;
+  postedBy: number | null;
+  postedByName: string | null;
+  mismatchOverrideReason: string | null;
+  mismatchOverrideBy: number | null;
+  mismatchOverrideByName: string | null;
+  mismatchOverrideAt: string | null;
   createdBy: number;
   createdByName: string | null;
   createdAt: string;
-}): FinanceExpenseRecord {
+};
+
+type ExpenseAuditSeverity = "low" | "medium" | "high";
+
+type ExpenseAuditSignal = {
+  ruleCode: string;
+  message: string;
+  severity: ExpenseAuditSeverity;
+  blocksPosting: boolean;
+  allowOverrideType?: "mismatch" | "reuse";
+};
+
+type ExpensePostOptions = {
+  overrideReason?: string;
+};
+
+const EXPENSE_SELECT_SQL = `
+  SELECT
+    e.id,
+    e.expense_number AS expenseNumber,
+    e.vendor_name AS vendorName,
+    e.date,
+    e.subcategory,
+    e.amount,
+    e.currency,
+    e.payment_method AS paymentMethod,
+    e.description,
+    e.notes,
+    e.status,
+    e.void_reason AS voidReason,
+    e.submitted_at AS submittedAt,
+    e.submitted_by_user_id AS submittedBy,
+    su.full_name AS submittedByName,
+    e.posted_at AS postedAt,
+    e.posted_by_user_id AS postedBy,
+    pu.full_name AS postedByName,
+    e.mismatch_override_reason AS mismatchOverrideReason,
+    e.mismatch_override_by AS mismatchOverrideBy,
+    mu.full_name AS mismatchOverrideByName,
+    e.mismatch_override_at AS mismatchOverrideAt,
+    e.created_by_user_id AS createdBy,
+    cu.full_name AS createdByName,
+    e.created_at AS createdAt
+  FROM finance_expenses e
+  JOIN portal_users cu ON cu.id = e.created_by_user_id
+  LEFT JOIN portal_users su ON su.id = e.submitted_by_user_id
+  LEFT JOIN portal_users pu ON pu.id = e.posted_by_user_id
+  LEFT JOIN portal_users mu ON mu.id = e.mismatch_override_by
+`;
+
+function buildExpenseRecord(row: ExpenseRow): FinanceExpenseRecord {
   return {
     id: row.id,
     expenseNumber: row.expenseNumber,
@@ -933,16 +1365,50 @@ function buildExpenseRecord(row: {
     paymentMethod: row.paymentMethod as FinanceExpenseRecord["paymentMethod"],
     description: row.description,
     notes: row.notes || undefined,
-    status: row.status as FinancePostedStatus,
+    status: row.status as FinanceExpenseStatus,
     voidReason: row.voidReason || undefined,
+    submittedAt: row.submittedAt || undefined,
+    submittedBy: row.submittedBy ?? undefined,
+    submittedByName: row.submittedByName || undefined,
+    postedAt: row.postedAt || undefined,
+    postedBy: row.postedBy ?? undefined,
+    postedByName: row.postedByName || undefined,
+    mismatchOverrideReason: row.mismatchOverrideReason || undefined,
+    mismatchOverrideBy: row.mismatchOverrideBy ?? undefined,
+    mismatchOverrideByName: row.mismatchOverrideByName || undefined,
+    mismatchOverrideAt: row.mismatchOverrideAt || undefined,
     createdBy: row.createdBy,
     createdByName: row.createdByName || undefined,
     createdAt: row.createdAt,
   };
 }
 
+function getExpenseRowById(db: Database.Database, expenseId: number): ExpenseRow | undefined {
+  return db.prepare(
+    `
+      ${EXPENSE_SELECT_SQL}
+      WHERE e.id = @expenseId
+      LIMIT 1
+    `,
+  ).get({ expenseId }) as ExpenseRow | undefined;
+}
+
 function appendAudit(actor: FinanceActor, action: string, table: string, targetId: number, detail: string) {
   logAuditEvent(actor.userId, actor.userName, action, table, targetId, null, null, detail, null);
+}
+
+function requireDestructiveReason(reason: string, action: "delete" | "void") {
+  const cleanReason = reason?.trim();
+  if (!cleanReason) {
+    throw new Error(`${action === "delete" ? "Delete" : "Void"} reason is required.`);
+  }
+  return cleanReason;
+}
+
+function assertFinanceDraftDeletePermission(createdByUserId: number, actor: FinanceActor) {
+  if (!actor.isSuperAdmin && createdByUserId !== actor.userId) {
+    throw new Error("Only Super Admin or the draft creator can delete this record.");
+  }
 }
 
 function getMonthWindow(month: string) {
@@ -1978,6 +2444,12 @@ export function updateFinanceSettings(
     invoiceEmailTemplate: updates.invoiceEmailTemplate || current.invoiceEmailTemplate,
     receiptEmailTemplate: updates.receiptEmailTemplate || current.receiptEmailTemplate,
     paymentInstructions: updates.paymentInstructions ?? current.paymentInstructions,
+    cashThresholdUgx: updates.cashThresholdUgx ?? current.cashThresholdUgx,
+    cashThresholdUsd: updates.cashThresholdUsd ?? current.cashThresholdUsd,
+    backdateDaysLimit: updates.backdateDaysLimit ?? current.backdateDaysLimit,
+    allowReceiptMismatchOverride: updates.allowReceiptMismatchOverride ?? current.allowReceiptMismatchOverride,
+    allowReceiptReuseOverride: updates.allowReceiptReuseOverride ?? current.allowReceiptReuseOverride,
+    outlierMultiplier: updates.outlierMultiplier ?? current.outlierMultiplier,
   };
 
   db.prepare(
@@ -1992,6 +2464,12 @@ export function updateFinanceSettings(
           invoice_email_template = @invoiceEmailTemplate,
           receipt_email_template = @receiptEmailTemplate,
           payment_instructions = @paymentInstructions,
+          cash_threshold_ugx = @cashThresholdUgx,
+          cash_threshold_usd = @cashThresholdUsd,
+          backdate_days_limit = @backdateDaysLimit,
+          allow_receipt_mismatch_override = @allowReceiptMismatchOverride,
+          allow_receipt_reuse_override = @allowReceiptReuseOverride,
+          outlier_multiplier = @outlierMultiplier,
           updated_at = @updatedAt
       WHERE id = 1
     `,
@@ -2005,6 +2483,12 @@ export function updateFinanceSettings(
     invoiceEmailTemplate: next.invoiceEmailTemplate,
     receiptEmailTemplate: next.receiptEmailTemplate,
     paymentInstructions: next.paymentInstructions,
+    cashThresholdUgx: normalizeNumber(Number(next.cashThresholdUgx || 0)),
+    cashThresholdUsd: normalizeNumber(Number(next.cashThresholdUsd || 0)),
+    backdateDaysLimit: normalizeInteger(next.backdateDaysLimit, DEFAULT_AUDIT_SETTINGS.backdateDaysLimit),
+    allowReceiptMismatchOverride: next.allowReceiptMismatchOverride ? 1 : 0,
+    allowReceiptReuseOverride: next.allowReceiptReuseOverride ? 1 : 0,
+    outlierMultiplier: Number(next.outlierMultiplier || DEFAULT_AUDIT_SETTINGS.outlierMultiplier),
     updatedAt: nowIso(),
   });
 
@@ -2361,12 +2845,66 @@ export function getFinanceInvoiceById(invoiceId: number) {
   return buildInvoiceRecord(db, row);
 }
 
+export function deleteFinanceInvoiceDraft(invoiceId: number, reason: string, actor: FinanceActor) {
+  ensureFinanceSchema();
+  const cleanReason = requireDestructiveReason(reason, "delete");
+  const db = getDb();
+  const row = getInvoiceRowById(db, invoiceId);
+  if (!row) {
+    throw new Error("Invoice not found.");
+  }
+  if (row.status !== "draft") {
+    throw new Error("Only draft invoices can be deleted. Use void for sent/posted invoices.");
+  }
+  assertFinanceDraftDeletePermission(row.createdBy, actor);
+
+  const linkedPayments = db.prepare(
+    `
+      SELECT COUNT(*) AS count
+      FROM finance_payments
+      WHERE related_invoice_id = @invoiceId
+        AND status != 'void'
+    `,
+  ).get({ invoiceId }) as { count: number } | undefined;
+  if (Number(linkedPayments?.count || 0) > 0) {
+    throw new Error("Draft invoice cannot be deleted because linked payments exist.");
+  }
+
+  const linkedReceipts = db.prepare(
+    `
+      SELECT COUNT(*) AS count
+      FROM finance_receipts
+      WHERE related_invoice_id = @invoiceId
+        AND status != 'void'
+    `,
+  ).get({ invoiceId }) as { count: number } | undefined;
+  if (Number(linkedReceipts?.count || 0) > 0) {
+    throw new Error("Draft invoice cannot be deleted because linked receipts exist.");
+  }
+
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM finance_invoice_items WHERE invoice_id = @invoiceId").run({ invoiceId });
+    db.prepare("DELETE FROM finance_invoices WHERE id = @invoiceId").run({ invoiceId });
+    appendAudit(
+      actor,
+      "delete_draft",
+      "finance_invoices",
+      invoiceId,
+      `Deleted draft invoice ${row.invoiceNumber}: ${cleanReason}`,
+    );
+  });
+  tx();
+
+  return {
+    deleted: true as const,
+    id: invoiceId,
+    invoiceNumber: row.invoiceNumber,
+  };
+}
+
 export function voidFinanceInvoice(invoiceId: number, reason: string, actor: FinanceActor) {
   ensureFinanceSchema();
-  const cleanReason = reason?.trim();
-  if (!cleanReason) {
-    throw new Error("Void reason is required.");
-  }
+  const cleanReason = requireDestructiveReason(reason, "void");
   const db = getDb();
   const row = getInvoiceRowById(db, invoiceId);
   if (!row) {
@@ -2972,6 +3510,15 @@ export function listFinanceReceipts(filters?: {
   return rows.map(buildReceiptRecord);
 }
 
+export function getFinanceReceiptById(receiptId: number): FinanceReceiptRecord | null {
+  ensureFinanceSchema();
+  const row = getReceiptRowById(getDb(), receiptId);
+  if (!row) {
+    return null;
+  }
+  return buildReceiptRecord(row);
+}
+
 async function ensureReceiptPdfArtifact(
   db: Database.Database,
   receiptRow: ReceiptRow,
@@ -3256,12 +3803,54 @@ export async function sendFinanceReceipt(
   return { receipt: buildReceiptRecord(refreshed), email: result };
 }
 
+export function deleteFinanceReceiptDraft(receiptId: number, reason: string, actor: FinanceActor) {
+  ensureFinanceSchema();
+  const cleanReason = requireDestructiveReason(reason, "delete");
+  const db = getDb();
+  const row = getReceiptRowById(db, receiptId);
+  if (!row) {
+    throw new Error("Receipt not found.");
+  }
+  if (row.status !== "draft") {
+    throw new Error("Only draft receipts can be deleted. Use void for issued receipts.");
+  }
+  assertFinanceDraftDeletePermission(row.createdBy, actor);
+
+  const ledgerLinks = db.prepare(
+    `
+      SELECT COUNT(*) AS count
+      FROM finance_transactions_ledger
+      WHERE source_type = 'receipt'
+        AND source_id = @receiptId
+        AND posted_status != 'void'
+    `,
+  ).get({ receiptId }) as { count: number } | undefined;
+  if (Number(ledgerLinks?.count || 0) > 0) {
+    throw new Error("Draft receipt cannot be deleted because it has ledger postings.");
+  }
+
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM finance_receipts WHERE id = @receiptId").run({ receiptId });
+    appendAudit(
+      actor,
+      "delete_draft",
+      "finance_receipts",
+      receiptId,
+      `Deleted draft receipt ${row.receiptNumber}: ${cleanReason}`,
+    );
+  });
+  tx();
+
+  return {
+    deleted: true as const,
+    id: receiptId,
+    receiptNumber: row.receiptNumber,
+  };
+}
+
 export function voidFinanceReceipt(receiptId: number, reason: string, actor: FinanceActor) {
   ensureFinanceSchema();
-  const cleanReason = reason?.trim();
-  if (!cleanReason) {
-    throw new Error("Void reason is required.");
-  }
+  const cleanReason = requireDestructiveReason(reason, "void");
   const db = getDb();
   const row = getReceiptRowById(db, receiptId);
   if (!row) {
@@ -3296,6 +3885,521 @@ export function voidFinanceReceipt(receiptId: number, reason: string, actor: Fin
   return buildReceiptRecord(updated);
 }
 
+type ExpenseReceiptMetadataInput = {
+  fileId: number;
+  fileHashSha256: string;
+  vendorName: string;
+  receiptDate: string;
+  receiptAmount: number;
+  currency: FinanceCurrency;
+  referenceNo?: string;
+};
+
+type ExpenseReceiptRow = {
+  id: number;
+  expenseId: number;
+  fileId: number;
+  fileHashSha256: string;
+  vendorName: string;
+  receiptDate: string;
+  receiptAmount: number;
+  currency: string;
+  referenceNo: string | null;
+  uploadedBy: number;
+  uploadedByName: string | null;
+  uploadedAt: string;
+  fileName: string | null;
+};
+
+const EXPENSE_AUDIT_RULE_CODES = [
+  "EXP-001",
+  "EXP-002",
+  "EXP-003",
+  "EXP-004",
+  "EXP-010",
+  "EXP-011",
+  "EXP-012",
+  "EXP-013",
+  "LED-001",
+  "LED-002",
+  "INC-001",
+  "INV-001",
+] as const;
+
+function moneyCloseEnough(a: number, b: number) {
+  return Math.abs(normalizeNumber(a) - normalizeNumber(b)) < 0.01;
+}
+
+function listExpenseReceiptRows(db: Database.Database, expenseId: number): ExpenseReceiptRow[] {
+  return db.prepare(
+    `
+      SELECT
+        er.id,
+        er.expense_id AS expenseId,
+        er.file_id AS fileId,
+        er.file_hash_sha256 AS fileHashSha256,
+        er.vendor_name AS vendorName,
+        er.receipt_date AS receiptDate,
+        er.receipt_amount AS receiptAmount,
+        er.currency,
+        er.reference_no AS referenceNo,
+        er.uploaded_by_user_id AS uploadedBy,
+        u.full_name AS uploadedByName,
+        er.uploaded_at AS uploadedAt,
+        f.file_name AS fileName
+      FROM finance_expense_receipts er
+      JOIN portal_users u ON u.id = er.uploaded_by_user_id
+      LEFT JOIN finance_files f ON f.id = er.file_id
+      WHERE er.expense_id = @expenseId
+      ORDER BY er.id ASC
+    `,
+  ).all({ expenseId }) as ExpenseReceiptRow[];
+}
+
+function mapExpenseReceiptRow(row: ExpenseReceiptRow): FinanceExpenseReceiptRecord {
+  return {
+    id: row.id,
+    expenseId: row.expenseId,
+    fileId: row.fileId,
+    fileUrl: getSignedFinanceFileUrl(row.fileId),
+    fileName: row.fileName || undefined,
+    fileHashSha256: row.fileHashSha256,
+    vendorName: row.vendorName,
+    receiptDate: row.receiptDate,
+    receiptAmount: normalizeNumber(Number(row.receiptAmount)),
+    currency: normalizeCurrency(row.currency),
+    referenceNo: row.referenceNo || undefined,
+    uploadedBy: row.uploadedBy,
+    uploadedByName: row.uploadedByName || undefined,
+    uploadedAt: row.uploadedAt,
+  };
+}
+
+function upsertFinanceAuditExceptionInternal(
+  db: Database.Database,
+  input: {
+    entityType: FinanceAuditExceptionRecord["entityType"];
+    entityId: number;
+    severity: FinanceAuditExceptionRecord["severity"];
+    ruleCode: string;
+    message: string;
+    amount?: number;
+    currency?: FinanceCurrency;
+    createdBy?: number;
+  },
+) {
+  const existing = db.prepare(
+    `
+      SELECT id
+      FROM finance_audit_exceptions
+      WHERE entity_type = @entityType
+        AND entity_id = @entityId
+        AND rule_code = @ruleCode
+        AND status IN ('open', 'acknowledged')
+      ORDER BY id DESC
+      LIMIT 1
+    `,
+  ).get({
+    entityType: input.entityType,
+    entityId: input.entityId,
+    ruleCode: input.ruleCode,
+  }) as { id: number } | undefined;
+
+  if (existing) {
+    db.prepare(
+      `
+        UPDATE finance_audit_exceptions
+        SET severity = @severity,
+            message = @message,
+            amount = @amount,
+            currency = @currency,
+            created_by_user_id = COALESCE(@createdBy, created_by_user_id)
+        WHERE id = @id
+      `,
+    ).run({
+      id: existing.id,
+      severity: input.severity,
+      message: input.message,
+      amount: input.amount ?? null,
+      currency: input.currency || null,
+      createdBy: input.createdBy ?? null,
+    });
+    return { id: existing.id, inserted: false };
+  }
+
+  const created = db.prepare(
+    `
+      INSERT INTO finance_audit_exceptions (
+        entity_type,
+        entity_id,
+        severity,
+        rule_code,
+        message,
+        status,
+        amount,
+        currency,
+        created_by_user_id,
+        created_at
+      ) VALUES (
+        @entityType,
+        @entityId,
+        @severity,
+        @ruleCode,
+        @message,
+        'open',
+        @amount,
+        @currency,
+        @createdBy,
+        @createdAt
+      )
+    `,
+  ).run({
+    entityType: input.entityType,
+    entityId: input.entityId,
+    severity: input.severity,
+    ruleCode: input.ruleCode,
+    message: input.message,
+    amount: input.amount ?? null,
+    currency: input.currency || null,
+    createdBy: input.createdBy ?? null,
+    createdAt: nowIso(),
+  });
+  return { id: Number(created.lastInsertRowid), inserted: true };
+}
+
+function resolveFinanceAuditExceptionsForEntity(
+  db: Database.Database,
+  input: {
+    entityType: FinanceAuditExceptionRecord["entityType"];
+    entityId: number;
+    ruleCodes: string[];
+    actor: FinanceActor;
+    status?: Extract<FinanceAuditExceptionRecord["status"], "resolved" | "overridden">;
+    notes?: string;
+  },
+) {
+  if (input.ruleCodes.length === 0) {
+    return;
+  }
+  const status = input.status || "resolved";
+  const params: Record<string, unknown> = {
+    entityType: input.entityType,
+    entityId: input.entityId,
+    status,
+    resolvedAt: nowIso(),
+    resolvedBy: input.actor.userId,
+    notes: input.notes || null,
+  };
+  const placeholders = input.ruleCodes.map((code, index) => {
+    const key = `rule${index}`;
+    params[key] = code;
+    return `@${key}`;
+  });
+  db.prepare(
+    `
+      UPDATE finance_audit_exceptions
+      SET status = @status,
+          resolved_at = @resolvedAt,
+          resolved_by_user_id = @resolvedBy,
+          resolution_notes = @notes
+      WHERE entity_type = @entityType
+        AND entity_id = @entityId
+        AND rule_code IN (${placeholders.join(", ")})
+        AND status IN ('open', 'acknowledged')
+    `,
+  ).run(params);
+}
+
+function upsertTxnRiskScore(
+  db: Database.Database,
+  input: {
+    entityType: FinanceTxnRiskScoreRecord["entityType"];
+    entityId: number;
+    riskScore: number;
+    signals: string[];
+  },
+) {
+  db.prepare(
+    `
+      INSERT INTO finance_txn_risk_scores (
+        entity_type,
+        entity_id,
+        risk_score,
+        signals_json,
+        computed_at
+      ) VALUES (
+        @entityType,
+        @entityId,
+        @riskScore,
+        @signalsJson,
+        @computedAt
+      )
+      ON CONFLICT(entity_type, entity_id)
+      DO UPDATE SET
+        risk_score = excluded.risk_score,
+        signals_json = excluded.signals_json,
+        computed_at = excluded.computed_at
+    `,
+  ).run({
+    entityType: input.entityType,
+    entityId: input.entityId,
+    riskScore: Math.max(0, Math.min(100, Math.trunc(input.riskScore))),
+    signalsJson: JSON.stringify(input.signals),
+    computedAt: nowIso(),
+  });
+}
+
+function computeRiskScoreFromSignals(signals: ExpenseAuditSignal[]) {
+  const ruleCodes = new Set(signals.map((signal) => signal.ruleCode));
+  let score = 0;
+  if (ruleCodes.has("EXP-003")) score += 30;
+  if (ruleCodes.has("EXP-004")) score += 25;
+  if (ruleCodes.has("EXP-001") || ruleCodes.has("EXP-002")) score += 20;
+  if (ruleCodes.has("EXP-012")) score += 15;
+  if (ruleCodes.has("EXP-013")) score += 10;
+  if (ruleCodes.has("EXP-010")) score += 10;
+  return Math.max(0, Math.min(100, score));
+}
+
+function computeMedian(values: number[]) {
+  if (values.length === 0) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return normalizeNumber((sorted[mid - 1] + sorted[mid]) / 2);
+  }
+  return normalizeNumber(sorted[mid]);
+}
+
+function evaluateExpenseAuditSignals(
+  db: Database.Database,
+  expense: ExpenseRow,
+  receipts: FinanceExpenseReceiptRecord[],
+): ExpenseAuditSignal[] {
+  const settings = getFinanceSettingsRow(db);
+  const signals: ExpenseAuditSignal[] = [];
+
+  if (receipts.length === 0) {
+    signals.push({
+      ruleCode: "EXP-001",
+      message: "Expense has no receipt evidence metadata.",
+      severity: "high",
+      blocksPosting: true,
+    });
+    return signals;
+  }
+
+  const missingMetadata = receipts.some((receipt) =>
+    !receipt.vendorName.trim() ||
+    !receipt.receiptDate.trim() ||
+    !Number.isFinite(receipt.receiptAmount) ||
+    receipt.receiptAmount <= 0 ||
+    !receipt.currency
+  );
+  if (missingMetadata) {
+    signals.push({
+      ruleCode: "EXP-002",
+      message: "One or more linked receipts are missing required metadata.",
+      severity: "high",
+      blocksPosting: true,
+    });
+  }
+
+  const totalReceiptAmount = normalizeNumber(
+    receipts.reduce((sum, receipt) => sum + normalizeNumber(Number(receipt.receiptAmount || 0)), 0),
+  );
+  const hasCurrencyMismatch = receipts.some((receipt) => normalizeCurrency(receipt.currency) !== normalizeCurrency(expense.currency));
+  if (hasCurrencyMismatch || !moneyCloseEnough(totalReceiptAmount, Number(expense.amount || 0))) {
+    const mismatchCurrencyReason = hasCurrencyMismatch
+      ? `currency differs from expense currency ${normalizeCurrency(expense.currency)}`
+      : `sum of receipt amounts (${totalReceiptAmount.toLocaleString()}) differs from expense amount (${normalizeNumber(
+        expense.amount,
+      ).toLocaleString()})`;
+    signals.push({
+      ruleCode: "EXP-003",
+      message: `Receipt amount mismatch: ${mismatchCurrencyReason}.`,
+      severity: "high",
+      blocksPosting: true,
+      allowOverrideType: "mismatch",
+    });
+  }
+
+  const duplicateHash = db.prepare(
+    `
+      SELECT DISTINCT er.file_hash_sha256 AS hash
+      FROM finance_expense_receipts er
+      JOIN finance_expenses e ON e.id = er.expense_id
+      WHERE e.status = 'posted'
+        AND er.expense_id != @expenseId
+        AND er.file_hash_sha256 IN (${receipts.map((_, index) => `@hash${index}`).join(", ")})
+      LIMIT 1
+    `,
+  ).get(
+    receipts.reduce<Record<string, unknown>>(
+      (acc, receipt, index) => {
+        acc.expenseId = expense.id;
+        acc[`hash${index}`] = receipt.fileHashSha256;
+        return acc;
+      },
+      {},
+    ),
+  ) as { hash: string } | undefined;
+  if (duplicateHash) {
+    signals.push({
+      ruleCode: "EXP-004",
+      message: "A linked receipt file hash is already used by another posted expense.",
+      severity: "high",
+      blocksPosting: true,
+      allowOverrideType: "reuse",
+    });
+  }
+
+  const duplicatePattern = db.prepare(
+    `
+      SELECT COUNT(*) AS count
+      FROM finance_expenses
+      WHERE id != @expenseId
+        AND status != 'void'
+        AND LOWER(TRIM(vendor_name)) = LOWER(TRIM(@vendorName))
+        AND date = @date
+        AND ABS(amount - @amount) < 0.01
+    `,
+  ).get({
+    expenseId: expense.id,
+    vendorName: expense.vendorName,
+    date: expense.date,
+    amount: normalizeNumber(expense.amount),
+  }) as { count: number } | undefined;
+  if (Number(duplicatePattern?.count || 0) > 0) {
+    signals.push({
+      ruleCode: "EXP-010",
+      message: "Potential duplicate expense pattern (same vendor + amount + date).",
+      severity: "medium",
+      blocksPosting: false,
+    });
+  }
+
+  const historicalRows = db.prepare(
+    `
+      SELECT amount
+      FROM finance_expenses
+      WHERE id != @expenseId
+        AND status = 'posted'
+        AND COALESCE(subcategory, '') = COALESCE(@subcategory, '')
+        AND currency = @currency
+      ORDER BY posted_at DESC
+      LIMIT 100
+    `,
+  ).all({
+    expenseId: expense.id,
+    subcategory: expense.subcategory || null,
+    currency: normalizeCurrency(expense.currency),
+  }) as Array<{ amount: number }>;
+  const historicalMedian = computeMedian(historicalRows.map((item) => normalizeNumber(Number(item.amount || 0))));
+  const outlierMultiplier = Number(settings.outlierMultiplier || DEFAULT_AUDIT_SETTINGS.outlierMultiplier);
+  if (historicalMedian > 0 && normalizeNumber(expense.amount) > historicalMedian * outlierMultiplier) {
+    signals.push({
+      ruleCode: "EXP-011",
+      message: `Expense amount is above ${outlierMultiplier}x median for this subcategory.`,
+      severity: normalizeNumber(expense.amount) > historicalMedian * outlierMultiplier * 2 ? "high" : "medium",
+      blocksPosting: false,
+    });
+  }
+
+  if (expense.paymentMethod === "cash") {
+    const threshold = normalizeCurrency(expense.currency) === "USD"
+      ? settings.cashThresholdUsd
+      : settings.cashThresholdUgx;
+    if (normalizeNumber(expense.amount) > normalizeNumber(threshold)) {
+      signals.push({
+        ruleCode: "EXP-012",
+        message: `Cash payment exceeds configured threshold (${normalizeCurrency(expense.currency)} ${normalizeNumber(threshold).toLocaleString()}).`,
+        severity: normalizeNumber(expense.amount) > normalizeNumber(threshold) * 2 ? "high" : "medium",
+        blocksPosting: false,
+      });
+    }
+  }
+
+  if (settings.backdateDaysLimit > 0) {
+    const createdAt = Date.parse(expense.createdAt);
+    const expenseDate = Date.parse(`${expense.date}T00:00:00.000Z`);
+    if (Number.isFinite(createdAt) && Number.isFinite(expenseDate)) {
+      const diffDays = Math.floor((createdAt - expenseDate) / (24 * 60 * 60 * 1000));
+      if (diffDays > settings.backdateDaysLimit) {
+        signals.push({
+          ruleCode: "EXP-013",
+          message: `Expense is backdated by ${diffDays} days (limit: ${settings.backdateDaysLimit}).`,
+          severity: diffDays > settings.backdateDaysLimit * 2 ? "high" : "medium",
+          blocksPosting: false,
+        });
+      }
+    }
+  }
+
+  return signals;
+}
+
+function syncExpenseAuditSignals(
+  db: Database.Database,
+  expense: ExpenseRow,
+  signals: ExpenseAuditSignal[],
+  actor?: FinanceActor,
+) {
+  const signalCodes = new Set(signals.map((signal) => signal.ruleCode));
+  let createdCount = 0;
+  for (const signal of signals) {
+    const result = upsertFinanceAuditExceptionInternal(db, {
+      entityType: "expense",
+      entityId: expense.id,
+      severity: signal.severity,
+      ruleCode: signal.ruleCode,
+      message: signal.message,
+      amount: normalizeNumber(expense.amount),
+      currency: normalizeCurrency(expense.currency),
+      createdBy: actor?.userId,
+    });
+    if (result.inserted) {
+      createdCount += 1;
+    }
+  }
+
+  const staleCodes = EXPENSE_AUDIT_RULE_CODES.filter((ruleCode) => !signalCodes.has(ruleCode));
+  if (staleCodes.length > 0 && actor) {
+    resolveFinanceAuditExceptionsForEntity(db, {
+      entityType: "expense",
+      entityId: expense.id,
+      ruleCodes: staleCodes as string[],
+      actor,
+      status: "resolved",
+      notes: "Rule no longer triggered after recomputation.",
+    });
+  }
+
+  upsertTxnRiskScore(db, {
+    entityType: "expense",
+    entityId: expense.id,
+    riskScore: computeRiskScoreFromSignals(signals),
+    signals: signals.map((signal) => signal.ruleCode),
+  });
+
+  return { createdCount, riskSignals: signals.map((signal) => signal.ruleCode) };
+}
+
+function getExpenseLedgerFileIds(db: Database.Database, expenseId: number) {
+  const fileRows = db.prepare(
+    `
+      SELECT id
+      FROM finance_files
+      WHERE source_type = 'expense'
+        AND source_id = @expenseId
+      ORDER BY id ASC
+    `,
+  ).all({ expenseId }) as Array<{ id: number }>;
+  return fileRows.map((row) => row.id);
+}
+
 export function createFinanceExpense(input: FinanceExpenseInput, actor: FinanceActor) {
   ensureFinanceSchema();
   const db = getDb();
@@ -3307,6 +4411,7 @@ export function createFinanceExpense(input: FinanceExpenseInput, actor: FinanceA
     settings.expensePrefix || "ORBF-EXP",
     input.date || todayIsoDate(),
   );
+  const createdAt = nowIso();
   const result = db.prepare(
     `
       INSERT INTO finance_expenses (
@@ -3352,8 +4457,8 @@ export function createFinanceExpense(input: FinanceExpenseInput, actor: FinanceA
     description: input.description.trim(),
     notes: input.notes?.trim() || null,
     createdBy: actor.userId,
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
+    createdAt,
+    updatedAt: createdAt,
   });
   const expenseId = Number(result.lastInsertRowid);
   appendAudit(actor, "create", "finance_expenses", expenseId, `Created expense ${expenseNumber}`);
@@ -3364,51 +4469,169 @@ export function createFinanceExpense(input: FinanceExpenseInput, actor: FinanceA
   return row;
 }
 
-export function postFinanceExpense(expenseId: number, actor: FinanceActor) {
+export function submitFinanceExpense(expenseId: number, actor: FinanceActor) {
   ensureFinanceSchema();
   const db = getDb();
-  const row = db.prepare(
+  const current = getExpenseRowById(db, expenseId);
+  if (!current) {
+    throw new Error("Expense not found.");
+  }
+  if (current.status === "void") {
+    throw new Error("Cannot submit a void expense.");
+  }
+  if (current.status === "posted") {
+    throw new Error("Posted expenses are immutable. Void and recreate instead.");
+  }
+  if (current.status === "submitted") {
+    return buildExpenseRecord(current);
+  }
+
+  const submittedAt = nowIso();
+  db.prepare(
+    `
+      UPDATE finance_expenses
+      SET status = 'submitted',
+          submitted_at = COALESCE(submitted_at, @submittedAt),
+          submitted_by_user_id = COALESCE(submitted_by_user_id, @submittedBy),
+          updated_at = @updatedAt
+      WHERE id = @expenseId
+    `,
+  ).run({
+    expenseId,
+    submittedAt,
+    submittedBy: actor.userId,
+    updatedAt: submittedAt,
+  });
+
+  appendAudit(actor, "submit", "finance_expenses", expenseId, `Submitted expense ${current.expenseNumber}`);
+  const updated = getExpenseRowById(db, expenseId);
+  if (!updated) {
+    throw new Error("Failed to reload expense.");
+  }
+  return buildExpenseRecord(updated);
+}
+
+export function upsertFinanceExpenseReceipts(
+  expenseId: number,
+  receipts: ExpenseReceiptMetadataInput[],
+  actor: FinanceActor,
+) {
+  ensureFinanceSchema();
+  const db = getDb();
+  const expense = getExpenseRowById(db, expenseId);
+  if (!expense) {
+    throw new Error("Expense not found.");
+  }
+  if (expense.status === "posted" || expense.status === "void") {
+    throw new Error("Receipts cannot be changed after expense is posted or voided.");
+  }
+  if (!Array.isArray(receipts) || receipts.length === 0) {
+    throw new Error("At least one expense receipt metadata entry is required.");
+  }
+
+  const insert = db.prepare(
+    `
+      INSERT INTO finance_expense_receipts (
+        expense_id,
+        file_id,
+        file_url,
+        file_hash_sha256,
+        vendor_name,
+        receipt_date,
+        receipt_amount,
+        currency,
+        reference_no,
+        uploaded_by_user_id,
+        uploaded_at
+      ) VALUES (
+        @expenseId,
+        @fileId,
+        @fileUrl,
+        @fileHashSha256,
+        @vendorName,
+        @receiptDate,
+        @receiptAmount,
+        @currency,
+        @referenceNo,
+        @uploadedBy,
+        @uploadedAt
+      )
+    `,
+  );
+
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM finance_expense_receipts WHERE expense_id = @expenseId").run({ expenseId });
+    for (const item of receipts) {
+      const file = db.prepare(
+        `
+          SELECT id
+          FROM finance_files
+          WHERE id = @fileId
+            AND source_type = 'expense'
+            AND source_id = @expenseId
+          LIMIT 1
+        `,
+      ).get({ fileId: item.fileId, expenseId }) as { id: number } | undefined;
+      if (!file) {
+        throw new Error(`Receipt file ${item.fileId} is not linked to this expense.`);
+      }
+      insert.run({
+        expenseId,
+        fileId: item.fileId,
+        fileUrl: `/api/portal/finance/files/${item.fileId}`,
+        fileHashSha256: String(item.fileHashSha256 || "").trim().toLowerCase(),
+        vendorName: String(item.vendorName || "").trim(),
+        receiptDate: String(item.receiptDate || "").trim(),
+        receiptAmount: normalizeNumber(Number(item.receiptAmount || 0)),
+        currency: normalizeCurrency(item.currency),
+        referenceNo: item.referenceNo?.trim() || null,
+        uploadedBy: actor.userId,
+        uploadedAt: nowIso(),
+      });
+    }
+  });
+  tx();
+
+  appendAudit(actor, "link_receipts", "finance_expense_receipts", expenseId, `Updated receipt evidence links for expense ${expense.expenseNumber}`);
+  return listExpenseReceiptRows(db, expenseId).map(mapExpenseReceiptRow);
+}
+
+export function listFinanceExpenseReceipts(expenseId?: number) {
+  ensureFinanceSchema();
+  const db = getDb();
+  if (Number.isFinite(expenseId)) {
+    return listExpenseReceiptRows(db, Number(expenseId)).map(mapExpenseReceiptRow);
+  }
+
+  const rows = db.prepare(
     `
       SELECT
-        e.id,
-        e.expense_number AS expenseNumber,
-        e.vendor_name AS vendorName,
-        e.date,
-        e.subcategory,
-        e.amount,
-        e.currency,
-        e.payment_method AS paymentMethod,
-        e.description,
-        e.notes,
-        e.status,
-        e.void_reason AS voidReason,
-        e.created_by_user_id AS createdBy,
-        u.full_name AS createdByName,
-        e.created_at AS createdAt
-      FROM finance_expenses e
-      JOIN portal_users u ON u.id = e.created_by_user_id
-      WHERE e.id = @expenseId
-      LIMIT 1
+        er.id,
+        er.expense_id AS expenseId,
+        er.file_id AS fileId,
+        er.file_hash_sha256 AS fileHashSha256,
+        er.vendor_name AS vendorName,
+        er.receipt_date AS receiptDate,
+        er.receipt_amount AS receiptAmount,
+        er.currency,
+        er.reference_no AS referenceNo,
+        er.uploaded_by_user_id AS uploadedBy,
+        u.full_name AS uploadedByName,
+        er.uploaded_at AS uploadedAt,
+        f.file_name AS fileName
+      FROM finance_expense_receipts er
+      JOIN portal_users u ON u.id = er.uploaded_by_user_id
+      LEFT JOIN finance_files f ON f.id = er.file_id
+      ORDER BY er.uploaded_at DESC, er.id DESC
     `,
-  ).get({ expenseId }) as
-    | {
-      id: number;
-      expenseNumber: string;
-      vendorName: string;
-      date: string;
-      subcategory: string | null;
-      amount: number;
-      currency: string;
-      paymentMethod: string;
-      description: string;
-      notes: string | null;
-      status: string;
-      voidReason: string | null;
-      createdBy: number;
-      createdByName: string | null;
-      createdAt: string;
-    }
-    | undefined;
+  ).all() as ExpenseReceiptRow[];
+  return rows.map(mapExpenseReceiptRow);
+}
+
+export function postFinanceExpense(expenseId: number, actor: FinanceActor, options?: ExpensePostOptions) {
+  ensureFinanceSchema();
+  const db = getDb();
+  const row = getExpenseRowById(db, expenseId);
   if (!row) {
     throw new Error("Expense not found.");
   }
@@ -3418,55 +4641,129 @@ export function postFinanceExpense(expenseId: number, actor: FinanceActor) {
   if (row.status === "posted") {
     return buildExpenseRecord(row);
   }
-
-  const fileCount = db.prepare(
-    `
-      SELECT COUNT(*) AS count
-      FROM finance_files
-      WHERE source_type = 'expense'
-        AND source_id = @expenseId
-    `,
-  ).get({ expenseId }) as { count: number } | undefined;
-  if (!fileCount || Number(fileCount.count) <= 0) {
-    throw new Error("Receipt evidence upload is required before posting an expense.");
+  if (row.status !== "submitted") {
+    throw new Error("Only submitted expenses can be posted.");
   }
 
-  const fileRows = db.prepare(
-    `
-      SELECT id
-      FROM finance_files
-      WHERE source_type = 'expense'
-        AND source_id = @expenseId
-      ORDER BY id ASC
-    `,
-  ).all({ expenseId }) as Array<{ id: number }>;
+  const receipts = listExpenseReceiptRows(db, expenseId).map(mapExpenseReceiptRow);
+  const signals = evaluateExpenseAuditSignals(db, row, receipts);
+  syncExpenseAuditSignals(db, row, signals, actor);
+  const blockingSignals = signals.filter((signal) => signal.blocksPosting);
+  const settings = getFinanceSettingsRow(db);
+  const overrideReason = options?.overrideReason?.trim() || "";
+  const canOverrideAll = blockingSignals.length > 0 && blockingSignals.every((signal) => {
+    if (!signal.allowOverrideType || !actor.isSuperAdmin || !overrideReason) {
+      return false;
+    }
+    if (signal.allowOverrideType === "mismatch") {
+      return settings.allowReceiptMismatchOverride;
+    }
+    if (signal.allowOverrideType === "reuse") {
+      return settings.allowReceiptReuseOverride;
+    }
+    return false;
+  });
 
+  if (blockingSignals.length > 0 && !canOverrideAll) {
+    const shouldBlockAsMismatch = blockingSignals.some((signal) => signal.ruleCode === "EXP-003" || signal.ruleCode === "EXP-004");
+    if (shouldBlockAsMismatch) {
+      db.prepare(
+        `
+          UPDATE finance_expenses
+          SET status = 'blocked_mismatch',
+              updated_at = @updatedAt
+          WHERE id = @expenseId
+        `,
+      ).run({ expenseId, updatedAt: nowIso() });
+    }
+    const message = blockingSignals.map((signal) => `${signal.ruleCode}: ${signal.message}`).join(" ");
+    throw new Error(message);
+  }
+
+  const postedAt = nowIso();
+  const evidenceFileIds = getExpenseLedgerFileIds(db, expenseId);
   const tx = db.transaction(() => {
     db.prepare(
       `
         UPDATE finance_expenses
         SET status = 'posted',
+            submitted_at = COALESCE(submitted_at, @submittedAt),
+            submitted_by_user_id = COALESCE(submitted_by_user_id, @submittedBy),
+            posted_at = @postedAt,
+            posted_by_user_id = @postedBy,
+            mismatch_override_reason = CASE WHEN @overrideReason = '' THEN mismatch_override_reason ELSE @overrideReason END,
+            mismatch_override_by = CASE WHEN @overrideReason = '' THEN mismatch_override_by ELSE @postedBy END,
+            mismatch_override_at = CASE WHEN @overrideReason = '' THEN mismatch_override_at ELSE @postedAt END,
             updated_at = @updatedAt
         WHERE id = @expenseId
       `,
-    ).run({ expenseId, updatedAt: nowIso() });
-
-    createLedgerEntry(db, {
-      txnType: "money_out",
-      category: "Expense",
-      subcategory: row.subcategory || undefined,
-      date: row.date,
-      currency: normalizeCurrency(row.currency),
-      amount: normalizeNumber(row.amount),
-      sourceType: "expense",
-      sourceId: expenseId,
-      notes: row.notes || row.description || undefined,
-      evidenceFileIds: fileRows.map((item) => item.id),
-      postedStatus: "posted",
-      actor,
+    ).run({
+      expenseId,
+      submittedAt: postedAt,
+      submittedBy: actor.userId,
+      postedAt,
+      postedBy: actor.userId,
+      overrideReason,
+      updatedAt: postedAt,
     });
 
-    appendAudit(actor, "post", "finance_expenses", expenseId, `Posted expense ${row.expenseNumber}`);
+    const existingLedger = db.prepare(
+      `
+        SELECT id
+        FROM finance_transactions_ledger
+        WHERE source_type = 'expense'
+          AND source_id = @expenseId
+          AND posted_status = 'posted'
+        LIMIT 1
+      `,
+    ).get({ expenseId }) as { id: number } | undefined;
+
+    if (!existingLedger) {
+      createLedgerEntry(db, {
+        txnType: "money_out",
+        category: "Expense",
+        subcategory: row.subcategory || undefined,
+        date: row.date,
+        currency: normalizeCurrency(row.currency),
+        amount: normalizeNumber(row.amount),
+        sourceType: "expense",
+        sourceId: expenseId,
+        notes: row.notes || row.description || undefined,
+        evidenceFileIds,
+        postedStatus: "posted",
+        actor,
+      });
+    }
+
+    resolveFinanceAuditExceptionsForEntity(db, {
+      entityType: "expense",
+      entityId: expenseId,
+      ruleCodes: EXPENSE_AUDIT_RULE_CODES.filter((ruleCode) => !signals.some((signal) => signal.ruleCode === ruleCode)) as string[],
+      actor,
+      status: "resolved",
+      notes: "Cleared during expense posting.",
+    });
+
+    if (canOverrideAll && overrideReason) {
+      resolveFinanceAuditExceptionsForEntity(db, {
+        entityType: "expense",
+        entityId: expenseId,
+        ruleCodes: blockingSignals.map((signal) => signal.ruleCode),
+        actor,
+        status: "overridden",
+        notes: overrideReason,
+      });
+    }
+
+    appendAudit(
+      actor,
+      "post",
+      "finance_expenses",
+      expenseId,
+      overrideReason
+        ? `Posted expense ${row.expenseNumber} with override: ${overrideReason}`
+        : `Posted expense ${row.expenseNumber}`,
+    );
   });
   tx();
 
@@ -3477,12 +4774,56 @@ export function postFinanceExpense(expenseId: number, actor: FinanceActor) {
   return updated;
 }
 
+export function deleteFinanceExpenseDraft(expenseId: number, reason: string, actor: FinanceActor) {
+  ensureFinanceSchema();
+  const cleanReason = requireDestructiveReason(reason, "delete");
+  const db = getDb();
+  const current = getFinanceExpenseById(expenseId);
+  if (!current) {
+    throw new Error("Expense not found.");
+  }
+  if (current.status !== "draft") {
+    throw new Error("Only draft expenses can be deleted. Use void for posted expenses.");
+  }
+  assertFinanceDraftDeletePermission(current.createdBy, actor);
+
+  const ledgerLinks = db.prepare(
+    `
+      SELECT COUNT(*) AS count
+      FROM finance_transactions_ledger
+      WHERE source_type = 'expense'
+        AND source_id = @expenseId
+        AND posted_status != 'void'
+    `,
+  ).get({ expenseId }) as { count: number } | undefined;
+  if (Number(ledgerLinks?.count || 0) > 0) {
+    throw new Error("Draft expense cannot be deleted because it has ledger postings.");
+  }
+
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM finance_expense_receipts WHERE expense_id = @expenseId").run({ expenseId });
+    db.prepare("DELETE FROM finance_files WHERE source_type = 'expense' AND source_id = @expenseId").run({ expenseId });
+    db.prepare("DELETE FROM finance_expenses WHERE id = @expenseId").run({ expenseId });
+    appendAudit(
+      actor,
+      "delete_draft",
+      "finance_expenses",
+      expenseId,
+      `Deleted draft expense ${current.expenseNumber}: ${cleanReason}`,
+    );
+  });
+  tx();
+
+  return {
+    deleted: true as const,
+    id: expenseId,
+    expenseNumber: current.expenseNumber,
+  };
+}
+
 export function voidFinanceExpense(expenseId: number, reason: string, actor: FinanceActor) {
   ensureFinanceSchema();
-  const cleanReason = reason?.trim();
-  if (!cleanReason) {
-    throw new Error("Void reason is required.");
-  }
+  const cleanReason = requireDestructiveReason(reason, "void");
   const db = getDb();
   const current = getFinanceExpenseById(expenseId);
   if (!current) {
@@ -3516,48 +4857,7 @@ export function voidFinanceExpense(expenseId: number, reason: string, actor: Fin
 
 export function getFinanceExpenseById(expenseId: number): FinanceExpenseRecord | null {
   ensureFinanceSchema();
-  const row = getDb().prepare(
-    `
-      SELECT
-        e.id,
-        e.expense_number AS expenseNumber,
-        e.vendor_name AS vendorName,
-        e.date,
-        e.subcategory,
-        e.amount,
-        e.currency,
-        e.payment_method AS paymentMethod,
-        e.description,
-        e.notes,
-        e.status,
-        e.void_reason AS voidReason,
-        e.created_by_user_id AS createdBy,
-        u.full_name AS createdByName,
-        e.created_at AS createdAt
-      FROM finance_expenses e
-      JOIN portal_users u ON u.id = e.created_by_user_id
-      WHERE e.id = @expenseId
-      LIMIT 1
-    `,
-  ).get({ expenseId }) as
-    | {
-      id: number;
-      expenseNumber: string;
-      vendorName: string;
-      date: string;
-      subcategory: string | null;
-      amount: number;
-      currency: string;
-      paymentMethod: string;
-      description: string;
-      notes: string | null;
-      status: string;
-      voidReason: string | null;
-      createdBy: number;
-      createdByName: string | null;
-      createdAt: string;
-    }
-    | undefined;
+  const row = getExpenseRowById(getDb(), expenseId);
   if (!row) {
     return null;
   }
@@ -3565,7 +4865,7 @@ export function getFinanceExpenseById(expenseId: number): FinanceExpenseRecord |
 }
 
 export function listFinanceExpenses(filters?: {
-  status?: FinancePostedStatus;
+  status?: FinanceExpenseStatus;
   fromDate?: string;
   toDate?: string;
   subcategory?: string;
@@ -3591,45 +4891,621 @@ export function listFinanceExpenses(filters?: {
   }
   const rows = getDb().prepare(
     `
-      SELECT
-        e.id,
-        e.expense_number AS expenseNumber,
-        e.vendor_name AS vendorName,
-        e.date,
-        e.subcategory,
-        e.amount,
-        e.currency,
-        e.payment_method AS paymentMethod,
-        e.description,
-        e.notes,
-        e.status,
-        e.void_reason AS voidReason,
-        e.created_by_user_id AS createdBy,
-        u.full_name AS createdByName,
-        e.created_at AS createdAt
-      FROM finance_expenses e
-      JOIN portal_users u ON u.id = e.created_by_user_id
+      ${EXPENSE_SELECT_SQL}
       ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
       ORDER BY e.created_at DESC
     `,
+  ).all(params) as ExpenseRow[];
+  return rows.map(buildExpenseRecord);
+}
+
+export function listFinanceAuditExceptions(filters?: {
+  month?: string;
+  entityType?: FinanceAuditExceptionRecord["entityType"];
+  severity?: FinanceAuditExceptionRecord["severity"];
+  status?: FinanceAuditExceptionRecord["status"];
+  ruleCode?: string;
+  category?: FinanceCategory;
+  subcategory?: string;
+  paymentMethod?: FinanceExpenseRecord["paymentMethod"];
+  currency?: FinanceCurrency;
+  createdBy?: number;
+}) {
+  ensureFinanceSchema();
+  const where: string[] = [];
+  const params: Record<string, unknown> = {};
+  if (filters?.entityType) {
+    where.push("e.entity_type = @entityType");
+    params.entityType = filters.entityType;
+  }
+  if (filters?.severity) {
+    where.push("e.severity = @severity");
+    params.severity = filters.severity;
+  }
+  if (filters?.status) {
+    where.push("e.status = @status");
+    params.status = filters.status;
+  }
+  if (filters?.ruleCode) {
+    where.push("e.rule_code = @ruleCode");
+    params.ruleCode = filters.ruleCode;
+  }
+  if (filters?.category) {
+    where.push("expense.category = @category");
+    params.category = filters.category;
+  }
+  if (filters?.subcategory) {
+    where.push("expense.subcategory = @subcategory");
+    params.subcategory = filters.subcategory;
+  }
+  if (filters?.paymentMethod) {
+    where.push("expense.payment_method = @paymentMethod");
+    params.paymentMethod = filters.paymentMethod;
+  }
+  if (filters?.currency) {
+    where.push("e.currency = @currency");
+    params.currency = normalizeCurrency(filters.currency);
+  }
+  if (Number.isFinite(filters?.createdBy)) {
+    where.push("e.created_by_user_id = @createdBy");
+    params.createdBy = Number(filters?.createdBy);
+  }
+  if (filters?.month && /^\d{4}-\d{2}$/.test(filters.month)) {
+    where.push("substr(e.created_at, 1, 7) = @month");
+    params.month = filters.month;
+  }
+
+  const rows = getDb().prepare(
+    `
+      SELECT
+        e.id,
+        e.entity_type AS entityType,
+        e.entity_id AS entityId,
+        e.severity,
+        e.rule_code AS ruleCode,
+        e.message,
+        e.status,
+        e.amount,
+        e.currency,
+        e.created_by_user_id AS createdBy,
+        cu.full_name AS createdByName,
+        e.created_at AS createdAt,
+        e.resolved_at AS resolvedAt,
+        e.resolved_by_user_id AS resolvedBy,
+        ru.full_name AS resolvedByName,
+        e.resolution_notes AS resolutionNotes
+      FROM finance_audit_exceptions e
+      LEFT JOIN finance_expenses expense
+        ON e.entity_type = 'expense'
+       AND e.entity_id = expense.id
+      LEFT JOIN portal_users cu ON cu.id = e.created_by_user_id
+      LEFT JOIN portal_users ru ON ru.id = e.resolved_by_user_id
+      ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY
+        CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+        e.created_at DESC,
+        e.id DESC
+    `,
   ).all(params) as Array<{
     id: number;
-    expenseNumber: string;
-    vendorName: string;
-    date: string;
-    subcategory: string | null;
-    amount: number;
-    currency: string;
-    paymentMethod: string;
-    description: string;
-    notes: string | null;
-    status: string;
-    voidReason: string | null;
-    createdBy: number;
+    entityType: FinanceAuditExceptionRecord["entityType"];
+    entityId: number;
+    severity: FinanceAuditExceptionRecord["severity"];
+    ruleCode: string;
+    message: string;
+    status: FinanceAuditExceptionRecord["status"];
+    amount: number | null;
+    currency: string | null;
+    createdBy: number | null;
     createdByName: string | null;
     createdAt: string;
+    resolvedAt: string | null;
+    resolvedBy: number | null;
+    resolvedByName: string | null;
+    resolutionNotes: string | null;
   }>;
-  return rows.map(buildExpenseRecord);
+
+  return rows.map((row) => ({
+    id: row.id,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    severity: row.severity,
+    ruleCode: row.ruleCode,
+    message: row.message,
+    status: row.status,
+    amount: row.amount === null ? undefined : normalizeNumber(Number(row.amount)),
+    currency: row.currency ? normalizeCurrency(row.currency) : undefined,
+    createdBy: row.createdBy ?? undefined,
+    createdByName: row.createdByName || undefined,
+    createdAt: row.createdAt,
+    resolvedAt: row.resolvedAt || undefined,
+    resolvedBy: row.resolvedBy ?? undefined,
+    resolvedByName: row.resolvedByName || undefined,
+    resolutionNotes: row.resolutionNotes || undefined,
+  }));
+}
+
+export function updateFinanceAuditExceptionStatus(
+  exceptionId: number,
+  input: {
+    status: Extract<FinanceAuditExceptionRecord["status"], "acknowledged" | "resolved" | "overridden">;
+    notes?: string;
+  },
+  actor: FinanceActor,
+) {
+  ensureFinanceSchema();
+  const db = getDb();
+  const current = db.prepare(
+    `
+      SELECT
+        id,
+        entity_type AS entityType,
+        entity_id AS entityId,
+        rule_code AS ruleCode,
+        status
+      FROM finance_audit_exceptions
+      WHERE id = @id
+      LIMIT 1
+    `,
+  ).get({ id: exceptionId }) as
+    | {
+      id: number;
+      entityType: FinanceAuditExceptionRecord["entityType"];
+      entityId: number;
+      ruleCode: string;
+      status: FinanceAuditExceptionRecord["status"];
+    }
+    | undefined;
+  if (!current) {
+    throw new Error("Audit exception not found.");
+  }
+  if (current.status === "resolved" || current.status === "overridden") {
+    throw new Error("Audit exception is already closed.");
+  }
+  if (input.status === "overridden" && !actor.isSuperAdmin) {
+    throw new Error("Only Super Admin can override audit exceptions.");
+  }
+  if ((input.status === "resolved" || input.status === "overridden") && !String(input.notes || "").trim()) {
+    throw new Error("Resolution notes are required.");
+  }
+
+  db.prepare(
+    `
+      UPDATE finance_audit_exceptions
+      SET status = @status,
+          resolved_at = CASE WHEN @status = 'acknowledged' THEN resolved_at ELSE @resolvedAt END,
+          resolved_by_user_id = CASE WHEN @status = 'acknowledged' THEN resolved_by_user_id ELSE @resolvedBy END,
+          resolution_notes = CASE WHEN @notes = '' THEN resolution_notes ELSE @notes END
+      WHERE id = @id
+    `,
+  ).run({
+    id: exceptionId,
+    status: input.status,
+    resolvedAt: nowIso(),
+    resolvedBy: actor.userId,
+    notes: String(input.notes || "").trim(),
+  });
+
+  if (
+    current.entityType === "expense" &&
+    input.status === "overridden" &&
+    (current.ruleCode === "EXP-003" || current.ruleCode === "EXP-004")
+  ) {
+    db.prepare(
+      `
+        UPDATE finance_expenses
+        SET mismatch_override_reason = @reason,
+            mismatch_override_by = @byUser,
+            mismatch_override_at = @at,
+            status = CASE WHEN status = 'blocked_mismatch' THEN 'submitted' ELSE status END,
+            updated_at = @at
+        WHERE id = @expenseId
+      `,
+    ).run({
+      expenseId: current.entityId,
+      reason: String(input.notes || "").trim(),
+      byUser: actor.userId,
+      at: nowIso(),
+    });
+  }
+
+  appendAudit(
+    actor,
+    input.status === "acknowledged" ? "acknowledge" : input.status,
+    "finance_audit_exceptions",
+    exceptionId,
+    `${input.status} exception ${current.ruleCode} (${current.entityType}#${current.entityId})`,
+  );
+  const updated = listFinanceAuditExceptions().find((exception) => exception.id === exceptionId);
+  if (!updated) {
+    throw new Error("Failed to reload audit exception.");
+  }
+  return updated;
+}
+
+export function listFinanceReceiptRegistry(filters?: {
+  vendor?: string;
+  reference?: string;
+  fromDate?: string;
+  toDate?: string;
+  amount?: number;
+  currency?: FinanceCurrency;
+}) {
+  ensureFinanceSchema();
+  const where: string[] = [];
+  const params: Record<string, unknown> = {};
+  if (filters?.vendor) {
+    where.push("LOWER(er.vendor_name) LIKE LOWER(@vendor)");
+    params.vendor = `%${filters.vendor.trim()}%`;
+  }
+  if (filters?.reference) {
+    where.push("LOWER(COALESCE(er.reference_no, '')) LIKE LOWER(@reference)");
+    params.reference = `%${filters.reference.trim()}%`;
+  }
+  if (filters?.fromDate) {
+    where.push("er.receipt_date >= @fromDate");
+    params.fromDate = filters.fromDate;
+  }
+  if (filters?.toDate) {
+    where.push("er.receipt_date <= @toDate");
+    params.toDate = filters.toDate;
+  }
+  if (Number.isFinite(filters?.amount)) {
+    where.push("ABS(er.receipt_amount - @amount) < 0.01");
+    params.amount = normalizeNumber(Number(filters?.amount));
+  }
+  if (filters?.currency) {
+    where.push("er.currency = @currency");
+    params.currency = normalizeCurrency(filters.currency);
+  }
+
+  const rows = getDb().prepare(
+    `
+      SELECT
+        er.id,
+        er.expense_id AS expenseId,
+        e.expense_number AS expenseNumber,
+        e.status AS expenseStatus,
+        er.file_id AS fileId,
+        er.file_hash_sha256 AS fileHashSha256,
+        er.vendor_name AS vendorName,
+        er.receipt_date AS receiptDate,
+        er.receipt_amount AS receiptAmount,
+        er.currency,
+        er.reference_no AS referenceNo,
+        er.uploaded_by_user_id AS uploadedBy,
+        u.full_name AS uploadedByName,
+        er.uploaded_at AS uploadedAt,
+        f.file_name AS fileName
+      FROM finance_expense_receipts er
+      JOIN finance_expenses e ON e.id = er.expense_id
+      JOIN portal_users u ON u.id = er.uploaded_by_user_id
+      LEFT JOIN finance_files f ON f.id = er.file_id
+      ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY er.uploaded_at DESC, er.id DESC
+    `,
+  ).all(params) as Array<{
+    id: number;
+    expenseId: number;
+    expenseNumber: string;
+    expenseStatus: FinanceExpenseStatus;
+    fileId: number;
+    fileHashSha256: string;
+    vendorName: string;
+    receiptDate: string;
+    receiptAmount: number;
+    currency: string;
+    referenceNo: string | null;
+    uploadedBy: number;
+    uploadedByName: string | null;
+    uploadedAt: string;
+    fileName: string | null;
+  }>;
+
+  const hashRows = getDb().prepare(
+    `
+      SELECT
+        er.file_hash_sha256 AS fileHashSha256,
+        SUM(CASE WHEN e.status = 'posted' THEN 1 ELSE 0 END) AS postedCount
+      FROM finance_expense_receipts er
+      JOIN finance_expenses e ON e.id = er.expense_id
+      GROUP BY er.file_hash_sha256
+    `,
+  ).all() as Array<{ fileHashSha256: string; postedCount: number }>;
+  const postedUsage = new Map(hashRows.map((row) => [row.fileHashSha256, Number(row.postedCount || 0)]));
+
+  return rows.map<FinanceReceiptRegistryRecord>((row) => {
+    const flags: string[] = [];
+    if (!row.vendorName.trim() || !row.receiptDate.trim() || !Number.isFinite(row.receiptAmount) || row.receiptAmount <= 0) {
+      flags.push("missing_metadata");
+    }
+    if (Number(postedUsage.get(row.fileHashSha256) || 0) > 1) {
+      flags.push("reused_receipt");
+    }
+    return {
+      id: row.id,
+      expenseId: row.expenseId,
+      expenseNumber: row.expenseNumber,
+      expenseStatus: row.expenseStatus,
+      fileId: row.fileId,
+      fileUrl: getSignedFinanceFileUrl(row.fileId),
+      fileName: row.fileName || undefined,
+      fileHashSha256: row.fileHashSha256,
+      vendorName: row.vendorName,
+      receiptDate: row.receiptDate,
+      receiptAmount: normalizeNumber(Number(row.receiptAmount)),
+      currency: normalizeCurrency(row.currency),
+      referenceNo: row.referenceNo || undefined,
+      uploadedBy: row.uploadedBy,
+      uploadedByName: row.uploadedByName || undefined,
+      uploadedAt: row.uploadedAt,
+      flags,
+    };
+  });
+}
+
+export function listFinanceHighRiskTransactions(limit = 25) {
+  ensureFinanceSchema();
+  const safeLimit = Math.min(200, Math.max(1, Math.trunc(limit || 25)));
+  const rows = getDb().prepare(
+    `
+      SELECT
+        id,
+        entity_type AS entityType,
+        entity_id AS entityId,
+        risk_score AS riskScore,
+        signals_json AS signalsJson,
+        computed_at AS computedAt
+      FROM finance_txn_risk_scores
+      ORDER BY risk_score DESC, computed_at DESC
+      LIMIT @limit
+    `,
+  ).all({ limit: safeLimit }) as Array<{
+    id: number;
+    entityType: FinanceTxnRiskScoreRecord["entityType"];
+    entityId: number;
+    riskScore: number;
+    signalsJson: string;
+    computedAt: string;
+  }>;
+
+  return rows.map<FinanceTxnRiskScoreRecord>((row) => ({
+    id: row.id,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    riskScore: Math.max(0, Math.min(100, Math.trunc(Number(row.riskScore || 0)))),
+    signals: parseJsonArray(row.signalsJson),
+    computedAt: row.computedAt,
+  }));
+}
+
+function runLedgerAndIncomeIntegrityChecks(db: Database.Database, actor: FinanceActor) {
+  let created = 0;
+
+  const postedWithoutLedger = db.prepare(
+    `
+      SELECT e.id, e.expense_number AS expenseNumber, e.amount, e.currency
+      FROM finance_expenses e
+      LEFT JOIN finance_transactions_ledger l
+        ON l.source_type = 'expense'
+       AND l.source_id = e.id
+       AND l.posted_status = 'posted'
+      WHERE e.status = 'posted'
+        AND l.id IS NULL
+    `,
+  ).all() as Array<{ id: number; expenseNumber: string; amount: number; currency: string }>;
+  for (const row of postedWithoutLedger) {
+    const res = upsertFinanceAuditExceptionInternal(db, {
+      entityType: "expense",
+      entityId: row.id,
+      severity: "high",
+      ruleCode: "LED-001",
+      message: `Posted expense ${row.expenseNumber} has no posted money_out ledger entry.`,
+      amount: normalizeNumber(row.amount),
+      currency: normalizeCurrency(row.currency),
+      createdBy: actor.userId,
+    });
+    if (res.inserted) {
+      created += 1;
+    }
+  }
+
+  const voidWithoutLedgerVoid = db.prepare(
+    `
+      SELECT e.id, e.expense_number AS expenseNumber, e.amount, e.currency
+      FROM finance_expenses e
+      LEFT JOIN finance_transactions_ledger l
+        ON l.source_type = 'expense'
+       AND l.source_id = e.id
+       AND l.posted_status = 'void'
+      WHERE e.status = 'void'
+        AND l.id IS NULL
+    `,
+  ).all() as Array<{ id: number; expenseNumber: string; amount: number; currency: string }>;
+  for (const row of voidWithoutLedgerVoid) {
+    const res = upsertFinanceAuditExceptionInternal(db, {
+      entityType: "expense",
+      entityId: row.id,
+      severity: "high",
+      ruleCode: "LED-002",
+      message: `Voided expense ${row.expenseNumber} has no voided/reversal ledger entry.`,
+      amount: normalizeNumber(row.amount),
+      currency: normalizeCurrency(row.currency),
+      createdBy: actor.userId,
+    });
+    if (res.inserted) {
+      created += 1;
+    }
+  }
+
+  const issuedReceiptsNoLedger = db.prepare(
+    `
+      SELECT r.id, r.receipt_number AS receiptNumber, r.amount_received AS amountReceived, r.currency
+      FROM finance_receipts r
+      LEFT JOIN finance_transactions_ledger l
+        ON l.source_type = 'receipt'
+       AND l.source_id = r.id
+       AND l.posted_status = 'posted'
+      WHERE r.status = 'issued'
+        AND l.id IS NULL
+    `,
+  ).all() as Array<{ id: number; receiptNumber: string; amountReceived: number; currency: string }>;
+  for (const row of issuedReceiptsNoLedger) {
+    const res = upsertFinanceAuditExceptionInternal(db, {
+      entityType: "receipt",
+      entityId: row.id,
+      severity: "high",
+      ruleCode: "INC-001",
+      message: `Issued receipt ${row.receiptNumber} has no posted money_in ledger entry.`,
+      amount: normalizeNumber(row.amountReceived),
+      currency: normalizeCurrency(row.currency),
+      createdBy: actor.userId,
+    });
+    if (res.inserted) {
+      created += 1;
+    }
+  }
+
+  const paidInvoicesMismatch = db.prepare(
+    `
+      SELECT
+        i.id,
+        i.invoice_number AS invoiceNumber,
+        i.total,
+        i.currency,
+        COALESCE((
+          SELECT SUM(allocated_amount)
+          FROM finance_payment_allocations pa
+          JOIN finance_payments p ON p.id = pa.payment_id
+          WHERE pa.invoice_id = i.id
+            AND p.status = 'posted'
+        ), 0) AS allocatedAmount
+      FROM finance_invoices i
+      WHERE i.status = 'paid'
+    `,
+  ).all() as Array<{ id: number; invoiceNumber: string; total: number; currency: string; allocatedAmount: number }>;
+  for (const row of paidInvoicesMismatch) {
+    if (moneyCloseEnough(Number(row.allocatedAmount || 0), Number(row.total || 0))) {
+      continue;
+    }
+    const res = upsertFinanceAuditExceptionInternal(db, {
+      entityType: "invoice",
+      entityId: row.id,
+      severity: "high",
+      ruleCode: "INV-001",
+      message: `Paid invoice ${row.invoiceNumber} allocation sum does not equal invoice total.`,
+      amount: normalizeNumber(row.total),
+      currency: normalizeCurrency(row.currency),
+      createdBy: actor.userId,
+    });
+    if (res.inserted) {
+      created += 1;
+    }
+  }
+
+  return created;
+}
+
+export function listFinanceAuditComplianceChecks(): FinanceAuditComplianceCheckRecord[] {
+  ensureFinanceSchema();
+  const rows = getDb().prepare(
+    `
+      SELECT
+        rule_code AS ruleCode,
+        severity,
+        COUNT(*) AS openCount
+      FROM finance_audit_exceptions
+      WHERE status IN ('open', 'acknowledged')
+      GROUP BY rule_code, severity
+      ORDER BY
+        CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+        rule_code ASC
+    `,
+  ).all() as Array<{
+    ruleCode: string;
+    severity: FinanceAuditExceptionRecord["severity"];
+    openCount: number;
+  }>;
+
+  const titleByRule: Record<string, string> = {
+    "EXP-001": "Posted expense has no receipt",
+    "EXP-002": "Receipt metadata missing",
+    "EXP-003": "Receipt amount mismatch",
+    "EXP-004": "Receipt file reused",
+    "EXP-010": "Duplicate vendor+amount+date",
+    "EXP-011": "Outlier expense amount",
+    "EXP-012": "Cash over threshold",
+    "EXP-013": "Backdated entry",
+    "LED-001": "Posted expense missing ledger money_out",
+    "LED-002": "Voided expense missing void/reversal ledger",
+    "INC-001": "Issued receipt missing money_in ledger",
+    "INV-001": "Paid invoice allocation mismatch",
+  };
+
+  return rows.map((row) => ({
+    ruleCode: row.ruleCode,
+    title: titleByRule[row.ruleCode] || row.ruleCode,
+    severity: row.severity,
+    openCount: Number(row.openCount || 0),
+  }));
+}
+
+export function runFinanceAuditSweep(actor: FinanceActor): FinanceAuditRunSummary {
+  ensureFinanceSchema();
+  const db = getDb();
+  const checkedAt = nowIso();
+
+  const expenses = db.prepare(
+    `
+      ${EXPENSE_SELECT_SQL}
+      WHERE e.status IN ('submitted', 'posted', 'blocked_mismatch')
+      ORDER BY e.updated_at DESC, e.id DESC
+    `,
+  ).all() as ExpenseRow[];
+
+  let exceptionsCreated = 0;
+  let riskScoresUpdated = 0;
+  for (const expense of expenses) {
+    const receipts = listExpenseReceiptRows(db, expense.id).map(mapExpenseReceiptRow);
+    const signals = evaluateExpenseAuditSignals(db, expense, receipts);
+    const sync = syncExpenseAuditSignals(db, expense, signals, actor);
+    exceptionsCreated += sync.createdCount;
+    riskScoresUpdated += 1;
+
+    if (expense.status === "submitted" && signals.some((signal) => signal.ruleCode === "EXP-003" || signal.ruleCode === "EXP-004")) {
+      db.prepare(
+        `
+          UPDATE finance_expenses
+          SET status = 'blocked_mismatch',
+              updated_at = @updatedAt
+          WHERE id = @expenseId
+            AND status = 'submitted'
+        `,
+      ).run({
+        expenseId: expense.id,
+        updatedAt: checkedAt,
+      });
+    }
+  }
+
+  const createdIntegrity = runLedgerAndIncomeIntegrityChecks(db, actor);
+  exceptionsCreated += createdIntegrity;
+  appendAudit(
+    actor,
+    "run_audit",
+    "finance_audit_exceptions",
+    0,
+    `Ran finance audit sweep. Expenses checked: ${expenses.length}.`,
+  );
+
+  return {
+    checkedAt,
+    checkedExpenses: expenses.length,
+    checkedLedgerEntries: listFinanceLedgerTransactions().length,
+    checkedIncomeRecords: listFinanceReceipts().length + listFinanceInvoices().length,
+    exceptionsCreated,
+    riskScoresUpdated,
+  };
 }
 
 export async function createFinanceFileRecord(

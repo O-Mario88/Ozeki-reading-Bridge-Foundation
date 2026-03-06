@@ -25,7 +25,7 @@ export function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualP
     const levelColors: Record<string, string> = {
         "Non-reader": "#fee2e2", // red-100
         "Emergent": "#fef3c7",    // amber-100
-        "Transitional": "#FFF0E8", // orange-100
+        "Transitional": "#FFF4EC", // orange-100
         "Fluent": "#dbeafe",      // blue-100
         "Advanced": "#f3e8ff",    // purple-100
     };
@@ -33,7 +33,7 @@ export function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualP
     const levelTextColors: Record<string, string> = {
         "Non-reader": "#dc2626", // red-600
         "Emergent": "#d97706",    // amber-600
-        "Transitional": "#FF4D00", // orange-600
+        "Transitional": "#FA7D15", // orange-600
         "Fluent": "#2563eb",      // blue-600
         "Advanced": "#7c3aed",    // purple-600
     };
@@ -184,7 +184,7 @@ export function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualP
                     </div>
                     <div style={{ width: "1px", height: "24px", background: "rgba(0,0,0,0.1)" }}></div>
                     <div>
-                        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FF4D00" }}>
+                        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FA7D15" }}>
                             {data.movement.n_matched}
                         </div>
                         <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#666" }}>MATCHED LEARNERS</div>

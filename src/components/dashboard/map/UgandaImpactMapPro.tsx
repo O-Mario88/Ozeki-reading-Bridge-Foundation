@@ -44,10 +44,10 @@ type MapSelection = {
 };
 
 type MapTarget = {
-  level: "country" | "subregion" | "district";
+  level: "country" | "region" | "subregion" | "district";
   id: string;
   label: string;
-  chip: "Country" | "Sub-region" | "District";
+  chip: "Country" | "Region" | "Sub-region" | "District";
   profileHref?: string;
 };
 
@@ -63,6 +63,9 @@ function pathForTarget(target: MapTarget, periodLabel: string) {
   const period = encodeURIComponent(periodLabel);
   if (target.level === "country") {
     return `/impact/country?period=${period}`;
+  }
+  if (target.level === "region") {
+    return `/impact/region/${encodeURIComponent(target.id)}?period=${period}`;
   }
   if (target.level === "subregion") {
     return `/impact/subregion/${encodeURIComponent(target.id)}?period=${period}`;
@@ -139,6 +142,15 @@ function getTargetFromSelection(selection: MapSelection): MapTarget {
       label: selection.subRegion,
       chip: "Sub-region",
       profileHref: `/sub-regions/${encodeURIComponent(selection.subRegion)}`,
+    };
+  }
+  if (selection.region) {
+    return {
+      level: "region",
+      id: selection.region,
+      label: selection.region,
+      chip: "Region",
+      profileHref: `/regions/${encodeURIComponent(selection.region)}`,
     };
   }
   return {

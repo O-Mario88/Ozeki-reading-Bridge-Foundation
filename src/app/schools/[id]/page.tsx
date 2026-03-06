@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicImpactAggregate, listPublishedStoriesBySchool, listPublishedAnthologiesBySchool } from "@/lib/db";
+import { TeacherEvaluationPerformanceCards } from "@/components/impact/TeacherEvaluationPerformanceCards";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,7 @@ export default async function SchoolPage({ params }: { params: Params }) {
 
           <article className="card" style={{ padding: "1.2rem" }}>
             <h3 style={{ marginTop: 0 }}>Learning Outcomes</h3>
-            <div className="impact-domain-mini-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+            <div className="impact-domain-mini-grid">
               <DomainCard
                 title="Letter Names"
                 baseline={aggregate.outcomes.letterNames.baseline}
@@ -189,6 +190,11 @@ export default async function SchoolPage({ params }: { params: Params }) {
               Last updated: {new Date(aggregate.meta.lastUpdated).toLocaleString()}
             </p>
           </article>
+
+          <TeacherEvaluationPerformanceCards
+            scopeLabel={aggregate.scope.name}
+            teachingQuality={aggregate.teachingQuality}
+          />
 
           {/* 1001 Story Library Section */}
           {(() => {

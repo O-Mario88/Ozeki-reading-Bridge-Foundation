@@ -28,7 +28,7 @@ const portalNavItems: PortalNavItem[] = [
   { href: "/portal/graduation-queue", label: "Graduation Queue", staffOnly: true },
   { href: "/portal/support", label: "Support Tickets", staffOnly: true },
   { href: "/portal/reports", label: "Reports", roles: ["Staff", "Volunteer", "Admin"] },
-  { href: "/portal/finance", label: "Finance", superAdminOnly: true },
+  { href: "/portal/finance", label: "Finance", roles: ["Admin"] },
   { href: "/portal/superadmin", label: "Super Admin", superAdminOnly: true },
 ];
 
@@ -58,7 +58,7 @@ export function PortalShell({
     if (item.staffOnly && user.role === "Volunteer") {
       return false;
     }
-    if (item.roles && !item.roles.includes(user.role)) {
+    if (item.roles && !item.roles.includes(user.role) && !user.isSuperAdmin) {
       return false;
     }
     return true;
@@ -66,7 +66,7 @@ export function PortalShell({
 
   return (
     <section className="section portal-section">
-      <div className={`container portal-shell ${shellClassName ?? ""}`.trim()}>
+      <div className={`container portal-shell portal-shell-compact ${shellClassName ?? ""}`.trim()}>
         <header className="portal-header card">
           <div className="portal-header-top">
             <div>

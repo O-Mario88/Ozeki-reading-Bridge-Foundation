@@ -1,7 +1,7 @@
 import { PortalFinanceReconciliationManager } from "@/components/portal/finance/PortalFinanceReconciliationManager";
 import { FinanceShell } from "@/components/portal/finance/FinanceShell";
 import { listStatementLines, listFinanceLedgerTransactions } from "@/lib/finance-db";
-import { requirePortalSuperAdminUser } from "@/lib/portal-auth";
+import { requirePortalFinanceReceiptEditorUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 export default async function PortalFinanceReconciliationPage() {
-    const user = await requirePortalSuperAdminUser();
+    const user = await requirePortalFinanceReceiptEditorUser();
     const lines = listStatementLines();
     const ledger = listFinanceLedgerTransactions({});
 

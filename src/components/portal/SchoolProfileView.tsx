@@ -400,7 +400,7 @@ export function SchoolProfileView({
 
         .graduation-alert-banner {
           margin: 0 1.5rem 1.5rem;
-          border-left: 4px solid #FF4D00;
+          border-left: 4px solid #FA7D15;
           display: flex;
           justify-content: space-between;
           gap: 1rem;
@@ -553,7 +553,7 @@ export function SchoolProfileView({
         
         .icon-wrapper.purple { background-color: #f3e8ff; color: #9333ea; }
         .icon-wrapper.blue { background-color: #dbeafe; color: #2563eb; }
-        .icon-wrapper.green { background-color: #FFF0E8; color: #FF4D00; }
+        .icon-wrapper.green { background-color: #FFF4EC; color: #FA7D15; }
         .icon-wrapper.orange { background-color: #ffedd5; color: #ea580c; }
         .icon-wrapper.red { background-color: #fee2e2; color: #dc2626; }
         .icon-wrapper.teal { background-color: #ccfbf1; color: #0d9488; }

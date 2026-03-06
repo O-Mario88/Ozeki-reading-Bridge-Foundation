@@ -64,13 +64,13 @@ export function TrainingShellSidebar() {
             >
                 <Icon
                     className={`w-5 h-5 mr-3 transition-colors \${
-                    isActive ? "text-[#FF4D00]" : "text-gray-400 group-hover:text-gray-600"
+                    isActive ? "text-[#FA7D15]" : "text-gray-400 group-hover:text-gray-600"
                 }`}
                 strokeWidth={isActive ? 2.5 : 2}
               />
                 {item.label}
                 {isActive && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#FF4D00]" />
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#FA7D15]" />
                 )}
             </Link>
             );

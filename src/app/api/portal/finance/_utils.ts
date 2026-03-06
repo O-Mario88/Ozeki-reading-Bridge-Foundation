@@ -4,6 +4,7 @@ import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 export type FinanceApiActor = {
   userId: number;
   userName: string;
+  isSuperAdmin: boolean;
 };
 
 export async function requireFinanceSuperAdmin() {
@@ -25,11 +26,12 @@ export async function requireFinanceSuperAdmin() {
     actor: {
       userId: user.id,
       userName: user.fullName,
+      isSuperAdmin: user.isSuperAdmin,
     } as FinanceApiActor,
   };
 }
 
-export async function requireFinanceReceiptEditor() {
+export async function requireFinanceEditor() {
   const user = await getAuthenticatedPortalUser();
   if (!user) {
     return {
@@ -48,9 +50,12 @@ export async function requireFinanceReceiptEditor() {
     actor: {
       userId: user.id,
       userName: user.fullName,
+      isSuperAdmin: user.isSuperAdmin,
     } as FinanceApiActor,
   };
 }
+
+export const requireFinanceReceiptEditor = requireFinanceEditor;
 
 export function csvHeaders(fileName: string) {
   return {

@@ -1,6 +1,12 @@
-import { getImpactDrilldownData, calculateFidelityScore, getLearningGainsData } from "@/lib/db";
+import {
+    getImpactDrilldownData,
+    calculateFidelityScore,
+    getLearningGainsData,
+    getPublicImpactAggregate,
+} from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { TeacherEvaluationPerformanceCards } from "@/components/impact/TeacherEvaluationPerformanceCards";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +32,14 @@ export default async function SubRegionPage({ params }: { params: Params }) {
     const drilldown = getImpactDrilldownData("sub_region", name);
     const fidelity = calculateFidelityScore("region", name); // Fallback to region for now if sub_region not fully supported in calculateFidelityScore
     const gains = getLearningGainsData("region", name);
+    const aggregate = getPublicImpactAggregate("subregion", name, "FY");
 
     return (
         <>
             <section className="page-hero">
                 <div className="container">
                     <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
-                        <Link href="/impact/dashboard">Dashboard</Link>
+                        <Link href="/impact">Dashboard</Link>
                         <span aria-hidden>›</span>
                         <span>{name} Sub-Region</span>
                     </nav>
@@ -47,7 +54,7 @@ export default async function SubRegionPage({ params }: { params: Params }) {
 
                     {/* KPI Cards */}
                     <div className="impact-dash-kpi-grid">
-                        <article className="impact-dash-kpi" style={{ "--kpi-accent": "#E64500" } as React.CSSProperties}>
+                        <article className="impact-dash-kpi" style={{ "--kpi-accent": "#D96A0F" } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Schools</span>
                                 <span className="impact-dash-kpi-value">{drilldown.kpis.schoolsSupported}</span>
@@ -60,7 +67,7 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{
-                            "--kpi-accent": fidelity.band === "Strong" ? "#FF4D00" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
+                            "--kpi-accent": fidelity.band === "Strong" ? "#FA7D15" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
                         } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Fidelity ({fidelity.band})</span>
@@ -69,7 +76,7 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                         </article>
                         {gains.schoolImprovementIndex !== null && (
                             <article className="impact-dash-kpi" style={{
-                                "--kpi-accent": gains.schoolImprovementIndex > 0 ? "#FF4D00" : "#dc2626",
+                                "--kpi-accent": gains.schoolImprovementIndex > 0 ? "#FA7D15" : "#dc2626",
                             } as React.CSSProperties}>
                                 <div className="impact-dash-kpi-body">
                                     <span className="impact-dash-kpi-label">Improvement Index</span>
@@ -88,10 +95,10 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                             <div key={d.driver} style={{ marginBottom: "0.75rem" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
                                     <span style={{ fontWeight: 600 }}>{d.label}</span>
-                                    <span style={{ fontWeight: 700, color: d.score >= 75 ? "#FF4D00" : d.score >= 50 ? "#e8a317" : "#dc2626" }}>{d.score}%</span>
+                                    <span style={{ fontWeight: 700, color: d.score >= 75 ? "#FA7D15" : d.score >= 50 ? "#e8a317" : "#dc2626" }}>{d.score}%</span>
                                 </div>
                                 <div style={{ height: "6px", borderRadius: "4px", background: "#e8e8e8", overflow: "hidden", marginTop: "0.15rem" }}>
-                                    <div style={{ width: `${d.score}%`, height: "100%", borderRadius: "4px", background: d.score >= 75 ? "#FF4D00" : d.score >= 50 ? "#e8a317" : "#dc2626" }} />
+                                    <div style={{ width: `${d.score}%`, height: "100%", borderRadius: "4px", background: d.score >= 75 ? "#FA7D15" : d.score >= 50 ? "#e8a317" : "#dc2626" }} />
                                 </div>
                                 <div style={{ fontSize: "0.72rem", color: "#999" }}>{d.detail}</div>
                             </div>
@@ -123,6 +130,11 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                             ))}
                         </div>
                     </div>
+
+                    <TeacherEvaluationPerformanceCards
+                        scopeLabel={`${name} Sub-region`}
+                        teachingQuality={aggregate.teachingQuality}
+                    />
 
                     <p className="note-box impact-compliance-note">
                         This page shows aggregated sub-region-level data only.

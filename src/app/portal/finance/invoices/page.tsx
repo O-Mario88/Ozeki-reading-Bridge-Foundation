@@ -1,7 +1,7 @@
 import { PortalFinanceInvoicesManager } from "@/components/portal/finance/PortalFinanceInvoicesManager";
 import { FinanceShell } from "@/components/portal/finance/FinanceShell";
 import { listFinanceContacts, listFinanceInvoices } from "@/lib/finance-db";
-import { requirePortalSuperAdminUser } from "@/lib/portal-auth";
+import { requirePortalFinanceReceiptEditorUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 export default async function PortalFinanceInvoicesPage() {
-  const user = await requirePortalSuperAdminUser();
+  const user = await requirePortalFinanceReceiptEditorUser();
   const invoices = listFinanceInvoices();
   const contacts = listFinanceContacts();
 

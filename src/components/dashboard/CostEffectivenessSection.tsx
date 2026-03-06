@@ -22,7 +22,7 @@ function CostBreakdownBar({ breakdown }: { breakdown: CostEffectivenessData["bre
     if (total === 0) return <div style={{ fontSize: "0.85rem", color: "#999", fontStyle: "italic" }}>No cost data recorded yet</div>;
 
     const catColors: Record<string, string> = {
-        transport: "#3b82f6", meals: "#f59e0b", printing: "#8b5cf6", staff_time: "#FF4D00",
+        transport: "#3b82f6", meals: "#f59e0b", printing: "#8b5cf6", staff_time: "#FA7D15",
         materials: "#ec4899", training: "#06b6d4", assessment: "#f97316", other: "#6b7280",
     };
 

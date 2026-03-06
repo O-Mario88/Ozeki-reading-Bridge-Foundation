@@ -12,16 +12,17 @@ type FinanceShellProps = {
 };
 
 const financeNavItems = [
-    { href: "/portal/finance", label: "Dashboard", icon: "📊" },
-    { href: "/portal/finance/invoices", label: "Invoices", icon: "📄" },
-    { href: "/portal/finance/receipts", label: "Receipts", icon: "🧾" },
-    { href: "/portal/finance/money-in", label: "Money In", icon: "💰" },
-    { href: "/portal/finance/money-out", label: "Money Out", icon: "💸" },
-    { href: "/portal/finance/reconciliation", label: "Reconciliation", icon: "🔄" },
-    { href: "/portal/finance/budgets", label: "Budgets", icon: "📈" },
-    { href: "/portal/finance/statements", label: "Statements", icon: "📋" },
-    { href: "/portal/finance/transparency", label: "Transparency", icon: "🔍" },
-    { href: "/portal/finance/settings", label: "Settings", icon: "⚙️" },
+    { href: "/portal/finance", label: "Dashboard" },
+    { href: "/portal/finance/invoices", label: "Invoices" },
+    { href: "/portal/finance/receipts", label: "Receipts" },
+    { href: "/portal/finance/money-in", label: "Money In" },
+    { href: "/portal/finance/money-out", label: "Money Out" },
+    { href: "/portal/finance/reconciliation", label: "Reconciliation" },
+    { href: "/portal/finance/audit-center", label: "Audit Center" },
+    { href: "/portal/finance/budgets", label: "Budgets" },
+    { href: "/portal/finance/statements", label: "Statements" },
+    { href: "/portal/finance/transparency", label: "Transparency" },
+    { href: "/portal/finance/settings", label: "Settings" },
 ];
 
 function getUserInitials(name: string) {
@@ -48,8 +49,8 @@ export function FinanceShell({ user, activeHref, title, children }: FinanceShell
             {/* Sidebar */}
             <aside className={`finance-sidebar ${sidebarOpen ? "open" : ""}`} aria-label="Finance navigation">
                 <div className="finance-sidebar-brand">
-                    <h2>Ozeki Accounts</h2>
-                    <p>Finance Management</p>
+                    <h2>Finance</h2>
+                    <p>Ozeki Reading Bridge Foundation</p>
                 </div>
 
                 <nav className="finance-sidebar-nav">
@@ -60,7 +61,6 @@ export function FinanceShell({ user, activeHref, title, children }: FinanceShell
                             className={`finance-nav-item ${item.href === activeHref ? "active" : ""}`}
                             onClick={() => setSidebarOpen(false)}
                         >
-                            <span className="finance-nav-icon" aria-hidden="true">{item.icon}</span>
                             {item.label}
                         </Link>
                     ))}
@@ -90,13 +90,6 @@ export function FinanceShell({ user, activeHref, title, children }: FinanceShell
                     </div>
 
                     <div className="finance-topbar-right">
-                        <div className="finance-search" role="search">
-                            <span aria-hidden="true">🔍</span>
-                            <input type="text" placeholder="Search finance…" aria-label="Search finance" />
-                        </div>
-                        <button type="button" className="finance-topbar-icon-btn" aria-label="Notifications">
-                            🔔
-                        </button>
                         <div
                             className="finance-topbar-avatar"
                             title={user.fullName}

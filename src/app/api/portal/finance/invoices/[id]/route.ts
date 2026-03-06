@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  deleteFinanceInvoiceDraft,
   getFinanceInvoiceById,
   updateFinanceInvoiceDraft,
   voidFinanceInvoice,
 } from "@/lib/finance-db";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
-import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 const patchSchema = z.object({
   contactId: z.coerce.number().int().positive().optional(),
@@ -35,7 +36,7 @@ export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireFinanceSuperAdmin();
+  const auth = await requireFinanceEditor();
   if (auth.error) {
     return auth.error;
   }
@@ -55,7 +56,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireFinanceSuperAdmin();
+  const auth = await requireFinanceEditor();
   if (auth.error || !auth.actor) {
     return auth.error;
   }
@@ -84,7 +85,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireFinanceSuperAdmin();
+  const auth = await requireFinanceEditor();
   if (auth.error || !auth.actor) {
     return auth.error;
   }
@@ -96,8 +97,16 @@ export async function DELETE(
 
   try {
     const parsed = voidSchema.parse(await request.json());
+    const current = getFinanceInvoiceById(invoiceId);
+    if (!current) {
+      return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
+    }
+    if (current.status === "draft") {
+      const deleted = deleteFinanceInvoiceDraft(invoiceId, parsed.reason, auth.actor);
+      return NextResponse.json({ deleted });
+    }
     const invoice = voidFinanceInvoice(invoiceId, parsed.reason, auth.actor);
-    return NextResponse.json({ invoice });
+    return NextResponse.json({ invoice, deleted: null });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });

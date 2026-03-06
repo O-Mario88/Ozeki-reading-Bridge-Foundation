@@ -14,8 +14,8 @@
     --fin-primary: #2563EB;
     --fin-primary-light: #EFF6FF;
     --fin-primary-dark: #1D4ED8;
-    --fin-success: #FF4D00;
-    --fin-success-bg: #FFF7F2;
+    --fin-success: #FA7D15;
+    --fin-success-bg: #FFF9F5;
     --fin-danger: #DC2626;
     --fin-danger-bg: #FEF2F2;
     --fin-warning: #D97706;
@@ -605,6 +605,298 @@
     gap: 8px;
 }
 
+/* ── Compact Finance Overrides ── */
+.finance-shell .card {
+    border: 1px solid var(--fin-border);
+    box-shadow: none;
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+.finance-shell .button {
+    min-height: 32px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    line-height: 1.2;
+}
+
+.finance-shell .button.button-sm {
+    min-height: 30px;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+}
+
+.finance-shell .button.button-danger {
+    background: #fff1f2;
+    color: #9f1239;
+    border-color: #fecdd3;
+}
+
+.finance-shell .button.button-danger:hover {
+    background: #ffe4e6;
+}
+
+.finance-shell .portal-grid {
+    gap: 14px;
+}
+
+.finance-shell .portal-kpis {
+    gap: 10px;
+}
+
+.finance-shell .portal-kpi-card {
+    padding: 12px 14px;
+    border-radius: 12px;
+    box-shadow: none;
+    border: 1px solid var(--fin-border);
+}
+
+.finance-shell .portal-kpi-card strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.finance-shell .portal-muted,
+.finance-shell .portal-field-help {
+    font-size: 12px;
+}
+
+.finance-shell .portal-danger-text {
+    color: #b42318;
+}
+
+.finance-shell .table-wrap table td,
+.finance-shell .table-wrap table th {
+    font-variant-numeric: tabular-nums;
+}
+
+.finance-table-compact {
+    border: 1px solid var(--fin-border);
+    border-radius: 10px;
+    overflow: auto;
+    max-height: 540px;
+}
+
+.finance-table-compact table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.finance-table-compact thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fbfcfe;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fin-text-muted);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--fin-border);
+}
+
+.finance-table-compact tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 12.5px;
+}
+
+.finance-row-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.finance-row-danger {
+    color: #b42318;
+}
+
+.finance-status-tag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    text-transform: capitalize;
+    border: 1px solid transparent;
+}
+
+.finance-status-draft {
+    background: #f8fafc;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+
+.finance-status-sent,
+.finance-status-issued,
+.finance-status-posted,
+.finance-status-partially_paid,
+.finance-status-submitted,
+.finance-status-resolved {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.finance-status-paid {
+    background: #fff7ed;
+    color: #c2410c;
+    border-color: #fed7aa;
+}
+
+.finance-status-overdue,
+.finance-status-void,
+.finance-status-high,
+.finance-status-blocked_mismatch {
+    background: #fef2f2;
+    color: #b42318;
+    border-color: #fecaca;
+}
+
+.finance-status-medium,
+.finance-status-open,
+.finance-status-acknowledged {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+.finance-status-low,
+.finance-status-overridden {
+    background: #f0fdf4;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+
+.finance-search-input {
+    width: 220px;
+    max-width: 100%;
+    border: 1px solid var(--fin-border);
+    border-radius: 10px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+    background: #fff;
+}
+
+.finance-search-input:focus {
+    outline: none;
+    border-color: var(--fin-primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.finance-filter-popover {
+    position: relative;
+}
+
+.finance-filter-popover > summary {
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid var(--fin-border);
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    color: var(--fin-text-secondary);
+    background: #fff;
+}
+
+.finance-filter-popover > summary::-webkit-details-marker {
+    display: none;
+}
+
+.finance-filter-popover-body {
+    position: absolute;
+    top: 36px;
+    left: 0;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--fin-border);
+    border-radius: 10px;
+    box-shadow: var(--fin-shadow-md);
+    padding: 10px;
+    z-index: 10;
+}
+
+.finance-filter-popover-body label {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.finance-filter-popover-body select {
+    height: 30px;
+    border: 1px solid var(--fin-border);
+    border-radius: 8px;
+    padding: 0 8px;
+    font-size: 12px;
+}
+
+.finance-dashboard-compact {
+    gap: 14px;
+}
+
+.finance-head-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    border: 1px solid var(--fin-border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #fff;
+}
+
+.finance-head-compact h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.finance-head-compact p {
+    margin: 4px 0 0;
+    color: var(--fin-text-muted);
+    font-size: 12px;
+}
+
+.finance-head-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.finance-kpis-compact {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 0;
+}
+
+.finance-kpi-card-compact {
+    padding: 12px 14px;
+    border-radius: 12px;
+}
+
+.finance-kpi-value-compact {
+    font-size: 20px;
+}
+
+.finance-dashboard-two-column {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+}
+
+.finance-right-stack {
+    display: grid;
+    gap: 14px;
+}
+
+.finance-table-empty {
+    padding: 14px;
+    color: var(--fin-text-muted);
+    font-size: 12px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1200px) {
     .finance-kpis {
@@ -612,6 +904,10 @@
     }
 
     .finance-dashboard-bottom {
+        grid-template-columns: 1fr;
+    }
+
+    .finance-dashboard-two-column {
         grid-template-columns: 1fr;
     }
 }
@@ -662,5 +958,13 @@
     .finance-table-card tbody td {
         padding: 10px 12px;
         font-size: 13px;
+    }
+
+    .finance-head-compact {
+        flex-direction: column;
+    }
+
+    .finance-search-input {
+        width: 100%;
     }
 }

@@ -444,7 +444,7 @@ export default function TransparencyPage() {
               </ul>
             </article>
             <article className="card bg-gray-50 border-gray-200 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-[#FF4D00]"></div>
+              <div className="absolute top-0 left-0 w-1 h-full bg-[#FA7D15]"></div>
               <h3 className="text-[#00155F] flex items-center">
                 Financial Transparency Hub
               </h3>

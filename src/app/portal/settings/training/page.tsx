@@ -157,7 +157,7 @@ export default function TrainingSettingsPage() {
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-[#FF4D00] hover:bg-[#E64500] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF4D00] disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-[#FA7D15] hover:bg-[#D96A0F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FA7D15] disabled:opacity-50 transition-colors"
                 >
                     {saving ? (
                         <span className="animate-pulse">Saving...</span>

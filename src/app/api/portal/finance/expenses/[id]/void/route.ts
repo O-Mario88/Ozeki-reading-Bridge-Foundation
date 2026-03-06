@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import { voidFinanceExpense } from "@/lib/finance-db";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireFinanceSuperAdmin();
+  const auth = await requireFinanceEditor();
   if (auth.error || !auth.actor) {
     return auth.error;
   }
@@ -37,4 +37,3 @@ export async function POST(
     );
   }
 }
-

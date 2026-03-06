@@ -74,7 +74,7 @@ function AnthologyCard({ anthology }: { anthology: AnthologyRecord }) {
                     <img src={anthology.coverImagePath} alt="" loading="lazy" />
                 </div>
             ) : (
-                <div className="story-card-cover story-card-cover-placeholder" style={{ backgroundColor: "#FFF7F2", color: "#CC3D00" }}>
+                <div className="story-card-cover story-card-cover-placeholder" style={{ backgroundColor: "#FFF9F5", color: "#C35D0E" }}>
                     <span>📚</span>
                 </div>
             )}

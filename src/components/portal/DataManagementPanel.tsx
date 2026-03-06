@@ -95,7 +95,7 @@ export function DataManagementPanel() {
                         </div>
                         <div className="card" style={{ flex: 1, minWidth: 180, textAlign: "center" }}>
                             <p className="portal-muted" style={{ margin: 0, fontSize: "0.85rem" }}>Total Rows</p>
-                            <p style={{ fontSize: "1.8rem", fontWeight: 700, margin: "0.25rem 0", color: totalRows > 0 ? "var(--color-warning, #e67e22)" : "var(--color-success, #FF4D00)" }}>
+                            <p style={{ fontSize: "1.8rem", fontWeight: 700, margin: "0.25rem 0", color: totalRows > 0 ? "var(--color-warning, #e67e22)" : "var(--color-success, #FA7D15)" }}>
                                 {totalRows.toLocaleString()}
                             </p>
                         </div>

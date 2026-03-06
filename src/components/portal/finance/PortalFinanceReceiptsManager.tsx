@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { FloatingSurface } from "@/components/FloatingSurface";
+import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import type { FinanceContactRecord, FinanceInvoiceRecord, FinanceReceiptRecord } from "@/lib/types";
@@ -32,6 +33,9 @@ export function PortalFinanceReceiptsManager({
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | FinanceReceiptRecord["status"]>("all");
+  const [destructiveTarget, setDestructiveTarget] = useState<FinanceReceiptRecord | null>(null);
   const [form, setForm] = useState({
     contactId: "",
     category: "Donation",
@@ -44,6 +48,8 @@ export function PortalFinanceReceiptsManager({
     relatedInvoiceId: "",
     description: "",
     notes: "",
+    issueNow: true,
+    sendEmail: false,
   });
 
   const totals = useMemo(() => {
@@ -60,6 +66,28 @@ export function PortalFinanceReceiptsManager({
     );
   }, [receipts]);
 
+  const filteredReceipts = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return receipts.filter((item) => {
+      if (statusFilter !== "all" && item.status !== statusFilter) {
+        return false;
+      }
+      if (!needle) {
+        return true;
+      }
+      const haystack = [
+        item.receiptNumber,
+        item.receivedFrom,
+        item.category,
+        item.status,
+        item.referenceNo || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [receipts, search, statusFilter]);
+
   function resetForm() {
     setForm({
       contactId: "",
@@ -73,6 +101,8 @@ export function PortalFinanceReceiptsManager({
       relatedInvoiceId: "",
       description: "",
       notes: "",
+      issueNow: true,
+      sendEmail: false,
     });
   }
 
@@ -101,6 +131,8 @@ export function PortalFinanceReceiptsManager({
           relatedInvoiceId: form.relatedInvoiceId ? Number(form.relatedInvoiceId) : undefined,
           description: trimmedDescription || undefined,
           notes: form.notes || undefined,
+          issueNow: form.issueNow,
+          sendEmail: form.issueNow ? form.sendEmail : false,
         }),
       });
       const data = await response.json();
@@ -110,7 +142,11 @@ export function PortalFinanceReceiptsManager({
       setReceipts((prev) => [data.receipt as FinanceReceiptRecord, ...prev]);
       resetForm();
       setOpen(false);
-      setStatusMessage("Receipt draft created.");
+      setStatusMessage(
+        data.issuedNow
+          ? (data.email ? `Receipt issued and emailed (${data.email.status || "processed"}).` : "Receipt issued and income recorded.")
+          : "Receipt draft created.",
+      );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Failed to create receipt.");
     } finally {
@@ -195,29 +231,35 @@ export function PortalFinanceReceiptsManager({
     }
   }
 
-  async function handleVoid(receiptId: number) {
-    const reason = window.prompt("Enter void reason:");
-    if (!reason) {
+  async function handleDeleteOrVoid(reason: string) {
+    if (!destructiveTarget) {
       return;
     }
+    const target = destructiveTarget;
     setSaving(true);
     setStatusMessage("");
     try {
-      const response = await fetch(`/api/portal/finance/receipts/${receiptId}/void`, {
-        method: "POST",
+      const response = await fetch(`/api/portal/finance/receipts/${target.id}`, {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to void receipt.");
+        throw new Error(data.error || "Failed to delete/void receipt.");
       }
-      setReceipts((prev) =>
-        prev.map((item) => (item.id === receiptId ? (data.receipt as FinanceReceiptRecord) : item)),
-      );
-      setStatusMessage("Receipt voided.");
+      if (data.deleted) {
+        setReceipts((prev) => prev.filter((item) => item.id !== target.id));
+        setStatusMessage("Draft receipt deleted.");
+      } else if (data.receipt) {
+        setReceipts((prev) =>
+          prev.map((item) => (item.id === target.id ? (data.receipt as FinanceReceiptRecord) : item)),
+        );
+        setStatusMessage("Receipt voided.");
+      }
+      setDestructiveTarget(null);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Failed to void receipt.");
+      setStatusMessage(error instanceof Error ? error.message : "Failed to delete/void receipt.");
     } finally {
       setSaving(false);
     }
@@ -242,19 +284,54 @@ export function PortalFinanceReceiptsManager({
 
       <section className="card">
         <h2>Receipts</h2>
+        <p className="portal-muted">
+          Use this as your income entry form. Issued receipts are automatically posted to Money In and appear in statements/reports.
+        </p>
         <div className="action-row portal-form-actions">
-          <button type="button" className="button" onClick={() => setOpen(true)}>+ New Receipt</button>
-          <a className="button button-ghost" href="/api/portal/finance/receipts?format=csv">Export CSV</a>
+          <button type="button" className="button button-sm" onClick={() => setOpen(true)}>+ New Receipt</button>
+          <a className="button button-ghost button-sm" href="/api/portal/finance/receipts?format=csv">Export CSV</a>
         </div>
         {statusMessage ? <p className="portal-muted">{statusMessage}</p> : null}
       </section>
 
       <section className="card">
         <h2>Receipt Register</h2>
-        {receipts.length === 0 ? (
-          <p>No receipts yet.</p>
+        <div className="finance-list-toolbar">
+          <div className="finance-list-toolbar-left">
+            <input
+              className="finance-search-input"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search receipts"
+              aria-label="Search receipts"
+            />
+            <details className="finance-filter-popover">
+              <summary>Filters</summary>
+              <div className="finance-filter-popover-body">
+                <label>
+                  <span>Status</span>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) =>
+                      setStatusFilter(event.target.value as "all" | FinanceReceiptRecord["status"])}
+                  >
+                    <option value="all">All</option>
+                    <option value="draft">Draft</option>
+                    <option value="issued">Issued</option>
+                    <option value="void">Void</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+          </div>
+          <div className="finance-list-toolbar-right portal-muted">
+            {filteredReceipts.length} shown
+          </div>
+        </div>
+        {filteredReceipts.length === 0 ? (
+          <p>No receipts match the current search/filter.</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap finance-table-compact">
             <table>
               <thead>
                 <tr>
@@ -268,7 +345,7 @@ export function PortalFinanceReceiptsManager({
                 </tr>
               </thead>
               <tbody>
-                {receipts.map((item) => (
+                {filteredReceipts.map((item) => (
                   <tr key={item.id}>
                     <td>
                       <strong>{item.receiptNumber}</strong>
@@ -278,12 +355,12 @@ export function PortalFinanceReceiptsManager({
                     <td>{item.category}</td>
                     <td>{formatMoney(item.currency, item.amountReceived)}</td>
                     <td>{item.paymentMethod}</td>
-                    <td>{item.status}</td>
+                    <td><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></td>
                     <td>
-                      <div className="action-row">
+                      <div className="action-row finance-row-actions">
                         <button
                           type="button"
-                          className="button button-ghost"
+                          className="button button-ghost button-sm"
                           onClick={() => handleIssue(item.id)}
                           disabled={saving || item.status !== "draft"}
                         >
@@ -291,7 +368,7 @@ export function PortalFinanceReceiptsManager({
                         </button>
                         <button
                           type="button"
-                          className="button button-ghost"
+                          className="button button-ghost button-sm"
                           onClick={() => handleSend(item.id)}
                           disabled={saving || item.status === "void"}
                         >
@@ -299,14 +376,15 @@ export function PortalFinanceReceiptsManager({
                         </button>
                         <button
                           type="button"
-                          className="button button-ghost"
-                          onClick={() => handleVoid(item.id)}
+                          className="button button-ghost button-sm finance-row-danger"
+                          onClick={() => setDestructiveTarget(item)}
                           disabled={saving || item.status === "void"}
+                          title={item.status === "draft" ? "Delete draft" : "Void posted"}
                         >
-                          Void
+                          {item.status === "draft" ? "Delete" : "Void"}
                         </button>
                         {item.pdfUrl ? (
-                          <a className="button button-ghost" href={item.pdfUrl} target="_blank" rel="noreferrer">
+                          <a className="button button-ghost button-sm" href={item.pdfUrl} target="_blank" rel="noreferrer">
                             PDF
                           </a>
                         ) : null}
@@ -324,7 +402,7 @@ export function PortalFinanceReceiptsManager({
         open={open}
         onClose={() => setOpen(false)}
         title="Create Receipt"
-        description="Save receipt as draft, then issue it to post Money In and send the receipt email."
+        description="Record income clearly. Issue immediately to post Money In and make it available to financial reports."
         closeLabel="Close"
         maxWidth="880px"
       >
@@ -334,7 +412,15 @@ export function PortalFinanceReceiptsManager({
             <select
               value={form.contactId}
               required
-              onChange={(event) => setForm((prev) => ({ ...prev, contactId: event.target.value }))}
+              onChange={(event) => {
+                const contactId = event.target.value;
+                const selected = contacts.find((contact) => String(contact.id) === contactId);
+                setForm((prev) => ({
+                  ...prev,
+                  contactId,
+                  receivedFrom: selected?.name || prev.receivedFrom,
+                }));
+              }}
             >
               <option value="">Select contact</option>
               {contacts.map((contact) => (
@@ -448,13 +534,51 @@ export function PortalFinanceReceiptsManager({
               onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
             />
           </label>
+          <label>
+            <span className="portal-field-label">Issue now</span>
+            <input
+              type="checkbox"
+              checked={form.issueNow}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  issueNow: event.target.checked,
+                  sendEmail: event.target.checked ? prev.sendEmail : false,
+                }))}
+            />
+            <small className="portal-field-help">Recommended. Posts this receipt to Money In immediately.</small>
+          </label>
+          <label>
+            <span className="portal-field-label">Send email now</span>
+            <input
+              type="checkbox"
+              checked={form.sendEmail}
+              disabled={!form.issueNow}
+              onChange={(event) => setForm((prev) => ({ ...prev, sendEmail: event.target.checked }))}
+            />
+            <small className="portal-field-help">Optional. Sends receipt email after issuing.</small>
+          </label>
           <div className="full-width action-row portal-form-actions">
-            <button className="button" type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save Draft Receipt"}
+            <button className="button button-sm" type="submit" disabled={saving}>
+              {saving ? "Saving..." : form.issueNow ? "Save & Issue Receipt" : "Save Draft Receipt"}
             </button>
           </div>
         </form>
       </FloatingSurface>
+
+      <FinanceDestructiveActionModal
+        open={Boolean(destructiveTarget)}
+        onClose={() => setDestructiveTarget(null)}
+        title={destructiveTarget?.status === "draft" ? "Delete receipt draft?" : "Void receipt?"}
+        impactText={
+          destructiveTarget?.status === "draft"
+            ? "This removes the draft receipt permanently. Issued receipts are never hard-deleted."
+            : "This will mark the receipt as void and preserve the ledger/audit trail."
+        }
+        confirmLabel={destructiveTarget?.status === "draft" ? "Delete Draft" : "Void Receipt"}
+        loading={saving}
+        onConfirm={handleDeleteOrVoid}
+      />
     </div>
   );
 }

@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { postFinanceExpense } from "@/lib/finance-db";
-import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";
 
+const bodySchema = z.object({
+  overrideReason: z.string().trim().max(500).optional(),
+});
+
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireFinanceSuperAdmin();
+  const auth = await requireFinanceEditor();
   if (auth.error || !auth.actor) {
     return auth.error;
   }
@@ -19,13 +24,18 @@ export async function POST(
   }
 
   try {
-    const expense = postFinanceExpense(expenseId, auth.actor);
+    const parsed = bodySchema.parse(await request.json().catch(() => ({})));
+    const expense = postFinanceExpense(expenseId, auth.actor, {
+      overrideReason: parsed.overrideReason,
+    });
     return NextResponse.json({ expense });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to post expense." },
       { status: 400 },
     );
   }
 }
-

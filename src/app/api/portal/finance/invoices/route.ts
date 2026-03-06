@@ -6,7 +6,7 @@ import {
   listFinanceInvoices,
 } from "@/lib/finance-db";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
-import { csvHeaders, requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";
 
@@ -28,7 +28,7 @@ const createSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const auth = await requireFinanceSuperAdmin();
+  const auth = await requireFinanceEditor();
   if (auth.error) {
     return auth.error;
   }
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireFinanceSuperAdmin();
+  const auth = await requireFinanceEditor();
   if (auth.error || !auth.actor) {
     return auth.error;
   }

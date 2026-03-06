@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   createFinanceReceipt,
   exportFinanceRowsToCsv,
+  issueFinanceReceipt,
   listFinanceReceipts,
 } from "@/lib/finance-db";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
@@ -29,6 +30,8 @@ const createSchema = z.object({
     })
     .transform((value) => value?.trim()),
   notes: z.string().trim().max(2000).optional(),
+  issueNow: z.boolean().optional(),
+  sendEmail: z.boolean().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -88,7 +91,7 @@ export async function POST(request: Request) {
 
   try {
     const parsed = createSchema.parse(await request.json());
-    const receipt = createFinanceReceipt(
+    const created = createFinanceReceipt(
       {
         contactId: parsed.contactId,
         category: parsed.category,
@@ -104,7 +107,21 @@ export async function POST(request: Request) {
       },
       auth.actor,
     );
-    return NextResponse.json({ receipt }, { status: 201 });
+    if (parsed.issueNow) {
+      const issued = await issueFinanceReceipt(created.id, auth.actor, {
+        sendEmail: parsed.sendEmail === true,
+        ensurePdf: true,
+      });
+      return NextResponse.json(
+        {
+          receipt: issued.receipt,
+          email: issued.email,
+          issuedNow: true,
+        },
+        { status: 201 },
+      );
+    }
+    return NextResponse.json({ receipt: created, issuedNow: false }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });

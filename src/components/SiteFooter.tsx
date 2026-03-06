@@ -1,10 +1,59 @@
 "use client";
 
 import Link from "next/link";
+import { FormEvent, useState } from "react";
 import { officialContact, officialContactLinks } from "@/lib/contact";
-import { Facebook, Instagram, Twitter, Youtube, Send, Mail, Phone } from "lucide-react";
+import { Facebook, Instagram, Twitter, Youtube, Send, Mail, Phone, MapPin } from "lucide-react";
+
+type FooterSubscribeState = {
+  status: "idle" | "submitting" | "success" | "error";
+  message: string;
+};
 
 export function SiteFooter() {
+  const [subscribeState, setSubscribeState] = useState<FooterSubscribeState>({
+    status: "idle",
+    message: "",
+  });
+
+  async function handleSubscribe(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const email = String(formData.get("email") ?? "").trim();
+
+    if (!email) {
+      setSubscribeState({ status: "error", message: "Email is required." });
+      return;
+    }
+
+    setSubscribeState({ status: "submitting", message: "Saving..." });
+
+    try {
+      const response = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        throw new Error(data.error ?? "Could not subscribe right now.");
+      }
+
+      form.reset();
+      setSubscribeState({
+        status: "success",
+        message: "Subscribed successfully for promotions and newsletter updates.",
+      });
+    } catch (error) {
+      setSubscribeState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Subscription failed. Try again.",
+      });
+    }
+  }
+
   return (
     <footer className="site-footer-v2">
       <div className="footer-v2-container">
@@ -22,6 +71,9 @@ export function SiteFooter() {
               <a href="#" aria-label="Twitter"><Twitter size={18} /></a>
               <a href="#" aria-label="YouTube"><Youtube size={18} /></a>
             </div>
+            <p className="footer-v2-note">
+              <strong>TIN:</strong> {officialContact.tin}
+            </p>
           </div>
 
           {/* Column 2: Useful Links */}
@@ -34,6 +86,9 @@ export function SiteFooter() {
               <li><Link href="/stories">1001 Story Library</Link></li>
               <li><Link href="/resources">Resources</Link></li>
             </ul>
+            <p className="footer-v2-note">
+              <strong>Registration No:</strong> {officialContact.regNo}
+            </p>
           </div>
 
           {/* Column 3: Our Company */}
@@ -46,18 +101,37 @@ export function SiteFooter() {
               <li><Link href="/contact">Contact Us</Link></li>
               <li><Link href="/transparency">Trust & Accountability</Link></li>
             </ul>
+            <p className="footer-v2-note">Ozeki Reading Bridge Foundation, Uganda</p>
           </div>
 
           {/* Column 4: Subscribe & Contact */}
           <div className="footer-v2-col">
             <h3>Subscribe News</h3>
             <div className="footer-v2-subscribe">
-              <form onSubmit={(e) => e.preventDefault()}>
-                <input type="email" placeholder="Email address" aria-label="Email address" />
-                <button type="submit" aria-label="Subscribe">
+              <form onSubmit={handleSubscribe}>
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="Email address"
+                  aria-label="Email address"
+                  required
+                />
+                <button
+                  type="submit"
+                  aria-label="Subscribe"
+                  disabled={subscribeState.status === "submitting"}
+                >
                   <Send size={16} />
                 </button>
               </form>
+              <p className="footer-v2-note" style={{ marginTop: "0.6rem" }}>
+                Receive promotions and the Ozeki newsletter.
+              </p>
+              {subscribeState.message ? (
+                <p className={`footer-v2-subscribe-message ${subscribeState.status}`}>
+                  {subscribeState.message}
+                </p>
+              ) : null}
             </div>
 
             <div className="footer-v2-contact">
@@ -73,6 +147,18 @@ export function SiteFooter() {
                 </div>
                 <a href={officialContactLinks.tel}>{officialContact.phoneDisplay}</a>
               </div>
+              <div className="footer-v2-contact-item">
+                <div className="footer-v2-contact-icon">
+                  <MapPin size={14} />
+                </div>
+                <span>{officialContact.address}</span>
+              </div>
+            </div>
+
+            <div className="footer-v2-meta">
+              <p className="footer-v2-meta-item">
+                <strong>P.O. Box:</strong> {officialContact.postalAddress}
+              </p>
             </div>
           </div>
 

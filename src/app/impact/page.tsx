@@ -67,14 +67,14 @@ function resolveReportYear(rawYear: string, availableYears: string[]) {
 
 function scoreColor(score: number | null): string {
   if (score === null || score === undefined) return "#999";
-  if (score >= 70) return "#CC3D00";
+  if (score >= 70) return "#C35D0E";
   if (score >= 40) return "#c77a00";
   return "#c0392b";
 }
 
 function scoreBg(score: number | null): string {
   if (score === null || score === undefined) return "transparent";
-  if (score >= 70) return "rgba(255, 77, 0, 0.08)";
+  if (score >= 70) return "rgba(250, 125, 21, 0.08)";
   if (score >= 40) return "rgba(199, 122, 0, 0.08)";
   return "rgba(192, 57, 43, 0.08)";
 }
@@ -311,7 +311,7 @@ export default async function ImpactDashboardPage({
                               Needs Support
                             </span>
                           ) : (
-                            <span style={{ background: "#CC3D00", color: "#fff", borderRadius: "999px", padding: "0.15rem 0.55rem", fontSize: "0.68rem", fontWeight: 700 }}>
+                            <span style={{ background: "#C35D0E", color: "#fff", borderRadius: "999px", padding: "0.15rem 0.55rem", fontSize: "0.68rem", fontWeight: 700 }}>
                               On Track
                             </span>
                           )}
@@ -330,7 +330,7 @@ export default async function ImpactDashboardPage({
 
             <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem", justifyContent: "center", flexWrap: "wrap" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.78rem" }}>
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#CC3D00", display: "inline-block" }} /> ≥ 70% (Strong)
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#C35D0E", display: "inline-block" }} /> ≥ 70% (Strong)
               </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.78rem" }}>
                 <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#c77a00", display: "inline-block" }} /> 40–69% (Developing)

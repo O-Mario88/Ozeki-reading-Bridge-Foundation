@@ -852,7 +852,7 @@ export interface PublicTeachingQualitySummary {
 
 export interface PublicImpactAggregate {
   scope: {
-    level: "country" | "subregion" | "district" | "school";
+    level: "country" | "region" | "subregion" | "district" | "school";
     id: string;
     name: string;
     parent?: string;
@@ -1119,6 +1119,7 @@ export type FinanceInvoiceStatus =
   | "void";
 export type FinanceReceiptStatus = "draft" | "issued" | "void";
 export type FinancePostedStatus = "draft" | "posted" | "void";
+export type FinanceExpenseStatus = "draft" | "submitted" | "posted" | "blocked_mismatch" | "void";
 export type FinancePaymentMethod =
   | "cash"
   | "bank_transfer"
@@ -1268,11 +1269,38 @@ export interface FinanceExpenseRecord extends FinanceExpenseInput {
   id: number;
   expenseNumber: string;
   category: "Expense";
-  status: FinancePostedStatus;
+  status: FinanceExpenseStatus;
   voidReason?: string;
+  submittedAt?: string;
+  submittedBy?: number;
+  submittedByName?: string;
+  postedAt?: string;
+  postedBy?: number;
+  postedByName?: string;
+  mismatchOverrideReason?: string;
+  mismatchOverrideBy?: number;
+  mismatchOverrideByName?: string;
+  mismatchOverrideAt?: string;
   createdBy: number;
   createdByName?: string;
   createdAt: string;
+}
+
+export interface FinanceExpenseReceiptRecord {
+  id: number;
+  expenseId: number;
+  fileId: number;
+  fileUrl: string;
+  fileName?: string;
+  fileHashSha256: string;
+  vendorName: string;
+  receiptDate: string;
+  receiptAmount: number;
+  currency: FinanceCurrency;
+  referenceNo?: string;
+  uploadedBy: number;
+  uploadedByName?: string;
+  uploadedAt: string;
 }
 
 export interface FinanceFileRecord {
@@ -1348,6 +1376,79 @@ export interface FinanceSettingsRecord {
   invoiceEmailTemplate: string;
   receiptEmailTemplate: string;
   paymentInstructions: string;
+  cashThresholdUgx: number;
+  cashThresholdUsd: number;
+  backdateDaysLimit: number;
+  allowReceiptMismatchOverride: boolean;
+  allowReceiptReuseOverride: boolean;
+  outlierMultiplier: number;
+}
+
+export type FinanceAuditExceptionSeverity = "low" | "medium" | "high";
+export type FinanceAuditExceptionStatus = "open" | "acknowledged" | "resolved" | "overridden";
+
+export interface FinanceAuditExceptionRecord {
+  id: number;
+  entityType: "expense" | "receipt" | "invoice" | "payment" | "ledger";
+  entityId: number;
+  severity: FinanceAuditExceptionSeverity;
+  ruleCode: string;
+  message: string;
+  status: FinanceAuditExceptionStatus;
+  amount?: number;
+  currency?: FinanceCurrency;
+  createdBy?: number;
+  createdByName?: string;
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedBy?: number;
+  resolvedByName?: string;
+  resolutionNotes?: string;
+}
+
+export interface FinanceTxnRiskScoreRecord {
+  id: number;
+  entityType: "expense" | "receipt" | "invoice" | "payment" | "ledger";
+  entityId: number;
+  riskScore: number;
+  signals: string[];
+  computedAt: string;
+}
+
+export interface FinanceReceiptRegistryRecord {
+  id: number;
+  expenseId: number;
+  expenseNumber?: string;
+  expenseStatus?: FinanceExpenseStatus;
+  fileId: number;
+  fileUrl: string;
+  fileName?: string;
+  fileHashSha256: string;
+  vendorName: string;
+  receiptDate: string;
+  receiptAmount: number;
+  currency: FinanceCurrency;
+  referenceNo?: string;
+  uploadedBy: number;
+  uploadedByName?: string;
+  uploadedAt: string;
+  flags: string[];
+}
+
+export interface FinanceAuditComplianceCheckRecord {
+  ruleCode: string;
+  title: string;
+  severity: FinanceAuditExceptionSeverity;
+  openCount: number;
+}
+
+export interface FinanceAuditRunSummary {
+  checkedAt: string;
+  checkedExpenses: number;
+  checkedLedgerEntries: number;
+  checkedIncomeRecords: number;
+  exceptionsCreated: number;
+  riskScoresUpdated: number;
 }
 
 export interface FinanceDashboardSummary {

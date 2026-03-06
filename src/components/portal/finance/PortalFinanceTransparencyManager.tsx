@@ -4,6 +4,7 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { FileText, Plus, CheckCircle, Archive, Eye, Upload } from "lucide-react";
+import { FloatingSurface } from "@/components/FloatingSurface";
 import type { FinanceCurrency, FinancePublicSnapshotRecord, FinanceAuditedStatementRecord } from "@/lib/types";
 
 export function PortalFinanceTransparencyManager() {
@@ -88,19 +89,19 @@ function PortalFinanceTransparencyManagerContent() {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab("fy")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "fy" ? "border-[#FF4D00] text-[#FF4D00]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "fy" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Annual Snapshots
           </button>
           <button
             onClick={() => setActiveTab("quarterly")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "quarterly" ? "border-[#FF4D00] text-[#FF4D00]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "quarterly" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Quarterly Snapshots
           </button>
           <button
             onClick={() => setActiveTab("audited")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "audited" ? "border-[#FF4D00] text-[#FF4D00]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "audited" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Audited Statements
           </button>
@@ -159,6 +160,7 @@ function StatusBadge({ status }: { status: string }) {
 function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data: FinancePublicSnapshotRecord[], type: "fy" | "quarterly", onPublish: (id: number) => void, onArchive: (id: number) => void, isPending: boolean }) {
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [openGenerate, setOpenGenerate] = useState(false);
   const [fy, setFy] = useState(new Date().getFullYear());
   const [currency, setCurrency] = useState<FinanceCurrency>("UGX");
   const [quarter, setQuarter] = useState("Q1");
@@ -176,6 +178,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
       });
       if (!res.ok) throw new Error((await res.json()).error || "Failed to generate");
       queryClient.invalidateQueries({ queryKey: ["finance", "transparency", "admin"] });
+      setOpenGenerate(false);
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -185,38 +188,64 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
 
   return (
     <div>
-      <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-4 items-end">
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Fiscal Year</label>
-          <input type="number" value={fy} onChange={(e) => setFy(parseInt(e.target.value, 10))} className="w-24 text-sm border-gray-300 rounded-md shadow-sm" />
-        </div>
-        {type === "quarterly" && (
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Quarter</label>
-            <select value={quarter} onChange={(e) => setQuarter(e.target.value)} className="w-24 text-sm border-gray-300 rounded-md shadow-sm">
-              <option value="Q1">Q1</option>
-              <option value="Q2">Q2</option>
-              <option value="Q3">Q3</option>
-              <option value="Q4">Q4</option>
-            </select>
-          </div>
-        )}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Currency</label>
-          <select value={currency} onChange={(e) => setCurrency(e.target.value as FinanceCurrency)} className="w-24 text-sm border-gray-300 rounded-md shadow-sm">
-            <option value="UGX">UGX</option>
-            <option value="USD">USD</option>
-          </select>
-        </div>
+      <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-3 items-center justify-between">
+        <p className="text-sm text-gray-600">
+          Create {type === "fy" ? "annual" : "quarterly"} snapshots from live finance records.
+        </p>
         <button
-          onClick={handleGenerate}
-          disabled={isGenerating}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#00155F] hover:bg-[#000d3d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00155F] disabled:opacity-50"
+          type="button"
+          onClick={() => setOpenGenerate(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#00155F] hover:bg-[#000d3d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00155F]"
         >
           <Plus className="w-4 h-4 mr-2" />
-          {isGenerating ? "Generating..." : `Generate \${type === "fy" ? "Annual" : "Quarterly"} Snapshot`}
+          Generate Snapshot
         </button>
       </div>
+
+      <FloatingSurface
+        open={openGenerate}
+        onClose={() => setOpenGenerate(false)}
+        title={type === "fy" ? "Generate Annual Snapshot" : "Generate Quarterly Snapshot"}
+        description="Run a new financial transparency snapshot."
+        closeLabel="Close"
+        maxWidth="640px"
+      >
+        <form
+          className="form-grid portal-form-grid"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleGenerate();
+          }}
+        >
+          <label>
+            <span className="portal-field-label">Fiscal Year</span>
+            <input type="number" value={fy} onChange={(e) => setFy(parseInt(e.target.value, 10))} />
+          </label>
+          {type === "quarterly" && (
+            <label>
+              <span className="portal-field-label">Quarter</span>
+              <select value={quarter} onChange={(e) => setQuarter(e.target.value)}>
+                <option value="Q1">Q1</option>
+                <option value="Q2">Q2</option>
+                <option value="Q3">Q3</option>
+                <option value="Q4">Q4</option>
+              </select>
+            </label>
+          )}
+          <label>
+            <span className="portal-field-label">Currency</span>
+            <select value={currency} onChange={(e) => setCurrency(e.target.value as FinanceCurrency)}>
+              <option value="UGX">UGX</option>
+              <option value="USD">USD</option>
+            </select>
+          </label>
+          <div className="full-width action-row portal-form-actions">
+            <button type="submit" className="button button-sm" disabled={isGenerating}>
+              {isGenerating ? "Generating..." : "Generate Snapshot"}
+            </button>
+          </div>
+        </form>
+      </FloatingSurface>
 
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -247,7 +276,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
                     <Eye className="w-4 h-4 mr-1" /> View PDF
                   </a>
                   {item.status === "draft" && (
-                    <button onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FF4D00] hover:text-[#cc3d00] disabled:opacity-50">Publish</button>
+                    <button onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FA7D15] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
                   )}
                   {item.status !== "archived" && (
                     <button onClick={() => onArchive(item.id)} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">Archive</button>
@@ -265,6 +294,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
 function AuditedManager({ data, onPublish, onArchive, isPending }: { data: FinanceAuditedStatementRecord[], onPublish: (id: number) => void, onArchive: (id: number) => void, isPending: boolean }) {
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
+  const [openUpload, setOpenUpload] = useState(false);
   const [fy, setFy] = useState(new Date().getFullYear() - 1);
   const [auditor, setAuditor] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -287,6 +317,7 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
       queryClient.invalidateQueries({ queryKey: ["finance", "transparency", "admin"] });
       setFile(null);
       setAuditor("");
+      setOpenUpload(false);
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -296,30 +327,46 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
 
   return (
     <div>
-      <div className="p-4 bg-gray-50 border-b border-gray-200">
-        <form onSubmit={handleUpload} className="flex flex-col sm:flex-row gap-4 items-end">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Fiscal Year</label>
-            <input type="number" required value={fy} onChange={(e) => setFy(parseInt(e.target.value, 10))} className="w-24 text-sm border-gray-300 rounded-md shadow-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Auditor Firm (Optional)</label>
-            <input type="text" value={auditor} onChange={(e) => setAuditor(e.target.value)} placeholder="e.g. PwC" className="w-48 text-sm border-gray-300 rounded-md shadow-sm" />
-          </div>
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-700 mb-1">PDF Statement</label>
-            <input type="file" required accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#00155F]/10 file:text-[#00155F] hover:file:bg-[#00155F]/20" />
-          </div>
-          <button
-            type="submit"
-            disabled={isUploading || !file}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#00155F] hover:bg-[#000d3d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00155F] disabled:opacity-50"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            {isUploading ? "Uploading..." : "Upload File"}
-          </button>
-        </form>
+      <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-3 items-center justify-between">
+        <p className="text-sm text-gray-600">Upload audited financial statement PDF for controlled publication.</p>
+        <button
+          type="button"
+          onClick={() => setOpenUpload(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#00155F] hover:bg-[#000d3d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00155F]"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          Upload Statement
+        </button>
       </div>
+
+      <FloatingSurface
+        open={openUpload}
+        onClose={() => setOpenUpload(false)}
+        title="Upload Audited Statement"
+        description="Attach the official audited PDF for the selected fiscal year."
+        closeLabel="Close"
+        maxWidth="700px"
+      >
+        <form className="form-grid portal-form-grid" onSubmit={handleUpload}>
+          <label>
+            <span className="portal-field-label">Fiscal Year</span>
+            <input type="number" required value={fy} onChange={(e) => setFy(parseInt(e.target.value, 10))} />
+          </label>
+          <label>
+            <span className="portal-field-label">Auditor Firm (Optional)</span>
+            <input type="text" value={auditor} onChange={(e) => setAuditor(e.target.value)} placeholder="e.g. PwC" />
+          </label>
+          <label className="full-width">
+            <span className="portal-field-label">PDF Statement</span>
+            <input type="file" required accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          </label>
+          <div className="full-width action-row portal-form-actions">
+            <button type="submit" className="button button-sm" disabled={isUploading || !file}>
+              {isUploading ? "Uploading..." : "Upload File"}
+            </button>
+          </div>
+        </form>
+      </FloatingSurface>
 
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -356,7 +403,7 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
                     <Eye className="w-4 h-4 mr-1" /> View PDF
                   </a>
                   {item.status === "private_uploaded" && (
-                    <button onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FF4D00] hover:text-[#cc3d00] disabled:opacity-50">Publish</button>
+                    <button onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FA7D15] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
                   )}
                   {item.status !== "archived" && (
                     <button onClick={() => onArchive(item.id)} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">Archive</button>

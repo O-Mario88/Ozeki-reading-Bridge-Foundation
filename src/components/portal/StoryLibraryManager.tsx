@@ -16,9 +16,9 @@ type Tab = "stories" | "anthologies";
 const STATUS_COLORS: Record<string, string> = {
   draft: "#78909c",
   review: "#f9a825",
-  published: "#CC3D00",
+  published: "#C35D0E",
   pending: "#78909c",
-  approved: "#CC3D00",
+  approved: "#C35D0E",
   denied: "#c62828",
 };
 

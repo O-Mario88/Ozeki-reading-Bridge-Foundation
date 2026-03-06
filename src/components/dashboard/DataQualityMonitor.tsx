@@ -14,7 +14,7 @@ interface QualitySummary {
 }
 
 function QualityGauge({ score }: { score: number }) {
-    const color = score >= 80 ? "#FF4D00" : score >= 50 ? "#e8a317" : "#dc2626";
+    const color = score >= 80 ? "#FA7D15" : score >= 50 ? "#e8a317" : "#dc2626";
     return (
         <div style={{
             width: 100, height: 100, borderRadius: "50%",
@@ -35,8 +35,8 @@ function QualityGauge({ score }: { score: number }) {
 }
 
 function AlertCard({ count, label, severity }: { count: number; label: string; severity: "error" | "warning" | "ok" }) {
-    const colors = { error: "#dc2626", warning: "#e8a317", ok: "#FF4D00" };
-    const bgs = { error: "#fee2e2", warning: "#fef3c7", ok: "#FFF0E8" };
+    const colors = { error: "#dc2626", warning: "#e8a317", ok: "#FA7D15" };
+    const bgs = { error: "#fee2e2", warning: "#fef3c7", ok: "#FFF4EC" };
     return (
         <div style={{
             padding: "1rem 1.25rem", borderRadius: "12px",

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import {
     createStatementLine,
     listStatementLines,
@@ -13,7 +13,7 @@ import type { FinanceCurrency, FinanceMatchStatus, FinanceStatementAccountType }
 
 /* GET — list statement lines + unmatched ledger transactions + summary */
 export async function GET(request: NextRequest) {
-    const { error, actor } = await requireFinanceSuperAdmin();
+    const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
 
     const url = new URL(request.url);
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
 /* POST — create statement line or match/unmatch */
 export async function POST(request: NextRequest) {
-    const { error, actor } = await requireFinanceSuperAdmin();
+    const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
 
     const body = await request.json();

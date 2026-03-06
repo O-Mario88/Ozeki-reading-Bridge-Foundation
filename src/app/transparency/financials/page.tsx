@@ -42,7 +42,7 @@ export default async function PublicFinancialsPage() {
 
           <div className="mb-12">
             <div className="flex items-center space-x-3 mb-4">
-              <ShieldCheck className="w-10 h-10 text-[#FF4D00]" />
+              <ShieldCheck className="w-10 h-10 text-[#FA7D15]" />
               <h1 className="text-4xl font-extrabold text-[#00155F] tracking-tight">Financial Transparency</h1>
             </div>
             <p className="text-lg text-gray-600 max-w-3xl leading-relaxed">
@@ -94,11 +94,11 @@ export default async function PublicFinancialsPage() {
                         {s.programPct !== null && s.adminPct !== null && (
                           <div className="pt-4 border-t border-gray-100">
                             <div className="flex justify-between text-xs mb-1.5">
-                              <span className="font-medium text-[#FF4D00]">Program: {s.programPct}%</span>
+                              <span className="font-medium text-[#FA7D15]">Program: {s.programPct}%</span>
                               <span className="text-gray-500">Core: {s.adminPct}%</span>
                             </div>
                             <div className="w-full bg-gray-100 rounded-full h-2">
-                              <div className="bg-[#FF4D00] h-2 rounded-full" style={{ width: `\${s.programPct}%` }} />
+                              <div className="bg-[#FA7D15] h-2 rounded-full" style={{ width: `\${s.programPct}%` }} />
                             </div>
                           </div>
                         )}
@@ -172,14 +172,14 @@ export default async function PublicFinancialsPage() {
                       key={s.id}
                       href={`/api/transparency/financials/\${s.id}/download?type=snapshot`}
                       download
-                      className="group p-5 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#FF4D00] hover:shadow-md transition-all flex flex-col"
+                      className="group p-5 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#FA7D15] hover:shadow-md transition-all flex flex-col"
                     >
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h3 className="font-bold text-gray-900">FY {s.fy} {s.quarter}</h3>
                           <p className="text-xs text-gray-500 mt-0.5">{s.currency}</p>
                         </div>
-                        <Download className="w-5 h-5 text-gray-300 group-hover:text-[#FF4D00] transition-colors" />
+                        <Download className="w-5 h-5 text-gray-300 group-hover:text-[#FA7D15] transition-colors" />
                       </div>
                       <div className="mt-auto pt-4 border-t border-gray-50 flex justify-between items-center text-sm">
                         <span className="text-gray-500 text-xs">Net</span>

@@ -15,6 +15,12 @@ const settingsSchema = z.object({
   invoiceEmailTemplate: z.string().trim().min(10).max(5000).optional(),
   receiptEmailTemplate: z.string().trim().min(10).max(5000).optional(),
   paymentInstructions: z.string().trim().max(3000).optional(),
+  cashThresholdUgx: z.coerce.number().min(0).optional(),
+  cashThresholdUsd: z.coerce.number().min(0).optional(),
+  backdateDaysLimit: z.coerce.number().int().min(0).max(3650).optional(),
+  allowReceiptMismatchOverride: z.boolean().optional(),
+  allowReceiptReuseOverride: z.boolean().optional(),
+  outlierMultiplier: z.coerce.number().positive().max(100).optional(),
 });
 
 export async function GET() {
@@ -45,4 +51,3 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
-

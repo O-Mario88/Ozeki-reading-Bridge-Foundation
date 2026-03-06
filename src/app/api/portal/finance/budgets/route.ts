@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
+import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import {
     upsertMonthlyBudget,
     listMonthlyBudgets,
@@ -9,7 +9,7 @@ import type { FinanceCurrency } from "@/lib/types";
 
 /* GET — list budgets or budget vs actual for a month */
 export async function GET(request: NextRequest) {
-    const { error, actor } = await requireFinanceSuperAdmin();
+    const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
 
     const url = new URL(request.url);
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
 /* POST — upsert a budget line */
 export async function POST(request: NextRequest) {
-    const { error, actor } = await requireFinanceSuperAdmin();
+    const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
 
     const body = await request.json();
