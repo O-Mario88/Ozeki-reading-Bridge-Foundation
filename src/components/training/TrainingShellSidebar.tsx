@@ -56,14 +56,14 @@ export function TrainingShellSidebar() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group \${
+                            className={`flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
                     isActive
                         ? "bg-blue-50/80 text-[#00155F]"
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`}
             >
                 <Icon
-                    className={`w-5 h-5 mr-3 transition-colors \${
+                    className={`w-5 h-5 mr-3 transition-colors ${
                     isActive ? "text-[#FA7D15]" : "text-gray-400 group-hover:text-gray-600"
                 }`}
                 strokeWidth={isActive ? 2.5 : 2}

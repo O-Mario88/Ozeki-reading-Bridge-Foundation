@@ -1,6 +1,10 @@
 "use client";
 
-import { GraduationEligibilityRecord, SchoolDirectoryRecord } from "@/lib/types";
+import {
+  GraduationEligibilityRecord,
+  SchoolDirectoryRecord,
+  SchoolSupportStatusRecord,
+} from "@/lib/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
@@ -26,6 +30,9 @@ export function SchoolProfileView({
   const [graduationOpen, setGraduationOpen] = useState(false);
   const [graduationEligibility, setGraduationEligibility] = useState<GraduationEligibilityRecord | null>(null);
   const [graduationSupervisors, setGraduationSupervisors] = useState<SupervisorOption[]>([]);
+  const [supportStatusLoading, setSupportStatusLoading] = useState(false);
+  const [supportStatusError, setSupportStatusError] = useState("");
+  const [schoolSupportStatus, setSchoolSupportStatus] = useState<SchoolSupportStatusRecord | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -56,6 +63,44 @@ export function SchoolProfileView({
       .finally(() => {
         if (active) {
           setGraduationLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [school.id]);
+
+  useEffect(() => {
+    let active = true;
+    setSupportStatusLoading(true);
+    setSupportStatusError("");
+    fetch(`/api/portal/automation/support-status?type=school&schoolId=${school.id}&limit=1`, {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const json = (await response.json()) as {
+          records?: SchoolSupportStatusRecord[];
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(json.error ?? "Could not load school support status.");
+        }
+        if (!active) {
+          return;
+        }
+        const first = Array.isArray(json.records) && json.records.length > 0 ? json.records[0] : null;
+        setSchoolSupportStatus(first);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+        setSupportStatusError(error instanceof Error ? error.message : "Could not load school support status.");
+      })
+      .finally(() => {
+        if (active) {
+          setSupportStatusLoading(false);
         }
       });
 
@@ -148,6 +193,48 @@ export function SchoolProfileView({
       ) : null}
       {graduationLoading ? <p className="portal-muted">Checking graduation eligibility…</p> : null}
       {!graduationLoading && graduationError ? <p className="portal-muted">{graduationError}</p> : null}
+
+      <section className="card support-status-banner">
+        <div>
+          <h3>Support Status</h3>
+          {supportStatusLoading ? (
+            <p className="portal-muted" style={{ margin: 0 }}>Computing support status…</p>
+          ) : schoolSupportStatus ? (
+            <>
+              <p className="support-status-pill">{schoolSupportStatus.status}</p>
+              <p className="portal-muted">
+                Rules version: {schoolSupportStatus.rulesVersion} • Period: {schoolSupportStatus.periodKey}
+              </p>
+              {schoolSupportStatus.recommendedActions.length > 0 ? (
+                <ul className="support-status-actions">
+                  {schoolSupportStatus.recommendedActions.map((action) => (
+                    <li key={action}>{action}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : (
+            <p className="portal-muted" style={{ margin: 0 }}>
+              No support-status snapshot available yet. Add assessment entries to compute status.
+            </p>
+          )}
+          {supportStatusError ? <p className="portal-muted">{supportStatusError}</p> : null}
+        </div>
+        <div className="support-status-metrics">
+          <span>Non-readers</span>
+          <strong>
+            {typeof schoolSupportStatus?.metrics?.nonReadersPct === "number"
+              ? `${schoolSupportStatus.metrics.nonReadersPct}%`
+              : "N/A"}
+          </strong>
+          <span>Below minimum</span>
+          <strong>
+            {typeof schoolSupportStatus?.metrics?.belowMinimumPct === "number"
+              ? `${schoolSupportStatus.metrics.belowMinimumPct}%`
+              : "N/A"}
+          </strong>
+        </div>
+      </section>
 
       {/* Main Content Area */}
       <div className="school-content-grid">
@@ -405,6 +492,64 @@ export function SchoolProfileView({
           justify-content: space-between;
           gap: 1rem;
           align-items: center;
+        }
+
+        .support-status-banner {
+          margin: 0 1.5rem 1.5rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 1rem;
+          border-left: 4px solid #0f766e;
+        }
+
+        .support-status-banner h3 {
+          margin: 0 0 0.35rem;
+          color: #0f172a;
+        }
+
+        .support-status-pill {
+          display: inline-flex;
+          align-items: center;
+          margin: 0 0 0.35rem;
+          padding: 0.2rem 0.55rem;
+          border-radius: 999px;
+          border: 1px solid #99f6e4;
+          color: #115e59;
+          background: #f0fdfa;
+          font-size: 0.78rem;
+          font-weight: 700;
+        }
+
+        .support-status-actions {
+          margin: 0.35rem 0 0;
+          padding-left: 1rem;
+          color: #334155;
+          font-size: 0.86rem;
+          display: grid;
+          gap: 0.2rem;
+        }
+
+        .support-status-metrics {
+          min-width: 190px;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 0.55rem 0.7rem;
+          display: grid;
+          gap: 0.15rem;
+          background: #f8fafc;
+        }
+
+        .support-status-metrics span {
+          color: #64748b;
+          font-size: 0.72rem;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+        }
+
+        .support-status-metrics strong {
+          color: #0f172a;
+          font-size: 0.95rem;
         }
 
         .school-header-top {

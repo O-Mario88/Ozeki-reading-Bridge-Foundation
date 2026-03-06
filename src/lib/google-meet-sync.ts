@@ -48,7 +48,7 @@ export async function createMeetEvent(
     },
     conferenceData: {
       createRequest: {
-        requestId: `ozeki-training-\${Date.now()}`,
+        requestId: `ozeki-training-${Date.now()}`,
         conferenceSolutionKey: {
           type: "hangoutsMeet",
         },
@@ -84,7 +84,7 @@ export async function getMeetArtifactsMetadata(conferenceRecordId: string) {
   const meet = google.meet({ version: "v2", auth });
 
   try {
-    const record = await meet.conferenceRecords.get({ name: conferenceRecordId });
+    await meet.conferenceRecords.get({ name: conferenceRecordId });
     // In a full implementation, you'd list recordings and transcripts
     const recordingsRes = await meet.conferenceRecords.recordings.list({ parent: conferenceRecordId });
     const transcriptsRes = await meet.conferenceRecords.transcripts.list({ parent: conferenceRecordId });

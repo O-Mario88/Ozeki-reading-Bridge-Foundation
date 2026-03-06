@@ -13,7 +13,7 @@ export const metadata = {
 
 async function getTransparencyData() {
   const host = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const res = await fetch(`\${host}/api/transparency/financials`, { cache: "no-store" });
+  const res = await fetch(`${host}/api/transparency/financials`, { cache: "no-store" });
   if (!res.ok) {
     return { snapshots: [], audited: [] };
   }
@@ -98,14 +98,14 @@ export default async function PublicFinancialsPage() {
                               <span className="text-gray-500">Core: {s.adminPct}%</span>
                             </div>
                             <div className="w-full bg-gray-100 rounded-full h-2">
-                              <div className="bg-[#FA7D15] h-2 rounded-full" style={{ width: `\${s.programPct}%` }} />
+                              <div className="bg-[#FA7D15] h-2 rounded-full" style={{ width: `${s.programPct}%` }} />
                             </div>
                           </div>
                         )}
                       </div>
                       <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 mt-auto">
                         <a
-                          href={`/api/transparency/financials/\${s.id}/download?type=snapshot`}
+                          href={`/api/transparency/financials/${s.id}/download?type=snapshot`}
                           download
                           className="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-[#00155F] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00155F] transition-colors"
                         >
@@ -145,7 +145,7 @@ export default async function PublicFinancialsPage() {
                           {a.notes && <p className="mt-2 text-sm text-gray-600 line-clamp-2">{a.notes}</p>}
                         </div>
                         <a
-                          href={`/api/transparency/financials/\${a.id}/download?type=audited`}
+                          href={`/api/transparency/financials/${a.id}/download?type=audited`}
                           download
                           className="shrink-0 inline-flex items-center px-4 py-2 border border-gray-200 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00155F]"
                         >
@@ -170,7 +170,7 @@ export default async function PublicFinancialsPage() {
                   {qSnapshots.map(s => (
                     <a
                       key={s.id}
-                      href={`/api/transparency/financials/\${s.id}/download?type=snapshot`}
+                      href={`/api/transparency/financials/${s.id}/download?type=snapshot`}
                       download
                       className="group p-5 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-[#FA7D15] hover:shadow-md transition-all flex flex-col"
                     >
@@ -183,7 +183,7 @@ export default async function PublicFinancialsPage() {
                       </div>
                       <div className="mt-auto pt-4 border-t border-gray-50 flex justify-between items-center text-sm">
                         <span className="text-gray-500 text-xs">Net</span>
-                        <span className={`font-medium \${s.net >= 0 ? "text-orange-600" : "text-red-500"}`}>
+                        <span className={`font-medium ${s.net >= 0 ? "text-orange-600" : "text-red-500"}`}>
                           {formatMoney(s.currency, s.net)}
                         </span>
                       </div>

@@ -707,9 +707,9 @@ export function PublicImpactMapExplorer({
         )}
 
         {activeTab === "teaching" && (
-          <article className="card">
+          <article className="card impact-teaching-card">
             <h3>Teaching Quality (Lesson Evaluations)</h3>
-            <p className="impact-mini-footer" style={{ marginTop: "-0.15rem" }}>
+            <p className="impact-mini-footer impact-teaching-scope">
               Scope: {payload?.scope?.name ?? "Uganda"} ({payload?.scope?.level ?? "country"})
             </p>
             {teachingQuality?.evaluationsCount ? (
@@ -833,10 +833,10 @@ export function PublicImpactMapExplorer({
               <p>Data not available for lesson evaluations in this scope/period.</p>
             )}
 
-            <h3 style={{ marginTop: "1rem" }}>Teaching → Learning Alignment</h3>
+            <h3 className="impact-teaching-subtitle">Teaching → Learning Alignment</h3>
             {teachingLearningAlignmentPoints.length ? (
-              <div className="impact-domain-mini-grid">
-                <article className="impact-domain-mini-card">
+              <div className="impact-domain-mini-grid impact-domain-mini-grid--teaching">
+                <article className="impact-domain-mini-card impact-domain-mini-card--compact">
                   <h4>Aligned trend summary</h4>
                   <p className="impact-domain-mini-meta">
                     Teaching quality delta:{" "}
@@ -868,7 +868,7 @@ export function PublicImpactMapExplorer({
                   </p>
                 </article>
 
-                <article className="impact-domain-mini-card">
+                <article className="impact-domain-mini-card impact-domain-mini-card--wide">
                   <h4>Aligned timeline</h4>
                   <div className="table-wrap">
                     <table>
@@ -917,8 +917,8 @@ export function PublicImpactMapExplorer({
               <p>Data not available for aligned teaching, learner, and story trends in this scope.</p>
             )}
 
-            <h3 style={{ marginTop: "1rem" }}>Implementation Fidelity</h3>
-            <div className="impact-auto-grid">
+            <h3 className="impact-teaching-subtitle">Implementation Fidelity</h3>
+            <div className="impact-auto-grid impact-auto-grid--teaching">
               <div className="impact-domain-mini-card">
                 <h4>Fidelity Score</h4>
                 <div className="flex items-center gap-4 mt-2">

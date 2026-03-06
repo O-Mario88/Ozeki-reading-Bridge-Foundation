@@ -24,6 +24,14 @@ const schoolSchema = z.object({
   gpsLng: z.string().trim().optional(),
   contactName: z.string().trim().optional(),
   contactPhone: z.string().trim().optional(),
+  proprietor: z.object({
+    fullName: z.string().trim().min(2, "Proprietor full name is required."),
+    gender: z.enum(["Male", "Female", "Other"]),
+    phone: z.string().trim().optional(),
+    email: z.string().trim().email().optional().or(z.literal("")),
+    whatsapp: z.string().trim().optional(),
+    roleTitle: z.string().trim().optional(),
+  }),
 });
 
 const schoolUpdateSchema = z.object({
@@ -85,6 +93,14 @@ export async function POST(request: Request) {
       gpsLng: payload.gpsLng?.trim() || undefined,
       contactName: payload.contactName?.trim() || undefined,
       contactPhone: payload.contactPhone?.trim() || undefined,
+      proprietor: {
+        fullName: payload.proprietor.fullName.trim(),
+        gender: payload.proprietor.gender,
+        phone: payload.proprietor.phone?.trim() || undefined,
+        email: payload.proprietor.email?.trim() || undefined,
+        whatsapp: payload.proprietor.whatsapp?.trim() || undefined,
+        roleTitle: payload.proprietor.roleTitle?.trim() || undefined,
+      },
     });
     return NextResponse.json({ ok: true, school });
   } catch (error) {

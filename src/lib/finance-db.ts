@@ -2269,17 +2269,6 @@ function logFinanceEmail(
   });
 }
 
-function contactEmailsById(db: Database.Database, contactId: number) {
-  const row = db.prepare(
-    `
-      SELECT emails_json AS emailsJson
-      FROM finance_contacts
-      WHERE id = @id
-      LIMIT 1
-    `,
-  ).get({ id: contactId }) as { emailsJson: string } | undefined;
-  return sanitizeEmailList(parseJsonArray(row?.emailsJson));
-}
 
 function parseLineItems(input: FinanceInvoiceLineItemInput[]) {
   const items = (input || [])
@@ -6067,7 +6056,7 @@ export async function generateFinanceMonthlyStatement(
     toDate: window.to,
   }) as Array<{ label: string; amount: number }>;
 
-  const upsert = db.prepare(
+  const _upsert = db.prepare(
     `
       INSERT INTO finance_monthly_statements (
         month,
@@ -6970,7 +6959,7 @@ export function generatePublicSnapshot(
   try {
     const ex = db.prepare(`SELECT id FROM finance_public_snapshots WHERE fy = ? AND currency = ? AND coalesce(quarter, '') = ?`).get(opts.fy, opts.currency, opts.quarter || "") as unknown;
     if (ex) existingId = (ex as { id: number }).id;
-  } catch (_err) {
+  } catch {
     // ignore
   }
 

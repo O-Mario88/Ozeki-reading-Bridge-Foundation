@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getGraduationSettings, updateGraduationSettings } from "@/lib/db";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { authorizeSuperAdmin } from "@/app/api/portal/_shared/auth";
 
 export const runtime = "nodejs";
 
@@ -37,25 +37,21 @@ const settingsSchema = z.object({
 });
 
 export async function GET() {
-  const user = await getAuthenticatedPortalUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (!user.isSuperAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const auth = await authorizeSuperAdmin();
+  if (!auth.authorized) {
+    return auth.response ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   return NextResponse.json({ settings: getGraduationSettings() });
 }
 
 export async function PUT(request: Request) {
-  const user = await getAuthenticatedPortalUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await authorizeSuperAdmin();
+  if (!auth.authorized) {
+    return auth.response ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!user.isSuperAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+
+  const user = auth.user!;
 
   try {
     const parsed = settingsSchema.parse(await request.json());
@@ -74,4 +70,3 @@ export async function PUT(request: Request) {
     );
   }
 }
-

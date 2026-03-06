@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import test from "node:test";
 import {
   createFinanceContact,
@@ -11,6 +12,8 @@ import {
   listFinanceLedgerTransactions,
   postFinanceExpense,
   recordFinancePayment,
+  submitFinanceExpense,
+  upsertFinanceExpenseReceipts,
 } from "../lib/finance-db";
 import { getDb } from "../lib/db";
 
@@ -102,16 +105,36 @@ test("expense posting requires evidence and creates money_out ledger", async () 
     actor,
   );
 
-  assert.throws(() => postFinanceExpense(draft.id, actor), /evidence upload is required/i);
+  submitFinanceExpense(draft.id, actor);
+  assert.throws(
+    () => postFinanceExpense(draft.id, actor),
+    /(evidence upload is required|EXP-001: Expense has no receipt evidence metadata)/i,
+  );
 
-  await createFinanceFileRecord(
+  const receiptPayload = `dummy-receipt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const evidenceFile = await createFinanceFileRecord(
     {
       sourceType: "expense",
       sourceId: draft.id,
       fileName: "expense-receipt.pdf",
-      bytes: Buffer.from("dummy-receipt"),
+      bytes: Buffer.from(receiptPayload),
       mimeType: "application/pdf",
     },
+    actor,
+  );
+
+  upsertFinanceExpenseReceipts(
+    draft.id,
+    [
+      {
+        fileId: evidenceFile.id,
+        fileHashSha256: crypto.createHash("sha256").update(receiptPayload).digest("hex"),
+        vendorName: draft.vendorName,
+        receiptDate: draft.date,
+        receiptAmount: draft.amount,
+        currency: draft.currency,
+      },
+    ],
     actor,
   );
 

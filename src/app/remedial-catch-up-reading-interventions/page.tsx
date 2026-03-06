@@ -5,38 +5,40 @@ import remedialPhoto from "../../../assets/photos/PXL_20260217_124358059.jpg";
 export const metadata = {
   title: "Remedial & Catch-Up Reading Interventions",
   description:
-    "Structured small-group interventions that move non-readers to foundational reading quickly and consistently.",
+    "Targeted recovery pathway for non-readers and below-benchmark learners using evidence-led grouping, routines, and progress tracking.",
 };
 
 export default function RemedialCatchUpReadingInterventionsPage() {
   return (
     <>
-      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+      <section
+        className="section tpd-hero-section bg-surface-container"
+        style={{ backgroundColor: "var(--md-sys-color-surface-container)" }}
+      >
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
-            <p className="kicker">Program spotlight</p>
+            <p className="kicker">Program Spotlight</p>
             <h1 className="tpd-page-title">
               Remedial &amp; Catch-Up Reading Interventions
             </h1>
             <p className="tpd-subline">
-              Small-group support that turns non-readers into readers, fast,
-              safely, and consistently.
+              Targeted recovery pathway for learners still below foundational reading benchmarks.
             </p>
             <h2>Overview</h2>
             <p>
-              Many learners fall behind not because they can&apos;t learn, but
-              because they missed one or two foundational skills, especially
-              letter sounds and blending.
+              Remedial &amp; Catch-Up Reading Interventions is our targeted
+              recovery pathway for schools where a significant share of learners
+              are still non-readers or remain below the minimum fluency benchmark.
             </p>
             <p>
-              Our Remedial &amp; Catch-Up Reading Interventions are structured
-              small-group sessions designed for non-readers and struggling
-              readers, helping them build the missing foundations quickly and
-              rejoin grade-level learning.
+              It is designed to prevent children from being left behind as the
+              curriculum advances by rebuilding foundational reading skills quickly
+              and systematically, using evidence to guide exactly what is taught,
+              to whom, and how progress is verified.
             </p>
             <p className="meta-line">
-              <strong>Outcome we drive:</strong> At-risk learners gain foundational
-              reading skills faster.
+              <strong>Outcome we drive:</strong> rapid foundational recovery and a
+              realistic pathway from non-reader status to fluent reading.
             </p>
           </article>
 
@@ -45,170 +47,187 @@ export default function RemedialCatchUpReadingInterventionsPage() {
               src={remedialPhoto}
               alt="Small-group catch-up reading intervention session"
               priority
+              sizes="(max-width: 900px) 100vw, 45vw"
             />
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">How We Do It (Our Catch-Up Model)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>1) Skill-Gap Diagnosis (We find the exact broken link)</h3>
-              <p>
-                Before intervention starts, we diagnose each learner&apos;s
-                specific reading gap. We do not guess.
-              </p>
-              <p>We identify:</p>
-              <ul>
-                <li>Learners who lack letter-sound mastery</li>
-                <li>Learners who know sounds but cannot blend</li>
-                <li>Learners who decode slowly or inaccurately</li>
-                <li>Learners who read words but struggle with simple comprehension</li>
-              </ul>
-              <p>
-                This diagnosis guides grouping and lesson targets, so time is not
-                wasted.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>2) Smart Grouping (Right learner, right group, right level)</h3>
-              <p>
-                We group learners by skill level rather than by age or grade, so
-                instruction matches need.
-              </p>
-              <p>Typical group types:</p>
-              <ul>
-                <li>Group A: Non-readers (sound gaps)</li>
-                <li>Group B: Emerging readers (blending and decoding gaps)</li>
-                <li>Group C: Developing readers (fluency building)</li>
-                <li>
-                  Group D: Fluent but weak comprehension (grade-appropriate
-                  meaning work)
-                </li>
-              </ul>
-              <p>
-                Groups stay small to ensure high participation, frequent feedback,
-                and rapid correction.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>3) Targeted Decoding &amp; Blending Lessons</h3>
-              <p>
-                Each remedial session follows a consistent routine teachers can
-                sustain.
-              </p>
-              <p>Session structure (example):</p>
-              <ul>
-                <li>Quick review (sounds or high-frequency patterns)</li>
-                <li>Teach or re-teach one target skill step</li>
-                <li>Guided practice with immediate correction</li>
-                <li>Independent practice at learner level</li>
-                <li>Quick check to confirm same-day mastery</li>
-              </ul>
-              <p>Key features:</p>
-              <ul>
-                <li>Fast pace with many repetitions</li>
-                <li>Immediate and supportive correction</li>
-                <li>Practice texts matched to taught skills</li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>4) Structured Fluency Building (From decoding to smooth reading)</h3>
-              <p>
-                Once learners can decode, we build fluency deliberately because
-                fluency unlocks comprehension.
-              </p>
-              <p>Fluency routines we use:</p>
-              <ul>
-                <li>Repeated reading</li>
-                <li>Echo reading</li>
-                <li>Phrase reading</li>
-                <li>Timed reads (simple, motivating, and not stressful)</li>
-              </ul>
-              <p>
-                Fluency practice is always paired with accuracy checks so learners
-                do not build fast guessing habits.
-              </p>
-            </article>
-          </div>
-
-          {/* Full-width horizontal Progress Monitoring card */}
-          <article className="card" style={{ marginTop: "1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "start" }}>
-            <div>
-              <h3>5) Progress Monitoring (We track growth and adjust quickly)</h3>
-              <p>
-                Every intervention includes a simple way to measure improvement
-                and guide next steps.
-              </p>
-            </div>
-            <div>
-              <p>We monitor:</p>
-              <ul>
-                <li>Sound mastery (accuracy and speed)</li>
-                <li>Decoding accuracy</li>
-                <li>Fluency gains (accuracy and rate)</li>
-                <li>Movement between groups (evidence-based promotion)</li>
-              </ul>
-              <p>
-                Teachers can see who is improving, who is stuck, and which
-                routine needs adjustment.
-              </p>
-            </div>
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Diagnosis from Real Learner Data</h3>
+            <p>
+              The intervention begins with what makes our platform different:
+              diagnosis from real learner data. Assessment results automatically
+              identify learners who are non-readers, emergent readers, or
+              struggling in specific domains such as letter-sound knowledge,
+              decoding accuracy, and fluency.
+            </p>
+            <p>
+              Rather than one-size-fits-all remediation, teachers focus on
+              precise missing skills because reading failure is usually a small set
+              of foundational gaps that block progress.
+            </p>
           </article>
 
-          <div className="cards-grid-two" style={{ marginTop: "2rem" }}>
-            <article className="card">
-              <h3>Focus Areas (What the Intervention Targets)</h3>
-              <ul>
-                <li>
-                  Skill-gap diagnosis (sounds, blending, decoding, fluency, and
-                  comprehension basics)
-                </li>
-                <li>
-                  Targeted decoding and blending lessons with a structured routine
-                </li>
-                <li>Structured fluency building (accuracy to speed to expression)</li>
-                <li>Continuous progress checks and regrouping when needed</li>
-              </ul>
-            </article>
+          <article className="card">
+            <h3>Skill-Based Grouping, Not Class-Based Grouping</h3>
+            <p>The platform supports grouping by learning need:</p>
+            <ul>
+              <li>Learners needing sound mastery</li>
+              <li>Learners needing blending practice</li>
+              <li>Learners needing decoding fluency</li>
+              <li>Learners needing accuracy and pace before comprehension work</li>
+            </ul>
+            <p>
+              This ensures each group receives the right routine at the right
+              level, instead of generic remedial sessions.
+            </p>
+          </article>
 
-            <article className="card">
-              <h3>Outputs (What Schools Receive)</h3>
-              <ul>
-                <li>Intervention plans (by level, by group, by week)</li>
-                <li>Grouping strategies (how to form groups and move learners)</li>
-                <li>Progress monitoring tools (simple checklists and trackers)</li>
-                <li>
-                  Optional lesson routine cards, word lists, and decodable practice
-                  texts aligned to intervention targets
-                </li>
-              </ul>
-            </article>
+          <article className="card">
+            <h3>Practical High-Frequency Catch-Up Delivery</h3>
+            <p>
+              Implementation is intentionally practical and school-friendly.
+              Catch-up runs through short, high-frequency small-group lessons,
+              daily or several times per week, without disrupting the whole
+              timetable.
+            </p>
+            <p>Teachers follow a clear sequence:</p>
+            <ul>
+              <li>Revise sounds</li>
+              <li>Blend and segment</li>
+              <li>Decode short words</li>
+              <li>Read simple phrases and sentences</li>
+              <li>Build accuracy and early fluency</li>
+              <li>Introduce meaning and basic comprehension once decoding is stable</li>
+            </ul>
+          </article>
+        </div>
+      </section>
 
-            <article className="card full-width">
-              <h3>Outcome</h3>
-              <p>
-                At-risk learners gain foundational reading skills faster because
-                intervention is based on diagnosis, delivered through structured
-                small-group routines, and guided by continuous progress tracking.
-              </p>
-              <div className="action-row">
-                <Link className="button" href="/portal/schools">
-                  Open school profiles
-                </Link>
-                <Link className="button button-ghost" href="/partner">
-                  Partner with us
-                </Link>
-              </div>
-            </article>
-          </div>
+      <section className="section">
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Aligned Materials for Faster Success</h3>
+            <p>
+              Teachers receive intervention materials aligned to taught skills so
+              practice is meaningful and success is visible early:
+            </p>
+            <ul>
+              <li>Sound cards</li>
+              <li>Blending boards</li>
+              <li>Decodable word lists</li>
+              <li>Short aligned reading passages</li>
+            </ul>
+            <p>
+              This prevents mismatch between what is taught and what learners are
+              asked to read.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Coaching Support for Consistent Delivery</h3>
+            <p>
+              Ozeki coaches help schools establish grouping plans, intervention
+              schedules, and delivery quality. Coaches observe sessions, provide
+              feedback, model strategies for large groups and mixed abilities, and
+              reinforce simple progress-monitoring habits.
+            </p>
+            <p>
+              This transforms remediation from occasional extra help into a
+              disciplined system with planned pathways and clear exit criteria.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Trackable and Accountable by Design</h3>
+            <p>Each intervention cycle is recorded:</p>
+            <ul>
+              <li>How many learners are in intervention groups</li>
+              <li>Which skills are being addressed</li>
+              <li>Which routines were delivered</li>
+              <li>What progress checks show over time</li>
+            </ul>
+            <p>
+              The platform monitors movement across reading levels with emphasis on
+              key shifts: reducing non-readers, moving learners into minimum
+              benchmark bands, and increasing fluent readers.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Transition Out of Remediation</h3>
+            <p>
+              The goal is rapid foundational recovery, not permanent remediation.
+              As learners gain decoding ability and fluency, intervention
+              transitions into broader reading practice and comprehension routines,
+              and teachers move back toward whole-class instruction with lighter
+              support.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>School-Level Next Phase Decisions</h3>
+            <p>Platform evidence guides the next phase:</p>
+            <ul>
+              <li>Continue catch-up where non-reader rates remain high</li>
+              <li>Strengthen coaching where teaching fidelity is inconsistent</li>
+              <li>Move into graduation preparation where systems are stable</li>
+            </ul>
+            <p>
+              This protects gains over time and keeps schools on a realistic
+              pathway toward sustained literacy performance.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Equity Result</h3>
+            <p>
+              Remedial and catch-up interventions become a strategic,
+              evidence-led equity engine. Every child gets a realistic path to
+              fluent reading and stronger success across the curriculum.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid-two">
+          <article className="card">
+            <h3>Explore Related Evidence</h3>
+            <p>
+              <Link className="inline-download-link" href="/impact">
+                Open Live Impact Dashboard
+              </Link>
+            </p>
+            <p>
+              <Link className="inline-download-link" href="/resources">
+                Open Resources Library
+              </Link>
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Support Catch-Up Expansion</h3>
+            <p>
+              Partner to scale structured catch-up cycles with verified learner
+              movement, accountable delivery, and targeted coaching support.
+            </p>
+            <div className="action-row">
+              <Link className="button" href="/portal/schools">
+                Open school profiles
+              </Link>
+              <Link className="button button-ghost" href="/partner-with-us">
+                Partner With Us
+              </Link>
+            </div>
+          </article>
         </div>
       </section>
     </>

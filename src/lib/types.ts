@@ -487,6 +487,169 @@ export interface TeacherImprovementProfile {
   teacherComparison: TeacherImprovementComparison | null;
   schoolSummary: SchoolTeachingQualityImprovementSummary;
   alignment: TeachingLearningAlignmentAggregate;
+  teacherSupportStatus?: TeacherSupportStatus | null;
+  teacherSupportAction?: string | null;
+}
+
+export interface SchoolSupportStatusRecord {
+  id: number;
+  schoolId: number;
+  schoolName: string;
+  district: string;
+  periodKey: string;
+  status: SchoolSupportStatus;
+  recommendedActions: string[];
+  metrics: Record<string, number | string | null>;
+  rulesVersion: string;
+  computedAt: string;
+}
+
+export interface TeacherSupportStatusRecord {
+  id: number;
+  schoolId: number;
+  schoolName: string;
+  district: string;
+  teacherUid: string;
+  teacherName: string;
+  periodKey: string;
+  status: TeacherSupportStatus;
+  recommendedAction: string;
+  evaluationsCount: number;
+  metrics: Record<string, number | string | null>;
+  rulesVersion: string;
+  computedAt: string;
+}
+
+export type TrainingReportScopeType =
+  | "training_session"
+  | "month"
+  | "quarter"
+  | "fy"
+  | "district"
+  | "region"
+  | "sub_region"
+  | "country";
+
+export interface TrainingReportFacts {
+  factsVersion: string;
+  scopeType: TrainingReportScopeType;
+  scopeValue: string;
+  scopeLabel: string;
+  periodStart: string;
+  periodEnd: string;
+  trainingsCount: number;
+  schoolsTrainedCount: number;
+  participantsTotal: number;
+  teachersTotal: number;
+  leadersTotal: number;
+  femaleTotal: number;
+  maleTotal: number;
+  teacherByClass: Array<{ classTaught: string; total: number }>;
+  teacherBySubject: Array<{ subjectTaught: string; total: number }>;
+  leadersByCategory: Array<{ category: string; total: number; female: number; male: number }>;
+  geographyBreakdown: Array<{
+    region: string;
+    subRegion: string;
+    district: string;
+    trainingsCount: number;
+    schoolsCount: number;
+    participantsCount: number;
+  }>;
+  followUpPlans: Array<{
+    trainingRecordId: number;
+    trainingDate: string;
+    schoolName: string;
+    district: string;
+    followUpDate: string | null;
+    followUpType: string | null;
+    followUpOwner: string | null;
+  }>;
+  feedback: {
+    participantRows: number;
+    trainerRows: number;
+    changedTeachingRows: number;
+    improveReadingRows: number;
+    challengesRows: number;
+    recommendationsRows: number;
+    themes: Array<{ theme: string; mentions: number; sampleQuote: string | null }>;
+  };
+  observedAfterTraining?: {
+    coachingVisitsCount: number;
+    assessmentSessionsCount: number;
+  } | null;
+  approvedQuotes: Array<{
+    quote: string;
+    role: string | null;
+    district: string | null;
+    schoolName: string | null;
+  }>;
+}
+
+export interface TrainingReportNarrative {
+  narrativeVersion: string;
+  generatedWithAi: boolean;
+  sections: {
+    summary: string;
+    participation: string;
+    whatWentWell: string;
+    practiceChange: string;
+    challengesAndRecommendations: string;
+    followUpPlan: string;
+    nextImprovements: string;
+  };
+}
+
+export interface TrainingReportArtifactRecord {
+  id: number;
+  reportCode: string;
+  scopeType: TrainingReportScopeType;
+  scopeValue: string;
+  periodStart: string;
+  periodEnd: string;
+  facts: TrainingReportFacts;
+  narrative: TrainingReportNarrative;
+  htmlReport: string;
+  pdfStoredPath: string | null;
+  generatedByUserId: number;
+  generatedByName: string;
+  generatedAt: string;
+  updatedAt: string;
+}
+
+export type TrainingFeedbackRole = "participant" | "trainer";
+
+export interface TrainingFeedbackRecord {
+  id: number;
+  trainingRecordId: number;
+  schoolId: number;
+  contactId: number | null;
+  trainerUserId: number | null;
+  feedbackRole: TrainingFeedbackRole;
+  whatWentWell: string | null;
+  howTrainingChangedTeaching: string | null;
+  whatYouWillDoToImproveReadingLevels: string | null;
+  challenges: string | null;
+  recommendationsNextTraining: string | null;
+  roleSnapshot: string | null;
+  genderSnapshot: string | null;
+  classTaughtSnapshot: string | null;
+  submittedAt: string;
+}
+
+export interface TrainingReportRecord {
+  id: number;
+  reportCode: string;
+  scopeType: string;
+  scopeValue: string;
+  periodStart: string;
+  periodEnd: string;
+  factsJson: string;
+  narrativeJson: string;
+  htmlReport: string;
+  pdfStoredPath: string | null;
+  generatedByUserId: number;
+  generatedAt: string;
+  updatedAt: string;
 }
 
 /* ─── NLIS Interventions ──────────────────────────── */
@@ -720,6 +883,35 @@ export interface TeacherRosterRecord extends TeacherRosterInput {
   updatedAt: string;
 }
 
+export type SchoolContactCategory =
+  | "Proprietor"
+  | "Head Teacher"
+  | "Deputy Head Teacher"
+  | "DOS"
+  | "Teacher";
+
+export interface SchoolContactInput {
+  schoolId: number;
+  fullName: string;
+  gender: "Male" | "Female" | "Other";
+  phone?: string;
+  email?: string;
+  whatsapp?: string;
+  category: SchoolContactCategory;
+  roleTitle?: string;
+  isPrimaryContact?: boolean;
+  classTaught?: string;
+  subjectTaught?: string;
+}
+
+export interface SchoolContactRecord extends SchoolContactInput {
+  contactId: number;
+  contactUid: string;
+  teacherUid: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LearnerRosterInput {
   schoolId: number;
   fullName: string;
@@ -736,8 +928,39 @@ export interface LearnerRosterRecord extends LearnerRosterInput {
   updatedAt: string;
 }
 
+export interface SchoolLearnerInput {
+  schoolId: number;
+  learnerName: string;
+  classGrade: string;
+  age: number;
+  gender: LearnerGender;
+  internalChildId?: string;
+}
+
+export interface SchoolLearnerRecord extends SchoolLearnerInput {
+  learnerId: number;
+  learnerUid: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AssessmentType = "baseline" | "progress" | "endline";
 export type LearnerGender = "Boy" | "Girl" | "Other";
+export type AssessmentComputedReadingLevel =
+  | "Level0 Non-reader"
+  | "Level1 Emergent"
+  | "Level2 Minimum"
+  | "Level3 Competent"
+  | "Level4 Strong";
+export type SchoolSupportStatus =
+  | "Requires Remedial & Catch-Up"
+  | "Progressing (Maintain + Strengthen)"
+  | "Graduation Prep (Approaching criteria)"
+  | "Graduation Eligible";
+export type TeacherSupportStatus =
+  | "Needs Catch-up Training"
+  | "Needs Coaching & Follow-up"
+  | "On Track";
 
 export type { ReadingLevel } from "@/lib/reading-assessment-utils";
 
@@ -758,6 +981,7 @@ export interface AssessmentRecordInput {
   madeUpWordsScore: number | null;
   storyReadingScore: number | null;
   readingComprehensionScore: number | null;
+  fluencyAccuracyScore?: number | null;
   notes?: string;
 }
 
@@ -767,6 +991,9 @@ export interface AssessmentRecord extends AssessmentRecordInput {
   createdAt: string;
   /** Auto-computed reading level based on domain scores */
   readingLevel?: import("@/lib/reading-assessment-utils").ReadingLevel;
+  computedReadingLevel?: AssessmentComputedReadingLevel | null;
+  computedLevelBand?: number | null;
+  readingRulesVersion?: string | null;
 }
 
 export interface DomainOutcomes {
@@ -958,9 +1185,18 @@ export interface PortalUserAdminRecord extends PortalUser {
 
 export type PortalRecordModule = "training" | "visit" | "assessment" | "story" | "story_activity";
 export type PortalRecordStatus = "Draft" | "Submitted" | "Returned" | "Approved";
+export type TrainingFollowUpType = "virtual_check_in" | "school_visit" | "refresher_session";
 
 export interface PortalRecordPayload {
-  [key: string]: string | number | boolean | string[] | null | undefined;
+  [key: string]:
+    | string
+    | number
+    | boolean
+    | string[]
+    | Array<Record<string, unknown>>
+    | Record<string, unknown>
+    | null
+    | undefined;
 }
 
 export interface PortalRecordInput {
@@ -971,6 +1207,8 @@ export interface PortalRecordInput {
   schoolName: string;
   programType?: string;
   followUpDate?: string;
+  followUpType?: TrainingFollowUpType;
+  followUpOwnerUserId?: number;
   status: PortalRecordStatus;
   payload: PortalRecordPayload;
 }
@@ -981,6 +1219,7 @@ export interface PortalRecord extends Omit<PortalRecordInput, "schoolId"> {
   recordCode: string;
   createdByUserId: number;
   createdByName: string;
+  followUpOwnerName?: string | null;
   reviewNote: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1767,6 +2006,14 @@ export interface SchoolDirectoryInput {
   gpsLng?: string;
   contactName?: string;
   contactPhone?: string;
+  proprietor: {
+    fullName: string;
+    gender: "Male" | "Female" | "Other";
+    phone?: string;
+    email?: string;
+    whatsapp?: string;
+    roleTitle?: string;
+  };
 }
 
 export interface SchoolDirectoryRecord {
@@ -1800,6 +2047,9 @@ export interface SchoolDirectoryRecord {
   gpsLng: string | null;
   contactName: string | null;
   contactPhone: string | null;
+  primaryContactId: number | null;
+  primaryContactName: string | null;
+  primaryContactCategory: SchoolContactCategory | null;
   programStatus: "active" | "graduated" | "paused" | "monitoring";
   graduatedAt: string | null;
   graduatedByUserId: number | null;
@@ -1959,6 +2209,11 @@ export interface PortalTestimonialRecord {
   photoMimeType: string | null;
   photoSizeBytes: number | null;
   isPublished: boolean;
+  moderationStatus: "pending" | "approved" | "hidden";
+  sourceType: "manual" | "training_feedback";
+  sourceTrainingFeedbackId: number | null;
+  sourceTrainingRecordId: number | null;
+  quoteField: string | null;
   createdByUserId: number;
   createdByName: string;
   createdAt: string;

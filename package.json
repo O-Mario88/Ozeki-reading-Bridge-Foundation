@@ -4,8 +4,9 @@
   "description": "Ozeki Reading Bridge Foundation full-stack webapp",
   "main": "index.js",
   "scripts": {
-    "test": "npm run test:privacy && npm run test:finance",
+    "test": "npm run test:privacy && npm run test:school-first && npm run test:finance",
     "test:privacy": "tsx --test src/tests/public-impact-privacy.test.ts src/tests/report-geo-cascade.test.ts src/tests/graduation-eligibility.test.ts",
+    "test:school-first": "tsx --test src/tests/school-first-participants.test.ts",
     "test:finance": "tsx --test src/tests/finance-module.test.ts",
     "dev": "next dev",
     "build": "next build",

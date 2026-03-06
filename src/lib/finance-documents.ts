@@ -896,7 +896,7 @@ export async function generateStatementPdfFile(input: StatementPdfInput): Promis
   const [pickedPage] = await outputDoc.copyPages(sourceDoc, [pageIndex]);
   outputDoc.addPage(pickedPage);
   const outputBytes = await outputDoc.save();
-  return writePdfBytesToPath(outputBytes, "statements", `\${baseName}-\${docType}`);
+  return writePdfBytesToPath(outputBytes, "statements", `${baseName}-${docType}`);
 }
 
 export async function generateSnapshotPdfFile(
@@ -925,7 +925,7 @@ export async function generateSnapshotPdfFile(
   cursorY -= 70;
 
   // Title
-  page.drawText(`Financial Snapshot — FY\${input.fy}`, {
+  page.drawText(`Financial Snapshot — FY${input.fy}`, {
     x: margin,
     y: cursorY,
     size: 20,
@@ -933,7 +933,7 @@ export async function generateSnapshotPdfFile(
     color: rgb(0.1, 0.1, 0.1),
   });
   cursorY -= 20;
-  const subtitle = input.quarter ? `Quarter: \${input.quarter}` : "Annual Ledger Summary";
+  const subtitle = input.quarter ? `Quarter: ${input.quarter}` : "Annual Ledger Summary";
   page.drawText(subtitle, {
     x: margin,
     y: cursorY,
@@ -942,7 +942,7 @@ export async function generateSnapshotPdfFile(
     color: rgb(0.3, 0.3, 0.3),
   });
   cursorY -= 15;
-  page.drawText(`As of \${formatStatementAsOfDate(input.generatedAt.slice(0, 10))} • \${input.currency} • Generated automatically`, {
+  page.drawText(`As of ${formatStatementAsOfDate(input.generatedAt.slice(0, 10))} • ${input.currency} • Generated automatically`, {
     x: margin,
     y: cursorY,
     size: 10,
@@ -976,7 +976,7 @@ export async function generateSnapshotPdfFile(
   cursorY -= (cardHeight + 20);
 
   if (input.programPct !== null && input.adminPct !== null) {
-    page.drawText(`Program Delivery: \${input.programPct}%  |  Core/Admin: \${input.adminPct}%`, {
+    page.drawText(`Program Delivery: ${input.programPct}%  |  Core/Admin: ${input.adminPct}%`, {
       x: margin,
       y: cursorY,
       size: 11,
@@ -1057,8 +1057,8 @@ export async function generateSnapshotPdfFile(
     input.restrictedSummary.forEach((item) => {
       state = ensureSpace(activePage, cursorY, 25);
       activePage = state.page; cursorY = state.y;
-      const label = `\${item.program} (Remaining: \${formatStatementAmount(item.remaining)})`;
-      cursorY = drawRow(activePage, cursorY, label, `In: \${formatStatementAmount(item.totalIn)} / Out: \${formatStatementAmount(Math.abs(item.totalOut))}`);
+      const label = `${item.program} (Remaining: ${formatStatementAmount(item.remaining)})`;
+      cursorY = drawRow(activePage, cursorY, label, `In: ${formatStatementAmount(item.totalIn)} / Out: ${formatStatementAmount(Math.abs(item.totalOut))}`);
     });
     cursorY -= 15;
   }
@@ -1078,8 +1078,8 @@ export async function generateSnapshotPdfFile(
   }
 
   const baseName = input.quarter
-    ? `SNAPSHOT-FY\${input.fy}-\${input.quarter}`
-    : `SNAPSHOT-FY\${input.fy}-ANNUAL`;
+    ? `SNAPSHOT-FY${input.fy}-${input.quarter}`
+    : `SNAPSHOT-FY${input.fy}-ANNUAL`;
 
   return writePdfToPath(doc, "transparency", baseName);
 }

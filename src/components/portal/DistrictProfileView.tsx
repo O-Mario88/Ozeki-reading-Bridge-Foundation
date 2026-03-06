@@ -1,15 +1,23 @@
 "use client";
 
-import { DistrictStats } from "@/lib/types";
+import { DistrictStats, SchoolSupportStatusRecord } from "@/lib/types";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface DistrictProfileViewProps {
     stats: DistrictStats;
+    initialSupportStatuses: SchoolSupportStatusRecord[];
 }
 
-export function DistrictProfileView({ stats }: DistrictProfileViewProps) {
+export function DistrictProfileView({ stats, initialSupportStatuses }: DistrictProfileViewProps) {
     const [activeTab, setActiveTab] = useState<"schools" | "impact">("schools");
+    const statusCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        initialSupportStatuses.forEach((row) => {
+            counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
+        });
+        return counts;
+    }, [initialSupportStatuses]);
 
     return (
         <div className="profile-container">
@@ -88,8 +96,70 @@ export function DistrictProfileView({ stats }: DistrictProfileViewProps) {
                             )}
 
                             {activeTab === "impact" && (
-                                <div className="placeholder-view">
-                                    <p>Aggregated impact reports and charts for {stats.district} will appear here.</p>
+                                <div className="list-view">
+                                    <h3>School Support Status ({stats.district})</h3>
+                                    <div className="impact-status-grid">
+                                        <article className="impact-status-card">
+                                            <span>Requires Remedial & Catch-Up</span>
+                                            <strong>{statusCounts.get("Requires Remedial & Catch-Up") ?? 0}</strong>
+                                        </article>
+                                        <article className="impact-status-card">
+                                            <span>Progressing</span>
+                                            <strong>{statusCounts.get("Progressing (Maintain + Strengthen)") ?? 0}</strong>
+                                        </article>
+                                        <article className="impact-status-card">
+                                            <span>Graduation Prep</span>
+                                            <strong>{statusCounts.get("Graduation Prep (Approaching criteria)") ?? 0}</strong>
+                                        </article>
+                                        <article className="impact-status-card">
+                                            <span>Graduation Eligible</span>
+                                            <strong>{statusCounts.get("Graduation Eligible") ?? 0}</strong>
+                                        </article>
+                                    </div>
+                                    <div className="table-wrap">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>School</th>
+                                                    <th>Status</th>
+                                                    <th>Period</th>
+                                                    <th>Non-readers %</th>
+                                                    <th>Below minimum %</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {initialSupportStatuses.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={5} className="empty-state-row">
+                                                            No support-status snapshots available yet.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    initialSupportStatuses.map((row) => (
+                                                        <tr key={row.id}>
+                                                            <td>
+                                                                <Link href={`/portal/schools/${row.schoolId}`} className="value link">
+                                                                    {row.schoolName}
+                                                                </Link>
+                                                            </td>
+                                                            <td>{row.status}</td>
+                                                            <td>{row.periodKey}</td>
+                                                            <td>
+                                                                {typeof row.metrics.nonReadersPct === "number"
+                                                                    ? `${row.metrics.nonReadersPct}%`
+                                                                    : "N/A"}
+                                                            </td>
+                                                            <td>
+                                                                {typeof row.metrics.belowMinimumPct === "number"
+                                                                    ? `${row.metrics.belowMinimumPct}%`
+                                                                    : "N/A"}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -266,6 +336,69 @@ export function DistrictProfileView({ stats }: DistrictProfileViewProps) {
         
         .action-link:hover {
             text-decoration: underline;
+        }
+
+        .impact-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .impact-status-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.65rem 0.8rem;
+            background: #f8fafc;
+            display: grid;
+            gap: 0.2rem;
+        }
+
+        .impact-status-card span {
+            font-size: 0.72rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .impact-status-card strong {
+            font-size: 1rem;
+            color: #111827;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.6rem 0.7rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.82rem;
+            color: #334155;
+        }
+
+        th {
+            font-size: 0.73rem;
+            color: #64748b;
+            background: #f8fafc;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .empty-state-row {
+            text-align: center;
+            color: #94a3b8;
+            font-style: italic;
+            padding: 1rem;
         }
       `}</style>
         </div>

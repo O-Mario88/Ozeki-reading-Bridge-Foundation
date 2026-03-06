@@ -12,53 +12,7 @@ type PortalFinanceStatementsManagerProps = {
 
 type StatementPeriodType = FinanceMonthlyStatementRecord["periodType"];
 
-const MONTH_LABELS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
-}
-
-function currentYear() {
-  return Number(new Date().toISOString().slice(0, 4));
-}
-
-function formatPeriodType(periodType: StatementPeriodType) {
-  if (periodType === "quarterly") {
-    return "Quarterly";
-  }
-  if (periodType === "fiscal_year") {
-    return "Fiscal Year";
-  }
-  return "Monthly";
-}
-
-function formatPeriodLabel(periodType: StatementPeriodType, period: string) {
-  if (periodType === "fiscal_year") {
-    return period.startsWith("FY-") ? period.replace("FY-", "FY ") : period;
-  }
-  if (periodType === "quarterly") {
-    return period.replace("-", " ");
-  }
-  const [yearRaw, monthRaw] = period.split("-");
-  const monthIndex = Number(monthRaw) - 1;
-  if (!yearRaw || Number.isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
-    return period;
-  }
-  return `${MONTH_LABELS[monthIndex]} ${yearRaw}`;
-}
+import { currentMonth, currentYear, formatPeriodType, formatPeriodLabel } from "./date-utils";
 
 export function PortalFinanceStatementsManager({ initialStatements }: PortalFinanceStatementsManagerProps) {
   const [statements, setStatements] = useState(initialStatements);
@@ -300,15 +254,15 @@ export function PortalFinanceStatementsManager({ initialStatements }: PortalFina
             </select>
           </label>
           {form.periodType === "monthly" ? (
-          <label>
-            <span className="portal-field-label">Report Month</span>
-            <input
-              type="month"
-              value={form.month}
-              required
-              onChange={(event) => setForm((prev) => ({ ...prev, month: event.target.value }))}
-            />
-          </label>
+            <label>
+              <span className="portal-field-label">Report Month</span>
+              <input
+                type="month"
+                value={form.month}
+                required
+                onChange={(event) => setForm((prev) => ({ ...prev, month: event.target.value }))}
+              />
+            </label>
           ) : null}
           {form.periodType === "quarterly" ? (
             <>

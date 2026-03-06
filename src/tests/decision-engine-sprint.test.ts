@@ -118,7 +118,7 @@ test("support requests auto-route and can be converted into activity records", (
 
   const now = Date.now();
   const tempEmail = `routing-test-${now}@example.org`;
-  const userInsert = db
+  db
     .prepare(
       `
       INSERT INTO portal_users (
@@ -140,10 +140,8 @@ test("support requests auto-route and can be converted into activity records", (
       fullName: `Routing Test Staff ${now}`,
       email: tempEmail,
       passwordHash: `hash-${now}`,
-      geographyScope: `district:${school!.district}`,
     });
 
-  const assignedStaffId = Number(userInsert.lastInsertRowid);
   const created = createSupportRequest(
     {
       schoolId: school!.id,

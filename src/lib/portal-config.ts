@@ -108,6 +108,31 @@ export const performanceSection: PortalSectionConfig = {
   ],
 };
 
+const sponsorshipFields: PortalFieldConfig[] = [
+  {
+    key: "sponsorshipType",
+    label: "Sponsorship type",
+    type: "select",
+    required: true,
+    options: [
+      { value: "Partner", label: "Partner" },
+      { value: "Individual Donation", label: "Individual donation" },
+      { value: "Government", label: "Government" },
+      { value: "Internal Program Budget", label: "Internal program budget" },
+      { value: "Other", label: "Other" },
+    ],
+    helperText:
+      "Select whether this activity was sponsored by a partner or an individual donor.",
+  },
+  {
+    key: "sponsoredBy",
+    label: "Sponsored by",
+    type: "text",
+    required: true,
+    placeholder: "e.g. UNICEF Uganda, USAID, John Doe",
+  },
+];
+
 const trainingConfig: PortalModuleConfig = {
   module: "training",
   route: "/portal/trainings",
@@ -148,6 +173,7 @@ const trainingConfig: PortalModuleConfig = {
         { key: "parish", label: "Parish", type: "text", required: true },
         { key: "village", label: "Village (optional)", type: "text" },
         { key: "gpsLocation", label: "GPS (optional)", type: "text" },
+        ...sponsorshipFields,
       ],
     },
     {
@@ -225,6 +251,50 @@ const trainingConfig: PortalModuleConfig = {
       id: "actions",
       title: "Section 4: Actions & Follow-up",
       fields: [
+        {
+          key: "how_training_changed_teaching",
+          label: "Participant feedback: How training changed teaching",
+          type: "textarea",
+          helperText:
+            "This field feeds the testimonials moderation queue and training report themes.",
+        },
+        {
+          key: "what_you_will_do_to_improve_reading_levels",
+          label: "Participant feedback: What you will do to improve reading levels",
+          type: "textarea",
+          helperText:
+            "Capture practical commitments that can be tracked during follow-up.",
+        },
+        {
+          key: "what_went_well_participant",
+          label: "Participant feedback: What went well",
+          type: "textarea",
+        },
+        {
+          key: "what_went_well_trainer",
+          label: "Trainer feedback: What went well",
+          type: "textarea",
+        },
+        {
+          key: "challenges_participant",
+          label: "Participant feedback: Challenges",
+          type: "textarea",
+        },
+        {
+          key: "challenges_trainer",
+          label: "Trainer feedback: Challenges",
+          type: "textarea",
+        },
+        {
+          key: "recommendations_next_training_participant",
+          label: "Participant feedback: Recommendations for next training",
+          type: "textarea",
+        },
+        {
+          key: "recommendations_next_training_trainer",
+          label: "Trainer feedback: Recommendations for next training",
+          type: "textarea",
+        },
         { key: "challenges", label: "Challenges / risks", type: "textarea" },
         { key: "actionPoints", label: "Action points agreed", type: "textarea" },
         { key: "trainingNotes", label: "Training notes", type: "textarea" },
@@ -307,6 +377,7 @@ const visitConfig: PortalModuleConfig = {
         { key: "subCounty", label: "Sub-county", type: "text", required: true },
         { key: "parish", label: "Parish", type: "text", required: true },
         { key: "village", label: "Village (optional)", type: "text" },
+        ...sponsorshipFields,
       ],
     },
     {
@@ -514,6 +585,7 @@ const assessmentConfig: PortalModuleConfig = {
         },
         { key: "assessor", label: "Assessor", type: "text", required: true },
         { key: "village", label: "Village (optional)", type: "text" },
+        ...sponsorshipFields,
       ],
     },
     {
@@ -620,6 +692,7 @@ const storyConfig: PortalModuleConfig = {
         { key: "subCounty", label: "Sub-county", type: "text", required: true },
         { key: "parish", label: "Parish", type: "text", required: true },
         { key: "village", label: "Village (optional)", type: "text" },
+        ...sponsorshipFields,
         { key: "grades", label: "Grade(s)", type: "text" },
         { key: "learnersInvolved", label: "# learners involved", type: "number", min: 0 },
         { key: "storiesDrafted", label: "# stories drafted", type: "number", min: 0 },

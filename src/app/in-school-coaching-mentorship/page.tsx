@@ -3,39 +3,41 @@ import Link from "next/link";
 import coachingPhoto from "../../../assets/photos/PXL_20260217_110739688.jpg";
 
 export const metadata = {
-  title: "In-School Teacher Evaluation, Coaching & Mentorship",
+  title: "In-School Coaching & Mentorship",
   description:
-    "Classroom coaching model that turns training into daily reading instruction practice.",
+    "Classroom implementation engine that converts training into consistent routines and measurable learner reading improvement.",
 };
 
 export default function InSchoolCoachingMentorshipPage() {
   return (
     <>
-      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+      <section
+        className="section tpd-hero-section bg-surface-container"
+        style={{ backgroundColor: "var(--md-sys-color-surface-container)" }}
+      >
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
-            <p className="kicker">Program spotlight</p>
-            <h1 className="tpd-page-title">
-              In-School Teacher Evaluation, Coaching &amp; Mentorship
-            </h1>
+            <p className="kicker">Program Spotlight</p>
+            <h1 className="tpd-page-title">In-School Coaching &amp; Mentorship</h1>
             <p className="tpd-subline">
-              Classroom coaching that turns training into daily practice.
+              Classroom implementation engine for daily routines and sustained reading gains.
             </p>
             <h2>Overview</h2>
             <p>
-              Training only creates change when it shows up in the classroom. Our
-              In-School Teacher Evaluation, Coaching &amp; Mentorship program is the
-              bridge between &quot;I attended training&quot; and &quot;I can teach
-              reading well every day.&quot;
+              In-School Coaching &amp; Mentorship is our classroom implementation
+              engine, designed to make sure training translates into daily
+              instruction, consistent routines, and sustained learner improvement.
             </p>
             <p>
-              We visit schools, observe real lessons, identify the exact gaps
-              holding teachers back, and provide targeted coaching cycles until
-              phonics routines become consistent, confident, and sustainable.
+              In many education programs, training ends at the workshop; in the
+              platform, training is only the beginning. Coaching is where teachers
+              shift from knowing phonics to delivering phonics accurately,
+              confidently, and consistently, so learners experience real change in
+              reading ability.
             </p>
             <p className="meta-line">
-              <strong>Outcome we drive:</strong> Instruction quality improves and
-              adoption of phonics routines is sustained.
+              <strong>Outcome we drive:</strong> measurable instructional change
+              that links classroom practice to learner outcomes.
             </p>
           </article>
 
@@ -44,177 +46,151 @@ export default function InSchoolCoachingMentorshipPage() {
               src={coachingPhoto}
               alt="In-school reading lesson coaching session"
               priority
+              sizes="(max-width: 900px) 100vw, 45vw"
             />
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">How We Do It (Our Coaching Model)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>1) Pre-Visit Planning</h3>
-              <p>
-                We set the coaching target before we arrive by working with school
-                leadership to identify:
-              </p>
-              <ul>
-                <li>Priority classes and teachers to observe</li>
-                <li>The day&apos;s reading timetable and schedule</li>
-                <li>Available materials (charts, readers, lesson notes)</li>
-                <li>
-                  Known challenges such as non-readers, large classes, low teacher
-                  confidence, and time constraints
-                </li>
-              </ul>
-              <p>
-                This helps us arrive with a clear purpose and maximize classroom
-                time.
-              </p>
-            </article>
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Classroom Observation Focus</h3>
+            <p>
+              Ozeki coaches work directly inside classrooms and observe real
+              reading lessons using a standard lesson evaluation tool. The tool
+              focuses on practices that matter most:
+            </p>
+            <ul>
+              <li>Quick revision of previously taught sounds</li>
+              <li>Clear modeling of new sounds and letter formation</li>
+              <li>Explicit blending and segmenting routines</li>
+              <li>Structured decoding practice</li>
+              <li>High time-on-task</li>
+              <li>Effective error correction</li>
+            </ul>
+          </article>
 
-            <article className="card">
-              <h3>2) Classroom Observation Using Practical Rubrics</h3>
-              <p>
-                We observe lessons as they happen and use a simple rubric focused
-                on the core actions that determine reading success.
-              </p>
-              <ul>
-                <li>
-                  Lesson structure: review, teach, guided practice, independent
-                  practice, quick check
-                </li>
-                <li>Phonics accuracy and sound-letter mapping</li>
-                <li>Blending and decoding routines</li>
-                <li>Error correction quality and speed</li>
-                <li>Active learner reading practice time</li>
-                <li>Use of materials and classroom pacing</li>
-                <li>Fluency and grade-appropriate comprehension routines</li>
-              </ul>
-              <p>
-                Output: clear observation notes with strengths and gaps, not
-                general comments.
-              </p>
-            </article>
+          <article className="card">
+            <h3>Coaching, Not Inspection</h3>
+            <p>
+              Observation is never inspection. It is a coaching moment.
+              Coaches provide immediate and specific feedback that identifies:
+            </p>
+            <ul>
+              <li>What the teacher did well</li>
+              <li>What is limiting learner success</li>
+              <li>What to improve in the next lesson</li>
+            </ul>
+            <p>
+              Where needed, coaches demonstrate routines through model lessons,
+              co-teaching, and guided rehearsal so teachers can see exactly how to
+              run routines with the whole class and with struggling learners.
+            </p>
+          </article>
 
-            <article className="card">
-              <h3>3) Immediate Feedback (Same Day, Same Teacher)</h3>
-              <p>
-                Feedback is specific, actionable, and practical. Teachers leave
-                knowing exactly what to change in the next lesson.
-              </p>
-              <ul>
-                <li>
-                  <strong>Keep doing:</strong> what worked and why
-                </li>
-                <li>
-                  <strong>Adjust:</strong> top 1-3 changes with the biggest impact
-                </li>
-                <li>
-                  <strong>Next steps:</strong> what the teacher practices before the
-                  next visit
-                </li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>4) Coaching Cycles (Habit Building)</h3>
-              <p>We coach in cycles so improvement is sustained.</p>
-              <ul>
-                <li>Observe baseline lesson performance</li>
-                <li>Coach on 1-3 high-impact skills</li>
-                <li>Practice immediately through micro-teaching rehearsal</li>
-                <li>Follow up to check routine consistency</li>
-                <li>Strengthen fluency and comprehension after phonics stabilizes</li>
-              </ul>
-              <p>
-                This prevents coaching overload and helps teachers improve fast.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>5) Model Lessons and Co-Teaching</h3>
-              <p>
-                When teachers struggle, we model in the same classroom with the
-                same learners and materials so expectations are clear.
-              </p>
-              <ul>
-                <li>Correct sound teaching and blending routines</li>
-                <li>Fast, supportive error correction</li>
-                <li>Efficient transition from phonics to fluency</li>
-                <li>Inclusion of weaker learners without slowing the class</li>
-                <li>Co-teaching to transfer confidence and skills immediately</li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>6) Teacher Improvement Plans</h3>
-              <p>
-                Each coached teacher receives a short, measurable plan with:
-              </p>
-              <ul>
-                <li>1-3 priority skills to improve</li>
-                <li>Daily or weekly practice actions</li>
-                <li>Clear progress evidence for the next observation</li>
-              </ul>
-              <p>
-                Plans are realistic and aligned to school constraints and teacher
-                workload.
-              </p>
-            </article>
-          </div>
+          <article className="card">
+            <h3>Structured Coaching Cycle</h3>
+            <p>Mentorship is delivered through repeatable coaching cycles:</p>
+            <p className="meta-line">
+              <strong>
+                observe -&gt; coach -&gt; model/practise -&gt; agree next actions
+                -&gt; follow-up
+              </strong>
+            </p>
+            <p>This makes improvement predictable and measurable across visits.</p>
+          </article>
         </div>
       </section>
 
       <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h3>Focus Areas (What Coaching Targets)</h3>
+            <h3>Daily Routines Teachers Build Through Coaching</h3>
             <ul>
-              <li>Lesson observation using simple rubrics</li>
-              <li>Immediate feedback and coaching cycles</li>
-              <li>Model lessons and co-teaching</li>
-              <li>Correction techniques and routine consistency</li>
-              <li>Increasing learner reading practice time</li>
-              <li>
-                Strengthening fluency routines and grade-appropriate comprehension
-                questions
-              </li>
+              <li>Accurate sound teaching</li>
+              <li>Fast-paced choral response</li>
+              <li>Blending practice that prevents guessing</li>
+              <li>Segmenting practice that strengthens spelling</li>
+              <li>Fluency routines that build automaticity</li>
+              <li>Quick checks to identify catch-up needs</li>
             </ul>
+            <p>
+              Because classroom realities vary, coaching includes strategies for
+              large classes, mixed-ability groups, and limited materials so
+              routines remain workable in real conditions.
+            </p>
           </article>
 
           <article className="card">
-            <h3>Outputs (What Schools Receive)</h3>
+            <h3>Evidence and Accountability from Every Visit</h3>
+            <p>Each coaching visit generates structured data:</p>
             <ul>
-              <li>Observation notes (teacher-by-teacher, lesson-by-lesson)</li>
-              <li>Teacher improvement plans</li>
-              <li>Follow-up coaching visits and progress tracking</li>
-              <li>Model lessons and co-teaching sessions where needed</li>
-              <li>
-                Summary feedback for school leadership to strengthen supervision
-              </li>
+              <li>Teaching quality scores by domain</li>
+              <li>Item-level strengths and gaps</li>
+              <li>Prioritized action plan</li>
             </ul>
+            <p>
+              Teacher improvement is tracked from first visit through follow-up
+              visits, enabling targeted support instead of generic support.
+            </p>
           </article>
 
           <article className="card">
-            <h3>What Changes We Expect to See</h3>
+            <h3>Linked to Learner Outcomes</h3>
+            <p>
+              Coaching results connect directly to learner assessment data, so
+              schools and partners can verify whether improved instruction is
+              producing intended outcomes:
+            </p>
             <ul>
-              <li>Reading lessons become more structured and faster-paced</li>
-              <li>
-                Teachers pronounce and teach sounds correctly and consistently
-              </li>
-              <li>
-                Learners spend more time actively practicing blending and reading
-              </li>
-              <li>Teachers correct mistakes immediately with a clear method</li>
-              <li>Phonics routines become habitual, not occasional</li>
-              <li>
-                School leadership supervises reading lessons using the same rubric
-              </li>
+              <li>Fewer non-readers</li>
+              <li>More learners at minimum fluency benchmarks</li>
+              <li>Stronger decoding accuracy</li>
+              <li>Improved comprehension</li>
             </ul>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Leadership and School System Strengthening</h3>
+            <p>
+              Where leadership support is included, Headteachers and Directors of
+              Studies are guided to supervise instruction, protect reading time on
+              the timetable, and use simple data dashboards for decisions.
+            </p>
+            <p>
+              This ensures progress does not depend on external coaches only, but
+              becomes school-owned practice.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Pathway to Graduation Readiness</h3>
+            <p>
+              Over time, schools move from intensive coaching to lighter follow-up
+              and, when performance thresholds are met, toward graduation
+              readiness.
+            </p>
+            <p>
+              The result is not visits for reporting purposes; it is measurable
+              instructional change sustained in school routines.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Program Result</h3>
+            <p>
+              Teachers deliver clearer and more consistent reading lessons.
+              Learners practise more, decode more accurately, and progress through
+              reading levels. Leaders gain tools to sustain routines. Partners
+              receive credible evidence linking classroom practice to learner
+              outcomes until schools maintain strong reading instruction
+              independently.
+            </p>
           </article>
         </div>
       </section>
@@ -222,26 +198,31 @@ export default function InSchoolCoachingMentorshipPage() {
       <section className="section">
         <div className="container cards-grid-two">
           <article className="card">
-            <h3>Outcome</h3>
+            <h3>Explore Related Evidence</h3>
             <p>
-              Instruction quality improves and adoption of phonics routines is
-              sustained, because teachers are supported in the real classroom until
-              consistent practice becomes the norm.
+              <Link className="inline-download-link" href="/impact">
+                Open Live Impact Dashboard
+              </Link>
+            </p>
+            <p>
+              <Link className="inline-download-link" href="/resources">
+                Open Resources Library
+              </Link>
             </p>
           </article>
 
           <article className="card">
-            <h3>Book Coaching Visit</h3>
+            <h3>Partner for Coaching Scale</h3>
             <p>
-              Schedule a school coaching visit for lesson observation, targeted
-              feedback, and follow-up implementation support.
+              Support coaching cycles that are tracked, verified, and directly
+              linked to learner reading gains.
             </p>
             <div className="action-row">
-              <Link className="button" href="/portal/schools">
-                Open school profiles
+              <Link className="button" href="/partner-with-us">
+                Partner With Us
               </Link>
-              <Link className="button button-ghost" href="/partner">
-                Partner with us
+              <Link className="button button-ghost" href="/portal/schools">
+                Open school profiles
               </Link>
             </div>
           </article>

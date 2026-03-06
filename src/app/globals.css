@@ -8871,14 +8871,42 @@ nav[aria-label="Staff navigation"] {
 
 .impact-teaching-quality-grid {
   display: grid;
-  gap: 0.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.42rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: start;
 }
 
 .impact-domain-mini-card {
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 10px;
   padding: 0.6rem;
+}
+
+.impact-teaching-card {
+  gap: 0.62rem;
+}
+
+.impact-teaching-scope {
+  margin-top: 0;
+}
+
+.impact-teaching-subtitle {
+  font-size: 1.02rem;
+  margin: 0.4rem 0 0.1rem;
+}
+
+.impact-domain-mini-grid--teaching {
+  gap: 0.42rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
+}
+
+.impact-domain-mini-card--compact {
+  padding: 0.55rem;
+}
+
+.impact-domain-mini-card--wide {
+  min-width: 0;
 }
 
 .impact-domain-mini-card h4 {
@@ -8948,6 +8976,12 @@ nav[aria-label="Staff navigation"] {
   display: grid;
   gap: 0.8rem;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.impact-auto-grid--teaching {
+  gap: 0.52rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  align-items: start;
 }
 
 .impact-reading-level-panel {

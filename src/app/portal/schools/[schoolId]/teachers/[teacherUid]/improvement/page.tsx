@@ -115,6 +115,16 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
             </div>
 
             <article className="card" style={{ display: "grid", gap: "0.5rem" }}>
+              <h3 style={{ margin: 0 }}>Recommended Next Support</h3>
+              <p style={{ margin: 0 }}>
+                Status: {profile.teacherSupportStatus ?? "Data not available"}
+              </p>
+              <p style={{ margin: 0 }}>
+                Action: {profile.teacherSupportAction ?? "No action recommendation yet."}
+              </p>
+            </article>
+
+            <article className="card" style={{ display: "grid", gap: "0.5rem" }}>
               <h3 style={{ margin: 0 }}>Teaching → Learning Alignment</h3>
               <p style={{ margin: 0 }}>
                 Teaching quality delta:{" "}
@@ -132,4 +142,3 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
     </PortalShell>
   );
 }
-

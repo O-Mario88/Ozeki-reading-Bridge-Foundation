@@ -5,7 +5,6 @@ import {
     Search,
     Calendar as CalendarIcon,
     Bell,
-    MoreVertical,
     ChevronRight,
     Plus
 } from "lucide-react";

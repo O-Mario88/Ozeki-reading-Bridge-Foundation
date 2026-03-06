@@ -6,11 +6,12 @@ export default tseslint.config(
   {
     ignores: [
       ".next/**",
-      ".next_old_*/**",
-      ".next_tmp_*/**",
-      ".next_build_lock_*/**",
+      ".next*/**",
       "node_modules/**",
       "public/**",
+      "out/**",
+      "coverage/**",
+      "dist/**",
     ],
   },
   js.configs.recommended,
@@ -28,6 +29,8 @@ export default tseslint.config(
         "warn",
         {
           argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
         },
       ],
     },

@@ -72,6 +72,11 @@ import {
   ImpactReportVariant,
   SchoolDirectoryInput,
   SchoolDirectoryRecord,
+  SchoolContactCategory,
+  SchoolContactInput,
+  SchoolContactRecord,
+  SchoolLearnerInput,
+  SchoolLearnerRecord,
   TeacherRosterInput,
   TeacherRosterRecord,
   LearnerRosterInput,
@@ -152,6 +157,9 @@ const dataDir = path.join(process.cwd(), "data");
 const dbFile = path.join(dataDir, "app.db");
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-salt";
+const ASSESSMENT_READING_RULE_VERSION = "UG-RLv1";
+const SCHOOL_SUPPORT_RULE_VERSION = "UG-Support-v1";
+const TEACHER_SUPPORT_RULE_VERSION = "UG-TeacherSupport-v1";
 
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -427,6 +435,230 @@ function ensureTeacherLearnerRosterTables(db: Database.Database) {
   `);
 }
 
+function ensureSchoolRosterTables(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS school_contacts (
+      contact_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_uid TEXT NOT NULL UNIQUE,
+      school_id INTEGER NOT NULL,
+      full_name TEXT NOT NULL,
+      gender TEXT NOT NULL CHECK(gender IN ('Male', 'Female', 'Other')),
+      phone TEXT,
+      email TEXT,
+      whatsapp TEXT,
+      category TEXT NOT NULL CHECK(category IN ('Proprietor', 'Head Teacher', 'Deputy Head Teacher', 'DOS', 'Teacher')),
+      role_title TEXT,
+      is_primary_contact INTEGER NOT NULL DEFAULT 0 CHECK(is_primary_contact IN (0, 1)),
+      class_taught TEXT,
+      subject_taught TEXT,
+      teacher_uid TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS school_learners (
+      learner_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      learner_uid TEXT NOT NULL UNIQUE,
+      school_id INTEGER NOT NULL,
+      learner_name TEXT NOT NULL,
+      class_grade TEXT NOT NULL,
+      age INTEGER NOT NULL,
+      gender TEXT NOT NULL CHECK(gender IN ('Boy', 'Girl', 'Other')),
+      internal_child_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_school_contacts_school
+      ON school_contacts(school_id);
+    CREATE INDEX IF NOT EXISTS idx_school_contacts_category
+      ON school_contacts(school_id, category);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_school_contacts_primary_per_school
+      ON school_contacts(school_id) WHERE is_primary_contact = 1;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_school_contacts_teacher_uid
+      ON school_contacts(teacher_uid) WHERE teacher_uid IS NOT NULL AND trim(teacher_uid) != '';
+
+    CREATE INDEX IF NOT EXISTS idx_school_learners_school
+      ON school_learners(school_id, class_grade);
+    CREATE INDEX IF NOT EXISTS idx_school_learners_uid
+      ON school_learners(learner_uid);
+  `);
+
+  ensureColumn(db, "schools_directory", "primary_contact_id", "INTEGER");
+
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS trg_school_contacts_primary_insert
+    BEFORE INSERT ON school_contacts
+    WHEN NEW.is_primary_contact = 1 AND NEW.category != 'Proprietor'
+    BEGIN
+      SELECT RAISE(ABORT, 'Primary contact must be a Proprietor.');
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS trg_school_contacts_primary_update
+    BEFORE UPDATE ON school_contacts
+    WHEN NEW.is_primary_contact = 1 AND NEW.category != 'Proprietor'
+    BEGIN
+      SELECT RAISE(ABORT, 'Primary contact must be a Proprietor.');
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS trg_school_contacts_teacher_requirements_insert
+    BEFORE INSERT ON school_contacts
+    WHEN NEW.category = 'Teacher'
+      AND (
+        length(trim(COALESCE(NEW.class_taught, ''))) = 0
+        OR length(trim(COALESCE(NEW.subject_taught, ''))) = 0
+      )
+    BEGIN
+      SELECT RAISE(ABORT, 'Teacher contacts require class_taught and subject_taught.');
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS trg_school_contacts_teacher_requirements_update
+    BEFORE UPDATE ON school_contacts
+    WHEN NEW.category = 'Teacher'
+      AND (
+        length(trim(COALESCE(NEW.class_taught, ''))) = 0
+        OR length(trim(COALESCE(NEW.subject_taught, ''))) = 0
+      )
+    BEGIN
+      SELECT RAISE(ABORT, 'Teacher contacts require class_taught and subject_taught.');
+    END;
+  `);
+
+  db.exec(`
+    INSERT INTO school_contacts (
+      contact_uid,
+      school_id,
+      full_name,
+      gender,
+      phone,
+      category,
+      role_title,
+      is_primary_contact,
+      class_taught,
+      subject_taught,
+      teacher_uid,
+      created_at,
+      updated_at
+    )
+    SELECT
+      tr.teacher_uid,
+      tr.school_id,
+      tr.full_name,
+      tr.gender,
+      tr.phone,
+      'Teacher',
+      'Teacher',
+      0,
+      'Not assigned',
+      'Not assigned',
+      tr.teacher_uid,
+      tr.created_at,
+      tr.updated_at
+    FROM teacher_roster tr
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM school_contacts sc
+      WHERE trim(COALESCE(sc.teacher_uid, '')) = trim(COALESCE(tr.teacher_uid, ''))
+    );
+
+    INSERT INTO school_learners (
+      learner_uid,
+      school_id,
+      learner_name,
+      class_grade,
+      age,
+      gender,
+      internal_child_id,
+      created_at,
+      updated_at
+    )
+    SELECT
+      lr.learner_uid,
+      lr.school_id,
+      lr.full_name,
+      lr.class_grade,
+      lr.age,
+      lr.gender,
+      lr.internal_child_id,
+      lr.created_at,
+      lr.updated_at
+    FROM learner_roster lr
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM school_learners sl
+      WHERE trim(COALESCE(sl.learner_uid, '')) = trim(COALESCE(lr.learner_uid, ''))
+    );
+
+    INSERT INTO school_contacts (
+      contact_uid,
+      school_id,
+      full_name,
+      gender,
+      phone,
+      category,
+      role_title,
+      is_primary_contact,
+      class_taught,
+      subject_taught,
+      teacher_uid
+    )
+    SELECT
+      'cnt_' || lower(hex(randomblob(12))),
+      sd.id,
+      CASE
+        WHEN trim(COALESCE(sd.contact_name, '')) != '' THEN trim(sd.contact_name)
+        ELSE trim(sd.name) || ' Proprietor'
+      END,
+      'Other',
+      CASE
+        WHEN trim(COALESCE(sd.contact_phone, '')) != '' THEN trim(sd.contact_phone)
+        ELSE NULL
+      END,
+      'Proprietor',
+      'Proprietor/Director',
+      1,
+      NULL,
+      NULL,
+      NULL
+    FROM schools_directory sd
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM school_contacts sc
+      WHERE sc.school_id = sd.id
+        AND sc.is_primary_contact = 1
+    );
+
+    UPDATE schools_directory
+    SET primary_contact_id = (
+      SELECT sc.contact_id
+      FROM school_contacts sc
+      WHERE sc.school_id = schools_directory.id
+        AND sc.is_primary_contact = 1
+      ORDER BY sc.contact_id ASC
+      LIMIT 1
+    )
+    WHERE primary_contact_id IS NULL;
+
+    UPDATE schools_directory
+    SET
+      contact_name = (
+        SELECT sc.full_name
+        FROM school_contacts sc
+        WHERE sc.contact_id = schools_directory.primary_contact_id
+        LIMIT 1
+      ),
+      contact_phone = (
+        SELECT sc.phone
+        FROM school_contacts sc
+        WHERE sc.contact_id = schools_directory.primary_contact_id
+        LIMIT 1
+      )
+    WHERE primary_contact_id IS NOT NULL;
+  `);
+}
+
 function ensureGeoHierarchyTables(db: Database.Database) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS geo_regions (
@@ -621,15 +853,20 @@ function ensureProgramLinkageTables(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       portal_record_id INTEGER NOT NULL,
       school_id INTEGER,
+      contact_id INTEGER,
+      contact_uid TEXT,
       participant_name TEXT NOT NULL,
       participant_role TEXT NOT NULL,
+      role_at_time TEXT,
+      attended INTEGER NOT NULL DEFAULT 1,
       gender TEXT,
       teacher_uid TEXT,
       phone TEXT,
       email TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY(portal_record_id) REFERENCES portal_records(id) ON DELETE CASCADE,
-      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL,
+      FOREIGN KEY(contact_id) REFERENCES school_contacts(contact_id) ON DELETE SET NULL
     );
     CREATE INDEX IF NOT EXISTS idx_portal_training_attendance_record
       ON portal_training_attendance(portal_record_id);
@@ -684,6 +921,7 @@ function ensureProgramLinkageTables(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       assessment_session_id INTEGER NOT NULL,
       source_row_key TEXT NOT NULL,
+      learner_id INTEGER,
       learner_uid TEXT NOT NULL,
       letter_sounds_score REAL,
       decoding_score REAL,
@@ -691,6 +929,7 @@ function ensureProgramLinkageTables(db: Database.Database) {
       comprehension_score REAL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY(assessment_session_id) REFERENCES assessment_sessions(id) ON DELETE CASCADE,
+      FOREIGN KEY(learner_id) REFERENCES school_learners(learner_id) ON DELETE SET NULL,
       FOREIGN KEY(learner_uid) REFERENCES learner_roster(learner_uid) ON DELETE CASCADE,
       UNIQUE(assessment_session_id, source_row_key)
     );
@@ -698,7 +937,30 @@ function ensureProgramLinkageTables(db: Database.Database) {
       ON assessment_session_results(assessment_session_id);
     CREATE INDEX IF NOT EXISTS idx_assessment_session_results_learner
       ON assessment_session_results(learner_uid);
+
+    CREATE TABLE IF NOT EXISTS visit_participants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      visit_id INTEGER NOT NULL,
+      school_id INTEGER NOT NULL,
+      contact_id INTEGER NOT NULL,
+      role_at_time TEXT,
+      attended INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(visit_id) REFERENCES coaching_visits(id) ON DELETE CASCADE,
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(contact_id) REFERENCES school_contacts(contact_id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_visit_participants_visit
+      ON visit_participants(visit_id);
+    CREATE INDEX IF NOT EXISTS idx_visit_participants_contact
+      ON visit_participants(contact_id);
   `);
+
+  ensureColumn(db, "portal_training_attendance", "contact_id", "INTEGER");
+  ensureColumn(db, "portal_training_attendance", "contact_uid", "TEXT");
+  ensureColumn(db, "portal_training_attendance", "role_at_time", "TEXT");
+  ensureColumn(db, "portal_training_attendance", "attended", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "assessment_session_results", "learner_id", "INTEGER");
 }
 
 function ensureLessonEvaluationTables(db: Database.Database) {
@@ -1343,6 +1605,386 @@ function ensureAssessmentDomainsColumns(db: Database.Database) {
   ensureColumn(db, "assessment_records", "made_up_words_score", "INTEGER");
   ensureColumn(db, "assessment_records", "story_reading_score", "INTEGER");
   ensureColumn(db, "assessment_records", "reading_comprehension_score", "INTEGER");
+}
+
+function ensureAutomationTables(db: Database.Database) {
+  ensureColumn(db, "portal_records", "follow_up_type", "TEXT");
+  ensureColumn(db, "portal_records", "follow_up_owner_user_id", "INTEGER");
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_portal_records_follow_up_owner
+      ON portal_records(follow_up_owner_user_id);
+  `);
+
+  ensureColumn(db, "assessment_records", "fluency_accuracy_score", "REAL");
+  ensureColumn(db, "assessment_records", "computed_reading_level", "TEXT");
+  ensureColumn(db, "assessment_records", "computed_level_band", "INTEGER");
+  ensureColumn(db, "assessment_records", "reading_rules_version", "TEXT");
+  ensureColumn(db, "assessment_records", "reading_level_computed_at", "TEXT");
+  ensureColumn(db, "assessment_session_results", "fluency_accuracy_score", "REAL");
+  ensureColumn(db, "assessment_session_results", "computed_reading_level", "TEXT");
+  ensureColumn(db, "assessment_session_results", "computed_level_band", "INTEGER");
+  ensureColumn(db, "assessment_session_results", "rules_version", "TEXT");
+  ensureColumn(db, "assessment_session_results", "computed_at", "TEXT");
+  ensureColumn(db, "assessment_session_results", "override_reason", "TEXT");
+  ensureColumn(db, "assessment_session_results", "override_by_user_id", "INTEGER");
+  ensureColumn(db, "assessment_session_results", "override_at", "TEXT");
+
+  ensureColumn(db, "portal_testimonials", "moderation_status", "TEXT NOT NULL DEFAULT 'approved'");
+  ensureColumn(db, "portal_testimonials", "source_type", "TEXT NOT NULL DEFAULT 'manual'");
+  ensureColumn(db, "portal_testimonials", "source_training_feedback_id", "INTEGER");
+  ensureColumn(db, "portal_testimonials", "source_training_record_id", "INTEGER");
+  ensureColumn(db, "portal_testimonials", "quote_field", "TEXT");
+  db.exec(`
+    UPDATE portal_testimonials
+    SET moderation_status = CASE
+      WHEN COALESCE(is_published, 0) = 1 THEN 'approved'
+      ELSE 'pending'
+    END
+    WHERE COALESCE(trim(moderation_status), '') = '';
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS assessment_benchmark_settings (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      reading_level_version TEXT NOT NULL DEFAULT 'UG-RLv1',
+      emergent_cwpm_max INTEGER NOT NULL DEFAULT 19,
+      minimum_cwpm_max INTEGER NOT NULL DEFAULT 39,
+      competent_cwpm_max INTEGER NOT NULL DEFAULT 59,
+      comprehension_min_percent REAL NOT NULL DEFAULT 70,
+      comprehension_min_score REAL NOT NULL DEFAULT 4,
+      comprehension_total_items REAL NOT NULL DEFAULT 5,
+      use_accuracy_floor INTEGER NOT NULL DEFAULT 0,
+      accuracy_floor REAL NOT NULL DEFAULT 90,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS school_support_settings (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      rules_version TEXT NOT NULL DEFAULT 'UG-Support-v1',
+      non_readers_threshold REAL NOT NULL DEFAULT 30,
+      below_minimum_threshold REAL NOT NULL DEFAULT 55,
+      decoding_proficiency_threshold REAL NOT NULL DEFAULT 45,
+      progress_min_below_minimum_drop REAL NOT NULL DEFAULT 5,
+      progress_min_cwpm20_gain REAL NOT NULL DEFAULT 5,
+      graduation_prep_below_minimum_max REAL NOT NULL DEFAULT 20,
+      graduation_prep_at40_min REAL NOT NULL DEFAULT 60,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS teacher_support_settings (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      rules_version TEXT NOT NULL DEFAULT 'UG-TeacherSupport-v1',
+      catchup_overall_threshold REAL NOT NULL DEFAULT 60,
+      critical_domain_threshold REAL NOT NULL DEFAULT 55,
+      on_track_overall_threshold REAL NOT NULL DEFAULT 75,
+      on_track_min_delta REAL NOT NULL DEFAULT 5,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS school_support_status_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER NOT NULL,
+      period_key TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN (
+        'Requires Remedial & Catch-Up',
+        'Progressing (Maintain + Strengthen)',
+        'Graduation Prep (Approaching criteria)',
+        'Graduation Eligible'
+      )),
+      metrics_json TEXT NOT NULL DEFAULT '{}',
+      recommended_actions_json TEXT NOT NULL DEFAULT '[]',
+      rules_version TEXT NOT NULL,
+      computed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(school_id, period_key),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_school_support_status_snapshots_status
+      ON school_support_status_snapshots(status, computed_at DESC);
+
+    CREATE TABLE IF NOT EXISTS teacher_support_status_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER NOT NULL,
+      teacher_uid TEXT NOT NULL,
+      period_key TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN (
+        'Needs Catch-up Training',
+        'Needs Coaching & Follow-up',
+        'On Track'
+      )),
+      recommended_action TEXT NOT NULL DEFAULT '',
+      evaluations_count INTEGER NOT NULL DEFAULT 0,
+      metrics_json TEXT NOT NULL DEFAULT '{}',
+      rules_version TEXT NOT NULL,
+      computed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(school_id, teacher_uid, period_key),
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(teacher_uid) REFERENCES teacher_roster(teacher_uid) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_teacher_support_status_snapshots_status
+      ON teacher_support_status_snapshots(status, computed_at DESC);
+
+    CREATE TABLE IF NOT EXISTS training_feedback_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      training_record_id INTEGER NOT NULL,
+      school_id INTEGER NOT NULL,
+      contact_id INTEGER,
+      trainer_user_id INTEGER,
+      feedback_role TEXT NOT NULL CHECK(feedback_role IN ('participant', 'trainer')),
+      what_went_well TEXT,
+      how_training_changed_teaching TEXT,
+      what_you_will_do_to_improve_reading_levels TEXT,
+      challenges TEXT,
+      recommendations_next_training TEXT,
+      role_snapshot TEXT,
+      gender_snapshot TEXT,
+      class_taught_snapshot TEXT,
+      submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(training_record_id) REFERENCES portal_records(id) ON DELETE CASCADE,
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(contact_id) REFERENCES school_contacts(contact_id) ON DELETE SET NULL,
+      FOREIGN KEY(trainer_user_id) REFERENCES portal_users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_training_feedback_entries_training
+      ON training_feedback_entries(training_record_id, submitted_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_training_feedback_entries_school
+      ON training_feedback_entries(school_id, submitted_at DESC);
+
+    CREATE TABLE IF NOT EXISTS training_report_artifacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      report_code TEXT NOT NULL UNIQUE,
+      scope_type TEXT NOT NULL,
+      scope_value TEXT NOT NULL,
+      period_start TEXT NOT NULL,
+      period_end TEXT NOT NULL,
+      facts_json TEXT NOT NULL,
+      narrative_json TEXT NOT NULL,
+      html_report TEXT NOT NULL,
+      pdf_stored_path TEXT,
+      generated_by_user_id INTEGER NOT NULL,
+      generated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(generated_by_user_id) REFERENCES portal_users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_training_report_artifacts_scope
+      ON training_report_artifacts(scope_type, scope_value, generated_at DESC);
+
+    CREATE VIEW IF NOT EXISTS reading_level_distribution_by_school_grade_period AS
+      WITH base AS (
+        SELECT
+          ass.school_id AS school_id,
+          ass.class_grade AS class_grade,
+          substr(ass.assessment_date, 1, 7) AS period_key,
+          COALESCE(
+            asr.computed_level_band,
+            CASE
+              WHEN COALESCE(asr.fluency_score, 0) <= 0 THEN 0
+              WHEN asr.fluency_score <= 19 THEN 1
+              WHEN asr.fluency_score <= 39 THEN 2
+              WHEN asr.fluency_score <= 59 THEN 3
+              ELSE 4
+            END
+          ) AS reading_level_band
+        FROM assessment_session_results asr
+        JOIN assessment_sessions ass ON ass.id = asr.assessment_session_id
+      ),
+      grouped AS (
+        SELECT
+          school_id,
+          class_grade,
+          period_key,
+          reading_level_band,
+          COUNT(*) AS learners_count
+        FROM base
+        WHERE reading_level_band IS NOT NULL
+        GROUP BY school_id, class_grade, period_key, reading_level_band
+      ),
+      totals AS (
+        SELECT
+          school_id,
+          class_grade,
+          period_key,
+          SUM(learners_count) AS learners_total
+        FROM grouped
+        GROUP BY school_id, class_grade, period_key
+      )
+      SELECT
+        g.school_id,
+        g.class_grade,
+        g.period_key,
+        g.reading_level_band,
+        g.learners_count,
+        t.learners_total,
+        CASE
+          WHEN t.learners_total > 0
+          THEN ROUND((g.learners_count * 100.0) / t.learners_total, 1)
+          ELSE 0
+        END AS learners_percent
+      FROM grouped g
+      JOIN totals t
+        ON t.school_id = g.school_id
+       AND t.class_grade = g.class_grade
+       AND t.period_key = g.period_key;
+
+    CREATE VIEW IF NOT EXISTS school_support_status_by_school_period AS
+      SELECT
+        school_id,
+        period_key,
+        status,
+        rules_version,
+        computed_at
+      FROM school_support_status_snapshots;
+
+    CREATE VIEW IF NOT EXISTS teacher_support_status_by_teacher_period AS
+      SELECT
+        school_id,
+        teacher_uid,
+        period_key,
+        status,
+        evaluations_count,
+        rules_version,
+        computed_at
+      FROM teacher_support_status_snapshots;
+
+    CREATE VIEW IF NOT EXISTS training_participation_summary_by_geo_period AS
+      SELECT
+        substr(pr.date, 1, 7) AS period_key,
+        COALESCE(sd.region, '') AS region,
+        COALESCE(sd.sub_region, '') AS sub_region,
+        pr.district AS district,
+        COALESCE(sd.sub_county, '') AS sub_county,
+        COUNT(DISTINCT pr.id) AS trainings_count,
+        COUNT(DISTINCT pr.school_id) AS schools_trained_count,
+        COUNT(pta.id) AS participants_total,
+        SUM(CASE WHEN pta.participant_role = 'Classroom teacher' THEN 1 ELSE 0 END) AS teachers_total,
+        SUM(CASE WHEN pta.participant_role = 'School Leader' THEN 1 ELSE 0 END) AS leaders_total,
+        SUM(CASE WHEN lower(COALESCE(pta.gender, '')) = 'female' THEN 1 ELSE 0 END) AS female_total,
+        SUM(CASE WHEN lower(COALESCE(pta.gender, '')) = 'male' THEN 1 ELSE 0 END) AS male_total
+      FROM portal_records pr
+      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
+      LEFT JOIN portal_training_attendance pta ON pta.portal_record_id = pr.id
+      WHERE pr.module = 'training'
+        AND pr.deleted_at IS NULL
+      GROUP BY period_key, region, sub_region, district, sub_county;
+
+    CREATE VIEW IF NOT EXISTS training_feedback_themes_by_training_period AS
+      SELECT
+        tf.training_record_id,
+        substr(pr.date, 1, 7) AS period_key,
+        COUNT(*) AS feedback_rows,
+        SUM(CASE WHEN tf.feedback_role = 'participant' THEN 1 ELSE 0 END) AS participant_feedback_rows,
+        SUM(CASE WHEN tf.feedback_role = 'trainer' THEN 1 ELSE 0 END) AS trainer_feedback_rows,
+        SUM(CASE WHEN length(trim(COALESCE(tf.how_training_changed_teaching, ''))) > 0 THEN 1 ELSE 0 END) AS changed_teaching_rows,
+        SUM(CASE WHEN length(trim(COALESCE(tf.what_you_will_do_to_improve_reading_levels, ''))) > 0 THEN 1 ELSE 0 END) AS improve_plan_rows,
+        SUM(CASE WHEN length(trim(COALESCE(tf.challenges, ''))) > 0 THEN 1 ELSE 0 END) AS challenges_rows,
+        SUM(CASE WHEN length(trim(COALESCE(tf.recommendations_next_training, ''))) > 0 THEN 1 ELSE 0 END) AS recommendations_rows
+      FROM training_feedback_entries tf
+      JOIN portal_records pr ON pr.id = tf.training_record_id
+      GROUP BY tf.training_record_id, period_key;
+  `);
+
+  const benchmarkRow = db
+    .prepare("SELECT id FROM assessment_benchmark_settings WHERE id = 1 LIMIT 1")
+    .get() as { id: number } | undefined;
+  if (!benchmarkRow) {
+    db.prepare(
+      `
+      INSERT INTO assessment_benchmark_settings (
+        id,
+        reading_level_version,
+        emergent_cwpm_max,
+        minimum_cwpm_max,
+        competent_cwpm_max,
+        comprehension_min_percent,
+        comprehension_min_score,
+        comprehension_total_items,
+        use_accuracy_floor,
+        accuracy_floor,
+        updated_at
+      ) VALUES (
+        1,
+        @readingLevelVersion,
+        19,
+        39,
+        59,
+        70,
+        4,
+        5,
+        0,
+        90,
+        @updatedAt
+      )
+      `,
+    ).run({
+      readingLevelVersion: ASSESSMENT_READING_RULE_VERSION,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  const schoolSettings = db
+    .prepare("SELECT id FROM school_support_settings WHERE id = 1 LIMIT 1")
+    .get() as { id: number } | undefined;
+  if (!schoolSettings) {
+    db.prepare(
+      `
+      INSERT INTO school_support_settings (
+        id,
+        rules_version,
+        non_readers_threshold,
+        below_minimum_threshold,
+        decoding_proficiency_threshold,
+        progress_min_below_minimum_drop,
+        progress_min_cwpm20_gain,
+        graduation_prep_below_minimum_max,
+        graduation_prep_at40_min,
+        updated_at
+      ) VALUES (
+        1,
+        @rulesVersion,
+        30,
+        55,
+        45,
+        5,
+        5,
+        20,
+        60,
+        @updatedAt
+      )
+      `,
+    ).run({
+      rulesVersion: SCHOOL_SUPPORT_RULE_VERSION,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  const teacherSettings = db
+    .prepare("SELECT id FROM teacher_support_settings WHERE id = 1 LIMIT 1")
+    .get() as { id: number } | undefined;
+  if (!teacherSettings) {
+    db.prepare(
+      `
+      INSERT INTO teacher_support_settings (
+        id,
+        rules_version,
+        catchup_overall_threshold,
+        critical_domain_threshold,
+        on_track_overall_threshold,
+        on_track_min_delta,
+        updated_at
+      ) VALUES (
+        1,
+        @rulesVersion,
+        60,
+        55,
+        75,
+        5,
+        @updatedAt
+      )
+      `,
+    ).run({
+      rulesVersion: TEACHER_SUPPORT_RULE_VERSION,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 }
 
 
@@ -2013,6 +2655,7 @@ export function getDb() {
   ensurePortalRecordColumns(db);
   ensureGeographyColumns(db);
   ensureDistrictMasterData(db);
+  ensureSchoolRosterTables(db);
   ensureTeacherLearnerRosterTables(db);
   ensureProgramLinkageTables(db);
   ensureLessonEvaluationTables(db);
@@ -2020,6 +2663,7 @@ export function getDb() {
   ensureGraduationTables(db);
   ensurePortalTestimonialVideoColumns(db);
   ensureAssessmentDomainsColumns(db);
+  ensureAutomationTables(db);
   ensureStoryLibraryColumns(db);
   ensurePaginatedReaderColumns(db);
   ensurePublicImpactViews(db);
@@ -2165,6 +2809,29 @@ function ensureSupportRequestTables(db: Database.Database) {
       FOREIGN KEY(school_id) REFERENCES schools_directory(id),
       FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS story_activity_participants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      story_activity_id INTEGER NOT NULL,
+      school_id INTEGER NOT NULL,
+      contact_id INTEGER NOT NULL,
+      role_at_time TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(story_activity_id) REFERENCES story_activities(id) ON DELETE CASCADE,
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(contact_id) REFERENCES school_contacts(contact_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS story_activity_learners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      story_activity_id INTEGER NOT NULL,
+      school_id INTEGER NOT NULL,
+      learner_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(story_activity_id) REFERENCES story_activities(id) ON DELETE CASCADE,
+      FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE CASCADE,
+      FOREIGN KEY(learner_id) REFERENCES school_learners(learner_id) ON DELETE CASCADE
+    );
   `);
 
   ensureColumn(db, "support_requests", "follow_up_started", "INTEGER NOT NULL DEFAULT 0");
@@ -2184,6 +2851,14 @@ function ensureSupportRequestTables(db: Database.Database) {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_story_activities_record ON story_activities(portal_record_id);
     CREATE INDEX IF NOT EXISTS idx_story_activities_school ON story_activities(school_id);
     CREATE INDEX IF NOT EXISTS idx_story_activities_date ON story_activities(date);
+    CREATE INDEX IF NOT EXISTS idx_story_activity_participants_story
+      ON story_activity_participants(story_activity_id);
+    CREATE INDEX IF NOT EXISTS idx_story_activity_participants_contact
+      ON story_activity_participants(contact_id);
+    CREATE INDEX IF NOT EXISTS idx_story_activity_learners_story
+      ON story_activity_learners(story_activity_id);
+    CREATE INDEX IF NOT EXISTS idx_story_activity_learners_learner
+      ON story_activity_learners(learner_id);
   `);
 }
 
@@ -3321,6 +3996,92 @@ function findTeacherRosterByName(
   };
 }
 
+function ensureSchoolContactForTeacher(db: Database.Database, teacher: TeacherRosterRecord) {
+  const existing = db
+    .prepare(
+      `
+        SELECT contact_id AS contactId
+        FROM school_contacts
+        WHERE teacher_uid = @teacherUid
+        LIMIT 1
+      `,
+    )
+    .get({ teacherUid: teacher.teacherUid }) as { contactId: number } | undefined;
+
+  if (existing?.contactId) {
+    db.prepare(
+      `
+        UPDATE school_contacts
+        SET
+          school_id = @schoolId,
+          full_name = @fullName,
+          gender = @gender,
+          phone = @phone,
+          category = 'Teacher',
+          role_title = @roleTitle,
+          class_taught = COALESCE(NULLIF(class_taught, ''), 'Not assigned'),
+          subject_taught = COALESCE(NULLIF(subject_taught, ''), 'Not assigned'),
+          updated_at = datetime('now')
+        WHERE contact_id = @contactId
+      `,
+    ).run({
+      contactId: existing.contactId,
+      schoolId: teacher.schoolId,
+      fullName: teacher.fullName,
+      gender: teacher.gender,
+      phone: teacher.phone?.trim() ? teacher.phone.trim() : null,
+      roleTitle: teacher.isReadingTeacher ? "Reading Teacher" : "Teacher",
+    });
+    return;
+  }
+
+  db.prepare(
+    `
+      INSERT INTO school_contacts (
+        contact_uid,
+        school_id,
+        full_name,
+        gender,
+        phone,
+        email,
+        whatsapp,
+        category,
+        role_title,
+        is_primary_contact,
+        class_taught,
+        subject_taught,
+        teacher_uid,
+        created_at,
+        updated_at
+      ) VALUES (
+        @contactUid,
+        @schoolId,
+        @fullName,
+        @gender,
+        @phone,
+        NULL,
+        NULL,
+        'Teacher',
+        @roleTitle,
+        0,
+        'Not assigned',
+        'Not assigned',
+        @teacherUid,
+        datetime('now'),
+        datetime('now')
+      )
+    `,
+  ).run({
+    contactUid: teacher.teacherUid,
+    schoolId: teacher.schoolId,
+    fullName: teacher.fullName,
+    gender: teacher.gender,
+    phone: teacher.phone?.trim() ? teacher.phone.trim() : null,
+    roleTitle: teacher.isReadingTeacher ? "Reading Teacher" : "Teacher",
+    teacherUid: teacher.teacherUid,
+  });
+}
+
 export function createTeacherRosterRecord(input: TeacherRosterInput): TeacherRosterRecord {
   const db = getDb();
   const fullName = normalizePersonName(input.fullName);
@@ -3351,6 +4112,7 @@ export function createTeacherRosterRecord(input: TeacherRosterInput): TeacherRos
     if (!updated) {
       throw new Error("Could not load teacher record.");
     }
+    ensureSchoolContactForTeacher(db, updated);
     return updated;
   }
 
@@ -3388,6 +4150,7 @@ export function createTeacherRosterRecord(input: TeacherRosterInput): TeacherRos
   if (!created) {
     throw new Error("Could not load teacher record.");
   }
+  ensureSchoolContactForTeacher(db, created);
   return created;
 }
 
@@ -3454,6 +4217,79 @@ function findLearnerRosterRecord(
   };
 }
 
+function ensureSchoolLearnerMirror(db: Database.Database, learner: LearnerRosterRecord) {
+  const existing = db
+    .prepare(
+      `
+        SELECT learner_id AS learnerId
+        FROM school_learners
+        WHERE learner_uid = @learnerUid
+        LIMIT 1
+      `,
+    )
+    .get({ learnerUid: learner.learnerUid }) as { learnerId: number } | undefined;
+
+  if (existing?.learnerId) {
+    db.prepare(
+      `
+        UPDATE school_learners
+        SET
+          school_id = @schoolId,
+          learner_name = @learnerName,
+          class_grade = @classGrade,
+          age = @age,
+          gender = @gender,
+          internal_child_id = @internalChildId,
+          updated_at = datetime('now')
+        WHERE learner_id = @learnerId
+      `,
+    ).run({
+      learnerId: existing.learnerId,
+      schoolId: learner.schoolId,
+      learnerName: learner.fullName,
+      classGrade: learner.classGrade,
+      age: learner.age,
+      gender: learner.gender,
+      internalChildId: learner.internalChildId?.trim() || null,
+    });
+    return;
+  }
+
+  db.prepare(
+    `
+      INSERT INTO school_learners (
+        learner_uid,
+        school_id,
+        learner_name,
+        class_grade,
+        age,
+        gender,
+        internal_child_id,
+        created_at,
+        updated_at
+      ) VALUES (
+        @learnerUid,
+        @schoolId,
+        @learnerName,
+        @classGrade,
+        @age,
+        @gender,
+        @internalChildId,
+        datetime('now'),
+        datetime('now')
+      )
+    `,
+  ).run({
+    learnerUid: learner.learnerUid,
+    schoolId: learner.schoolId,
+    learnerName: learner.fullName,
+    classGrade: learner.classGrade,
+    age: learner.age,
+    gender: learner.gender,
+    internalChildId: learner.internalChildId?.trim() || null,
+  });
+}
+
 export function createOrUpdateLearnerRosterRecord(input: LearnerRosterInput): LearnerRosterRecord {
   const db = getDb();
   const normalizedName = normalizePersonName(input.fullName);
@@ -3487,6 +4323,7 @@ export function createOrUpdateLearnerRosterRecord(input: LearnerRosterInput): Le
     if (!updated) {
       throw new Error("Could not load learner record.");
     }
+    ensureSchoolLearnerMirror(db, updated);
     return updated;
   }
 
@@ -3528,6 +4365,7 @@ export function createOrUpdateLearnerRosterRecord(input: LearnerRosterInput): Le
   if (!created) {
     throw new Error("Could not load learner record.");
   }
+  ensureSchoolLearnerMirror(db, created);
   return created;
 }
 
@@ -3741,6 +4579,20 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
   if (!learnerRecord) {
     throw new Error("Could not resolve learner roster record.");
   }
+  const readingRuleSettings = getAssessmentReadingRuleSettings(db, {
+    grade: payload.classGrade,
+    language: "English",
+    atDate: payload.assessmentDate,
+  });
+  const computedReading = computeAssessmentReadingLevel(
+    {
+      fluencyCwpm: payload.storyReadingScore,
+      fluencyAccuracy: payload.fluencyAccuracyScore ?? null,
+      comprehensionScore: payload.readingComprehensionScore,
+    },
+    readingRuleSettings,
+  );
+  const computedAt = new Date().toISOString();
 
   const insertResult = db
     .prepare(
@@ -3761,7 +4613,12 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
         undecodable_words_score,
         made_up_words_score,
         story_reading_score,
+        fluency_accuracy_score,
         reading_comprehension_score,
+        computed_reading_level,
+        computed_level_band,
+        reading_rules_version,
+        reading_level_computed_at,
         notes,
         created_by_user_id
       ) VALUES (
@@ -3780,7 +4637,12 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
         @undecodableWordsScore,
         @madeUpWordsScore,
         @storyReadingScore,
+        @fluencyAccuracyScore,
         @readingComprehensionScore,
+        @computedReadingLevel,
+        @computedLevelBand,
+        @readingRulesVersion,
+        @readingLevelComputedAt,
         @notes,
         @createdByUserId
       )
@@ -3805,7 +4667,12 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
       undecodableWordsScore: payload.undecodableWordsScore,
       madeUpWordsScore: payload.madeUpWordsScore,
       storyReadingScore: payload.storyReadingScore,
+      fluencyAccuracyScore: payload.fluencyAccuracyScore ?? null,
       readingComprehensionScore: payload.readingComprehensionScore,
+      computedReadingLevel: computedReading.computedReadingLevel,
+      computedLevelBand: computedReading.computedLevelBand,
+      readingRulesVersion: computedReading.rulesVersion,
+      readingLevelComputedAt: computedAt,
       notes: payload.notes?.trim() ? payload.notes : null,
       createdByUserId,
     });
@@ -3831,7 +4698,11 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
         undecodable_words_score AS undecodableWordsScore,
         made_up_words_score AS madeUpWordsScore,
         story_reading_score AS storyReadingScore,
+        fluency_accuracy_score AS fluencyAccuracyScore,
         reading_comprehension_score AS readingComprehensionScore,
+        computed_reading_level AS computedReadingLevel,
+        computed_level_band AS computedLevelBand,
+        reading_rules_version AS readingRulesVersion,
         notes,
         created_at AS createdAt
       FROM assessment_records
@@ -3844,6 +4715,8 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
   if (!row) {
     throw new Error("Could not load saved assessment record.");
   }
+
+  upsertSchoolSupportStatusSnapshot(db, learnerRecord.schoolId);
 
   return { ...row, createdByUserId };
 }
@@ -3869,7 +4742,11 @@ export function listAssessmentRecords(limit = 20): AssessmentRecord[] {
         undecodable_words_score AS undecodableWordsScore,
         made_up_words_score AS madeUpWordsScore,
         story_reading_score AS storyReadingScore,
+        fluency_accuracy_score AS fluencyAccuracyScore,
         reading_comprehension_score AS readingComprehensionScore,
+        computed_reading_level AS computedReadingLevel,
+        computed_level_band AS computedLevelBand,
+        reading_rules_version AS readingRulesVersion,
         notes,
         created_by_user_id AS createdByUserId,
         created_at AS createdAt
@@ -4145,6 +5022,9 @@ function parsePortalRecord(
     programType: string | null;
     status: PortalRecordStatus;
     followUpDate: string | null;
+    followUpType: string | null;
+    followUpOwnerUserId: number | null;
+    followUpOwnerName: string | null;
     payloadJson: string;
     reviewNote: string | null;
     createdByUserId: number;
@@ -4167,6 +5047,9 @@ function parsePortalRecord(
     programType: row.programType ?? undefined,
     status: row.status,
     followUpDate: row.followUpDate ?? undefined,
+    followUpType: row.followUpType === null ? undefined : (row.followUpType as PortalRecord["followUpType"]),
+    followUpOwnerUserId: row.followUpOwnerUserId === null ? undefined : Number(row.followUpOwnerUserId),
+    followUpOwnerName: row.followUpOwnerName ?? undefined,
     payload: JSON.parse(row.payloadJson || "{}"),
     reviewNote: row.reviewNote,
     createdByUserId: row.createdByUserId,
@@ -4220,19 +5103,6 @@ function normalizeTeacherGender(value: unknown): "Male" | "Female" | null {
   return null;
 }
 
-function normalizeLearnerGender(value: unknown): "Boy" | "Girl" | "Other" {
-  const normalized = String(value ?? "")
-    .trim()
-    .toLowerCase();
-  if (normalized === "boy" || normalized === "male" || normalized === "m") {
-    return "Boy";
-  }
-  if (normalized === "girl" || normalized === "female" || normalized === "f") {
-    return "Girl";
-  }
-  return "Other";
-}
-
 function normalizeAssessmentType(value: unknown): "baseline" | "progress" | "endline" {
   const normalized = String(value ?? "")
     .trim()
@@ -4251,6 +5121,402 @@ function normalizeAssessmentType(value: unknown): "baseline" | "progress" | "end
   return "baseline";
 }
 
+type AssessmentReadingRuleSettings = {
+  readingLevelVersion: string;
+  emergentCwpmMax: number;
+  minimumCwpmMax: number;
+  competentCwpmMax: number;
+  comprehensionMinPercent: number;
+  comprehensionMinScore: number;
+  comprehensionTotalItems: number;
+  useAccuracyFloor: boolean;
+  accuracyFloor: number;
+};
+
+type SchoolSupportRuleSettings = {
+  rulesVersion: string;
+  nonReadersThreshold: number;
+  belowMinimumThreshold: number;
+  decodingProficiencyThreshold: number;
+  progressMinBelowMinimumDrop: number;
+  progressMinCwpm20Gain: number;
+  graduationPrepBelowMinimumMax: number;
+  graduationPrepAt40Min: number;
+};
+
+type TeacherSupportRuleSettings = {
+  rulesVersion: string;
+  catchupOverallThreshold: number;
+  criticalDomainThreshold: number;
+  onTrackOverallThreshold: number;
+  onTrackMinDelta: number;
+};
+
+type ComputedReadingLevelResult = {
+  computedReadingLevel: "Level0 Non-reader" | "Level1 Emergent" | "Level2 Minimum" | "Level3 Competent" | "Level4 Strong";
+  computedLevelBand: number;
+  rulesVersion: string;
+  comprehensionPercent: number | null;
+  comprehensionPass: boolean;
+  accuracyPass: boolean;
+};
+
+const SCHOOL_SUPPORT_ACTIONS: Record<
+  "Requires Remedial & Catch-Up" | "Progressing (Maintain + Strengthen)" | "Graduation Prep (Approaching criteria)" | "Graduation Eligible",
+  string[]
+> = {
+  "Requires Remedial & Catch-Up": [
+    "Set up small-group routines and decoding catch-up plans for struggling learners.",
+    "Schedule an extra coaching cycle focused on foundational reading routines.",
+    "Track weekly progress in letter sounds, decoding, and fluency.",
+  ],
+  "Progressing (Maintain + Strengthen)": [
+    "Maintain fidelity checks on core routines and lesson structure.",
+    "Expand fluency practice and strengthen comprehension questioning routines.",
+    "Monitor trend movement monthly and adjust support intensity as needed.",
+  ],
+  "Graduation Prep (Approaching criteria)": [
+    "Strengthen leadership routines to sustain literacy timetables.",
+    "Finalize monitoring plans and evidence for graduation readiness.",
+    "Close remaining quality gaps and complete 1001 story targets.",
+  ],
+  "Graduation Eligible": [
+    "Prepare graduation validation evidence and sustainability documentation.",
+    "Maintain monitoring cadence to protect gains post-graduation.",
+    "Document effective practices for peer-school learning.",
+  ],
+};
+
+const TEACHER_SUPPORT_ACTIONS: Record<
+  "Needs Catch-up Training" | "Needs Coaching & Follow-up" | "On Track",
+  string
+> = {
+  "Needs Catch-up Training":
+    "Enroll teacher in catch-up training cohort focused on new sound, decoding, and feedback routines.",
+  "Needs Coaching & Follow-up":
+    "Provide targeted coaching follow-up on specific weak domains and track progress in the next observation.",
+  "On Track":
+    "Keep light-touch monitoring and peer sharing while reinforcing strengths.",
+};
+
+function normalizePercentValue(
+  rawValue: number | null,
+  totalItems: number,
+): number | null {
+  if (rawValue === null || !Number.isFinite(rawValue)) {
+    return null;
+  }
+  if (rawValue <= totalItems) {
+    return Number(((rawValue / Math.max(totalItems, 1)) * 100).toFixed(1));
+  }
+  return Number(rawValue.toFixed(1));
+}
+
+function bandLabelFromNumber(
+  band: number,
+): "Level0 Non-reader" | "Level1 Emergent" | "Level2 Minimum" | "Level3 Competent" | "Level4 Strong" {
+  if (band <= 0) return "Level0 Non-reader";
+  if (band === 1) return "Level1 Emergent";
+  if (band === 2) return "Level2 Minimum";
+  if (band === 3) return "Level3 Competent";
+  return "Level4 Strong";
+}
+
+function computeReadingBandFromCwpm(
+  cwpm: number | null,
+  settings: AssessmentReadingRuleSettings,
+) {
+  const normalized = Number(cwpm ?? 0);
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    return 0;
+  }
+  if (normalized <= settings.emergentCwpmMax) return 1;
+  if (normalized <= settings.minimumCwpmMax) return 2;
+  if (normalized <= settings.competentCwpmMax) return 3;
+  return 4;
+}
+
+function getAssessmentReadingRuleSettings(
+  db: Database.Database,
+  options?: {
+    grade?: string | null;
+    language?: string | null;
+    atDate?: string | null;
+  },
+): AssessmentReadingRuleSettings {
+  const benchmarkTables = db
+    .prepare(
+      `
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name IN ('benchmark_profiles', 'benchmark_rules')
+      `,
+    )
+    .all() as Array<{ name: string }>;
+  const hasBenchmarkProfiles = benchmarkTables.some((row) => row.name === "benchmark_profiles");
+  const hasBenchmarkRules = benchmarkTables.some((row) => row.name === "benchmark_rules");
+
+  if (hasBenchmarkProfiles && hasBenchmarkRules) {
+    const grade = String(options?.grade ?? "").trim().toUpperCase() || "ALL";
+    const language = String(options?.language ?? "").trim() || "English";
+    const atDate = String(options?.atDate ?? "").trim() || new Date().toISOString().slice(0, 10);
+
+    const benchmarkRule = db
+      .prepare(
+        `
+        SELECT
+          bp.name AS benchmarkName,
+          br.cwpm_bands_json AS cwpmBandsJson,
+          br.comprehension_proficient_rule_json AS comprehensionRuleJson,
+          br.optional_accuracy_floor AS optionalAccuracyFloor
+        FROM benchmark_profiles bp
+        JOIN benchmark_rules br
+          ON br.benchmark_id = bp.benchmark_id
+        WHERE bp.is_active = 1
+          AND bp.effective_from_date <= @atDate
+          AND (bp.effective_to_date IS NULL OR bp.effective_to_date = '' OR bp.effective_to_date >= @atDate)
+          AND br.grade IN (@grade, 'ALL')
+          AND lower(trim(br.language)) IN (lower(trim(@language)), 'english')
+        ORDER BY
+          CASE br.grade WHEN @grade THEN 0 ELSE 1 END ASC,
+          CASE WHEN lower(trim(br.language)) = lower(trim(@language)) THEN 0 ELSE 1 END ASC,
+          br.rule_id DESC
+        LIMIT 1
+        `,
+      )
+      .get({
+        atDate,
+        grade,
+        language,
+      }) as
+      | {
+        benchmarkName: string;
+        cwpmBandsJson: string;
+        comprehensionRuleJson: string;
+        optionalAccuracyFloor: number | null;
+      }
+      | undefined;
+
+    if (benchmarkRule) {
+      const cwpmBands = (() => {
+        try {
+          return JSON.parse(benchmarkRule.cwpmBandsJson || "{}") as {
+            emergent?: [number, number];
+            minimum?: [number, number];
+            competent?: [number, number];
+          };
+        } catch {
+          return {} as {
+            emergent?: [number, number];
+            minimum?: [number, number];
+            competent?: [number, number];
+          };
+        }
+      })();
+      const comprehensionRule = (() => {
+        try {
+          return JSON.parse(benchmarkRule.comprehensionRuleJson || "{}") as
+            | { type: "percent"; threshold: number }
+            | { type: "count"; correct: number; total: number };
+        } catch {
+          return {} as { type: "percent"; threshold: number };
+        }
+      })();
+
+      const emergentBand = Array.isArray(cwpmBands.emergent) ? cwpmBands.emergent : [1, 19];
+      const minimumBand = Array.isArray(cwpmBands.minimum) ? cwpmBands.minimum : [20, 39];
+      const competentBand = Array.isArray(cwpmBands.competent) ? cwpmBands.competent : [40, 59];
+
+      return {
+        readingLevelVersion: benchmarkRule.benchmarkName || ASSESSMENT_READING_RULE_VERSION,
+        emergentCwpmMax: Number(emergentBand[1] ?? 19),
+        minimumCwpmMax: Number(minimumBand[1] ?? 39),
+        competentCwpmMax: Number(competentBand[1] ?? 59),
+        comprehensionMinPercent:
+          comprehensionRule.type === "percent"
+            ? Number(comprehensionRule.threshold ?? 70)
+            : 70,
+        comprehensionMinScore:
+          comprehensionRule.type === "count"
+            ? Number(comprehensionRule.correct ?? 4)
+            : 4,
+        comprehensionTotalItems:
+          comprehensionRule.type === "count"
+            ? Number(comprehensionRule.total ?? 5)
+            : 5,
+        useAccuracyFloor: benchmarkRule.optionalAccuracyFloor !== null,
+        accuracyFloor:
+          benchmarkRule.optionalAccuracyFloor === null
+            ? 90
+            : Number(benchmarkRule.optionalAccuracyFloor),
+      };
+    }
+  }
+
+  const row = db
+    .prepare(
+      `
+      SELECT
+        reading_level_version AS readingLevelVersion,
+        emergent_cwpm_max AS emergentCwpmMax,
+        minimum_cwpm_max AS minimumCwpmMax,
+        competent_cwpm_max AS competentCwpmMax,
+        comprehension_min_percent AS comprehensionMinPercent,
+        comprehension_min_score AS comprehensionMinScore,
+        comprehension_total_items AS comprehensionTotalItems,
+        use_accuracy_floor AS useAccuracyFloor,
+        accuracy_floor AS accuracyFloor
+      FROM assessment_benchmark_settings
+      WHERE id = 1
+      LIMIT 1
+      `,
+    )
+    .get() as
+    | {
+      readingLevelVersion: string;
+      emergentCwpmMax: number;
+      minimumCwpmMax: number;
+      competentCwpmMax: number;
+      comprehensionMinPercent: number;
+      comprehensionMinScore: number;
+      comprehensionTotalItems: number;
+      useAccuracyFloor: number;
+      accuracyFloor: number;
+    }
+    | undefined;
+
+  return {
+    readingLevelVersion: row?.readingLevelVersion || ASSESSMENT_READING_RULE_VERSION,
+    emergentCwpmMax: Number(row?.emergentCwpmMax ?? 19),
+    minimumCwpmMax: Number(row?.minimumCwpmMax ?? 39),
+    competentCwpmMax: Number(row?.competentCwpmMax ?? 59),
+    comprehensionMinPercent: Number(row?.comprehensionMinPercent ?? 70),
+    comprehensionMinScore: Number(row?.comprehensionMinScore ?? 4),
+    comprehensionTotalItems: Number(row?.comprehensionTotalItems ?? 5),
+    useAccuracyFloor: Number(row?.useAccuracyFloor ?? 0) === 1,
+    accuracyFloor: Number(row?.accuracyFloor ?? 90),
+  };
+}
+
+function computeAssessmentReadingLevel(
+  args: {
+    fluencyCwpm: number | null;
+    fluencyAccuracy: number | null;
+    comprehensionScore: number | null;
+  },
+  settings: AssessmentReadingRuleSettings,
+): ComputedReadingLevelResult {
+  const baseBand = computeReadingBandFromCwpm(args.fluencyCwpm, settings);
+  const comprehensionPercent = normalizePercentValue(
+    args.comprehensionScore,
+    settings.comprehensionTotalItems,
+  );
+  const comprehensionPass =
+    (comprehensionPercent !== null &&
+      comprehensionPercent >= settings.comprehensionMinPercent) ||
+    (args.comprehensionScore !== null &&
+      Number(args.comprehensionScore) >= settings.comprehensionMinScore);
+  const accuracyPass =
+    !settings.useAccuracyFloor ||
+    args.fluencyAccuracy === null ||
+    Number(args.fluencyAccuracy) >= settings.accuracyFloor;
+
+  let adjustedBand = baseBand;
+  if (!comprehensionPass) {
+    adjustedBand = Math.min(adjustedBand, 2);
+  }
+  if (!accuracyPass) {
+    adjustedBand = Math.min(adjustedBand, 3);
+  }
+
+  return {
+    computedReadingLevel: bandLabelFromNumber(adjustedBand),
+    computedLevelBand: adjustedBand,
+    rulesVersion: settings.readingLevelVersion,
+    comprehensionPercent,
+    comprehensionPass,
+    accuracyPass,
+  };
+}
+
+function getSchoolSupportRuleSettings(db: Database.Database): SchoolSupportRuleSettings {
+  const row = db
+    .prepare(
+      `
+      SELECT
+        rules_version AS rulesVersion,
+        non_readers_threshold AS nonReadersThreshold,
+        below_minimum_threshold AS belowMinimumThreshold,
+        decoding_proficiency_threshold AS decodingProficiencyThreshold,
+        progress_min_below_minimum_drop AS progressMinBelowMinimumDrop,
+        progress_min_cwpm20_gain AS progressMinCwpm20Gain,
+        graduation_prep_below_minimum_max AS graduationPrepBelowMinimumMax,
+        graduation_prep_at40_min AS graduationPrepAt40Min
+      FROM school_support_settings
+      WHERE id = 1
+      LIMIT 1
+      `,
+    )
+    .get() as
+    | {
+      rulesVersion: string;
+      nonReadersThreshold: number;
+      belowMinimumThreshold: number;
+      decodingProficiencyThreshold: number;
+      progressMinBelowMinimumDrop: number;
+      progressMinCwpm20Gain: number;
+      graduationPrepBelowMinimumMax: number;
+      graduationPrepAt40Min: number;
+    }
+    | undefined;
+
+  return {
+    rulesVersion: row?.rulesVersion || SCHOOL_SUPPORT_RULE_VERSION,
+    nonReadersThreshold: Number(row?.nonReadersThreshold ?? 30),
+    belowMinimumThreshold: Number(row?.belowMinimumThreshold ?? 55),
+    decodingProficiencyThreshold: Number(row?.decodingProficiencyThreshold ?? 45),
+    progressMinBelowMinimumDrop: Number(row?.progressMinBelowMinimumDrop ?? 5),
+    progressMinCwpm20Gain: Number(row?.progressMinCwpm20Gain ?? 5),
+    graduationPrepBelowMinimumMax: Number(row?.graduationPrepBelowMinimumMax ?? 20),
+    graduationPrepAt40Min: Number(row?.graduationPrepAt40Min ?? 60),
+  };
+}
+
+function getTeacherSupportRuleSettings(db: Database.Database): TeacherSupportRuleSettings {
+  const row = db
+    .prepare(
+      `
+      SELECT
+        rules_version AS rulesVersion,
+        catchup_overall_threshold AS catchupOverallThreshold,
+        critical_domain_threshold AS criticalDomainThreshold,
+        on_track_overall_threshold AS onTrackOverallThreshold,
+        on_track_min_delta AS onTrackMinDelta
+      FROM teacher_support_settings
+      WHERE id = 1
+      LIMIT 1
+      `,
+    )
+    .get() as
+    | {
+      rulesVersion: string;
+      catchupOverallThreshold: number;
+      criticalDomainThreshold: number;
+      onTrackOverallThreshold: number;
+      onTrackMinDelta: number;
+    }
+    | undefined;
+
+  return {
+    rulesVersion: row?.rulesVersion || TEACHER_SUPPORT_RULE_VERSION,
+    catchupOverallThreshold: Number(row?.catchupOverallThreshold ?? 60),
+    criticalDomainThreshold: Number(row?.criticalDomainThreshold ?? 55),
+    onTrackOverallThreshold: Number(row?.onTrackOverallThreshold ?? 75),
+    onTrackMinDelta: Number(row?.onTrackMinDelta ?? 5),
+  };
+}
+
 function normalizeParticipantRole(value: unknown) {
   const normalized = String(value ?? "")
     .trim()
@@ -4258,49 +5524,841 @@ function normalizeParticipantRole(value: unknown) {
   if (normalized === "classroom teacher" || normalized === "teacher") {
     return "Classroom teacher";
   }
-  if (normalized === "school leader" || normalized === "leader") {
+  if (
+    normalized === "school leader" ||
+    normalized === "leader" ||
+    normalized === "head teacher" ||
+    normalized === "deputy head teacher" ||
+    normalized === "dos" ||
+    normalized === "proprietor" ||
+    normalized === "director"
+  ) {
     return "School Leader";
   }
   return String(value ?? "").trim() || "School Leader";
 }
 
+function normalizeContactRoleFromCategory(category: SchoolContactCategory) {
+  return category === "Teacher" ? "Classroom teacher" : "School Leader";
+}
+
+function resolveContactByTeacherUid(
+  db: Database.Database,
+  teacherUid: string,
+): SchoolContactRecord | null {
+  const normalizedTeacherUid = teacherUid.trim();
+  if (!normalizedTeacherUid) {
+    return null;
+  }
+  const row = db
+    .prepare(
+      `
+        SELECT contact_id AS contactId
+        FROM school_contacts
+        WHERE lower(trim(COALESCE(teacher_uid, ''))) = lower(trim(@teacherUid))
+        LIMIT 1
+      `,
+    )
+    .get({ teacherUid: normalizedTeacherUid }) as { contactId: number } | undefined;
+
+  if (!row?.contactId) {
+    return null;
+  }
+  return getSchoolContactByIdInternal(db, row.contactId);
+}
+
+function resolveActivityContact(
+  db: Database.Database,
+  row: Record<string, unknown>,
+  schoolId: number,
+): SchoolContactRecord {
+  const contactIdRaw = Number(
+    row.contactId ??
+      row.contact_id ??
+      row.participantContactId ??
+      row.teacherContactId,
+  );
+  let contact: SchoolContactRecord | null = null;
+  if (Number.isInteger(contactIdRaw) && contactIdRaw > 0) {
+    contact = getSchoolContactByIdInternal(db, contactIdRaw);
+  }
+
+  if (!contact) {
+    const contactUid = String(
+      row.contactUid ??
+        row.contact_uid ??
+        row.participantContactUid ??
+        row.teacherContactUid,
+    )
+      .trim();
+    if (contactUid) {
+      contact = getSchoolContactByUidInternal(db, contactUid);
+    }
+  }
+
+  if (!contact) {
+    const teacherUid = String(row.teacherUid ?? row.teacher_uid ?? "")
+      .trim();
+    if (teacherUid) {
+      contact = resolveContactByTeacherUid(db, teacherUid);
+    }
+  }
+
+  if (!contact) {
+    throw new Error("Participant not found in school roster. Add to School Account first.");
+  }
+  if (contact.schoolId !== schoolId) {
+    throw new Error("Participant must belong to the selected school account.");
+  }
+
+  return contact;
+}
+
+function resolveActivityLearner(
+  db: Database.Database,
+  row: Record<string, unknown>,
+  schoolId: number,
+): SchoolLearnerRecord {
+  const learnerIdRaw = Number(row.learnerId ?? row.learner_id);
+  let learner: SchoolLearnerRecord | null = null;
+  if (Number.isInteger(learnerIdRaw) && learnerIdRaw > 0) {
+    learner = getSchoolLearnerByIdInternal(db, learnerIdRaw);
+  }
+
+  if (!learner) {
+    const learnerUid = String(row.learnerUid ?? row.learner_uid ?? "")
+      .trim();
+    if (learnerUid) {
+      learner = getSchoolLearnerByUidInternal(db, learnerUid);
+    }
+  }
+
+  if (!learner) {
+    throw new Error("Learner not found in school roster. Add learner to this school first.");
+  }
+  if (learner.schoolId !== schoolId) {
+    throw new Error("Learner must belong to the selected school account.");
+  }
+
+  return learner;
+}
+
+function ensureSchoolHasPrimaryProprietor(schoolId: number) {
+  const row = getDb()
+    .prepare(
+      `
+        SELECT
+          sd.id AS schoolId,
+          sd.primary_contact_id AS primaryContactId,
+          sc.category
+        FROM schools_directory sd
+        LEFT JOIN school_contacts sc
+          ON sc.contact_id = sd.primary_contact_id
+        WHERE sd.id = @schoolId
+        LIMIT 1
+      `,
+    )
+    .get({ schoolId }) as
+    | { schoolId: number; primaryContactId: number | null; category: SchoolContactCategory | null }
+    | undefined;
+
+  if (!row?.schoolId) {
+    throw new Error("Selected school account was not found.");
+  }
+  if (!row.primaryContactId || row.category !== "Proprietor") {
+    throw new Error("Each school must have a Proprietor as the primary contact before recording activities.");
+  }
+}
+
+function getPeriodKey(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) {
+    return new Date().toISOString().slice(0, 7);
+  }
+  return normalized.slice(0, 7);
+}
+
+function toPercentSafe(part: number, total: number) {
+  if (total <= 0) return 0;
+  return Number(((part / total) * 100).toFixed(1));
+}
+
+function parseDomainScoresJson(input: string | null | undefined) {
+  if (!input) {
+    return {} as Record<string, unknown>;
+  }
+  try {
+    const parsed = JSON.parse(input) as unknown;
+    if (parsed && typeof parsed === "object") {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return {} as Record<string, unknown>;
+  }
+  return {} as Record<string, unknown>;
+}
+
+function computeAssessmentDistributionMetrics(
+  db: Database.Database,
+  rows: Array<{
+    computedLevelBand: number | null;
+    fluencyScore: number | null;
+    decodingScore: number | null;
+  }>,
+  decodingThreshold: number,
+) {
+  const settings = getAssessmentReadingRuleSettings(db);
+  const n = rows.length;
+  let level0 = 0;
+  let level01 = 0;
+  let at20Plus = 0;
+  let at40Plus = 0;
+  let at60Plus = 0;
+  let decodingProficient = 0;
+
+  rows.forEach((row) => {
+    const band =
+      row.computedLevelBand !== null && Number.isFinite(Number(row.computedLevelBand))
+        ? Number(row.computedLevelBand)
+        : computeReadingBandFromCwpm(row.fluencyScore, settings);
+    if (band <= 0) level0 += 1;
+    if (band <= 1) level01 += 1;
+    if (band >= 2) at20Plus += 1;
+    if (band >= 3) at40Plus += 1;
+    if (band >= 4) at60Plus += 1;
+    if (row.decodingScore !== null && Number(row.decodingScore) >= decodingThreshold) {
+      decodingProficient += 1;
+    }
+  });
+
+  return {
+    n,
+    nonReadersPct: toPercentSafe(level0, n),
+    belowMinimumPct: toPercentSafe(level01, n),
+    at20PlusPct: toPercentSafe(at20Plus, n),
+    at40PlusPct: toPercentSafe(at40Plus, n),
+    at60PlusPct: toPercentSafe(at60Plus, n),
+    decodingProficientPct: toPercentSafe(decodingProficient, n),
+  };
+}
+
+function upsertSchoolSupportStatusSnapshot(
+  db: Database.Database,
+  schoolId: number,
+) {
+  const latestSession = db
+    .prepare(
+      `
+      SELECT
+        id,
+        assessment_date AS assessmentDate
+      FROM assessment_sessions
+      WHERE school_id = @schoolId
+      ORDER BY assessment_date DESC, id DESC
+      LIMIT 1
+      `,
+    )
+    .get({ schoolId }) as { id: number; assessmentDate: string } | undefined;
+
+  if (!latestSession?.id) {
+    return;
+  }
+
+  const settings = getSchoolSupportRuleSettings(db);
+  const latestRows = db
+    .prepare(
+      `
+      SELECT
+        computed_level_band AS computedLevelBand,
+        fluency_score AS fluencyScore,
+        decoding_score AS decodingScore
+      FROM assessment_session_results
+      WHERE assessment_session_id = @sessionId
+      `,
+    )
+    .all({ sessionId: latestSession.id }) as Array<{
+      computedLevelBand: number | null;
+      fluencyScore: number | null;
+      decodingScore: number | null;
+    }>;
+  const latest = computeAssessmentDistributionMetrics(
+    db,
+    latestRows,
+    settings.decodingProficiencyThreshold,
+  );
+
+  const baselineSession = db
+    .prepare(
+      `
+      SELECT id
+      FROM assessment_sessions
+      WHERE school_id = @schoolId
+        AND assessment_type = 'baseline'
+      ORDER BY assessment_date ASC, id ASC
+      LIMIT 1
+      `,
+    )
+    .get({ schoolId }) as { id: number } | undefined;
+
+  let baseline: ReturnType<typeof computeAssessmentDistributionMetrics> | null = null;
+  if (baselineSession?.id) {
+    const baselineRows = db
+      .prepare(
+        `
+        SELECT
+          computed_level_band AS computedLevelBand,
+          fluency_score AS fluencyScore,
+          decoding_score AS decodingScore
+        FROM assessment_session_results
+        WHERE assessment_session_id = @sessionId
+        `,
+      )
+      .all({ sessionId: baselineSession.id }) as Array<{
+        computedLevelBand: number | null;
+        fluencyScore: number | null;
+        decodingScore: number | null;
+      }>;
+    baseline = computeAssessmentDistributionMetrics(
+      db,
+      baselineRows,
+      settings.decodingProficiencyThreshold,
+    );
+  }
+
+  const graduationRow = db
+    .prepare(
+      `
+      SELECT COALESCE(is_eligible, 0) AS isEligible
+      FROM school_graduation_eligibility_cache
+      WHERE school_id = @schoolId
+      LIMIT 1
+      `,
+    )
+    .get({ schoolId }) as { isEligible: number } | undefined;
+  const graduationEligible = Number(graduationRow?.isEligible ?? 0) === 1;
+
+  const belowMinimumDrop =
+    baseline && baseline.n > 0
+      ? Number((baseline.belowMinimumPct - latest.belowMinimumPct).toFixed(1))
+      : null;
+  const cwpm20Gain =
+    baseline && baseline.n > 0
+      ? Number((latest.at20PlusPct - baseline.at20PlusPct).toFixed(1))
+      : null;
+
+  let status:
+    | "Requires Remedial & Catch-Up"
+    | "Progressing (Maintain + Strengthen)"
+    | "Graduation Prep (Approaching criteria)"
+    | "Graduation Eligible";
+  if (graduationEligible) {
+    status = "Graduation Eligible";
+  } else if (
+    latest.n <= 0 ||
+    latest.nonReadersPct >= settings.nonReadersThreshold ||
+    latest.belowMinimumPct >= settings.belowMinimumThreshold ||
+    latest.decodingProficientPct < settings.decodingProficiencyThreshold
+  ) {
+    status = "Requires Remedial & Catch-Up";
+  } else if (
+    latest.belowMinimumPct <= settings.graduationPrepBelowMinimumMax &&
+    latest.at40PlusPct >= settings.graduationPrepAt40Min
+  ) {
+    status = "Graduation Prep (Approaching criteria)";
+  } else if (
+    (belowMinimumDrop !== null &&
+      belowMinimumDrop >= settings.progressMinBelowMinimumDrop) ||
+    (cwpm20Gain !== null && cwpm20Gain >= settings.progressMinCwpm20Gain)
+  ) {
+    status = "Progressing (Maintain + Strengthen)";
+  } else {
+    status = "Progressing (Maintain + Strengthen)";
+  }
+
+  const metrics = {
+    nAssessed: latest.n,
+    nonReadersPct: latest.nonReadersPct,
+    belowMinimumPct: latest.belowMinimumPct,
+    at20PlusPct: latest.at20PlusPct,
+    at40PlusPct: latest.at40PlusPct,
+    at60PlusPct: latest.at60PlusPct,
+    decodingProficientPct: latest.decodingProficientPct,
+    baselineBelowMinimumPct: baseline?.belowMinimumPct ?? null,
+    baselineAt20PlusPct: baseline?.at20PlusPct ?? null,
+    belowMinimumDropPp: belowMinimumDrop,
+    at20PlusGainPp: cwpm20Gain,
+    graduationEligible: graduationEligible ? "yes" : "no",
+  };
+  const recommendedActions = SCHOOL_SUPPORT_ACTIONS[status] ?? [];
+  const periodKey = getPeriodKey(latestSession.assessmentDate);
+  const now = new Date().toISOString();
+
+  db.prepare(
+    `
+    INSERT INTO school_support_status_snapshots (
+      school_id,
+      period_key,
+      status,
+      metrics_json,
+      recommended_actions_json,
+      rules_version,
+      computed_at
+    ) VALUES (
+      @schoolId,
+      @periodKey,
+      @status,
+      @metricsJson,
+      @recommendedActionsJson,
+      @rulesVersion,
+      @computedAt
+    )
+    ON CONFLICT(school_id, period_key) DO UPDATE SET
+      status = excluded.status,
+      metrics_json = excluded.metrics_json,
+      recommended_actions_json = excluded.recommended_actions_json,
+      rules_version = excluded.rules_version,
+      computed_at = excluded.computed_at
+    `,
+  ).run({
+    schoolId,
+    periodKey,
+    status,
+    metricsJson: JSON.stringify(metrics),
+    recommendedActionsJson: JSON.stringify(recommendedActions),
+    rulesVersion: settings.rulesVersion,
+    computedAt: now,
+  });
+}
+
+function upsertTeacherSupportStatusSnapshot(
+  db: Database.Database,
+  schoolId: number,
+  teacherUid: string,
+) {
+  const normalizedTeacherUid = teacherUid.trim();
+  if (!normalizedTeacherUid) {
+    return;
+  }
+
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        le.lesson_date AS lessonDate,
+        le.overall_score AS overallScore,
+        le.domain_scores_json AS domainScoresJson,
+        tr.full_name AS teacherName
+      FROM lesson_evaluations le
+      LEFT JOIN teacher_roster tr ON tr.teacher_uid = le.teacher_uid
+      WHERE le.school_id = @schoolId
+        AND le.teacher_uid = @teacherUid
+        AND le.status = 'active'
+      ORDER BY le.lesson_date ASC, le.id ASC
+      `,
+    )
+    .all({ schoolId, teacherUid: normalizedTeacherUid }) as Array<{
+      lessonDate: string;
+      overallScore: number;
+      domainScoresJson: string;
+      teacherName: string | null;
+    }>;
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const settings = getTeacherSupportRuleSettings(db);
+  const baseline = rows[0];
+  const latest = rows[rows.length - 1];
+  const baselinePct = score4ToPercent(Number(baseline.overallScore));
+  const latestPct = score4ToPercent(Number(latest.overallScore));
+  const deltaOverall =
+    baselinePct !== null && latestPct !== null
+      ? Number((latestPct - baselinePct).toFixed(1))
+      : null;
+
+  const latestDomainScores = parseDomainScoresJson(latest.domainScoresJson);
+  const newSoundPct = score4ToPercent(
+    toNumberOrNull(
+      latestDomainScores.new_sound ??
+        latestDomainScores.newSound ??
+        null,
+    ),
+  );
+  const decodingPct = score4ToPercent(
+    toNumberOrNull(
+      latestDomainScores.decoding ??
+        null,
+    ),
+  );
+
+  let status: "Needs Catch-up Training" | "Needs Coaching & Follow-up" | "On Track";
+  if (
+    latestPct === null ||
+    latestPct < settings.catchupOverallThreshold ||
+    (newSoundPct !== null && newSoundPct < settings.criticalDomainThreshold) ||
+    (decodingPct !== null && decodingPct < settings.criticalDomainThreshold)
+  ) {
+    status = "Needs Catch-up Training";
+  } else if (
+    latestPct >= settings.onTrackOverallThreshold &&
+    deltaOverall !== null &&
+    deltaOverall >= settings.onTrackMinDelta
+  ) {
+    status = "On Track";
+  } else {
+    status = "Needs Coaching & Follow-up";
+  }
+
+  const metrics = {
+    latestOverallPct: latestPct,
+    baselineOverallPct: baselinePct,
+    deltaOverallPct: deltaOverall,
+    criticalNewSoundPct: newSoundPct,
+    criticalDecodingPct: decodingPct,
+    evaluationsCount: rows.length,
+  };
+  const periodKey = getPeriodKey(latest.lessonDate);
+  const now = new Date().toISOString();
+
+  db.prepare(
+    `
+    INSERT INTO teacher_support_status_snapshots (
+      school_id,
+      teacher_uid,
+      period_key,
+      status,
+      recommended_action,
+      evaluations_count,
+      metrics_json,
+      rules_version,
+      computed_at
+    ) VALUES (
+      @schoolId,
+      @teacherUid,
+      @periodKey,
+      @status,
+      @recommendedAction,
+      @evaluationsCount,
+      @metricsJson,
+      @rulesVersion,
+      @computedAt
+    )
+    ON CONFLICT(school_id, teacher_uid, period_key) DO UPDATE SET
+      status = excluded.status,
+      recommended_action = excluded.recommended_action,
+      evaluations_count = excluded.evaluations_count,
+      metrics_json = excluded.metrics_json,
+      rules_version = excluded.rules_version,
+      computed_at = excluded.computed_at
+    `,
+  ).run({
+    schoolId,
+    teacherUid: normalizedTeacherUid,
+    periodKey,
+    status,
+    recommendedAction: TEACHER_SUPPORT_ACTIONS[status] ?? "",
+    evaluationsCount: rows.length,
+    metricsJson: JSON.stringify(metrics),
+    rulesVersion: settings.rulesVersion,
+    computedAt: now,
+  });
+}
+
+function normalizeOptionalFeedbackText(value: unknown) {
+  const normalized = String(value ?? "").trim();
+  return normalized ? normalized : null;
+}
+
+function syncTrainingFeedbackTestimonials(
+  db: Database.Database,
+  trainingRecordId: number,
+  schoolId: number,
+  createdByUserId: number,
+) {
+  db.prepare(
+    `
+    DELETE FROM portal_testimonials
+    WHERE source_type = 'training_feedback'
+      AND source_training_record_id = @trainingRecordId
+    `,
+  ).run({ trainingRecordId });
+
+  const school = db
+    .prepare(
+      `
+      SELECT name, district
+      FROM schools_directory
+      WHERE id = @schoolId
+      LIMIT 1
+      `,
+    )
+    .get({ schoolId }) as { name: string; district: string } | undefined;
+
+  const feedbackRows = db
+    .prepare(
+      `
+      SELECT
+        tf.id,
+        tf.role_snapshot AS roleSnapshot,
+        tf.how_training_changed_teaching AS changedTeaching,
+        tf.what_you_will_do_to_improve_reading_levels AS improveReading,
+        sc.full_name AS fullName
+      FROM training_feedback_entries tf
+      LEFT JOIN school_contacts sc ON sc.contact_id = tf.contact_id
+      WHERE tf.training_record_id = @trainingRecordId
+        AND tf.feedback_role = 'participant'
+      ORDER BY tf.id ASC
+      `,
+    )
+    .all({ trainingRecordId }) as Array<{
+      id: number;
+      roleSnapshot: string | null;
+      changedTeaching: string | null;
+      improveReading: string | null;
+      fullName: string | null;
+    }>;
+
+  const insert = db.prepare(
+    `
+    INSERT INTO portal_testimonials (
+      storyteller_name,
+      storyteller_role,
+      school_name,
+      district,
+      story_text,
+      video_source_type,
+      video_file_name,
+      video_stored_path,
+      video_mime_type,
+      video_size_bytes,
+      is_published,
+      moderation_status,
+      source_type,
+      source_training_feedback_id,
+      source_training_record_id,
+      quote_field,
+      created_by_user_id
+    ) VALUES (
+      @storytellerName,
+      @storytellerRole,
+      @schoolName,
+      @district,
+      @storyText,
+      'upload',
+      'auto-feedback.txt',
+      '',
+      'text/plain',
+      0,
+      0,
+      'pending',
+      'training_feedback',
+      @sourceTrainingFeedbackId,
+      @sourceTrainingRecordId,
+      @quoteField,
+      @createdByUserId
+    )
+    `,
+  );
+
+  feedbackRows.forEach((row) => {
+    const changed = normalizeOptionalFeedbackText(row.changedTeaching);
+    const improve = normalizeOptionalFeedbackText(row.improveReading);
+    const selectedQuote = changed || improve;
+    if (!selectedQuote || selectedQuote.length < 20) {
+      return;
+    }
+    insert.run({
+      storytellerName: row.fullName?.trim() || "Training participant",
+      storytellerRole: row.roleSnapshot?.trim() || "Teacher",
+      schoolName: school?.name ?? "Unknown school",
+      district: school?.district ?? "Unknown district",
+      storyText: selectedQuote,
+      sourceTrainingFeedbackId: row.id,
+      sourceTrainingRecordId: trainingRecordId,
+      quoteField: changed ? "how_training_changed_teaching" : "what_you_will_do_to_improve_reading_levels",
+      createdByUserId,
+    });
+  });
+}
+
+function syncTrainingFeedbackEntries(
+  db: Database.Database,
+  args: {
+    recordId: number;
+    schoolId: number;
+    payload: Record<string, unknown>;
+    userId: number;
+  },
+) {
+  db.prepare("DELETE FROM training_feedback_entries WHERE training_record_id = @recordId").run({
+    recordId: args.recordId,
+  });
+
+  const participantRows = asRecordArray(args.payload.participants);
+  const participantWhatWentWell = normalizeOptionalFeedbackText(
+    args.payload.what_went_well_participant ?? args.payload.whatWentWellParticipant,
+  );
+  const participantChangedTeaching = normalizeOptionalFeedbackText(
+    args.payload.how_training_changed_teaching ?? args.payload.howTrainingChangedTeaching,
+  );
+  const participantImproveReading = normalizeOptionalFeedbackText(
+    args.payload.what_you_will_do_to_improve_reading_levels ??
+      args.payload.whatYouWillDoToImproveReadingLevels,
+  );
+  const participantChallenges = normalizeOptionalFeedbackText(
+    args.payload.challenges_participant ?? args.payload.challenges,
+  );
+  const participantRecommendations = normalizeOptionalFeedbackText(
+    args.payload.recommendations_next_training_participant ??
+      args.payload.recommendations_next_training ??
+      args.payload.recommendationsNextTraining,
+  );
+  const trainerWhatWentWell = normalizeOptionalFeedbackText(
+    args.payload.what_went_well_trainer ?? args.payload.whatWentWellTrainer,
+  );
+  const trainerChallenges = normalizeOptionalFeedbackText(
+    args.payload.challenges_trainer,
+  );
+  const trainerRecommendations = normalizeOptionalFeedbackText(
+    args.payload.recommendations_next_training_trainer,
+  );
+  const followUpOwnerUserId = Number(
+    args.payload.followUpOwnerUserId ??
+      args.payload.follow_up_owner_user_id ??
+      0,
+  );
+
+  const insert = db.prepare(
+    `
+    INSERT INTO training_feedback_entries (
+      training_record_id,
+      school_id,
+      contact_id,
+      trainer_user_id,
+      feedback_role,
+      what_went_well,
+      how_training_changed_teaching,
+      what_you_will_do_to_improve_reading_levels,
+      challenges,
+      recommendations_next_training,
+      role_snapshot,
+      gender_snapshot,
+      class_taught_snapshot,
+      submitted_at
+    ) VALUES (
+      @trainingRecordId,
+      @schoolId,
+      @contactId,
+      @trainerUserId,
+      @feedbackRole,
+      @whatWentWell,
+      @howTrainingChangedTeaching,
+      @whatYouWillDoToImproveReadingLevels,
+      @challenges,
+      @recommendationsNextTraining,
+      @roleSnapshot,
+      @genderSnapshot,
+      @classTaughtSnapshot,
+      @submittedAt
+    )
+    `,
+  );
+  const submittedAt = new Date().toISOString();
+
+  participantRows.forEach((row) => {
+    const hasAnyParticipantFeedback =
+      participantWhatWentWell ||
+      participantChangedTeaching ||
+      participantImproveReading ||
+      participantChallenges ||
+      participantRecommendations;
+    if (!hasAnyParticipantFeedback) {
+      return;
+    }
+    const contact = resolveActivityContact(db, row, args.schoolId);
+    insert.run({
+      trainingRecordId: args.recordId,
+      schoolId: args.schoolId,
+      contactId: contact.contactId,
+      trainerUserId: null,
+      feedbackRole: "participant",
+      whatWentWell: participantWhatWentWell,
+      howTrainingChangedTeaching: participantChangedTeaching,
+      whatYouWillDoToImproveReadingLevels: participantImproveReading,
+      challenges: participantChallenges,
+      recommendationsNextTraining: participantRecommendations,
+      roleSnapshot: normalizeParticipantRole(
+        row.role ?? normalizeContactRoleFromCategory(contact.category),
+      ),
+      genderSnapshot:
+        contact.gender === "Male" || contact.gender === "Female"
+          ? contact.gender
+          : normalizeTeacherGender(row.gender),
+      classTaughtSnapshot: normalizeOptionalFeedbackText(contact.classTaught),
+      submittedAt,
+    });
+  });
+
+  const hasTrainerFeedback =
+    trainerWhatWentWell || trainerChallenges || trainerRecommendations;
+  if (hasTrainerFeedback) {
+    insert.run({
+      trainingRecordId: args.recordId,
+      schoolId: args.schoolId,
+      contactId: null,
+      trainerUserId:
+        Number.isInteger(followUpOwnerUserId) && followUpOwnerUserId > 0
+          ? followUpOwnerUserId
+          : null,
+      feedbackRole: "trainer",
+      whatWentWell: trainerWhatWentWell,
+      howTrainingChangedTeaching: null,
+      whatYouWillDoToImproveReadingLevels: null,
+      challenges: trainerChallenges,
+      recommendationsNextTraining: trainerRecommendations,
+      roleSnapshot: "Trainer",
+      genderSnapshot: null,
+      classTaughtSnapshot: null,
+      submittedAt,
+    });
+  }
+
+  syncTrainingFeedbackTestimonials(db, args.recordId, args.schoolId, args.userId);
+}
+
 function normalizeLinkedPayload(module: PortalRecordModule, payload: PortalRecordInput["payload"], fallbackSchoolId: number) {
   const linkedPayload: Record<string, unknown> = { ...(payload ?? {}) };
+  const db = getDb();
+  if (!Number.isInteger(fallbackSchoolId) || fallbackSchoolId <= 0) {
+    throw new Error("School selection is required.");
+  }
 
   if (module === "training") {
-    const participantRows = asRecordArray(linkedPayload.participants);
+    const participantRows = asRecordArray(linkedPayload.participants).filter((row) =>
+      Object.values(row).some((value) => String(value ?? "").trim() !== ""),
+    );
     const normalizedRows = participantRows.map((row) => {
-      const participantName = String(row.participantName ?? row.name ?? "").trim();
-      const role = normalizeParticipantRole(row.role);
-      const gender = normalizeTeacherGender(row.gender);
-      const schoolIdRaw = Number(row.schoolAccountId ?? row.schoolId ?? fallbackSchoolId);
-      const schoolId = Number.isInteger(schoolIdRaw) && schoolIdRaw > 0 ? schoolIdRaw : fallbackSchoolId;
-      let teacherUid: string | null = null;
-      if (
-        schoolId > 0 &&
-        participantName &&
-        role === "Classroom teacher" &&
-        gender
-      ) {
-        teacherUid = createTeacherRosterRecord({
-          schoolId,
-          fullName: participantName,
-          gender,
-          isReadingTeacher: true,
-          phone: String(row.phoneContact ?? row.phone ?? "").trim() || undefined,
-        }).teacherUid;
-      }
-
-      const school = schoolId > 0 ? getSchoolDirectoryRecordById(schoolId) : null;
+      const contact = resolveActivityContact(db, row, fallbackSchoolId);
+      const school = getSchoolDirectoryRecordById(fallbackSchoolId);
+      const inferredGender =
+        contact.gender === "Male" || contact.gender === "Female"
+          ? contact.gender
+          : normalizeTeacherGender(row.gender) ?? "";
+      const role = normalizeParticipantRole(
+        row.role ?? normalizeContactRoleFromCategory(contact.category),
+      );
       return {
-        participantName,
+        contactId: contact.contactId,
+        contactUid: contact.contactUid,
+        participantName: contact.fullName,
         role,
-        gender: gender ?? "",
-        schoolAccountId: schoolId > 0 ? schoolId : null,
+        gender: inferredGender,
+        schoolAccountId: fallbackSchoolId,
         schoolAttachedTo: school?.name ?? String(row.schoolAttachedTo ?? "").trim(),
-        teacherUid,
-        phoneContact: String(row.phoneContact ?? row.phone ?? "").trim(),
-        email: String(row.email ?? "").trim(),
+        teacherUid: contact.teacherUid ?? null,
+        phoneContact: contact.phone ?? String(row.phoneContact ?? row.phone ?? "").trim(),
+        email: contact.email ?? String(row.email ?? "").trim(),
       };
     });
 
@@ -4314,47 +6372,58 @@ function normalizeLinkedPayload(module: PortalRecordModule, payload: PortalRecor
   }
 
   if (module === "visit") {
-    const teacherName = String(linkedPayload.teacherObserved ?? "").trim();
-    const teacherGender = normalizeTeacherGender(linkedPayload.teacherGender);
-    if (fallbackSchoolId > 0 && teacherName && teacherGender) {
-      const teacher = createTeacherRosterRecord({
-        schoolId: fallbackSchoolId,
-        fullName: teacherName,
-        gender: teacherGender,
-        isReadingTeacher: true,
-      });
-      linkedPayload.teacherUid = teacher.teacherUid;
+    const hasTeacherData =
+      String(linkedPayload.teacherObserved ?? "").trim() ||
+      String(linkedPayload.teacherContactUid ?? "").trim() ||
+      String(linkedPayload.teacherContactId ?? "").trim() ||
+      String(linkedPayload.teacherUid ?? "").trim();
+    if (hasTeacherData) {
+      const teacher = resolveActivityContact(
+        db,
+        {
+          participantName: linkedPayload.teacherObserved,
+          contactId: linkedPayload.teacherContactId,
+          contactUid: linkedPayload.teacherContactUid,
+          teacherUid: linkedPayload.teacherUid,
+        },
+        fallbackSchoolId,
+      );
+      linkedPayload.teacherObserved = teacher.fullName;
+      linkedPayload.teacherContactId = teacher.contactId;
+      linkedPayload.teacherContactUid = teacher.contactUid;
+      linkedPayload.teacherUid = teacher.teacherUid ?? "";
+      linkedPayload.teacherGender =
+        teacher.gender === "Male" || teacher.gender === "Female" ? teacher.gender : "";
+      linkedPayload.visitParticipants = JSON.stringify([
+        {
+          contactId: teacher.contactId,
+          contactUid: teacher.contactUid,
+          participantName: teacher.fullName,
+          role: normalizeContactRoleFromCategory(teacher.category),
+        },
+      ]);
     }
   }
 
   if (module === "assessment") {
     const classGrade = String(linkedPayload.classLevel ?? linkedPayload.classGrade ?? "").trim() || "Unspecified";
-    const learnerRows = asRecordArray(linkedPayload.egraLearnersData).filter((row) => {
-      const learnerName = String(row.learnerName ?? row.childName ?? "").trim();
-      return Boolean(learnerName);
-    });
+    const learnerRows = asRecordArray(linkedPayload.egraLearnersData).filter((row) =>
+      Object.values(row).some((value) => String(value ?? "").trim() !== ""),
+    );
 
-    const normalizedRows = learnerRows.map((row, index) => {
-      const learnerName = String(row.learnerName ?? row.childName ?? "").trim();
-      const learnerId = String(row.learnerId ?? row.childId ?? `LRN-${index + 1}`).trim();
-      const age = Math.max(3, Math.min(25, Math.floor(Number(row.age ?? 6) || 6)));
-      const learner = createOrUpdateLearnerRosterRecord({
-        schoolId: fallbackSchoolId,
-        fullName: learnerName,
-        internalChildId: learnerId || undefined,
-        gender: normalizeLearnerGender(row.sex ?? row.gender),
-        age,
-        classGrade,
-        consentFlag: false,
-      });
-
+    const normalizedRows = learnerRows.map((row) => {
+      const learner = resolveActivityLearner(db, row, fallbackSchoolId);
+      const sex = learner.gender === "Boy" ? "M" : learner.gender === "Girl" ? "F" : "";
       return {
         ...row,
         learnerUid: learner.learnerUid,
-        learnerName: learner.fullName,
-        learnerId: learnerId || learner.internalChildId || learner.learnerUid.slice(-8),
+        learnerId: learner.learnerId,
+        learnerName: learner.learnerName,
+        childName: learner.learnerName,
+        childId: learner.internalChildId ?? String(learner.learnerId),
+        sex,
         age: learner.age,
-        classGrade,
+        classGrade: String(row.classGrade ?? classGrade).trim() || classGrade,
       };
     });
 
@@ -4362,14 +6431,85 @@ function normalizeLinkedPayload(module: PortalRecordModule, payload: PortalRecor
     linkedPayload.learnersAssessed = normalizedRows.length;
   }
 
+  if (module === "story") {
+    const storyParticipantRows = asRecordArray(linkedPayload.storyParticipants);
+    if (storyParticipantRows.length > 0) {
+      const resolvedParticipants = storyParticipantRows.map((row) => {
+        const contact = resolveActivityContact(db, row, fallbackSchoolId);
+        return {
+          contactId: contact.contactId,
+          contactUid: contact.contactUid,
+          participantName: contact.fullName,
+          role: normalizeContactRoleFromCategory(contact.category),
+        };
+      });
+      linkedPayload.storyParticipants = JSON.stringify(resolvedParticipants);
+    }
+
+    const storyLearnerRows = asRecordArray(linkedPayload.storyLearners);
+    if (storyLearnerRows.length > 0) {
+      const resolvedLearners = storyLearnerRows.map((row) => {
+        const learner = resolveActivityLearner(db, row, fallbackSchoolId);
+        return {
+          learnerId: learner.learnerId,
+          learnerUid: learner.learnerUid,
+          learnerName: learner.learnerName,
+          classGrade: learner.classGrade,
+        };
+      });
+      linkedPayload.storyLearners = JSON.stringify(resolvedLearners);
+    }
+  }
+
   return linkedPayload;
 }
 
 function clearPortalRecordLinkages(db: Database.Database, recordId: number) {
   db.prepare("DELETE FROM portal_training_attendance WHERE portal_record_id = @recordId").run({ recordId });
+  db.prepare("DELETE FROM training_feedback_entries WHERE training_record_id = @recordId").run({
+    recordId,
+  });
+  db.prepare(
+    `
+      DELETE FROM portal_testimonials
+      WHERE source_type = 'training_feedback'
+        AND source_training_record_id = @recordId
+    `,
+  ).run({ recordId });
+  db.prepare(
+    `
+      DELETE FROM visit_participants
+      WHERE visit_id IN (
+        SELECT id
+        FROM coaching_visits
+        WHERE portal_record_id = @recordId
+      )
+    `,
+  ).run({ recordId });
   db.prepare("DELETE FROM coaching_visits WHERE portal_record_id = @recordId").run({ recordId });
   db.prepare("DELETE FROM assessment_records WHERE source_portal_record_id = @recordId").run({ recordId });
   db.prepare("DELETE FROM assessment_sessions WHERE portal_record_id = @recordId").run({ recordId });
+  db.prepare(
+    `
+      DELETE FROM story_activity_participants
+      WHERE story_activity_id IN (
+        SELECT id
+        FROM story_activities
+        WHERE portal_record_id = @recordId
+      )
+    `,
+  ).run({ recordId });
+  db.prepare(
+    `
+      DELETE FROM story_activity_learners
+      WHERE story_activity_id IN (
+        SELECT id
+        FROM story_activities
+        WHERE portal_record_id = @recordId
+      )
+    `,
+  ).run({ recordId });
+  db.prepare("DELETE FROM story_activities WHERE portal_record_id = @recordId").run({ recordId });
 }
 
 function syncPortalRecordLinkages(
@@ -4381,10 +6521,11 @@ function syncPortalRecordLinkages(
     schoolId: number;
     date: string;
     programType: string | null | undefined;
+    followUpType?: string | null;
+    followUpOwnerUserId?: number | null;
     userId: number;
   },
 ) {
-  db.prepare("DELETE FROM story_activities WHERE portal_record_id = ?").run(args.recordId);
   clearPortalRecordLinkages(db, args.recordId);
 
   if (args.module === "training") {
@@ -4393,41 +6534,73 @@ function syncPortalRecordLinkages(
       INSERT INTO portal_training_attendance (
         portal_record_id,
         school_id,
+        contact_id,
+        contact_uid,
         participant_name,
         participant_role,
+        role_at_time,
         gender,
         teacher_uid,
+        attended,
         phone,
         email
       ) VALUES (
         @portalRecordId,
         @schoolId,
+        @contactId,
+        @contactUid,
         @participantName,
         @participantRole,
+        @roleAtTime,
         @gender,
         @teacherUid,
+        @attended,
         @phone,
         @email
       )
     `);
 
     participantRows.forEach((row) => {
-      const participantName = String(row.participantName ?? row.name ?? "").trim();
-      if (!participantName) {
-        return;
-      }
-      const schoolIdRaw = Number(row.schoolAccountId ?? row.schoolId ?? args.schoolId);
-      const schoolId = Number.isInteger(schoolIdRaw) && schoolIdRaw > 0 ? schoolIdRaw : args.schoolId;
+      const contact = resolveActivityContact(db, row, args.schoolId);
+      const roleAtTime = normalizeParticipantRole(
+        row.role ?? normalizeContactRoleFromCategory(contact.category),
+      );
+      const gender =
+        contact.gender === "Male" || contact.gender === "Female"
+          ? contact.gender
+          : normalizeTeacherGender(row.gender);
       insertAttendance.run({
         portalRecordId: args.recordId,
-        schoolId: schoolId > 0 ? schoolId : null,
-        participantName,
-        participantRole: normalizeParticipantRole(row.role),
-        gender: normalizeTeacherGender(row.gender),
-        teacherUid: String(row.teacherUid ?? "").trim() || null,
-        phone: String(row.phoneContact ?? row.phone ?? "").trim() || null,
-        email: String(row.email ?? "").trim() || null,
+        schoolId: args.schoolId,
+        contactId: contact.contactId,
+        contactUid: contact.contactUid,
+        participantName: contact.fullName,
+        participantRole: roleAtTime,
+        roleAtTime,
+        gender: gender ?? null,
+        teacherUid: contact.teacherUid ?? (String(row.teacherUid ?? "").trim() || null),
+        attended: 1,
+        phone: contact.phone ?? (String(row.phoneContact ?? row.phone ?? "").trim() || null),
+        email: contact.email ?? (String(row.email ?? "").trim() || null),
       });
+    });
+
+    if (args.followUpType && !String(args.payload.followUpType ?? "").trim()) {
+      args.payload.followUpType = String(args.followUpType);
+    }
+    if (
+      Number.isInteger(args.followUpOwnerUserId) &&
+      Number(args.followUpOwnerUserId) > 0 &&
+      !String(args.payload.followUpOwnerUserId ?? "").trim()
+    ) {
+      args.payload.followUpOwnerUserId = Number(args.followUpOwnerUserId);
+    }
+
+    syncTrainingFeedbackEntries(db, {
+      recordId: args.recordId,
+      schoolId: args.schoolId,
+      payload: args.payload,
+      userId: args.userId,
     });
   }
 
@@ -4487,6 +6660,60 @@ function syncPortalRecordLinkages(
       coachUserId: args.userId,
       focusAreasJson,
     });
+
+    const visitRow = db
+      .prepare(
+        `
+          SELECT id
+          FROM coaching_visits
+          WHERE portal_record_id = @portalRecordId
+          LIMIT 1
+        `,
+      )
+      .get({ portalRecordId: args.recordId }) as { id: number } | undefined;
+
+    if (visitRow?.id) {
+      const hasTeacherData =
+        String(args.payload.teacherObserved ?? "").trim() ||
+        String(args.payload.teacherContactUid ?? "").trim() ||
+        String(args.payload.teacherContactId ?? "").trim() ||
+        String(args.payload.teacherUid ?? "").trim();
+      if (hasTeacherData) {
+        const teacher = resolveActivityContact(
+          db,
+          {
+            participantName: args.payload.teacherObserved,
+            contactId: args.payload.teacherContactId,
+            contactUid: args.payload.teacherContactUid,
+            teacherUid: args.payload.teacherUid,
+            role: "School Leader",
+          },
+          args.schoolId,
+        );
+        db.prepare(
+          `
+            INSERT INTO visit_participants (
+              visit_id,
+              school_id,
+              contact_id,
+              role_at_time,
+              attended
+            ) VALUES (
+              @visitId,
+              @schoolId,
+              @contactId,
+              @roleAtTime,
+              1
+            )
+          `,
+        ).run({
+          visitId: visitRow.id,
+          schoolId: args.schoolId,
+          contactId: teacher.contactId,
+          roleAtTime: normalizeContactRoleFromCategory(teacher.category),
+        });
+      }
+    }
   }
 
   if (args.module === "assessment") {
@@ -4578,24 +6805,42 @@ function syncPortalRecordLinkages(
     db.prepare("DELETE FROM assessment_records WHERE source_portal_record_id = @recordId").run({
       recordId: args.recordId,
     });
+    const readingRuleSettings = getAssessmentReadingRuleSettings(db, {
+      grade: classGrade,
+      language: "English",
+      atDate: args.date,
+    });
+    const computedAt = new Date().toISOString();
 
     const insertResult = db.prepare(`
       INSERT INTO assessment_session_results (
         assessment_session_id,
         source_row_key,
+        learner_id,
         learner_uid,
         letter_sounds_score,
         decoding_score,
         fluency_score,
-        comprehension_score
+        fluency_accuracy_score,
+        comprehension_score,
+        computed_reading_level,
+        computed_level_band,
+        rules_version,
+        computed_at
       ) VALUES (
         @assessmentSessionId,
         @sourceRowKey,
+        @learnerId,
         @learnerUid,
         @letterSoundsScore,
         @decodingScore,
         @fluencyScore,
-        @comprehensionScore
+        @fluencyAccuracyScore,
+        @comprehensionScore,
+        @computedReadingLevel,
+        @computedLevelBand,
+        @rulesVersion,
+        @computedAt
       )
     `);
 
@@ -4616,7 +6861,12 @@ function syncPortalRecordLinkages(
         undecodable_words_score,
         made_up_words_score,
         story_reading_score,
+        fluency_accuracy_score,
         reading_comprehension_score,
+        computed_reading_level,
+        computed_level_band,
+        reading_rules_version,
+        reading_level_computed_at,
         notes,
         created_by_user_id,
         source_portal_record_id,
@@ -4637,7 +6887,12 @@ function syncPortalRecordLinkages(
         @undecodableWordsScore,
         @madeUpWordsScore,
         @storyReadingScore,
+        @fluencyAccuracyScore,
         @readingComprehensionScore,
+        @computedReadingLevel,
+        @computedLevelBand,
+        @rulesVersion,
+        @computedAt,
         @notes,
         @createdByUserId,
         @sourcePortalRecordId,
@@ -4645,25 +6900,15 @@ function syncPortalRecordLinkages(
       )
     `);
     rows.forEach((row, index) => {
-      const learnerName = String(row.learnerName ?? row.childName ?? "").trim();
-      if (!learnerName) {
-        return;
-      }
-
-      const childId = String(row.learnerId ?? row.childId ?? "").trim() || `LRN-${index + 1}`;
-      const age = Math.max(3, Math.min(25, Math.floor(Number(row.age ?? 6) || 6)));
-      const learnerUidFromRow = String(row.learnerUid ?? "").trim();
-      const learnerUid = learnerUidFromRow
-        ? learnerUidFromRow
-        : createOrUpdateLearnerRosterRecord({
-          schoolId: args.schoolId,
-          fullName: learnerName,
-          internalChildId: childId,
-          gender: normalizeLearnerGender(row.sex ?? row.gender),
-          age,
-          classGrade,
-          consentFlag: false,
-        }).learnerUid;
+      const learner = resolveActivityLearner(db, row, args.schoolId);
+      const learnerUid = learner.learnerUid;
+      const learnerName = learner.learnerName;
+      const childId =
+        String(row.childId ?? row.learnerId ?? "").trim() ||
+        learner.internalChildId ||
+        String(learner.learnerId);
+      const age = learner.age;
+      const learnerGender = learner.gender;
 
       const letterIdentificationScore = toNumberOrNull(
         row.letterIdentification ?? row.letterIdentication ?? row.letterSoundsScore,
@@ -4675,6 +6920,12 @@ function syncPortalRecordLinkages(
       const undecodableWordsScore = toNumberOrNull(row.undecodableWords);
       const madeUpWordsScore = toNumberOrNull(row.madeUpWords);
       const fluencyScore = toNumberOrNull(row.storyReading ?? row.fluencyScore);
+      const fluencyAccuracyScore = toNumberOrNull(
+        row.fluencyAccuracy ??
+          row.fluencyAccuracyScore ??
+          row.fluency_accuracy_score ??
+          row.accuracy,
+      );
       const comprehensionScore = toNumberOrNull(
         row.readingComprehension ?? row.comprehensionScore,
       );
@@ -4687,24 +6938,38 @@ function syncPortalRecordLinkages(
         decodingCandidates.length > 0
           ? decodingCandidates.reduce((sum, score) => sum + score, 0) / decodingCandidates.length
           : toNumberOrNull(row.decodingScore);
+      const computed = computeAssessmentReadingLevel(
+        {
+          fluencyCwpm: fluencyScore,
+          fluencyAccuracy: fluencyAccuracyScore,
+          comprehensionScore,
+        },
+        readingRuleSettings,
+      );
 
       const sourceRowKey = String(row.no ?? index + 1);
       insertResult.run({
         assessmentSessionId: sessionId,
         sourceRowKey,
+        learnerId: learner.learnerId,
         learnerUid,
         letterSoundsScore:
           toNumberOrNull(soundIdentificationScore ?? letterIdentificationScore) ?? null,
         decodingScore: decodingScore ?? null,
         fluencyScore: fluencyScore ?? null,
+        fluencyAccuracyScore: fluencyAccuracyScore ?? null,
         comprehensionScore: comprehensionScore ?? null,
+        computedReadingLevel: computed.computedReadingLevel,
+        computedLevelBand: computed.computedLevelBand,
+        rulesVersion: computed.rulesVersion,
+        computedAt,
       });
 
       insertAssessment.run({
         learnerUid,
         childName: learnerName,
         childId,
-        gender: normalizeLearnerGender(row.sex ?? row.gender),
+        gender: learnerGender,
         age,
         schoolId: args.schoolId,
         classGrade,
@@ -4716,17 +6981,24 @@ function syncPortalRecordLinkages(
         undecodableWordsScore: undecodableWordsScore ?? null,
         madeUpWordsScore: madeUpWordsScore ?? null,
         storyReadingScore: fluencyScore ?? null,
+        fluencyAccuracyScore: fluencyAccuracyScore ?? null,
         readingComprehensionScore: comprehensionScore ?? null,
+        computedReadingLevel: computed.computedReadingLevel,
+        computedLevelBand: computed.computedLevelBand,
+        rulesVersion: computed.rulesVersion,
+        computedAt,
         notes: null,
         createdByUserId: args.userId,
         sourcePortalRecordId: args.recordId,
         sourceRowKey,
       });
     });
+
+    upsertSchoolSupportStatusSnapshot(db, args.schoolId);
   }
 
   if (args.module === "story") {
-    db.prepare(`
+    const insertStory = db.prepare(`
       INSERT INTO story_activities (
         portal_record_id,
         school_id,
@@ -4759,6 +7031,58 @@ function syncPortalRecordLinkages(
       notes: String(args.payload.notes ?? ""),
       createdByUserId: args.userId,
     });
+
+    const storyActivityId = Number(insertStory.lastInsertRowid);
+    if (Number.isInteger(storyActivityId) && storyActivityId > 0) {
+      const participantRows = asRecordArray(args.payload.storyParticipants);
+      const insertStoryParticipant = db.prepare(
+        `
+          INSERT INTO story_activity_participants (
+            story_activity_id,
+            school_id,
+            contact_id,
+            role_at_time
+          ) VALUES (
+            @storyActivityId,
+            @schoolId,
+            @contactId,
+            @roleAtTime
+          )
+        `,
+      );
+      participantRows.forEach((row) => {
+        const contact = resolveActivityContact(db, row, args.schoolId);
+        insertStoryParticipant.run({
+          storyActivityId,
+          schoolId: args.schoolId,
+          contactId: contact.contactId,
+          roleAtTime: normalizeContactRoleFromCategory(contact.category),
+        });
+      });
+
+      const learnerRows = asRecordArray(args.payload.storyLearners);
+      const insertStoryLearner = db.prepare(
+        `
+          INSERT INTO story_activity_learners (
+            story_activity_id,
+            school_id,
+            learner_id
+          ) VALUES (
+            @storyActivityId,
+            @schoolId,
+            @learnerId
+          )
+        `,
+      );
+      learnerRows.forEach((row) => {
+        const learner = resolveActivityLearner(db, row, args.schoolId);
+        insertStoryLearner.run({
+          storyActivityId,
+          schoolId: args.schoolId,
+          learnerId: learner.learnerId,
+        });
+      });
+    }
   }
 }
 
@@ -4810,14 +7134,19 @@ function getSchoolDirectoryRecordById(id: number) {
         gps_lng AS gpsLng,
           contact_name AS contactName,
             contact_phone AS contactPhone,
+              primary_contact_id AS primaryContactId,
+                primary_contact.full_name AS primaryContactName,
+                  primary_contact.category AS primaryContactCategory,
               COALESCE(program_status, 'active') AS programStatus,
                 graduated_at AS graduatedAt,
                   graduated_by_user_id AS graduatedByUserId,
-                    graduation_notes AS graduationNotes,
-                      graduation_version AS graduationVersion,
+                      graduation_notes AS graduationNotes,
+                        graduation_version AS graduationVersion,
               notes,
-              created_at AS createdAt
+              schools_directory.created_at AS createdAt
       FROM schools_directory
+      LEFT JOIN school_contacts primary_contact
+        ON primary_contact.contact_id = schools_directory.primary_contact_id
       WHERE id = @id
       LIMIT 1
       `,
@@ -4885,11 +7214,23 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
   if (!input.schoolId || input.schoolId <= 0) {
     throw new Error("School selection is required.");
   }
+  if (input.module === "training") {
+    if (!input.followUpDate?.trim()) {
+      throw new Error("Training follow-up date is required.");
+    }
+    if (!input.followUpType?.trim()) {
+      throw new Error("Training follow-up type is required.");
+    }
+    if (!Number.isInteger(input.followUpOwnerUserId) || Number(input.followUpOwnerUserId) <= 0) {
+      throw new Error("Training follow-up owner is required.");
+    }
+  }
 
   const school = getSchoolDirectoryRecordById(input.schoolId);
   if (!school) {
     throw new Error("Selected school account was not found.");
   }
+  ensureSchoolHasPrimaryProprietor(school.id);
 
   if (checkPortalDuplicate(db, input.module, input.date, school.id, school.name)) {
     throw new Error(
@@ -4914,6 +7255,8 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
       program_type,
       status,
       follow_up_date,
+      follow_up_type,
+      follow_up_owner_user_id,
       payload_json,
       created_by_user_id,
       updated_by_user_id
@@ -4927,6 +7270,8 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
       @programType,
       @status,
       @followUpDate,
+      @followUpType,
+      @followUpOwnerUserId,
       @payloadJson,
       @createdByUserId,
       @updatedByUserId
@@ -4943,6 +7288,11 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
         programType: input.programType ?? null,
         status: input.status,
         followUpDate: input.followUpDate ?? null,
+        followUpType: input.followUpType ?? null,
+        followUpOwnerUserId:
+          Number.isInteger(input.followUpOwnerUserId) && Number(input.followUpOwnerUserId) > 0
+            ? Number(input.followUpOwnerUserId)
+            : null,
         payloadJson,
         createdByUserId: user.id,
         updatedByUserId: user.id,
@@ -4961,6 +7311,8 @@ export function createPortalRecord(input: PortalRecordInput, user: PortalUser): 
       schoolId: school.id,
       date: input.date,
       programType: input.programType,
+      followUpType: input.followUpType,
+      followUpOwnerUserId: input.followUpOwnerUserId,
       userId: user.id,
     });
 
@@ -4999,11 +7351,23 @@ export function updatePortalRecord(
   if (!input.schoolId || input.schoolId <= 0) {
     throw new Error("School selection is required.");
   }
+  if (input.module === "training") {
+    if (!input.followUpDate?.trim()) {
+      throw new Error("Training follow-up date is required.");
+    }
+    if (!input.followUpType?.trim()) {
+      throw new Error("Training follow-up type is required.");
+    }
+    if (!Number.isInteger(input.followUpOwnerUserId) || Number(input.followUpOwnerUserId) <= 0) {
+      throw new Error("Training follow-up owner is required.");
+    }
+  }
 
   const school = getSchoolDirectoryRecordById(input.schoolId);
   if (!school) {
     throw new Error("Selected school account was not found.");
   }
+  ensureSchoolHasPrimaryProprietor(school.id);
 
   const current = db
     .prepare(
@@ -5050,6 +7414,8 @@ export function updatePortalRecord(
       program_type = @programType,
       status = @status,
       follow_up_date = @followUpDate,
+      follow_up_type = @followUpType,
+      follow_up_owner_user_id = @followUpOwnerUserId,
       payload_json = @payloadJson,
       updated_by_user_id = @updatedByUserId,
       updated_at = datetime('now')
@@ -5065,6 +7431,11 @@ export function updatePortalRecord(
       programType: input.programType ?? null,
       status: input.status,
       followUpDate: input.followUpDate ?? null,
+      followUpType: input.followUpType ?? null,
+      followUpOwnerUserId:
+        Number.isInteger(input.followUpOwnerUserId) && Number(input.followUpOwnerUserId) > 0
+          ? Number(input.followUpOwnerUserId)
+          : null,
       payloadJson,
       updatedByUserId: user.id,
     });
@@ -5076,6 +7447,8 @@ export function updatePortalRecord(
       schoolId: school.id,
       date: input.date,
       programType: input.programType,
+      followUpType: input.followUpType,
+      followUpOwnerUserId: input.followUpOwnerUserId,
       userId: user.id,
     });
 
@@ -5215,6 +7588,9 @@ export function getPortalRecordById(id: number, user: PortalUser): PortalRecord 
             pr.program_type AS programType,
               pr.status,
               pr.follow_up_date AS followUpDate,
+              pr.follow_up_type AS followUpType,
+              pr.follow_up_owner_user_id AS followUpOwnerUserId,
+              pfu.full_name AS followUpOwnerName,
                 pr.payload_json AS payloadJson,
                   pr.review_note AS reviewNote,
                     pr.created_by_user_id AS createdByUserId,
@@ -5226,6 +7602,7 @@ export function getPortalRecordById(id: number, user: PortalUser): PortalRecord 
                                 pr.delete_reason AS deleteReason
       FROM portal_records pr
       JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      LEFT JOIN portal_users pfu ON pfu.id = pr.follow_up_owner_user_id
       WHERE pr.id = @id AND pr.deleted_at IS NULL
       LIMIT 1
       `,
@@ -5242,6 +7619,9 @@ export function getPortalRecordById(id: number, user: PortalUser): PortalRecord 
       programType: string | null;
       status: PortalRecordStatus;
       followUpDate: string | null;
+      followUpType: string | null;
+      followUpOwnerUserId: number | null;
+      followUpOwnerName: string | null;
       payloadJson: string;
       reviewNote: string | null;
       createdByUserId: number;
@@ -5328,6 +7708,9 @@ export function listPortalRecords(filters: PortalRecordFilters, user: PortalUser
             pr.program_type AS programType,
               pr.status,
               pr.follow_up_date AS followUpDate,
+              pr.follow_up_type AS followUpType,
+              pr.follow_up_owner_user_id AS followUpOwnerUserId,
+              pfu.full_name AS followUpOwnerName,
                 pr.payload_json AS payloadJson,
                   pr.review_note AS reviewNote,
                     pr.created_by_user_id AS createdByUserId,
@@ -5339,6 +7722,7 @@ export function listPortalRecords(filters: PortalRecordFilters, user: PortalUser
                                 pr.delete_reason AS deleteReason
       FROM portal_records pr
       JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      LEFT JOIN portal_users pfu ON pfu.id = pr.follow_up_owner_user_id
       WHERE ${whereClauses.join(" AND ")} AND pr.deleted_at IS NULL
       ORDER BY pr.date DESC, pr.updated_at DESC
       LIMIT 300
@@ -5355,6 +7739,9 @@ export function listPortalRecords(filters: PortalRecordFilters, user: PortalUser
       programType: string | null;
       status: PortalRecordStatus;
       followUpDate: string | null;
+      followUpType: string | null;
+      followUpOwnerUserId: number | null;
+      followUpOwnerName: string | null;
       payloadJson: string;
       reviewNote: string | null;
       createdByUserId: number;
@@ -5536,6 +7923,9 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
     0,
     Math.floor(Number(input.enrollmentTotal ?? computedEnrollment)),
   );
+  const proprietorName = input.proprietor.fullName.trim();
+  const proprietorGender = input.proprietor.gender;
+  const proprietorPhone = input.proprietor.phone?.trim() || "";
 
   if (!normalizedName) {
     throw new Error("School name is required.");
@@ -5546,6 +7936,9 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
   if (!Number.isFinite(enrollmentTotal) || enrollmentTotal <= 0) {
     throw new Error("Enrollment total is required and must be greater than 0.");
   }
+  if (!proprietorName) {
+    throw new Error("A Proprietor primary contact is required.");
+  }
 
   const duplicateSchool = findSchoolByNormalizedName(normalizedName);
   if (duplicateSchool) {
@@ -5554,119 +7947,135 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
     );
   }
 
-  const insertResult = db
-    .prepare(
-      `
-      INSERT INTO schools_directory(
-        school_uid,
-        school_code,
-        name,
-        region,
-        sub_region,
-        region_id,
-        subregion_id,
-        district_id,
-        district,
-        sub_county,
-        parish,
-        village,
-        enrollment_total,
-        enrollment_by_grade,
-        enrolled_boys,
-        enrolled_girls,
-        enrolled_baby,
-        enrolled_middle,
-        enrolled_top,
-        enrolled_p1,
-        enrolled_p2,
-        enrolled_p3,
-        enrolled_p4,
-        enrolled_p5,
-        enrolled_p6,
-        enrolled_p7,
-        enrolled_learners,
-        gps_lat,
-        gps_lng,
-        contact_name,
-        contact_phone,
-        notes
-      ) VALUES(
-        @schoolUid,
-        @schoolCode,
-        @name,
-        @region,
-        @subRegion,
-        @regionId,
-        @subregionId,
-        @districtId,
-        @district,
-        @subCounty,
-        @parish,
-        @village,
-        @enrollmentTotal,
-        @enrollmentByGrade,
-        @enrolledBoys,
-        @enrolledGirls,
-        @enrolledBaby,
-        @enrolledMiddle,
-        @enrolledTop,
-        @enrolledP1,
-        @enrolledP2,
-        @enrolledP3,
-        @enrolledP4,
-        @enrolledP5,
-        @enrolledP6,
-        @enrolledP7,
-        @enrolledLearners,
-        @gpsLat,
-        @gpsLng,
-        @contactName,
-        @contactPhone,
-        @notes
+  const id = db.transaction(() => {
+    const insertResult = db
+      .prepare(
+        `
+        INSERT INTO schools_directory(
+          school_uid,
+          school_code,
+          name,
+          region,
+          sub_region,
+          region_id,
+          subregion_id,
+          district_id,
+          district,
+          sub_county,
+          parish,
+          village,
+          enrollment_total,
+          enrollment_by_grade,
+          enrolled_boys,
+          enrolled_girls,
+          enrolled_baby,
+          enrolled_middle,
+          enrolled_top,
+          enrolled_p1,
+          enrolled_p2,
+          enrolled_p3,
+          enrolled_p4,
+          enrolled_p5,
+          enrolled_p6,
+          enrolled_p7,
+          enrolled_learners,
+          gps_lat,
+          gps_lng,
+          contact_name,
+          contact_phone,
+          notes
+        ) VALUES(
+          @schoolUid,
+          @schoolCode,
+          @name,
+          @region,
+          @subRegion,
+          @regionId,
+          @subregionId,
+          @districtId,
+          @district,
+          @subCounty,
+          @parish,
+          @village,
+          @enrollmentTotal,
+          @enrollmentByGrade,
+          @enrolledBoys,
+          @enrolledGirls,
+          @enrolledBaby,
+          @enrolledMiddle,
+          @enrolledTop,
+          @enrolledP1,
+          @enrolledP2,
+          @enrolledP3,
+          @enrolledP4,
+          @enrolledP5,
+          @enrolledP6,
+          @enrolledP7,
+          @enrolledLearners,
+          @gpsLat,
+          @gpsLng,
+          @contactName,
+          @contactPhone,
+          @notes
+        )
+      `,
       )
-    `,
-    )
-    .run({
-      schoolUid: createGeneratedUid("sch"),
-      schoolCode: "SCH-PENDING",
-      name: normalizedName,
-      region: normalizedRegion,
-      subRegion: normalizedSubRegion,
-      regionId: stableIdFromText("reg", normalizedRegion),
-      subregionId: stableIdFromText("sub", normalizedSubRegion),
-      districtId: stableIdFromText("dist", normalizedDistrict),
-      district: normalizedDistrict,
-      subCounty: normalizedSubCounty,
-      parish: normalizedParish,
-      village: input.village?.trim() ? input.village : null,
-      enrollmentTotal,
-      enrollmentByGrade: input.enrollmentByGrade?.trim() ? input.enrollmentByGrade.trim() : null,
-      enrolledBoys,
-      enrolledGirls,
-      enrolledBaby,
-      enrolledMiddle,
-      enrolledTop,
-      enrolledP1,
-      enrolledP2,
-      enrolledP3,
-      enrolledP4,
-      enrolledP5,
-      enrolledP6,
-      enrolledP7,
-      enrolledLearners: enrollmentTotal,
-      gpsLat: input.gpsLat?.trim() ? input.gpsLat : null,
-      gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
-      contactName: input.contactName?.trim() ? input.contactName : null,
-      contactPhone: input.contactPhone?.trim() ? input.contactPhone : null,
-      notes: input.notes?.trim() ? input.notes.trim() : null,
+      .run({
+        schoolUid: createGeneratedUid("sch"),
+        schoolCode: "SCH-PENDING",
+        name: normalizedName,
+        region: normalizedRegion,
+        subRegion: normalizedSubRegion,
+        regionId: stableIdFromText("reg", normalizedRegion),
+        subregionId: stableIdFromText("sub", normalizedSubRegion),
+        districtId: stableIdFromText("dist", normalizedDistrict),
+        district: normalizedDistrict,
+        subCounty: normalizedSubCounty,
+        parish: normalizedParish,
+        village: input.village?.trim() ? input.village : null,
+        enrollmentTotal,
+        enrollmentByGrade: input.enrollmentByGrade?.trim() ? input.enrollmentByGrade.trim() : null,
+        enrolledBoys,
+        enrolledGirls,
+        enrolledBaby,
+        enrolledMiddle,
+        enrolledTop,
+        enrolledP1,
+        enrolledP2,
+        enrolledP3,
+        enrolledP4,
+        enrolledP5,
+        enrolledP6,
+        enrolledP7,
+        enrolledLearners: enrollmentTotal,
+        gpsLat: input.gpsLat?.trim() ? input.gpsLat : null,
+        gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
+        contactName: proprietorName,
+        contactPhone: proprietorPhone || input.contactPhone?.trim() || null,
+        notes: input.notes?.trim() ? input.notes.trim() : null,
+      });
+
+    const schoolId = Number(insertResult.lastInsertRowid);
+    const schoolCode = `SCH - ${schoolId.toString().padStart(4, "0")} `;
+    db.prepare("UPDATE schools_directory SET school_code = @schoolCode WHERE id = @id").run({
+      id: schoolId,
+      schoolCode,
     });
 
-  const id = Number(insertResult.lastInsertRowid);
-  const schoolCode = `SCH - ${id.toString().padStart(4, "0")} `;
-  db.prepare("UPDATE schools_directory SET school_code = @schoolCode WHERE id = @id").run({
-    id,
-    schoolCode,
-  });
+    addSchoolContactToSchool({
+      schoolId,
+      fullName: proprietorName,
+      gender: proprietorGender,
+      phone: proprietorPhone || undefined,
+      email: input.proprietor.email?.trim() || undefined,
+      whatsapp: input.proprietor.whatsapp?.trim() || undefined,
+      category: "Proprietor",
+      roleTitle: input.proprietor.roleTitle?.trim() || "Director",
+      isPrimaryContact: true,
+    });
+
+    return schoolId;
+  })();
 
   const row = getSchoolDirectoryRecordById(id);
   if (!row) {
@@ -6083,16 +8492,21 @@ export function listSchoolDirectoryRecords(
         gps_lng AS gpsLng,
           contact_name AS contactName,
             contact_phone AS contactPhone,
+              primary_contact_id AS primaryContactId,
+                primary_contact.full_name AS primaryContactName,
+                  primary_contact.category AS primaryContactCategory,
               COALESCE(program_status, 'active') AS programStatus,
                 graduated_at AS graduatedAt,
                   graduated_by_user_id AS graduatedByUserId,
                     graduation_notes AS graduationNotes,
                       graduation_version AS graduationVersion,
               notes,
-              created_at AS createdAt
+              schools_directory.created_at AS createdAt
       FROM schools_directory
+      LEFT JOIN school_contacts primary_contact
+        ON primary_contact.contact_id = schools_directory.primary_contact_id
       WHERE ${where.join(" AND ")}
-      ORDER BY created_at DESC
+      ORDER BY schools_directory.created_at DESC
       LIMIT 500
       `,
     )
@@ -6395,6 +8809,11 @@ function parsePortalTestimonialRow(row: {
   photoMimeType: string | null;
   photoSizeBytes: number | null;
   isPublished: number;
+  moderationStatus: string | null;
+  sourceType: string | null;
+  sourceTrainingFeedbackId: number | null;
+  sourceTrainingRecordId: number | null;
+  quoteField: string | null;
   createdByUserId: number;
   createdByName: string;
   createdAt: string;
@@ -6422,6 +8841,18 @@ function parsePortalTestimonialRow(row: {
     photoMimeType: row.photoMimeType ?? null,
     photoSizeBytes: row.photoSizeBytes !== null ? Number(row.photoSizeBytes) : null,
     isPublished: Boolean(row.isPublished),
+    moderationStatus:
+      row.moderationStatus === "hidden"
+        ? "hidden"
+        : row.moderationStatus === "pending"
+          ? "pending"
+          : "approved",
+    sourceType: row.sourceType === "training_feedback" ? "training_feedback" : "manual",
+    sourceTrainingFeedbackId:
+      row.sourceTrainingFeedbackId !== null ? Number(row.sourceTrainingFeedbackId) : null,
+    sourceTrainingRecordId:
+      row.sourceTrainingRecordId !== null ? Number(row.sourceTrainingRecordId) : null,
+    quoteField: row.quoteField ?? null,
     createdByUserId: Number(row.createdByUserId),
     createdByName: row.createdByName,
     createdAt: row.createdAt,
@@ -6449,9 +8880,16 @@ export function savePortalTestimonial(input: {
   photoStoredPath?: string | null;
   photoMimeType?: string | null;
   photoSizeBytes?: number | null;
+  moderationStatus?: "pending" | "approved" | "hidden";
+  sourceType?: "manual" | "training_feedback";
+  sourceTrainingFeedbackId?: number | null;
+  sourceTrainingRecordId?: number | null;
+  quoteField?: string | null;
   createdByUserId: number;
 }): PortalTestimonialRecord {
   const db = getDb();
+  const moderationStatus = input.moderationStatus ?? "approved";
+  const isPublished = moderationStatus === "approved" ? 1 : 0;
   const insertResult = db
     .prepare(
       `
@@ -6477,6 +8915,11 @@ export function savePortalTestimonial(input: {
         photo_mime_type,
         photo_size_bytes,
         is_published,
+        moderation_status,
+        source_type,
+        source_training_feedback_id,
+        source_training_record_id,
+        quote_field,
         created_by_user_id
       ) VALUES(
         @storytellerName,
@@ -6499,7 +8942,12 @@ export function savePortalTestimonial(input: {
         @photoStoredPath,
         @photoMimeType,
         @photoSizeBytes,
-        1,
+        @isPublished,
+        @moderationStatus,
+        @sourceType,
+        @sourceTrainingFeedbackId,
+        @sourceTrainingRecordId,
+        @quoteField,
         @createdByUserId
       )
         `,
@@ -6525,6 +8973,12 @@ export function savePortalTestimonial(input: {
       photoStoredPath: input.photoStoredPath ?? null,
       photoMimeType: input.photoMimeType ?? null,
       photoSizeBytes: input.photoSizeBytes ?? null,
+      isPublished,
+      moderationStatus,
+      sourceType: input.sourceType ?? "manual",
+      sourceTrainingFeedbackId: input.sourceTrainingFeedbackId ?? null,
+      sourceTrainingRecordId: input.sourceTrainingRecordId ?? null,
+      quoteField: input.quoteField ?? null,
       createdByUserId: input.createdByUserId,
     });
 
@@ -6555,6 +9009,11 @@ export function savePortalTestimonial(input: {
                                         pt.photo_mime_type AS photoMimeType,
                                           pt.photo_size_bytes AS photoSizeBytes,
                                             pt.is_published AS isPublished,
+                                            pt.moderation_status AS moderationStatus,
+                                            pt.source_type AS sourceType,
+                                            pt.source_training_feedback_id AS sourceTrainingFeedbackId,
+                                            pt.source_training_record_id AS sourceTrainingRecordId,
+                                            pt.quote_field AS quoteField,
                                               pt.created_by_user_id AS createdByUserId,
                                                 pu.full_name AS createdByName,
                                                   pt.created_at AS createdAt
@@ -6588,6 +9047,11 @@ export function savePortalTestimonial(input: {
       photoMimeType: string | null;
       photoSizeBytes: number | null;
       isPublished: number;
+      moderationStatus: string | null;
+      sourceType: string | null;
+      sourceTrainingFeedbackId: number | null;
+      sourceTrainingRecordId: number | null;
+      quoteField: string | null;
       createdByUserId: number;
       createdByName: string;
       createdAt: string;
@@ -6632,6 +9096,11 @@ export function listPortalTestimonials(
                                         pt.photo_mime_type AS photoMimeType,
                                           pt.photo_size_bytes AS photoSizeBytes,
                                             pt.is_published AS isPublished,
+                                            pt.moderation_status AS moderationStatus,
+                                            pt.source_type AS sourceType,
+                                            pt.source_training_feedback_id AS sourceTrainingFeedbackId,
+                                            pt.source_training_record_id AS sourceTrainingRecordId,
+                                            pt.quote_field AS quoteField,
                                               pt.created_by_user_id AS createdByUserId,
                                                 pu.full_name AS createdByName,
                                                   pt.created_at AS createdAt
@@ -6667,6 +9136,11 @@ export function listPortalTestimonials(
       photoMimeType: string | null;
       photoSizeBytes: number | null;
       isPublished: number;
+      moderationStatus: string | null;
+      sourceType: string | null;
+      sourceTrainingFeedbackId: number | null;
+      sourceTrainingRecordId: number | null;
+      quoteField: string | null;
       createdByUserId: number;
       createdByName: string;
       createdAt: string;
@@ -6702,12 +9176,18 @@ export function listPublishedPortalTestimonials(limit = 180): PortalTestimonialR
                                         pt.photo_mime_type AS photoMimeType,
                                           pt.photo_size_bytes AS photoSizeBytes,
                                             pt.is_published AS isPublished,
+                                            pt.moderation_status AS moderationStatus,
+                                            pt.source_type AS sourceType,
+                                            pt.source_training_feedback_id AS sourceTrainingFeedbackId,
+                                            pt.source_training_record_id AS sourceTrainingRecordId,
+                                            pt.quote_field AS quoteField,
                                               pt.created_by_user_id AS createdByUserId,
                                                 pu.full_name AS createdByName,
                                                   pt.created_at AS createdAt
       FROM portal_testimonials pt
       JOIN portal_users pu ON pu.id = pt.created_by_user_id
       WHERE pt.is_published = 1
+        AND COALESCE(pt.moderation_status, 'approved') = 'approved'
       ORDER BY pt.created_at DESC
       LIMIT @limit
       `,
@@ -6735,6 +9215,11 @@ export function listPublishedPortalTestimonials(limit = 180): PortalTestimonialR
       photoMimeType: string | null;
       photoSizeBytes: number | null;
       isPublished: number;
+      moderationStatus: string | null;
+      sourceType: string | null;
+      sourceTrainingFeedbackId: number | null;
+      sourceTrainingRecordId: number | null;
+      quoteField: string | null;
       createdByUserId: number;
       createdByName: string;
       createdAt: string;
@@ -6772,6 +9257,11 @@ export function getPublishedPortalTestimonialById(
                                         pt.photo_mime_type AS photoMimeType,
                                           pt.photo_size_bytes AS photoSizeBytes,
                                             pt.is_published AS isPublished,
+                                            pt.moderation_status AS moderationStatus,
+                                            pt.source_type AS sourceType,
+                                            pt.source_training_feedback_id AS sourceTrainingFeedbackId,
+                                            pt.source_training_record_id AS sourceTrainingRecordId,
+                                            pt.quote_field AS quoteField,
                                               pt.created_by_user_id AS createdByUserId,
                                                 pu.full_name AS createdByName,
                                                   pt.created_at AS createdAt
@@ -6779,6 +9269,7 @@ export function getPublishedPortalTestimonialById(
       JOIN portal_users pu ON pu.id = pt.created_by_user_id
       WHERE pt.id = @id
         AND pt.is_published = 1
+        AND COALESCE(pt.moderation_status, 'approved') = 'approved'
       LIMIT 1
       `,
     )
@@ -6806,6 +9297,11 @@ export function getPublishedPortalTestimonialById(
       photoMimeType: string | null;
       photoSizeBytes: number | null;
       isPublished: number;
+      moderationStatus: string | null;
+      sourceType: string | null;
+      sourceTrainingFeedbackId: number | null;
+      sourceTrainingRecordId: number | null;
+      quoteField: string | null;
       createdByUserId: number;
       createdByName: string;
       createdAt: string;
@@ -6817,6 +9313,130 @@ export function getPublishedPortalTestimonialById(
   }
 
   return parsePortalTestimonialRow(row);
+}
+
+export function setPortalTestimonialModerationStatus(
+  input: {
+    testimonialId: number;
+    moderationStatus: "pending" | "approved" | "hidden";
+    user: PortalUser;
+  },
+) {
+  if (!canReviewRecords(input.user)) {
+    throw new Error("Only supervisors or admins can moderate testimonials.");
+  }
+  const isPublished = input.moderationStatus === "approved" ? 1 : 0;
+  getDb()
+    .prepare(
+      `
+      UPDATE portal_testimonials
+      SET
+        moderation_status = @moderationStatus,
+        is_published = @isPublished
+      WHERE id = @testimonialId
+      `,
+    )
+    .run({
+      testimonialId: input.testimonialId,
+      moderationStatus: input.moderationStatus,
+      isPublished,
+    });
+
+  logAuditEvent(
+    input.user.id,
+    input.user.fullName,
+    "moderate_testimonial",
+    "portal_testimonials",
+    input.testimonialId,
+    null,
+    JSON.stringify({ moderationStatus: input.moderationStatus, isPublished }),
+    `Moderation set to ${input.moderationStatus} for testimonial ${input.testimonialId}`,
+  );
+}
+
+export function listTrainingFeedbackRecords(filters?: {
+  trainingRecordId?: number;
+  schoolId?: number;
+  feedbackRole?: "participant" | "trainer";
+  limit?: number;
+}) {
+  const clauses: string[] = [];
+  const params: Record<string, number | string> = {};
+  if (filters?.trainingRecordId && Number.isInteger(filters.trainingRecordId) && filters.trainingRecordId > 0) {
+    clauses.push("tf.training_record_id = @trainingRecordId");
+    params.trainingRecordId = filters.trainingRecordId;
+  }
+  if (filters?.schoolId && Number.isInteger(filters.schoolId) && filters.schoolId > 0) {
+    clauses.push("tf.school_id = @schoolId");
+    params.schoolId = filters.schoolId;
+  }
+  if (filters?.feedbackRole) {
+    clauses.push("tf.feedback_role = @feedbackRole");
+    params.feedbackRole = filters.feedbackRole;
+  }
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const limit = Math.max(1, Math.min(filters?.limit ?? 1000, 5000));
+
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        tf.id,
+        tf.training_record_id AS trainingRecordId,
+        tf.school_id AS schoolId,
+        tf.contact_id AS contactId,
+        tf.trainer_user_id AS trainerUserId,
+        tf.feedback_role AS feedbackRole,
+        tf.what_went_well AS whatWentWell,
+        tf.how_training_changed_teaching AS howTrainingChangedTeaching,
+        tf.what_you_will_do_to_improve_reading_levels AS whatYouWillDoToImproveReadingLevels,
+        tf.challenges,
+        tf.recommendations_next_training AS recommendationsNextTraining,
+        tf.role_snapshot AS roleSnapshot,
+        tf.gender_snapshot AS genderSnapshot,
+        tf.class_taught_snapshot AS classTaughtSnapshot,
+        tf.submitted_at AS submittedAt
+      FROM training_feedback_entries tf
+      ${whereClause}
+      ORDER BY tf.submitted_at DESC, tf.id DESC
+      LIMIT ${limit}
+      `,
+    )
+    .all(params) as Array<{
+      id: number;
+      trainingRecordId: number;
+      schoolId: number;
+      contactId: number | null;
+      trainerUserId: number | null;
+      feedbackRole: "participant" | "trainer";
+      whatWentWell: string | null;
+      howTrainingChangedTeaching: string | null;
+      whatYouWillDoToImproveReadingLevels: string | null;
+      challenges: string | null;
+      recommendationsNextTraining: string | null;
+      roleSnapshot: string | null;
+      genderSnapshot: string | null;
+      classTaughtSnapshot: string | null;
+      submittedAt: string;
+    }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    trainingRecordId: Number(row.trainingRecordId),
+    schoolId: Number(row.schoolId),
+    contactId: row.contactId !== null ? Number(row.contactId) : null,
+    trainerUserId: row.trainerUserId !== null ? Number(row.trainerUserId) : null,
+    feedbackRole: row.feedbackRole,
+    whatWentWell: row.whatWentWell,
+    howTrainingChangedTeaching: row.howTrainingChangedTeaching,
+    whatYouWillDoToImproveReadingLevels: row.whatYouWillDoToImproveReadingLevels,
+    challenges: row.challenges,
+    recommendationsNextTraining: row.recommendationsNextTraining,
+    roleSnapshot: row.roleSnapshot,
+    genderSnapshot: row.genderSnapshot,
+    classTaughtSnapshot: row.classTaughtSnapshot,
+    submittedAt: row.submittedAt,
+  }));
 }
 
 function countTotal(db: Database.Database, query: string) {
@@ -9381,6 +12001,28 @@ function readString(payload: Record<string, unknown>, keys: string[]): string | 
   return null;
 }
 
+function extractSponsorAttribution(payload: Record<string, unknown>): {
+  sponsorType: string;
+  sponsoredBy: string;
+} | null {
+  const sponsoredBy = readString(payload, [
+    "sponsoredBy",
+    "sponsorName",
+    "sponsored_by",
+    "partnerName",
+  ]);
+  if (!sponsoredBy) {
+    return null;
+  }
+  const sponsorType =
+    readString(payload, ["sponsorshipType", "sponsorType", "sponsor_category"]) ??
+    "Unspecified";
+  return {
+    sponsorType,
+    sponsoredBy,
+  };
+}
+
 function parseStringList(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value
@@ -9783,7 +12425,7 @@ function summarizeTeacherLessonEvaluation(
     .sort((left, right) => right[1] - left[1])
     .slice(0, 3)
     .map(([domainKey]) => LESSON_EVALUATION_DOMAIN_LABELS[domainKey]);
-  const topStrengthDomains = [...strengthCounts.entries()]
+  const _topStrengthDomains = [...strengthCounts.entries()]
     .sort((left, right) => right[1] - left[1])
     .slice(0, 2)
     .map(([domainKey]) => LESSON_EVALUATION_DOMAIN_LABELS[domainKey]);
@@ -11889,6 +14531,717 @@ export function getSchoolLearnerAnalysis(schoolId: number, assessmentType?: stri
    SCHOOL ROSTER CRUD — Teachers & Learners
    ═══════════════════════════════════════════════════════ */
 
+type SchoolContactRowDb = {
+  contactId: number;
+  contactUid: string;
+  schoolId: number;
+  fullName: string;
+  gender: "Male" | "Female" | "Other";
+  phone: string | null;
+  email: string | null;
+  whatsapp: string | null;
+  category: SchoolContactCategory;
+  roleTitle: string | null;
+  isPrimaryContact: number;
+  classTaught: string | null;
+  subjectTaught: string | null;
+  teacherUid: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type SchoolLearnerRowDb = {
+  learnerId: number;
+  learnerUid: string;
+  schoolId: number;
+  learnerName: string;
+  classGrade: string;
+  age: number;
+  gender: "Boy" | "Girl" | "Other";
+  internalChildId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function mapSchoolContactRow(row: SchoolContactRowDb): SchoolContactRecord {
+  return {
+    contactId: row.contactId,
+    contactUid: row.contactUid,
+    schoolId: row.schoolId,
+    fullName: row.fullName,
+    gender: row.gender,
+    phone: row.phone ?? undefined,
+    email: row.email ?? undefined,
+    whatsapp: row.whatsapp ?? undefined,
+    category: row.category,
+    roleTitle: row.roleTitle ?? undefined,
+    isPrimaryContact: row.isPrimaryContact === 1,
+    classTaught: row.classTaught ?? undefined,
+    subjectTaught: row.subjectTaught ?? undefined,
+    teacherUid: row.teacherUid ?? null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapSchoolLearnerRow(row: SchoolLearnerRowDb): SchoolLearnerRecord {
+  return {
+    learnerId: row.learnerId,
+    learnerUid: row.learnerUid,
+    schoolId: row.schoolId,
+    learnerName: row.learnerName,
+    classGrade: row.classGrade,
+    age: row.age,
+    gender: row.gender,
+    internalChildId: row.internalChildId ?? undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function getSchoolContactByIdInternal(db: Database.Database, contactId: number): SchoolContactRecord | null {
+  const row = db
+    .prepare(
+      `
+        SELECT
+          contact_id AS contactId,
+          contact_uid AS contactUid,
+          school_id AS schoolId,
+          full_name AS fullName,
+          gender,
+          phone,
+          email,
+          whatsapp,
+          category,
+          role_title AS roleTitle,
+          is_primary_contact AS isPrimaryContact,
+          class_taught AS classTaught,
+          subject_taught AS subjectTaught,
+          teacher_uid AS teacherUid,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM school_contacts
+        WHERE contact_id = @contactId
+        LIMIT 1
+      `,
+    )
+    .get({ contactId }) as SchoolContactRowDb | undefined;
+  return row ? mapSchoolContactRow(row) : null;
+}
+
+function getSchoolContactByUidInternal(db: Database.Database, contactUid: string): SchoolContactRecord | null {
+  const row = db
+    .prepare(
+      `
+        SELECT
+          contact_id AS contactId,
+          contact_uid AS contactUid,
+          school_id AS schoolId,
+          full_name AS fullName,
+          gender,
+          phone,
+          email,
+          whatsapp,
+          category,
+          role_title AS roleTitle,
+          is_primary_contact AS isPrimaryContact,
+          class_taught AS classTaught,
+          subject_taught AS subjectTaught,
+          teacher_uid AS teacherUid,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM school_contacts
+        WHERE lower(trim(contact_uid)) = lower(trim(@contactUid))
+        LIMIT 1
+      `,
+    )
+    .get({ contactUid }) as SchoolContactRowDb | undefined;
+  return row ? mapSchoolContactRow(row) : null;
+}
+
+function getSchoolLearnerByIdInternal(db: Database.Database, learnerId: number): SchoolLearnerRecord | null {
+  const row = db
+    .prepare(
+      `
+        SELECT
+          learner_id AS learnerId,
+          learner_uid AS learnerUid,
+          school_id AS schoolId,
+          learner_name AS learnerName,
+          class_grade AS classGrade,
+          age,
+          gender,
+          internal_child_id AS internalChildId,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM school_learners
+        WHERE learner_id = @learnerId
+        LIMIT 1
+      `,
+    )
+    .get({ learnerId }) as SchoolLearnerRowDb | undefined;
+  return row ? mapSchoolLearnerRow(row) : null;
+}
+
+function getSchoolLearnerByUidInternal(db: Database.Database, learnerUid: string): SchoolLearnerRecord | null {
+  const row = db
+    .prepare(
+      `
+        SELECT
+          learner_id AS learnerId,
+          learner_uid AS learnerUid,
+          school_id AS schoolId,
+          learner_name AS learnerName,
+          class_grade AS classGrade,
+          age,
+          gender,
+          internal_child_id AS internalChildId,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM school_learners
+        WHERE lower(trim(learner_uid)) = lower(trim(@learnerUid))
+        LIMIT 1
+      `,
+    )
+    .get({ learnerUid }) as SchoolLearnerRowDb | undefined;
+  return row ? mapSchoolLearnerRow(row) : null;
+}
+
+function normalizeSchoolContactCategory(value: unknown): SchoolContactCategory {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "proprietor" || normalized === "director") return "Proprietor";
+  if (normalized === "head teacher" || normalized === "headteacher") return "Head Teacher";
+  if (normalized === "deputy head teacher" || normalized === "deputy") return "Deputy Head Teacher";
+  if (normalized === "dos") return "DOS";
+  return "Teacher";
+}
+
+function syncSchoolPrimaryContact(db: Database.Database, schoolId: number) {
+  const primary = db
+    .prepare(
+      `
+        SELECT contact_id AS contactId, full_name AS fullName, phone
+        FROM school_contacts
+        WHERE school_id = @schoolId
+          AND is_primary_contact = 1
+        ORDER BY contact_id ASC
+        LIMIT 1
+      `,
+    )
+    .get({ schoolId }) as { contactId: number; fullName: string; phone: string | null } | undefined;
+
+  db.prepare(
+    `
+      UPDATE schools_directory
+      SET
+        primary_contact_id = @primaryContactId,
+        contact_name = @contactName,
+        contact_phone = @contactPhone
+      WHERE id = @schoolId
+    `,
+  ).run({
+    schoolId,
+    primaryContactId: primary?.contactId ?? null,
+    contactName: primary?.fullName ?? null,
+    contactPhone: primary?.phone ?? null,
+  });
+}
+
+export function getSchoolContactById(contactId: number): SchoolContactRecord | null {
+  return getSchoolContactByIdInternal(getDb(), contactId);
+}
+
+export function getSchoolContactByUid(contactUid: string): SchoolContactRecord | null {
+  return getSchoolContactByUidInternal(getDb(), contactUid);
+}
+
+export function getSchoolLearnerById(learnerId: number): SchoolLearnerRecord | null {
+  return getSchoolLearnerByIdInternal(getDb(), learnerId);
+}
+
+export function getSchoolLearnerByUid(learnerUid: string): SchoolLearnerRecord | null {
+  return getSchoolLearnerByUidInternal(getDb(), learnerUid);
+}
+
+export function listSchoolContactsBySchool(
+  schoolId: number,
+  options?: { category?: SchoolContactCategory | "all" },
+): SchoolContactRecord[] {
+  const db = getDb();
+  const where = ["school_id = @schoolId"];
+  const params: Record<string, unknown> = { schoolId };
+  if (options?.category && options.category !== "all") {
+    where.push("category = @category");
+    params.category = options.category;
+  }
+
+  const rows = db
+    .prepare(
+      `
+        SELECT
+          contact_id AS contactId,
+          contact_uid AS contactUid,
+          school_id AS schoolId,
+          full_name AS fullName,
+          gender,
+          phone,
+          email,
+          whatsapp,
+          category,
+          role_title AS roleTitle,
+          is_primary_contact AS isPrimaryContact,
+          class_taught AS classTaught,
+          subject_taught AS subjectTaught,
+          teacher_uid AS teacherUid,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM school_contacts
+        WHERE ${where.join(" AND ")}
+        ORDER BY is_primary_contact DESC, full_name ASC
+      `,
+    )
+    .all(params) as SchoolContactRowDb[];
+  return rows.map(mapSchoolContactRow);
+}
+
+export function addSchoolContactToSchool(input: SchoolContactInput): SchoolContactRecord {
+  const db = getDb();
+  const school = getSchoolDirectoryRecordById(input.schoolId);
+  if (!school) {
+    throw new Error("School account not found.");
+  }
+
+  const fullName = input.fullName.trim();
+  if (!fullName) {
+    throw new Error("Contact full name is required.");
+  }
+
+  const category = normalizeSchoolContactCategory(input.category);
+  const isPrimaryContact = Boolean(input.isPrimaryContact);
+  if (isPrimaryContact && category !== "Proprietor") {
+    throw new Error("Primary contact must be a Proprietor.");
+  }
+
+  const classTaught = input.classTaught?.trim() || null;
+  const subjectTaught = input.subjectTaught?.trim() || null;
+  if (category === "Teacher" && (!classTaught || !subjectTaught)) {
+    throw new Error("Teacher contacts require class taught and subject taught.");
+  }
+
+  let teacherUid: string | null = null;
+  if (category === "Teacher") {
+    if (input.gender !== "Male" && input.gender !== "Female") {
+      throw new Error("Teacher gender must be Male or Female.");
+    }
+    teacherUid = createTeacherRosterRecord({
+      schoolId: input.schoolId,
+      fullName,
+      gender: input.gender,
+      isReadingTeacher: true,
+      phone: input.phone,
+    }).teacherUid;
+  }
+
+  if (category === "Teacher" && teacherUid) {
+    const existing = db
+      .prepare(
+        `
+          SELECT contact_id AS contactId
+          FROM school_contacts
+          WHERE teacher_uid = @teacherUid
+          LIMIT 1
+        `,
+      )
+      .get({ teacherUid }) as { contactId: number } | undefined;
+
+    if (existing?.contactId) {
+      return updateSchoolContactInSchool(existing.contactId, {
+        fullName,
+        gender: input.gender,
+        phone: input.phone,
+        email: input.email,
+        whatsapp: input.whatsapp,
+        category,
+        roleTitle: input.roleTitle,
+        isPrimaryContact,
+        classTaught: classTaught ?? undefined,
+        subjectTaught: subjectTaught ?? undefined,
+      });
+    }
+  }
+
+  if (isPrimaryContact) {
+    db.prepare(
+      "UPDATE school_contacts SET is_primary_contact = 0, updated_at = datetime('now') WHERE school_id = @schoolId",
+    ).run({ schoolId: input.schoolId });
+  }
+
+  const contactUid = createGeneratedUid("cnt");
+  const insert = db
+    .prepare(
+      `
+        INSERT INTO school_contacts (
+          contact_uid,
+          school_id,
+          full_name,
+          gender,
+          phone,
+          email,
+          whatsapp,
+          category,
+          role_title,
+          is_primary_contact,
+          class_taught,
+          subject_taught,
+          teacher_uid,
+          created_at,
+          updated_at
+        ) VALUES (
+          @contactUid,
+          @schoolId,
+          @fullName,
+          @gender,
+          @phone,
+          @email,
+          @whatsapp,
+          @category,
+          @roleTitle,
+          @isPrimaryContact,
+          @classTaught,
+          @subjectTaught,
+          @teacherUid,
+          datetime('now'),
+          datetime('now')
+        )
+      `,
+    )
+    .run({
+      contactUid,
+      schoolId: input.schoolId,
+      fullName,
+      gender: input.gender,
+      phone: input.phone?.trim() || null,
+      email: input.email?.trim() || null,
+      whatsapp: input.whatsapp?.trim() || null,
+      category,
+      roleTitle: input.roleTitle?.trim() || null,
+      isPrimaryContact: isPrimaryContact ? 1 : 0,
+      classTaught: category === "Teacher" ? classTaught : null,
+      subjectTaught: category === "Teacher" ? subjectTaught : null,
+      teacherUid,
+    });
+
+  const created = getSchoolContactByIdInternal(db, Number(insert.lastInsertRowid));
+  if (!created) {
+    throw new Error("Could not load created school contact.");
+  }
+
+  syncSchoolPrimaryContact(db, input.schoolId);
+  return created;
+}
+
+export function updateSchoolContactInSchool(
+  contactId: number,
+  updates: Partial<Omit<SchoolContactInput, "schoolId">>,
+): SchoolContactRecord {
+  const db = getDb();
+  const current = getSchoolContactByIdInternal(db, contactId);
+  if (!current) {
+    throw new Error("Contact not found.");
+  }
+
+  const nextCategory = updates.category
+    ? normalizeSchoolContactCategory(updates.category)
+    : current.category;
+  const nextFullName = updates.fullName?.trim() || current.fullName;
+  const nextGender = updates.gender ?? current.gender;
+  const nextIsPrimary = updates.isPrimaryContact ?? current.isPrimaryContact;
+  const nextClassTaught =
+    updates.classTaught !== undefined ? updates.classTaught?.trim() || "" : current.classTaught || "";
+  const nextSubjectTaught =
+    updates.subjectTaught !== undefined ? updates.subjectTaught?.trim() || "" : current.subjectTaught || "";
+
+  if (!nextFullName) {
+    throw new Error("Contact full name is required.");
+  }
+  if (current.isPrimaryContact && updates.isPrimaryContact === false) {
+    throw new Error("A school must always keep a primary Proprietor contact.");
+  }
+  if (nextIsPrimary && nextCategory !== "Proprietor") {
+    throw new Error("Primary contact must be a Proprietor.");
+  }
+  if (nextCategory === "Teacher" && (!nextClassTaught || !nextSubjectTaught)) {
+    throw new Error("Teacher contacts require class taught and subject taught.");
+  }
+
+  let teacherUid = current.teacherUid;
+  if (nextCategory === "Teacher" && !teacherUid) {
+    if (nextGender !== "Male" && nextGender !== "Female") {
+      throw new Error("Teacher gender must be Male or Female.");
+    }
+    teacherUid = createTeacherRosterRecord({
+      schoolId: current.schoolId,
+      fullName: nextFullName,
+      gender: nextGender,
+      isReadingTeacher: true,
+      phone: updates.phone ?? current.phone ?? undefined,
+    }).teacherUid;
+  }
+
+  if (nextIsPrimary) {
+    db.prepare(
+      "UPDATE school_contacts SET is_primary_contact = 0, updated_at = datetime('now') WHERE school_id = @schoolId AND contact_id != @contactId",
+    ).run({
+      schoolId: current.schoolId,
+      contactId,
+    });
+  }
+
+  db.prepare(
+    `
+      UPDATE school_contacts
+      SET
+        full_name = @fullName,
+        gender = @gender,
+        phone = @phone,
+        email = @email,
+        whatsapp = @whatsapp,
+        category = @category,
+        role_title = @roleTitle,
+        is_primary_contact = @isPrimaryContact,
+        class_taught = @classTaught,
+        subject_taught = @subjectTaught,
+        teacher_uid = @teacherUid,
+        updated_at = datetime('now')
+      WHERE contact_id = @contactId
+    `,
+  ).run({
+    contactId,
+    fullName: nextFullName,
+    gender: nextGender,
+    phone: updates.phone !== undefined ? updates.phone?.trim() || null : current.phone ?? null,
+    email: updates.email !== undefined ? updates.email?.trim() || null : current.email ?? null,
+    whatsapp:
+      updates.whatsapp !== undefined ? updates.whatsapp?.trim() || null : current.whatsapp ?? null,
+    category: nextCategory,
+    roleTitle:
+      updates.roleTitle !== undefined
+        ? updates.roleTitle?.trim() || null
+        : current.roleTitle ?? null,
+    isPrimaryContact: nextIsPrimary ? 1 : 0,
+    classTaught: nextCategory === "Teacher" ? nextClassTaught : null,
+    subjectTaught: nextCategory === "Teacher" ? nextSubjectTaught : null,
+    teacherUid: nextCategory === "Teacher" ? teacherUid : null,
+  });
+
+  syncSchoolPrimaryContact(db, current.schoolId);
+  const updated = getSchoolContactByIdInternal(db, contactId);
+  if (!updated) {
+    throw new Error("Could not load updated contact.");
+  }
+  return updated;
+}
+
+export function listSchoolLearnersBySchool(schoolId: number): SchoolLearnerRecord[] {
+  const rows = getDb()
+    .prepare(
+      `
+        SELECT
+          learner_id AS learnerId,
+          learner_uid AS learnerUid,
+          school_id AS schoolId,
+          learner_name AS learnerName,
+          class_grade AS classGrade,
+          age,
+          gender,
+          internal_child_id AS internalChildId,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM school_learners
+        WHERE school_id = @schoolId
+        ORDER BY class_grade, learner_name
+      `,
+    )
+    .all({ schoolId }) as SchoolLearnerRowDb[];
+  return rows.map(mapSchoolLearnerRow);
+}
+
+export function addSchoolLearnerToSchool(input: SchoolLearnerInput): SchoolLearnerRecord {
+  const db = getDb();
+  const school = getSchoolDirectoryRecordById(input.schoolId);
+  if (!school) {
+    throw new Error("School account not found.");
+  }
+
+  const learnerName = input.learnerName.trim();
+  const classGrade = input.classGrade.trim();
+  if (!learnerName) {
+    throw new Error("Learner name is required.");
+  }
+  if (!classGrade) {
+    throw new Error("Class/grade is required.");
+  }
+
+  const age = Math.max(3, Math.min(25, Math.floor(Number(input.age))));
+  const learnerUid = createGeneratedUid("lrn");
+  const insert = db
+    .prepare(
+      `
+        INSERT INTO school_learners (
+          learner_uid,
+          school_id,
+          learner_name,
+          class_grade,
+          age,
+          gender,
+          internal_child_id,
+          created_at,
+          updated_at
+        ) VALUES (
+          @learnerUid,
+          @schoolId,
+          @learnerName,
+          @classGrade,
+          @age,
+          @gender,
+          @internalChildId,
+          datetime('now'),
+          datetime('now')
+        )
+      `,
+    )
+    .run({
+      learnerUid,
+      schoolId: input.schoolId,
+      learnerName,
+      classGrade,
+      age,
+      gender: input.gender,
+      internalChildId: input.internalChildId?.trim() || null,
+    });
+
+  db.prepare(
+    `
+      INSERT INTO learner_roster (
+        learner_uid,
+        school_id,
+        full_name,
+        internal_child_id,
+        gender,
+        age,
+        class_grade,
+        consent_flag,
+        created_at,
+        updated_at
+      ) VALUES (
+        @learnerUid,
+        @schoolId,
+        @fullName,
+        @internalChildId,
+        @gender,
+        @age,
+        @classGrade,
+        0,
+        datetime('now'),
+        datetime('now')
+      )
+      ON CONFLICT(learner_uid) DO UPDATE SET
+        school_id = excluded.school_id,
+        full_name = excluded.full_name,
+        internal_child_id = excluded.internal_child_id,
+        gender = excluded.gender,
+        age = excluded.age,
+        class_grade = excluded.class_grade,
+        updated_at = datetime('now')
+    `,
+  ).run({
+    learnerUid,
+    schoolId: input.schoolId,
+    fullName: learnerName,
+    internalChildId: input.internalChildId?.trim() || null,
+    gender: input.gender,
+    age,
+    classGrade,
+  });
+
+  const created = getSchoolLearnerByIdInternal(db, Number(insert.lastInsertRowid));
+  if (!created) {
+    throw new Error("Could not load created learner.");
+  }
+  return created;
+}
+
+export function updateSchoolLearnerInSchool(
+  learnerId: number,
+  updates: Partial<Omit<SchoolLearnerInput, "schoolId">>,
+): SchoolLearnerRecord {
+  const db = getDb();
+  const current = getSchoolLearnerByIdInternal(db, learnerId);
+  if (!current) {
+    throw new Error("Learner not found.");
+  }
+
+  const learnerName = updates.learnerName?.trim() || current.learnerName;
+  const classGrade = updates.classGrade?.trim() || current.classGrade;
+  const age =
+    updates.age !== undefined
+      ? Math.max(3, Math.min(25, Math.floor(Number(updates.age))))
+      : current.age;
+  const gender = updates.gender ?? current.gender;
+  const internalChildId =
+    updates.internalChildId !== undefined
+      ? updates.internalChildId?.trim() || null
+      : current.internalChildId ?? null;
+
+  db.prepare(
+    `
+      UPDATE school_learners
+      SET
+        learner_name = @learnerName,
+        class_grade = @classGrade,
+        age = @age,
+        gender = @gender,
+        internal_child_id = @internalChildId,
+        updated_at = datetime('now')
+      WHERE learner_id = @learnerId
+    `,
+  ).run({
+    learnerId,
+    learnerName,
+    classGrade,
+    age,
+    gender,
+    internalChildId,
+  });
+
+  db.prepare(
+    `
+      UPDATE learner_roster
+      SET
+        full_name = @fullName,
+        class_grade = @classGrade,
+        age = @age,
+        gender = @gender,
+        internal_child_id = @internalChildId,
+        updated_at = datetime('now')
+      WHERE learner_uid = @learnerUid
+    `,
+  ).run({
+    learnerUid: current.learnerUid,
+    fullName: learnerName,
+    classGrade,
+    age,
+    gender,
+    internalChildId,
+  });
+
+  const updated = getSchoolLearnerByIdInternal(db, learnerId);
+  if (!updated) {
+    throw new Error("Could not load updated learner.");
+  }
+  return updated;
+}
+
 export interface TeacherRosterEntry {
   id: number;
   teacherUid: string;
@@ -11949,24 +15302,23 @@ export function addTeacherToSchool(input: {
   isReadingTeacher?: boolean;
   phone?: string;
 }): TeacherRosterEntry {
-  const db = getDb();
-  const uid = `TR-${input.schoolId}-${Date.now().toString(36)}`;
-  const now = new Date().toISOString();
-
-  db.prepare(
-    `INSERT INTO teacher_roster (teacher_uid, school_id, full_name, gender, is_reading_teacher, phone, status, created_at, updated_at)
-     VALUES (@uid, @schoolId, @fullName, @gender, @isReadingTeacher, @phone, 'active', @now, @now)`,
-  ).run({
-    uid,
+  const contact = addSchoolContactToSchool({
     schoolId: input.schoolId,
-    fullName: input.fullName.trim(),
+    fullName: input.fullName,
     gender: input.gender,
-    isReadingTeacher: input.isReadingTeacher !== false ? 1 : 0,
-    phone: input.phone?.trim() || null,
-    now,
+    phone: input.phone,
+    category: "Teacher",
+    roleTitle: input.isReadingTeacher === false ? "Teacher" : "Reading Teacher",
+    classTaught: "Not assigned",
+    subjectTaught: "Not assigned",
   });
-
-  return listTeachersBySchool(input.schoolId).find((t) => t.teacherUid === uid)!;
+  const teacher = listTeachersBySchool(input.schoolId).find(
+    (entry) => entry.teacherUid === contact.teacherUid,
+  );
+  if (!teacher) {
+    throw new Error("Could not load created teacher.");
+  }
+  return teacher;
 }
 
 /** Update a teacher roster entry */
@@ -11988,30 +15340,44 @@ export function updateTeacherInSchool(teacherUid: string, updates: {
   if (updates.status !== undefined) { sets.push("status = @status"); params.status = updates.status; }
 
   db.prepare(`UPDATE teacher_roster SET ${sets.join(", ")} WHERE teacher_uid = @teacherUid`).run(params);
+
+  const contact = db
+    .prepare(
+      `
+        SELECT contact_id AS contactId
+        FROM school_contacts
+        WHERE teacher_uid = @teacherUid
+        LIMIT 1
+      `,
+    )
+    .get({ teacherUid }) as { contactId: number } | undefined;
+  if (contact?.contactId) {
+    updateSchoolContactInSchool(contact.contactId, {
+      fullName: updates.fullName,
+      gender: updates.gender,
+      phone: updates.phone ?? undefined,
+      roleTitle: updates.isReadingTeacher === false ? "Teacher" : "Reading Teacher",
+      category: "Teacher",
+      classTaught: "Not assigned",
+      subjectTaught: "Not assigned",
+    });
+  }
 }
 
 /** List all learners in a school's roster */
 export function listLearnersBySchool(schoolId: number): LearnerRosterEntry[] {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      `SELECT id, learner_uid AS learnerUid, school_id AS schoolId, full_name AS fullName,
-              internal_child_id AS internalChildId, gender, age, class_grade AS classGrade,
-              consent_flag AS consentFlag, created_at AS createdAt, updated_at AS updatedAt
-       FROM learner_roster
-       WHERE school_id = @schoolId
-       ORDER BY class_grade, full_name`,
-    )
-    .all({ schoolId }) as Array<{
-      id: number; learnerUid: string; schoolId: number; fullName: string;
-      internalChildId: string | null; gender: string; age: number; classGrade: string;
-      consentFlag: number; createdAt: string; updatedAt: string;
-    }>;
-
-  return rows.map((r) => ({
-    ...r,
-    gender: r.gender as "Boy" | "Girl" | "Other",
-    consentFlag: r.consentFlag === 1,
+  return listSchoolLearnersBySchool(schoolId).map((entry) => ({
+    id: entry.learnerId,
+    learnerUid: entry.learnerUid,
+    schoolId: entry.schoolId,
+    fullName: entry.learnerName,
+    internalChildId: entry.internalChildId ?? null,
+    gender: entry.gender,
+    age: entry.age,
+    classGrade: entry.classGrade,
+    consentFlag: false,
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt,
   }));
 }
 
@@ -12024,25 +15390,27 @@ export function addLearnerToSchool(input: {
   classGrade: string;
   internalChildId?: string;
 }): LearnerRosterEntry {
-  const db = getDb();
-  const uid = `LR-${input.schoolId}-${Date.now().toString(36)}`;
-  const now = new Date().toISOString();
-
-  db.prepare(
-    `INSERT INTO learner_roster (learner_uid, school_id, full_name, gender, age, class_grade, internal_child_id, consent_flag, created_at, updated_at)
-     VALUES (@uid, @schoolId, @fullName, @gender, @age, @classGrade, @internalChildId, 0, @now, @now)`,
-  ).run({
-    uid,
+  const created = addSchoolLearnerToSchool({
     schoolId: input.schoolId,
-    fullName: input.fullName.trim(),
-    gender: input.gender,
+    learnerName: input.fullName,
+    classGrade: input.classGrade,
     age: input.age,
-    classGrade: input.classGrade.trim(),
-    internalChildId: input.internalChildId?.trim() || null,
-    now,
+    gender: input.gender,
+    internalChildId: input.internalChildId,
   });
-
-  return listLearnersBySchool(input.schoolId).find((l) => l.learnerUid === uid)!;
+  return {
+    id: created.learnerId,
+    learnerUid: created.learnerUid,
+    schoolId: created.schoolId,
+    fullName: created.learnerName,
+    internalChildId: created.internalChildId ?? null,
+    gender: created.gender,
+    age: created.age,
+    classGrade: created.classGrade,
+    consentFlag: false,
+    createdAt: created.createdAt,
+    updatedAt: created.updatedAt,
+  };
 }
 
 /** Update a learner roster entry */
@@ -12053,15 +15421,24 @@ export function updateLearnerInSchool(learnerUid: string, updates: {
   classGrade?: string;
 }): void {
   const db = getDb();
-  const sets: string[] = ["updated_at = datetime('now')"];
-  const params: Record<string, string | number | null> = { learnerUid };
+  const learner = getSchoolLearnerByUidInternal(db, learnerUid);
+  if (!learner) {
+    const sets: string[] = ["updated_at = datetime('now')"];
+    const params: Record<string, string | number | null> = { learnerUid };
+    if (updates.fullName !== undefined) { sets.push("full_name = @fullName"); params.fullName = updates.fullName.trim(); }
+    if (updates.gender !== undefined) { sets.push("gender = @gender"); params.gender = updates.gender; }
+    if (updates.age !== undefined) { sets.push("age = @age"); params.age = updates.age; }
+    if (updates.classGrade !== undefined) { sets.push("class_grade = @classGrade"); params.classGrade = updates.classGrade.trim(); }
+    db.prepare(`UPDATE learner_roster SET ${sets.join(", ")} WHERE learner_uid = @learnerUid`).run(params);
+    return;
+  }
 
-  if (updates.fullName !== undefined) { sets.push("full_name = @fullName"); params.fullName = updates.fullName.trim(); }
-  if (updates.gender !== undefined) { sets.push("gender = @gender"); params.gender = updates.gender; }
-  if (updates.age !== undefined) { sets.push("age = @age"); params.age = updates.age; }
-  if (updates.classGrade !== undefined) { sets.push("class_grade = @classGrade"); params.classGrade = updates.classGrade.trim(); }
-
-  db.prepare(`UPDATE learner_roster SET ${sets.join(", ")} WHERE learner_uid = @learnerUid`).run(params);
+  updateSchoolLearnerInSchool(learner.learnerId, {
+    learnerName: updates.fullName,
+    gender: updates.gender,
+    age: updates.age,
+    classGrade: updates.classGrade,
+  });
 }
 
 /**
@@ -12074,14 +15451,42 @@ export function validateParticipantBelongsToSchool(
   schoolId: number,
 ): boolean {
   const db = getDb();
+  if (type === "teacher") {
+    const contactRow = db
+      .prepare(
+        `
+          SELECT school_id AS schoolId
+          FROM school_contacts
+          WHERE trim(COALESCE(teacher_uid, '')) = trim(@uid)
+          LIMIT 1
+        `,
+      )
+      .get({ uid }) as { schoolId: number } | undefined;
+    if (contactRow?.schoolId === schoolId) {
+      return true;
+    }
+  } else {
+    const learnerRow = db
+      .prepare(
+        `
+          SELECT school_id AS schoolId
+          FROM school_learners
+          WHERE trim(learner_uid) = trim(@uid)
+          LIMIT 1
+        `,
+      )
+      .get({ uid }) as { schoolId: number } | undefined;
+    if (learnerRow?.schoolId === schoolId) {
+      return true;
+    }
+  }
+
   const table = type === "teacher" ? "teacher_roster" : "learner_roster";
   const uidCol = type === "teacher" ? "teacher_uid" : "learner_uid";
-
-  const row = db
-    .prepare(`SELECT school_id AS schoolId FROM ${table} WHERE ${uidCol} = @uid`)
+  const legacyRow = db
+    .prepare(`SELECT school_id AS schoolId FROM ${table} WHERE ${uidCol} = @uid LIMIT 1`)
     .get({ uid }) as { schoolId: number } | undefined;
-
-  return row?.schoolId === schoolId;
+  return legacyRow?.schoolId === schoolId;
 }
 
 export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | null {
@@ -12121,13 +15526,18 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
         gps_lng,
         contact_name,
         contact_phone,
+        primary_contact_id,
+        primary_contact.full_name AS primary_contact_name,
+        primary_contact.category AS primary_contact_category,
         COALESCE(program_status, 'active') AS program_status,
         graduated_at,
         graduated_by_user_id,
         graduation_notes,
         graduation_version,
-        created_at
+        schools_directory.created_at
       FROM schools_directory
+      LEFT JOIN school_contacts primary_contact
+        ON primary_contact.contact_id = schools_directory.primary_contact_id
       WHERE id = ?
     `,
     )
@@ -12163,6 +15573,9 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
       gps_lng: string | null;
       contact_name: string | null;
       contact_phone: string | null;
+      primary_contact_id: number | null;
+      primary_contact_name: string | null;
+      primary_contact_category: SchoolContactCategory | null;
       program_status: "active" | "graduated" | "paused";
       graduated_at: string | null;
       graduated_by_user_id: number | null;
@@ -12208,6 +15621,9 @@ export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | nu
     gpsLng: row.gps_lng,
     contactName: row.contact_name,
     contactPhone: row.contact_phone,
+    primaryContactId: row.primary_contact_id,
+    primaryContactName: row.primary_contact_name,
+    primaryContactCategory: row.primary_contact_category,
     programStatus: row.program_status ?? "active",
     graduatedAt: row.graduated_at ?? null,
     graduatedByUserId: row.graduated_by_user_id ?? null,
@@ -14392,13 +17808,6 @@ export function reviewSchoolGraduation(
   return after;
 }
 
-function toPeriodMonth(value: string | null | undefined) {
-  const raw = String(value ?? "").trim();
-  if (!raw || raw.length < 7) {
-    return null;
-  }
-  return raw.slice(0, 7);
-}
 
 function emptyTeacherDomainDelta(): TeacherImprovementDomainDelta {
   return {
@@ -16415,17 +19824,6 @@ function computeLessonEvaluationScores(items: LessonEvaluationItemInput[]) {
   };
 }
 
-function parseLessonEvaluationItemsJson(value: string | null | undefined): LessonEvaluationItemInput[] {
-  if (!value) {
-    return normalizeLessonEvaluationItems([]);
-  }
-  try {
-    const parsed = JSON.parse(value) as LessonEvaluationItemInput[];
-    return normalizeLessonEvaluationItems(Array.isArray(parsed) ? parsed : []);
-  } catch {
-    return normalizeLessonEvaluationItems([]);
-  }
-}
 
 function parseLessonEvaluationDomainScoresJson(
   value: string | null | undefined,
@@ -16925,12 +20323,287 @@ export function getTeacherImprovementProfile(input: {
     input.startDate ?? null,
     input.endDate ?? null,
   );
+  const db = getDb();
+  if (teacherRecords.length > 0) {
+    upsertTeacherSupportStatusSnapshot(db, input.schoolId, input.teacherUid);
+  }
+  const supportRow = db
+    .prepare(
+      `
+      SELECT
+        status,
+        recommended_action AS recommendedAction
+      FROM teacher_support_status_snapshots
+      WHERE school_id = @schoolId
+        AND teacher_uid = @teacherUid
+      ORDER BY period_key DESC, computed_at DESC
+      LIMIT 1
+      `,
+    )
+    .get({
+      schoolId: input.schoolId,
+      teacherUid: input.teacherUid,
+    }) as
+    | {
+      status: "Needs Catch-up Training" | "Needs Coaching & Follow-up" | "On Track";
+      recommendedAction: string | null;
+    }
+    | undefined;
 
   return {
     teacherComparison,
     schoolSummary,
     alignment,
+    teacherSupportStatus: supportRow?.status ?? null,
+    teacherSupportAction: supportRow?.recommendedAction ?? null,
   };
+}
+
+export function listSchoolSupportStatuses(filters?: {
+  schoolId?: number;
+  district?: string;
+  region?: string;
+  status?:
+    | "Requires Remedial & Catch-Up"
+    | "Progressing (Maintain + Strengthen)"
+    | "Graduation Prep (Approaching criteria)"
+    | "Graduation Eligible";
+  periodKey?: string;
+  limit?: number;
+}) {
+  const db = getDb();
+  const clauses: string[] = ["ranked.rn = 1"];
+  const params: Record<string, string | number> = {};
+
+  if (filters?.schoolId && Number.isInteger(filters.schoolId) && filters.schoolId > 0) {
+    clauses.push("ranked.school_id = @schoolId");
+    params.schoolId = filters.schoolId;
+  }
+  if (filters?.district?.trim()) {
+    clauses.push("lower(trim(sd.district)) = lower(trim(@district))");
+    params.district = filters.district.trim();
+  }
+  if (filters?.region?.trim()) {
+    clauses.push("lower(trim(COALESCE(sd.region, ''))) = lower(trim(@region))");
+    params.region = filters.region.trim();
+  }
+  if (filters?.status) {
+    clauses.push("ranked.status = @status");
+    params.status = filters.status;
+  }
+  if (filters?.periodKey?.trim()) {
+    clauses.push("ranked.period_key = @periodKey");
+    params.periodKey = filters.periodKey.trim();
+  }
+
+  const limit = Math.max(1, Math.min(filters?.limit ?? 500, 2000));
+  const rows = db
+    .prepare(
+      `
+      WITH ranked AS (
+        SELECT
+          sss.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY sss.school_id
+            ORDER BY sss.period_key DESC, sss.computed_at DESC, sss.id DESC
+          ) AS rn
+        FROM school_support_status_snapshots sss
+      )
+      SELECT
+        ranked.id,
+        ranked.school_id AS schoolId,
+        sd.name AS schoolName,
+        sd.district AS district,
+        ranked.period_key AS periodKey,
+        ranked.status,
+        ranked.metrics_json AS metricsJson,
+        ranked.recommended_actions_json AS recommendedActionsJson,
+        ranked.rules_version AS rulesVersion,
+        ranked.computed_at AS computedAt
+      FROM ranked
+      JOIN schools_directory sd ON sd.id = ranked.school_id
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY ranked.computed_at DESC
+      LIMIT ${limit}
+      `,
+    )
+    .all(params) as Array<{
+      id: number;
+      schoolId: number;
+      schoolName: string;
+      district: string;
+      periodKey: string;
+      status:
+        | "Requires Remedial & Catch-Up"
+        | "Progressing (Maintain + Strengthen)"
+        | "Graduation Prep (Approaching criteria)"
+        | "Graduation Eligible";
+      metricsJson: string;
+      recommendedActionsJson: string;
+      rulesVersion: string;
+      computedAt: string;
+    }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    schoolId: Number(row.schoolId),
+    schoolName: row.schoolName,
+    district: row.district,
+    periodKey: row.periodKey,
+    status: row.status,
+    recommendedActions: JSON.parse(row.recommendedActionsJson || "[]") as string[],
+    metrics: JSON.parse(row.metricsJson || "{}") as Record<string, number | string | null>,
+    rulesVersion: row.rulesVersion,
+    computedAt: row.computedAt,
+  }));
+}
+
+export function listTeacherSupportStatuses(filters?: {
+  schoolId?: number;
+  teacherUid?: string;
+  district?: string;
+  status?: "Needs Catch-up Training" | "Needs Coaching & Follow-up" | "On Track";
+  periodKey?: string;
+  limit?: number;
+}) {
+  const db = getDb();
+  const clauses: string[] = ["ranked.rn = 1"];
+  const params: Record<string, string | number> = {};
+
+  if (filters?.schoolId && Number.isInteger(filters.schoolId) && filters.schoolId > 0) {
+    clauses.push("ranked.school_id = @schoolId");
+    params.schoolId = filters.schoolId;
+  }
+  if (filters?.teacherUid?.trim()) {
+    clauses.push("ranked.teacher_uid = @teacherUid");
+    params.teacherUid = filters.teacherUid.trim();
+  }
+  if (filters?.district?.trim()) {
+    clauses.push("lower(trim(sd.district)) = lower(trim(@district))");
+    params.district = filters.district.trim();
+  }
+  if (filters?.status) {
+    clauses.push("ranked.status = @status");
+    params.status = filters.status;
+  }
+  if (filters?.periodKey?.trim()) {
+    clauses.push("ranked.period_key = @periodKey");
+    params.periodKey = filters.periodKey.trim();
+  }
+
+  const limit = Math.max(1, Math.min(filters?.limit ?? 1000, 3000));
+  const rows = db
+    .prepare(
+      `
+      WITH ranked AS (
+        SELECT
+          tss.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY tss.school_id, tss.teacher_uid
+            ORDER BY tss.period_key DESC, tss.computed_at DESC, tss.id DESC
+          ) AS rn
+        FROM teacher_support_status_snapshots tss
+      )
+      SELECT
+        ranked.id,
+        ranked.school_id AS schoolId,
+        sd.name AS schoolName,
+        sd.district AS district,
+        ranked.teacher_uid AS teacherUid,
+        COALESCE(sc.full_name, tr.full_name, ranked.teacher_uid) AS teacherName,
+        ranked.period_key AS periodKey,
+        ranked.status,
+        ranked.recommended_action AS recommendedAction,
+        ranked.evaluations_count AS evaluationsCount,
+        ranked.metrics_json AS metricsJson,
+        ranked.rules_version AS rulesVersion,
+        ranked.computed_at AS computedAt
+      FROM ranked
+      JOIN schools_directory sd ON sd.id = ranked.school_id
+      LEFT JOIN teacher_roster tr ON tr.teacher_uid = ranked.teacher_uid
+      LEFT JOIN school_contacts sc ON sc.teacher_uid = ranked.teacher_uid
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY ranked.computed_at DESC
+      LIMIT ${limit}
+      `,
+    )
+    .all(params) as Array<{
+      id: number;
+      schoolId: number;
+      schoolName: string;
+      district: string;
+      teacherUid: string;
+      teacherName: string;
+      periodKey: string;
+      status: "Needs Catch-up Training" | "Needs Coaching & Follow-up" | "On Track";
+      recommendedAction: string;
+      evaluationsCount: number;
+      metricsJson: string;
+      rulesVersion: string;
+      computedAt: string;
+    }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    schoolId: Number(row.schoolId),
+    schoolName: row.schoolName,
+    district: row.district,
+    teacherUid: row.teacherUid,
+    teacherName: row.teacherName,
+    periodKey: row.periodKey,
+    status: row.status,
+    recommendedAction: row.recommendedAction,
+    evaluationsCount: Number(row.evaluationsCount ?? 0),
+    metrics: JSON.parse(row.metricsJson || "{}") as Record<string, number | string | null>,
+    rulesVersion: row.rulesVersion,
+    computedAt: row.computedAt,
+  }));
+}
+
+export function recomputeLearningAutomationSnapshots(input?: { schoolId?: number }) {
+  const db = getDb();
+  const schoolRows = input?.schoolId
+    ? ([{ schoolId: input.schoolId }] as Array<{ schoolId: number }>)
+    : (db
+      .prepare(
+        `
+        SELECT DISTINCT school_id AS schoolId
+        FROM assessment_sessions
+        WHERE school_id IS NOT NULL
+        `,
+      )
+      .all() as Array<{ schoolId: number }>);
+  schoolRows.forEach((row) => {
+    if (Number.isInteger(row.schoolId) && Number(row.schoolId) > 0) {
+      upsertSchoolSupportStatusSnapshot(db, Number(row.schoolId));
+    }
+  });
+
+  const teacherRows = input?.schoolId
+    ? (db
+      .prepare(
+        `
+        SELECT DISTINCT school_id AS schoolId, teacher_uid AS teacherUid
+        FROM lesson_evaluations
+        WHERE school_id = @schoolId
+          AND status = 'active'
+        `,
+      )
+      .all({ schoolId: input.schoolId }) as Array<{ schoolId: number; teacherUid: string }>)
+    : (db
+      .prepare(
+        `
+        SELECT DISTINCT school_id AS schoolId, teacher_uid AS teacherUid
+        FROM lesson_evaluations
+        WHERE status = 'active'
+        `,
+      )
+      .all() as Array<{ schoolId: number; teacherUid: string }>);
+  teacherRows.forEach((row) => {
+    if (Number.isInteger(row.schoolId) && Number(row.schoolId) > 0 && row.teacherUid) {
+      upsertTeacherSupportStatusSnapshot(db, Number(row.schoolId), String(row.teacherUid));
+    }
+  });
 }
 
 export function createLessonEvaluation(
@@ -17086,6 +20759,7 @@ export function createLessonEvaluation(
     throw new Error("Could not load lesson evaluation after save.");
   }
   refreshSchoolGraduationEligibilityCache(saved.schoolId);
+  upsertTeacherSupportStatusSnapshot(db, saved.schoolId, saved.teacherUid);
   return saved;
 }
 
@@ -17224,8 +20898,12 @@ export function updateLessonEvaluation(
     throw new Error("Could not load lesson evaluation after update.");
   }
   refreshSchoolGraduationEligibilityCache(saved.schoolId);
+  upsertTeacherSupportStatusSnapshot(db, saved.schoolId, saved.teacherUid);
   if (saved.schoolId !== existing.schoolId) {
     refreshSchoolGraduationEligibilityCache(existing.schoolId);
+    upsertTeacherSupportStatusSnapshot(db, existing.schoolId, existing.teacherUid);
+  } else if (saved.teacherUid !== existing.teacherUid) {
+    upsertTeacherSupportStatusSnapshot(db, existing.schoolId, existing.teacherUid);
   }
   return saved;
 }
@@ -17260,6 +20938,7 @@ export function voidLessonEvaluation(
   const updated = getLessonEvaluationById(evaluationId);
   if (updated) {
     refreshSchoolGraduationEligibilityCache(updated.schoolId);
+    upsertTeacherSupportStatusSnapshot(db, updated.schoolId, updated.teacherUid);
   }
   return updated;
 }

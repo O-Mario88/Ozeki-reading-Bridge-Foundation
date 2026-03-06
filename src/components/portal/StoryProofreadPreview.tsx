@@ -235,7 +235,7 @@ export function StoryProofreadPreview({ draft, onBackToEditor, onPublish, onUpda
                         <EditableField
                             value={tempTitle} isEditing={editingTitle}
                             onStartEdit={() => { setTempTitle(draft.title); setEditingTitle(true); }}
-                            onEditHover={(e: any) => setTempTitle(e.target.value)}
+                            onEditHover={(e: React.ChangeEvent<HTMLInputElement>) => setTempTitle(e.target.value)}
                             onCancel={() => setEditingTitle(false)} onSave={handleSaveTitle}
                         >
                             <h1 style={{ margin: "1rem 0" }}>{draft.title || "Untitled Story"}</h1>

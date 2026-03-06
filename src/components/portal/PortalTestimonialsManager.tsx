@@ -16,6 +16,7 @@ type PortalTestimonialView = PortalTestimonialRecord & {
 
 interface PortalTestimonialsManagerProps {
   initialTestimonials: PortalTestimonialView[];
+  canModerate: boolean;
 }
 
 type FeedbackState = {
@@ -38,6 +39,7 @@ function formatDate(value: string) {
 
 export function PortalTestimonialsManager({
   initialTestimonials,
+  canModerate,
 }: PortalTestimonialsManagerProps) {
   const [testimonials, setTestimonials] = useState(initialTestimonials);
   const [region, setRegion] = useState(ugandaRegions[0]?.region ?? "");
@@ -53,6 +55,35 @@ export function PortalTestimonialsManager({
   const districtOptions = region ? getDistrictsByRegion(region) : [];
   const [formKey, setFormKey] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  async function handleModeration(
+    testimonialId: number,
+    moderationStatus: "pending" | "approved" | "hidden",
+  ) {
+    try {
+      const response = await fetch("/api/portal/testimonials", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testimonialId, moderationStatus }),
+      });
+      const data = (await response.json()) as { error?: string; testimonial?: PortalTestimonialView };
+      if (!response.ok || !data.testimonial) {
+        throw new Error(data.error ?? "Could not update testimonial moderation status.");
+      }
+      setTestimonials((prev) =>
+        prev.map((item) => (item.id === testimonialId ? data.testimonial as PortalTestimonialView : item)),
+      );
+      setFeedback({
+        kind: "success",
+        message: `Testimonial moderation set to ${moderationStatus}.`,
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Could not update moderation status.",
+      });
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -202,6 +233,37 @@ export function PortalTestimonialsManager({
                   <p className="media-showcase-caption">
                     {item.schoolName}, {item.district} · {formatDate(item.createdAt)}
                   </p>
+                  <p className="meta-line">
+                    Moderation: <strong>{item.moderationStatus}</strong>
+                  </p>
+                  {item.sourceType === "training_feedback" ? (
+                    <p className="meta-line">Auto-generated from structured training feedback.</p>
+                  ) : null}
+                  {canModerate ? (
+                    <div className="action-row">
+                      <button
+                        className="button button-ghost"
+                        type="button"
+                        onClick={() => void handleModeration(item.id, "pending")}
+                      >
+                        Mark pending
+                      </button>
+                      <button
+                        className="button button-ghost"
+                        type="button"
+                        onClick={() => void handleModeration(item.id, "approved")}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="button button-ghost"
+                        type="button"
+                        onClick={() => void handleModeration(item.id, "hidden")}
+                      >
+                        Hide
+                      </button>
+                    </div>
+                  ) : null}
                   {item.videoSourceType === "youtube" && item.youtubeWatchUrl ? (
                     <a className="button button-ghost" href={item.youtubeWatchUrl} target="_blank" rel="noreferrer">
                       Open source

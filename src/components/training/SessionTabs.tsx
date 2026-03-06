@@ -3,15 +3,67 @@
 import { useState } from "react";
 import { FileText, Download, Users, Lightbulb, PlayCircle, Loader2 } from "lucide-react";
 
+type SessionViewModel = {
+    agenda?: string | null;
+    objectives?: string | null;
+    program_tags?: string | null;
+};
+
+type SessionResourceViewModel = {
+    title?: string | null;
+    fileUrl?: string | null;
+};
+
+type SessionArtifactViewModel = {
+    type?: string | null;
+    status?: string | null;
+};
+
 interface SessionTabsProps {
-    session: any;
-    resources: any[];
-    artifacts: any[];
+    session: SessionViewModel;
+    resources: unknown[];
+    artifacts: unknown[];
     isStaff: boolean;
+}
+
+function parseProgramTags(rawTags: string | null | undefined) {
+    if (!rawTags) {
+        return [] as string[];
+    }
+    try {
+        const parsed = JSON.parse(rawTags) as unknown;
+        return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    } catch {
+        return [];
+    }
+}
+
+function normalizeResource(value: unknown): SessionResourceViewModel {
+    if (typeof value !== "object" || value === null) {
+        return {};
+    }
+    const record = value as Record<string, unknown>;
+    return {
+        title: typeof record.title === "string" ? record.title : null,
+        fileUrl: typeof record.fileUrl === "string" ? record.fileUrl : null,
+    };
+}
+
+function normalizeArtifact(value: unknown): SessionArtifactViewModel {
+    if (typeof value !== "object" || value === null) {
+        return {};
+    }
+    const record = value as Record<string, unknown>;
+    return {
+        type: typeof record.type === "string" ? record.type : null,
+        status: typeof record.status === "string" ? record.status : null,
+    };
 }
 
 export function SessionTabs({ session, resources, artifacts, isStaff }: SessionTabsProps) {
     const [activeTab, setActiveTab] = useState("description");
+    const normalizedResources = resources.map(normalizeResource);
+    const normalizedArtifacts = artifacts.map(normalizeArtifact);
 
     const tabs = [
         { id: "description", label: "Description" },
@@ -24,9 +76,9 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
         tabs.push({ id: "attendance", label: "Attendance" });
     }
 
-    const hasTranscript = artifacts.some(a => a.type === "transcript" && a.status === "available");
-    const hasNotes = artifacts.some(a => a.type === "ai_notes" && a.status === "available");
-    const hasRecording = artifacts.some(a => a.type === "recording" && a.status === "available");
+    const hasTranscript = normalizedArtifacts.some(a => a.type === "transcript" && a.status === "available");
+    const hasNotes = normalizedArtifacts.some(a => a.type === "ai_notes" && a.status === "available");
+    const hasRecording = normalizedArtifacts.some(a => a.type === "recording" && a.status === "available");
 
     return (
         <div className="mt-8 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
@@ -37,7 +89,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`pb-4 pt-2 px-2 whitespace-nowrap text-sm font-semibold transition-all border-b-2 relative \${
+                        className={`pb-4 pt-2 px-2 whitespace-nowrap text-sm font-semibold transition-all border-b-2 relative ${
                     activeTab === tab.id
                         ? "border-[#00155F] text-[#00155F]"
                         : "border-transparent text-gray-500 hover:text-gray-900"
@@ -79,11 +131,11 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                     <div className="flex flex-col">
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Tags</span>
                         <div className="flex space-x-2">
-                            {session.program_tags ? JSON.parse(session.program_tags).map((tag: string) => (
+                            {parseProgramTags(session.program_tags).map((tag) => (
                                 <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
                                     {tag}
                                 </span>
-                            )) : null}
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -104,7 +156,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                     {/* Recording Card */}
                     <div className="p-5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
                         <div className="flex items-center">
-                            <div className={`p-3 rounded-lg mr-4 \${hasRecording ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-200 text-gray-400'}`}>
+                            <div className={`p-3 rounded-lg mr-4 ${hasRecording ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-200 text-gray-400'}`}>
                             <PlayCircle className="w-6 h-6" />
                         </div>
                         <div>
@@ -122,7 +174,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                 {/* Transcript Card */}
                 <div className="p-5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
                     <div className="flex items-center">
-                        <div className={`p-3 rounded-lg mr-4 \${hasTranscript ? 'bg-amber-100 text-amber-600' : 'bg-gray-200 text-gray-400'}`}>
+                        <div className={`p-3 rounded-lg mr-4 ${hasTranscript ? 'bg-amber-100 text-amber-600' : 'bg-gray-200 text-gray-400'}`}>
                         <FileText className="w-6 h-6" />
                     </div>
                     <div>
@@ -184,19 +236,19 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
     activeTab === "resources" && (
         <div className="animate-in fade-in duration-300">
             <h3 className="text-lg font-bold text-gray-900 mb-6">Session Materials</h3>
-            {resources.length === 0 ? (
+            {normalizedResources.length === 0 ? (
                 <div className="p-8 text-center bg-gray-50 rounded-xl border border-gray-200 border-dashed">
                     <p className="text-gray-500">No resources uploaded for this session yet.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {resources.map((r, i) => (
+                    {normalizedResources.map((r, i) => (
                         <div key={i} className="group p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between">
                             <div className="flex items-start mb-4">
                                 <FileText className="w-8 h-8 text-blue-500 shrink-0 mr-3" />
-                                <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{r.title}</h4>
+                                <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{r.title || "Resource"}</h4>
                             </div>
-                            <a href={r.fileUrl} download className="text-sm font-bold text-blue-600 group-hover:underline flex items-center">
+                            <a href={r.fileUrl || "#"} download className="text-sm font-bold text-blue-600 group-hover:underline flex items-center">
                                 Download <Download className="w-3 h-3 ml-1" />
                             </a>
                         </div>

@@ -7,6 +7,10 @@ import { FileText, Plus, CheckCircle, Archive, Eye, Upload } from "lucide-react"
 import { FloatingSurface } from "@/components/FloatingSurface";
 import type { FinanceCurrency, FinancePublicSnapshotRecord, FinanceAuditedStatementRecord } from "@/lib/types";
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export function PortalFinanceTransparencyManager() {
   const [queryClient] = useState(() => new QueryClient());
 
@@ -62,7 +66,7 @@ function PortalFinanceTransparencyManagerContent() {
 
   const handlePublish = (id: number, type: "snapshot" | "audited") => {
     const text = type === "snapshot" ? "PUBLISH FY SNAPSHOT" : "PUBLISH AUDITED STATEMENTS";
-    const conf = prompt(`Type "\${text}" to confirm publishing to the public page:`);
+    const conf = prompt(`Type "${text}" to confirm publishing to the public page:`);
     if (conf === text) {
       publishMutation.mutate({ id, type, confirmation: text });
     } else if (conf !== null) {
@@ -89,19 +93,19 @@ function PortalFinanceTransparencyManagerContent() {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab("fy")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "fy" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "fy" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Annual Snapshots
           </button>
           <button
             onClick={() => setActiveTab("quarterly")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "quarterly" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "quarterly" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Quarterly Snapshots
           </button>
           <button
             onClick={() => setActiveTab("audited")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm \${activeTab === "audited" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "audited" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Audited Statements
           </button>
@@ -117,7 +121,7 @@ function PortalFinanceTransparencyManagerContent() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {activeTab === "fy" && (
             <SnapshotManager
-              data={data?.snapshots.filter((s: any) => s.snapshotType === "fy") || []}
+              data={data?.snapshots.filter((s) => s.snapshotType === "fy") || []}
               type="fy"
               onPublish={(id) => handlePublish(id, "snapshot")}
               onArchive={(id) => handleArchive(id, "snapshot")}
@@ -126,7 +130,7 @@ function PortalFinanceTransparencyManagerContent() {
           )}
           {activeTab === "quarterly" && (
             <SnapshotManager
-              data={data?.snapshots.filter((s: any) => s.snapshotType === "quarterly") || []}
+              data={data?.snapshots.filter((s) => s.snapshotType === "quarterly") || []}
               type="quarterly"
               onPublish={(id) => handlePublish(id, "snapshot")}
               onArchive={(id) => handleArchive(id, "snapshot")}
@@ -179,8 +183,8 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
       if (!res.ok) throw new Error((await res.json()).error || "Failed to generate");
       queryClient.invalidateQueries({ queryKey: ["finance", "transparency", "admin"] });
       setOpenGenerate(false);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, "Failed to generate snapshot"));
     } finally {
       setIsGenerating(false);
     }
@@ -263,7 +267,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
             ) : data.map((item) => (
               <tr key={item.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  FY {item.fy} {item.quarter ? `(\${item.quarter})` : ""} • {item.currency}
+                  FY {item.fy} {item.quarter ? `(${item.quarter})` : ""} • {item.currency}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <StatusBadge status={item.status} />
@@ -272,7 +276,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
                   {format(new Date(item.generatedAt), "MMM d, yyyy")}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                  <a href={`/api/portal/finance/transparency/download?id=\${item.id}&type=snapshot`} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900 inline-flex items-center">
+                  <a href={`/api/portal/finance/transparency/download?id=${item.id}&type=snapshot`} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900 inline-flex items-center">
                     <Eye className="w-4 h-4 mr-1" /> View PDF
                   </a>
                   {item.status === "draft" && (
@@ -318,8 +322,8 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
       setFile(null);
       setAuditor("");
       setOpenUpload(false);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, "Upload failed"));
     } finally {
       setIsUploading(false);
     }
@@ -399,7 +403,7 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
                   {format(new Date(item.uploadedAt || item.publishedAt || new Date()), "MMM d, yyyy")}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                  <a href={`/api/portal/finance/transparency/download?id=\${item.id}&type=audited`} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900 inline-flex items-center">
+                  <a href={`/api/portal/finance/transparency/download?id=${item.id}&type=audited`} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900 inline-flex items-center">
                     <Eye className="w-4 h-4 mr-1" /> View PDF
                   </a>
                   {item.status === "private_uploaded" && (

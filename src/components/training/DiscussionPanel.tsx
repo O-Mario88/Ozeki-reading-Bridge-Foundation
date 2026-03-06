@@ -21,12 +21,12 @@ export function DiscussionPanel() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-gray-50/30">
                 {posts.map((post, i) => (
           <div key={i} className="flex space-x-3">
-            <div className={`w-8 h-8 rounded-full \${post.color} flex items-center justify-center text-white font-bold text-xs shrink-0 mt-1`}>
+            <div className={`w-8 h-8 rounded-full ${post.color} flex items-center justify-center text-white font-bold text-xs shrink-0 mt-1`}>
               {post.initial}
             </div>
             <div className="flex-1">
               <div className="flex items-baseline space-x-2">
-                <span className={`text-sm font-bold \${post.isStaff ? "text-[#00155F]" : "text-gray-900"}`}>
+                <span className={`text-sm font-bold ${post.isStaff ? "text-[#00155F]" : "text-gray-900"}`}>
                   {post.author}
                 </span>
                 {post.isStaff && (
@@ -34,7 +34,7 @@ export function DiscussionPanel() {
                 )}
                 <span className="text-xs text-gray-400">{post.time}</span>
               </div>
-              <div className={`text-sm mt-1 p-3 rounded-2xl rounded-tl-none \${post.isStaff ? "bg-blue-50 text-blue-900" : "bg-white border border-gray-100 text-gray-700 shadow-sm"}`}>
+              <div className={`text-sm mt-1 p-3 rounded-2xl rounded-tl-none ${post.isStaff ? "bg-blue-50 text-blue-900" : "bg-white border border-gray-100 text-gray-700 shadow-sm"}`}>
                 {post.text}
             </div>
         </div>

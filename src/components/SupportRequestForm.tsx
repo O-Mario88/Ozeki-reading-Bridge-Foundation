@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { SupportRequestInput, SupportType } from "@/lib/types";
+import { SupportRequestInput, SupportRequestUrgency, SupportType } from "@/lib/types";
 
 interface SchoolOption {
     id: number;
@@ -64,8 +64,8 @@ export default function SupportRequestForm() {
             }
 
             setSubmitted(true);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to submit request");
         } finally {
             setIsSubmitting(false);
         }
@@ -99,6 +99,7 @@ export default function SupportRequestForm() {
         { value: "learner assessment", label: "Learner Assessment", icon: "📝" },
         { value: "1001 story", label: "1001 Story Library", icon: "📖" }
     ];
+    const urgencyLevels: SupportRequestUrgency[] = ["low", "medium", "high"];
 
     return (
         <div className="max-w-3xl mx-auto my-12 px-6">
@@ -223,11 +224,11 @@ export default function SupportRequestForm() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
                             <div className="flex gap-4">
-                                {["low", "medium", "high"].map(level => (
+                                {urgencyLevels.map(level => (
                                     <button
                                         key={level}
                                         type="button"
-                                        onClick={() => setFormData(prev => ({ ...prev, urgency: level as any }))}
+                                        onClick={() => setFormData(prev => ({ ...prev, urgency: level }))}
                                         className={`flex-1 py-2 rounded-xl border-2 transition-all uppercase text-[10px] font-bold tracking-widest ${formData.urgency === level
                                                 ? "bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md"
                                                 : "bg-white border-gray-100 text-gray-400"

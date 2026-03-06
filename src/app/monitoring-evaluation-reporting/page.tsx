@@ -6,7 +6,7 @@ import { listPublicImpactReports } from "@/lib/db";
 export const metadata = {
   title: "Monitoring, Evaluation & Reporting",
   description:
-    "Data systems that prove impact, strengthen delivery, and build partner confidence.",
+    "NLIP evidence engine for delivery quality, outcomes tracking, and partner-ready accountability from school to national levels.",
 };
 
 export const dynamic = "force-dynamic";
@@ -16,164 +16,168 @@ export default function MonitoringEvaluationReportingPage() {
 
   return (
     <>
-      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+      <section
+        className="section tpd-hero-section bg-surface-container"
+        style={{ backgroundColor: "var(--md-sys-color-surface-container)" }}
+      >
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
-            <p className="kicker">Program spotlight</p>
+            <p className="kicker">Program Spotlight</p>
             <h1 className="tpd-page-title">Monitoring, Evaluation &amp; Reporting</h1>
             <p className="tpd-subline">
-              Data systems that prove impact, strengthen delivery, and build
-              partner confidence.
+              NLIP&apos;s evidence engine for delivery quality, outcomes, and accountability.
             </p>
             <h2>Overview</h2>
             <p>
-              Good intentions are not enough; partners need evidence. Our
-              Monitoring, Evaluation &amp; Reporting (MER) system tracks what was
-              delivered, what changed, and what needs improvement.
+              Monitoring, Evaluation &amp; Reporting (MER) is NLIP&apos;s evidence
+              engine, built to ensure delivery quality, track outcomes, and
+              provide partner-ready accountability at every level of the system.
             </p>
             <p>
-              We combine classroom monitoring, assessment data, and implementation
-              evidence to produce partner-ready reports that are clear, credible,
-              and decision-focused.
+              In national literacy work, what matters is not only what was done
+              (trainings, visits, materials), but whether those inputs translated
+              into better teaching and stronger reading outcomes.
             </p>
             <p className="meta-line">
-              <strong>Outcome we drive:</strong> Partners get accountability,
-              transparency, and credible evidence of results.
+              <strong>Outcome we drive:</strong> improvement becomes visible,
+              credible, and actionable from school level to national reporting.
             </p>
           </article>
 
           <article className="card tpd-hero-media">
             <Image
               src={merPhoto}
-              alt="Literacy facilitators and school staff reviewing implementation and outcome data"
+              alt="Field teams and school leaders reviewing literacy implementation and outcome evidence"
               priority
+              sizes="(max-width: 900px) 100vw, 45vw"
             />
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">What We Monitor (Focus Areas)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>1) Program Monitoring (Did the work happen as planned?)</h3>
-              <p>
-                We track implementation across training, coaching, assessments, and
-                materials distribution to ensure delivery quality and consistency.
-              </p>
-              <p>What we monitor:</p>
-              <ul>
-                <li>Schools reached and sessions delivered</li>
-                <li>Teacher participation and completion</li>
-                <li>Coaching visit schedules and follow-through</li>
-                <li>Availability and use of teaching aids/materials</li>
-                <li>Fidelity to classroom phonics routines</li>
-              </ul>
-              <p>
-                <strong>Why it matters:</strong> Programs move from planned
-                activities to verifiable delivery.
-              </p>
-            </article>
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Full Implementation Chain Captured</h3>
+            <p>Our platform captures data across the full delivery chain:</p>
+            <ul>
+              <li>
+                Training delivery and attendance by role, gender, class/subject
+                taught, and geography
+              </li>
+              <li>Coaching visits and follow-up actions</li>
+              <li>
+                Lesson evaluation scores that show fidelity to structured phonics
+                routines
+              </li>
+              <li>
+                Learner assessments across sounds, decoding, fluency/CWPM with
+                accuracy, and comprehension
+              </li>
+              <li>1001 Story participation and publishing outputs</li>
+            </ul>
+          </article>
 
-            <article className="card">
-              <h3>2) Data Quality (Is the information trustworthy?)</h3>
-              <p>
-                We strengthen reliability through simple, disciplined data quality
-                processes.
-              </p>
-              <p>How we ensure quality:</p>
-              <ul>
-                <li>Standardized tools (same rubrics and formats)</li>
-                <li>Enumerator and assessor calibration</li>
-                <li>Spot-check and verification visits</li>
-                <li>Clean data capture templates</li>
-                <li>Data review rules for outliers and consistency</li>
-              </ul>
-              <p>
-                <strong>Why it matters:</strong> Partners trust results when data
-                quality is clear and controlled.
-              </p>
-            </article>
+          <article className="card">
+            <h3>Automatic Reading Level Movement Tracking</h3>
+            <p>
+              The platform automatically computes reading levels and movement over
+              time, so schools and partners can see shifts from non-reader to
+              fluent bands and identify which domains are improving versus which
+              remain bottlenecks.
+            </p>
+            <p>
+              This turns MER from static reporting into practical cycle-by-cycle
+              improvement intelligence.
+            </p>
+          </article>
 
-            <article className="card">
-              <h3>3) Evidence Synthesis (What does it mean?)</h3>
-              <p>
-                We do not just collect numbers; we turn data into insights and
-                actions.
-              </p>
-              <p>What we synthesize:</p>
-              <ul>
-                <li>Teacher practice change trends</li>
-                <li>Learner reading progress and fluency/comprehension shifts</li>
-                <li>Implementation strengths and bottlenecks</li>
-                <li>Next-cycle recommendations</li>
-              </ul>
-              <p>
-                <strong>Why it matters:</strong> Evidence becomes a tool for
-                improvement, not paperwork.
-              </p>
-            </article>
-          </div>
+          <article className="card">
+            <h3>MER as National Intelligence</h3>
+            <p>
+              What makes MER under Ozeki national intelligence is decision-use and
+              credibility. Every dashboard and report includes quality indicators
+              such as sample size (n), coverage/completeness, and tool/version
+              information.
+            </p>
+            <p>
+              This allows users to trust comparisons across schools and districts
+              and understand limitations clearly.
+            </p>
+          </article>
         </div>
       </section>
 
       <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h3>Outputs (What Partners Receive)</h3>
-            <p>1) Partner-Ready Reports:</p>
-            <ul>
-              <li>Coverage and completeness of activities delivered</li>
-              <li>Teaching practice quality indicators</li>
-              <li>Learner outcomes from baseline to endline (where applicable)</li>
-              <li>Lessons learned, risks, and mitigation actions</li>
-              <li>Next-cycle plan and recommendations</li>
-            </ul>
-            <p>Formats can include PDF reports, slide summaries, and dashboards.</p>
+            <h3>Data Quality Controls for Defensible Results</h3>
+            <p>
+              MER includes data quality checks that reduce errors, prevent missing
+              critical fields, and flag unusual patterns for review.
+            </p>
+            <p>
+              The result is evidence that is not only compelling, but defensible
+              for government and major funders.
+            </p>
           </article>
 
           <article className="card">
-            <h3>Learning Briefs + Action Recommendations</h3>
-            <p>Learning briefs (1 to 3 pages):</p>
+            <h3>School-Level Reporting for Action</h3>
+            <p>
+              At school level, the platform generates coaching packs and
+              headteacher summaries that translate findings into next steps:
+            </p>
             <ul>
-              <li>What worked and why</li>
-              <li>What did not work and why</li>
-              <li>Recommended adjustments</li>
-              <li>Success stories and implementation examples</li>
-            </ul>
-            <p>Decision-ready recommendations:</p>
-            <ul>
-              <li>Grades/skills needing intensified coaching</li>
-              <li>Routines to standardize across schools</li>
-              <li>Material deployment priorities</li>
-              <li>Schools requiring additional support</li>
-              <li>Indicators for next cycle measurement</li>
+              <li>Which routines to strengthen</li>
+              <li>Which learners need catch-up support</li>
+              <li>What to verify in the next supervision/coaching cycle</li>
             </ul>
           </article>
 
           <article className="card">
-            <h3>What We Measure (Example Indicators)</h3>
-            <p>Delivery indicators:</p>
+            <h3>District and Regional Briefs</h3>
+            <p>
+              District and regional briefs highlight performance patterns, priority
+              support zones, and implementation factors influencing outcomes:
+            </p>
             <ul>
-              <li>Schools supported, teachers trained, coaching visits completed</li>
-              <li>Percent of planned activities delivered on time</li>
-              <li>Percent of schools implementing reading timetable/routines</li>
+              <li>Training coverage</li>
+              <li>Coaching intensity</li>
+              <li>Teaching quality trends</li>
+              <li>Story participation and publishing activity</li>
             </ul>
-            <p>Quality indicators:</p>
-            <ul>
-              <li>Percent teachers meeting minimum lesson-rubric quality</li>
-              <li>Teacher practice score improvement across coaching cycles</li>
-            </ul>
-            <p>Learning outcome indicators:</p>
-            <ul>
-              <li>Percent learners mastering letter-sound knowledge</li>
-              <li>Decoding accuracy improvement</li>
-              <li>Fluency improvement (words correct per minute)</li>
-              <li>Comprehension improvement (grade-appropriate)</li>
-            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>National Quarterly and Annual Reporting</h3>
+            <p>
+              At national level, NLIP produces quarterly snapshots and annual
+              reports showing reach, equity, and progress movement, with clear
+              recommendations for scaling what works.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Partner and Donor Accountability</h3>
+            <p>
+              MER connects investment to delivery and results, demonstrates
+              progress over time rather than isolated success stories, and supports
+              confident decisions about where support should go next.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>MER Promise</h3>
+            <p>
+              MER ensures the platform does not only collect data. It turns data
+              into credible evidence, strategic action, and sustained literacy
+              improvement nationwide.
+            </p>
           </article>
         </div>
       </section>
@@ -183,9 +187,8 @@ export default function MonitoringEvaluationReportingPage() {
           <article className="card" id="impact-reports">
             <h3>Impact Reports Library</h3>
             <p>
-              All donor and partner reports are now accessed through this M&amp;E
-              page. Each report is generated from verified data with a
-              facts-locked narrative.
+              Public reports are generated from verified data with fact-locked
+              narratives and downloadable evidence packs.
             </p>
             <p className="meta-line">
               FY reporting follows Uganda school-calendar sessions (Term I-III): 01 February to 30 November.
@@ -202,12 +205,18 @@ export default function MonitoringEvaluationReportingPage() {
                       {report.reportType} | {report.scopeType}: {report.scopeValue}
                     </span>
                     <p>
-                      <Link className="inline-download-link" href={`/impact/reports/${report.reportCode}`}>
+                      <Link
+                        className="inline-download-link"
+                        href={`/impact/reports/${report.reportCode}`}
+                      >
                         View Report
                       </Link>
                     </p>
                     <p>
-                      <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
+                      <a
+                        className="inline-download-link"
+                        href={`/api/impact-reports/${report.reportCode}/download`}
+                      >
                         Download PDF
                       </a>
                     </p>
@@ -218,40 +227,38 @@ export default function MonitoringEvaluationReportingPage() {
           </article>
 
           <article className="card">
-            <h3>Website Downloads</h3>
-            <ul>
-              <li><a className="inline-download-link" href="/resources">Download Sample Partner Report (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Learning Brief Template (PDF/Word)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Classroom Observation Rubric (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Assessment Summary Template (Excel)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download MER Indicator Menu (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Action Plan Template (Word)</a></li>
-            </ul>
+            <h3>Explore Related Evidence</h3>
+            <p>
+              <Link className="inline-download-link" href="/impact">
+                Open Live Impact Dashboard
+              </Link>
+            </p>
+            <p>
+              <Link className="inline-download-link" href="/impact/reports">
+                Open Full Reports Library
+              </Link>
+            </p>
+            <p>
+              <Link className="inline-download-link" href="/resources">
+                Open Resources Library
+              </Link>
+            </p>
           </article>
 
           <article className="card full-width">
-            <h3>Primary CTA</h3>
+            <h3>Partner With MER</h3>
             <p>
-              Request an impact report or partner with us to scale evidence-led
-              literacy implementation.
+              Request an impact report or partner with us to scale transparent,
+              evidence-led literacy implementation across Uganda.
             </p>
             <div className="action-row">
-              <Link className="button" href="/partner">
-                Request an Impact Report / Partner With Us
+              <Link className="button" href="/partner-with-us">
+                Partner With Us
               </Link>
               <Link className="button button-ghost" href="/impact/reports">
                 Open report library
               </Link>
             </div>
-          </article>
-
-          <article className="card full-width">
-            <h3>Outcome</h3>
-            <p>
-              Partners get accountability, transparency, and credible evidence of
-              results, and programs continuously improve because decisions are
-              guided by real classroom and learner data.
-            </p>
           </article>
         </div>
       </section>

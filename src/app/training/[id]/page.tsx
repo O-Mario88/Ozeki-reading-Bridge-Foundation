@@ -16,7 +16,7 @@ export default async function PublicSessionRoomPage({ params }: { params: Promis
     const { id } = await params;
 
     const host = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const res = await fetch(`\${host}/api/training/\${id}`, { cache: "no-store" });
+    const res = await fetch(`${host}/api/training/${id}`, { cache: "no-store" });
   
   if (!res.ok) {
     if (res.status === 404) return notFound();

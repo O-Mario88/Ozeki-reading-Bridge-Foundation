@@ -1,0 +1,465 @@
+.hero {
+  background:
+    radial-gradient(circle at top right, rgba(250, 125, 21, 0.2), transparent 42%),
+    linear-gradient(160deg, rgba(13, 51, 48, 0.08), rgba(13, 51, 48, 0.02));
+  border-bottom: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 30%);
+}
+
+.heroInner {
+  display: grid;
+  gap: 1rem;
+  max-width: 860px;
+}
+
+.heroKicker {
+  color: var(--md-sys-color-tertiary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.heroSubhead {
+  color: var(--md-sys-color-on-surface);
+  font-size: clamp(1.05rem, 1.7vw, 1.34rem);
+  line-height: 1.55;
+  margin: 0;
+  max-width: 75ch;
+}
+
+.microline {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.ctaRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.72rem;
+}
+
+.primaryCta {
+  background: #fa7d15 !important;
+  border-color: #fa7d15 !important;
+  color: #ffffff !important;
+  font-size: 0.88rem !important;
+  min-height: 40px !important;
+  padding: 0.55rem 1rem !important;
+}
+
+.primaryCta:hover,
+.primaryCta:focus-visible {
+  background: #e86f0b !important;
+  border-color: #e86f0b !important;
+  box-shadow: 0 8px 18px rgba(250, 125, 21, 0.28) !important;
+}
+
+.outlineCta {
+  background: transparent !important;
+  border-color: color-mix(in oklab, var(--md-sys-color-primary), white 40%) !important;
+  box-shadow: none !important;
+  color: var(--md-sys-color-primary) !important;
+  font-size: 0.88rem !important;
+  min-height: 40px !important;
+  padding: 0.55rem 1rem !important;
+}
+
+.outlineCta:hover,
+.outlineCta:focus-visible {
+  background: color-mix(in oklab, var(--md-sys-color-primary), white 90%) !important;
+  border-color: var(--md-sys-color-primary) !important;
+  color: var(--md-sys-color-primary) !important;
+}
+
+.sectionHeading {
+  margin-bottom: 1.4rem;
+}
+
+.sectionHeading h2 {
+  font-size: clamp(1.38rem, 1.9vw, 2.2rem);
+  line-height: 1.2;
+  margin: 0;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.problemTitle {
+  max-width: min(100%, 30ch);
+}
+
+.loopGrid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.loopCard {
+  background: #ffffff;
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 22%);
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+}
+
+.loopCard h3 {
+  color: var(--md-sys-color-primary);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.loopCard p {
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.loopIcon {
+  align-items: center;
+  background: color-mix(in oklab, #fa7d15, white 78%);
+  border-radius: 999px;
+  color: #a34c09;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  height: 1.7rem;
+  justify-content: center;
+  width: 1.7rem;
+}
+
+.loopCtaWrap {
+  margin: 0.85rem 0 0;
+}
+
+.inlineLink {
+  color: var(--md-sys-color-primary);
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 700;
+  gap: 0.3rem;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--md-sys-color-primary), white 42%);
+  text-underline-offset: 0.25rem;
+}
+
+.inlineLink:hover,
+.inlineLink:focus-visible {
+  color: #fa7d15;
+}
+
+.problemSection {
+  background: color-mix(in oklab, var(--md-sys-color-surface-container), white 45%);
+  border-block: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 24%);
+}
+
+.problemPhotoCard {
+  background: #0f4254;
+  border: 0;
+  border-radius: 0.95rem;
+  margin-bottom: 1rem;
+  min-height: clamp(300px, 38vw, 520px);
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.problemPhotoImage {
+  object-fit: cover;
+}
+
+.problemPhotoOverlay {
+  background: linear-gradient(
+    90deg,
+    rgba(7, 57, 72, 0.86) 0%,
+    rgba(7, 57, 72, 0.72) 42%,
+    rgba(7, 57, 72, 0.38) 74%,
+    rgba(7, 57, 72, 0.12) 100%
+  );
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.problemPhotoContent {
+  color: #f7fafc;
+  display: grid;
+  gap: 0.72rem;
+  left: clamp(0.9rem, 1.8vw, 1.7rem);
+  max-width: min(94%, 46rem);
+  position: absolute;
+  top: clamp(0.9rem, 1.8vw, 1.7rem);
+  z-index: 2;
+}
+
+.problemPhotoKicker {
+  align-items: center;
+  border: 1px solid rgba(233, 240, 247, 0.35);
+  border-radius: 0.62rem;
+  display: inline-flex;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  margin: 0;
+  max-width: max-content;
+  padding: 0.36rem 0.62rem;
+  text-transform: uppercase;
+}
+
+.problemPhotoKicker::before {
+  background: #fa7d15;
+  border-radius: 999px;
+  content: "";
+  display: inline-block;
+  height: 2px;
+  margin-right: 0.52rem;
+  width: 1.65rem;
+}
+
+.problemPhotoTitle {
+  font-size: clamp(1.45rem, 3.2vw, 3.3rem);
+  line-height: 1.05;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.problemPhotoContent > p:last-child {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 38ch;
+}
+
+.problemNarrative {
+  display: grid;
+  gap: 0.95rem;
+  margin-bottom: 1rem;
+  max-width: 100%;
+  width: 100%;
+}
+
+.problemNarrative p {
+  font-size: 1rem;
+  line-height: 1.72;
+  margin: 0;
+}
+
+.programOverviewSection {
+  background: #ffffff;
+}
+
+.programOverview {
+  display: grid;
+  gap: 0.92rem;
+  margin-bottom: 1rem;
+}
+
+.programOverview p {
+  font-size: 1rem;
+  line-height: 1.72;
+  margin: 0;
+}
+
+.insightSection {
+  background: linear-gradient(180deg, rgba(13, 51, 48, 0.05), rgba(13, 51, 48, 0));
+  border-block: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 24%);
+}
+
+.insightGrid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.insightTile {
+  background: #ffffff;
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 18%);
+  border-radius: 1rem;
+  display: grid;
+  min-height: 100px;
+  padding: 0.95rem;
+}
+
+.insightTile h3 {
+  color: var(--md-sys-color-primary);
+  font-size: 0.98rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.centeredCta {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.partnerGrid {
+  display: grid;
+  gap: 0.82rem;
+  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+}
+
+.partnerCard {
+  background: #ffffff;
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 16%);
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.52rem;
+  padding: 1rem;
+}
+
+.partnerCard h3 {
+  color: var(--md-sys-color-primary);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.partnerCard p {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.testimonialSection {
+  background: color-mix(in oklab, var(--md-sys-color-surface-container), white 38%);
+}
+
+.testimonialGrid {
+  display: grid;
+  gap: 0.82rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.testimonialCard {
+  background: #ffffff;
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 14%);
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+}
+
+.quote {
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.95rem;
+  line-height: 1.64;
+  margin: 0;
+}
+
+.metaRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.52rem;
+}
+
+.roleChip {
+  background: color-mix(in oklab, var(--md-sys-color-primary), white 87%);
+  border-radius: 999px;
+  color: var(--md-sys-color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.28rem 0.62rem;
+}
+
+.geoMeta {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.supportSection {
+  padding-top: 2rem;
+}
+
+.supportCard {
+  align-items: start;
+  background:
+    linear-gradient(120deg, rgba(13, 51, 48, 0.93), rgba(13, 51, 48, 0.82)),
+    radial-gradient(circle at top right, rgba(250, 125, 21, 0.28), transparent 44%);
+  border-radius: 1.1rem;
+  color: #ffffff;
+  display: grid;
+  gap: 0.86rem;
+  padding: clamp(1.1rem, 1.9vw, 1.7rem);
+}
+
+.supportCard h2 {
+  color: #ffffff;
+  margin: 0;
+}
+
+.supportCard p {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  max-width: 76ch;
+}
+
+.trustStrip {
+  background: #f0ede3;
+  border-top: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 22%);
+  padding: 1rem 0;
+}
+
+.trustLinks {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.trustLinks a {
+  color: var(--md-sys-color-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--md-sys-color-primary), white 44%);
+  text-underline-offset: 0.23rem;
+}
+
+.trustLinks a:hover,
+.trustLinks a:focus-visible {
+  color: #fa7d15;
+}
+
+@media (max-width: 860px) {
+  .hero {
+    padding-block: 2rem 1.7rem;
+  }
+
+  .problemPhotoCard {
+    min-height: 270px;
+  }
+
+  .problemPhotoContent {
+    max-width: min(95%, 35rem);
+  }
+
+  .problemPhotoTitle {
+    font-size: clamp(1.4rem, 5.6vw, 2.3rem);
+  }
+
+@media (max-width: 640px) {
+  .heroInner {
+    gap: 0.82rem;
+  }
+
+  .sectionHeading {
+    margin-bottom: 1rem;
+  }
+
+  .partnerGrid,
+  .insightGrid,
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .trustLinks {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

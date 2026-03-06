@@ -1,16 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-
-type SubmitState = {
-  status: "idle" | "submitting" | "success" | "error";
-  message: string;
-};
-
-const initialState: SubmitState = {
-  status: "idle",
-  message: "",
-};
+import { BaseContactForm } from "./BaseContactForm";
 
 export function PartnerActionForm({
   type,
@@ -27,13 +17,7 @@ export function PartnerActionForm({
   onSuccess?: () => void;
   onCancel?: () => void;
 }) {
-  const [state, setState] = useState<SubmitState>(initialState);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setState({ status: "submitting", message: "Submitting request..." });
-
-    const formData = new FormData(event.currentTarget);
+  async function handleSubmit(formData: FormData) {
     const payload = {
       type,
       name: String(formData.get("name") || ""),
@@ -57,36 +41,27 @@ export function PartnerActionForm({
         .join("\n"),
     };
 
-    try {
-      const response = await fetch("/api/contacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    const response = await fetch("/api/contacts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
-        throw new Error(data.error ?? "Could not submit request.");
-      }
-
-      event.currentTarget.reset();
-      setState({
-        status: "success",
-        message: "Request submitted successfully. Our partnerships team will follow up.",
-      });
-      if (onSuccess) {
-        window.setTimeout(() => {
-          onSuccess();
-        }, 900);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Submission failed.";
-      setState({ status: "error", message });
+    if (!response.ok) {
+      const data = (await response.json()) as { error?: string };
+      throw new Error(data.error ?? "Could not submit request.");
     }
   }
 
   return (
-    <form className="form-grid" onSubmit={handleSubmit}>
+    <BaseContactForm
+      onSubmit={handleSubmit}
+      onSuccess={onSuccess}
+      onCancel={onCancel}
+      successMessage="Request submitted successfully. Our partnerships team will follow up."
+      submitLabel={actionLabel}
+      submittingLabel="Submitting..."
+    >
       <label>
         Name
         <input name="name" required />
@@ -170,19 +145,6 @@ export function PartnerActionForm({
         Message
         <textarea name="message" rows={4} placeholder="Share your funding interest or proposal request." required />
       </label>
-
-      <div className="action-row">
-        <button className="button" type="submit" disabled={state.status === "submitting"}>
-          {state.status === "submitting" ? "Submitting..." : actionLabel}
-        </button>
-        {onCancel ? (
-          <button className="button button-ghost" type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        ) : null}
-      </div>
-
-      {state.message ? <p className={`form-message ${state.status}`}>{state.message}</p> : null}
-    </form>
+    </BaseContactForm>
   );
 }

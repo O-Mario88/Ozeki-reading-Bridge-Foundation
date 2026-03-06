@@ -46,6 +46,8 @@ type FormState = {
   schoolName: string;
   programType: string;
   followUpDate: string;
+  followUpType: string;
+  followUpOwnerUserId: string;
   status: PortalRecordStatus;
   reviewNote: string;
   payload: FormPayloadState;
@@ -80,6 +82,8 @@ type OfflineQueueItem = {
     schoolName: string;
     programType?: string;
     followUpDate?: string;
+    followUpType?: string;
+    followUpOwnerUserId?: number;
     status: PortalRecordStatus;
     payload: Record<string, string | number | boolean | string[] | null | undefined>;
   };
@@ -96,6 +100,7 @@ type EgraMetricKey =
 
 type EgraLearnerRow = {
   no: number;
+  learnerUid: string;
   learnerId: string;
   learnerName: string;
   sex: "" | "M" | "F";
@@ -133,6 +138,7 @@ type EgraSummary = {
   };
   rowsForPayload: Array<{
     no: number;
+    learnerUid: string;
     learnerId: string;
     learnerName: string;
     sex: "M" | "F" | "";
@@ -152,6 +158,8 @@ type TrainingParticipantRole = "" | "Teacher" | "Leader";
 type TrainingParticipantGender = "" | "Male" | "Female";
 
 type TrainingParticipantRow = {
+  contactId: string;
+  contactUid: string;
   participantName: string;
   schoolAccountId: string;
   schoolAttachedTo: string;
@@ -182,11 +190,11 @@ const egraMetricLabels: Array<{ key: EgraMetricKey; label: string }> = [
 ];
 
 const egraLevelLabels = [
-  "Non-Reader",
-  "Emerging Reader",
-  "Developing Reader",
-  "Transitional Reader",
-  "Fluent Reader",
+  "Level0 Non-reader",
+  "Level1 Emergent",
+  "Level2 Minimum",
+  "Level3 Competent",
+  "Level4 Strong",
 ] as const;
 
 const visitObservationScoreByRating: Record<string, number> = {
@@ -333,10 +341,17 @@ function inferPlaceholder(field: PortalFieldConfig) {
 
 function normalizeParticipantRole(value: unknown): TrainingParticipantRole {
   const normalized = String(value ?? "").trim().toLowerCase();
-  if (normalized === "teacher") {
+  if (normalized === "teacher" || normalized === "classroom teacher") {
     return "Teacher";
   }
-  if (normalized === "leader") {
+  if (
+    normalized === "leader" ||
+    normalized === "school leader" ||
+    normalized === "head teacher" ||
+    normalized === "deputy head teacher" ||
+    normalized === "dos" ||
+    normalized === "proprietor"
+  ) {
     return "Leader";
   }
   return "";
@@ -355,6 +370,8 @@ function normalizeParticipantGender(value: unknown): TrainingParticipantGender {
 
 function createEmptyTrainingParticipant(defaultSchoolId = "", defaultSchoolName = ""): TrainingParticipantRow {
   return {
+    contactId: "",
+    contactUid: "",
     participantName: "",
     schoolAccountId: defaultSchoolId,
     schoolAttachedTo: defaultSchoolName,
@@ -366,6 +383,8 @@ function createEmptyTrainingParticipant(defaultSchoolId = "", defaultSchoolName 
 
 function rowHasTrainingParticipantData(row: TrainingParticipantRow) {
   return (
+    row.contactId.trim() ||
+    row.contactUid.trim() ||
     row.participantName.trim() ||
     row.schoolAccountId.trim() ||
     row.schoolAttachedTo.trim() ||
@@ -421,6 +440,8 @@ function parseTrainingParticipants(
       const linkedSchool = schoolFromId ?? schoolFromName ?? null;
 
       return {
+        contactId: sanitizeForInput(entry.contactId),
+        contactUid: sanitizeForInput(entry.contactUid ?? entry.teacherUid),
         participantName: sanitizeForInput(entry.participantName),
         schoolAccountId: linkedSchool ? String(linkedSchool.id) : schoolAccountIdRaw,
         schoolAttachedTo:
@@ -514,6 +535,7 @@ function createEmptyEgraMetricRecord(): Record<EgraMetricKey, number> {
 function createEmptyEgraLearnerRow(no: number): EgraLearnerRow {
   return {
     no,
+    learnerUid: "",
     learnerId: "",
     learnerName: "",
     sex: "",
@@ -545,25 +567,70 @@ function roundOne(value: number) {
   return Number(value.toFixed(1));
 }
 
-function determineFluencyLevel(storyReadingValue: string) {
+function determineFluencyLevel(storyReadingValue: string, comprehensionValue?: string) {
   const storyReading = toNumberOrNull(storyReadingValue);
   if (storyReading === null) {
     return "";
   }
 
-  if (storyReading <= 10) {
-    return "Non-Reader";
+  let band = 0;
+  if (storyReading <= 0) {
+    band = 0;
+  } else if (storyReading <= 19) {
+    band = 1;
+  } else if (storyReading <= 39) {
+    band = 2;
+  } else if (storyReading <= 59) {
+    band = 3;
+  } else {
+    band = 4;
   }
-  if (storyReading <= 25) {
-    return "Emerging Reader";
+
+  const comprehension = toNumberOrNull(comprehensionValue ?? "");
+  if (comprehension !== null) {
+    const comprehensionPct = comprehension <= 5 ? (comprehension / 5) * 100 : comprehension;
+    const comprehensionOk = comprehensionPct >= 70 || comprehension >= 4;
+    if (!comprehensionOk) {
+      band = Math.max(0, band - 1);
+    }
   }
-  if (storyReading <= 45) {
-    return "Developing Reader";
+
+  if (band <= 0) {
+    return "Level0 Non-reader";
   }
-  if (storyReading <= 60) {
-    return "Transitional Reader";
+  if (band === 1) {
+    return "Level1 Emergent";
   }
-  return "Fluent Reader";
+  if (band === 2) {
+    return "Level2 Minimum";
+  }
+  if (band === 3) {
+    return "Level3 Competent";
+  }
+  return "Level4 Strong";
+}
+
+function normalizeEgraLevelLabel(
+  value: string,
+  storyReadingValue: string,
+  comprehensionValue?: string,
+) {
+  const normalized = value.trim();
+  if (
+    normalized === "Level0 Non-reader" ||
+    normalized === "Level1 Emergent" ||
+    normalized === "Level2 Minimum" ||
+    normalized === "Level3 Competent" ||
+    normalized === "Level4 Strong"
+  ) {
+    return normalized;
+  }
+  if (normalized === "Non-Reader") return "Level0 Non-reader";
+  if (normalized === "Emerging Reader" || normalized === "Letter Reader") return "Level1 Emergent";
+  if (normalized === "Developing Reader" || normalized === "Syllable Reader") return "Level2 Minimum";
+  if (normalized === "Transitional Reader" || normalized === "Word Reader") return "Level3 Competent";
+  if (normalized === "Fluent Reader" || normalized === "Story Reader") return "Level4 Strong";
+  return determineFluencyLevel(storyReadingValue, comprehensionValue);
 }
 
 function rowHasAssessmentData(row: EgraLearnerRow) {
@@ -609,12 +676,16 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
   };
 
   activeRows.forEach((row) => {
-    const level = row.fluencyLevel || determineFluencyLevel(row.storyReading);
-    if (level === "Non-Reader") profileCounts.nonReaders += 1;
-    if (level === "Emerging Reader") profileCounts.emerging += 1;
-    if (level === "Developing Reader") profileCounts.developing += 1;
-    if (level === "Transitional Reader") profileCounts.transitional += 1;
-    if (level === "Fluent Reader") profileCounts.fluent += 1;
+    const level = normalizeEgraLevelLabel(
+      row.fluencyLevel,
+      row.storyReading,
+      row.readingComprehension,
+    );
+    if (level === "Level0 Non-reader") profileCounts.nonReaders += 1;
+    if (level === "Level1 Emergent") profileCounts.emerging += 1;
+    if (level === "Level2 Minimum") profileCounts.developing += 1;
+    if (level === "Level3 Competent") profileCounts.transitional += 1;
+    if (level === "Level4 Strong") profileCounts.fluent += 1;
   });
 
   const total = activeRows.length || 1;
@@ -639,6 +710,7 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
     },
     rowsForPayload: activeRows.map((row) => ({
       no: row.no,
+      learnerUid: row.learnerUid.trim(),
       learnerId: row.learnerId.trim(),
       learnerName: row.learnerName.trim(),
       sex: row.sex,
@@ -650,7 +722,11 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
       madeUpWords: toNumberOrNull(row.madeUpWords),
       storyReading: toNumberOrNull(row.storyReading),
       readingComprehension: toNumberOrNull(row.readingComprehension),
-      fluencyLevel: row.fluencyLevel || determineFluencyLevel(row.storyReading),
+      fluencyLevel: normalizeEgraLevelLabel(
+        row.fluencyLevel,
+        row.storyReading,
+        row.readingComprehension,
+      ),
     })),
   };
 }
@@ -676,10 +752,16 @@ function parseEgraRows(raw: unknown): EgraLearnerRow[] {
     }
     const entry = source as Record<string, unknown>;
     const storyReading = sanitizeForInput(entry.storyReading);
-    const fluencyLevel = sanitizeForInput(entry.fluencyLevel) || determineFluencyLevel(storyReading);
+    const readingComprehension = sanitizeForInput(entry.readingComprehension);
+    const fluencyLevel = normalizeEgraLevelLabel(
+      sanitizeForInput(entry.fluencyLevel),
+      storyReading,
+      readingComprehension,
+    );
 
     return {
       no: Number(entry.no ?? template.no) || template.no,
+      learnerUid: sanitizeForInput(entry.learnerUid),
       learnerId: sanitizeForInput(entry.learnerId),
       learnerName: sanitizeForInput(entry.learnerName),
       sex: normalizeSex(entry.sex),
@@ -690,7 +772,7 @@ function parseEgraRows(raw: unknown): EgraLearnerRow[] {
       undecodableWords: sanitizeForInput(entry.undecodableWords),
       madeUpWords: sanitizeForInput(entry.madeUpWords),
       storyReading,
-      readingComprehension: sanitizeForInput(entry.readingComprehension),
+      readingComprehension,
       fluencyLevel,
     };
   });
@@ -776,6 +858,8 @@ export function PortalModuleManager({
     schoolName: "",
     programType: config.programTypeOptions[0]?.value ?? "",
     followUpDate: "",
+    followUpType: "school_visit",
+    followUpOwnerUserId: "",
     status: "Draft",
     reviewNote: "",
     payload: buildDefaultPayload(config),
@@ -820,10 +904,6 @@ export function PortalModuleManager({
 
     return list.sort((left, right) => left.name.localeCompare(right.name));
   }, [formState.district, formState.region, initialSchools]);
-  const participantSchoolOptions = useMemo(
-    () => [...initialSchools].sort((left, right) => left.name.localeCompare(right.name)),
-    [initialSchools],
-  );
   const trainingParticipantStats = useMemo(() => {
     const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
     return {
@@ -841,6 +921,17 @@ export function PortalModuleManager({
         : formState.date || getToday(),
     [config.module, formState.date],
   );
+  const followUpOwnerOptions = useMemo(
+    () => initialUsers.map((entry) => ({ id: entry.id, fullName: entry.fullName })),
+    [initialUsers],
+  );
+  const defaultFollowUpOwnerId = useMemo(() => {
+    const hasCurrentUser = followUpOwnerOptions.some((entry) => entry.id === currentUser.id);
+    if (hasCurrentUser) {
+      return String(currentUser.id);
+    }
+    return followUpOwnerOptions[0] ? String(followUpOwnerOptions[0].id) : "";
+  }, [currentUser.id, followUpOwnerOptions]);
 
   const refreshOfflineCount = useCallback(() => {
     setOfflineCount(readQueue().length);
@@ -920,12 +1011,14 @@ export function PortalModuleManager({
           config.programTypeOptions[0]?.value ||
           "",
         followUpDate: config.module === "training" ? addDaysToDate(getToday(), 14) : "",
+        followUpType: "school_visit",
+        followUpOwnerUserId: config.module === "training" ? defaultFollowUpOwnerId : "",
         status: "Draft",
         reviewNote: "",
         payload: defaults,
       };
     },
-    [config, getSchoolScopeDefaults],
+    [config, defaultFollowUpOwnerId, getSchoolScopeDefaults],
   );
 
   const openNewForm = useCallback((options?: { schoolId?: number | null; programType?: string }) => {
@@ -1013,6 +1106,8 @@ export function PortalModuleManager({
       schoolName: linkedSchoolName,
       programType: record.programType ?? config.programTypeOptions[0]?.value ?? "",
       followUpDate: record.followUpDate ?? "",
+      followUpType: record.followUpType ?? "school_visit",
+      followUpOwnerUserId: record.followUpOwnerUserId ? String(record.followUpOwnerUserId) : defaultFollowUpOwnerId,
       status: record.status,
       reviewNote: record.reviewNote ?? "",
       payload: nextPayload,
@@ -1021,7 +1116,7 @@ export function PortalModuleManager({
     setSelectedFiles([]);
     setFileInputKey((value) => value + 1);
     setFeedback({ kind: "idle", message: "" });
-  }, [config, initialSchools, schoolsById, schoolsByName]);
+  }, [config, defaultFollowUpOwnerId, initialSchools, schoolsById, schoolsByName]);
 
   const fetchRecords = useCallback(async (nextFilters: FilterState) => {
     setLoadingRecords(true);
@@ -1321,6 +1416,11 @@ export function PortalModuleManager({
             schoolName: enforcedSchool?.name ?? parsed.schoolName ?? "",
             programType: resolvedProgramType,
             followUpDate: parsed.followUpDate ?? "",
+            followUpType: parsed.followUpType ?? "school_visit",
+            followUpOwnerUserId:
+              parsed.followUpOwnerUserId !== undefined && parsed.followUpOwnerUserId !== null
+                ? String(parsed.followUpOwnerUserId)
+                : defaultFollowUpOwnerId,
             status: parsed.status ?? "Draft",
             reviewNote: parsed.reviewNote ?? "",
             payload: { ...buildDefaultPayload(config), ...(parsed.payload ?? {}) },
@@ -1353,6 +1453,7 @@ export function PortalModuleManager({
     setUrlInitialized(true);
   }, [
     config,
+    defaultFollowUpOwnerId,
     draftStorageKey,
     initialSchools,
     loadEvidence,
@@ -1471,6 +1572,7 @@ export function PortalModuleManager({
       const index = learner.no - 1;
       newRows[index] = {
         no: learner.no,
+        learnerUid: learner.learnerUid ?? "",
         learnerId: learner.learnerId,
         learnerName: learner.learnerName,
         sex: learner.sex as "M" | "F",
@@ -1519,10 +1621,8 @@ export function PortalModuleManager({
     const hasSelectedSchool =
       Number.isInteger(selectedSchoolId) && selectedSchoolId > 0 && schoolsById.has(selectedSchoolId);
 
-    if (config.module !== "training") {
-      if (!hasSelectedSchool) {
-        return "Select a valid school account.";
-      }
+    if (!hasSelectedSchool) {
+      return "Select a valid school account.";
     }
 
     if (config.module === "training") {
@@ -1531,20 +1631,14 @@ export function PortalModuleManager({
         return "Add at least one participant.";
       }
 
-      const hasLinkedSchool = activeRows.some((row) => {
-        if (!row.schoolAccountId.trim()) {
-          return false;
-        }
-        const schoolId = Number(row.schoolAccountId);
-        return Number.isInteger(schoolId) && schoolId > 0 && schoolsById.has(schoolId);
-      });
-
-      if (!hasLinkedSchool && !hasSelectedSchool) {
-        return "At least one participant must be linked to a school account.";
-      }
-
       if (!formState.followUpDate) {
         return "Next follow-up date is required and must be at least 2 weeks after training.";
+      }
+      if (!formState.followUpType.trim()) {
+        return "Follow-up type is required for training.";
+      }
+      if (!formState.followUpOwnerUserId.trim()) {
+        return "Follow-up owner is required for training.";
       }
     }
 
@@ -1604,15 +1698,18 @@ export function PortalModuleManager({
           const validPhone = /^[+0-9()\s-]{7,20}$/;
           for (let index = 0; index < activeRows.length; index += 1) {
             const participant = activeRows[index];
-            if (!participant.participantName.trim()) {
-              return `Participant ${index + 1}: participant name is required.`;
+            if (!participant.contactId.trim() && !participant.contactUid.trim()) {
+              return `Participant ${index + 1}: select a participant from the school roster.`;
             }
-            if (!participant.schoolAccountId.trim()) {
-              return `Participant ${index + 1}: school account is required.`;
+            if (!participant.participantName.trim()) {
+              return `Participant ${index + 1}: participant name is missing.`;
             }
             const participantSchoolId = Number(participant.schoolAccountId);
             if (!Number.isInteger(participantSchoolId) || participantSchoolId <= 0 || !schoolsById.has(participantSchoolId)) {
               return `Participant ${index + 1}: select a valid school account.`;
+            }
+            if (participantSchoolId !== selectedSchoolId) {
+              return `Participant ${index + 1}: participant must belong to the selected school.`;
             }
             if (!participant.role) {
               return `Participant ${index + 1}: role is required.`;
@@ -1620,10 +1717,7 @@ export function PortalModuleManager({
             if (!participant.gender) {
               return `Participant ${index + 1}: gender is required.`;
             }
-            if (!participant.phoneContact.trim()) {
-              return `Participant ${index + 1}: phone contact is required.`;
-            }
-            if (!validPhone.test(participant.phoneContact.trim())) {
+            if (participant.phoneContact.trim() && !validPhone.test(participant.phoneContact.trim())) {
               return `Participant ${index + 1}: phone contact format is invalid.`;
             }
           }
@@ -1703,21 +1797,43 @@ export function PortalModuleManager({
         payload[key] = String(value ?? "").trim();
       });
 
+      if (config.module === "visit") {
+        const teacherContactId = String(formState.payload.teacherContactId ?? "").trim();
+        const teacherContactUid = String(formState.payload.teacherContactUid ?? "").trim();
+        const teacherUid = String(formState.payload.teacherUid ?? "").trim();
+        const teacherGender = String(formState.payload.teacherGender ?? "").trim();
+        if (teacherContactId) {
+          payload.teacherContactId = Number(teacherContactId);
+        }
+        if (teacherContactUid) {
+          payload.teacherContactUid = teacherContactUid;
+        }
+        if (teacherUid) {
+          payload.teacherUid = teacherUid;
+        }
+        if (teacherGender) {
+          payload.teacherGender = teacherGender;
+        }
+      }
+
       if (formState.region.trim()) {
         payload.region = formState.region.trim();
+      }
+      if (config.module === "training") {
+        payload.followUpType = formState.followUpType.trim();
+        payload.followUpOwnerUserId = formState.followUpOwnerUserId.trim()
+          ? Number(formState.followUpOwnerUserId.trim())
+          : null;
       }
 
       if (participantField) {
         const participantRows = trainingParticipants
           .filter((row) => rowHasTrainingParticipantData(row))
           .map((row) => {
-            const mappedSchool =
-              (row.schoolAccountId.trim()
-                ? schoolsById.get(Number(row.schoolAccountId.trim()))
-                : null) ??
-              selectedSchool ??
-              null;
+            const mappedSchool = selectedSchool ?? null;
             return {
+              contactId: row.contactId.trim() ? Number(row.contactId.trim()) : null,
+              contactUid: row.contactUid.trim() || null,
               participantName: row.participantName.trim(),
               schoolAttachedTo: mappedSchool?.name ?? row.schoolAttachedTo.trim(),
               schoolAccountId: mappedSchool?.id ?? null,
@@ -1729,13 +1845,7 @@ export function PortalModuleManager({
           });
 
         const primaryParticipantSchool =
-          participantRows
-            .map((row) =>
-              typeof row.schoolAccountId === "number" && Number.isInteger(row.schoolAccountId)
-                ? schoolsById.get(row.schoolAccountId) ?? null
-                : null,
-            )
-            .find((school) => Boolean(school)) ?? null;
+          participantRows.length > 0 ? selectedSchool ?? null : null;
         const resolvedPrimarySchool =
           config.module === "training"
             ? primaryParticipantSchool ?? selectedSchool
@@ -1765,6 +1875,11 @@ export function PortalModuleManager({
           schoolName: resolvedSchoolName,
           programType: formState.programType.trim(),
           followUpDate: formState.followUpDate.trim() || undefined,
+          followUpType: config.module === "training" ? formState.followUpType.trim() || undefined : undefined,
+          followUpOwnerUserId:
+            config.module === "training" && formState.followUpOwnerUserId.trim()
+              ? Number(formState.followUpOwnerUserId.trim())
+              : undefined,
           status: nextStatus,
           payload,
         };
@@ -1833,6 +1948,11 @@ export function PortalModuleManager({
         schoolName: resolvedSchoolName,
         programType: formState.programType.trim(),
         followUpDate: formState.followUpDate.trim() || undefined,
+        followUpType: config.module === "training" ? formState.followUpType.trim() || undefined : undefined,
+        followUpOwnerUserId:
+          config.module === "training" && formState.followUpOwnerUserId.trim()
+            ? Number(formState.followUpOwnerUserId.trim())
+            : undefined,
         status: nextStatus,
         payload,
       };
@@ -2493,45 +2613,83 @@ export function PortalModuleManager({
                           ))}
                         </select>
                       </label>
-                      {config.module !== "training" ? (
-                        <label>
-                          {renderLabel("School Account", true)}
-                          <select
-                            value={formState.schoolId}
-                            onChange={(event) =>
-                              setFormState((prev) => {
-                                const nextSchoolId = event.target.value;
-                                const selectedSchool = nextSchoolId
-                                  ? schoolsById.get(Number(nextSchoolId))
-                                  : undefined;
+                      <label>
+                        {renderLabel("School Account", true)}
+                        <select
+                          value={formState.schoolId}
+                          onChange={(event) => {
+                            const nextSchoolId = event.target.value;
+                            const selectedSchool = nextSchoolId
+                              ? schoolsById.get(Number(nextSchoolId))
+                              : undefined;
 
-                                return {
-                                  ...prev,
-                                  schoolId: nextSchoolId,
-                                  schoolName: selectedSchool?.name ?? "",
-                                  district: selectedSchool?.district ?? prev.district,
-                                  region: selectedSchool
-                                    ? inferRegionFromDistrict(selectedSchool.district) ??
-                                    prev.region
-                                    : prev.region,
-                                };
-                              })
+                            setFormState((prev) => ({
+                              ...prev,
+                              payload:
+                                config.module === "visit"
+                                  ? {
+                                    ...prev.payload,
+                                    teacherObserved: "",
+                                    teacherContactId: "",
+                                    teacherContactUid: "",
+                                    teacherUid: "",
+                                    teacherGender: "",
+                                  }
+                                  : prev.payload,
+                              schoolId: nextSchoolId,
+                              schoolName: selectedSchool?.name ?? "",
+                              district: selectedSchool?.district ?? prev.district,
+                              region: selectedSchool
+                                ? inferRegionFromDistrict(selectedSchool.district) ??
+                                prev.region
+                                : prev.region,
+                            }));
+
+                            if (config.module === "training") {
+                              setTrainingParticipants((prev) =>
+                                prev.map((row) => ({
+                                  ...row,
+                                  contactId: "",
+                                  contactUid: "",
+                                  participantName: "",
+                                  role: "",
+                                  gender: "",
+                                  phoneContact: "",
+                                  schoolAccountId: nextSchoolId,
+                                  schoolAttachedTo: selectedSchool?.name ?? "",
+                                })),
+                              );
                             }
-                            required
+                            if (config.module === "assessment") {
+                              setEgraLearners(createDefaultEgraRows());
+                            }
+                          }}
+                          required
+                        >
+                          <option value="">Select school account</option>
+                          {formSchoolOptions.map((school) => (
+                            <option key={school.id} value={String(school.id)}>
+                              {school.name} ({school.schoolCode})
+                            </option>
+                          ))}
+                        </select>
+                        <div className="portal-inline-actions">
+                          <button
+                            type="button"
+                            className="button button-ghost button-compact"
+                            onClick={() => {
+                              if (typeof window !== "undefined") {
+                                window.open("/portal/schools?new=1", "_blank", "noopener,noreferrer");
+                              }
+                            }}
                           >
-                            <option value="">Select school account</option>
-                            {formSchoolOptions.map((school) => (
-                              <option key={school.id} value={String(school.id)}>
-                                {school.name} ({school.schoolCode})
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : (
-                        <div style={{ alignSelf: "end", paddingBottom: "0.5rem" }}>
-                          <span className="portal-muted">Training session (Scale)</span>
+                            Create new school
+                          </button>
+                          <small className="portal-field-help">
+                            If the school is missing, create it first in School Accounts, then refresh and select it here.
+                          </small>
                         </div>
-                      )}
+                      </label>
                     </div>
                   </div>
 
@@ -2605,6 +2763,41 @@ export function PortalModuleManager({
                         required={config.module === "training"}
                       />
                     </label>
+                    {config.module === "training" ? (
+                      <label>
+                        {renderLabel("Follow-up type", true)}
+                        <select
+                          value={formState.followUpType}
+                          onChange={(event) =>
+                            setFormState((prev) => ({ ...prev, followUpType: event.target.value }))
+                          }
+                          required
+                        >
+                          <option value="virtual_check_in">Virtual check-in</option>
+                          <option value="school_visit">School visit</option>
+                          <option value="refresher_session">Refresher session</option>
+                        </select>
+                      </label>
+                    ) : null}
+                    {config.module === "training" ? (
+                      <label>
+                        {renderLabel("Follow-up owner", true)}
+                        <select
+                          value={formState.followUpOwnerUserId}
+                          onChange={(event) =>
+                            setFormState((prev) => ({ ...prev, followUpOwnerUserId: event.target.value }))
+                          }
+                          required
+                        >
+                          <option value="">Select follow-up owner</option>
+                          {followUpOwnerOptions.map((option) => (
+                            <option key={option.id} value={String(option.id)}>
+                              {option.fullName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
                     <label>
                       {renderLabel("Workflow status")}
                       <input value={formState.status} readOnly />
@@ -2656,7 +2849,7 @@ export function PortalModuleManager({
                                           <td>{row.learnerName || "-"}</td>
                                           <td>{row.sex}</td>
                                           <td>{row.age}</td>
-                                          <td>{row.fluencyLevel || determineFluencyLevel(row.storyReading)}</td>
+                                          <td>{normalizeEgraLevelLabel(row.fluencyLevel, row.storyReading, row.readingComprehension)}</td>
                                           <td>
                                             {/* Edit button could go here */}
                                             <button type="button" className="button button-small button-ghost" onClick={() => {
@@ -2785,29 +2978,55 @@ export function PortalModuleManager({
                                           <td>{index + 1}</td>
                                           <td style={{ minWidth: 280 }}>
                                             <SchoolRosterPicker
-                                              schoolId={row.schoolAccountId ? Number(row.schoolAccountId) : selectedSchoolId}
+                                              schoolId={selectedSchoolId}
                                               schoolName={row.schoolAttachedTo || formState.schoolName}
                                               participantType="teacher"
-                                              selectedUid={row.participantName ? "" : ""}
+                                              selectedUid={row.contactUid}
                                               label=""
                                               onSelect={(entry: RosterEntry | null) => {
                                                 if (!entry) {
-                                                  updateTrainingParticipant(index, "participantName", "");
+                                                  setTrainingParticipants((prev) =>
+                                                    prev.map((p, i) =>
+                                                      i !== index
+                                                        ? p
+                                                        : {
+                                                          ...p,
+                                                          contactId: "",
+                                                          contactUid: "",
+                                                          participantName: "",
+                                                          role: "",
+                                                          gender: "",
+                                                          phoneContact: "",
+                                                        },
+                                                    ),
+                                                  );
                                                   return;
                                                 }
-                                                const teacher = entry as { teacherUid: string; fullName: string; gender: string; isReadingTeacher: boolean; phone: string | null };
+                                                const teacher = entry as {
+                                                  contactId: number;
+                                                  contactUid: string;
+                                                  fullName: string;
+                                                  gender: string;
+                                                  category: string;
+                                                  phone: string | null;
+                                                };
                                                 setTrainingParticipants((prev) =>
                                                   prev.map((p, i) =>
                                                     i !== index
                                                       ? p
                                                       : {
                                                         ...p,
+                                                        contactId: String(teacher.contactId),
+                                                        contactUid: teacher.contactUid,
                                                         participantName: teacher.fullName,
-                                                        role: teacher.isReadingTeacher ? "Teacher" as const : "Teacher" as const,
-                                                        gender: teacher.gender as TrainingParticipantGender,
+                                                        role: teacher.category === "Teacher" ? "Teacher" : "Leader",
+                                                        gender:
+                                                          teacher.gender === "Male" || teacher.gender === "Female"
+                                                            ? (teacher.gender as TrainingParticipantGender)
+                                                            : "",
                                                         phoneContact: teacher.phone ?? "",
-                                                        schoolAccountId: row.schoolAccountId || String(selectedSchoolId ?? ""),
-                                                        schoolAttachedTo: row.schoolAttachedTo || formState.schoolName,
+                                                        schoolAccountId: String(selectedSchoolId ?? ""),
+                                                        schoolAttachedTo: formState.schoolName,
                                                       },
                                                   ),
                                                 );
@@ -2820,23 +3039,11 @@ export function PortalModuleManager({
                                             )}
                                           </td>
                                           <td>
-                                            <select
-                                              value={row.schoolAccountId}
-                                              onChange={(event) =>
-                                                updateTrainingParticipant(
-                                                  index,
-                                                  "schoolAccountId",
-                                                  event.target.value,
-                                                )
-                                              }
-                                            >
-                                              <option value="">Select school</option>
-                                              {participantSchoolOptions.map((school) => (
-                                                <option key={school.id} value={String(school.id)}>
-                                                  {school.name} ({school.schoolCode})
-                                                </option>
-                                              ))}
-                                            </select>
+                                            <input
+                                              value={formState.schoolName}
+                                              readOnly
+                                              placeholder="Select school first"
+                                            />
                                           </td>
                                           <td>
                                             <select
@@ -2890,6 +3097,63 @@ export function PortalModuleManager({
                                     </tbody>
                                   </table>
                                 </div>
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </div>
+                            );
+                          }
+
+                          if (config.module === "visit" && field.key === "teacherObserved") {
+                            const selectedSchoolId = formState.schoolId ? Number(formState.schoolId) : null;
+                            const selectedContactUid = sanitizeForInput(formState.payload.teacherContactUid);
+                            return (
+                              <div key={field.key} className="full-width">
+                                <SchoolRosterPicker
+                                  schoolId={selectedSchoolId}
+                                  schoolName={formState.schoolName}
+                                  participantType="teacher"
+                                  selectedUid={selectedContactUid}
+                                  onSelect={(entry: RosterEntry | null) => {
+                                    if (!entry) {
+                                      setFormState((prev) => ({
+                                        ...prev,
+                                        payload: {
+                                          ...prev.payload,
+                                          teacherObserved: "",
+                                          teacherContactId: "",
+                                          teacherContactUid: "",
+                                          teacherUid: "",
+                                          teacherGender: "",
+                                        },
+                                      }));
+                                      return;
+                                    }
+
+                                    const contact = entry as {
+                                      contactId: number;
+                                      contactUid: string;
+                                      fullName: string;
+                                      gender: string;
+                                      teacherUid?: string;
+                                    };
+                                    setFormState((prev) => ({
+                                      ...prev,
+                                      payload: {
+                                        ...prev.payload,
+                                        teacherObserved: contact.fullName,
+                                        teacherContactId: String(contact.contactId),
+                                        teacherContactUid: contact.contactUid,
+                                        teacherUid: contact.teacherUid ?? "",
+                                        teacherGender:
+                                          contact.gender === "Male" || contact.gender === "Female"
+                                            ? contact.gender
+                                            : "",
+                                      },
+                                    }));
+                                  }}
+                                  label={field.label}
+                                />
                                 {field.helperText ? (
                                   <small className="portal-field-help">{field.helperText}</small>
                                 ) : null}

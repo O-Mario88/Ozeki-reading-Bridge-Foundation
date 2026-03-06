@@ -3,9 +3,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { listPortalTestimonials, savePortalTestimonial } from "@/lib/db";
+import {
+  listPortalTestimonials,
+  savePortalTestimonial,
+  setPortalTestimonialModerationStatus,
+} from "@/lib/db";
 import { resolveMimeType } from "@/lib/media-response";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";
 
@@ -397,6 +401,62 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0]?.message ?? "Invalid testimonial payload." },
+        { status: 400 },
+      );
+    }
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Server error." }, { status: 500 });
+  }
+}
+
+const moderationSchema = z.object({
+  testimonialId: z.coerce.number().int().positive(),
+  moderationStatus: z.enum(["pending", "approved", "hidden"]),
+});
+
+export async function PATCH(request: Request) {
+  const user = await getAuthenticatedPortalUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!canReview(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const payload = moderationSchema.parse(await request.json());
+    setPortalTestimonialModerationStatus({
+      testimonialId: payload.testimonialId,
+      moderationStatus: payload.moderationStatus,
+      user,
+    });
+
+    const testimonial = listPortalTestimonials(user, 500).find(
+      (item) => item.id === payload.testimonialId,
+    );
+    if (!testimonial) {
+      return NextResponse.json({ error: "Testimonial not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      testimonial: {
+        ...testimonial,
+        videoUrl:
+          testimonial.videoSourceType === "youtube"
+            ? testimonial.youtubeEmbedUrl ||
+              testimonial.youtubeWatchUrl ||
+              `/api/testimonials/${testimonial.id}/video`
+            : `/api/testimonials/${testimonial.id}/video`,
+        photoUrl: testimonial.photoFileName ? `/api/testimonials/${testimonial.id}/photo` : null,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.issues[0]?.message ?? "Invalid moderation payload." },
         { status: 400 },
       );
     }

@@ -7,6 +7,14 @@ export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
 
+function getErrorCode(error: unknown) {
+    if (typeof error !== "object" || error === null) {
+        return undefined;
+    }
+    const maybeCode = (error as { code?: unknown }).code;
+    return typeof maybeCode === "string" ? maybeCode : undefined;
+}
+
 export async function GET(
     request: Request,
     segmentData: { params: Params }
@@ -40,7 +48,7 @@ export async function GET(
             if (!target || target.status !== "published") {
                 return new NextResponse("Not found or not published", { status: 404 });
             }
-            storedPath = target.storedPath as string;
+            storedPath = typeof target.storedPath === "string" ? target.storedPath : null;
             filename = `Audited_Statement_FY${target.fy}.pdf`;
         } else {
             return new NextResponse("Invalid type", { status: 400 });
@@ -63,8 +71,8 @@ export async function GET(
                 "Content-Disposition": `attachment; filename="${filename}"`,
             },
         });
-    } catch (error: Omit<Error, "name"> | any) {
-        if (error.code === 'ENOENT') {
+    } catch (error: unknown) {
+        if (getErrorCode(error) === "ENOENT") {
             return new NextResponse("File not found on disk", { status: 404 });
         }
         console.error("Download error:", error);

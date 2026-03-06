@@ -5,21 +5,26 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 
+function errorMessage(error: unknown, fallback: string) {
+    return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export async function POST(request: Request) {
     try {
         const auth = await requireFinanceSuperAdmin();
         if (auth.error) return auth.error;
 
         const formData = await request.formData();
-        const file = formData.get("file") as File;
-        const fy = parseInt(formData.get("fy") as string, 10);
+        const fileEntry = formData.get("file");
+        const fy = parseInt(String(formData.get("fy") ?? ""), 10);
         const auditorName = (formData.get("auditorName") as string) || undefined;
         const auditCompletedDate = (formData.get("auditCompletedDate") as string) || undefined;
         const notes = (formData.get("notes") as string) || undefined;
 
-        if (!file || isNaN(fy)) {
+        if (!(fileEntry instanceof File) || isNaN(fy)) {
             return NextResponse.json({ error: "File and valid FY are required" }, { status: 400 });
         }
+        const file = fileEntry;
 
         if (!file.name.toLowerCase().endsWith(".pdf")) {
             return NextResponse.json({ error: "Only PDFs are allowed" }, { status: 400 });
@@ -47,10 +52,10 @@ export async function POST(request: Request) {
         );
 
         return NextResponse.json({ success: true, id });
-    } catch (error: Omit<Error, "name"> | any) {
+    } catch (error: unknown) {
         console.error("POST /api/portal/finance/transparency/upload error:", error);
         return NextResponse.json(
-            { error: error?.message || "Failed to upload audited statement" },
+            { error: errorMessage(error, "Failed to upload audited statement") },
             { status: 500 }
         );
     }

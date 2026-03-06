@@ -3,6 +3,10 @@ import { listFinancePublicSnapshots, listFinanceAuditedStatements } from "@/lib/
 
 export const dynamic = "force-dynamic";
 
+function errorMessage(error: unknown, fallback: string) {
+    return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export async function GET() {
     try {
         const snapshots = listFinancePublicSnapshots({ publishedOnly: true });
@@ -38,10 +42,10 @@ export async function GET() {
             snapshots: safeSnapshots,
             audited: safeAudited,
         });
-    } catch (error: Omit<Error, "name"> | any) {
+    } catch (error: unknown) {
         console.error("GET /api/transparency/financials error:", error);
         return NextResponse.json(
-            { error: "Failed to load public transparency data" },
+            { error: errorMessage(error, "Failed to load public transparency data") },
             { status: 500 }
         );
     }

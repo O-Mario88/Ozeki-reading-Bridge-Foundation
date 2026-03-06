@@ -10,7 +10,7 @@ interface SessionVideoPanelProps {
   isStaff?: boolean;
 }
 
-export function SessionVideoPanel({ session, trainerName = "Ozeki Trainer", isStaff = false }: SessionVideoPanelProps) {
+export function SessionVideoPanel({ session, trainerName = "Ozeki Trainer" }: SessionVideoPanelProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleFullscreenToggle = () => {
@@ -38,9 +38,8 @@ export function SessionVideoPanel({ session, trainerName = "Ozeki Trainer", isSt
   return (
     <div
       id="session-video-container"
-      className={`relative bg-black rounded-2xl overflow-hidden shadow-sm flex flex-col \${
-        isFullscreen ? "h-screen w-screen rounded-none" : "w-full aspect-video"
-      }`}
+      className={`relative bg-black rounded-2xl overflow-hidden shadow-sm flex flex-col ${isFullscreen ? "h-screen w-screen rounded-none" : "w-full aspect-video"
+        }`}
     >
       {/* Fallback View (If Meet embed isn't supported / preferred new tab) */}
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 text-white p-8 text-center space-y-6">

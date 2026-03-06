@@ -5,216 +5,214 @@ import leadershipPhoto from "../../../assets/photos/PXL_20260217_124357146.jpg";
 export const metadata = {
   title: "Instructional Leadership Support (Headteachers & Directors of Studies)",
   description:
-    "Leadership coaching that strengthens supervision, supports teachers, and protects reading time.",
+    "Leadership support that protects reading time, strengthens supervision, and sustains quality instruction beyond one-off trainings.",
 };
 
 export default function InstructionalLeadershipSupportPage() {
   return (
     <>
-      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+      <section
+        className="section tpd-hero-section bg-surface-container"
+        style={{ backgroundColor: "var(--md-sys-color-surface-container)" }}
+      >
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
-            <p className="kicker">Program spotlight</p>
+            <p className="kicker">Program Spotlight</p>
             <h1 className="tpd-page-title">
-              Instructional Leadership Support (Headteachers &amp; Directors of
-              Studies)
+              Instructional Leadership Support (Headteachers &amp; DOS)
             </h1>
             <p className="tpd-subline">
-              Leadership coaching that strengthens supervision, supports teachers,
-              and protects reading time.
+              Leadership systems that protect reading time and sustain instructional quality.
             </p>
             <h2>Overview</h2>
             <p>
-              Even strong teachers struggle without strong instructional
-              leadership. This program equips Headteachers and Directors of Studies
-              with practical tools and routines to supervise reading lessons, coach
-              teachers, and use learner data to guide decisions.
+              Instructional Leadership Support strengthens school leadership to
+              protect reading time and sustain quality instruction beyond one-off
+              trainings. Even strong teacher training can fade without consistent
+              supervision and school-level routines.
             </p>
             <p>
-              The goal is simple: literacy becomes a school priority with
-              consistent follow-through, not a one-time activity.
+              This program ensures literacy improvement becomes part of how a
+              school is led, monitored, and improved, term by term.
             </p>
             <p className="meta-line">
-              <strong>Outcome we drive:</strong> Leaders drive consistent,
-              high-quality reading instruction.
+              <strong>Outcome we drive:</strong> school leaders sustain literacy
+              gains through practical supervision, evidence-led decisions, and
+              daily implementation routines.
             </p>
           </article>
 
           <article className="card tpd-hero-media">
             <Image
               src={leadershipPhoto}
-              alt="Headteachers and school leaders participating in instructional leadership coaching"
+              alt="Headteachers and Directors of Studies in instructional leadership coaching"
               priority
+              sizes="(max-width: 900px) 100vw, 45vw"
             />
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">How We Support School Leaders (What We Do)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>1) Observation &amp; Supervision Systems</h3>
-              <p>
-                We train leaders to observe reading lessons using clear, short
-                checklists, so supervision is possible even with busy schedules.
-              </p>
-              <p>What leaders learn to check:</p>
-              <ul>
-                <li>Is the reading block happening as scheduled?</li>
-                <li>
-                  Is the lesson following the phonics routine (review, teach,
-                  practice, check)?
-                </li>
-                <li>Is sound pronunciation and blending taught accurately?</li>
-                <li>Are learners getting enough active practice time?</li>
-                <li>Are errors corrected immediately and correctly?</li>
-                <li>Are teaching aids and materials being used properly?</li>
-              </ul>
-              <p>
-                We also help leaders plan a realistic supervision timetable with
-                clear classroom coverage and recording routines.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>2) Coaching Conversations</h3>
-              <p>
-                Observation without coaching does not improve teaching. We train
-                leaders to hold short, effective conversations that help teachers
-                improve quickly.
-              </p>
-              <p>Coaching conversation structure:</p>
-              <ul>
-                <li>Start with strengths (what is working and why)</li>
-                <li>Name 1-2 priority improvements (not 10 issues)</li>
-                <li>Give a clear next step for the next lesson</li>
-                <li>Agree on daily routine practice actions</li>
-                <li>Set a follow-up date for accountability</li>
-              </ul>
-              <p>
-                Leaders also learn micro-coaching: 5-minute post-lesson feedback
-                that drives immediate classroom change.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>3) Data-Informed Decisions</h3>
-              <p>
-                We help leaders interpret simple learner reading data and translate
-                it into practical action.
-              </p>
-              <p>Leaders use data to:</p>
-              <ul>
-                <li>Identify classes or grades with most non-readers</li>
-                <li>Decide where coaching support should focus</li>
-                <li>Group learners for catch-up interventions</li>
-                <li>Track progress over time and adjust instruction</li>
-                <li>Run termly literacy review meetings with teachers</li>
-              </ul>
-              <p>
-                Improvement becomes measurable and targeted instead of opinion-based.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h3>Focus Areas</h3>
-            <ul>
-              <li>
-                Observation and supervision checklists (what to look for and how
-                to record it)
-              </li>
-              <li>
-                Coaching conversations (how to give feedback and build teacher
-                confidence)
-              </li>
-              <li>
-                Data-informed decisions (how to use learner results for action)
-              </li>
-            </ul>
-          </article>
-
-          <article className="card">
-            <h3>Outputs (What Schools Receive)</h3>
-            <p>1) Leadership Toolkits:</p>
-            <ul>
-              <li>Reading lesson observation checklist</li>
-              <li>Supervision schedule template</li>
-              <li>Coaching conversation guide</li>
-              <li>Literacy meeting agenda and action tracker</li>
-              <li>Simple literacy data summary format</li>
-            </ul>
-            <p>2) Supervision Routines:</p>
-            <ul>
-              <li>Weekly or biweekly reading lesson checks</li>
-              <li>Monthly implementation reviews</li>
-              <li>Term literacy planning and reflection routines</li>
-              <li>Documented follow-ups for teachers needing support</li>
-            </ul>
-            <p>3) Coaching Templates:</p>
-            <ul>
-              <li>Teacher improvement plan template</li>
-              <li>Quick feedback form</li>
-              <li>Next lesson focus coaching card</li>
-              <li>Follow-up tracker</li>
-            </ul>
-          </article>
-
-          <article className="card">
-            <h3>Website Downloads</h3>
-            <p>Observation &amp; Supervision</p>
-            <ul>
-              <li><a className="inline-download-link" href="/resources">Download Reading Lesson Supervision Checklist (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Supervision Schedule Template (Word/Excel)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Literacy Implementation Checklist (PDF)</a></li>
-            </ul>
-            <p>Coaching Conversations</p>
-            <ul>
-              <li><a className="inline-download-link" href="/resources">Download Coaching Conversation Guide (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Teacher Improvement Plan Template (Word)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Quick Feedback Form (PDF)</a></li>
-            </ul>
-            <p>Data-Informed Decisions</p>
-            <ul>
-              <li><a className="inline-download-link" href="/resources">Download Literacy Data Summary Template (Excel)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Termly Literacy Review Meeting Template (Word)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Progress Tracking Dashboard (Simple Excel)</a></li>
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container cards-grid">
-          <article className="card full-width">
-            <h3>Primary CTA</h3>
+            <h3>Practical Supervision Tools for Daily Leadership Work</h3>
             <p>
-              Book coaching support for Headteachers and Directors of Studies to
-              strengthen supervision and teacher support in your school.
+              We equip Headteachers and Directors of Studies with simple
+              supervision tools that fit into their normal schedules:
+            </p>
+            <ul>
+              <li>Observation checklists aligned to structured phonics lessons</li>
+              <li>Short templates for supportive, specific teacher feedback</li>
+              <li>Coaching conversation guides for lesson follow-up</li>
+            </ul>
+            <p>
+              These tools make supervision manageable and consistent across terms.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>What Leaders Are Trained to Observe</h3>
+            <p>During reading lessons, leaders are guided to track core routines:</p>
+            <ul>
+              <li>Sound revision and new sound modeling quality</li>
+              <li>Explicit blending and segmenting routines</li>
+              <li>Decoding practice and correction routines</li>
+              <li>Fluency practice and quick checks</li>
+              <li>Learner practice time and lesson pace</li>
+            </ul>
+          </article>
+
+          <article className="card">
+            <h3>Coaching Conversations That Drive Action</h3>
+            <p>
+              Leaders move beyond general comments like teach well to actionable
+              guidance linked to learner outcomes:
+            </p>
+            <ul>
+              <li>Increase learner practice time</li>
+              <li>Correct blending errors immediately</li>
+              <li>Align words to taught sounds</li>
+            </ul>
+            <p>
+              This keeps post-observation feedback practical, supportive, and
+              immediately usable in the next lesson.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Evidence-Led Leadership Decisions</h3>
+            <p>
+              Leaders are trained to use learner assessment and reading-level data
+              for practical school decisions:
+            </p>
+            <ul>
+              <li>Which classes need catch-up groups</li>
+              <li>Which teachers need coaching versus refresher training</li>
+              <li>How timetables should protect daily reading routines</li>
+              <li>How to monitor whether changes are working</li>
+            </ul>
+          </article>
+
+          <article className="card">
+            <h3>Lightweight Accountability Systems</h3>
+            <p>
+              Leaders learn to run manageable school systems that sustain gains
+              even when external coaches are not present:
+            </p>
+            <ul>
+              <li>Weekly reading routine checks</li>
+              <li>Simple implementation trackers</li>
+              <li>Follow-up plans with clear responsibilities</li>
+            </ul>
+            <p>
+              These structures embed literacy as a school-owned priority.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Measured Leadership Actions in the Platform</h3>
+            <p>Leadership actions are recorded and tracked, including:</p>
+            <ul>
+              <li>Supervision visits completed</li>
+              <li>Lesson observations logged</li>
+              <li>Follow-up meetings held</li>
+              <li>Routine implementation progress</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Accountability Chain: Leadership to Learner Outcomes</h3>
+            <p>
+              Leadership actions are linked to teaching quality scores and learner
+              outcomes, creating a clear chain:
+            </p>
+            <p className="meta-line">
+              <strong>
+                leadership supervision strengthens classroom practice -&gt; improved
+                practice drives better reading levels and comprehension
+              </strong>
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Value for Schools</h3>
+            <p>
+              Improvement becomes manageable. Leaders can see what is working,
+              where support is needed, and how to keep literacy implementation
+              strong across terms.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Value for Partners</h3>
+            <p>
+              Partners receive credible evidence that literacy improvement does not
+              depend on one training event, but is sustained through school-owned
+              systems and leadership commitment.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid-two">
+          <article className="card">
+            <h3>Explore Related Evidence</h3>
+            <p>
+              <Link className="inline-download-link" href="/impact">
+                Open Live Impact Dashboard
+              </Link>
+            </p>
+            <p>
+              <Link className="inline-download-link" href="/resources">
+                Open Resources Library
+              </Link>
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Support Leadership Strengthening</h3>
+            <p>
+              Partner to scale Headteacher and DOS instructional leadership systems
+              that keep reading gains protected and sustained.
             </p>
             <div className="action-row">
               <Link className="button" href="/portal/schools">
                 Open school profiles
               </Link>
+              <Link className="button button-ghost" href="/partner-with-us">
+                Partner With Us
+              </Link>
             </div>
-          </article>
-
-          <article className="card full-width">
-            <h3>Outcome</h3>
-            <p>
-              Leaders drive consistent, high-quality reading instruction by
-              supervising lessons effectively, coaching teachers with confidence,
-              and using data to keep literacy implementation strong throughout the
-              term.
-            </p>
           </article>
         </div>
       </section>

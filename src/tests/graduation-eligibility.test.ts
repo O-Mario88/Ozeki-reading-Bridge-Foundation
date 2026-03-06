@@ -6,6 +6,7 @@ import {
   createLessonEvaluation,
   getDb,
   getPortalUserByEmail,
+  getGraduationSettings,
   getSchoolGraduationEligibility,
   listAuditLogs,
   listTeachersBySchool,
@@ -181,6 +182,12 @@ test("school graduation eligibility is computed from live records and confirmati
         latestAssessmentRequired: true,
         latestEvaluationRequired: true,
         assessmentCycleMode: "latest_or_endline",
+        minLearnersAssessedN: 1,
+        targetGrades: ["P3"],
+        minTeacherEvaluationsTotal: 1,
+        minEvaluationsPerReadingTeacher: 1,
+        dataCompletenessThreshold: 0,
+        requireSustainabilityValidation: false,
         dismissSnoozeDays: 7,
         criteriaVersion: "GRAD-test",
       },
@@ -192,17 +199,22 @@ test("school graduation eligibility is computed from live records and confirmati
     assert.ok(eligibility, "Expected graduation eligibility snapshot.");
     assert.equal(eligibility!.isEligible, true, "School should be eligible under permissive thresholds.");
 
+    const checklistAnswers = Object.fromEntries(
+      getGraduationSettings().sustainabilityChecklistItems.map((item) => [item, true]),
+    );
+
     const reviewed = reviewSchoolGraduation(
       {
         schoolId: school!.id,
         action: "confirm_graduation",
         reason: "Automated test confirmation.",
+        checklistAnswers,
       },
       actor,
     );
     assert.ok(reviewed, "Expected graduation review response.");
-    assert.equal(reviewed?.programStatus, "graduated");
-    assert.equal(reviewed?.workflowState, "graduated");
+    assert.equal(reviewed?.programStatus, "monitoring");
+    assert.equal(reviewed?.workflowState, "monitoring");
 
     const logs = listAuditLogs({ targetTable: "schools_directory", limit: 200 });
     assert.ok(

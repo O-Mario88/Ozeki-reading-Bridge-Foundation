@@ -6,6 +6,14 @@ import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
+function getErrorCode(error: unknown) {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+  const maybeCode = (error as { code?: unknown }).code;
+  return typeof maybeCode === "string" ? maybeCode : undefined;
+}
+
 export async function GET(request: Request) {
   try {
     const auth = await requireFinanceSuperAdmin();
@@ -32,16 +40,16 @@ export async function GET(request: Request) {
       }
       storedPath = target.storedPath;
       filename = target.quarter
-        ? `Ledger_Snapshot_FY\${target.fy}_\${target.quarter}.pdf`
-        : `Ledger_Snapshot_FY\${target.fy}_Annual.pdf`;
+        ? `Ledger_Snapshot_FY${target.fy}_${target.quarter}.pdf`
+        : `Ledger_Snapshot_FY${target.fy}_Annual.pdf`;
     } else if (type === "audited") {
       const allAudits = listFinanceAuditedStatements();
       const target = allAudits.find(a => a.id === id);
       if (!target) {
         return new NextResponse("Not found", { status: 404 });
       }
-      storedPath = target.storedPath as string;
-      filename = `Audited_Statement_FY\${target.fy}.pdf`;
+      storedPath = typeof target.storedPath === "string" ? target.storedPath : null;
+      filename = `Audited_Statement_FY${target.fy}.pdf`;
     } else {
       return new NextResponse("Invalid type", { status: 400 });
     }
@@ -60,11 +68,11 @@ export async function GET(request: Request) {
     return new NextResponse(fileBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="\${filename}"`,
+        "Content-Disposition": `inline; filename="${filename}"`,
       },
     });
-  } catch (error: Omit<Error, "name"> | any) {
-    if (error.code === 'ENOENT') {
+  } catch (error: unknown) {
+    if (getErrorCode(error) === "ENOENT") {
       return new NextResponse("File not found on disk", { status: 404 });
     }
     console.error("Admin Download error:", error);

@@ -4,6 +4,10 @@ import { requirePortalUser } from "@/lib/portal-auth";
 import { ensureTrainingSchema, createTrainingSession, updateTrainingSessionGoogleLinks } from "@/lib/training-db";
 import { createMeetEvent } from "@/lib/google-meet-sync";
 
+type TrainingSessionRow = Record<string, unknown> & {
+  host_user_id: number | null;
+};
+
 export async function GET() {
   try {
     const user = await requirePortalUser();
@@ -17,12 +21,11 @@ export async function GET() {
           FROM training_sessions s
           LEFT JOIN portal_users u ON s.host_user_id = u.id
           ORDER BY s.start_time DESC
-        `).all() as Record<string, unknown>[];
+        `).all() as TrainingSessionRow[];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filtered = isAdmin
       ? sessions
-      : sessions.filter((s: any) => s.host_user_id === user.id);
+      : sessions.filter((s) => Number(s.host_user_id) === user.id);
 
     return NextResponse.json({ sessions: filtered });
   } catch (error) {

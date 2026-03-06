@@ -19,7 +19,7 @@ export async function GET() {
             aiNotesEnabled: true,
             aiModel: "gpt-4o-mini",
         });
-    } catch (error) {
+    } catch (_error) {
         return new NextResponse("Internal Error", { status: 500 });
     }
 }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         );
 
         return NextResponse.json({ success: true, settings: body });
-    } catch (error) {
+    } catch (_error) {
         return new NextResponse("Internal Error", { status: 500 });
     }
 }
