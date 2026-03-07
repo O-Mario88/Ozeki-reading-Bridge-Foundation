@@ -17,3 +17,6 @@ assets/videos/*.mp4
 # Ignore all next build artifacts
 .next*
 public/videos/*.mp4
+
+# TypeScript build cache
+*.tsbuildinfo
