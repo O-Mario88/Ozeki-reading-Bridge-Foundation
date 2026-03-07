@@ -5,217 +5,204 @@ import contentAdvocacyPhoto from "../../../assets/photos/PXL_20260217_124415441.
 export const metadata = {
   title: "Literacy Content Creation & Advocacy",
   description:
-    "Practical knowledge-sharing that helps educators teach reading better every week, not only during trainings.",
+    "Continuous practical literacy guidance that reinforces training, coaching, and assessment standards across schools and districts.",
 };
 
 export default function LiteracyContentCreationAdvocacyPage() {
   return (
     <>
-      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+      <section
+        className="section tpd-hero-section bg-surface-container"
+        style={{ backgroundColor: "var(--md-sys-color-surface-container)" }}
+      >
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
-            <p className="kicker">Program spotlight</p>
+            <p className="kicker">Program Spotlight</p>
             <h1 className="tpd-page-title">Literacy Content Creation &amp; Advocacy</h1>
             <p className="tpd-subline">
-              Practical knowledge-sharing that helps educators teach reading
-              better, every week, not only during trainings.
+              Continuous practical guidance for teachers and school leaders beyond trainings.
             </p>
             <h2>Overview</h2>
             <p>
-              Many teachers want to improve, but they lack clear, practical
-              guidance they can trust. Our Literacy Content Creation &amp;
-              Advocacy program produces short, teacher-friendly content that
-              translates evidence-based literacy practices into simple routines,
-              tools, and tips for real classrooms. This keeps good practice
-              alive between trainings and helps schools standardize quality
-              across teachers.
+              Literacy Content Creation &amp; Advocacy extends Ozeki Reading Bridge
+              Foundation beyond trainings and school visits by providing
+              continuous, practical guidance that teachers and school leaders can
+              use every week.
+            </p>
+            <p>
+              In many schools, improvement slows when support is not immediately
+              available. This program keeps best practice accessible, simple to
+              apply, and aligned to the same standards used in training, coaching,
+              and assessment.
             </p>
             <p className="meta-line">
-              <strong>Outcome we drive:</strong> More educators apply proven
-              literacy practices in real classrooms.
+              <strong>Outcome we drive:</strong> stronger consistency across
+              districts through shared access to proven routines, tools, and
+              implementation examples.
             </p>
           </article>
 
           <article className="card tpd-hero-media">
             <Image
               src={contentAdvocacyPhoto}
-              alt="Teachers participating in literacy content and instructional advocacy session"
+              alt="Teachers and facilitators engaging with literacy content and advocacy resources"
               priority
+              sizes="(max-width: 900px) 100vw, 45vw"
             />
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">What We Produce (Focus Areas)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>1) Guides (Step-by-step how-to teach resources)</h3>
-              <p>
-                We create practical guides that show teachers exactly what to do
-                during reading lessons using simple language, examples, and
-                ready-to-use routines.
-              </p>
-              <p>Examples of guides:</p>
-              <ul>
-                <li>&quot;How to Teach Letter Sounds Correctly&quot;</li>
-                <li>&quot;Blending Routine: From Sounds to Words&quot;</li>
-                <li>&quot;Error Correction in Phonics (Fast &amp; Supportive)&quot;</li>
-                <li>&quot;Fluency Routines in 10 Minutes&quot;</li>
-                <li>&quot;Simple Comprehension Checks That Work&quot;</li>
-                <li>&quot;Catch-Up Reading: Small-Group Lesson Plans&quot;</li>
-                <li>&quot;How to Use Decodable Readers Effectively&quot;</li>
-              </ul>
-            </article>
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Implementation-Focused Resource Types</h3>
+            <p>
+              Ozeki produces resources designed for real classrooms and quick use:
+            </p>
+            <ul>
+              <li>Short teacher guides and lesson tips</li>
+              <li>Phonics routine scripts and remediation plans</li>
+              <li>Fluency practice ideas and comprehension mini-lessons</li>
+              <li>Assessment quick guides</li>
+              <li>Leadership supervision checklists</li>
+            </ul>
+          </article>
 
-            <article className="card">
-              <h3>2) Articles (Professional learning in bite-sized form)</h3>
-              <p>
-                We publish articles that explain common classroom challenges and
-                provide practical solutions teachers can apply immediately.
-              </p>
-              <p>Article themes:</p>
-              <ul>
-                <li>Why learners guess words and how to stop it</li>
-                <li>Common phonics mistakes and how to fix them</li>
-                <li>How to manage large classes in phonics lessons</li>
-                <li>How to support slow learners without slowing the class</li>
-                <li>How to build reading culture inside the classroom</li>
-                <li>How to track progress using simple learner data</li>
-              </ul>
-            </article>
+          <article className="card">
+            <h3>Built for Immediate Use</h3>
+            <p>
+              Content is structured to be usable in minutes: clear steps, examples,
+              and common mistakes with corrections.
+            </p>
+            <p>
+              This allows teachers to improve practice without long workshops and
+              supports leaders to supervise instruction and protect reading time
+              with practical tools.
+            </p>
+          </article>
 
-            <article className="card">
-              <h3>3) Implementation Tips (Quick wins teachers can use tomorrow)</h3>
-              <p>
-                We share short do-this-next-lesson tips designed for busy teachers
-                and school leaders.
-              </p>
-              <p>Examples:</p>
-              <ul>
-                <li>5-minute warm-up routines for daily sound review</li>
-                <li>A 3-step blending drill for faster decoding</li>
-                <li>Weekly routines for fluency and spelling</li>
-                <li>Simple class trackers for reading progress</li>
-                <li>Supervision tips for Headteachers and DoS</li>
-              </ul>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">Outputs (What Schools and Educators Receive)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>1) Toolkits (Downloadable Packs)</h3>
-              <p>
-                Curated bundles combining charts, templates, routines, and
-                lesson tools:
-              </p>
-              <ul>
-                <li>Phonics Starter Toolkit</li>
-                <li>Fluency Toolkit</li>
-                <li>Assessment Toolkit</li>
-                <li>Remedial/Catch-Up Toolkit</li>
-                <li>School Supervision Toolkit</li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>2) Campaign Content (Consistency at Scale)</h3>
-              <p>
-                Short, shareable content for literacy campaigns and teacher
-                reinforcement:
-              </p>
-              <ul>
-                <li>Posters, routines cards, classroom reminders</li>
-                <li>
-                  Themed reading improvement campaigns (for example, Decode
-                  First, Then Read Fast)
-                </li>
-                <li>Optional termly implementation challenges for schools</li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>3) Best-Practice Briefs (Clear, credible summaries)</h3>
-              <p>Short briefs that condense proven literacy practices into:</p>
-              <ul>
-                <li>What works</li>
-                <li>Why it works</li>
-                <li>
-                  How to implement in a Ugandan/African classroom context
-                </li>
-                <li>Common mistakes to avoid</li>
-              </ul>
-            </article>
-          </div>
+          <article className="card">
+            <h3>Leadership-Oriented Guidance</h3>
+            <p>
+              For Headteachers and Directors of Studies, content emphasizes:
+            </p>
+            <ul>
+              <li>How to protect daily reading time on timetables</li>
+              <li>How to supervise classroom routines effectively</li>
+              <li>
+                How to use learner data to decide grouping, coaching, and support
+                priorities
+              </li>
+            </ul>
+          </article>
         </div>
       </section>
 
       <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h3>Where Content Lives (Website + Visibility)</h3>
-            <ul>
-              <li>
-                Blog articles organized by phonics, fluency, comprehension,
-                assessment, and leadership
-              </li>
-              <li>
-                Resource Library downloads for toolkits and templates with
-                download links
-              </li>
-              <li>
-                Program pages with embedded implementation tips and sample tools
-              </li>
-              <li>Optional monthly Teaching Tip newsletter</li>
-            </ul>
-          </article>
-
-          <article className="card">
-            <h3>Website Downloads</h3>
-            <ul>
-              <li><a className="inline-download-link" href="/resources">Download Phonics Teaching Guide (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Fluency Routines Toolkit (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Reading Assessment Pack (PDF/Excel)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Remedial Reading Toolkit (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Supervision &amp; Coaching Toolkit (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Best-Practice Briefs (PDF Bundle)</a></li>
-            </ul>
-          </article>
-
-          <article className="card">
-            <h3>Primary Call To Action</h3>
+            <h3>From Static Library to Smart Support</h3>
             <p>
-              Access practical teaching resources, toolkits, and implementation
-              guides in one place.
+              Within the platform, resources are organized by grade, phonics set,
+              topic, and program. This turns content into a practical support
+              system rather than a static repository.
             </p>
-            <div className="action-row">
-              <Link className="button" href="/resources">
-                Access Free Teaching Resources
-              </Link>
-            </div>
+          </article>
+
+          <article className="card">
+            <h3>Engagement Tracking and Usage Signals</h3>
+            <p>
+              The platform tracks engagement including views, downloads, and usage
+              patterns so Ozeki and partners can see what schools are actually
+              accessing and where support demand is highest.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Targeted Content Recommendations</h3>
+            <p>
+              Resources can be surfaced strategically by school need:
+            </p>
+            <ul>
+              <li>Decoding gaps: blending and error-correction resources</li>
+              <li>Weak fluency: repeated-reading routines and passage packs</li>
+              <li>Catch-up flags: small-group intervention guides</li>
+            </ul>
+            <p>
+              This makes support responsive and efficient, especially in schools
+              with limited connectivity or fewer coaching visits.
+            </p>
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container">
+        <div className="container cards-grid">
           <article className="card">
-            <h3>Outcome</h3>
+            <h3>National Advocacy for Evidence-Based Reading</h3>
             <p>
-              More educators apply proven literacy practices in real classrooms
-              because they have practical guidance, tools, and routines they
-              can use immediately and repeat consistently.
+              As an advocacy channel, the program builds national momentum for
+              evidence-based reading instruction by sharing practical guidance and
+              highlighting what works based on platform evidence.
             </p>
+          </article>
+
+          <article className="card">
+            <h3>System-Level Value</h3>
+            <p>
+              This strengthens teacher practice, informs district-level
+              conversations, and increases partner confidence that literacy
+              improvement is driven by a coherent and measurable approach.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Program Result</h3>
+            <p>
+              The result is a national knowledge-sharing system that reinforces
+              classroom implementation, supports sustainability, and accelerates
+              literacy gains across Uganda.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid-two">
+          <article className="card">
+            <h3>Explore Related Evidence</h3>
+            <p>
+              <Link className="inline-download-link" href="/impact">
+                Open Live Impact Dashboard
+              </Link>
+            </p>
+            <p>
+              <Link className="inline-download-link" href="/resources">
+                Open Resources Library
+              </Link>
+            </p>
+            <p>
+              <Link className="inline-download-link" href="/blog">
+                Open Literacy Blog
+              </Link>
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Scale Practical Literacy Guidance</h3>
+            <p>
+              Partner with us to expand high-quality literacy content that is used,
+              tracked, and linked to implementation and outcome improvement.
+            </p>
+            <div className="action-row">
+              <Link className="button" href="/resources">
+                Access Teaching Resources
+              </Link>
+              <Link className="button button-ghost" href="/partner-with-us">
+                Partner With Us
+              </Link>
+            </div>
           </article>
         </div>
       </section>

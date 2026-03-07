@@ -190,6 +190,12 @@ export async function GET(request: Request) {
     "Teacher Observation Average",
     "Teacher Observation Count",
     "Learner Assessments",
+    "Implementation Started Visits",
+    "Implementation Not Started Visits",
+    "Implementation Partial Visits",
+    "Demo Visits",
+    "Latest Implementation Status",
+    "Latest Visit Pathway",
     "Total Records",
   ];
 
@@ -219,6 +225,12 @@ export async function GET(request: Request) {
       row.teacherObservationAverage ?? "",
       row.teacherObservationCount,
       row.learnerAssessments,
+      row.implementationStartedVisits,
+      row.implementationNotStartedVisits,
+      row.implementationPartialVisits,
+      row.demoVisits,
+      row.latestImplementationStatus ?? "",
+      row.latestVisitPathway ?? "",
       row.totalRecords,
     ]
       .map((value) => csvEscape(value))

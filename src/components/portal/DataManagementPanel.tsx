@@ -69,7 +69,9 @@ export function DataManagementPanel() {
             <h2>🗑️ Data Management</h2>
             <p>
                 View row counts for each data table and purge all test/dummy data before
-                go-live. <strong>User accounts and geography master data are preserved.</strong>
+                go-live. <strong>User accounts and geography master data are preserved.</strong>{" "}
+                Uploaded runtime artifacts (finance PDFs/uploads, evidence, testimonials, blog uploads)
+                are also deleted.
             </p>
 
             {loading ? (
@@ -93,7 +95,7 @@ export function DataManagementPanel() {
                         </div>
                         <div className="card" style={{ flex: 1, minWidth: 180, textAlign: "center" }}>
                             <p className="portal-muted" style={{ margin: 0, fontSize: "0.85rem" }}>Total Rows</p>
-                            <p style={{ fontSize: "1.8rem", fontWeight: 700, margin: "0.25rem 0", color: totalRows > 0 ? "var(--color-warning, #e67e22)" : "var(--color-success, #27ae60)" }}>
+                            <p style={{ fontSize: "1.8rem", fontWeight: 700, margin: "0.25rem 0", color: totalRows > 0 ? "var(--color-warning, #e67e22)" : "var(--color-success, #FA7D15)" }}>
                                 {totalRows.toLocaleString()}
                             </p>
                         </div>
@@ -160,7 +162,8 @@ export function DataManagementPanel() {
                         <p style={{ margin: "0 0 1rem" }}>
                             Permanently delete <strong>all {totalRows.toLocaleString()} rows</strong> across{" "}
                             {nonEmptyTables.length} table{nonEmptyTables.length !== 1 ? "s" : ""}. User accounts
-                            and geography data will <strong>not</strong> be affected.
+                            and geography data will <strong>not</strong> be affected. Uploaded runtime files will
+                            also be removed.
                         </p>
 
                         {!confirmOpen ? (

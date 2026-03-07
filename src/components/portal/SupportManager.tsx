@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { SupportRequestRecord, SupportRequestStatus, PortalUserAdminRecord } from "@/lib/types";
 
 interface Props {
@@ -12,9 +12,18 @@ const STATUS_COLORS: Record<SupportRequestStatus, string> = {
     New: "#2196f3",
     Contacted: "#ff9800",
     Scheduled: "#9c27b0",
-    Delivered: "#4caf50",
+    Delivered: "#F8A05A",
     Closed: "#757575"
 };
+
+const FILTER_STATUSES: Array<SupportRequestStatus | "All"> = [
+    "All",
+    "New",
+    "Contacted",
+    "Scheduled",
+    "Delivered",
+    "Closed",
+];
 
 function Badge({ label, color }: { label: string; color: string }) {
     return (
@@ -73,10 +82,10 @@ export default function SupportManager({ initialRequests, staffMembers }: Props)
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    {["All", "New", "Contacted", "Scheduled", "Delivered", "Closed"].map(status => (
+                    {FILTER_STATUSES.map(status => (
                         <button
                             key={status}
-                            onClick={() => setFilterStatus(status as any)}
+                            onClick={() => setFilterStatus(status)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterStatus === status
                                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
                                 : "bg-gray-50 text-gray-500 hover:bg-gray-100"

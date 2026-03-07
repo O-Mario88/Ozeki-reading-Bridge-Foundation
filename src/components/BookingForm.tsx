@@ -1,16 +1,19 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { serviceOptions } from "@/lib/content";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
-type SubmitState = {
+import { BaseContactForm } from "./BaseContactForm";
+
+type BookingSubmitState = {
   status: "idle" | "submitting" | "success" | "error";
   message: string;
   eventLink?: string | null;
   meetLink?: string | null;
 };
 
-const initialState: SubmitState = { status: "idle", message: "", eventLink: null, meetLink: null };
+const initialState: BookingSubmitState = { status: "idle", message: "", eventLink: null, meetLink: null };
 
 export function BookingForm({
   onSuccess,
@@ -19,10 +22,9 @@ export function BookingForm({
   onSuccess?: () => void;
   onCancel?: () => void;
 }) {
-  const [state, setState] = useState<SubmitState>(initialState);
+  const [state, setState] = useState<BookingSubmitState>(initialState);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit(formData: FormData) {
     setState({
       status: "submitting",
       message: "Submitting request...",
@@ -30,17 +32,10 @@ export function BookingForm({
       meetLink: null,
     });
 
-    const formData = new FormData(event.currentTarget);
     const payload = Object.fromEntries(formData.entries());
 
     try {
-      const response = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await response.json()) as {
+      const result = await submitJsonWithOfflineQueue<{
         error?: string;
         message?: string;
         calendar?: {
@@ -48,13 +43,28 @@ export function BookingForm({
           meetLink: string | null;
         } | null;
         calendarWarning?: string;
-      };
+      }>("/api/bookings", {
+        payload,
+        label: "Booking request",
+      });
 
-      if (!response.ok) {
+      if (result.queued) {
+        setState({
+          status: "success",
+          message:
+            "No internet connection. Booking request saved on this device and will sync automatically when connected.",
+          eventLink: null,
+          meetLink: null,
+        });
+        return;
+      }
+
+      const data = result.data ?? {};
+
+      if (!result.response.ok) {
         throw new Error(data.error ?? "Could not submit booking request.");
       }
 
-      event.currentTarget.reset();
       setState({
         status: "success",
         message: data.calendarWarning
@@ -76,7 +86,14 @@ export function BookingForm({
   }
 
   return (
-    <form className="form-grid booking-form-grid" onSubmit={handleSubmit}>
+    <BaseContactForm
+      onSubmit={handleSubmit}
+      onSuccess={onSuccess}
+      onCancel={onCancel}
+      successMessage="Booking request submitted and calendar invite created."
+      submitLabel="Submit request"
+      submittingLabel="Submitting..."
+    >
       <label>
         Service
         <select name="service" required>
@@ -144,28 +161,9 @@ export function BookingForm({
         />
       </label>
 
-      <div className="action-row">
-        <button
-          className="button button-compact booking-form-submit"
-          type="submit"
-          disabled={state.status === "submitting"}
-        >
-          {state.status === "submitting" ? "Submitting..." : "Submit request"}
-        </button>
-        {onCancel ? (
-          <button
-            className="button button-ghost button-compact"
-            type="button"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-        ) : null}
-      </div>
-
-      {state.message ? (
-        <div className={`form-message ${state.status}`}>
-          <p>{state.message}</p>
+      <div className="action-row"></div>
+      {state.eventLink || state.meetLink ? (
+        <div className="form-message success" style={{ marginTop: "-1rem" }}>
           {state.eventLink ? (
             <p>
               <a href={state.eventLink} target="_blank" rel="noreferrer">
@@ -182,6 +180,6 @@ export function BookingForm({
           ) : null}
         </div>
       ) : null}
-    </form>
+    </BaseContactForm>
   );
 }

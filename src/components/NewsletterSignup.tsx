@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 type SubmitState = {
   status: "idle" | "submitting" | "success" | "error";
@@ -36,15 +37,23 @@ export function NewsletterSignup() {
     const payload = Object.fromEntries(formData.entries());
 
     try {
-      const response = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/newsletter", {
+        payload,
+        label: "Newsletter signup",
       });
 
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
-        throw new Error(data.error ?? "Could not subscribe.");
+      if (result.queued) {
+        event.currentTarget.reset();
+        setState({
+          status: "success",
+          message:
+            "No internet connection. Subscription saved on this device and will sync automatically when connected.",
+        });
+        return;
+      }
+
+      if (!result.response.ok) {
+        throw new Error(result.data?.error ?? "Could not subscribe.");
       }
 
       event.currentTarget.reset();

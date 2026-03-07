@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@/styles/finance-theme.css";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { organizationName, tagline } from "@/lib/content";
 
 export const metadata: Metadata = {
@@ -31,6 +33,7 @@ export const metadata: Metadata = {
     "remedial reading",
     "decodable readers",
   ],
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
@@ -41,6 +44,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <ServiceWorkerRegister />
         <SiteHeader />
         <main>{children}</main>
         <SiteFooter />

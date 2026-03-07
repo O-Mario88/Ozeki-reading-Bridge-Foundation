@@ -1,8 +1,9 @@
 import { PortalUserAdminManager } from "@/components/portal/PortalUserAdminManager";
 import { DataManagementPanel } from "@/components/portal/DataManagementPanel";
 import { GeoSyncPanel } from "@/components/portal/GeoSyncPanel";
+import { PortalGraduationSettingsManager } from "@/components/portal/PortalGraduationSettingsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listPortalUsersForAdmin } from "@/lib/db";
+import { getGraduationSettings, listPortalUsersForAdmin } from "@/lib/db";
 import { requirePortalSuperAdminUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export const metadata = {
 export default async function PortalSuperAdminPage() {
   const user = await requirePortalSuperAdminUser();
   const users = listPortalUsersForAdmin(user);
+  const graduationSettings = getGraduationSettings();
 
   return (
     <PortalShell
@@ -24,6 +26,7 @@ export default async function PortalSuperAdminPage() {
       description="Manage staff and volunteer access, role flags, and permission levels."
     >
       <PortalUserAdminManager initialUsers={users} />
+      <PortalGraduationSettingsManager initialSettings={graduationSettings} />
       <GeoSyncPanel />
       <DataManagementPanel />
     </PortalShell>

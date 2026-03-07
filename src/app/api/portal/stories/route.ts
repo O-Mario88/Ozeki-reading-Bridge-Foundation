@@ -26,7 +26,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     const user = await getCurrentPortalUser();
-    if (!user || user.role === "Volunteer") {
+    if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const canManageStories =
+        user.role === "Staff" || user.role === "Admin" || user.isAdmin || user.isSuperAdmin;
+    if (!canManageStories) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -39,6 +44,7 @@ export async function POST(request: NextRequest) {
             schoolId: body.schoolId,
             anthologyId: body.anthologyId || null,
             title: body.title,
+            authorAbout: body.authorAbout || "",
             excerpt: body.excerpt || "",
             contentText: body.contentText || null,
             storyContentBlocks: Array.isArray(body.storyContentBlocks) ? body.storyContentBlocks : [],
@@ -69,6 +75,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "unpublish") {
+        if (!user?.isSuperAdmin) {
+            return NextResponse.json({ error: "Only Super Admin can unpublish stories." }, { status: 403 });
+        }
         unpublishStoryEntry(body.storyId, user.id, user.fullName);
         const story = getStoryById(body.storyId);
         return NextResponse.json({ story });

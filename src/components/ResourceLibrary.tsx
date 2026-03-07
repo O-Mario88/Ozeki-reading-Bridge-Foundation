@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { ResourceItem } from "@/lib/types";
 import { FloatingFormModal } from "@/components/FloatingFormModal";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 interface Lead {
   name: string;
@@ -46,17 +47,27 @@ export function ResourceLibrary({ resources }: { resources: ResourceItem[] }) {
     }
 
     try {
-      const response = await fetch("/api/downloads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/downloads", {
+        payload: {
           ...lead,
           resourceSlug: "library-access",
-        }),
+        },
+        label: "Resource library access",
       });
 
-      if (!response.ok) {
-        throw new Error("Could not unlock downloads.");
+      if (result.queued) {
+        setLeadReady(true);
+        setStatus("No internet connection. Access request saved and will sync automatically.");
+        if (close) {
+          window.setTimeout(() => {
+            close();
+          }, 600);
+        }
+        return;
+      }
+
+      if (!result.response.ok) {
+        throw new Error(result.data?.error || "Could not unlock downloads.");
       }
 
       setLeadReady(true);

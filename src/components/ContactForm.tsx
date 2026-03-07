@@ -1,13 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-
-type SubmitState = {
-  status: "idle" | "submitting" | "success" | "error";
-  message: string;
-};
-
-const initialState: SubmitState = { status: "idle", message: "" };
+import { BaseContactForm } from "./BaseContactForm";
+import type { BaseContactSubmitResult } from "./BaseContactForm";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 export function ContactForm({
   onSuccess,
@@ -16,46 +11,37 @@ export function ContactForm({
   onSuccess?: () => void;
   onCancel?: () => void;
 }) {
-  const [state, setState] = useState<SubmitState>(initialState);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setState({ status: "submitting", message: "Submitting inquiry..." });
-
-    const formData = new FormData(event.currentTarget);
+  async function handleSubmit(formData: FormData): Promise<BaseContactSubmitResult> {
     const payload = Object.fromEntries(formData.entries());
+    const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/contacts", {
+      payload,
+      label: "Contact inquiry",
+    });
 
-    try {
-      const response = await fetch("/api/contacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
-        throw new Error(data.error ?? "Could not submit inquiry.");
-      }
-
-      event.currentTarget.reset();
-      setState({
-        status: "success",
-        message: "Inquiry sent successfully. We will reply within 1-2 business days.",
-      });
-      if (onSuccess) {
-        window.setTimeout(() => {
-          onSuccess();
-        }, 700);
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Submission failed. Try again.";
-      setState({ status: "error", message });
+    if (result.queued) {
+      return {
+        mode: "queued",
+        successMessage:
+          "No internet connection. Inquiry saved on this device and will sync automatically when connected.",
+      };
     }
+
+    if (!result.response.ok) {
+      throw new Error(result.data?.error ?? "Could not submit inquiry.");
+    }
+
+    return { mode: "online" };
   }
 
   return (
-    <form className="form-grid" onSubmit={handleSubmit}>
+    <BaseContactForm
+      onSubmit={handleSubmit}
+      onSuccess={onSuccess}
+      onCancel={onCancel}
+      successMessage="Inquiry sent successfully. We will reply within 1-2 business days."
+      submitLabel="Send inquiry"
+      submittingLabel="Submitting..."
+    >
       <label>
         Inquiry type
         <select name="type" required>
@@ -96,21 +82,6 @@ export function ContactForm({
           required
         />
       </label>
-
-      <div className="action-row">
-        <button className="button" type="submit" disabled={state.status === "submitting"}>
-          {state.status === "submitting" ? "Submitting..." : "Send inquiry"}
-        </button>
-        {onCancel ? (
-          <button className="button button-ghost" type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        ) : null}
-      </div>
-
-      {state.message ? (
-        <p className={`form-message ${state.status}`}>{state.message}</p>
-      ) : null}
-    </form>
+    </BaseContactForm>
   );
 }

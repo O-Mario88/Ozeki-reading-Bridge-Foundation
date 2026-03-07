@@ -185,7 +185,7 @@ export default function NlisDataForm({ mode, onSubmit, schoolId }: NlisFormProps
                     {saving ? "Saving…" : "Submit"}
                 </button>
                 {success && (
-                    <span style={{ fontSize: "0.85rem", color: "#16a34a", fontWeight: 600 }}>
+                    <span style={{ fontSize: "0.85rem", color: "#FA7D15", fontWeight: 600 }}>
                         ✓ Saved successfully
                     </span>
                 )}

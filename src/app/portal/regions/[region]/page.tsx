@@ -1,6 +1,6 @@
 
 import { requirePortalStaffUser } from "@/lib/portal-auth";
-import { getRegionStats } from "@/lib/db";
+import { getRegionStats, listSchoolSupportStatuses } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { RegionProfileView } from "@/components/portal/RegionProfileView";
 
@@ -10,10 +10,14 @@ export default async function RegionProfilePage({ params }: { params: Promise<{ 
     const decodedRegion = decodeURIComponent(region);
 
     const stats = getRegionStats(decodedRegion);
+    const supportStatuses = listSchoolSupportStatuses({
+        region: decodedRegion,
+        limit: 600,
+    });
 
     if (!stats) {
         notFound();
     }
 
-    return <RegionProfileView stats={stats} />;
+    return <RegionProfileView stats={stats} initialSupportStatuses={supportStatuses} />;
 }

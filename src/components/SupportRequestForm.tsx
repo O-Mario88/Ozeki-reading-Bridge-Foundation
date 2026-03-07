@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { SupportRequestInput, SupportType } from "@/lib/types";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
+import { SupportRequestInput, SupportRequestUrgency, SupportType } from "@/lib/types";
 
 interface SchoolOption {
     id: number;
@@ -52,20 +53,23 @@ export default function SupportRequestForm() {
         setError(null);
 
         try {
-            const res = await fetch("/api/portal/support", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
+            const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/portal/support", {
+                payload: formData,
+                label: "School support request"
             });
 
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || "Failed to submit request");
+            if (result.queued) {
+                setSubmitted(true);
+                return;
+            }
+
+            if (!result.response.ok) {
+                throw new Error(result.data?.error || "Failed to submit request");
             }
 
             setSubmitted(true);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to submit request");
         } finally {
             setIsSubmitting(false);
         }
@@ -73,8 +77,8 @@ export default function SupportRequestForm() {
 
     if (submitted) {
         return (
-            <div className="bg-green-50 p-8 rounded-2xl border-2 border-green-200 text-center max-w-2xl mx-auto my-12 animate-in fade-in zoom-in duration-500">
-                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="bg-orange-50 p-8 rounded-2xl border-2 border-orange-200 text-center max-w-2xl mx-auto my-12 animate-in fade-in zoom-in duration-500">
+                <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -85,7 +89,7 @@ export default function SupportRequestForm() {
                 </p>
                 <button
                     onClick={() => setSubmitted(false)}
-                    className="mt-6 px-6 py-2 bg-white border border-green-200 text-green-700 rounded-lg hover:bg-green-50 transition-colors"
+                    className="mt-6 px-6 py-2 bg-white border border-orange-200 text-orange-700 rounded-lg hover:bg-orange-50 transition-colors"
                 >
                     Submit another request
                 </button>
@@ -99,6 +103,7 @@ export default function SupportRequestForm() {
         { value: "learner assessment", label: "Learner Assessment", icon: "📝" },
         { value: "1001 story", label: "1001 Story Library", icon: "📖" }
     ];
+    const urgencyLevels: SupportRequestUrgency[] = ["low", "medium", "high"];
 
     return (
         <div className="max-w-3xl mx-auto my-12 px-6">
@@ -223,11 +228,11 @@ export default function SupportRequestForm() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
                             <div className="flex gap-4">
-                                {["low", "medium", "high"].map(level => (
+                                {urgencyLevels.map(level => (
                                     <button
                                         key={level}
                                         type="button"
-                                        onClick={() => setFormData(prev => ({ ...prev, urgency: level as any }))}
+                                        onClick={() => setFormData(prev => ({ ...prev, urgency: level }))}
                                         className={`flex-1 py-2 rounded-xl border-2 transition-all uppercase text-[10px] font-bold tracking-widest ${formData.urgency === level
                                                 ? "bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md"
                                                 : "bg-white border-gray-100 text-gray-400"

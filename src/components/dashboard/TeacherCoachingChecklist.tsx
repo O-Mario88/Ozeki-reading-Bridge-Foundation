@@ -56,7 +56,7 @@ export default function TeacherCoachingChecklist({
                 </div>
                 <div style={{
                     fontSize: "1.25rem", fontWeight: 800,
-                    color: score >= 70 ? "#16a34a" : score >= 40 ? "#e8a317" : "#dc2626",
+                    color: score >= 70 ? "#FA7D15" : score >= 40 ? "#e8a317" : "#dc2626",
                 }}>
                     {score}%
                 </div>
@@ -69,7 +69,7 @@ export default function TeacherCoachingChecklist({
                         style={{
                             display: "flex", alignItems: "flex-start", gap: "0.65rem",
                             padding: "0.5rem 0.65rem", borderRadius: "8px", cursor: "pointer",
-                            background: checked.has(item.id) ? "#dcfce720" : "transparent",
+                            background: checked.has(item.id) ? "#FFF4EC20" : "transparent",
                             transition: "background 0.15s",
                         }}
                     >
@@ -77,7 +77,7 @@ export default function TeacherCoachingChecklist({
                             type="checkbox"
                             checked={checked.has(item.id)}
                             onChange={() => toggle(item.id)}
-                            style={{ marginTop: "0.15rem", accentColor: "#16a34a", width: 16, height: 16 }}
+                            style={{ marginTop: "0.15rem", accentColor: "#FA7D15", width: 16, height: 16 }}
                         />
                         <div>
                             <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{item.label}</div>

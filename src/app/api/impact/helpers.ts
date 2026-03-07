@@ -35,6 +35,8 @@ export function toPublicImpactResponse(payload: PublicImpactAggregate) {
       baseline_assessed: payload.funnel.baselineAssessed,
       endline_assessed: payload.funnel.endlineAssessed,
     },
+    teaching_quality: payload.teachingQuality ?? null,
+    teaching_learning_alignment: payload.teachingLearningAlignment ?? null,
     meta: {
       ...payload.meta,
       last_updated: payload.meta.lastUpdated,

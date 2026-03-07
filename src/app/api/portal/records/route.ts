@@ -25,6 +25,10 @@ const createRecordSchema = z.object({
   schoolName: z.string().min(2),
   programType: z.string().trim().optional(),
   followUpDate: z.string().trim().optional(),
+  followUpType: z
+    .enum(["virtual_check_in", "school_visit", "refresher_session"])
+    .optional(),
+  followUpOwnerUserId: z.coerce.number().int().positive().optional(),
   status: statusSchema,
   payload: z.record(z.string(), payloadValueSchema).default({}),
 });
@@ -125,10 +129,25 @@ export async function POST(request: Request) {
         ...payload,
         programType: payload.programType?.trim() || undefined,
         followUpDate: payload.followUpDate?.trim() || undefined,
+        followUpType: payload.followUpType,
+        followUpOwnerUserId: payload.followUpOwnerUserId,
         payload: cleanPayload(payload.payload),
       },
       user,
     );
+
+    if (payload.module === "assessment" || payload.module === "story") {
+      try {
+        const { runEducationDataQualitySweep } = await import("@/lib/national-intelligence");
+        runEducationDataQualitySweep({
+          user,
+          scopeType: "district",
+          scopeId: payload.district,
+        });
+      } catch {
+        // Record creation should not fail due to async quality checks.
+      }
+    }
 
     return NextResponse.json({ ok: true, record });
   } catch (error) {

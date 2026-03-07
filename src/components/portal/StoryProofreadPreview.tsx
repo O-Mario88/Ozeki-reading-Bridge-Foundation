@@ -202,10 +202,10 @@ export function StoryProofreadPreview({ draft, onBackToEditor, onPublish, onUpda
                 }}>
                     <h4 style={{ margin: "0 0 1rem 0" }}>Publish Readiness Checklist</h4>
                     <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: "0.5rem" }}>
-                        <li style={{ color: hasTitle ? "green" : "red" }}>{hasTitle ? "✅" : "❌"} Title present</li>
-                        <li style={{ color: hasBlocks ? "green" : "red" }}>{hasBlocks ? "✅" : "❌"} Has content blocks</li>
-                        <li style={{ color: blocksValid ? "green" : "red" }}>{blocksValid ? "✅" : "❌"} Illustration assets valid</li>
-                        <li style={{ color: consentApproved || !draft.publicAuthorDisplay ? "green" : "red" }}>
+                        <li style={{ color: hasTitle ? "#FA7D15" : "red" }}>{hasTitle ? "✅" : "❌"} Title present</li>
+                        <li style={{ color: hasBlocks ? "#FA7D15" : "red" }}>{hasBlocks ? "✅" : "❌"} Has content blocks</li>
+                        <li style={{ color: blocksValid ? "#FA7D15" : "red" }}>{blocksValid ? "✅" : "❌"} Illustration assets valid</li>
+                        <li style={{ color: consentApproved || !draft.publicAuthorDisplay ? "#FA7D15" : "red" }}>
                             {consentApproved || !draft.publicAuthorDisplay ? "✅" : "❌"} Author consent approved (or anonymous)
                         </li>
                     </ul>
@@ -235,7 +235,7 @@ export function StoryProofreadPreview({ draft, onBackToEditor, onPublish, onUpda
                         <EditableField
                             value={tempTitle} isEditing={editingTitle}
                             onStartEdit={() => { setTempTitle(draft.title); setEditingTitle(true); }}
-                            onEditHover={(e: any) => setTempTitle(e.target.value)}
+                            onEditHover={(e: React.ChangeEvent<HTMLInputElement>) => setTempTitle(e.target.value)}
                             onCancel={() => setEditingTitle(false)} onSave={handleSaveTitle}
                         >
                             <h1 style={{ margin: "1rem 0" }}>{draft.title || "Untitled Story"}</h1>

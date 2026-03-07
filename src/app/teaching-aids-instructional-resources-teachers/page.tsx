@@ -5,181 +5,99 @@ import teachingAidsPhoto from "../../../assets/photos/PXL_20260218_124653516.MP.
 export const metadata = {
   title: "Teaching Aids & Instructional Resources (Teachers)",
   description:
-    "Practical classroom tools that improve consistency and reduce preparation time so every reading lesson is structured and effective.",
+    "Practical, high-impact teacher tools aligned to structured phonics routines, classroom implementation, and measurable learner progress.",
 };
 
 export default function TeachingAidsInstructionalResourcesTeachersPage() {
   return (
     <>
-      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+      <section
+        className="section tpd-hero-section bg-surface-container"
+        style={{ backgroundColor: "var(--md-sys-color-surface-container)" }}
+      >
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
-            <p className="kicker">Program spotlight</p>
+            <p className="kicker">Program Spotlight</p>
             <h1 className="tpd-page-title">
               Teaching Aids &amp; Instructional Resources (Teachers)
             </h1>
             <p className="tpd-subline">
-              Practical classroom tools that improve consistency and save
-              preparation time, so every reading lesson is structured, fast-paced,
-              and effective.
+              Practical tools that make structured phonics easier to deliver every day.
             </p>
             <h2>Overview</h2>
             <p>
-              Even a well-trained teacher can struggle without the right tools.
-              Our Teaching Aids &amp; Instructional Resources provide ready-to-use
-              classroom materials that make phonics lessons easier to deliver and
-              more consistent across teachers and schools.
+              Teaching Aids &amp; Instructional Resources (Teachers) equips
+              classrooms with practical, high-impact tools that make structured
+              phonics easy to deliver consistently, especially in real-world
+              conditions where teachers manage large classes, limited preparation
+              time, and uneven access to materials.
             </p>
             <p>
-              These tools reduce preparation time, increase learner participation,
-              and help teachers follow clear routines every day.
+              Strong literacy instruction depends on routines being repeated
+              accurately every day. This program ensures teachers have the supports
+              needed to teach clearly, maintain pace, and give learners enough
+              practice to become fluent readers.
             </p>
             <p className="meta-line">
-              <strong>Outcome we drive:</strong> Teachers deliver engaging lessons
-              with stronger structure.
+              <strong>Outcome we drive:</strong> a stronger instructional
+              environment where teachers spend less time improvising and more time
+              teaching reading effectively.
             </p>
           </article>
 
           <article className="card tpd-hero-media">
             <Image
               src={teachingAidsPhoto}
-              alt="Teachers in a literacy session using practical classroom tools and routines"
+              alt="Teachers using structured literacy teaching aids in class"
               priority
+              sizes="(max-width: 900px) 100vw, 45vw"
             />
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">What We Provide (Focus Areas)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>1) Sound Charts (Phonics Wall Tools)</h3>
-              <p>
-                Sound charts help teachers introduce, review, and reinforce letter
-                sounds and common sound patterns visually and consistently.
-              </p>
-              <p>What&apos;s included:</p>
-              <ul>
-                <li>Letter-sound charts (single sounds)</li>
-                <li>Digraph charts (sh, ch, th, ph)</li>
-                <li>Blend charts (bl, cl, tr, st)</li>
-                <li>Vowel pattern charts (where applicable)</li>
-                <li>Classroom placement guidance for daily use</li>
-              </ul>
-              <p>Button examples:</p>
-              <ul>
-                <li><a className="inline-download-link" href="/resources">Download Sound Charts - Basic Letter Sounds (PDF)</a></li>
-                <li><a className="inline-download-link" href="/resources">Download Sound Charts - Digraphs &amp; Blends (PDF)</a></li>
-                <li><a className="inline-download-link" href="/resources">Download Sound Charts - Vowel Patterns (PDF)</a></li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>2) Flashcards (Fast Practice + Assessment)</h3>
-              <p>
-                Flashcards support quick drills for sounds, words, and sight
-                vocabulary, ideal for warm-ups, group practice, and catch-up
-                sessions.
-              </p>
-              <p>What&apos;s included:</p>
-              <ul>
-                <li>Letter-sound flashcards</li>
-                <li>Blend and digraph flashcards</li>
-                <li>Decodable word flashcards aligned to phonics sequence</li>
-                <li>Optional high-frequency word cards by level</li>
-                <li>Simple game routines for rapid practice</li>
-              </ul>
-              <p>Button examples:</p>
-              <ul>
-                <li><a className="inline-download-link" href="/resources">Download Flashcards - Letter Sounds (PDF)</a></li>
-                <li><a className="inline-download-link" href="/resources">Download Flashcards - Decodable Words (PDF)</a></li>
-                <li><a className="inline-download-link" href="/resources">Download Flashcards - High-Frequency Words (PDF)</a></li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>3) Blending Boards (The Decoding Engine)</h3>
-              <p>
-                Blending boards are structured tools that help teachers teach
-                blending clearly and help learners see how sounds combine to form
-                words.
-              </p>
-              <p>What&apos;s included:</p>
-              <ul>
-                <li>Sound boxes and phoneme frames</li>
-                <li>Blending slides (for example c-a-t to cat)</li>
-                <li>Word-building mats (cat to cap to cup)</li>
-                <li>Teacher instructions for a 10-minute blending routine</li>
-              </ul>
-              <p>Button examples:</p>
-              <ul>
-                <li><a className="inline-download-link" href="/resources">Download Blending Boards - Sound Boxes (PDF)</a></li>
-                <li><a className="inline-download-link" href="/resources">Download Blending Boards - Word Building Mats (PDF)</a></li>
-                <li><a className="inline-download-link" href="/resources">Download Blending Routine Cards (PDF)</a></li>
-              </ul>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h3>A) Word Lists (Aligned to Phonics Progression)</h3>
-            <p>Teachers receive structured word lists for:</p>
+            <h3>Structured Teaching Aids Package</h3>
+            <p>
+              Ozeki provides a package of tools aligned to the same phonics
+              sequence and lesson routines used in training and coaching. Core
+              resources include:
+            </p>
             <ul>
-              <li>Sound practice</li>
-              <li>Blending practice</li>
-              <li>Dictation and spelling practice</li>
-              <li>Fluency drills</li>
-            </ul>
-            <p>Button examples:</p>
-            <ul>
-              <li><a className="inline-download-link" href="/resources">Download Word Lists - Phonics Sequence Set 1 (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Word Lists - Blends &amp; Digraphs (PDF)</a></li>
+              <li>Sound charts for daily revision and quick checks</li>
+              <li>Flashcards for rapid practice and retrieval</li>
+              <li>Blending boards and phoneme frames for blending and segmenting</li>
+              <li>Graded word lists aligned to taught sounds</li>
+              <li>Ready-to-use lesson templates for routine consistency</li>
             </ul>
           </article>
 
           <article className="card">
-            <h3>B) Lesson Templates (Planning Made Easy)</h3>
+            <h3>Teacher Guides for Accurate Delivery</h3>
             <p>
-              Simple templates help teachers plan quickly while maintaining clear
-              lesson structure.
+              Teacher guides provide step-by-step delivery notes, sample scripts,
+              common error patterns, and correction routines so lessons remain
+              accurate even when teachers are still building confidence.
             </p>
-            <ul>
-              <li>Lesson objective and target sound</li>
-              <li>Routine steps from review to quick check</li>
-              <li>Materials needed and quick assessment check</li>
-            </ul>
-            <p>Button examples:</p>
-            <ul>
-              <li><a className="inline-download-link" href="/resources">Download Lesson Templates - Daily Phonics Lesson (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Lesson Templates - Weekly Reading Plan (PDF)</a></li>
-            </ul>
+            <p>
+              Where possible, resources are low-cost and reproducible so schools
+              can sustain supply over time.
+            </p>
           </article>
 
           <article className="card">
-            <h3>C) Teacher Guides (Step-by-Step Delivery)</h3>
+            <h3>Designed for Real Classroom Constraints</h3>
             <p>
-              Short guides that show teachers exactly how to teach, correct errors,
-              and sustain routine quality.
+              Resources are built for typical school realities: large class sizes,
+              mixed learner ability, limited prep time, and uneven access to
+              materials.
             </p>
-            <ul>
-              <li>Introducing a sound</li>
-              <li>Blending and segmenting</li>
-              <li>Error correction techniques</li>
-              <li>Fluency and comprehension checks</li>
-            </ul>
-            <p>Button examples:</p>
-            <ul>
-              <li><a className="inline-download-link" href="/resources">Download Teacher Guide - Phonics Routines (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Teacher Guide - Fluency Routines (PDF)</a></li>
-              <li><a className="inline-download-link" href="/resources">Download Teacher Guide - Error Correction Techniques (PDF)</a></li>
-            </ul>
+            <p>
+              The design goal is simple: make high-quality routines workable every
+              day, not only under ideal conditions.
+            </p>
           </article>
         </div>
       </section>
@@ -187,35 +105,112 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
       <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h3>Website Experience (Teaching Resources Page)</h3>
-            <p>Cards + filters + downloads:</p>
+            <h3>Materials Tracking and School-Level Accountability</h3>
+            <p>
+              Beyond availability, the platform makes resources measurable.
+              Materials are recorded at school level: what was delivered, when,
+              and for which grades.
+            </p>
+            <p>
+              This gives leaders and coaches a shared view of resource readiness
+              before implementation support starts.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Usage Verification During Lesson Evaluation</h3>
+            <p>
+              Teachers and coaches can tag which tools are used during lesson
+              evaluations, for example whether sound charts and blending boards are
+              used effectively, not just present in the classroom.
+            </p>
+            <p>
+              This shifts resource monitoring from inventory counting to classroom
+              effectiveness.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Resource-Instruction Feedback Loop</h3>
+            <p>
+              The platform creates a practical loop between resource use and
+              outcomes. If teaching quality improves but decoding remains weak, the
+              platform can highlight whether key tools are missing or used
+              inconsistently.
+            </p>
+            <p>
+              If catch-up learners are not moving, the system can recommend the
+              specific resources needed to increase practice intensity and success.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Partner Transparency and Sustainability</h3>
+            <p>
+              For partners and funders, this program strengthens transparency and
+              sustainability. Instead of materials distributed being treated as a
+              one-time activity, we link instructional resources to implementation
+              quality and learner outcomes.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>How Stakeholders Use the Evidence</h3>
             <ul>
-              <li>Filters: Grade, Skill, Resource Type</li>
-              <li>Each card: title, short description, tags, file type, download link</li>
-              <li>Recommended section for high-conversion resources</li>
+              <li>Schools see what is available and what to prioritize next</li>
+              <li>Coaches target support based on what is missing</li>
+              <li>
+                Partners receive evidence that resources are delivered and used in
+                ways that improve teaching quality and reading progress
+              </li>
             </ul>
           </article>
 
           <article className="card">
-            <h3>Recommended Starter Pack</h3>
+            <h3>Program Result</h3>
             <p>
-              Teacher Starter Pack (free download): sound charts + flashcards +
-              blending board + lesson template.
+              The result is a stronger, more consistent instructional environment
+              where teachers spend less time improvising and more time teaching
+              reading effectively, every day.
             </p>
           </article>
+        </div>
+      </section>
 
+      <section className="section">
+        <div className="container cards-grid-two">
           <article className="card">
-            <h3>Download Link Label</h3>
+            <h3>Explore Related Evidence</h3>
             <p>
-              <a className="inline-download-link" href="/resources">
-                Download Teacher Starter Pack (PDF Bundle)
-              </a>
-            </p>
-            <p>
-              <Link className="inline-download-link" href="/portal/schools">
-                Open school profiles for support
+              <Link className="inline-download-link" href="/impact">
+                Open Live Impact Dashboard
               </Link>
             </p>
+            <p>
+              <Link className="inline-download-link" href="/resources">
+                Open Resources Library
+              </Link>
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Support Classroom Resource Scale-Up</h3>
+            <p>
+              Partner to provide practical teacher tools with tracked usage and
+              verified links to instructional quality and learner reading progress.
+            </p>
+            <div className="action-row">
+              <Link className="button" href="/portal/schools">
+                Open school profiles
+              </Link>
+              <Link className="button button-ghost" href="/partner-with-us">
+                Partner With Us
+              </Link>
+            </div>
           </article>
         </div>
       </section>

@@ -3,19 +3,39 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { OnlineTrainingEventRecord } from "@/lib/types";
+import { FloatingSurface } from "@/components/FloatingSurface";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 interface PortalEventsManagerProps {
   initialEvents: OnlineTrainingEventRecord[];
 }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString(undefined, {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+    timeZone: "UTC",
+  }).format(parsed);
+}
+
+function formatDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(parsed);
 }
 
 export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps) {
@@ -23,6 +43,8 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
   const [saving, setSaving] = useState(false);
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -47,24 +69,31 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
     };
 
     try {
-      const response = await fetch("/api/portal/online-trainings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await response.json()) as {
+      const result = await submitJsonWithOfflineQueue<{
         error?: string;
         event?: OnlineTrainingEventRecord;
         calendarWarning?: string;
-      };
+      }>("/api/portal/online-trainings", {
+        payload,
+        label: "Portal event scheduling",
+      });
 
-      if (!response.ok || !data.event) {
+      if (result.queued) {
+        event.currentTarget.reset();
+        setIsScheduleOpen(false);
+        setStatus("No internet connection. Event saved offline and queued for sync.");
+        return;
+      }
+
+      const data = result.data ?? {};
+
+      if (!result.response.ok || !data.event) {
         throw new Error(data.error ?? "Could not schedule event.");
       }
 
       setEvents((prev) => [data.event as OnlineTrainingEventRecord, ...prev]);
       event.currentTarget.reset();
+      setIsScheduleOpen(false);
       setStatus(
         data.calendarWarning
           ? `Event saved. ${data.calendarWarning}`
@@ -93,23 +122,31 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
     };
 
     try {
-      const response = await fetch(`/api/portal/online-trainings/${eventId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = (await response.json()) as {
+      const result = await submitJsonWithOfflineQueue<{
         error?: string;
         event?: OnlineTrainingEventRecord;
-      };
+      }>(`/api/portal/online-trainings/${eventId}`, {
+        method: "PATCH",
+        payload,
+        label: "Portal online attendance update",
+      });
 
-      if (!response.ok || !data.event) {
+      if (result.queued) {
+        setIsAttendanceOpen(false);
+        setStatus("No internet connection. Attendance update saved offline and queued for sync.");
+        return;
+      }
+
+      const data = result.data ?? {};
+
+      if (!result.response.ok || !data.event) {
         throw new Error(data.error ?? "Could not save attendance.");
       }
 
       setEvents((prev) =>
         prev.map((item) => (item.id === data.event?.id ? (data.event as OnlineTrainingEventRecord) : item)),
       );
+      setIsAttendanceOpen(false);
       setStatus("Online attendance, recording link, and session chat summary saved.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not save attendance.");
@@ -126,57 +163,11 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
           This form schedules live events from the dashboard and creates Google
           Calendar invites with Google Meet links for online delivery.
         </p>
-        <form className="form-grid portal-form-grid" onSubmit={handleSubmit}>
-          <label>
-            <span className="portal-field-label">Event Title</span>
-            <input name="title" required minLength={3} placeholder="e.g. Monthly Fluency Webinar" />
-          </label>
-          <label>
-            <span className="portal-field-label">Audience</span>
-            <input
-              name="audience"
-              required
-              minLength={2}
-              placeholder="Teachers, school leaders, district teams..."
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Date</span>
-            <input name="startDate" type="date" defaultValue={today} required />
-          </label>
-          <label>
-            <span className="portal-field-label">Start Time</span>
-            <input name="startTime" type="time" defaultValue="10:00" required />
-          </label>
-          <label>
-            <span className="portal-field-label">Duration (minutes)</span>
-            <input name="durationMinutes" type="number" min={15} max={720} defaultValue={90} required />
-          </label>
-          <label className="full-width">
-            <span className="portal-field-label">Description</span>
-            <textarea
-              name="description"
-              rows={4}
-              placeholder="Objectives, agenda, and any joining notes."
-            />
-          </label>
-          <label className="full-width">
-            <span className="portal-field-label">Attendee Emails (optional)</span>
-            <textarea
-              name="attendeeEmails"
-              rows={4}
-              placeholder="one@email.com, two@email.com or one per line"
-            />
-            <small className="portal-field-help">
-              Staff workspace recipients are added automatically for accountability.
-            </small>
-          </label>
-          <div className="full-width action-row portal-form-actions">
-            <button className="button" type="submit" disabled={saving}>
-              {saving ? "Scheduling..." : "Schedule event"}
-            </button>
-          </div>
-        </form>
+        <div className="action-row portal-form-actions">
+          <button className="button" type="button" onClick={() => setIsScheduleOpen(true)}>
+            + Schedule Event
+          </button>
+        </div>
         {status ? <p className="form-message success">{status}</p> : null}
       </section>
 
@@ -241,51 +232,143 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
         {events.length === 0 ? (
           <p>Schedule an event first to capture outcomes.</p>
         ) : (
-          <form className="form-grid portal-form-grid" onSubmit={handleAttendanceSubmit}>
-            <label>
-              <span className="portal-field-label">Event</span>
-              <select name="eventId" required defaultValue={events[0]?.id}>
-                {events.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title} ({new Date(item.startDateTime).toLocaleDateString()})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="portal-field-label">Teachers Trained (Online)</span>
-              <input name="onlineTeachersTrained" type="number" min={0} defaultValue={0} required />
-            </label>
-            <label>
-              <span className="portal-field-label">School Leaders Trained (Online)</span>
-              <input
-                name="onlineSchoolLeadersTrained"
-                type="number"
-                min={0}
-                defaultValue={0}
-                required
-              />
-            </label>
-            <label>
-              <span className="portal-field-label">Total Attendance</span>
-              <input name="attendeeCount" type="number" min={0} defaultValue={0} required />
-            </label>
-            <label className="full-width">
-              <span className="portal-field-label">Recording URL (Google Meet recording link)</span>
-              <input name="recordingUrl" type="url" placeholder="https://..." />
-            </label>
-            <label className="full-width">
-              <span className="portal-field-label">Chat Summary / Key Discussion Notes</span>
-              <textarea name="chatSummary" rows={4} placeholder="Key chat Q&A and action points." />
-            </label>
-            <div className="full-width action-row portal-form-actions">
-              <button className="button" type="submit" disabled={attendanceSaving}>
-                {attendanceSaving ? "Saving..." : "Save outcomes"}
-              </button>
-            </div>
-          </form>
+          <div className="action-row portal-form-actions">
+            <button className="button" type="button" onClick={() => setIsAttendanceOpen(true)}>
+              + Capture Outcomes
+            </button>
+          </div>
         )}
       </section>
+
+      <FloatingSurface
+        open={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+        title="Schedule Event / Webinar"
+        description="Create a live event and generate calendar + Google Meet links."
+        closeLabel="Close"
+        maxWidth="920px"
+      >
+        <form className="form-grid portal-form-grid" onSubmit={handleSubmit}>
+          <label>
+            <span className="portal-field-label">Event Title</span>
+            <input name="title" required minLength={3} placeholder="e.g. Monthly Fluency Webinar" />
+          </label>
+          <label>
+            <span className="portal-field-label">Audience</span>
+            <input
+              name="audience"
+              required
+              minLength={2}
+              placeholder="Teachers, school leaders, district teams..."
+            />
+          </label>
+          <label>
+            <span className="portal-field-label">Date</span>
+            <input name="startDate" type="date" defaultValue={today} required />
+          </label>
+          <label>
+            <span className="portal-field-label">Start Time</span>
+            <input name="startTime" type="time" defaultValue="10:00" required />
+          </label>
+          <label>
+            <span className="portal-field-label">Duration (minutes)</span>
+            <input name="durationMinutes" type="number" min={15} max={720} defaultValue={90} required />
+          </label>
+          <label className="full-width">
+            <span className="portal-field-label">Description</span>
+            <textarea
+              name="description"
+              rows={4}
+              placeholder="Objectives, agenda, and any joining notes."
+            />
+          </label>
+          <label className="full-width">
+            <span className="portal-field-label">Attendee Emails (optional)</span>
+            <textarea
+              name="attendeeEmails"
+              rows={4}
+              placeholder="one@email.com, two@email.com or one per line"
+            />
+            <small className="portal-field-help">
+              Staff workspace recipients are added automatically for accountability.
+            </small>
+          </label>
+          <div className="full-width action-row portal-form-actions">
+            <button className="button" type="submit" disabled={saving}>
+              {saving ? "Scheduling..." : "Schedule event"}
+            </button>
+            <button
+              className="button button-ghost"
+              type="button"
+              disabled={saving}
+              onClick={() => setIsScheduleOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </FloatingSurface>
+
+      <FloatingSurface
+        open={isAttendanceOpen}
+        onClose={() => setIsAttendanceOpen(false)}
+        title="Capture Webinar Outcomes"
+        description="Record attendance, online training totals, and session artifacts."
+        closeLabel="Close"
+        maxWidth="920px"
+      >
+        <form className="form-grid portal-form-grid" onSubmit={handleAttendanceSubmit}>
+          <label>
+            <span className="portal-field-label">Event</span>
+            <select name="eventId" required defaultValue={events[0]?.id}>
+              {events.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title} ({formatDate(item.startDateTime)})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="portal-field-label">Teachers Trained (Online)</span>
+            <input name="onlineTeachersTrained" type="number" min={0} defaultValue={0} required />
+          </label>
+          <label>
+            <span className="portal-field-label">School Leaders Trained (Online)</span>
+            <input
+              name="onlineSchoolLeadersTrained"
+              type="number"
+              min={0}
+              defaultValue={0}
+              required
+            />
+          </label>
+          <label>
+            <span className="portal-field-label">Total Attendance</span>
+            <input name="attendeeCount" type="number" min={0} defaultValue={0} required />
+          </label>
+          <label className="full-width">
+            <span className="portal-field-label">Recording URL (Google Meet recording link)</span>
+            <input name="recordingUrl" type="url" placeholder="https://..." />
+          </label>
+          <label className="full-width">
+            <span className="portal-field-label">Chat Summary / Key Discussion Notes</span>
+            <textarea name="chatSummary" rows={4} placeholder="Key chat Q&A and action points." />
+          </label>
+          <div className="full-width action-row portal-form-actions">
+            <button className="button" type="submit" disabled={attendanceSaving}>
+              {attendanceSaving ? "Saving..." : "Save outcomes"}
+            </button>
+            <button
+              className="button button-ghost"
+              type="button"
+              disabled={attendanceSaving}
+              onClick={() => setIsAttendanceOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </FloatingSurface>
     </div>
   );
 }

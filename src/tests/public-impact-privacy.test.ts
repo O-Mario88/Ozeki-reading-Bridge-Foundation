@@ -11,6 +11,9 @@ const RESTRICTED_KEYS = new Set([
   "age",
   "learner_uid",
   "teacher_uid",
+  "teacher_name",
+  "teachername",
+  "class_observed",
 ]);
 
 function normalizedKey(key: string) {
@@ -86,4 +89,31 @@ test("public impact response includes aggregate KPI contract aliases", () => {
   assert.ok(kpis.assessments_baseline_count !== undefined, "Missing assessments_baseline_count");
   assert.ok(kpis.assessments_progress_count !== undefined, "Missing assessments_progress_count");
   assert.ok(kpis.assessments_endline_count !== undefined, "Missing assessments_endline_count");
+});
+
+test("public impact response exposes teaching improvement and alignment aggregates only", () => {
+  const payload = getPublicImpactAggregate("country", "Uganda", "FY");
+  const response = toPublicImpactResponse(payload) as Record<string, unknown>;
+
+  const teaching = response.teaching_quality as Record<string, unknown> | null;
+  assert.ok(teaching, "Missing teaching_quality aggregate block");
+  assert.ok(teaching?.deltaOverall !== undefined, "Missing teaching quality deltaOverall");
+  assert.ok(
+    teaching?.improvedTeachersPercent !== undefined,
+    "Missing teaching quality improvedTeachersPercent",
+  );
+  assert.ok(
+    teaching?.schoolsImprovedPercent !== undefined,
+    "Missing teaching quality schoolsImprovedPercent",
+  );
+  assert.ok(teaching?.domainDeltas !== undefined, "Missing teaching quality domainDeltas");
+
+  const alignment = response.teaching_learning_alignment as Record<string, unknown> | null;
+  assert.ok(alignment, "Missing teaching_learning_alignment block");
+  assert.equal(
+    typeof alignment?.caveat,
+    "string",
+    "Alignment block must include non-causation caveat",
+  );
+  assert.ok(Array.isArray(alignment?.points), "Alignment points must be an array");
 });

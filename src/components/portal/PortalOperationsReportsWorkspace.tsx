@@ -259,6 +259,38 @@ export function PortalOperationsReportsWorkspace({
       (sum, row) => sum + row.teacherObservationCount,
       0,
     );
+    const implementationStartedVisits = filteredSchools.reduce(
+      (sum, row) => sum + row.implementationStartedVisits,
+      0,
+    );
+    const implementationNotStartedVisits = filteredSchools.reduce(
+      (sum, row) => sum + row.implementationNotStartedVisits,
+      0,
+    );
+    const implementationPartialVisits = filteredSchools.reduce(
+      (sum, row) => sum + row.implementationPartialVisits,
+      0,
+    );
+    const demoVisits = filteredSchools.reduce((sum, row) => sum + row.demoVisits, 0);
+    const schoolsWithImplementationData = filteredSchools.filter(
+      (row) => row.latestImplementationStatus !== null,
+    ).length;
+    const schoolsImplementing = filteredSchools.filter(
+      (row) =>
+        row.latestImplementationStatus === "started" ||
+        row.latestImplementationStatus === "partial",
+    ).length;
+    const schoolsNotImplementing = filteredSchools.filter(
+      (row) => row.latestImplementationStatus === "not_started",
+    ).length;
+    const schoolsImplementingPct =
+      schoolsWithImplementationData > 0
+        ? Number(((schoolsImplementing / schoolsWithImplementationData) * 100).toFixed(1))
+        : 0;
+    const schoolsNotImplementingPct =
+      schoolsWithImplementationData > 0
+        ? Number(((schoolsNotImplementing / schoolsWithImplementationData) * 100).toFixed(1))
+        : 0;
     return {
       totalRecords,
       enrollment: filteredSchools.reduce((sum, row) => sum + row.currentEnrollment, 0),
@@ -270,6 +302,13 @@ export function PortalOperationsReportsWorkspace({
       learnerAssessments: filteredSchools.reduce((sum, row) => sum + row.learnerAssessments, 0),
       schoolsWithContacts,
       teacherObservationCount,
+      implementationStartedVisits,
+      implementationNotStartedVisits,
+      implementationPartialVisits,
+      demoVisits,
+      schoolsWithImplementationData,
+      schoolsImplementingPct,
+      schoolsNotImplementingPct,
     };
   }, [filteredSchools, moduleFilter]);
 
@@ -554,6 +593,18 @@ export function PortalOperationsReportsWorkspace({
           <span>Schools with contacts</span>
           <strong>{summary.schoolsWithContacts.toLocaleString()}</strong>
         </article>
+        <article>
+          <span>Schools implementing</span>
+          <strong>{summary.schoolsImplementingPct.toFixed(1)}%</strong>
+        </article>
+        <article>
+          <span>Schools not implementing</span>
+          <strong>{summary.schoolsNotImplementingPct.toFixed(1)}%</strong>
+        </article>
+        <article>
+          <span>Demo visits conducted</span>
+          <strong>{summary.demoVisits.toLocaleString()}</strong>
+        </article>
       </section>
 
       <div className="portal-report-insight-grid">
@@ -648,13 +699,19 @@ export function PortalOperationsReportsWorkspace({
               <th>Resources</th>
               <th>Teacher Assessments</th>
               <th>Learner Assessments</th>
+              <th>Impl Started</th>
+              <th>Impl Not Started</th>
+              <th>Impl Partial</th>
+              <th>Demo Visits</th>
+              <th>Latest Impl Status</th>
+              <th>Latest Visit Pathway</th>
               <th>Total Records</th>
             </tr>
           </thead>
           <tbody>
             {filteredSchools.length === 0 ? (
               <tr>
-                <td colSpan={23}>No schools match the selected filters.</td>
+                <td colSpan={29}>No schools match the selected filters.</td>
               </tr>
             ) : (
               filteredSchools.map((row) => (
@@ -683,6 +740,12 @@ export function PortalOperationsReportsWorkspace({
                   <td>{row.resourcesDistributed.toLocaleString()}</td>
                   <td>{row.teacherAssessments.toLocaleString()}</td>
                   <td>{row.learnerAssessments.toLocaleString()}</td>
+                  <td>{row.implementationStartedVisits.toLocaleString()}</td>
+                  <td>{row.implementationNotStartedVisits.toLocaleString()}</td>
+                  <td>{row.implementationPartialVisits.toLocaleString()}</td>
+                  <td>{row.demoVisits.toLocaleString()}</td>
+                  <td>{row.latestImplementationStatus ?? "N/A"}</td>
+                  <td>{row.latestVisitPathway ?? "N/A"}</td>
                   <td>
                     <strong>{getModuleCount(row, moduleFilter).toLocaleString()}</strong>
                   </td>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MediaShowcaseItem } from "@/lib/media-showcase";
+import { buildVideoThumbnailFallback } from "@/lib/media-placeholders";
 
 interface MediaTestimonialGridProps {
   items: MediaShowcaseItem[];
@@ -57,7 +58,7 @@ export function MediaTestimonialGrid({ items }: MediaTestimonialGridProps) {
                       item.youtubeThumbnailUrl ||
                       (item.youtubeVideoId
                         ? `https://img.youtube.com/vi/${item.youtubeVideoId}/hqdefault.jpg`
-                        : "/images/ozeki-logo.jpg")
+                        : buildVideoThumbnailFallback(`media-grid-${item.id}`, "Video thumbnail unavailable"))
                     }
                     alt={item.alt}
                     loading={index < 9 ? "eager" : "lazy"}
@@ -85,7 +86,7 @@ export function MediaTestimonialGrid({ items }: MediaTestimonialGridProps) {
                 aria-label="Open Ozeki Reading Bridge Foundation YouTube channel"
               >
                 <img
-                  src="/images/ozeki-logo.jpg"
+                  src={buildVideoThumbnailFallback(`media-grid-channel-${item.id}`, "Open Ozeki YouTube")}
                   alt="Ozeki YouTube channel"
                   loading={index < 9 ? "eager" : "lazy"}
                   fetchPriority={index < 3 ? "high" : "auto"}

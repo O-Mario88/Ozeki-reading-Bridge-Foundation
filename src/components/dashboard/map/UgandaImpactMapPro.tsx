@@ -24,13 +24,13 @@ import { DistrictSearchInput } from "./DistrictSearchInput";
 /** Sub-region fill colors inspired by the UBOS reference map. */
 const SUB_REGION_COLORS: Record<UgandaMapSubRegionName, string> = {
   Acholi: "rgba(173,216,230,0.45)",
-  Central: "rgba(144,238,144,0.40)",
+  Central: "rgba(255, 170, 120, 0.40)",
   "East Central": "rgba(255,228,196,0.45)",
   Elgon: "rgba(255,182,108,0.40)",
   Karamoja: "rgba(221,160,221,0.40)",
   Lango: "rgba(176,196,222,0.45)",
   "South Western": "rgba(255,218,185,0.45)",
-  Teso: "rgba(152,251,152,0.40)",
+  Teso: "rgba(255, 190, 140, 0.40)",
   "West Nile": "rgba(255,182,193,0.40)",
   Western: "rgba(240,230,140,0.40)",
 };
@@ -44,10 +44,10 @@ type MapSelection = {
 };
 
 type MapTarget = {
-  level: "country" | "subregion" | "district";
+  level: "country" | "region" | "subregion" | "district";
   id: string;
   label: string;
-  chip: "Country" | "Sub-region" | "District";
+  chip: "Country" | "Region" | "Sub-region" | "District";
   profileHref?: string;
 };
 
@@ -63,6 +63,9 @@ function pathForTarget(target: MapTarget, periodLabel: string) {
   const period = encodeURIComponent(periodLabel);
   if (target.level === "country") {
     return `/impact/country?period=${period}`;
+  }
+  if (target.level === "region") {
+    return `/impact/region/${encodeURIComponent(target.id)}?period=${period}`;
   }
   if (target.level === "subregion") {
     return `/impact/subregion/${encodeURIComponent(target.id)}?period=${period}`;
@@ -139,6 +142,15 @@ function getTargetFromSelection(selection: MapSelection): MapTarget {
       label: selection.subRegion,
       chip: "Sub-region",
       profileHref: `/sub-regions/${encodeURIComponent(selection.subRegion)}`,
+    };
+  }
+  if (selection.region) {
+    return {
+      level: "region",
+      id: selection.region,
+      label: selection.region,
+      chip: "Region",
+      profileHref: `/regions/${encodeURIComponent(selection.region)}`,
     };
   }
   return {

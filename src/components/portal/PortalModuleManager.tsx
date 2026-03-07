@@ -22,6 +22,9 @@ import {
 } from "@/lib/types";
 import { EgraLearnerInputModal, EgraLearner } from "./EgraLearnerInputModal";
 import { SchoolRosterPicker, RosterEntry } from "./SchoolRosterPicker";
+import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
+import { EXTENDED_RECOMMENDATION_CATALOG } from "@/lib/recommendations";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 type FilterState = {
   region: string;
@@ -45,6 +48,8 @@ type FormState = {
   schoolName: string;
   programType: string;
   followUpDate: string;
+  followUpType: string;
+  followUpOwnerUserId: string;
   status: PortalRecordStatus;
   reviewNote: string;
   payload: FormPayloadState;
@@ -79,6 +84,8 @@ type OfflineQueueItem = {
     schoolName: string;
     programType?: string;
     followUpDate?: string;
+    followUpType?: string;
+    followUpOwnerUserId?: number;
     status: PortalRecordStatus;
     payload: Record<string, string | number | boolean | string[] | null | undefined>;
   };
@@ -95,6 +102,7 @@ type EgraMetricKey =
 
 type EgraLearnerRow = {
   no: number;
+  learnerUid: string;
   learnerId: string;
   learnerName: string;
   sex: "" | "M" | "F";
@@ -132,6 +140,7 @@ type EgraSummary = {
   };
   rowsForPayload: Array<{
     no: number;
+    learnerUid: string;
     learnerId: string;
     learnerName: string;
     sex: "M" | "F" | "";
@@ -151,12 +160,39 @@ type TrainingParticipantRole = "" | "Teacher" | "Leader";
 type TrainingParticipantGender = "" | "Male" | "Female";
 
 type TrainingParticipantRow = {
+  contactId: string;
+  contactUid: string;
   participantName: string;
   schoolAccountId: string;
   schoolAttachedTo: string;
   role: TrainingParticipantRole;
   gender: TrainingParticipantGender;
   phoneContact: string;
+};
+
+type VisitImplementationStatus = "started" | "not_started" | "partial";
+type VisitPathway = "observation" | "demo_and_meeting" | "mixed";
+
+type SchoolContactOption = {
+  contactId: number;
+  contactUid: string;
+  fullName: string;
+  category: string;
+};
+
+type VisitNextActionRow = {
+  id: string;
+  action: string;
+  ownerContactId: string;
+  dueDate: string;
+};
+
+type InsightRecommendationPriority = "high" | "medium" | "low";
+
+type InsightRecommendationRow = {
+  recId: string;
+  priority: InsightRecommendationPriority;
+  notes: string;
 };
 
 interface PortalModuleManagerProps {
@@ -171,21 +207,39 @@ const queueStorageKey = "portal-offline-queue";
 const defaultRegion = ugandaRegions[0]?.region ?? "";
 const EGRA_ROW_COUNT = 20;
 const egraMetricLabels: Array<{ key: EgraMetricKey; label: string }> = [
-  { key: "letterIdentification", label: "Letter Identification (letters/min)" },
-  { key: "soundIdentification", label: "Sound Identification (sounds/min)" },
-  { key: "decodableWords", label: "Decodable Words (words/min)" },
-  { key: "undecodableWords", label: "Undecodable Words (words/min)" },
-  { key: "madeUpWords", label: "Made-up Words (words/min)" },
-  { key: "storyReading", label: "Story Reading (words/min)" },
-  { key: "readingComprehension", label: "Reading Comprehension (correct Qs)" },
+  {
+    key: "letterIdentification",
+    label: `${LEARNING_DOMAIN_DICTIONARY.letter_names.label_full} (letters/min)`,
+  },
+  {
+    key: "soundIdentification",
+    label: `${LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full} (sounds/min)`,
+  },
+  {
+    key: "decodableWords",
+    label: `${LEARNING_DOMAIN_DICTIONARY.real_words.label_full} (words/min)`,
+  },
+  { key: "undecodableWords", label: "Reading Real Words (Extended Set) (words/min)" },
+  {
+    key: "madeUpWords",
+    label: `${LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full} (words/min)`,
+  },
+  {
+    key: "storyReading",
+    label: `${LEARNING_DOMAIN_DICTIONARY.story_reading.label_full} (words/min)`,
+  },
+  {
+    key: "readingComprehension",
+    label: `${LEARNING_DOMAIN_DICTIONARY.comprehension.label_full} (correct Qs)`,
+  },
 ];
 
 const egraLevelLabels = [
-  "Non-Reader",
-  "Emerging Reader",
-  "Developing Reader",
-  "Transitional Reader",
-  "Fluent Reader",
+  "Level0 Non-reader",
+  "Level1 Emergent",
+  "Level2 Minimum",
+  "Level3 Competent",
+  "Level4 Strong",
 ] as const;
 
 const visitObservationScoreByRating: Record<string, number> = {
@@ -194,6 +248,10 @@ const visitObservationScoreByRating: Record<string, number> = {
   Fair: 1,
   "Can Improve": 0,
 };
+
+const recCatalogById = new Map(
+  EXTENDED_RECOMMENDATION_CATALOG.map((rec) => [rec.id, rec]),
+);
 
 async function requestBrowserCoordinates(): Promise<BrowserCoordinates> {
   if (typeof window === "undefined" || !navigator.geolocation) {
@@ -230,6 +288,189 @@ function isVisitObservationField(key: string) {
     key.startsWith("readingActivities_") ||
     key.startsWith("trickyWords_")
   );
+}
+
+const visitStepSectionIds = {
+  context: new Set(["visitContext"]),
+  implementation: new Set(["implementationGate"]),
+  observation: new Set([
+    "observationContext",
+    "generalTeaching",
+    "teacherNewSound",
+    "readingActivities",
+    "trickyWords",
+    "observationCoaching",
+  ]),
+  demo: new Set(["lessonDemo", "implementationStartPlan", "leadershipMeeting"]),
+  submit: new Set(["visitInsights"]),
+} as const;
+
+const visitObservationOnlyFieldKeys = new Set([
+  "teacherObserved",
+  "teacherContactId",
+  "teacherContactUid",
+  "teacherUid",
+  "teacherGender",
+  "classLevel",
+  "classSize",
+  "lessonFocusAreas",
+  "learnerSpotCheckCount",
+  "learnerSpotCheckNote",
+  "strengthsObserved",
+  "gapsIdentified",
+  "coachingProvided",
+  "teacherActions",
+  "nextVisitFocus",
+]);
+
+const visitDemoMeetingFieldKeys = new Set([
+  "demoDelivered",
+  "demoClass",
+  "demoFocus",
+  "demoMinutes",
+  "demoComponents",
+  "demoMaterialsUsed",
+  "demoTeachersPresentContactIds",
+  "demoTakeawaysText",
+  "implementationStartDate",
+  "dailyReadingTimeMinutes",
+  "classesToStartFirst",
+  "implementationResponsibleContactId",
+  "supportNeededFromOzeki",
+  "leadershipMeetingHeld",
+  "leadershipAttendeesContactIds",
+  "leadershipSummary",
+  "leadershipAgreements",
+  "leadershipRisks",
+  "leadershipNextActionsJson",
+  "leadershipNextVisitDate",
+]);
+
+function normalizeVisitImplementationStatus(value: unknown): VisitImplementationStatus {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "not_started" || normalized === "not started" || normalized === "no") {
+    return "not_started";
+  }
+  if (normalized === "partial" || normalized === "partially") {
+    return "partial";
+  }
+  return "started";
+}
+
+function deriveVisitPathway(status: VisitImplementationStatus): VisitPathway {
+  if (status === "not_started") return "demo_and_meeting";
+  if (status === "partial") return "mixed";
+  return "observation";
+}
+
+function parseVisitNextActions(value: unknown): VisitNextActionRow[] {
+  let rows: Array<Record<string, unknown>> = [];
+
+  if (Array.isArray(value)) {
+    rows = value.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>;
+  } else if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        rows = parsed.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>;
+      }
+    } catch {
+      rows = [];
+    }
+  }
+
+  const parsedRows = rows
+    .map((row, index) => ({
+      id: `${Date.now()}-${index}`,
+      action: String(row.action ?? "").trim(),
+      ownerContactId: String(row.ownerContactId ?? row.owner_contact_id ?? "").trim(),
+      dueDate: String(row.dueDate ?? row.due_date ?? "").trim().slice(0, 10),
+    }))
+    .filter((row) => row.action || row.ownerContactId || row.dueDate);
+
+  if (parsedRows.length > 0) {
+    return parsedRows;
+  }
+
+  return [{ id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" }];
+}
+
+function sanitizeContactIds(values: string[]) {
+  return [...new Set(values.map((value) => String(value).trim()).filter(Boolean))];
+}
+
+function normalizeInsightRecommendationPriority(value: unknown): InsightRecommendationPriority {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "high" || normalized === "medium" || normalized === "low") {
+    return normalized;
+  }
+  return "medium";
+}
+
+function parseInsightRecommendationRows(value: unknown): InsightRecommendationRow[] {
+  let source: unknown = value;
+  if (typeof source === "string" && source.trim()) {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      source = [];
+    }
+  }
+  if (!Array.isArray(source)) {
+    return [];
+  }
+
+  const rows = source
+    .filter((entry) => entry && typeof entry === "object")
+    .map((entry) => {
+      const row = entry as Record<string, unknown>;
+      return {
+        recId: String(row.recId ?? row.rec_id ?? "").trim(),
+        priority: normalizeInsightRecommendationPriority(row.priority),
+        notes: String(row.notes ?? "").trim(),
+      } as InsightRecommendationRow;
+    })
+    .filter((row) => row.recId);
+
+  return rows;
+}
+
+function applySuggestedInsightRecIds(
+  module: PortalModuleConfig["module"],
+  payload: FormPayloadState,
+): string[] {
+  const recIds = new Set<string>();
+  if (module === "assessment") {
+    const nonReaders = Number(payload.nonReaders ?? 0);
+    const learnersAssessed = Number(payload.learnersAssessed ?? 0);
+    if (learnersAssessed > 0 && nonReaders / learnersAssessed >= 0.3) {
+      recIds.add("REC-01");
+      recIds.add("REC-09");
+    }
+    const fluency = Number(payload.storyReadingScore ?? 0);
+    if (Number.isFinite(fluency) && fluency < 20) {
+      recIds.add("REC-10");
+    }
+  }
+  if (module === "visit") {
+    const implementationStatus = String(payload.implementationStatus ?? "").trim().toLowerCase();
+    if (implementationStatus === "not_started") {
+      recIds.add("REC-03");
+      recIds.add("REC-04");
+    } else if (implementationStatus === "partial") {
+      recIds.add("REC-04");
+      recIds.add("REC-17");
+    }
+  }
+  if (module === "training") {
+    recIds.add("REC-04");
+    recIds.add("REC-17");
+  }
+  if (module === "story" || module === "story_activity") {
+    recIds.add("REC-18");
+    recIds.add("REC-20");
+  }
+  return [...recIds];
 }
 
 function getToday() {
@@ -332,10 +573,17 @@ function inferPlaceholder(field: PortalFieldConfig) {
 
 function normalizeParticipantRole(value: unknown): TrainingParticipantRole {
   const normalized = String(value ?? "").trim().toLowerCase();
-  if (normalized === "teacher") {
+  if (normalized === "teacher" || normalized === "classroom teacher") {
     return "Teacher";
   }
-  if (normalized === "leader") {
+  if (
+    normalized === "leader" ||
+    normalized === "school leader" ||
+    normalized === "head teacher" ||
+    normalized === "deputy head teacher" ||
+    normalized === "dos" ||
+    normalized === "proprietor"
+  ) {
     return "Leader";
   }
   return "";
@@ -354,6 +602,8 @@ function normalizeParticipantGender(value: unknown): TrainingParticipantGender {
 
 function createEmptyTrainingParticipant(defaultSchoolId = "", defaultSchoolName = ""): TrainingParticipantRow {
   return {
+    contactId: "",
+    contactUid: "",
     participantName: "",
     schoolAccountId: defaultSchoolId,
     schoolAttachedTo: defaultSchoolName,
@@ -365,6 +615,8 @@ function createEmptyTrainingParticipant(defaultSchoolId = "", defaultSchoolName 
 
 function rowHasTrainingParticipantData(row: TrainingParticipantRow) {
   return (
+    row.contactId.trim() ||
+    row.contactUid.trim() ||
     row.participantName.trim() ||
     row.schoolAccountId.trim() ||
     row.schoolAttachedTo.trim() ||
@@ -420,6 +672,8 @@ function parseTrainingParticipants(
       const linkedSchool = schoolFromId ?? schoolFromName ?? null;
 
       return {
+        contactId: sanitizeForInput(entry.contactId),
+        contactUid: sanitizeForInput(entry.contactUid ?? entry.teacherUid),
         participantName: sanitizeForInput(entry.participantName),
         schoolAccountId: linkedSchool ? String(linkedSchool.id) : schoolAccountIdRaw,
         schoolAttachedTo:
@@ -513,6 +767,7 @@ function createEmptyEgraMetricRecord(): Record<EgraMetricKey, number> {
 function createEmptyEgraLearnerRow(no: number): EgraLearnerRow {
   return {
     no,
+    learnerUid: "",
     learnerId: "",
     learnerName: "",
     sex: "",
@@ -544,25 +799,70 @@ function roundOne(value: number) {
   return Number(value.toFixed(1));
 }
 
-function determineFluencyLevel(storyReadingValue: string) {
+function determineFluencyLevel(storyReadingValue: string, comprehensionValue?: string) {
   const storyReading = toNumberOrNull(storyReadingValue);
   if (storyReading === null) {
     return "";
   }
 
-  if (storyReading <= 10) {
-    return "Non-Reader";
+  let band = 0;
+  if (storyReading <= 0) {
+    band = 0;
+  } else if (storyReading <= 19) {
+    band = 1;
+  } else if (storyReading <= 39) {
+    band = 2;
+  } else if (storyReading <= 59) {
+    band = 3;
+  } else {
+    band = 4;
   }
-  if (storyReading <= 25) {
-    return "Emerging Reader";
+
+  const comprehension = toNumberOrNull(comprehensionValue ?? "");
+  if (comprehension !== null) {
+    const comprehensionPct = comprehension <= 5 ? (comprehension / 5) * 100 : comprehension;
+    const comprehensionOk = comprehensionPct >= 70 || comprehension >= 4;
+    if (!comprehensionOk) {
+      band = Math.max(0, band - 1);
+    }
   }
-  if (storyReading <= 45) {
-    return "Developing Reader";
+
+  if (band <= 0) {
+    return "Level0 Non-reader";
   }
-  if (storyReading <= 60) {
-    return "Transitional Reader";
+  if (band === 1) {
+    return "Level1 Emergent";
   }
-  return "Fluent Reader";
+  if (band === 2) {
+    return "Level2 Minimum";
+  }
+  if (band === 3) {
+    return "Level3 Competent";
+  }
+  return "Level4 Strong";
+}
+
+function normalizeEgraLevelLabel(
+  value: string,
+  storyReadingValue: string,
+  comprehensionValue?: string,
+) {
+  const normalized = value.trim();
+  if (
+    normalized === "Level0 Non-reader" ||
+    normalized === "Level1 Emergent" ||
+    normalized === "Level2 Minimum" ||
+    normalized === "Level3 Competent" ||
+    normalized === "Level4 Strong"
+  ) {
+    return normalized;
+  }
+  if (normalized === "Non-Reader") return "Level0 Non-reader";
+  if (normalized === "Emerging Reader" || normalized === "Letter Reader") return "Level1 Emergent";
+  if (normalized === "Developing Reader" || normalized === "Syllable Reader") return "Level2 Minimum";
+  if (normalized === "Transitional Reader" || normalized === "Word Reader") return "Level3 Competent";
+  if (normalized === "Fluent Reader" || normalized === "Story Reader") return "Level4 Strong";
+  return determineFluencyLevel(storyReadingValue, comprehensionValue);
 }
 
 function rowHasAssessmentData(row: EgraLearnerRow) {
@@ -608,12 +908,16 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
   };
 
   activeRows.forEach((row) => {
-    const level = row.fluencyLevel || determineFluencyLevel(row.storyReading);
-    if (level === "Non-Reader") profileCounts.nonReaders += 1;
-    if (level === "Emerging Reader") profileCounts.emerging += 1;
-    if (level === "Developing Reader") profileCounts.developing += 1;
-    if (level === "Transitional Reader") profileCounts.transitional += 1;
-    if (level === "Fluent Reader") profileCounts.fluent += 1;
+    const level = normalizeEgraLevelLabel(
+      row.fluencyLevel,
+      row.storyReading,
+      row.readingComprehension,
+    );
+    if (level === "Level0 Non-reader") profileCounts.nonReaders += 1;
+    if (level === "Level1 Emergent") profileCounts.emerging += 1;
+    if (level === "Level2 Minimum") profileCounts.developing += 1;
+    if (level === "Level3 Competent") profileCounts.transitional += 1;
+    if (level === "Level4 Strong") profileCounts.fluent += 1;
   });
 
   const total = activeRows.length || 1;
@@ -638,6 +942,7 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
     },
     rowsForPayload: activeRows.map((row) => ({
       no: row.no,
+      learnerUid: row.learnerUid.trim(),
       learnerId: row.learnerId.trim(),
       learnerName: row.learnerName.trim(),
       sex: row.sex,
@@ -649,7 +954,11 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
       madeUpWords: toNumberOrNull(row.madeUpWords),
       storyReading: toNumberOrNull(row.storyReading),
       readingComprehension: toNumberOrNull(row.readingComprehension),
-      fluencyLevel: row.fluencyLevel || determineFluencyLevel(row.storyReading),
+      fluencyLevel: normalizeEgraLevelLabel(
+        row.fluencyLevel,
+        row.storyReading,
+        row.readingComprehension,
+      ),
     })),
   };
 }
@@ -675,10 +984,16 @@ function parseEgraRows(raw: unknown): EgraLearnerRow[] {
     }
     const entry = source as Record<string, unknown>;
     const storyReading = sanitizeForInput(entry.storyReading);
-    const fluencyLevel = sanitizeForInput(entry.fluencyLevel) || determineFluencyLevel(storyReading);
+    const readingComprehension = sanitizeForInput(entry.readingComprehension);
+    const fluencyLevel = normalizeEgraLevelLabel(
+      sanitizeForInput(entry.fluencyLevel),
+      storyReading,
+      readingComprehension,
+    );
 
     return {
       no: Number(entry.no ?? template.no) || template.no,
+      learnerUid: sanitizeForInput(entry.learnerUid),
       learnerId: sanitizeForInput(entry.learnerId),
       learnerName: sanitizeForInput(entry.learnerName),
       sex: normalizeSex(entry.sex),
@@ -689,7 +1004,7 @@ function parseEgraRows(raw: unknown): EgraLearnerRow[] {
       undecodableWords: sanitizeForInput(entry.undecodableWords),
       madeUpWords: sanitizeForInput(entry.madeUpWords),
       storyReading,
-      readingComprehension: sanitizeForInput(entry.readingComprehension),
+      readingComprehension,
       fluencyLevel,
     };
   });
@@ -761,6 +1076,15 @@ export function PortalModuleManager({
   const [trainingParticipants, setTrainingParticipants] = useState<TrainingParticipantRow[]>(
     () => [createEmptyTrainingParticipant()],
   );
+  const [visitStep, setVisitStep] = useState<1 | 2 | 3 | 4>(1);
+  const [schoolContacts, setSchoolContacts] = useState<SchoolContactOption[]>([]);
+  const [loadingSchoolContacts, setLoadingSchoolContacts] = useState(false);
+  const [visitNextActions, setVisitNextActions] = useState<VisitNextActionRow[]>(() => [
+    { id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" },
+  ]);
+  const [insightRecommendationRows, setInsightRecommendationRows] = useState<
+    InsightRecommendationRow[]
+  >([]);
 
   const [isEgraModalOpen, setIsEgraModalOpen] = useState(false);
   const [modalLearnerNo, setModalLearnerNo] = useState(1);
@@ -775,10 +1099,29 @@ export function PortalModuleManager({
     schoolName: "",
     programType: config.programTypeOptions[0]?.value ?? "",
     followUpDate: "",
+    followUpType: "school_visit",
+    followUpOwnerUserId: "",
     status: "Draft",
     reviewNote: "",
     payload: buildDefaultPayload(config),
   }));
+
+  const isVisitModule = config.module === "visit";
+  const visitImplementationStatus = useMemo(
+    () =>
+      normalizeVisitImplementationStatus(
+        formState.payload.implementationStatus,
+      ),
+    [formState.payload.implementationStatus],
+  );
+  const visitPathway = useMemo(
+    () => deriveVisitPathway(visitImplementationStatus),
+    [visitImplementationStatus],
+  );
+  const visitAllowsObservation =
+    visitImplementationStatus === "started" || visitImplementationStatus === "partial";
+  const visitRequiresDemoMeeting =
+    visitImplementationStatus === "not_started" || visitImplementationStatus === "partial";
 
   const egraSummary = useMemo(() => computeEgraSummary(egraLearners), [egraLearners]);
   const formDistrictOptions = useMemo(() => {
@@ -805,6 +1148,9 @@ export function PortalModuleManager({
     [initialSchools],
   );
   const formSchoolOptions = useMemo(() => {
+    if (config.module === "visit") {
+      return [...initialSchools].sort((left, right) => left.name.localeCompare(right.name));
+    }
     const region = formState.region.trim();
     const district = formState.district.trim().toLowerCase();
     const list = initialSchools.filter((school) => {
@@ -818,11 +1164,7 @@ export function PortalModuleManager({
     });
 
     return list.sort((left, right) => left.name.localeCompare(right.name));
-  }, [formState.district, formState.region, initialSchools]);
-  const participantSchoolOptions = useMemo(
-    () => [...initialSchools].sort((left, right) => left.name.localeCompare(right.name)),
-    [initialSchools],
-  );
+  }, [config.module, formState.district, formState.region, initialSchools]);
   const trainingParticipantStats = useMemo(() => {
     const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
     return {
@@ -840,6 +1182,17 @@ export function PortalModuleManager({
         : formState.date || getToday(),
     [config.module, formState.date],
   );
+  const followUpOwnerOptions = useMemo(
+    () => initialUsers.map((entry) => ({ id: entry.id, fullName: entry.fullName })),
+    [initialUsers],
+  );
+  const defaultFollowUpOwnerId = useMemo(() => {
+    const hasCurrentUser = followUpOwnerOptions.some((entry) => entry.id === currentUser.id);
+    if (hasCurrentUser) {
+      return String(currentUser.id);
+    }
+    return followUpOwnerOptions[0] ? String(followUpOwnerOptions[0].id) : "";
+  }, [currentUser.id, followUpOwnerOptions]);
 
   const refreshOfflineCount = useCallback(() => {
     setOfflineCount(readQueue().length);
@@ -905,6 +1258,14 @@ export function PortalModuleManager({
   const newFormState = useCallback(
     (options?: { schoolId?: number | null; programType?: string }): FormState => {
       const defaults = buildDefaultPayload(config);
+      if (config.module === "visit") {
+        defaults.coachObserver = currentUser.fullName;
+        defaults.implementationStatus = "";
+        defaults.visitPathway = "observation";
+        defaults.demoDelivered = "yes";
+        defaults.leadershipMeetingHeld = "yes";
+        defaults.leadershipNextActionsJson = "[]";
+      }
       const schoolDefaults = getSchoolScopeDefaults(options?.schoolId);
 
       return {
@@ -919,12 +1280,14 @@ export function PortalModuleManager({
           config.programTypeOptions[0]?.value ||
           "",
         followUpDate: config.module === "training" ? addDaysToDate(getToday(), 14) : "",
+        followUpType: "school_visit",
+        followUpOwnerUserId: config.module === "training" ? defaultFollowUpOwnerId : "",
         status: "Draft",
         reviewNote: "",
         payload: defaults,
       };
     },
-    [config, getSchoolScopeDefaults],
+    [config, currentUser.fullName, defaultFollowUpOwnerId, getSchoolScopeDefaults],
   );
 
   const openNewForm = useCallback((options?: { schoolId?: number | null; programType?: string }) => {
@@ -935,9 +1298,13 @@ export function PortalModuleManager({
       createEmptyTrainingParticipant(nextForm.schoolId, nextForm.schoolName),
     ]);
     setIsFormOpen(true);
+    setVisitStep(1);
     setSelectedFiles([]);
     setFileInputKey((value) => value + 1);
     setEvidenceItems([]);
+    setSchoolContacts([]);
+    setVisitNextActions([{ id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" }]);
+    setInsightRecommendationRows([]);
     setFeedback({ kind: "idle", message: "" });
   }, [newFormState]);
 
@@ -1001,6 +1368,21 @@ export function PortalModuleManager({
       }
     });
 
+    if (config.module === "visit") {
+      if (!String(nextPayload.coachObserver ?? "").trim()) {
+        nextPayload.coachObserver = record.createdByName;
+      }
+      if (!String(nextPayload.implementationStatus ?? "").trim()) {
+        nextPayload.implementationStatus = "started";
+      }
+      if (!String(nextPayload.demoDelivered ?? "").trim()) {
+        nextPayload.demoDelivered = "yes";
+      }
+      if (!String(nextPayload.leadershipMeetingHeld ?? "").trim()) {
+        nextPayload.leadershipMeetingHeld = "yes";
+      }
+    }
+
     setFormState({
       id: record.id,
       date: record.date,
@@ -1012,15 +1394,35 @@ export function PortalModuleManager({
       schoolName: linkedSchoolName,
       programType: record.programType ?? config.programTypeOptions[0]?.value ?? "",
       followUpDate: record.followUpDate ?? "",
+      followUpType: record.followUpType ?? "school_visit",
+      followUpOwnerUserId: record.followUpOwnerUserId ? String(record.followUpOwnerUserId) : defaultFollowUpOwnerId,
       status: record.status,
       reviewNote: record.reviewNote ?? "",
       payload: nextPayload,
     });
     setIsFormOpen(true);
+    setVisitStep(1);
+    setVisitNextActions(parseVisitNextActions(nextPayload.leadershipNextActionsJson));
+    const recIds = Array.isArray(nextPayload.insightsRecommendationsRecIds)
+      ? nextPayload.insightsRecommendationsRecIds
+      : [];
+    const parsedRecRows = parseInsightRecommendationRows(
+      nextPayload.insightsRecommendationsRecJson,
+    );
+    const recRowsById = new Map(parsedRecRows.map((row) => [row.recId, row]));
+    const mergedRows: InsightRecommendationRow[] = recIds.map((recId) => {
+      const existing = recRowsById.get(recId);
+      return existing ?? {
+        recId,
+        priority: "medium" as InsightRecommendationPriority,
+        notes: "",
+      };
+    });
+    setInsightRecommendationRows(mergedRows);
     setSelectedFiles([]);
     setFileInputKey((value) => value + 1);
     setFeedback({ kind: "idle", message: "" });
-  }, [config, initialSchools, schoolsById, schoolsByName]);
+  }, [config, defaultFollowUpOwnerId, initialSchools, schoolsById, schoolsByName]);
 
   const fetchRecords = useCallback(async (nextFilters: FilterState) => {
     setLoadingRecords(true);
@@ -1172,6 +1574,8 @@ export function PortalModuleManager({
         ...formState,
         egraLearners,
         trainingParticipants,
+        visitNextActions,
+        insightRecommendationRows,
         module: config.module,
         savedAt: new Date().toISOString(),
       };
@@ -1182,7 +1586,16 @@ export function PortalModuleManager({
     return () => {
       window.clearInterval(interval);
     };
-  }, [config.module, draftStorageKey, formState, egraLearners, isFormOpen, trainingParticipants]);
+  }, [
+    config.module,
+    draftStorageKey,
+    formState,
+    egraLearners,
+    isFormOpen,
+    trainingParticipants,
+    visitNextActions,
+    insightRecommendationRows,
+  ]);
 
   useEffect(() => {
     if (config.module !== "training") {
@@ -1208,6 +1621,118 @@ export function PortalModuleManager({
       }),
     );
   }, [config.module, formState.schoolId, schoolsById]);
+
+  useEffect(() => {
+    if (!isVisitModule) {
+      return;
+    }
+    if (!isFormOpen) {
+      setSchoolContacts([]);
+      return;
+    }
+    const schoolId = Number(formState.schoolId);
+    if (!Number.isInteger(schoolId) || schoolId <= 0) {
+      setSchoolContacts([]);
+      return;
+    }
+
+    let active = true;
+    setLoadingSchoolContacts(true);
+    void (async () => {
+      try {
+        const response = await fetch(`/api/portal/schools/roster?schoolId=${schoolId}&type=teacher`);
+        if (!response.ok) {
+          return;
+        }
+        const data = (await response.json()) as {
+          roster?: Array<{
+            contactId: number;
+            contactUid: string;
+            fullName: string;
+            category: string;
+          }>;
+        };
+        if (!active) {
+          return;
+        }
+        const contacts = (data.roster ?? [])
+          .filter((entry) => Number.isInteger(entry.contactId) && entry.contactId > 0)
+          .map((entry) => ({
+            contactId: Number(entry.contactId),
+            contactUid: String(entry.contactUid ?? ""),
+            fullName: String(entry.fullName ?? "").trim(),
+            category: String(entry.category ?? "").trim(),
+          }))
+          .sort((left, right) => left.fullName.localeCompare(right.fullName));
+        setSchoolContacts(contacts);
+      } catch {
+        if (active) {
+          setSchoolContacts([]);
+        }
+      } finally {
+        if (active) {
+          setLoadingSchoolContacts(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [formState.schoolId, isFormOpen, isVisitModule]);
+
+  useEffect(() => {
+    if (!isVisitModule) {
+      return;
+    }
+    if (!formState.schoolId.trim() && visitStep > 1) {
+      setVisitStep(1);
+    }
+  }, [formState.schoolId, isVisitModule, visitStep]);
+
+  useEffect(() => {
+    if (!isVisitModule) {
+      return;
+    }
+    setFormState((prev) => {
+      const currentPathway = String(prev.payload.visitPathway ?? "").trim();
+      const nextPayload: FormPayloadState = { ...prev.payload };
+      let changed = false;
+
+      if (currentPathway !== visitPathway) {
+        nextPayload.visitPathway = visitPathway;
+        changed = true;
+      }
+
+      if (!String(prev.payload.coachObserver ?? "").trim()) {
+        nextPayload.coachObserver = currentUser.fullName;
+        changed = true;
+      }
+
+      if (!changed) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        payload: nextPayload,
+      };
+    });
+  }, [currentUser.fullName, isVisitModule, visitPathway]);
+
+  useEffect(() => {
+    const selectedRecIds = Array.isArray(formState.payload.insightsRecommendationsRecIds)
+      ? sanitizeContactIds(formState.payload.insightsRecommendationsRecIds)
+      : [];
+
+    setInsightRecommendationRows((prev) => {
+      const prevById = new Map(prev.map((row) => [row.recId, row]));
+      return selectedRecIds.map((recId) => {
+        const existing = prevById.get(recId);
+        return existing ?? { recId, priority: "medium", notes: "" };
+      });
+    });
+  }, [formState.payload.insightsRecommendationsRecIds]);
 
   useEffect(() => {
     if (urlInitialized) {
@@ -1266,6 +1791,7 @@ export function PortalModuleManager({
           schoolId?: unknown;
           egraLearners?: unknown;
           trainingParticipants?: unknown;
+          visitNextActions?: unknown;
         };
         if (parsed.module === config.module || !parsed.module) {
           const draftSchoolIdValue =
@@ -1320,6 +1846,11 @@ export function PortalModuleManager({
             schoolName: enforcedSchool?.name ?? parsed.schoolName ?? "",
             programType: resolvedProgramType,
             followUpDate: parsed.followUpDate ?? "",
+            followUpType: parsed.followUpType ?? "school_visit",
+            followUpOwnerUserId:
+              parsed.followUpOwnerUserId !== undefined && parsed.followUpOwnerUserId !== null
+                ? String(parsed.followUpOwnerUserId)
+                : defaultFollowUpOwnerId,
             status: parsed.status ?? "Draft",
             reviewNote: parsed.reviewNote ?? "",
             payload: { ...buildDefaultPayload(config), ...(parsed.payload ?? {}) },
@@ -1336,6 +1867,26 @@ export function PortalModuleManager({
               },
             ),
           );
+          const payload = { ...buildDefaultPayload(config), ...(parsed.payload ?? {}) };
+          const selectedRecIds = Array.isArray(payload.insightsRecommendationsRecIds)
+            ? payload.insightsRecommendationsRecIds
+            : [];
+          const parsedRecRows = parseInsightRecommendationRows(
+            payload.insightsRecommendationsRecJson,
+          );
+          const recRowsById = new Map(parsedRecRows.map((row) => [row.recId, row]));
+          setInsightRecommendationRows(
+            selectedRecIds.map((recId) => {
+              const existing = recRowsById.get(recId);
+              return existing ?? { recId, priority: "medium", notes: "" };
+            }),
+          );
+          if (config.module === "visit") {
+            setVisitNextActions(
+              parseVisitNextActions(parsed.visitNextActions ?? payload.leadershipNextActionsJson),
+            );
+            setVisitStep(1);
+          }
           setIsFormOpen(true);
           setUrlInitialized(true);
           return;
@@ -1352,6 +1903,7 @@ export function PortalModuleManager({
     setUrlInitialized(true);
   }, [
     config,
+    defaultFollowUpOwnerId,
     draftStorageKey,
     initialSchools,
     loadEvidence,
@@ -1470,6 +2022,7 @@ export function PortalModuleManager({
       const index = learner.no - 1;
       newRows[index] = {
         no: learner.no,
+        learnerUid: learner.learnerUid ?? "",
         learnerId: learner.learnerId,
         learnerName: learner.learnerName,
         sex: learner.sex as "M" | "F",
@@ -1503,7 +2056,8 @@ export function PortalModuleManager({
     }
   }, [formState.payload.classLevel, formState.schoolId, schoolsById]);
 
-  const validateForm = useCallback(() => {
+  const validateForm = useCallback((nextStatus: PortalRecordStatus) => {
+    const enforceInsights = nextStatus !== "Draft";
     const requiresDistrict = config.module !== "training";
     if (!formState.date || !formState.region.trim() || (requiresDistrict && !formState.district.trim())) {
       return requiresDistrict
@@ -1518,10 +2072,8 @@ export function PortalModuleManager({
     const hasSelectedSchool =
       Number.isInteger(selectedSchoolId) && selectedSchoolId > 0 && schoolsById.has(selectedSchoolId);
 
-    if (config.module !== "training") {
-      if (!hasSelectedSchool) {
-        return "Select a valid school account.";
-      }
+    if (!hasSelectedSchool) {
+      return "Select a valid school account.";
     }
 
     if (config.module === "training") {
@@ -1530,20 +2082,14 @@ export function PortalModuleManager({
         return "Add at least one participant.";
       }
 
-      const hasLinkedSchool = activeRows.some((row) => {
-        if (!row.schoolAccountId.trim()) {
-          return false;
-        }
-        const schoolId = Number(row.schoolAccountId);
-        return Number.isInteger(schoolId) && schoolId > 0 && schoolsById.has(schoolId);
-      });
-
-      if (!hasLinkedSchool && !hasSelectedSchool) {
-        return "At least one participant must be linked to a school account.";
-      }
-
       if (!formState.followUpDate) {
         return "Next follow-up date is required and must be at least 2 weeks after training.";
+      }
+      if (!formState.followUpType.trim()) {
+        return "Follow-up type is required for training.";
+      }
+      if (!formState.followUpOwnerUserId.trim()) {
+        return "Follow-up owner is required for training.";
       }
     }
 
@@ -1580,11 +2126,76 @@ export function PortalModuleManager({
       return "Female + male attendance cannot exceed total number attended.";
     }
 
+    if (config.module === "visit") {
+      const implementationStatusRaw = String(formState.payload.implementationStatus ?? "").trim();
+      if (!implementationStatusRaw) {
+        return "Implementation check is required.";
+      }
+
+      const classesImplementing = Array.isArray(formState.payload.classesImplementing)
+        ? formState.payload.classesImplementing
+        : [];
+      const classesNotImplementing = Array.isArray(formState.payload.classesNotImplementing)
+        ? formState.payload.classesNotImplementing
+        : [];
+
+      if (visitImplementationStatus === "partial") {
+        if (classesImplementing.length === 0) {
+          return "Select classes implementing for partial implementation.";
+        }
+        if (classesNotImplementing.length === 0) {
+          return "Select classes not implementing for partial implementation.";
+        }
+        const overlap = classesImplementing.find((entry) => classesNotImplementing.includes(entry));
+        if (overlap) {
+          return `Class ${overlap} cannot be in both implementing and not implementing lists.`;
+        }
+      }
+
+      if (visitRequiresDemoMeeting) {
+        const validNextActions = visitNextActions.filter(
+          (row) => row.action.trim() && row.ownerContactId.trim() && row.dueDate.trim(),
+        );
+        if (validNextActions.length === 0) {
+          return "Add at least one next action with owner and due date.";
+        }
+      }
+    }
+
     for (const section of config.sections) {
       for (const field of section.fields) {
-        if (!field.required) {
+        const isInsightField =
+          field.key === "insightsKeyFindings" ||
+          field.key === "insightsWhatWentWell" ||
+          field.key === "insightsChallenges" ||
+          field.key === "insightsRecommendationsRecIds" ||
+          field.key === "insightsConclusionsNextSteps";
+
+        if (!field.required || (!enforceInsights && isInsightField)) {
           continue;
         }
+
+        if (config.module === "visit") {
+          const isObservationField =
+            visitObservationOnlyFieldKeys.has(field.key) || isVisitObservationField(field.key);
+          const isDemoMeetingField = visitDemoMeetingFieldKeys.has(field.key);
+          if (!visitAllowsObservation && isObservationField) {
+            continue;
+          }
+          if (!visitRequiresDemoMeeting && isDemoMeetingField) {
+            continue;
+          }
+          if (field.key === "leadershipNextActionsJson") {
+            const validNextActions = visitNextActions.filter(
+              (row) => row.action.trim() && row.ownerContactId.trim() && row.dueDate.trim(),
+            );
+            if (validNextActions.length === 0) {
+              return "Add at least one next action with owner and due date.";
+            }
+            continue;
+          }
+        }
+
         const value = formState.payload[field.key];
         if (field.type === "multiselect") {
           if (!Array.isArray(value) || value.length === 0) {
@@ -1603,15 +2214,18 @@ export function PortalModuleManager({
           const validPhone = /^[+0-9()\s-]{7,20}$/;
           for (let index = 0; index < activeRows.length; index += 1) {
             const participant = activeRows[index];
-            if (!participant.participantName.trim()) {
-              return `Participant ${index + 1}: participant name is required.`;
+            if (!participant.contactId.trim() && !participant.contactUid.trim()) {
+              return `Participant ${index + 1}: select a participant from the school roster.`;
             }
-            if (!participant.schoolAccountId.trim()) {
-              return `Participant ${index + 1}: school account is required.`;
+            if (!participant.participantName.trim()) {
+              return `Participant ${index + 1}: participant name is missing.`;
             }
             const participantSchoolId = Number(participant.schoolAccountId);
             if (!Number.isInteger(participantSchoolId) || participantSchoolId <= 0 || !schoolsById.has(participantSchoolId)) {
               return `Participant ${index + 1}: select a valid school account.`;
+            }
+            if (participantSchoolId !== selectedSchoolId) {
+              return `Participant ${index + 1}: participant must belong to the selected school.`;
             }
             if (!participant.role) {
               return `Participant ${index + 1}: role is required.`;
@@ -1619,10 +2233,7 @@ export function PortalModuleManager({
             if (!participant.gender) {
               return `Participant ${index + 1}: gender is required.`;
             }
-            if (!participant.phoneContact.trim()) {
-              return `Participant ${index + 1}: phone contact is required.`;
-            }
-            if (!validPhone.test(participant.phoneContact.trim())) {
+            if (participant.phoneContact.trim() && !validPhone.test(participant.phoneContact.trim())) {
               return `Participant ${index + 1}: phone contact format is invalid.`;
             }
           }
@@ -1651,6 +2262,24 @@ export function PortalModuleManager({
       }
     }
 
+    if (enforceInsights) {
+      const keyFindings = String(formState.payload.insightsKeyFindings ?? "").trim();
+      const conclusions = String(formState.payload.insightsConclusionsNextSteps ?? "").trim();
+      const selectedRecIds = Array.isArray(formState.payload.insightsRecommendationsRecIds)
+        ? sanitizeContactIds(formState.payload.insightsRecommendationsRecIds)
+        : [];
+
+      if (!keyFindings) {
+        return "Key findings are required for final submission.";
+      }
+      if (selectedRecIds.length === 0) {
+        return "Select at least one REC recommendation for final submission.";
+      }
+      if (!conclusions) {
+        return "Conclusions + next steps are required for final submission.";
+      }
+    }
+
     return "";
   }, [
     config,
@@ -1661,6 +2290,10 @@ export function PortalModuleManager({
     trainingParticipantStats.male,
     trainingParticipantStats.total,
     trainingParticipants,
+    visitAllowsObservation,
+    visitImplementationStatus,
+    visitNextActions,
+    visitRequiresDemoMeeting,
   ]);
 
   const buildRequestBody = useCallback(
@@ -1702,21 +2335,124 @@ export function PortalModuleManager({
         payload[key] = String(value ?? "").trim();
       });
 
+      const selectedInsightRecIds = sanitizeContactIds(
+        Array.isArray(formState.payload.insightsRecommendationsRecIds)
+          ? formState.payload.insightsRecommendationsRecIds
+          : [],
+      );
+      const recommendationRowsById = new Map(
+        insightRecommendationRows.map((row) => [row.recId, row]),
+      );
+      const serializedRecommendationRows = selectedInsightRecIds.map((recId) => {
+        const existing = recommendationRowsById.get(recId);
+        return {
+          recId,
+          priority: existing?.priority ?? "medium",
+          notes: (existing?.notes ?? "").trim() || null,
+        };
+      });
+      payload.insightsRecommendationsRecIds = selectedInsightRecIds;
+      payload.insightsRecommendationsRecJson = JSON.stringify(serializedRecommendationRows);
+      payload.insightsRecRecommendations = selectedInsightRecIds.join(", ");
+
+      if (config.module === "visit") {
+        payload.coachObserver = currentUser.fullName;
+        payload.implementationStatus = String(
+          formState.payload.implementationStatus ?? "",
+        ).trim();
+        payload.visitPathway = visitPathway;
+        payload.classesImplementing = sanitizeContactIds(
+          Array.isArray(formState.payload.classesImplementing)
+            ? formState.payload.classesImplementing
+            : [],
+        );
+        payload.classesNotImplementing = sanitizeContactIds(
+          Array.isArray(formState.payload.classesNotImplementing)
+            ? formState.payload.classesNotImplementing
+            : [],
+        );
+
+        const demoTeachersPresent = sanitizeContactIds(
+          Array.isArray(formState.payload.demoTeachersPresentContactIds)
+            ? formState.payload.demoTeachersPresentContactIds
+            : [],
+        );
+        const leadershipAttendees = sanitizeContactIds(
+          Array.isArray(formState.payload.leadershipAttendeesContactIds)
+            ? formState.payload.leadershipAttendeesContactIds
+            : [],
+        );
+        payload.demoTeachersPresentContactIds = demoTeachersPresent;
+        payload.leadershipAttendeesContactIds = leadershipAttendees;
+        payload.implementationResponsibleContactId = String(
+          formState.payload.implementationResponsibleContactId ?? "",
+        ).trim();
+
+        const nextActions = visitNextActions
+          .map((row) => ({
+            action: row.action.trim(),
+            ownerContactId: row.ownerContactId.trim(),
+            dueDate: row.dueDate.trim(),
+          }))
+          .filter((row) => row.action && row.ownerContactId && row.dueDate);
+        payload.leadershipNextActionsJson = JSON.stringify(nextActions);
+
+        ["classSize", "learnerSpotCheckCount", "demoMinutes", "dailyReadingTimeMinutes"].forEach(
+          (key) => {
+            const raw = String(formState.payload[key] ?? "").trim();
+            if (!raw) {
+              delete payload[key];
+            }
+          },
+        );
+
+        const teacherContactId = String(formState.payload.teacherContactId ?? "").trim();
+        const teacherContactUid = String(formState.payload.teacherContactUid ?? "").trim();
+        const teacherUid = String(formState.payload.teacherUid ?? "").trim();
+        const teacherGender = String(formState.payload.teacherGender ?? "").trim();
+        if (visitAllowsObservation) {
+          if (teacherContactId) {
+            payload.teacherContactId = Number(teacherContactId);
+          }
+          if (teacherContactUid) {
+            payload.teacherContactUid = teacherContactUid;
+          }
+          if (teacherUid) {
+            payload.teacherUid = teacherUid;
+          }
+          if (teacherGender) {
+            payload.teacherGender = teacherGender;
+          }
+        }
+
+        if (!visitAllowsObservation) {
+          Object.keys(payload).forEach((key) => {
+            if (isVisitObservationField(key) || visitObservationOnlyFieldKeys.has(key)) {
+              delete payload[key];
+            }
+          });
+        }
+
+      }
+
       if (formState.region.trim()) {
         payload.region = formState.region.trim();
+      }
+      if (config.module === "training") {
+        payload.followUpType = formState.followUpType.trim();
+        payload.followUpOwnerUserId = formState.followUpOwnerUserId.trim()
+          ? Number(formState.followUpOwnerUserId.trim())
+          : null;
       }
 
       if (participantField) {
         const participantRows = trainingParticipants
           .filter((row) => rowHasTrainingParticipantData(row))
           .map((row) => {
-            const mappedSchool =
-              (row.schoolAccountId.trim()
-                ? schoolsById.get(Number(row.schoolAccountId.trim()))
-                : null) ??
-              selectedSchool ??
-              null;
+            const mappedSchool = selectedSchool ?? null;
             return {
+              contactId: row.contactId.trim() ? Number(row.contactId.trim()) : null,
+              contactUid: row.contactUid.trim() || null,
               participantName: row.participantName.trim(),
               schoolAttachedTo: mappedSchool?.name ?? row.schoolAttachedTo.trim(),
               schoolAccountId: mappedSchool?.id ?? null,
@@ -1728,13 +2464,7 @@ export function PortalModuleManager({
           });
 
         const primaryParticipantSchool =
-          participantRows
-            .map((row) =>
-              typeof row.schoolAccountId === "number" && Number.isInteger(row.schoolAccountId)
-                ? schoolsById.get(row.schoolAccountId) ?? null
-                : null,
-            )
-            .find((school) => Boolean(school)) ?? null;
+          participantRows.length > 0 ? selectedSchool ?? null : null;
         const resolvedPrimarySchool =
           config.module === "training"
             ? primaryParticipantSchool ?? selectedSchool
@@ -1764,6 +2494,11 @@ export function PortalModuleManager({
           schoolName: resolvedSchoolName,
           programType: formState.programType.trim(),
           followUpDate: formState.followUpDate.trim() || undefined,
+          followUpType: config.module === "training" ? formState.followUpType.trim() || undefined : undefined,
+          followUpOwnerUserId:
+            config.module === "training" && formState.followUpOwnerUserId.trim()
+              ? Number(formState.followUpOwnerUserId.trim())
+              : undefined,
           status: nextStatus,
           payload,
         };
@@ -1792,10 +2527,20 @@ export function PortalModuleManager({
       }
 
       if (config.module === "visit") {
+        payload.visitPathway = visitPathway;
         if (selectedSchool?.gpsLat?.trim() && selectedSchool?.gpsLng?.trim()) {
           payload.schoolGpsLat = selectedSchool.gpsLat.trim();
           payload.schoolGpsLng = selectedSchool.gpsLng.trim();
           payload.schoolGpsSource = "school_profile";
+        }
+
+        if (!String(payload.nextVisitFocus ?? "").trim()) {
+          payload.nextVisitFocus =
+            visitPathway === "demo_and_meeting"
+              ? "Verify implementation start plan, leadership agreements, and classroom launch readiness."
+              : visitPathway === "mixed"
+                ? "Track rollout in non-implementing classes while deepening coaching support in implementing classes."
+                : "Follow up on observation gaps, teacher actions, and learner outcomes in the next coaching cycle.";
         }
 
         const observationRatings = Object.entries(payload).filter(
@@ -1832,11 +2577,28 @@ export function PortalModuleManager({
         schoolName: resolvedSchoolName,
         programType: formState.programType.trim(),
         followUpDate: formState.followUpDate.trim() || undefined,
+        followUpType: config.module === "training" ? formState.followUpType.trim() || undefined : undefined,
+        followUpOwnerUserId:
+          config.module === "training" && formState.followUpOwnerUserId.trim()
+            ? Number(formState.followUpOwnerUserId.trim())
+            : undefined,
         status: nextStatus,
         payload,
       };
     },
-    [config, egraSummary, formState, participantField, schoolsById, trainingParticipants],
+    [
+      config,
+      currentUser.fullName,
+      egraSummary,
+      formState,
+      participantField,
+      schoolsById,
+      trainingParticipants,
+      visitAllowsObservation,
+      visitNextActions,
+      visitPathway,
+      visitRequiresDemoMeeting,
+    ],
   );
 
   const enrichVisitGps = useCallback(
@@ -1952,7 +2714,7 @@ export function PortalModuleManager({
 
   const submitRecord = useCallback(
     async (nextStatus: PortalRecordStatus) => {
-      const validationError = validateForm();
+      const validationError = validateForm(nextStatus);
       if (validationError) {
         setFeedback({ kind: "error", message: validationError });
         return;
@@ -2414,97 +3176,228 @@ export function PortalModuleManager({
                   className="portal-form-grid"
                   onSubmit={(event) => event.preventDefault()}
                 >
+                  {isVisitModule ? (
+                    <div className="portal-visit-stepper">
+                      {([
+                        { id: 1, label: "1. Visit Context" },
+                        { id: 2, label: "2. Implementation Check" },
+                        {
+                          id: 3,
+                          label:
+                            visitPathway === "demo_and_meeting"
+                              ? "3. Lesson Demo + Headteacher Meeting"
+                              : visitPathway === "mixed"
+                                ? "3. Mixed Visit Pathway"
+                                : "3. Observation & Coaching",
+                        },
+                        { id: 4, label: "4. Submit & Follow-up" },
+                      ] as Array<{ id: 1 | 2 | 3 | 4; label: string }>).map((step) => {
+                        const hasSchoolSelected = formState.schoolId.trim().length > 0;
+                        const hasImplementationChoice =
+                          String(formState.payload.implementationStatus ?? "").trim().length > 0;
+                        const disabled =
+                          (step.id > 1 && !hasSchoolSelected) ||
+                          (step.id > 2 && !hasImplementationChoice);
+                        const isActive = visitStep === step.id;
+                        return (
+                          <button
+                            key={step.id}
+                            type="button"
+                            className={`portal-step-chip${isActive ? " active" : ""}`}
+                            disabled={disabled}
+                            onClick={() => {
+                              if (disabled) {
+                                setFeedback({
+                                  kind: "error",
+                                  message: "Select a school first before continuing to the next step.",
+                                });
+                                return;
+                              }
+                              setVisitStep(step.id);
+                            }}
+                          >
+                            {step.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {isVisitModule && visitStep > 1 ? (
+                    <div className="portal-visit-context-inline">
+                      <strong>{formState.schoolName || "No school selected"}</strong>
+                      <span>{formState.date || "No date"}</span>
+                      <span>{formState.programType || "No visit type"}</span>
+                      <span>Pathway: {visitPathway}</span>
+                    </div>
+                  ) : null}
+
+                  {!isVisitModule || visitStep === 1 ? (
+                    <>
                   <div className="portal-modal-context-header">
                     <h4>Context & Location</h4>
                     <p className="portal-muted">Standard data entry context</p>
 
                     <div className="portal-context-selectors">
-                      <label>
-                        {renderLabel("Region", true)}
-                        <select
-                          value={formState.region}
-                          onChange={(event) =>
-                            setFormState((prev) => {
-                              const nextRegion = event.target.value;
-                              const options = getDistrictsByRegion(nextRegion);
-                              const nextDistrict = options.includes(prev.district) ? prev.district : "";
-                              const selectedSchool = prev.schoolId
-                                ? schoolsById.get(Number(prev.schoolId))
-                                : undefined;
-                              const keepSchool = Boolean(
-                                selectedSchool &&
-                                (!nextRegion ||
-                                  inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
-                                (!nextDistrict || selectedSchool.district === nextDistrict),
-                              );
-                              return {
-                                ...prev,
-                                region: nextRegion,
-                                district: nextDistrict,
-                                schoolId: keepSchool ? prev.schoolId : "",
-                                schoolName: keepSchool
-                                  ? selectedSchool?.name ?? prev.schoolName
-                                  : "",
-                              };
-                            })
-                          }
-                          required
-                        >
-                          <option value="">Select region</option>
-                          {ugandaRegions.map((entry) => (
-                            <option key={entry.region} value={entry.region}>
-                              {entry.region}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        {renderLabel("District", true)}
-                        <select
-                          value={formState.district}
-                          onChange={(event) =>
-                            setFormState((prev) => {
-                              const nextDistrict = event.target.value;
-                              const selectedSchool = prev.schoolId
-                                ? schoolsById.get(Number(prev.schoolId))
-                                : undefined;
-                              const keepSchool = Boolean(
-                                selectedSchool &&
-                                (!nextDistrict || selectedSchool.district === nextDistrict),
-                              );
-                              return {
-                                ...prev,
-                                district: nextDistrict,
-                                schoolId: keepSchool ? prev.schoolId : "",
-                                schoolName: keepSchool
-                                  ? selectedSchool?.name ?? prev.schoolName
-                                  : "",
-                              };
-                            })
-                          }
-                          required
-                        >
-                          <option value="">Select district</option>
-                          {formDistrictOptions.map((district) => (
-                            <option key={district} value={district}>
-                              {district}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      {config.module !== "training" ? (
-                        <label>
-                          {renderLabel("School Account", true)}
-                          <select
-                            value={formState.schoolId}
-                            onChange={(event) =>
-                              setFormState((prev) => {
+                      {isVisitModule ? (
+                        <>
+                          <label>
+                            {renderLabel("School Account", true)}
+                            <select
+                              value={formState.schoolId}
+                              onChange={(event) => {
                                 const nextSchoolId = event.target.value;
                                 const selectedSchool = nextSchoolId
                                   ? schoolsById.get(Number(nextSchoolId))
                                   : undefined;
 
-                                return {
+                                setFormState((prev) => ({
+                                  ...prev,
+                                  payload: {
+                                    ...prev.payload,
+                                    teacherObserved: "",
+                                    teacherContactId: "",
+                                    teacherContactUid: "",
+                                    teacherUid: "",
+                                    teacherGender: "",
+                                    demoTeachersPresentContactIds: [],
+                                    leadershipAttendeesContactIds: [],
+                                    implementationResponsibleContactId: "",
+                                    leadershipNextActionsJson: "[]",
+                                  },
+                                  schoolId: nextSchoolId,
+                                  schoolName: selectedSchool?.name ?? "",
+                                  district: selectedSchool?.district ?? prev.district,
+                                  region: selectedSchool
+                                    ? inferRegionFromDistrict(selectedSchool.district) ??
+                                    prev.region
+                                    : prev.region,
+                                }));
+                                setVisitNextActions([
+                                  { id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" },
+                                ]);
+                              }}
+                              required
+                            >
+                              <option value="">Select school account</option>
+                              {formSchoolOptions.map((school) => (
+                                <option key={school.id} value={String(school.id)}>
+                                  {school.name} ({school.schoolCode})
+                                </option>
+                              ))}
+                            </select>
+                            <div className="portal-inline-actions">
+                              <button
+                                type="button"
+                                className="button button-ghost button-compact"
+                                onClick={() => {
+                                  if (typeof window !== "undefined") {
+                                    window.open("/portal/schools?new=1", "_blank", "noopener,noreferrer");
+                                  }
+                                }}
+                              >
+                                Create new school
+                              </button>
+                              <small className="portal-field-help">
+                                If the school is missing, create it first in School Accounts, then refresh and select it here.
+                              </small>
+                            </div>
+                          </label>
+                          <label>
+                            {renderLabel("Region", true)}
+                            <input value={formState.region} readOnly placeholder="Auto from school" />
+                          </label>
+                          <label>
+                            {renderLabel("District", true)}
+                            <input value={formState.district} readOnly placeholder="Auto from school" />
+                          </label>
+                        </>
+                      ) : (
+                        <>
+                          <label>
+                            {renderLabel("Region", true)}
+                            <select
+                              value={formState.region}
+                              onChange={(event) =>
+                                setFormState((prev) => {
+                                  const nextRegion = event.target.value;
+                                  const options = getDistrictsByRegion(nextRegion);
+                                  const nextDistrict = options.includes(prev.district) ? prev.district : "";
+                                  const selectedSchool = prev.schoolId
+                                    ? schoolsById.get(Number(prev.schoolId))
+                                    : undefined;
+                                  const keepSchool = Boolean(
+                                    selectedSchool &&
+                                    (!nextRegion ||
+                                      inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
+                                    (!nextDistrict || selectedSchool.district === nextDistrict),
+                                  );
+                                  return {
+                                    ...prev,
+                                    region: nextRegion,
+                                    district: nextDistrict,
+                                    schoolId: keepSchool ? prev.schoolId : "",
+                                    schoolName: keepSchool
+                                      ? selectedSchool?.name ?? prev.schoolName
+                                      : "",
+                                  };
+                                })
+                              }
+                              required
+                            >
+                              <option value="">Select region</option>
+                              {ugandaRegions.map((entry) => (
+                                <option key={entry.region} value={entry.region}>
+                                  {entry.region}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            {renderLabel("District", true)}
+                            <select
+                              value={formState.district}
+                              onChange={(event) =>
+                                setFormState((prev) => {
+                                  const nextDistrict = event.target.value;
+                                  const selectedSchool = prev.schoolId
+                                    ? schoolsById.get(Number(prev.schoolId))
+                                    : undefined;
+                                  const keepSchool = Boolean(
+                                    selectedSchool &&
+                                    (!nextDistrict || selectedSchool.district === nextDistrict),
+                                  );
+                                  return {
+                                    ...prev,
+                                    district: nextDistrict,
+                                    schoolId: keepSchool ? prev.schoolId : "",
+                                    schoolName: keepSchool
+                                      ? selectedSchool?.name ?? prev.schoolName
+                                      : "",
+                                  };
+                                })
+                              }
+                              required
+                            >
+                              <option value="">Select district</option>
+                              {formDistrictOptions.map((district) => (
+                                <option key={district} value={district}>
+                                  {district}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            {renderLabel("School Account", true)}
+                            <select
+                              value={formState.schoolId}
+                              onChange={(event) => {
+                                const nextSchoolId = event.target.value;
+                                const selectedSchool = nextSchoolId
+                                  ? schoolsById.get(Number(nextSchoolId))
+                                  : undefined;
+
+                                setFormState((prev) => ({
                                   ...prev,
                                   schoolId: nextSchoolId,
                                   schoolName: selectedSchool?.name ?? "",
@@ -2513,23 +3406,54 @@ export function PortalModuleManager({
                                     ? inferRegionFromDistrict(selectedSchool.district) ??
                                     prev.region
                                     : prev.region,
-                                };
-                              })
-                            }
-                            required
-                          >
-                            <option value="">Select school account</option>
-                            {formSchoolOptions.map((school) => (
-                              <option key={school.id} value={String(school.id)}>
-                                {school.name} ({school.schoolCode})
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : (
-                        <div style={{ alignSelf: "end", paddingBottom: "0.5rem" }}>
-                          <span className="portal-muted">Training session (Scale)</span>
-                        </div>
+                                }));
+
+                                if (config.module === "training") {
+                                  setTrainingParticipants((prev) =>
+                                    prev.map((row) => ({
+                                      ...row,
+                                      contactId: "",
+                                      contactUid: "",
+                                      participantName: "",
+                                      role: "",
+                                      gender: "",
+                                      phoneContact: "",
+                                      schoolAccountId: nextSchoolId,
+                                      schoolAttachedTo: selectedSchool?.name ?? "",
+                                    })),
+                                  );
+                                }
+                                if (config.module === "assessment") {
+                                  setEgraLearners(createDefaultEgraRows());
+                                }
+                              }}
+                              required
+                            >
+                              <option value="">Select school account</option>
+                              {formSchoolOptions.map((school) => (
+                                <option key={school.id} value={String(school.id)}>
+                                  {school.name} ({school.schoolCode})
+                                </option>
+                              ))}
+                            </select>
+                            <div className="portal-inline-actions">
+                              <button
+                                type="button"
+                                className="button button-ghost button-compact"
+                                onClick={() => {
+                                  if (typeof window !== "undefined") {
+                                    window.open("/portal/schools?new=1", "_blank", "noopener,noreferrer");
+                                  }
+                                }}
+                              >
+                                Create new school
+                              </button>
+                              <small className="portal-field-help">
+                                If the school is missing, create it first in School Accounts, then refresh and select it here.
+                              </small>
+                            </div>
+                          </label>
+                        </>
                       )}
                     </div>
                   </div>
@@ -2604,23 +3528,104 @@ export function PortalModuleManager({
                         required={config.module === "training"}
                       />
                     </label>
+                    {config.module === "training" ? (
+                      <label>
+                        {renderLabel("Follow-up type", true)}
+                        <select
+                          value={formState.followUpType}
+                          onChange={(event) =>
+                            setFormState((prev) => ({ ...prev, followUpType: event.target.value }))
+                          }
+                          required
+                        >
+                          <option value="virtual_check_in">Virtual check-in</option>
+                          <option value="school_visit">School visit</option>
+                          <option value="refresher_session">Refresher session</option>
+                        </select>
+                      </label>
+                    ) : null}
+                    {config.module === "training" ? (
+                      <label>
+                        {renderLabel("Follow-up owner", true)}
+                        <select
+                          value={formState.followUpOwnerUserId}
+                          onChange={(event) =>
+                            setFormState((prev) => ({ ...prev, followUpOwnerUserId: event.target.value }))
+                          }
+                          required
+                        >
+                          <option value="">Select follow-up owner</option>
+                          {followUpOwnerOptions.map((option) => (
+                            <option key={option.id} value={String(option.id)}>
+                              {option.fullName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
                     <label>
                       {renderLabel("Workflow status")}
                       <input value={formState.status} readOnly />
                     </label>
                   </div>
+                    </>
+                  ) : null}
 
+                  {isVisitModule && visitStep === 3 && visitPathway === "mixed" ? (
+                    <div className="portal-mixed-visit-banner">
+                      <strong>Mixed Visit Layout</strong>
+                      <p>
+                        Observation/coaching is captured for implementing classes, while demo +
+                        leadership planning is captured for non-implementing classes.
+                      </p>
+                    </div>
+                  ) : null}
 
                   {config.sections.map((section) => {
+                    if (isVisitModule) {
+                      if (visitStep === 1 && !visitStepSectionIds.context.has(section.id)) {
+                        return null;
+                      }
+                      if (visitStep === 2 && !visitStepSectionIds.implementation.has(section.id)) {
+                        return null;
+                      }
+                      if (visitStep === 3) {
+                        const showObservation =
+                          visitStepSectionIds.observation.has(section.id) && visitAllowsObservation;
+                        const showDemo = visitStepSectionIds.demo.has(section.id);
+                        if (!showObservation && !showDemo) {
+                          return null;
+                        }
+                      }
+                      if (visitStep === 4 && !visitStepSectionIds.submit.has(section.id)) {
+                        return null;
+                      }
+                    }
+
                     const content = (
                       <div className="form-grid">
                         {section.fields.map((field) => {
                           const value = formState.payload[field.key];
+                          const isVisitObservationFieldForUi =
+                            isVisitModule &&
+                            (visitObservationOnlyFieldKeys.has(field.key) || isVisitObservationField(field.key));
+                          const isVisitDemoMeetingFieldForUi =
+                            isVisitModule && visitDemoMeetingFieldKeys.has(field.key);
+                          const isFieldRequired =
+                            Boolean(field.required) &&
+                            (!isVisitModule ||
+                              (isVisitObservationFieldForUi && visitAllowsObservation) ||
+                              (isVisitDemoMeetingFieldForUi && visitRequiresDemoMeeting) ||
+                              (!isVisitObservationFieldForUi && !isVisitDemoMeetingFieldForUi));
+
+                          if (isVisitModule && !visitAllowsObservation && isVisitObservationFieldForUi) {
+                            return null;
+                          }
                           if (field.type === "egraLearners") {
                             return (
                               <div key={field.key} className="full-width">
                                 <div className="portal-participants-header">
-                                  {renderLabel(field.label, field.required)}
+                                  {renderLabel(field.label, isFieldRequired)}
                                   <button
                                     className="button button-ghost"
                                     type="button"
@@ -2655,7 +3660,7 @@ export function PortalModuleManager({
                                           <td>{row.learnerName || "-"}</td>
                                           <td>{row.sex}</td>
                                           <td>{row.age}</td>
-                                          <td>{row.fluencyLevel || determineFluencyLevel(row.storyReading)}</td>
+                                          <td>{normalizeEgraLevelLabel(row.fluencyLevel, row.storyReading, row.readingComprehension)}</td>
                                           <td>
                                             {/* Edit button could go here */}
                                             <button type="button" className="button button-small button-ghost" onClick={() => {
@@ -2751,7 +3756,7 @@ export function PortalModuleManager({
                             return (
                               <div key={field.key} className="full-width portal-participants-block">
                                 <div className="portal-participants-header">
-                                  {renderLabel(field.label, field.required)}
+                                  {renderLabel(field.label, isFieldRequired)}
                                   <button
                                     className="button button-ghost"
                                     type="button"
@@ -2784,58 +3789,72 @@ export function PortalModuleManager({
                                           <td>{index + 1}</td>
                                           <td style={{ minWidth: 280 }}>
                                             <SchoolRosterPicker
-                                              schoolId={row.schoolAccountId ? Number(row.schoolAccountId) : selectedSchoolId}
+                                              schoolId={selectedSchoolId}
                                               schoolName={row.schoolAttachedTo || formState.schoolName}
                                               participantType="teacher"
-                                              selectedUid={row.participantName ? "" : ""}
+                                              selectedUid={row.contactUid}
                                               label=""
                                               onSelect={(entry: RosterEntry | null) => {
                                                 if (!entry) {
-                                                  updateTrainingParticipant(index, "participantName", "");
+                                                  setTrainingParticipants((prev) =>
+                                                    prev.map((p, i) =>
+                                                      i !== index
+                                                        ? p
+                                                        : {
+                                                          ...p,
+                                                          contactId: "",
+                                                          contactUid: "",
+                                                          participantName: "",
+                                                          role: "",
+                                                          gender: "",
+                                                          phoneContact: "",
+                                                        },
+                                                    ),
+                                                  );
                                                   return;
                                                 }
-                                                const teacher = entry as { teacherUid: string; fullName: string; gender: string; isReadingTeacher: boolean; phone: string | null };
+                                                const teacher = entry as {
+                                                  contactId: number;
+                                                  contactUid: string;
+                                                  fullName: string;
+                                                  gender: string;
+                                                  category: string;
+                                                  phone: string | null;
+                                                };
                                                 setTrainingParticipants((prev) =>
                                                   prev.map((p, i) =>
                                                     i !== index
                                                       ? p
                                                       : {
                                                         ...p,
+                                                        contactId: String(teacher.contactId),
+                                                        contactUid: teacher.contactUid,
                                                         participantName: teacher.fullName,
-                                                        role: teacher.isReadingTeacher ? "Teacher" as const : "Teacher" as const,
-                                                        gender: teacher.gender as TrainingParticipantGender,
+                                                        role: teacher.category === "Teacher" ? "Teacher" : "Leader",
+                                                        gender:
+                                                          teacher.gender === "Male" || teacher.gender === "Female"
+                                                            ? (teacher.gender as TrainingParticipantGender)
+                                                            : "",
                                                         phoneContact: teacher.phone ?? "",
-                                                        schoolAccountId: row.schoolAccountId || String(selectedSchoolId ?? ""),
-                                                        schoolAttachedTo: row.schoolAttachedTo || formState.schoolName,
+                                                        schoolAccountId: String(selectedSchoolId ?? ""),
+                                                        schoolAttachedTo: formState.schoolName,
                                                       },
                                                   ),
                                                 );
                                               }}
                                             />
                                             {row.participantName && (
-                                              <div style={{ fontSize: "0.78rem", color: "#0f5d4f", marginTop: 2 }}>
+                                              <div style={{ fontSize: "0.78rem", color: "#C35D0E", marginTop: 2 }}>
                                                 ✓ {row.participantName}
                                               </div>
                                             )}
                                           </td>
                                           <td>
-                                            <select
-                                              value={row.schoolAccountId}
-                                              onChange={(event) =>
-                                                updateTrainingParticipant(
-                                                  index,
-                                                  "schoolAccountId",
-                                                  event.target.value,
-                                                )
-                                              }
-                                            >
-                                              <option value="">Select school</option>
-                                              {participantSchoolOptions.map((school) => (
-                                                <option key={school.id} value={String(school.id)}>
-                                                  {school.name} ({school.schoolCode})
-                                                </option>
-                                              ))}
-                                            </select>
+                                            <input
+                                              value={formState.schoolName}
+                                              readOnly
+                                              placeholder="Select school first"
+                                            />
                                           </td>
                                           <td>
                                             <select
@@ -2896,16 +3915,304 @@ export function PortalModuleManager({
                             );
                           }
 
+                          if (config.module === "visit" && field.key === "teacherObserved") {
+                            const selectedSchoolId = formState.schoolId ? Number(formState.schoolId) : null;
+                            const selectedContactUid = sanitizeForInput(formState.payload.teacherContactUid);
+                            return (
+                              <div key={field.key} className="full-width">
+                                <SchoolRosterPicker
+                                  schoolId={selectedSchoolId}
+                                  schoolName={formState.schoolName}
+                                  participantType="teacher"
+                                  selectedUid={selectedContactUid}
+                                  onSelect={(entry: RosterEntry | null) => {
+                                    if (!entry) {
+                                      setFormState((prev) => ({
+                                        ...prev,
+                                        payload: {
+                                          ...prev.payload,
+                                          teacherObserved: "",
+                                          teacherContactId: "",
+                                          teacherContactUid: "",
+                                          teacherUid: "",
+                                          teacherGender: "",
+                                        },
+                                      }));
+                                      return;
+                                    }
+
+                                    const contact = entry as {
+                                      contactId: number;
+                                      contactUid: string;
+                                      fullName: string;
+                                      gender: string;
+                                      teacherUid?: string;
+                                    };
+                                    setFormState((prev) => ({
+                                      ...prev,
+                                      payload: {
+                                        ...prev.payload,
+                                        teacherObserved: contact.fullName,
+                                        teacherContactId: String(contact.contactId),
+                                        teacherContactUid: contact.contactUid,
+                                        teacherUid: contact.teacherUid ?? "",
+                                        teacherGender:
+                                          contact.gender === "Male" || contact.gender === "Female"
+                                            ? contact.gender
+                                            : "",
+                                      },
+                                    }));
+                                  }}
+                                  label={field.label}
+                                />
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </div>
+                            );
+                          }
+
+                          if (isVisitModule && field.key === "coachObserver") {
+                            return (
+                              <label key={field.key}>
+                                {renderLabel(field.label, isFieldRequired)}
+                                <input
+                                  value={currentUser.fullName}
+                                  readOnly
+                                  placeholder="Auto-filled from signed-in user"
+                                />
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </label>
+                            );
+                          }
+
+                          if (isVisitModule && field.key === "visitPathway") {
+                            return (
+                              <label key={field.key}>
+                                {renderLabel(field.label, false)}
+                                <input value={visitPathway} readOnly />
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </label>
+                            );
+                          }
+
+                          if (isVisitModule && field.key === "implementationResponsibleContactId") {
+                            return (
+                              <label key={field.key}>
+                                {renderLabel(field.label, isFieldRequired)}
+                                <select
+                                  value={sanitizeForInput(value)}
+                                  onChange={(event) => updatePayloadField(field.key, event.target.value)}
+                                  required={isFieldRequired}
+                                >
+                                  <option value="">Select contact</option>
+                                  {schoolContacts.map((contact) => (
+                                    <option key={contact.contactId} value={String(contact.contactId)}>
+                                      {contact.fullName} ({contact.category})
+                                    </option>
+                                  ))}
+                                </select>
+                                {loadingSchoolContacts ? (
+                                  <small className="portal-field-help">Loading school contacts...</small>
+                                ) : null}
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </label>
+                            );
+                          }
+
+                          if (
+                            isVisitModule &&
+                            (field.key === "demoTeachersPresentContactIds" ||
+                              field.key === "leadershipAttendeesContactIds")
+                          ) {
+                            const selected = Array.isArray(value) ? sanitizeContactIds(value) : [];
+                            return (
+                              <fieldset key={field.key} className="card full-width portal-form-options">
+                                <legend>
+                                  {field.label}
+                                  {isFieldRequired ? " *" : ""}
+                                </legend>
+                                {loadingSchoolContacts ? (
+                                  <p className="portal-muted">Loading school contacts...</p>
+                                ) : schoolContacts.length === 0 ? (
+                                  <p className="portal-muted">No school contacts found. Add contacts in School Accounts.</p>
+                                ) : (
+                                  <div className="portal-multiselect">
+                                    {schoolContacts.map((contact) => {
+                                      const contactId = String(contact.contactId);
+                                      const checked = selected.includes(contactId);
+                                      return (
+                                        <label key={contact.contactId}>
+                                          <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={(event) => {
+                                              const next = new Set(selected);
+                                              if (event.target.checked) {
+                                                next.add(contactId);
+                                              } else {
+                                                next.delete(contactId);
+                                              }
+                                              updatePayloadField(field.key, Array.from(next));
+                                            }}
+                                          />
+                                          <span>{contact.fullName} ({contact.category})</span>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </fieldset>
+                            );
+                          }
+
+                          if (isVisitModule && field.key === "leadershipNextActionsJson") {
+                            const rows = visitNextActions.length > 0
+                              ? visitNextActions
+                              : [{ id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" }];
+                            return (
+                              <div key={field.key} className="full-width portal-next-actions-block">
+                                <div className="portal-participants-header">
+                                  {renderLabel(field.label, isFieldRequired)}
+                                  <button
+                                    className="button button-ghost"
+                                    type="button"
+                                    onClick={() =>
+                                      setVisitNextActions((prev) => [
+                                        ...prev,
+                                        {
+                                          id: `${Date.now()}-${prev.length + 1}`,
+                                          action: "",
+                                          ownerContactId: "",
+                                          dueDate: "",
+                                        },
+                                      ])
+                                    }
+                                  >
+                                    + Add action
+                                  </button>
+                                </div>
+                                <div className="table-wrap">
+                                  <table>
+                                    <thead>
+                                      <tr>
+                                        <th>Action</th>
+                                        <th>Owner</th>
+                                        <th>Due date</th>
+                                        <th>Remove</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {rows.map((row, index) => (
+                                        <tr key={row.id}>
+                                          <td>
+                                            <input
+                                              value={row.action}
+                                              placeholder="Action"
+                                              onChange={(event) =>
+                                                setVisitNextActions((prev) =>
+                                                  prev.map((entry, entryIndex) =>
+                                                    entryIndex === index
+                                                      ? { ...entry, action: event.target.value }
+                                                      : entry,
+                                                  ),
+                                                )
+                                              }
+                                            />
+                                          </td>
+                                          <td>
+                                            <select
+                                              value={row.ownerContactId}
+                                              onChange={(event) =>
+                                                setVisitNextActions((prev) =>
+                                                  prev.map((entry, entryIndex) =>
+                                                    entryIndex === index
+                                                      ? { ...entry, ownerContactId: event.target.value }
+                                                      : entry,
+                                                  ),
+                                                )
+                                              }
+                                            >
+                                              <option value="">Select owner</option>
+                                              {schoolContacts.map((contact) => (
+                                                <option
+                                                  key={contact.contactId}
+                                                  value={String(contact.contactId)}
+                                                >
+                                                  {contact.fullName}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </td>
+                                          <td>
+                                            <input
+                                              type="date"
+                                              value={row.dueDate}
+                                              onChange={(event) =>
+                                                setVisitNextActions((prev) =>
+                                                  prev.map((entry, entryIndex) =>
+                                                    entryIndex === index
+                                                      ? { ...entry, dueDate: event.target.value }
+                                                      : entry,
+                                                  ),
+                                                )
+                                              }
+                                            />
+                                          </td>
+                                          <td>
+                                            <button
+                                              className="button button-ghost"
+                                              type="button"
+                                              onClick={() =>
+                                                setVisitNextActions((prev) => {
+                                                  if (prev.length <= 1) {
+                                                    return [
+                                                      {
+                                                        id: `${Date.now()}-0`,
+                                                        action: "",
+                                                        ownerContactId: "",
+                                                        dueDate: "",
+                                                      },
+                                                    ];
+                                                  }
+                                                  return prev.filter((_, entryIndex) => entryIndex !== index);
+                                                })
+                                              }
+                                            >
+                                              Remove
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                              </div>
+                            );
+                          }
+
                           if (field.type === "textarea") {
                             return (
                               <label key={field.key} className="full-width">
-                                {renderLabel(field.label, field.required)}
+                                {renderLabel(field.label, isFieldRequired)}
                                 <textarea
                                   rows={4}
                                   value={Array.isArray(value) ? value.join(", ") : sanitizeForInput(value)}
                                   placeholder={inferPlaceholder(field)}
                                   onChange={(event) => updatePayloadField(field.key, event.target.value)}
-                                  required={field.required}
+                                  required={isFieldRequired}
                                 />
                                 {field.helperText ? (
                                   <small className="portal-field-help">{field.helperText}</small>
@@ -2917,11 +4224,11 @@ export function PortalModuleManager({
                           if (field.type === "select") {
                             return (
                               <label key={field.key}>
-                                {renderLabel(field.label, field.required)}
+                                {renderLabel(field.label, isFieldRequired)}
                                 <select
                                   value={Array.isArray(value) ? value[0] ?? "" : sanitizeForInput(value)}
                                   onChange={(event) => updatePayloadField(field.key, event.target.value)}
-                                  required={field.required}
+                                  required={isFieldRequired}
                                 >
                                   <option value="">Select</option>
                                   {(field.options ?? []).map((option) => (
@@ -2936,12 +4243,38 @@ export function PortalModuleManager({
 
                           if (field.type === "multiselect") {
                             const selected = Array.isArray(value) ? value : [];
+                            const isInsightRecommendationField =
+                              field.key === "insightsRecommendationsRecIds";
                             return (
                               <fieldset key={field.key} className="card full-width portal-form-options">
                                 <legend>
                                   {field.label}
-                                  {field.required ? " *" : ""}
+                                  {isFieldRequired ? " *" : ""}
                                 </legend>
+                                {isInsightRecommendationField ? (
+                                  <div className="action-row" style={{ marginBottom: "0.5rem" }}>
+                                    <button
+                                      type="button"
+                                      className="button button-ghost"
+                                      onClick={() => {
+                                        const suggested = applySuggestedInsightRecIds(
+                                          config.module,
+                                          formState.payload,
+                                        );
+                                        if (suggested.length === 0) {
+                                          return;
+                                        }
+                                        const merged = sanitizeContactIds([
+                                          ...selected,
+                                          ...suggested,
+                                        ]);
+                                        updatePayloadField(field.key, merged);
+                                      }}
+                                    >
+                                      Suggested REC
+                                    </button>
+                                  </div>
+                                ) : null}
                                 <div className="portal-multiselect">
                                   {(field.options ?? []).map((option) => {
                                     const checked = selected.includes(option.value);
@@ -2965,13 +4298,111 @@ export function PortalModuleManager({
                                     );
                                   })}
                                 </div>
+                                {isInsightRecommendationField && selected.length > 0 ? (
+                                  <div className="table-wrap" style={{ marginTop: "0.75rem" }}>
+                                    <table>
+                                      <thead>
+                                        <tr>
+                                          <th>REC</th>
+                                          <th>Priority</th>
+                                          <th>Notes (optional)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {selected.map((recId) => {
+                                          const row =
+                                            insightRecommendationRows.find((item) => item.recId === recId) ??
+                                            {
+                                              recId,
+                                              priority: "medium" as InsightRecommendationPriority,
+                                              notes: "",
+                                            };
+                                          const recTitle = recCatalogById.get(recId)?.title ?? recId;
+                                          return (
+                                            <tr key={recId}>
+                                              <td>
+                                                <strong>{recId}</strong>
+                                                <br />
+                                                <small>{recTitle}</small>
+                                              </td>
+                                              <td>
+                                                <select
+                                                  value={row.priority}
+                                                  onChange={(event) => {
+                                                    const nextPriority =
+                                                      normalizeInsightRecommendationPriority(
+                                                        event.target.value,
+                                                      );
+                                                    setInsightRecommendationRows((prev) => {
+                                                      const byId = new Map(
+                                                        prev.map((entry) => [entry.recId, entry]),
+                                                      );
+                                                      byId.set(recId, {
+                                                        recId,
+                                                        priority: nextPriority,
+                                                        notes: byId.get(recId)?.notes ?? "",
+                                                      });
+                                                      return selected.map(
+                                                        (selectedRecId) =>
+                                                          byId.get(selectedRecId) ?? {
+                                                            recId: selectedRecId,
+                                                            priority: "medium",
+                                                            notes: "",
+                                                          },
+                                                      );
+                                                    });
+                                                  }}
+                                                >
+                                                  <option value="high">High</option>
+                                                  <option value="medium">Medium</option>
+                                                  <option value="low">Low</option>
+                                                </select>
+                                              </td>
+                                              <td>
+                                                <input
+                                                  value={row.notes}
+                                                  placeholder="Optional implementation notes"
+                                                  onChange={(event) => {
+                                                    const nextNotes = event.target.value;
+                                                    setInsightRecommendationRows((prev) => {
+                                                      const byId = new Map(
+                                                        prev.map((entry) => [entry.recId, entry]),
+                                                      );
+                                                      byId.set(recId, {
+                                                        recId,
+                                                        priority:
+                                                          byId.get(recId)?.priority ?? "medium",
+                                                        notes: nextNotes,
+                                                      });
+                                                      return selected.map(
+                                                        (selectedRecId) =>
+                                                          byId.get(selectedRecId) ?? {
+                                                            recId: selectedRecId,
+                                                            priority: "medium",
+                                                            notes: "",
+                                                          },
+                                                      );
+                                                    });
+                                                  }}
+                                                />
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                ) : null}
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
                               </fieldset>
                             );
                           }
 
                           return (
                             <label key={field.key}>
-                              {renderLabel(field.label, field.required)}
+                              {renderLabel(field.label, isFieldRequired)}
                               {(() => {
                                 const isTrainingAutoAttendanceField =
                                   config.module === "training" &&
@@ -3002,7 +4433,7 @@ export function PortalModuleManager({
                                     onChange={(event) =>
                                       updatePayloadField(field.key, event.target.value)
                                     }
-                                    required={field.required}
+                                    required={isFieldRequired}
                                     readOnly={isTrainingAutoAttendanceField}
                                   />
                                 );
@@ -3046,66 +4477,91 @@ export function PortalModuleManager({
                     );
                   })}
 
-                  <fieldset className="card full-width portal-form-section">
-                    <legend>Evidence Locker</legend>
-                    <div className="form-grid">
-                      <label className="full-width">
-                        {renderLabel("Attach files (photo/video/PDF/document)")}
-                        <input
-                          key={fileInputKey}
-                          type="file"
-                          accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-                          multiple
-                          onChange={(event) =>
-                            setSelectedFiles(event.target.files ? Array.from(event.target.files) : [])
-                          }
+                  {config.module === "visit" && visitStep === 3 ? (
+                    <div className="full-width">
+                      {visitAllowsObservation && formState.schoolId ? (
+                        <LessonEvaluationPanel
+                          schoolId={Number(formState.schoolId)}
+                          schoolName={formState.schoolName}
+                          defaultVisitId={formState.id}
+                          title="Lesson Evaluations"
+                          description="Add Ozeki Phonics Lesson Evaluation Tool entries linked to this school visit."
+                          allowVoid={currentUser.isSuperAdmin}
                         />
-                        <small className="portal-field-help">
-                          Files are uploaded after Save Draft or Submit.
-                        </small>
-                      </label>
-                      <div className="full-width">
-                        {selectedFiles.length > 0 ? (
-                          <div>
-                            <p>{selectedFiles.length} file(s) selected.</p>
-                            <ul className="portal-file-list">
-                              {selectedFiles.map((file) => (
-                                <li key={`${file.name}-${file.size}`}>
-                                  {file.name} ({Math.max(1, Math.round(file.size / 1024))} KB)
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : (
-                          <p>No new files selected.</p>
-                        )}
-                      </div>
-                      {evidenceItems.length > 0 ? (
-                        <div className="full-width table-wrap">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>File</th>
-                                <th>Uploaded</th>
-                                <th>Download</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {evidenceItems.map((item) => (
-                                <tr key={item.id}>
-                                  <td>{item.fileName}</td>
-                                  <td>{new Date(item.createdAt).toLocaleString()}</td>
-                                  <td>
-                                    <a href={item.downloadUrl}>Download</a>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : null}
+                      ) : visitAllowsObservation ? (
+                        <p className="portal-muted">
+                          Select a school account first, then save this visit to attach lesson evaluations.
+                        </p>
+                      ) : (
+                        <p className="portal-muted">
+                          Lesson evaluations are disabled because implementation has not started.
+                        </p>
+                      )}
                     </div>
-                  </fieldset>
+                  ) : null}
+
+                  {!isVisitModule || visitStep === 4 ? (
+                    <fieldset className="card full-width portal-form-section">
+                      <legend>Evidence Locker</legend>
+                      <div className="form-grid">
+                        <label className="full-width">
+                          {renderLabel("Attach files (photo/video/PDF/document)")}
+                          <input
+                            key={fileInputKey}
+                            type="file"
+                            accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                            multiple
+                            onChange={(event) =>
+                              setSelectedFiles(event.target.files ? Array.from(event.target.files) : [])
+                            }
+                          />
+                          <small className="portal-field-help">
+                            Files are uploaded after Save Draft or Submit.
+                          </small>
+                        </label>
+                        <div className="full-width">
+                          {selectedFiles.length > 0 ? (
+                            <div>
+                              <p>{selectedFiles.length} file(s) selected.</p>
+                              <ul className="portal-file-list">
+                                {selectedFiles.map((file) => (
+                                  <li key={`${file.name}-${file.size}`}>
+                                    {file.name} ({Math.max(1, Math.round(file.size / 1024))} KB)
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : (
+                            <p>No new files selected.</p>
+                          )}
+                        </div>
+                        {evidenceItems.length > 0 ? (
+                          <div className="full-width table-wrap">
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>File</th>
+                                  <th>Uploaded</th>
+                                  <th>Download</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {evidenceItems.map((item) => (
+                                  <tr key={item.id}>
+                                    <td>{item.fileName}</td>
+                                    <td>{new Date(item.createdAt).toLocaleString()}</td>
+                                    <td>
+                                      <a href={item.downloadUrl}>Download</a>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : null}
+                      </div>
+                    </fieldset>
+                  ) : null}
 
                   {canReview && formState.id ? (
                     <label className="full-width">
@@ -3121,13 +4577,42 @@ export function PortalModuleManager({
                   ) : null}
 
                   <div className="full-width action-row portal-form-actions">
+                    {isVisitModule ? (
+                      <>
+                        <button
+                          className="button button-ghost"
+                          type="button"
+                          onClick={() => setVisitStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4) : prev))}
+                          disabled={visitStep === 1}
+                        >
+                          Back
+                        </button>
+                        <button
+                          className="button button-ghost"
+                          type="button"
+                          onClick={() =>
+                            setVisitStep((prev) =>
+                              prev < 4 ? ((prev + 1) as 1 | 2 | 3 | 4) : prev,
+                            )
+                          }
+                          disabled={
+                            visitStep === 4 ||
+                            (visitStep === 1 && !formState.schoolId.trim()) ||
+                            (visitStep === 2 &&
+                              !String(formState.payload.implementationStatus ?? "").trim())
+                          }
+                        >
+                          Next
+                        </button>
+                      </>
+                    ) : null}
                     <button className="button" type="button" disabled={saving} onClick={() => void submitRecord("Draft")}>
                       {saving ? "Saving..." : "Save Draft"}
                     </button>
                     <button
                       className="button button-ghost"
                       type="button"
-                      disabled={saving}
+                      disabled={saving || (isVisitModule && visitStep !== 4)}
                       onClick={() => void submitRecord("Submitted")}
                     >
                       {saving ? "Saving..." : "Submit"}

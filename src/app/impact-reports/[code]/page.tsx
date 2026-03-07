@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getImpactReportByCode, incrementImpactReportViewCount } from "@/lib/db";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +19,36 @@ export default async function ImpactReportDetailPage({
 
   const outcomes = report.factPack.learningOutcomes;
   const outcomeRows = [
-    { label: "Letter Names", value: outcomes.letterIdentification },
-    { label: "Letter Sounds", value: outcomes.soundIdentification },
-    { label: "Real Words", value: outcomes.decodableWords },
-    { label: "Made Up Words", value: outcomes.madeUpWords },
-    { label: "Story Reading", value: outcomes.storyReading },
-    { label: "Comprehension", value: outcomes.readingComprehension },
+    {
+      label: LEARNING_DOMAIN_DICTIONARY.letter_names.label_full,
+      description: LEARNING_DOMAIN_DICTIONARY.letter_names.description,
+      value: outcomes.letterIdentification,
+    },
+    {
+      label: LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full,
+      description: LEARNING_DOMAIN_DICTIONARY.letter_sounds.description,
+      value: outcomes.soundIdentification,
+    },
+    {
+      label: LEARNING_DOMAIN_DICTIONARY.real_words.label_full,
+      description: LEARNING_DOMAIN_DICTIONARY.real_words.description,
+      value: outcomes.decodableWords,
+    },
+    {
+      label: LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full,
+      description: LEARNING_DOMAIN_DICTIONARY.made_up_words.description,
+      value: outcomes.madeUpWords,
+    },
+    {
+      label: LEARNING_DOMAIN_DICTIONARY.story_reading.label_full,
+      description: LEARNING_DOMAIN_DICTIONARY.story_reading.description,
+      value: outcomes.storyReading,
+    },
+    {
+      label: LEARNING_DOMAIN_DICTIONARY.comprehension.label_full,
+      description: LEARNING_DOMAIN_DICTIONARY.comprehension.description,
+      value: outcomes.readingComprehension,
+    },
   ].filter((row) => row.value != null);
 
   return (
@@ -41,6 +66,11 @@ export default async function ImpactReportDetailPage({
           <p className="meta-line">
             Report ID: {report.reportCode} • Version: {report.version} • Generated{" "}
             {new Date(report.generatedAt).toLocaleString()}
+          </p>
+          <p className="meta-line">
+            Category: {report.reportCategory ?? "Not specified"} • Period type:{" "}
+            {report.periodType ?? "FY"} • Audience: {report.audience ?? "Public-safe"} • Output:{" "}
+            {report.output ?? "PDF"}
           </p>
           <div className="action-row">
             <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
@@ -205,7 +235,11 @@ export default async function ImpactReportDetailPage({
               <tbody>
                 {outcomeRows.map((row) => (
                   <tr key={row.label}>
-                    <td>{row.label}</td>
+                    <td>
+                      <strong>{row.label}</strong>
+                      <br />
+                      <small>{row.description}</small>
+                    </td>
                     <td>{row.value?.baseline ?? "Data not available"}</td>
                     <td>{row.value?.progress ?? "Data not available"}</td>
                     <td>{row.value?.endline ?? "Data not available"}</td>
@@ -274,6 +308,13 @@ export default async function ImpactReportDetailPage({
               {report.factPack.dataQuality.approvedRecords.toLocaleString()} of{" "}
               {report.factPack.dataQuality.totalRecords.toLocaleString()} records; missing payload
               rate {report.factPack.dataQuality.missingPayloadRate}%.
+            </p>
+            <p>
+              <strong>Data trust:</strong>{" "}
+              {report.factPack.dataTrust
+                ? `n=${report.factPack.dataTrust.n.toLocaleString()}, completeness=${report.factPack.dataTrust.completenessPercent.toFixed(1)}%, tool_version=${report.factPack.dataTrust.toolVersion}, last_updated=${report.factPack.dataTrust.lastUpdated}`
+                : "Data not available"}
+              .
             </p>
           </article>
         </div>

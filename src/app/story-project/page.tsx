@@ -5,277 +5,216 @@ import storyProjectPhoto from "../../../assets/photos/PXL_20260217_124359226.jpg
 export const metadata = {
   title: "The 1001 Story Project",
   description:
-    "School-based learner authorship program that strengthens writing, fluency, and comprehension, then compiles stories into a school anthology.",
+    "Structured learner authorship program that strengthens writing, reinforces reading, and links participation outputs to measurable literacy outcomes.",
 };
 
 export default function StoryProjectPage() {
   return (
     <>
-      <section className="section tpd-hero-section bg-surface-container" style={{ backgroundColor: 'var(--md-sys-color-surface-container)' }}>
+      <section
+        className="section tpd-hero-section bg-surface-container"
+        style={{ backgroundColor: "var(--md-sys-color-surface-container)" }}
+      >
         <div className="container tpd-hero-grid">
           <article className="card tpd-hero-copy">
-            <p className="kicker">Program spotlight</p>
+            <p className="kicker">Program Spotlight</p>
             <h1 className="tpd-page-title">The 1001 Story Project</h1>
             <p className="tpd-subline">
-              Learner Authors -&gt; Stronger Literacy -&gt; Published Stories
+              Structured learner authorship that reinforces reading through meaningful writing.
             </p>
-            <h2>What it is</h2>
+            <h2>Overview</h2>
             <p>
-              The 1001 Story Project is a school-based literacy program that helps
-              primary learners become confident writers and stronger readers by
-              guiding them to write short stories, then compiling the best drafts
-              into a school anthology (digital or print, depending on funding).
-              It is structured, teacher-led, and designed to fit into the normal
-              school routine.
+              The 1001 Story Project is our structured learner authorship
+              program, designed to strengthen writing while reinforcing reading
+              through purposeful, motivating practice.
             </p>
             <p>
-              At its core, the project turns writing into a literacy engine:
-              learners plan, draft, revise, read aloud, and edit, which
-              strengthens spelling, vocabulary, sentence construction, fluency,
-              and comprehension.
+              It transforms learners from passive readers into creators of
+              meaningful text and helps schools build a culture where reading and
+              writing are normal, celebrated, and connected to measurable learning
+              outcomes.
+            </p>
+            <p className="meta-line">
+              <strong>Outcome we drive:</strong> stronger writing quality, better
+              reading fluency and comprehension, and school-level reading culture
+              growth with evidence.
             </p>
           </article>
 
           <article className="card tpd-hero-media">
             <Image
               src={storyProjectPhoto}
-              alt="Teachers and learners during 1001 Story Project writing support session"
+              alt="Learners and teachers in guided story writing and read-aloud practice"
               priority
+              sizes="(max-width: 900px) 100vw, 45vw"
             />
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">How the 1001 Story Project promotes literacy (why it works)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>1) Writing strengthens reading (and vice versa)</h3>
-              <p>When learners write, they practice the foundations of literacy:</p>
-              <ul>
-                <li>Phonics/encoding: hearing sounds and spelling them correctly</li>
-                <li>Vocabulary growth: using words to express ideas</li>
-                <li>Sentence construction: grammar, punctuation, and clarity</li>
-                <li>Comprehension and sequencing: beginning, middle, end and cause/effect</li>
-                <li>
-                  Fluency: reading drafts aloud improves speed, accuracy, and
-                  expression
-                </li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>2) Motivation increases when learners become authors</h3>
-              <p>Publishing stories creates pride and ownership. Learners read more because:</p>
-              <ul>
-                <li>They want to read their own story and their friends&apos; stories</li>
-                <li>They feel recognized and capable</li>
-                <li>Reading becomes meaningful, not just a classroom task</li>
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3>3) The school gains local reading materials</h3>
-              <p>
-                Anthologies become locally relevant texts with names, places,
-                values, and experiences children understand, making reading
-                easier and more enjoyable.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
+        <div className="container cards-grid">
           <article className="card">
-            <h3>How it boosts school academics (beyond English)</h3>
-            <p>The project improves:</p>
+            <h3>Structured Classroom Routine</h3>
+            <p>
+              At the heart of the project is a simple but powerful routine:
+              learners write short stories using clear prompts and guided
+              structures, then improve them through repeated cycles of drafting,
+              reading aloud, revising, and editing.
+            </p>
+            <p>
+              This moves the project beyond creative writing activities into a
+              consistent literacy-development process.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Teacher Training for Story Instruction</h3>
+            <p>
+              Teachers are trained to deliver story writing as structured literacy
+              instruction. They guide learners in:
+            </p>
             <ul>
-              <li>Language performance: stronger writing, spelling, and comprehension</li>
-              <li>
-                Overall learning: better reading improves performance in Science,
-                SST, Math word problems, and exams
-              </li>
-              <li>Class participation: confident readers participate more and learn faster</li>
-              <li>
-                Teacher quality: teachers improve writing instruction, marking,
-                and feedback
-              </li>
-              <li>
-                School image: published books show school seriousness and support
-                enrollment, reputation, and partnerships
-              </li>
+              <li>Planning a story (characters, setting, problem, solution)</li>
+              <li>Writing clear, connected sentences</li>
+              <li>Improving spelling and punctuation</li>
+              <li>Strengthening vocabulary and meaning</li>
             </ul>
           </article>
-        </div>
-      </section>
 
-      <section className="section">
-        <div className="container">
-          <div className="section-head" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem' }}>
-            <h2 className="tpd-page-title">How Schools Join (Step-by-Step)</h2>
-          </div>
-          <div className="cards-grid">
-            <article className="card">
-              <h3>Step 1: Registration &amp; Planning (1 week)</h3>
-              <p>The school submits a simple registration form with:</p>
-              <ul>
-                <li>School name and location</li>
-                <li>Grades/classes participating</li>
-                <li>Teacher focal persons (English/literacy)</li>
-                <li>Preferred timeline (term dates)</li>
-                <li>Digital-only or print preference (funding dependent)</li>
-              </ul>
-              <p>
-                <strong>Deliverable:</strong> Project schedule and participating
-                teacher list.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>Step 2: Teacher Orientation &amp; Writing-Routine Training (1-2 days)</h3>
-              <p>We orient teachers and school leaders on:</p>
-              <ul>
-                <li>How the project works</li>
-                <li>How to run writing sessions efficiently</li>
-                <li>Age-appropriate story structure</li>
-                <li>Sentence-building and vocabulary support strategies</li>
-                <li>How to assess writing using simple rubrics</li>
-                <li>How to guide revision without writing for learners</li>
-              </ul>
-              <p>
-                <strong>Deliverables:</strong> Writing routine toolkit and weekly
-                session plan.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>Step 3: Learner Prompt-Based Drafting Sessions (4-8 weeks)</h3>
-              <p>
-                Teachers run structured writing sessions weekly or twice weekly,
-                using prompts matched to learner level.
-              </p>
-              <p>Simple session routine:</p>
-              <ul>
-                <li>Prompt (picture, sentence starter, or theme)</li>
-                <li>Plan (characters + setting + beginning/middle/end)</li>
-                <li>Draft (guided writing time)</li>
-                <li>Quick share (pair/share or small group)</li>
-                <li>Teacher check (1-2 key corrections only)</li>
-              </ul>
-              <p>Differentiation support for struggling learners includes:</p>
-              <ul>
-                <li>Sentence starters and word banks</li>
-                <li>Guided group writing</li>
-                <li>Oral storytelling before writing</li>
-                <li>Shorter formats (6-10 sentences) then gradual expansion</li>
-              </ul>
-              <p>
-                <strong>Deliverables:</strong> Learner draft portfolio and teacher
-                session log.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>Step 4: Revision, Read-Aloud &amp; Editing Cycles (2-3 weeks)</h3>
-              <p>This is where literacy accelerates. Learners revise to:</p>
-              <ul>
-                <li>Improve sentence clarity</li>
-                <li>Correct spelling and punctuation</li>
-                <li>Strengthen vocabulary</li>
-                <li>Improve story flow and meaning</li>
-              </ul>
-              <p>Read-aloud practice is built in:</p>
-              <ul>
-                <li>Learners read drafts aloud in pairs/groups</li>
-                <li>Teachers coach accuracy and expression</li>
-                <li>Peers give simple feedback</li>
-              </ul>
-              <p>
-                <strong>Deliverables:</strong> Revised drafts, growth notes, and
-                shortlist for anthology.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>Step 5: Story Compilation &amp; Optional School Showcase (1-2 weeks)</h3>
-              <p>We compile selected stories into a school anthology with:</p>
-              <ul>
-                <li>Light editing while preserving learner voice</li>
-                <li>Formatting and basic design</li>
-                <li>Optional learner illustrations</li>
-              </ul>
-              <p>
-                Schools may host an optional Story Day where learners read aloud
-                and celebrate authorship.
-              </p>
-              <p>
-                <strong>Deliverables:</strong> Final edited anthology draft and
-                optional showcase plan.
-              </p>
-            </article>
-
-            <article className="card">
-              <h3>Step 6: Anthology Publishing (Digital or Print)</h3>
-              <ul>
-                <li>Digital: PDF anthology shared for school printing and reading use</li>
-                <li>Print: books printed and delivered based on partner funding</li>
-              </ul>
-              <p>
-                <strong>Deliverables:</strong> Published anthology and
-                distribution plan for classes, library corners, and awards.
-              </p>
-            </article>
-          </div>
+          <article className="card">
+            <h3>Read-Aloud Cycles That Reinforce Reading</h3>
+            <p>
+              Read-aloud cycles are used strategically. Learners read their own
+              work and peers&apos; work as drafts improve, building fluency,
+              confidence, and comprehension alongside writing quality.
+            </p>
+            <p>
+              Over time, sentence construction strengthens and learners gain pride
+              in producing complete, understandable text.
+            </p>
+          </article>
         </div>
       </section>
 
       <section className="section">
         <div className="container cards-grid">
           <article className="card">
-            <h3>Outcomes (What changes)</h3>
-            <ul>
-              <li>Improved writing quality and sentence construction</li>
-              <li>Stronger reading fluency through structured read-aloud practice</li>
-              <li>Higher learner confidence and motivation</li>
-              <li>
-                Locally relevant reading materials created by learners and reused
-                for reading practice
-              </li>
-            </ul>
+            <h3>Publication and Visibility</h3>
+            <p>
+              The project is designed for publication. Learner stories are
+              compiled into school anthologies that can be published as PDF for
+              rapid release or printed when funding allows.
+            </p>
+            <p>
+              This creates a strong motivation loop: learners see their work
+              valued, teachers see tangible outputs, and schools gain locally
+              relevant reading materials.
+            </p>
           </article>
 
           <article className="card">
-            <h3>Sample Implementation Outputs (Evidence &amp; Reporting)</h3>
-            <ul>
-              <li>Teacher training log and writing routines toolkit</li>
-              <li>Learner draft portfolio and final edited anthology</li>
-              <li>Progress notes on writing improvement and fluency growth</li>
-              <li>Optional photos, showcase report, and school testimony quotes</li>
-            </ul>
+            <h3>School Story Showcases</h3>
+            <p>
+              Where appropriate, schools can host story showcases to celebrate
+              learner authorship, reinforce reading culture, and make literacy
+              progress visible to communities and partners.
+            </p>
           </article>
 
           <article className="card">
-            <h3>Ready to Join?</h3>
-            <p>Join the 1001 Story Project:</p>
+            <h3>Locally Relevant Reading Content</h3>
+            <p>
+              Anthologies provide context-relevant texts grounded in learners&apos;
+              language, culture, and experiences, strengthening reading engagement
+              and sustained classroom use.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid">
+          <article className="card">
+            <h3>Measured Participation and Outputs</h3>
+            <p>
+              What makes this a true literacy intelligence program is measurement
+              and integration. The platform tracks:
+            </p>
             <ul>
-              <li>Register your school</li>
-              <li>Get teacher orientation and writing toolkit</li>
-              <li>Run weekly story sessions</li>
-              <li>Publish your learners&apos; stories into a school anthology</li>
+              <li>Writing sessions conducted</li>
+              <li>Drafts produced and stories edited</li>
+              <li>Published stories and anthologies created</li>
+              <li>School-level participation and output coverage</li>
             </ul>
+            <p>
+              Where consent is available, outputs are linked to learner authors.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Linked to Literacy Outcomes</h3>
+            <p>
+              Story activity is connected to broader literacy outcomes in the
+              platform:
+            </p>
+            <ul>
+              <li>Reading-level movement</li>
+              <li>Fluency and comprehension trends</li>
+              <li>Teaching quality improvements</li>
+            </ul>
+            <p>
+              Schools and partners can verify whether writing and read-aloud
+              routines are strengthening reading performance over time.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Evidence-Led Partner Value</h3>
+            <p>
+              For partners and funders, the project works as both literacy
+              intervention and scalable content-creation model, producing credible
+              outputs alongside measurable learning progress.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container cards-grid-two">
+          <article className="card">
+            <h3>Program Result</h3>
+            <p>
+              The 1001 Story Project strengthens literacy from multiple angles at
+              once: purposeful reading practice, stronger writing and sentence
+              construction, learner confidence and motivation, and expanded supply
+              of locally relevant texts.
+            </p>
+            <p>
+              It helps schools move from learning to read into reading and writing
+              to learn, through a uniquely Ugandan, learner-centered pathway.
+            </p>
+          </article>
+
+          <article className="card">
+            <h3>Join or Sponsor the Project</h3>
+            <p>
+              Support story sessions, anthology publishing, and learner-centered
+              literacy growth linked to measurable outcomes.
+            </p>
             <div className="action-row">
               <Link className="button" href="/portal/schools">
                 Open school profiles
               </Link>
-              <Link className="button button-ghost" href="/partner">
+              <Link className="button button-ghost" href="/partner-with-us">
                 Sponsor anthology printing
               </Link>
             </div>
+            <p>
+              <Link className="inline-download-link" href="/stories">
+                Explore published stories
+              </Link>
+            </p>
           </article>
         </div>
       </section>

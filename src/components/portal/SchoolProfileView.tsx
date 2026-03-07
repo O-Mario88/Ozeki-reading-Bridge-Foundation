@@ -1,15 +1,113 @@
 "use client";
 
-import { SchoolDirectoryRecord } from "@/lib/types";
+import {
+  GraduationEligibilityRecord,
+  SchoolDirectoryRecord,
+  SchoolSupportStatusRecord,
+} from "@/lib/types";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
+import { GraduationReviewModal } from "./GraduationReviewModal";
+
+type SupervisorOption = {
+  id: number;
+  fullName: string;
+};
 
 interface SchoolProfileViewProps {
   school: SchoolDirectoryRecord;
+  canVoidLessonEvaluations?: boolean;
 }
 
-export function SchoolProfileView({ school }: SchoolProfileViewProps) {
+export function SchoolProfileView({
+  school,
+  canVoidLessonEvaluations = false,
+}: SchoolProfileViewProps) {
   const [activeTab, setActiveTab] = useState<"details" | "related" | "activity">("details");
+  const [graduationLoading, setGraduationLoading] = useState(false);
+  const [graduationError, setGraduationError] = useState("");
+  const [graduationOpen, setGraduationOpen] = useState(false);
+  const [graduationEligibility, setGraduationEligibility] = useState<GraduationEligibilityRecord | null>(null);
+  const [graduationSupervisors, setGraduationSupervisors] = useState<SupervisorOption[]>([]);
+  const [supportStatusLoading, setSupportStatusLoading] = useState(false);
+  const [supportStatusError, setSupportStatusError] = useState("");
+  const [schoolSupportStatus, setSchoolSupportStatus] = useState<SchoolSupportStatusRecord | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setGraduationLoading(true);
+    setGraduationError("");
+    fetch(`/api/portal/graduation/school/${school.id}`, { cache: "no-store" })
+      .then(async (response) => {
+        const json = (await response.json()) as {
+          eligibility?: GraduationEligibilityRecord;
+          supervisors?: SupervisorOption[];
+          error?: string;
+        };
+        if (!response.ok || !json.eligibility) {
+          throw new Error(json.error ?? "Could not load graduation status.");
+        }
+        if (!active) {
+          return;
+        }
+        setGraduationEligibility(json.eligibility);
+        setGraduationSupervisors(Array.isArray(json.supervisors) ? json.supervisors : []);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+        setGraduationError(error instanceof Error ? error.message : "Could not load graduation status.");
+      })
+      .finally(() => {
+        if (active) {
+          setGraduationLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [school.id]);
+
+  useEffect(() => {
+    let active = true;
+    setSupportStatusLoading(true);
+    setSupportStatusError("");
+    fetch(`/api/portal/automation/support-status?type=school&schoolId=${school.id}&limit=1`, {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const json = (await response.json()) as {
+          records?: SchoolSupportStatusRecord[];
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(json.error ?? "Could not load school support status.");
+        }
+        if (!active) {
+          return;
+        }
+        const first = Array.isArray(json.records) && json.records.length > 0 ? json.records[0] : null;
+        setSchoolSupportStatus(first);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+        setSupportStatusError(error instanceof Error ? error.message : "Could not load school support status.");
+      })
+      .finally(() => {
+        if (active) {
+          setSupportStatusLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [school.id]);
 
   return (
     <div className="school-profile-container">
@@ -61,8 +159,82 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
             <span className="label">Phone</span>
             <span className="value">{school.contactPhone || "-"}</span>
           </div>
+          <div className="highlight-item">
+            <span className="label">Program Status</span>
+            <span className="value">{graduationEligibility?.programStatus ?? school.programStatus}</span>
+          </div>
         </div>
       </div>
+
+      {graduationEligibility?.isEligible ? (
+        <section className="card graduation-alert-banner">
+          <div>
+            <h3>Graduation Eligible</h3>
+            <p>
+              This school currently meets configured graduation criteria. Review evidence before confirming
+              graduation.
+            </p>
+            <p className="portal-muted">
+              {graduationEligibility.eligibilityScorecard.readingSampleSize.toLocaleString()} assessed learners •{" "}
+              {graduationEligibility.eligibilityScorecard.teachingEvaluationsCount.toLocaleString()} lesson
+              evaluations • {graduationEligibility.eligibilityScorecard.publishedStoryCount.toLocaleString()}{" "}
+              published stories
+            </p>
+          </div>
+          <div className="action-row">
+            <button className="button" onClick={() => setGraduationOpen(true)}>
+              Review Graduation
+            </button>
+            <Link href="/portal/graduation-queue" className="button button-ghost">
+              Open Queue
+            </Link>
+          </div>
+        </section>
+      ) : null}
+      {graduationLoading ? <p className="portal-muted">Checking graduation eligibility…</p> : null}
+      {!graduationLoading && graduationError ? <p className="portal-muted">{graduationError}</p> : null}
+
+      <section className="card support-status-banner">
+        <div>
+          <h3>Support Status</h3>
+          {supportStatusLoading ? (
+            <p className="portal-muted" style={{ margin: 0 }}>Computing support status…</p>
+          ) : schoolSupportStatus ? (
+            <>
+              <p className="support-status-pill">{schoolSupportStatus.status}</p>
+              <p className="portal-muted">
+                Rules version: {schoolSupportStatus.rulesVersion} • Period: {schoolSupportStatus.periodKey}
+              </p>
+              {schoolSupportStatus.recommendedActions.length > 0 ? (
+                <ul className="support-status-actions">
+                  {schoolSupportStatus.recommendedActions.map((action) => (
+                    <li key={action}>{action}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : (
+            <p className="portal-muted" style={{ margin: 0 }}>
+              No support-status snapshot available yet. Add assessment entries to compute status.
+            </p>
+          )}
+          {supportStatusError ? <p className="portal-muted">{supportStatusError}</p> : null}
+        </div>
+        <div className="support-status-metrics">
+          <span>Non-readers</span>
+          <strong>
+            {typeof schoolSupportStatus?.metrics?.nonReadersPct === "number"
+              ? `${schoolSupportStatus.metrics.nonReadersPct}%`
+              : "N/A"}
+          </strong>
+          <span>Below minimum</span>
+          <strong>
+            {typeof schoolSupportStatus?.metrics?.belowMinimumPct === "number"
+              ? `${schoolSupportStatus.metrics.belowMinimumPct}%`
+              : "N/A"}
+          </strong>
+        </div>
+      </section>
 
       {/* Main Content Area */}
       <div className="school-content-grid">
@@ -109,6 +281,12 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
             </Link>
           </div>
 
+          <LessonEvaluationPanel
+            schoolId={school.id}
+            schoolName={school.name}
+            allowVoid={canVoidLessonEvaluations}
+          />
+
           {/* Tabs */}
           <div className="tabs-container">
             <div className="tabs-header">
@@ -154,7 +332,9 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
                       </div>
                       <div className="detail-group">
                         <label>School Status</label>
-                        <div className="detail-value">Open</div>
+                        <div className="detail-value">
+                          {graduationEligibility?.programStatus ?? school.programStatus}
+                        </div>
                       </div>
                     </div>
                     <div className="detail-row">
@@ -281,6 +461,14 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
 
       </div>
 
+      <GraduationReviewModal
+        open={graduationOpen}
+        eligibility={graduationEligibility}
+        supervisors={graduationSupervisors}
+        onClose={() => setGraduationOpen(false)}
+        onUpdated={(next) => setGraduationEligibility(next)}
+      />
+
       <style jsx>{`
         .school-profile-container {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
@@ -295,6 +483,73 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
           border-bottom: 1px solid #e5e7eb;
           padding: 1rem 1.5rem;
           margin-bottom: 1.5rem;
+        }
+
+        .graduation-alert-banner {
+          margin: 0 1.5rem 1.5rem;
+          border-left: 4px solid #FA7D15;
+          display: flex;
+          justify-content: space-between;
+          gap: 1rem;
+          align-items: center;
+        }
+
+        .support-status-banner {
+          margin: 0 1.5rem 1.5rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 1rem;
+          border-left: 4px solid #0f766e;
+        }
+
+        .support-status-banner h3 {
+          margin: 0 0 0.35rem;
+          color: #0f172a;
+        }
+
+        .support-status-pill {
+          display: inline-flex;
+          align-items: center;
+          margin: 0 0 0.35rem;
+          padding: 0.2rem 0.55rem;
+          border-radius: 999px;
+          border: 1px solid #99f6e4;
+          color: #115e59;
+          background: #f0fdfa;
+          font-size: 0.78rem;
+          font-weight: 700;
+        }
+
+        .support-status-actions {
+          margin: 0.35rem 0 0;
+          padding-left: 1rem;
+          color: #334155;
+          font-size: 0.86rem;
+          display: grid;
+          gap: 0.2rem;
+        }
+
+        .support-status-metrics {
+          min-width: 190px;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 0.55rem 0.7rem;
+          display: grid;
+          gap: 0.15rem;
+          background: #f8fafc;
+        }
+
+        .support-status-metrics span {
+          color: #64748b;
+          font-size: 0.72rem;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+        }
+
+        .support-status-metrics strong {
+          color: #0f172a;
+          font-size: 0.95rem;
         }
 
         .school-header-top {
@@ -443,7 +698,7 @@ export function SchoolProfileView({ school }: SchoolProfileViewProps) {
         
         .icon-wrapper.purple { background-color: #f3e8ff; color: #9333ea; }
         .icon-wrapper.blue { background-color: #dbeafe; color: #2563eb; }
-        .icon-wrapper.green { background-color: #dcfce7; color: #16a34a; }
+        .icon-wrapper.green { background-color: #FFF4EC; color: #FA7D15; }
         .icon-wrapper.orange { background-color: #ffedd5; color: #ea580c; }
         .icon-wrapper.red { background-color: #fee2e2; color: #dc2626; }
         .icon-wrapper.teal { background-color: #ccfbf1; color: #0d9488; }

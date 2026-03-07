@@ -8,7 +8,7 @@ interface PlanItem {
 }
 
 function progressColor(pct: number) {
-    if (pct >= 90) return "#16a34a";
+    if (pct >= 90) return "#FA7D15";
     if (pct >= 60) return "#e8a317";
     return "#dc2626";
 }

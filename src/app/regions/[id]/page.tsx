@@ -1,6 +1,12 @@
-import { getImpactDrilldownData, calculateFidelityScore, getLearningGainsData } from "@/lib/db";
+import {
+    getImpactDrilldownData,
+    calculateFidelityScore,
+    getLearningGainsData,
+    getPublicImpactAggregate,
+} from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { TeacherEvaluationPerformanceCards } from "@/components/impact/TeacherEvaluationPerformanceCards";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +32,14 @@ export default async function RegionPage({ params }: { params: Params }) {
     const drilldown = getImpactDrilldownData("region", name);
     const fidelity = calculateFidelityScore("region", name);
     const gains = getLearningGainsData("region", name);
+    const aggregate = getPublicImpactAggregate("region", name, "FY");
 
     return (
         <>
             <section className="page-hero">
                 <div className="container">
                     <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
-                        <Link href="/impact/dashboard">Dashboard</Link>
+                        <Link href="/impact">Dashboard</Link>
                         <span aria-hidden>›</span>
                         <span>{name}</span>
                     </nav>
@@ -47,7 +54,7 @@ export default async function RegionPage({ params }: { params: Params }) {
 
                     {/* KPI Cards */}
                     <div className="impact-dash-kpi-grid">
-                        <article className="impact-dash-kpi" style={{ "--kpi-accent": "#0d7c66" } as React.CSSProperties}>
+                        <article className="impact-dash-kpi" style={{ "--kpi-accent": "#D96A0F" } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Schools Supported</span>
                                 <span className="impact-dash-kpi-value">{drilldown.kpis.schoolsSupported}</span>
@@ -66,7 +73,7 @@ export default async function RegionPage({ params }: { params: Params }) {
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{
-                            "--kpi-accent": fidelity.band === "Strong" ? "#16a34a" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
+                            "--kpi-accent": fidelity.band === "Strong" ? "#FA7D15" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
                         } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Fidelity ({fidelity.band})</span>
@@ -100,6 +107,11 @@ export default async function RegionPage({ params }: { params: Params }) {
                             ))}
                         </div>
                     </div>
+
+                    <TeacherEvaluationPerformanceCards
+                        scopeLabel={`${name} Region`}
+                        teachingQuality={aggregate.teachingQuality}
+                    />
 
                     <p className="note-box impact-compliance-note">
                         Data is aggregated at region level. No individual learner or school-level identifiers are published.

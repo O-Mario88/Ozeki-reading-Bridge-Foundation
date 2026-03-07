@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
 import {
   safeguardingPolicyBody,
   safeguardingPolicyTitle,
   safeguardingPolicyToc,
 } from "@/lib/safeguarding-policy";
+import { embedPdfSerifFonts } from "@/lib/pdf-fonts";
+import {
+  drawBrandFrame,
+  drawBrandHeader,
+  drawBrandWatermark,
+  loadBrandLogo,
+} from "@/lib/pdf-branding";
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
 const MARGIN_X = 48;
-const MARGIN_TOP = 54;
 const MARGIN_BOTTOM = 52;
 
 function wrapTextByWidth(
@@ -66,11 +72,33 @@ function wrapTextByWidth(
 
 export async function GET() {
   const document = await PDFDocument.create();
-  const regularFont = await document.embedFont(StandardFonts.Helvetica);
-  const boldFont = await document.embedFont(StandardFonts.HelveticaBold);
+  const serifFonts = await embedPdfSerifFonts(document);
+  const regularFont = serifFonts.regular;
+  const boldFont = serifFonts.bold;
+  const logo = await loadBrandLogo(document);
+  const createBrandedPage = (subtitle: string) => {
+    const nextPage = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    drawBrandFrame(nextPage);
+    drawBrandWatermark(nextPage, logo);
+    drawBrandHeader({
+      page: nextPage,
+      font: regularFont,
+      fontBold: boldFont,
+      logo,
+      title: safeguardingPolicyTitle,
+      documentNumber: "FULL POLICY",
+      subtitle,
+      titleColor: rgb(0.03, 0.31, 0.4),
+      mutedColor: rgb(0.2, 0.24, 0.3),
+      titleSize: 20,
+      numberSize: 12,
+      subtitleSize: 9,
+    });
+    return nextPage;
+  };
 
-  let page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  let cursorY = PAGE_HEIGHT - MARGIN_TOP;
+  let page = createBrandedPage("Document type: Full policy text");
+  let cursorY = 600;
 
   const lineGapMultiplier = 1.35;
 
@@ -81,8 +109,8 @@ export async function GET() {
 
   const ensureSpace = (heightNeeded: number) => {
     if (cursorY - heightNeeded < MARGIN_BOTTOM) {
-      page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      cursorY = PAGE_HEIGHT - MARGIN_TOP;
+      page = createBrandedPage("Policy continuation");
+      cursorY = 600;
     }
   };
 
@@ -124,23 +152,6 @@ export async function GET() {
     cursorY -= paragraphGap;
   };
 
-  drawWrapped("Ozeki Reading Bridge Foundation", {
-    size: 13,
-    bold: true,
-    color: rgb(0.03, 0.31, 0.4),
-    paragraphGap: 8,
-  });
-  drawWrapped(safeguardingPolicyTitle, {
-    size: 21,
-    bold: true,
-    color: rgb(0.03, 0.31, 0.4),
-    paragraphGap: 10,
-  });
-  drawWrapped("Document type: Full policy text", {
-    size: 10,
-    color: rgb(0.2, 0.24, 0.3),
-    paragraphGap: 2,
-  });
   drawWrapped(`Generated: ${new Date().toLocaleString()}`, {
     size: 10,
     color: rgb(0.2, 0.24, 0.3),
@@ -161,8 +172,8 @@ export async function GET() {
     });
   });
 
-  page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  cursorY = PAGE_HEIGHT - MARGIN_TOP;
+  page = createBrandedPage("Policy body and clauses");
+  cursorY = 600;
 
   const lines = safeguardingPolicyBody.replace(/\r/g, "").trim().split("\n");
 
@@ -172,8 +183,8 @@ export async function GET() {
     if (!line) {
       cursorY -= 4;
       if (cursorY < MARGIN_BOTTOM) {
-        page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-        cursorY = PAGE_HEIGHT - MARGIN_TOP;
+        page = createBrandedPage("Policy continuation");
+        cursorY = 600;
       }
       continue;
     }

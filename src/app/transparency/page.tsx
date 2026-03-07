@@ -443,6 +443,20 @@ export default function TransparencyPage() {
                 <li>Learning briefs with action recommendations</li>
               </ul>
             </article>
+            <article className="card bg-gray-50 border-gray-200 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-[#FA7D15]"></div>
+              <h3 className="text-[#00155F] flex items-center">
+                Financial Transparency Hub
+              </h3>
+              <p className="mb-4">
+                View our public financial snapshots, expense summaries, and independently audited financial statements.
+              </p>
+              <div className="action-row">
+                <Link className="button" href="/transparency/financials" style={{ backgroundColor: '#00155F', color: 'white' }}>
+                  Open Financials Hub
+                </Link>
+              </div>
+            </article>
             <article className="card">
               <h3>Downloads</h3>
               <div className="action-row">

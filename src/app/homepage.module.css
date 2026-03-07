@@ -1,0 +1,589 @@
+.hero {
+  background:
+    radial-gradient(circle at 92% 12%, color-mix(in oklab, var(--color-brand-orange), transparent 76%), transparent 44%),
+    linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--color-brand-blue), white 92%) 0%,
+      color-mix(in oklab, var(--color-brand-blue), white 97%) 62%,
+      #ffffff 100%
+    );
+  border-bottom: 1px solid color-mix(in oklab, var(--color-brand-blue), white 76%);
+}
+
+.heroInner {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 920px;
+}
+
+.heroKicker {
+  align-items: center;
+  color: var(--color-brand-orange-dark);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.heroSubhead {
+  color: var(--color-text);
+  font-size: clamp(1rem, 1.3vw, 1.2rem);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 72ch;
+}
+
+.microline {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.ctaRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.primaryCta {
+  background: var(--color-brand-blue) !important;
+  border-color: var(--color-brand-blue) !important;
+  color: #ffffff !important;
+}
+
+.primaryCta:hover,
+.primaryCta:focus-visible {
+  background: var(--color-brand-blue-dark) !important;
+  border-color: var(--color-brand-blue-dark) !important;
+}
+
+.outlineCta {
+  background: #ffffff !important;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 58%) !important;
+  color: var(--color-brand-blue) !important;
+  box-shadow: none !important;
+}
+
+.outlineCta:hover,
+.outlineCta:focus-visible {
+  background: color-mix(in oklab, var(--color-brand-blue), white 94%) !important;
+  border-color: var(--color-brand-blue) !important;
+  color: var(--color-brand-blue-dark) !important;
+}
+
+.sectionHeading {
+  margin-bottom: var(--space-6);
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  max-width: 32ch;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.trustStrip {
+  background: #ffffff;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  border-top: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  padding: var(--space-4) 0;
+}
+
+.trustLinks {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.trustLinks a {
+  background: color-mix(in oklab, var(--color-brand-blue), white 94%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 74%);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-blue);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: var(--space-2) var(--space-3);
+  text-decoration: none;
+}
+
+.trustLinks a:hover,
+.trustLinks a:focus-visible {
+  border-color: var(--color-brand-blue);
+  color: var(--color-brand-blue-dark);
+}
+
+.problemSection {
+  background: color-mix(in oklab, var(--color-brand-blue), white 96%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 82%);
+}
+
+.problemSection .sectionHeading h2 {
+  max-width: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.loopSectionHeading h2 {
+  max-width: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.programSectionHeading h2 {
+  max-width: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.problemLayout {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  margin-bottom: var(--space-5);
+}
+
+.problemPhotoCard {
+  background: var(--color-brand-blue);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 64%);
+  border-radius: var(--radius-lg);
+  min-height: 340px;
+  overflow: hidden;
+  position: relative;
+}
+
+.problemPhotoImage {
+  object-fit: cover;
+}
+
+.problemPhotoOverlay {
+  background: linear-gradient(
+    90deg,
+    rgba(6, 55, 72, 0.92) 0%,
+    rgba(6, 55, 72, 0.74) 52%,
+    rgba(6, 55, 72, 0.24) 100%
+  );
+  inset: 0;
+  position: absolute;
+}
+
+.problemPhotoContent {
+  color: #ffffff;
+  display: grid;
+  gap: var(--space-2);
+  left: var(--space-4);
+  max-width: 40ch;
+  position: absolute;
+  top: var(--space-4);
+  z-index: 1;
+}
+
+.problemPhotoKicker {
+  align-items: center;
+  background: color-mix(in oklab, var(--color-brand-orange), white 16%);
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 0;
+  max-width: max-content;
+  padding: var(--space-1) var(--space-2);
+  text-transform: uppercase;
+}
+
+.problemPhotoContent p {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.problemNarrative {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.problemNarrative p {
+  color: var(--color-text);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.loopGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.loopCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.loopCard h3 {
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.loopCard p {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.loopIcon {
+  align-items: center;
+  background: color-mix(in oklab, var(--color-brand-orange), white 82%);
+  border-radius: 999px;
+  color: var(--color-brand-orange-dark);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.loopCtaWrap {
+  margin: var(--space-4) 0 0;
+}
+
+.inlineLink {
+  color: var(--color-brand-blue);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-brand-blue), white 48%);
+  text-underline-offset: 4px;
+}
+
+.inlineLink:hover,
+.inlineLink:focus-visible {
+  color: var(--color-brand-orange-dark);
+}
+
+.programOverviewSection {
+  background: #ffffff;
+}
+
+.programOverview {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.programOverview p {
+  color: var(--color-text);
+  line-height: 1.68;
+  margin: 0;
+}
+
+.programGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: var(--space-5);
+}
+
+.programCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.programCard h3 {
+  margin: 0;
+}
+
+.programLink {
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.programLink:hover,
+.programLink:focus-visible {
+  color: var(--color-brand-orange-dark);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-brand-orange), white 42%);
+}
+
+.programCard p {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.insightSection {
+  background:
+    radial-gradient(circle at 2% 90%, color-mix(in oklab, var(--color-brand-orange), transparent 82%), transparent 36%),
+    linear-gradient(180deg, color-mix(in oklab, var(--color-brand-blue), white 95%), #ffffff 56%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+}
+
+.insightLead {
+  color: var(--color-text);
+  margin: 0 0 var(--space-4);
+}
+
+.insightGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.insightTile {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  min-height: 108px;
+  padding: var(--space-4);
+}
+
+.insightTile h3 {
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+  word-break: break-word;
+}
+
+.centeredCta {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-5);
+}
+
+.partnerGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.partnerCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.partnerCard h3 {
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.partnerCard p {
+  color: var(--color-text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.partnerCard strong {
+  color: var(--color-text);
+}
+
+.testimonialSection {
+  background: color-mix(in oklab, var(--color-brand-blue), white 96%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+}
+
+.testimonialGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.testimonialCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.quote {
+  color: var(--color-text);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.metaRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.roleChip {
+  background: color-mix(in oklab, var(--color-brand-blue), white 90%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 74%);
+  border-radius: 999px;
+  color: var(--color-brand-blue);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
+}
+
+.geoMeta {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.supportSection {
+  padding-top: var(--space-7);
+}
+
+.supportCard {
+  align-items: start;
+  background:
+    radial-gradient(circle at 90% 16%, color-mix(in oklab, var(--color-brand-orange), transparent 66%), transparent 36%),
+    linear-gradient(132deg, var(--color-brand-blue), color-mix(in oklab, var(--color-brand-blue), black 18%));
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 48%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  color: #ffffff;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.supportCard h2 {
+  color: #ffffff;
+  margin: 0;
+}
+
+.supportCard p {
+  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  max-width: 72ch;
+}
+
+.supportCard .primaryCta {
+  background: var(--color-brand-orange) !important;
+  border-color: var(--color-brand-orange) !important;
+}
+
+.supportCard .primaryCta:hover,
+.supportCard .primaryCta:focus-visible {
+  background: var(--color-brand-orange-dark) !important;
+  border-color: var(--color-brand-orange-dark) !important;
+}
+
+@media (max-width: 1120px) {
+  .problemLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .problemPhotoCard {
+    min-height: 320px;
+  }
+
+  .loopGrid,
+  .programGrid,
+  .insightGrid,
+  .partnerGrid,
+  .testimonialGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .sectionHeading {
+    margin-bottom: var(--space-5);
+  }
+
+  .problemSection .sectionHeading h2 {
+    white-space: normal;
+  }
+
+  .loopSectionHeading h2 {
+    white-space: normal;
+  }
+
+  .programSectionHeading h2 {
+    white-space: normal;
+  }
+
+  .problemPhotoCard {
+    min-height: 292px;
+  }
+
+  .ctaRow {
+    gap: var(--space-2);
+  }
+}
+
+@media (max-width: 640px) {
+  .heroInner {
+    gap: var(--space-3);
+  }
+
+  .trustLinks {
+    justify-content: flex-start;
+  }
+
+  .trustLinks a {
+    width: 100%;
+  }
+
+  .loopGrid,
+  .programGrid,
+  .insightGrid,
+  .partnerGrid,
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .supportCard {
+    padding: var(--space-4);
+  }
+
+  .centeredCta {
+    justify-content: flex-start;
+  }
+
+  .ctaRow :global(.button),
+  .ctaRow :global(button.button) {
+    width: 100%;
+  }
+}

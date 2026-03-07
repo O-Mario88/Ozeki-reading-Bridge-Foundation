@@ -25,8 +25,18 @@ const portalNavItems: PortalNavItem[] = [
   { href: "/portal/events", label: "Events", staffOnly: true },
   { href: "/portal/testimonials", label: "Testimonials" },
   { href: "/portal/schools", label: "Schools", staffOnly: true },
+  { href: "/portal/graduation-queue", label: "Graduation Queue", staffOnly: true },
   { href: "/portal/support", label: "Support Tickets", staffOnly: true },
   { href: "/portal/reports", label: "Reports", roles: ["Staff", "Volunteer", "Admin"] },
+  { href: "/portal/training-reports", label: "Training Reports", roles: ["Staff", "Admin"] },
+  { href: "/portal/national-intelligence", label: "National Intelligence", roles: ["Staff", "Admin"] },
+  { href: "/portal/benchmarks", label: "Benchmarks", superAdminOnly: true },
+  { href: "/portal/data-quality", label: "Data Quality", roles: ["Staff", "Admin"] },
+  { href: "/portal/insights", label: "Insights", roles: ["Staff", "Admin"] },
+  { href: "/portal/priority-queue", label: "Priority Queue", roles: ["Staff", "Admin"] },
+  { href: "/portal/interventions", label: "Interventions", roles: ["Staff", "Admin"] },
+  { href: "/portal/national-reports", label: "National Reports", roles: ["Staff", "Admin"] },
+  { href: "/portal/finance", label: "Finance", roles: ["Admin"] },
   { href: "/portal/superadmin", label: "Super Admin", superAdminOnly: true },
 ];
 
@@ -56,7 +66,7 @@ export function PortalShell({
     if (item.staffOnly && user.role === "Volunteer") {
       return false;
     }
-    if (item.roles && !item.roles.includes(user.role)) {
+    if (item.roles && !item.roles.includes(user.role) && !user.isSuperAdmin) {
       return false;
     }
     return true;
@@ -64,7 +74,7 @@ export function PortalShell({
 
   return (
     <section className="section portal-section">
-      <div className={`container portal-shell ${shellClassName ?? ""}`.trim()}>
+      <div className={`container portal-shell portal-shell-compact ${shellClassName ?? ""}`.trim()}>
         <header className="portal-header card">
           <div className="portal-header-top">
             <div>

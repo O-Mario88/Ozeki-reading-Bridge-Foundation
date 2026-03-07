@@ -9,10 +9,23 @@ import {
   ugandaRegions,
 } from "@/lib/uganda-locations";
 import { SchoolDirectoryRecord } from "@/lib/types";
-import { SchoolRosterPicker } from "./SchoolRosterPicker";
+import dynamic from "next/dynamic";
+
+const SchoolRosterPicker = dynamic(
+  () => import("./SchoolRosterPicker").then((mod) => mod.SchoolRosterPicker),
+  { ssr: false, loading: () => <div>Loading roster...</div> },
+);
+
+const LessonEvaluationPanel = dynamic(
+  () => import("./LessonEvaluationPanel").then((mod) => mod.LessonEvaluationPanel),
+  { ssr: false, loading: () => <div>Loading evaluations...</div> },
+);
+
+import { FloatingSurface } from "@/components/FloatingSurface";
 
 interface PortalSchoolsManagerProps {
   initialSchools: SchoolDirectoryRecord[];
+  canVoidLessonEvaluations?: boolean;
 }
 
 type Feedback = {
@@ -89,7 +102,10 @@ async function getBrowserCoordinates() {
   });
 }
 
-export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerProps) {
+export function PortalSchoolsManager({
+  initialSchools,
+  canVoidLessonEvaluations = false,
+}: PortalSchoolsManagerProps) {
   const [schools, setSchools] = useState(initialSchools);
   const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(
     initialSchools[0]?.id ?? null,
@@ -108,6 +124,10 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [createContactName, setCreateContactName] = useState("");
   const [createContactPhone, setCreateContactPhone] = useState("");
+  const [createContactGender, setCreateContactGender] = useState<"Male" | "Female" | "Other" | "">("");
+  const [createContactEmail, setCreateContactEmail] = useState("");
+  const [createContactWhatsapp, setCreateContactWhatsapp] = useState("");
+  const [createContactRoleTitle, setCreateContactRoleTitle] = useState("Director");
   const [editContactName, setEditContactName] = useState("");
   const [editContactPhone, setEditContactPhone] = useState("");
 
@@ -301,6 +321,10 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
       gpsLng: String(formData.get("gpsLng") ?? ""),
       contactName: String(formData.get("contactName") ?? ""),
       contactPhone: String(formData.get("contactPhone") ?? ""),
+      proprietorGender: String(formData.get("proprietorGender") ?? ""),
+      proprietorEmail: String(formData.get("proprietorEmail") ?? ""),
+      proprietorWhatsapp: String(formData.get("proprietorWhatsapp") ?? ""),
+      proprietorRoleTitle: String(formData.get("proprietorRoleTitle") ?? "Director"),
     };
 
     if (!region || !district) {
@@ -333,7 +357,27 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
     if (!isValidPhone(payload.contactPhone)) {
       setCreateFeedback({
         kind: "error",
-        message: "Contact phone format is invalid. Use digits and optional +, space, (), or -.",
+        message: "Proprietor phone format is invalid. Use digits and optional +, space, (), or -.",
+      });
+      setSavingSchool(false);
+      return;
+    }
+    if (!payload.contactName.trim()) {
+      setCreateFeedback({
+        kind: "error",
+        message: "Proprietor full name is required.",
+      });
+      setSavingSchool(false);
+      return;
+    }
+    if (
+      payload.proprietorGender !== "Male" &&
+      payload.proprietorGender !== "Female" &&
+      payload.proprietorGender !== "Other"
+    ) {
+      setCreateFeedback({
+        kind: "error",
+        message: "Proprietor gender is required.",
       });
       setSavingSchool(false);
       return;
@@ -385,6 +429,14 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
           enrolledP5: toWholeNumber(payload.enrolledP5),
           enrolledP6: toWholeNumber(payload.enrolledP6),
           enrolledP7: toWholeNumber(payload.enrolledP7),
+          proprietor: {
+            fullName: payload.contactName.trim(),
+            gender: payload.proprietorGender as "Male" | "Female" | "Other",
+            phone: payload.contactPhone.trim() || undefined,
+            email: payload.proprietorEmail.trim() || undefined,
+            whatsapp: payload.proprietorWhatsapp.trim() || undefined,
+            roleTitle: payload.proprietorRoleTitle.trim() || "Director",
+          },
         }),
       });
 
@@ -403,6 +455,10 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
       setCreateDistrict("");
       setCreateContactName("");
       setCreateContactPhone("");
+      setCreateContactGender("");
+      setCreateContactEmail("");
+      setCreateContactWhatsapp("");
+      setCreateContactRoleTitle("Director");
       setIsCreateFormOpen(false);
       setCreateFeedback({
         kind: "success",
@@ -563,259 +619,324 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
             className="button button-compact"
             type="button"
             onClick={() => {
-              setIsCreateFormOpen((prev) => !prev);
+              setIsCreateFormOpen(true);
               setCreateFeedback({ kind: "idle", message: "" });
             }}
           >
-            {isCreateFormOpen ? "Hide Form" : "+ New School"}
+            + New School
           </button>
         </div>
+        <p className="portal-muted">Create school records in a floating form without leaving this page.</p>
         {isCreateFormOpen ? (
-          <form ref={createFormRef} className="form-grid portal-form-grid" onSubmit={handleCreateSchool}>
-            <label>
-              <span className="portal-field-label">
-                <span>School Name</span>
-                <span className="portal-required-indicator">
-                  *<span className="visually-hidden">required</span>
+          <FloatingSurface
+            open={isCreateFormOpen}
+            onClose={() => setIsCreateFormOpen(false)}
+            title="New School Entry"
+            description="Add a new school account and baseline metadata."
+            closeLabel="Close"
+            maxWidth="1080px"
+          >
+            <form ref={createFormRef} className="form-grid portal-form-grid" onSubmit={handleCreateSchool}>
+              <label>
+                <span className="portal-field-label">
+                  <span>School Name</span>
+                  <span className="portal-required-indicator">
+                    *<span className="visually-hidden">required</span>
+                  </span>
                 </span>
-              </span>
-              <input
-                name="name"
-                required
-                minLength={2}
-                placeholder="e.g. Bright Future Primary - Gulu"
-                autoComplete="organization"
-              />
-            </label>
-            <label>
-              <span className="portal-field-label">
-                <span>Region</span>
-                <span className="portal-required-indicator">
-                  *<span className="visually-hidden">required</span>
+                <input
+                  name="name"
+                  required
+                  minLength={2}
+                  placeholder="e.g. Bright Future Primary - Gulu"
+                  autoComplete="organization"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">
+                  <span>Region</span>
+                  <span className="portal-required-indicator">
+                    *<span className="visually-hidden">required</span>
+                  </span>
                 </span>
-              </span>
-              <select
-                name="region"
-                value={createRegion}
-                onChange={(event) => {
-                  const nextRegion = event.target.value;
-                  const options = getDistrictsByRegion(nextRegion);
-                  setCreateRegion(nextRegion);
-                  setCreateDistrict((current) => (options.includes(current) ? current : ""));
-                }}
-                required
-              >
-                <option value="">Select region</option>
-                {ugandaRegions.map((entry) => (
-                  <option key={entry.region} value={entry.region}>
-                    {entry.region}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="portal-field-label">
-                <span>District</span>
-                <span className="portal-required-indicator">
-                  *<span className="visually-hidden">required</span>
+                <select
+                  name="region"
+                  value={createRegion}
+                  onChange={(event) => {
+                    const nextRegion = event.target.value;
+                    const options = getDistrictsByRegion(nextRegion);
+                    setCreateRegion(nextRegion);
+                    setCreateDistrict((current) => (options.includes(current) ? current : ""));
+                  }}
+                  required
+                >
+                  <option value="">Select region</option>
+                  {ugandaRegions.map((entry) => (
+                    <option key={entry.region} value={entry.region}>
+                      {entry.region}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="portal-field-label">
+                  <span>District</span>
+                  <span className="portal-required-indicator">
+                    *<span className="visually-hidden">required</span>
+                  </span>
                 </span>
-              </span>
-              <select
-                name="district"
-                value={createDistrict}
-                onChange={(event) => setCreateDistrict(event.target.value)}
-                required
-              >
-                <option value="">Select district</option>
-                {createDistrictOptions.map((district) => (
-                  <option key={district} value={district}>
-                    {district}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="portal-field-label">
-                <span>Enrollment Total</span>
-                <span className="portal-required-indicator">
-                  *<span className="visually-hidden">required</span>
+                <select
+                  name="district"
+                  value={createDistrict}
+                  onChange={(event) => setCreateDistrict(event.target.value)}
+                  required
+                >
+                  <option value="">Select district</option>
+                  {createDistrictOptions.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="portal-field-label">
+                  <span>Enrollment Total</span>
+                  <span className="portal-required-indicator">
+                    *<span className="visually-hidden">required</span>
+                  </span>
                 </span>
-              </span>
-              <input
-                name="enrollmentTotal"
-                type="number"
-                min={1}
-                step={1}
-                required
-                defaultValue={0}
-                inputMode="numeric"
-              />
-            </label>
-            <label>
-              <span className="portal-field-label">
-                <span>Sub-county (optional)</span>
-              </span>
-              <input
-                name="subCounty"
-                placeholder="e.g. Loro"
-                autoComplete="address-level2"
-              />
-            </label>
-            <label>
-              <span className="portal-field-label">
-                <span>Parish (optional)</span>
-              </span>
-              <input
-                name="parish"
-                placeholder="e.g. Corner Parish"
-                autoComplete="address-level3"
-              />
-            </label>
-            <label>
-              <span className="portal-field-label">Village (optional)</span>
-              <input name="village" placeholder="e.g. Lukole" autoComplete="address-level4" />
-            </label>
-            <label className="full-width">
-              <span className="portal-field-label">Notes</span>
-              <textarea
-                name="notes"
-                rows={3}
-                placeholder="School metadata notes, access details, or additional context."
-              />
-            </label>
-            <fieldset className="portal-fieldset">
-              <legend>Class Enrollment</legend>
-              <div className="form-grid-3">
-                <label>
-                  <span className="portal-field-label">Baby</span>
-                  <input name="enrolledBaby" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">Middle</span>
-                  <input name="enrolledMiddle" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">Top</span>
-                  <input name="enrolledTop" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">P1</span>
-                  <input name="enrolledP1" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">P2</span>
-                  <input name="enrolledP2" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">P3</span>
-                  <input name="enrolledP3" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">P4</span>
-                  <input name="enrolledP4" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">P5</span>
-                  <input name="enrolledP5" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">P6</span>
-                  <input name="enrolledP6" type="number" min={0} defaultValue={0} />
-                </label>
-                <label>
-                  <span className="portal-field-label">P7</span>
-                  <input name="enrolledP7" type="number" min={0} defaultValue={0} />
-                </label>
+                <input
+                  name="enrollmentTotal"
+                  type="number"
+                  min={1}
+                  step={1}
+                  required
+                  defaultValue={0}
+                  inputMode="numeric"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">
+                  <span>Sub-county (optional)</span>
+                </span>
+                <input
+                  name="subCounty"
+                  placeholder="e.g. Loro"
+                  autoComplete="address-level2"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">
+                  <span>Parish (optional)</span>
+                </span>
+                <input
+                  name="parish"
+                  placeholder="e.g. Corner Parish"
+                  autoComplete="address-level3"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Village (optional)</span>
+                <input name="village" placeholder="e.g. Lukole" autoComplete="address-level4" />
+              </label>
+              <label className="full-width">
+                <span className="portal-field-label">Notes</span>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  placeholder="School metadata notes, access details, or additional context."
+                />
+              </label>
+              <fieldset className="portal-fieldset">
+                <legend>Class Enrollment</legend>
+                <div className="form-grid-3">
+                  <label>
+                    <span className="portal-field-label">Baby</span>
+                    <input name="enrolledBaby" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Middle</span>
+                    <input name="enrolledMiddle" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Top</span>
+                    <input name="enrolledTop" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">P1</span>
+                    <input name="enrolledP1" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">P2</span>
+                    <input name="enrolledP2" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">P3</span>
+                    <input name="enrolledP3" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">P4</span>
+                    <input name="enrolledP4" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">P5</span>
+                    <input name="enrolledP5" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">P6</span>
+                    <input name="enrolledP6" type="number" min={0} defaultValue={0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">P7</span>
+                    <input name="enrolledP7" type="number" min={0} defaultValue={0} />
+                  </label>
+                </div>
+              </fieldset>
+              <label>
+                <span className="portal-field-label">Total Boys</span>
+                <input
+                  name="enrolledBoys"
+                  type="number"
+                  min={0}
+                  step={1}
+                  defaultValue={0}
+                  inputMode="numeric"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Total Girls</span>
+                <input
+                  name="enrolledGirls"
+                  type="number"
+                  min={0}
+                  step={1}
+                  defaultValue={0}
+                  inputMode="numeric"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">GPS Latitude (optional)</span>
+                <input name="gpsLat" placeholder="e.g. 2.7746" inputMode="decimal" />
+              </label>
+              <label>
+                <span className="portal-field-label">GPS Longitude (optional)</span>
+                <input name="gpsLng" placeholder="e.g. 32.2990" inputMode="decimal" />
+              </label>
+              <label>
+                <span className="portal-field-label">
+                  <span>Proprietor Name (Primary Contact)</span>
+                  <span className="portal-required-indicator">
+                    *<span className="visually-hidden">required</span>
+                  </span>
+                </span>
+                <input
+                  name="contactName"
+                  placeholder="e.g. Sarah Akello"
+                  autoComplete="name"
+                  value={createContactName}
+                  onChange={(event) => setCreateContactName(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Proprietor Phone (optional)</span>
+                <input
+                  name="contactPhone"
+                  placeholder="+2567xxxxxxxx"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={createContactPhone}
+                  onChange={(event) => setCreateContactPhone(event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">
+                  <span>Proprietor Gender</span>
+                  <span className="portal-required-indicator">
+                    *<span className="visually-hidden">required</span>
+                  </span>
+                </span>
+                <select
+                  name="proprietorGender"
+                  value={createContactGender}
+                  onChange={(event) =>
+                    setCreateContactGender(event.target.value as "Male" | "Female" | "Other" | "")
+                  }
+                  required
+                >
+                  <option value="">Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>
+                <span className="portal-field-label">Proprietor Email (optional)</span>
+                <input
+                  name="proprietorEmail"
+                  type="email"
+                  placeholder="name@school.org"
+                  autoComplete="email"
+                  value={createContactEmail}
+                  onChange={(event) => setCreateContactEmail(event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Proprietor WhatsApp (optional)</span>
+                <input
+                  name="proprietorWhatsapp"
+                  placeholder="+2567xxxxxxxx"
+                  inputMode="tel"
+                  value={createContactWhatsapp}
+                  onChange={(event) => setCreateContactWhatsapp(event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Proprietor Role Title (optional)</span>
+                <input
+                  name="proprietorRoleTitle"
+                  placeholder="Director"
+                  value={createContactRoleTitle}
+                  onChange={(event) => setCreateContactRoleTitle(event.target.value)}
+                />
+              </label>
+              {createDuplicateContactMatches.length > 0 ? (
+                <p className="full-width portal-warning-note" role="status">
+                  Warning: Duplicate contact found in{" "}
+                  {createDuplicateContactMatches
+                    .map((school) => `${school.schoolCode} (${school.name})`)
+                    .join(", ")}
+                  . Saving is allowed.
+                </p>
+              ) : null}
+
+              <div className="full-width action-row portal-form-actions">
+                <button className="button" type="submit" disabled={savingSchool}>
+                  {savingSchool ? "Saving..." : "Save School"}
+                </button>
+                <button
+                  className="button button-ghost"
+                  type="button"
+                  disabled={savingSchool}
+                  onClick={() => void autofillGps("create")}
+                >
+                  Use Current GPS
+                </button>
               </div>
-            </fieldset>
-            <label>
-              <span className="portal-field-label">Total Boys</span>
-              <input
-                name="enrolledBoys"
-                type="number"
-                min={0}
-                step={1}
-                defaultValue={0}
-                inputMode="numeric"
-              />
-            </label>
-            <label>
-              <span className="portal-field-label">Total Girls</span>
-              <input
-                name="enrolledGirls"
-                type="number"
-                min={0}
-                step={1}
-                defaultValue={0}
-                inputMode="numeric"
-              />
-            </label>
-            <label>
-              <span className="portal-field-label">GPS Latitude (optional)</span>
-              <input name="gpsLat" placeholder="e.g. 2.7746" inputMode="decimal" />
-            </label>
-            <label>
-              <span className="portal-field-label">GPS Longitude (optional)</span>
-              <input name="gpsLng" placeholder="e.g. 32.2990" inputMode="decimal" />
-            </label>
-            <label>
-              <span className="portal-field-label">Primary Contact Name (optional)</span>
-              <input
-                name="contactName"
-                placeholder="e.g. Headteacher name"
-                autoComplete="name"
-                value={createContactName}
-                onChange={(event) => setCreateContactName(event.target.value)}
-              />
-            </label>
-            <label>
-              <span className="portal-field-label">Primary Contact Phone (optional)</span>
-              <input
-                name="contactPhone"
-                placeholder="+2567xxxxxxxx"
-                inputMode="tel"
-                autoComplete="tel"
-                value={createContactPhone}
-                onChange={(event) => setCreateContactPhone(event.target.value)}
-              />
-            </label>
-            {createDuplicateContactMatches.length > 0 ? (
-              <p className="full-width portal-warning-note" role="status">
-                Warning: Duplicate contact found in{" "}
-                {createDuplicateContactMatches
-                  .map((school) => `${school.schoolCode} (${school.name})`)
-                  .join(", ")}
-                . Saving is allowed.
-              </p>
-            ) : null}
 
-            <div className="full-width action-row portal-form-actions">
-              <button className="button" type="submit" disabled={savingSchool}>
-                {savingSchool ? "Saving..." : "Save School"}
-              </button>
-              <button
-                className="button button-ghost"
-                type="button"
-                disabled={savingSchool}
-                onClick={() => void autofillGps("create")}
-              >
-                Use Current GPS
-              </button>
-            </div>
-
-            {createFeedback.message ? (
-              <p
-                role="status"
-                className={`full-width form-message ${createFeedback.kind === "error" ? "error" : "success"
-                  }`}
-              >
-                {createFeedback.message}
-              </p>
-            ) : null}
-          </form>
-        ) : (
-          <p className="portal-muted">Click “+ New School” to open the school metadata form.</p>
-        )}
+              {createFeedback.message ? (
+                <p
+                  role="status"
+                  className={`full-width form-message ${createFeedback.kind === "error" ? "error" : "success"
+                    }`}
+                >
+                  {createFeedback.message}
+                </p>
+              ) : null}
+            </form>
+          </FloatingSurface>
+        ) : null}
       </section>
 
       <section className="card">
@@ -845,8 +966,8 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 <Link href={`/portal/visits?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New School Visit
                 </Link>
-                <Link href={`/portal/visits?new=1&schoolId=${selectedSchool.id}&programType=Observation`} className="button button-compact">
-                  Teacher Evaluation
+                <Link href="#lesson-evaluations" className="button button-compact">
+                  New Lesson Evaluation
                 </Link>
                 <Link href={`/portal/assessments?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New Assessment
@@ -891,7 +1012,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                     participantType="teacher"
                     selectedUid=""
                     onSelect={() => { }}
-                    label="Teachers"
+                    label="Contacts (Leaders/Teachers)"
                   />
                 </div>
                 <div>
@@ -907,6 +1028,12 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
               </div>
             </div>
 
+            <LessonEvaluationPanel
+              schoolId={selectedSchool.id}
+              schoolName={selectedSchool.name}
+              allowVoid={canVoidLessonEvaluations}
+            />
+
             {!editingProfile ? (
               <div className="action-row portal-form-actions">
                 <button
@@ -918,222 +1045,231 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 </button>
               </div>
             ) : (
-              <form
-                ref={editFormRef}
-                className="form-grid portal-form-grid"
-                onSubmit={handleUpdateSchoolProfile}
+              <FloatingSurface
+                open={editingProfile}
+                onClose={() => setEditingProfile(false)}
+                title="Edit School Profile"
+                description={`${selectedSchool.name} (${selectedSchool.schoolCode})`}
+                closeLabel="Close"
+                maxWidth="1080px"
               >
-                <label>
-                  <span className="portal-field-label">School Name</span>
-                  <input name="name" defaultValue={selectedSchool.name} required minLength={2} />
-                </label>
-                <label>
-                  <span className="portal-field-label">Region</span>
-                  <select
-                    value={editRegion}
-                    onChange={(event) => {
-                      const nextRegion = event.target.value;
-                      const options = nextRegion
-                        ? getDistrictsByRegion(nextRegion)
-                        : allUgandaDistricts;
-                      setEditRegion(nextRegion);
-                      setEditDistrict((current) => (options.includes(current) ? current : ""));
-                    }}
-                    required
-                  >
-                    {ugandaRegions.map((entry) => (
-                      <option key={entry.region} value={entry.region}>
-                        {entry.region}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <form
+                  ref={editFormRef}
+                  className="form-grid portal-form-grid"
+                  onSubmit={handleUpdateSchoolProfile}
+                >
+                  <label>
+                    <span className="portal-field-label">School Name</span>
+                    <input name="name" defaultValue={selectedSchool.name} required minLength={2} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Region</span>
+                    <select
+                      value={editRegion}
+                      onChange={(event) => {
+                        const nextRegion = event.target.value;
+                        const options = nextRegion
+                          ? getDistrictsByRegion(nextRegion)
+                          : allUgandaDistricts;
+                        setEditRegion(nextRegion);
+                        setEditDistrict((current) => (options.includes(current) ? current : ""));
+                      }}
+                      required
+                    >
+                      {ugandaRegions.map((entry) => (
+                        <option key={entry.region} value={entry.region}>
+                          {entry.region}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                <fieldset className="portal-fieldset full-width">
-                  <legend>Class Enrollment</legend>
-                  <div className="form-grid-3">
+                  <fieldset className="portal-fieldset full-width">
+                    <legend>Class Enrollment</legend>
+                    <div className="form-grid-3">
+                      <label>
+                        <span className="portal-field-label">Baby</span>
+                        <input name="enrolledBaby" type="number" min={0} defaultValue={selectedSchool.enrolledBaby ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">Middle</span>
+                        <input name="enrolledMiddle" type="number" min={0} defaultValue={selectedSchool.enrolledMiddle ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">Top</span>
+                        <input name="enrolledTop" type="number" min={0} defaultValue={selectedSchool.enrolledTop ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">P1</span>
+                        <input name="enrolledP1" type="number" min={0} defaultValue={selectedSchool.enrolledP1 ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">P2</span>
+                        <input name="enrolledP2" type="number" min={0} defaultValue={selectedSchool.enrolledP2 ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">P3</span>
+                        <input name="enrolledP3" type="number" min={0} defaultValue={selectedSchool.enrolledP3 ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">P4</span>
+                        <input name="enrolledP4" type="number" min={0} defaultValue={selectedSchool.enrolledP4 ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">P5</span>
+                        <input name="enrolledP5" type="number" min={0} defaultValue={selectedSchool.enrolledP5 ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">P6</span>
+                        <input name="enrolledP6" type="number" min={0} defaultValue={selectedSchool.enrolledP6 ?? 0} />
+                      </label>
+                      <label>
+                        <span className="portal-field-label">P7</span>
+                        <input name="enrolledP7" type="number" min={0} defaultValue={selectedSchool.enrolledP7 ?? 0} />
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <div className="form-grid-2 full-width">
                     <label>
-                      <span className="portal-field-label">Baby</span>
-                      <input name="enrolledBaby" type="number" min={0} defaultValue={selectedSchool.enrolledBaby ?? 0} />
+                      <span className="portal-field-label">Enrollment Total</span>
+                      <input
+                        name="enrollmentTotal"
+                        type="number"
+                        min={1}
+                        defaultValue={selectedSchool.enrollmentTotal ?? selectedSchool.enrolledLearners ?? 0}
+                        required
+                      />
                     </label>
                     <label>
-                      <span className="portal-field-label">Middle</span>
-                      <input name="enrolledMiddle" type="number" min={0} defaultValue={selectedSchool.enrolledMiddle ?? 0} />
+                      <span className="portal-field-label">Total Boys</span>
+                      <input name="enrolledBoys" type="number" defaultValue={selectedSchool.enrolledBoys ?? 0} />
                     </label>
                     <label>
-                      <span className="portal-field-label">Top</span>
-                      <input name="enrolledTop" type="number" min={0} defaultValue={selectedSchool.enrolledTop ?? 0} />
-                    </label>
-                    <label>
-                      <span className="portal-field-label">P1</span>
-                      <input name="enrolledP1" type="number" min={0} defaultValue={selectedSchool.enrolledP1 ?? 0} />
-                    </label>
-                    <label>
-                      <span className="portal-field-label">P2</span>
-                      <input name="enrolledP2" type="number" min={0} defaultValue={selectedSchool.enrolledP2 ?? 0} />
-                    </label>
-                    <label>
-                      <span className="portal-field-label">P3</span>
-                      <input name="enrolledP3" type="number" min={0} defaultValue={selectedSchool.enrolledP3 ?? 0} />
-                    </label>
-                    <label>
-                      <span className="portal-field-label">P4</span>
-                      <input name="enrolledP4" type="number" min={0} defaultValue={selectedSchool.enrolledP4 ?? 0} />
-                    </label>
-                    <label>
-                      <span className="portal-field-label">P5</span>
-                      <input name="enrolledP5" type="number" min={0} defaultValue={selectedSchool.enrolledP5 ?? 0} />
-                    </label>
-                    <label>
-                      <span className="portal-field-label">P6</span>
-                      <input name="enrolledP6" type="number" min={0} defaultValue={selectedSchool.enrolledP6 ?? 0} />
-                    </label>
-                    <label>
-                      <span className="portal-field-label">P7</span>
-                      <input name="enrolledP7" type="number" min={0} defaultValue={selectedSchool.enrolledP7 ?? 0} />
+                      <span className="portal-field-label">Total Girls</span>
+                      <input name="enrolledGirls" type="number" defaultValue={selectedSchool.enrolledGirls ?? 0} />
                     </label>
                   </div>
-                </fieldset>
-
-                <div className="form-grid-2 full-width">
                   <label>
-                    <span className="portal-field-label">Enrollment Total</span>
-                    <input
-                      name="enrollmentTotal"
-                      type="number"
-                      min={1}
-                      defaultValue={selectedSchool.enrollmentTotal ?? selectedSchool.enrolledLearners ?? 0}
+                    <span className="portal-field-label">District</span>
+                    <select
+                      name="district"
+                      value={editDistrict}
+                      onChange={(event) => setEditDistrict(event.target.value)}
                       required
+                    >
+                      {editDistrictOptions.map((district) => (
+                        <option key={district} value={district}>
+                          {district}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Sub-county</span>
+                    <input
+                      name="subCounty"
+                      defaultValue={selectedSchool.subCounty}
+                      required
+                      minLength={2}
                     />
                   </label>
                   <label>
-                    <span className="portal-field-label">Total Boys</span>
-                    <input name="enrolledBoys" type="number" defaultValue={selectedSchool.enrolledBoys ?? 0} />
+                    <span className="portal-field-label">Parish</span>
+                    <input name="parish" defaultValue={selectedSchool.parish} required minLength={2} />
                   </label>
                   <label>
-                    <span className="portal-field-label">Total Girls</span>
-                    <input name="enrolledGirls" type="number" defaultValue={selectedSchool.enrolledGirls ?? 0} />
+                    <span className="portal-field-label">Village (optional)</span>
+                    <input name="village" defaultValue={selectedSchool.village ?? ""} />
                   </label>
-                </div>
-                <label>
-                  <span className="portal-field-label">District</span>
-                  <select
-                    name="district"
-                    value={editDistrict}
-                    onChange={(event) => setEditDistrict(event.target.value)}
-                    required
-                  >
-                    {editDistrictOptions.map((district) => (
-                      <option key={district} value={district}>
-                        {district}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span className="portal-field-label">Sub-county</span>
-                  <input
-                    name="subCounty"
-                    defaultValue={selectedSchool.subCounty}
-                    required
-                    minLength={2}
-                  />
-                </label>
-                <label>
-                  <span className="portal-field-label">Parish</span>
-                  <input name="parish" defaultValue={selectedSchool.parish} required minLength={2} />
-                </label>
-                <label>
-                  <span className="portal-field-label">Village (optional)</span>
-                  <input name="village" defaultValue={selectedSchool.village ?? ""} />
-                </label>
-                <label className="full-width">
-                  <span className="portal-field-label">Notes</span>
-                  <textarea
-                    name="notes"
-                    rows={3}
-                    defaultValue={selectedSchool.notes ?? ""}
-                    placeholder="School metadata notes, access details, or additional context."
-                  />
-                </label>
-                <label>
-                  <span className="portal-field-label">Enrolled Boys</span>
-                  <input
-                    name="enrolledBoys"
-                    type="number"
-                    min={0}
-                    step={1}
-                    defaultValue={selectedSchool.enrolledBoys ?? 0}
-                  />
-                </label>
-                <label>
-                  <span className="portal-field-label">Enrolled Girls</span>
-                  <input
-                    name="enrolledGirls"
-                    type="number"
-                    min={0}
-                    step={1}
-                    defaultValue={selectedSchool.enrolledGirls ?? 0}
-                  />
-                </label>
-                <label>
-                  <span className="portal-field-label">GPS Latitude</span>
-                  <input name="gpsLat" defaultValue={toGpsInputValue(selectedSchool.gpsLat)} />
-                </label>
-                <label>
-                  <span className="portal-field-label">GPS Longitude</span>
-                  <input name="gpsLng" defaultValue={toGpsInputValue(selectedSchool.gpsLng)} />
-                </label>
-                <label>
-                  <span className="portal-field-label">Contact Name</span>
-                  <input
-                    name="contactName"
-                    value={editContactName}
-                    onChange={(event) => setEditContactName(event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span className="portal-field-label">Contact Phone</span>
-                  <input
-                    name="contactPhone"
-                    value={editContactPhone}
-                    onChange={(event) => setEditContactPhone(event.target.value)}
-                  />
-                </label>
-                {editDuplicateContactMatches.length > 0 ? (
-                  <p className="full-width portal-warning-note" role="status">
-                    Warning: Duplicate contact found in{" "}
-                    {editDuplicateContactMatches
-                      .map((school) => `${school.schoolCode} (${school.name})`)
-                      .join(", ")}
-                    . Saving is allowed.
-                  </p>
-                ) : null}
-                <div className="full-width action-row portal-form-actions">
-                  <button className="button" type="submit" disabled={savingProfile}>
-                    {savingProfile ? "Saving..." : "Save profile changes"}
-                  </button>
-                  <button
-                    className="button button-ghost"
-                    type="button"
-                    disabled={savingProfile}
-                    onClick={() => void autofillGps("edit")}
-                  >
-                    Use Current GPS
-                  </button>
-                  <button
-                    className="button button-ghost"
-                    type="button"
-                    disabled={savingProfile}
-                    onClick={() => {
-                      setEditingProfile(false);
-                      setProfileFeedback({ kind: "idle", message: "" });
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+                  <label className="full-width">
+                    <span className="portal-field-label">Notes</span>
+                    <textarea
+                      name="notes"
+                      rows={3}
+                      defaultValue={selectedSchool.notes ?? ""}
+                      placeholder="School metadata notes, access details, or additional context."
+                    />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Enrolled Boys</span>
+                    <input
+                      name="enrolledBoys"
+                      type="number"
+                      min={0}
+                      step={1}
+                      defaultValue={selectedSchool.enrolledBoys ?? 0}
+                    />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Enrolled Girls</span>
+                    <input
+                      name="enrolledGirls"
+                      type="number"
+                      min={0}
+                      step={1}
+                      defaultValue={selectedSchool.enrolledGirls ?? 0}
+                    />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">GPS Latitude</span>
+                    <input name="gpsLat" defaultValue={toGpsInputValue(selectedSchool.gpsLat)} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">GPS Longitude</span>
+                    <input name="gpsLng" defaultValue={toGpsInputValue(selectedSchool.gpsLng)} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Contact Name</span>
+                    <input
+                      name="contactName"
+                      value={editContactName}
+                      onChange={(event) => setEditContactName(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Contact Phone</span>
+                    <input
+                      name="contactPhone"
+                      value={editContactPhone}
+                      onChange={(event) => setEditContactPhone(event.target.value)}
+                    />
+                  </label>
+                  {editDuplicateContactMatches.length > 0 ? (
+                    <p className="full-width portal-warning-note" role="status">
+                      Warning: Duplicate contact found in{" "}
+                      {editDuplicateContactMatches
+                        .map((school) => `${school.schoolCode} (${school.name})`)
+                        .join(", ")}
+                      . Saving is allowed.
+                    </p>
+                  ) : null}
+                  <div className="full-width action-row portal-form-actions">
+                    <button className="button" type="submit" disabled={savingProfile}>
+                      {savingProfile ? "Saving..." : "Save profile changes"}
+                    </button>
+                    <button
+                      className="button button-ghost"
+                      type="button"
+                      disabled={savingProfile}
+                      onClick={() => void autofillGps("edit")}
+                    >
+                      Use Current GPS
+                    </button>
+                    <button
+                      className="button button-ghost"
+                      type="button"
+                      disabled={savingProfile}
+                      onClick={() => {
+                        setEditingProfile(false);
+                        setProfileFeedback({ kind: "idle", message: "" });
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </FloatingSurface>
             )}
 
             {profileFeedback.message ? (
@@ -1232,6 +1368,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                 <th>Boys</th>
                 <th>Girls</th>
                 <th>Total</th>
+                <th>Status</th>
                 <th>GPS</th>
                 <th>Contact</th>
                 <th>Actions</th>
@@ -1240,7 +1377,7 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
             <tbody>
               {schools.length === 0 ? (
                 <tr>
-                  <td colSpan={12}>No schools available.</td>
+                  <td colSpan={13}>No schools available.</td>
                 </tr>
               ) : (
                 schools.map((school) => (
@@ -1254,6 +1391,13 @@ export function PortalSchoolsManager({ initialSchools }: PortalSchoolsManagerPro
                     <td>{Number(school.enrolledBoys ?? 0).toLocaleString()}</td>
                     <td>{Number(school.enrolledGirls ?? 0).toLocaleString()}</td>
                     <td>{Number(school.enrolledLearners ?? 0).toLocaleString()}</td>
+                    <td>
+                      {school.programStatus === "graduated" ? (
+                        <span className="portal-filter-chip active">Graduated</span>
+                      ) : (
+                        <span className="portal-filter-chip">{school.programStatus ?? "active"}</span>
+                      )}
+                    </td>
                     <td>
                       {school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"}
                     </td>

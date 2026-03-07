@@ -8,6 +8,8 @@ import {
   ParticipantRole,
   TrainingSessionRecord,
 } from "@/lib/types";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 type ParticipantDraft = {
   id: number;
@@ -148,22 +150,29 @@ export function TrainingPortalManager({
     };
 
     try {
-      const response = await fetch("/api/portal/training-sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const result = await submitJsonWithOfflineQueue<{
+        error?: string;
+        session?: TrainingSessionRecord;
+      }>("/api/portal/training-sessions", {
+        payload,
+        label: "Training session",
       });
 
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
+      if (result.queued) {
+        setParticipants([createParticipant(1)]);
+        setNextParticipantId(2);
+        event.currentTarget.reset();
+        setTrainingStatus("No internet connection. Training session saved offline and queued for sync.");
+        return;
+      }
+
+      const data = result.data ?? {};
+      const savedSession = data.session;
+      if (!result.response.ok || !savedSession) {
         throw new Error(data.error ?? "Could not save training session.");
       }
 
-      const data = (await response.json()) as {
-        session: TrainingSessionRecord;
-      };
-
-      setSessions((prev) => [data.session, ...prev].slice(0, 20));
+      setSessions((prev) => [savedSession, ...prev].slice(0, 20));
       setParticipants([createParticipant(1)]);
       setNextParticipantId(2);
       event.currentTarget.reset();
@@ -204,22 +213,27 @@ export function TrainingPortalManager({
     };
 
     try {
-      const response = await fetch("/api/portal/assessments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const result = await submitJsonWithOfflineQueue<{
+        error?: string;
+        assessment?: AssessmentRecord;
+      }>("/api/portal/assessments", {
+        payload,
+        label: "Learner assessment",
       });
 
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
+      if (result.queued) {
+        event.currentTarget.reset();
+        setAssessmentStatus("No internet connection. Assessment saved offline and queued for sync.");
+        return;
+      }
+
+      const data = result.data ?? {};
+      const savedAssessment = data.assessment;
+      if (!result.response.ok || !savedAssessment) {
         throw new Error(data.error ?? "Could not save assessment record.");
       }
 
-      const data = (await response.json()) as {
-        assessment: AssessmentRecord;
-      };
-
-      setAssessments((prev) => [data.assessment, ...prev].slice(0, 20));
+      setAssessments((prev) => [savedAssessment, ...prev].slice(0, 20));
       event.currentTarget.reset();
       setAssessmentStatus("Assessment record saved successfully.");
       await refreshMetrics();
@@ -254,19 +268,24 @@ export function TrainingPortalManager({
     };
 
     try {
-      const response = await fetch("/api/portal/online-trainings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await response.json()) as {
+      const result = await submitJsonWithOfflineQueue<{
         error?: string;
         event?: OnlineTrainingEventRecord;
         calendarWarning?: string;
-      };
+      }>("/api/portal/online-trainings", {
+        payload,
+        label: "Online training event",
+      });
 
-      if (!response.ok || !data.event) {
+      if (result.queued) {
+        event.currentTarget.reset();
+        setOnlineStatus("No internet connection. Online training request saved offline and queued for sync.");
+        return;
+      }
+
+      const data = result.data ?? {};
+
+      if (!result.response.ok || !data.event) {
         throw new Error(data.error ?? "Could not schedule online training.");
       }
 
@@ -458,31 +477,31 @@ export function TrainingPortalManager({
                   </select>
                 </label>
                 <label>
-                  Letter Identification Score (0-100)
+                  {LEARNING_DOMAIN_DICTIONARY.letter_names.label_full} Score (0-100)
                   <input name="letterIdentificationScore" type="number" min={0} max={100} />
                 </label>
                 <label>
-                  Sound Identification Score (0-100)
+                  {LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full} Score (0-100)
                   <input name="soundIdentificationScore" type="number" min={0} max={100} />
                 </label>
                 <label>
-                  Decodable Words Score (0-100)
+                  {LEARNING_DOMAIN_DICTIONARY.real_words.label_full} Score (0-100)
                   <input name="decodableWordsScore" type="number" min={0} max={100} />
                 </label>
                 <label>
-                  Undecodable Words Score (0-100)
+                  Reading Real Words (Extended Set) Score (0-100)
                   <input name="undecodableWordsScore" type="number" min={0} max={100} />
                 </label>
                 <label>
-                  Made Up Words Score (0-100)
+                  {LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full} Score (0-100)
                   <input name="madeUpWordsScore" type="number" min={0} max={100} />
                 </label>
                 <label>
-                  Story Reading Score (0-150 wcpm)
+                  {LEARNING_DOMAIN_DICTIONARY.story_reading.label_full} Score (0-150 wcpm)
                   <input name="storyReadingScore" type="number" min={0} max={150} />
                 </label>
                 <label>
-                  Reading Comprehension Score (0-100)
+                  {LEARNING_DOMAIN_DICTIONARY.comprehension.label_full} Score (0-100)
                   <input name="readingComprehensionScore" type="number" min={0} max={100} />
                 </label>
                 <label className="full-width">
@@ -617,8 +636,8 @@ export function TrainingPortalManager({
                     <th>ID</th>
                     <th>Type</th>
                     <th>Grade</th>
-                    <th>Story Reading</th>
-                    <th>Comprehension</th>
+                    <th>{LEARNING_DOMAIN_DICTIONARY.story_reading.label_short}</th>
+                    <th>{LEARNING_DOMAIN_DICTIONARY.comprehension.label_short}</th>
                   </tr>
                 </thead>
                 <tbody>

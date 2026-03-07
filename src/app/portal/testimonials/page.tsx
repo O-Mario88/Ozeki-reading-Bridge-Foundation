@@ -12,6 +12,7 @@ export const metadata = {
 
 export default async function PortalTestimonialsPage() {
   const user = await requirePortalUser();
+  const canModerate = user.isSupervisor || user.isME || user.isAdmin || user.isSuperAdmin;
   const testimonials = listPortalTestimonials(user, 180).map((item) => ({
     ...item,
     videoUrl:
@@ -28,7 +29,7 @@ export default async function PortalTestimonialsPage() {
       title="Testimonial Story Collection"
       description="Capture text stories and video testimony in one submission workflow."
     >
-      <PortalTestimonialsManager initialTestimonials={testimonials} />
+      <PortalTestimonialsManager initialTestimonials={testimonials} canModerate={canModerate} />
     </PortalShell>
   );
 }

@@ -5,12 +5,21 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 /* ── Types ── */
 
 export interface RosterTeacher {
+    contactId: number;
+    contactUid: string;
     teacherUid: string;
     fullName: string;
-    gender: "Male" | "Female";
-    isReadingTeacher: boolean;
+    gender: "Male" | "Female" | "Other";
+    category: "Proprietor" | "Head Teacher" | "Deputy Head Teacher" | "DOS" | "Teacher";
+    roleTitle?: string;
+    isPrimaryContact: boolean;
+    isReadingTeacher?: boolean;
     phone: string | null;
-    status: string;
+    email?: string;
+    whatsapp?: string;
+    classTaught?: string;
+    subjectTaught?: string;
+    status?: string;
 }
 
 export interface RosterLearner {
@@ -37,9 +46,14 @@ interface SchoolRosterPickerProps {
 
 interface AddTeacherForm {
     fullName: string;
-    gender: "Male" | "Female" | "";
-    isReadingTeacher: boolean;
+    gender: "Male" | "Female" | "Other" | "";
+    category: "Proprietor" | "Head Teacher" | "Deputy Head Teacher" | "DOS" | "Teacher" | "";
+    roleTitle: string;
+    classTaught: string;
+    subjectTaught: string;
     phone: string;
+    email: string;
+    whatsapp: string;
 }
 
 interface AddLearnerForm {
@@ -70,8 +84,13 @@ export function SchoolRosterPicker({
     const [teacherForm, setTeacherForm] = useState<AddTeacherForm>({
         fullName: "",
         gender: "",
-        isReadingTeacher: true,
+        category: "Teacher",
+        roleTitle: "",
+        classTaught: "",
+        subjectTaught: "",
         phone: "",
+        email: "",
+        whatsapp: "",
     });
 
     // Learner add form
@@ -122,7 +141,7 @@ export function SchoolRosterPicker({
 
     /* ── Get UID helper ── */
     const getUid = (entry: RosterEntry) =>
-        "teacherUid" in entry ? entry.teacherUid : (entry as RosterLearner).learnerUid;
+        "contactUid" in entry ? entry.contactUid : (entry as RosterLearner).learnerUid;
 
     /* ── Currently selected entry ── */
     const selectedEntry = roster.find((e) => getUid(e) === selectedUid) ?? null;
@@ -148,18 +167,33 @@ export function SchoolRosterPicker({
                     classGrade: learnerForm.classGrade,
                 };
             } else {
-                if (!teacherForm.fullName.trim() || !teacherForm.gender) {
-                    setAddError("Name and gender are required.");
+                if (!teacherForm.fullName.trim() || !teacherForm.gender || !teacherForm.category) {
+                    setAddError("Name, gender, and category are required.");
+                    setAdding(false);
+                    return;
+                }
+                if (
+                    teacherForm.category === "Teacher" &&
+                    (!teacherForm.classTaught.trim() || !teacherForm.subjectTaught.trim())
+                ) {
+                    setAddError("Teacher contacts require class taught and subject taught.");
                     setAdding(false);
                     return;
                 }
                 body = {
                     schoolId,
-                    type: "teacher",
+                    type: "contact",
                     fullName: teacherForm.fullName,
                     gender: teacherForm.gender,
-                    isReadingTeacher: teacherForm.isReadingTeacher,
+                    category: teacherForm.category,
+                    roleTitle: teacherForm.roleTitle || undefined,
+                    classTaught:
+                        teacherForm.category === "Teacher" ? teacherForm.classTaught : undefined,
+                    subjectTaught:
+                        teacherForm.category === "Teacher" ? teacherForm.subjectTaught : undefined,
                     phone: teacherForm.phone || undefined,
+                    email: teacherForm.email || undefined,
+                    whatsapp: teacherForm.whatsapp || undefined,
                 };
             }
 
@@ -184,7 +218,17 @@ export function SchoolRosterPicker({
             }
             setShowAddModal(false);
             // Reset forms
-            setTeacherForm({ fullName: "", gender: "", isReadingTeacher: true, phone: "" });
+            setTeacherForm({
+                fullName: "",
+                gender: "",
+                category: "Teacher",
+                roleTitle: "",
+                classTaught: "",
+                subjectTaught: "",
+                phone: "",
+                email: "",
+                whatsapp: "",
+            });
             setLearnerForm({ fullName: "", gender: "", age: "", classGrade: "" });
         } catch {
             setAddError("Network error. Try again.");
@@ -216,7 +260,7 @@ export function SchoolRosterPicker({
                 <input
                     type="text"
                     className="roster-picker__search"
-                    placeholder={`Search ${participantType}s by name${participantType === "learner" ? " or class" : ""}…`}
+                    placeholder={`Search ${participantType === "learner" ? "learners" : "contacts"} by name${participantType === "learner" ? " or class" : ""}…`}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -243,7 +287,11 @@ export function SchoolRosterPicker({
                                     </span>
                                 ) : (
                                     <span className="roster-picker__meta">
-                                        {(entry as RosterTeacher).isReadingTeacher ? "Reading Teacher" : "Teacher"} · {entry.gender}
+                                        {(entry as RosterTeacher).category}
+                                        {(entry as RosterTeacher).roleTitle
+                                            ? ` (${(entry as RosterTeacher).roleTitle})`
+                                            : ""}{" "}
+                                        · {entry.gender}
                                     </span>
                                 )}
                                 {isSelected && <span className="roster-picker__check">✓</span>}
@@ -259,7 +307,7 @@ export function SchoolRosterPicker({
                         className="button roster-picker__add-btn"
                         onClick={() => setShowAddModal(true)}
                     >
-                        + Add {participantType === "learner" ? "Learner" : "Teacher"} to School Account
+                        + Add {participantType === "learner" ? "Learner" : "Contact"} to School Account
                     </button>
                 </div>
             )}
@@ -271,7 +319,7 @@ export function SchoolRosterPicker({
                     className="roster-picker__add-link"
                     onClick={() => setShowAddModal(true)}
                 >
-                    + Add new {participantType} to school
+                    + Add new {participantType === "learner" ? "learner" : "contact"} to school
                 </button>
             )}
 
@@ -290,7 +338,7 @@ export function SchoolRosterPicker({
                 <div className="roster-modal-overlay" onClick={() => setShowAddModal(false)}>
                     <div className="roster-modal" onClick={(e) => e.stopPropagation()}>
                         <h3>
-                            Add {participantType === "learner" ? "Learner" : "Teacher"} to{" "}
+                            Add {participantType === "learner" ? "Learner" : "Contact"} to{" "}
                             {schoolName || "School"}
                         </h3>
 
@@ -314,28 +362,72 @@ export function SchoolRosterPicker({
                                         onChange={(e) =>
                                             setTeacherForm((p) => ({
                                                 ...p,
-                                                gender: e.target.value as "Male" | "Female" | "",
+                                                gender: e.target.value as "Male" | "Female" | "Other" | "",
                                             }))
                                         }
                                     >
                                         <option value="">Select</option>
                                         <option value="Male">Male</option>
                                         <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
                                     </select>
                                 </label>
-                                <label className="roster-modal__checkbox">
-                                    <input
-                                        type="checkbox"
-                                        checked={teacherForm.isReadingTeacher}
+                                <label>
+                                    Category *
+                                    <select
+                                        value={teacherForm.category}
                                         onChange={(e) =>
                                             setTeacherForm((p) => ({
                                                 ...p,
-                                                isReadingTeacher: e.target.checked,
+                                                category: e.target.value as AddTeacherForm["category"],
                                             }))
                                         }
-                                    />
-                                    Reading Teacher
+                                    >
+                                        <option value="">Select</option>
+                                        <option value="Proprietor">Proprietor</option>
+                                        <option value="Head Teacher">Head Teacher</option>
+                                        <option value="Deputy Head Teacher">Deputy Head Teacher</option>
+                                        <option value="DOS">DOS</option>
+                                        <option value="Teacher">Teacher</option>
+                                    </select>
                                 </label>
+                                <label>
+                                    Role title (optional)
+                                    <input
+                                        type="text"
+                                        value={teacherForm.roleTitle}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, roleTitle: e.target.value }))
+                                        }
+                                        placeholder="e.g. Reading Coordinator"
+                                    />
+                                </label>
+                                {teacherForm.category === "Teacher" ? (
+                                    <>
+                                        <label>
+                                            Class taught *
+                                            <input
+                                                type="text"
+                                                value={teacherForm.classTaught}
+                                                onChange={(e) =>
+                                                    setTeacherForm((p) => ({ ...p, classTaught: e.target.value }))
+                                                }
+                                                placeholder="e.g. P3"
+                                            />
+                                        </label>
+                                        <label>
+                                            Subject taught *
+                                            <input
+                                                type="text"
+                                                value={teacherForm.subjectTaught}
+                                                onChange={(e) =>
+                                                    setTeacherForm((p) => ({ ...p, subjectTaught: e.target.value }))
+                                                }
+                                                placeholder="e.g. Literacy"
+                                            />
+                                        </label>
+                                    </>
+                                ) : null}
                                 <label>
                                     Phone (optional)
                                     <input
@@ -343,6 +435,28 @@ export function SchoolRosterPicker({
                                         value={teacherForm.phone}
                                         onChange={(e) =>
                                             setTeacherForm((p) => ({ ...p, phone: e.target.value }))
+                                        }
+                                        placeholder="+2567xxxxxxxx"
+                                    />
+                                </label>
+                                <label>
+                                    Email (optional)
+                                    <input
+                                        type="email"
+                                        value={teacherForm.email}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, email: e.target.value }))
+                                        }
+                                        placeholder="name@school.org"
+                                    />
+                                </label>
+                                <label>
+                                    WhatsApp (optional)
+                                    <input
+                                        type="tel"
+                                        value={teacherForm.whatsapp}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, whatsapp: e.target.value }))
                                         }
                                         placeholder="+2567xxxxxxxx"
                                     />
