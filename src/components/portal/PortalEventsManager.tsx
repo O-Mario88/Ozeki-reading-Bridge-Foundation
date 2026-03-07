@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { OnlineTrainingEventRecord } from "@/lib/types";
 import { FloatingSurface } from "@/components/FloatingSurface";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 interface PortalEventsManagerProps {
   initialEvents: OnlineTrainingEventRecord[];
@@ -68,19 +69,25 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
     };
 
     try {
-      const response = await fetch("/api/portal/online-trainings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await response.json()) as {
+      const result = await submitJsonWithOfflineQueue<{
         error?: string;
         event?: OnlineTrainingEventRecord;
         calendarWarning?: string;
-      };
+      }>("/api/portal/online-trainings", {
+        payload,
+        label: "Portal event scheduling",
+      });
 
-      if (!response.ok || !data.event) {
+      if (result.queued) {
+        event.currentTarget.reset();
+        setIsScheduleOpen(false);
+        setStatus("No internet connection. Event saved offline and queued for sync.");
+        return;
+      }
+
+      const data = result.data ?? {};
+
+      if (!result.response.ok || !data.event) {
         throw new Error(data.error ?? "Could not schedule event.");
       }
 
@@ -115,17 +122,24 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
     };
 
     try {
-      const response = await fetch(`/api/portal/online-trainings/${eventId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = (await response.json()) as {
+      const result = await submitJsonWithOfflineQueue<{
         error?: string;
         event?: OnlineTrainingEventRecord;
-      };
+      }>(`/api/portal/online-trainings/${eventId}`, {
+        method: "PATCH",
+        payload,
+        label: "Portal online attendance update",
+      });
 
-      if (!response.ok || !data.event) {
+      if (result.queued) {
+        setIsAttendanceOpen(false);
+        setStatus("No internet connection. Attendance update saved offline and queued for sync.");
+        return;
+      }
+
+      const data = result.data ?? {};
+
+      if (!result.response.ok || !data.event) {
         throw new Error(data.error ?? "Could not save attendance.");
       }
 

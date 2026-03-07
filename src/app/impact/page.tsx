@@ -3,7 +3,15 @@ import Link from "next/link";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
 import { getImpactReportFilterFacets, listPublicImpactReports, getSchoolLearnerAnalysis } from "@/lib/db";
-import { ImpactReportScopeType, ImpactReportType } from "@/lib/types";
+import {
+  ImpactReportAudience,
+  ImpactReportOutput,
+  ImpactReportPeriodType,
+  ImpactReportScopeType,
+  ImpactReportType,
+  ReportCategory,
+} from "@/lib/types";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 export const metadata: Metadata = {
   title: "Impact",
@@ -26,11 +34,47 @@ function parseReportType(value: string): ImpactReportType | undefined {
   const allowed: ImpactReportType[] = [
     "FY Impact Report",
     "Regional Impact Report",
+    "Sub-region Report",
     "District Report",
     "School Report",
+    "School Coaching Pack",
+    "Headteacher Summary",
     "Partner Snapshot Report",
   ];
   return (allowed as string[]).includes(value) ? (value as ImpactReportType) : undefined;
+}
+
+function parseReportCategory(value: string): ReportCategory | undefined {
+  const allowed: ReportCategory[] = [
+    "Assessment Report",
+    "Training Report",
+    "School Coaching Visit Report",
+    "Teaching Quality Report (Lesson Evaluations)",
+    "Remedial & Catch-Up Intervention Report",
+    "1001 Story Project Report",
+    "Implementation Fidelity & Coverage Report",
+    "District Literacy Brief",
+    "Graduation Readiness & Alumni Monitoring Report",
+    "Partner/Donor Report (Scoped)",
+    "Data Quality & Credibility Report",
+    "School Profile Report (Headteacher Pack)",
+  ];
+  return (allowed as string[]).includes(value) ? (value as ReportCategory) : undefined;
+}
+
+function parsePeriodType(value: string): ImpactReportPeriodType | undefined {
+  const allowed: ImpactReportPeriodType[] = ["FY", "Term", "Quarter", "Custom"];
+  return (allowed as string[]).includes(value) ? (value as ImpactReportPeriodType) : undefined;
+}
+
+function parseAudience(value: string): ImpactReportAudience | undefined {
+  const allowed: ImpactReportAudience[] = ["Public-safe", "Staff-only"];
+  return (allowed as string[]).includes(value) ? (value as ImpactReportAudience) : undefined;
+}
+
+function parseOutput(value: string): ImpactReportOutput | undefined {
+  const allowed: ImpactReportOutput[] = ["PDF", "HTML preview"];
+  return (allowed as string[]).includes(value) ? (value as ImpactReportOutput) : undefined;
 }
 
 function parseScopeType(value: string): ImpactReportScopeType | undefined {
@@ -66,17 +110,17 @@ function resolveReportYear(rawYear: string, availableYears: string[]) {
 }
 
 function scoreColor(score: number | null): string {
-  if (score === null || score === undefined) return "#999";
-  if (score >= 70) return "#C35D0E";
-  if (score >= 40) return "#c77a00";
-  return "#c0392b";
+  if (score === null || score === undefined) return "var(--color-text-muted)";
+  if (score >= 70) return "var(--color-brand-orange-dark)";
+  if (score >= 40) return "color-mix(in oklab, var(--color-brand-orange), black 18%)";
+  return "var(--color-state-danger)";
 }
 
 function scoreBg(score: number | null): string {
   if (score === null || score === undefined) return "transparent";
-  if (score >= 70) return "rgba(250, 125, 21, 0.08)";
-  if (score >= 40) return "rgba(199, 122, 0, 0.08)";
-  return "rgba(192, 57, 43, 0.08)";
+  if (score >= 70) return "color-mix(in oklab, var(--color-brand-orange), white 90%)";
+  if (score >= 40) return "color-mix(in oklab, var(--color-brand-orange), white 88%)";
+  return "color-mix(in oklab, var(--color-state-danger), white 90%)";
 }
 
 export default async function ImpactDashboardPage({
@@ -89,6 +133,10 @@ export default async function ImpactDashboardPage({
   /* ── Report filters ── */
   const selectedYearParam = firstValue(params.year);
   const selectedType = firstValue(params.reportType);
+  const selectedCategory = firstValue(params.reportCategory);
+  const selectedPeriodType = firstValue(params.periodType);
+  const selectedAudience = firstValue(params.audience);
+  const selectedOutput = firstValue(params.output);
   const selectedScopeType = firstValue(params.scopeType);
   const selectedScopeValue = firstValue(params.scopeValue);
   const selectedRegion = firstValue(params.region);
@@ -101,6 +149,10 @@ export default async function ImpactDashboardPage({
   const reports = listPublicImpactReports({
     year: selectedYear,
     reportType: parseReportType(selectedType),
+    reportCategory: parseReportCategory(selectedCategory),
+    periodType: parsePeriodType(selectedPeriodType),
+    audience: parseAudience(selectedAudience),
+    output: parseOutput(selectedOutput),
     scopeType: parseScopeType(selectedScopeType),
     scopeValue: selectedScopeValue || undefined,
     region: selectedRegion || undefined,
@@ -167,11 +219,19 @@ export default async function ImpactDashboardPage({
             <ImpactReportFilters
               initialYear={selectedYear}
               initialReportType={selectedType}
+              initialReportCategory={selectedCategory}
+              initialPeriodType={selectedPeriodType}
+              initialOutput={selectedOutput}
+              initialAudience={selectedAudience}
               initialRegion={selectedRegion}
               initialSubRegion={selectedSubRegion}
               initialDistrict={selectedDistrict}
               initialSchoolId={selectedSchoolId}
               reportTypes={facets.reportTypes}
+              reportCategories={facets.reportCategories}
+              periodTypes={facets.periodTypes}
+              outputs={facets.outputs}
+              audiences={facets.audiences}
               period={firstValue(params.period) || undefined}
             />
           </div>
@@ -193,9 +253,11 @@ export default async function ImpactDashboardPage({
                   <p className="meta-pill">{report.reportType}</p>
                   <h3>{report.title}</h3>
                   <p className="meta-line">
+                    Category: {report.reportCategory ?? "Not specified"}
+                    <br />
                     Scope: {report.scopeType} - {report.scopeValue}
                     <br />
-                    Period: {report.periodStart} to {report.periodEnd}
+                    Period ({report.periodType ?? "FY"}): {report.periodStart} to {report.periodEnd}
                   </p>
                   <ul>
                     <li>Schools impacted: {schoolsImpacted.toLocaleString()}</li>
@@ -242,7 +304,7 @@ export default async function ImpactDashboardPage({
               </h2>
               <p>
                 Individual learner scores across 6 EGRA domains. Learners scoring below 40% in
-                any domain are flagged as <strong style={{ color: "#c0392b" }}>struggling</strong>.
+                any domain are flagged as <strong style={{ color: "var(--color-state-danger)" }}>struggling</strong>.
               </p>
             </div>
 
@@ -280,19 +342,19 @@ export default async function ImpactDashboardPage({
                       <th>Class</th>
                       <th>Type</th>
                       <th>Date</th>
-                      <th>Letter Names</th>
-                      <th>Letter Sounds</th>
-                      <th>Real Words</th>
-                      <th>Made Up Words</th>
-                      <th>Story Reading</th>
-                      <th>Comprehension</th>
+                        <th title={LEARNING_DOMAIN_DICTIONARY.letter_names.description}>{LEARNING_DOMAIN_DICTIONARY.letter_names.label_short}</th>
+                        <th title={LEARNING_DOMAIN_DICTIONARY.letter_sounds.description}>{LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_short}</th>
+                        <th title={LEARNING_DOMAIN_DICTIONARY.real_words.description}>{LEARNING_DOMAIN_DICTIONARY.real_words.label_short}</th>
+                        <th title={LEARNING_DOMAIN_DICTIONARY.made_up_words.description}>{LEARNING_DOMAIN_DICTIONARY.made_up_words.label_short}</th>
+                        <th title={LEARNING_DOMAIN_DICTIONARY.story_reading.description}>{LEARNING_DOMAIN_DICTIONARY.story_reading.label_short}</th>
+                        <th title={LEARNING_DOMAIN_DICTIONARY.comprehension.description}>{LEARNING_DOMAIN_DICTIONARY.comprehension.label_short}</th>
                       <th>Avg</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {learnerAnalysis.map((row, idx) => (
-                      <tr key={`${row.learnerUid}-${row.assessmentType}-${idx}`} style={row.isStruggling ? { background: "rgba(192, 57, 43, 0.04)" } : undefined}>
+                      <tr key={`${row.learnerUid}-${row.assessmentType}-${idx}`} style={row.isStruggling ? { background: "color-mix(in oklab, var(--color-state-danger), white 94%)" } : undefined}>
                         <td style={{ fontWeight: 600 }}>{row.learnerName}</td>
                         <td>{row.gender}</td>
                         <td>{row.classGrade}</td>
@@ -307,11 +369,11 @@ export default async function ImpactDashboardPage({
                         <td style={{ fontWeight: 700, textAlign: "center" }}>{row.averageScore ?? "—"}</td>
                         <td>
                           {row.isStruggling ? (
-                            <span style={{ background: "#c0392b", color: "#fff", borderRadius: "999px", padding: "0.15rem 0.55rem", fontSize: "0.68rem", fontWeight: 700 }}>
+                            <span style={{ background: "var(--color-state-danger)", color: "#fff", borderRadius: "999px", padding: "0.15rem 0.55rem", fontSize: "0.68rem", fontWeight: 700 }}>
                               Needs Support
                             </span>
                           ) : (
-                            <span style={{ background: "#C35D0E", color: "#fff", borderRadius: "999px", padding: "0.15rem 0.55rem", fontSize: "0.68rem", fontWeight: 700 }}>
+                            <span style={{ background: "var(--color-brand-orange)", color: "#fff", borderRadius: "999px", padding: "0.15rem 0.55rem", fontSize: "0.68rem", fontWeight: 700 }}>
                               On Track
                             </span>
                           )}
@@ -330,13 +392,13 @@ export default async function ImpactDashboardPage({
 
             <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem", justifyContent: "center", flexWrap: "wrap" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.78rem" }}>
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#C35D0E", display: "inline-block" }} /> ≥ 70% (Strong)
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "var(--color-brand-orange)", display: "inline-block" }} /> ≥ 70% (Strong)
               </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.78rem" }}>
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#c77a00", display: "inline-block" }} /> 40–69% (Developing)
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "color-mix(in oklab, var(--color-brand-orange), black 18%)", display: "inline-block" }} /> 40–69% (Developing)
               </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.78rem" }}>
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#c0392b", display: "inline-block" }} /> &lt; 40% (Needs Support)
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "var(--color-state-danger)", display: "inline-block" }} /> &lt; 40% (Needs Support)
               </span>
             </div>
           </div>

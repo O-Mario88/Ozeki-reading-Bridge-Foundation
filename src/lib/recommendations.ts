@@ -425,7 +425,7 @@ export const EXTENDED_RECOMMENDATION_CATALOG: ExtendedRecommendation[] = [
     {
         id: "REC-09",
         title: "Strengthen phonics instruction",
-        description: "Low Letter Sounds and Real Words scores indicate insufficient phonics teaching.",
+        description: "Low Knowing Letter Sounds and Reading Real Words scores indicate insufficient phonics teaching.",
         priority: "High",
         actions: ["Provide phonics instruction training for teachers", "Supply letter-sound flashcards and phonics games", "Schedule daily 15-minute phonics drills"],
     },
@@ -439,7 +439,7 @@ export const EXTENDED_RECOMMENDATION_CATALOG: ExtendedRecommendation[] = [
     {
         id: "REC-11",
         title: "Improve reading comprehension strategies",
-        description: "Low comprehension scores despite adequate fluency suggest a need for explicit comprehension instruction.",
+        description: "Low Reading Comprehension scores despite adequate fluency suggest a need for explicit comprehension instruction.",
         priority: "Medium",
         actions: ["Train teachers on think-aloud and prediction strategies", "Use story retell activities after reading sessions", "Introduce comprehension question cards for guided reading"],
     },
@@ -467,7 +467,7 @@ export const EXTENDED_RECOMMENDATION_CATALOG: ExtendedRecommendation[] = [
     {
         id: "REC-15",
         title: "Strengthen letter knowledge instruction",
-        description: "Low Letter Names scores at baseline suggest learners need more foundational alphabet work.",
+        description: "Low Knowing Letter Names scores at baseline suggest learners need more foundational alphabet work.",
         priority: "High",
         actions: ["Provide alphabet charts and letter-tracing materials", "Schedule daily letter of the day activities", "Use multi-sensory letter learning (sand writing, clay)"],
     },

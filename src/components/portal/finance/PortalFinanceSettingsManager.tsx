@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { FloatingSurface } from "@/components/FloatingSurface";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import type { FinanceSettingsRecord } from "@/lib/types";
 
 type PortalFinanceSettingsManagerProps = {
@@ -19,16 +20,23 @@ export function PortalFinanceSettingsManager({ initialSettings }: PortalFinanceS
     setSaving(true);
     setStatusMessage("");
     try {
-      const response = await fetch("/api/portal/finance/settings", {
+      const result = await submitJsonWithOfflineQueue<{
+        error?: string;
+        settings?: FinanceSettingsRecord;
+      }>("/api/portal/finance/settings", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        payload: settings,
+        label: "Finance settings update",
       });
-      const data = await response.json();
-      if (!response.ok) {
+      if (result.queued) {
+        setStatusMessage("No internet connection. Settings saved offline and queued for sync.");
+        return;
+      }
+      const data = result.data ?? {};
+      if (!result.response.ok || !data.settings) {
         throw new Error(data.error || "Failed to update settings.");
       }
-      setSettings(data.settings as FinanceSettingsRecord);
+      setSettings(data.settings);
       setStatusMessage("Finance settings saved.");
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Failed to update settings.");

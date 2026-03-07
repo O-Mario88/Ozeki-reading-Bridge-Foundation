@@ -1,3 +1,4 @@
+import { EXTENDED_RECOMMENDATION_CATALOG } from "@/lib/recommendations";
 import { PortalRecordModule } from "@/lib/types";
 
 export type PortalFieldType =
@@ -132,6 +133,52 @@ const sponsorshipFields: PortalFieldConfig[] = [
     placeholder: "e.g. UNICEF Uganda, USAID, John Doe",
   },
 ];
+
+const insightRecommendationOptions: PortalFieldOption[] = EXTENDED_RECOMMENDATION_CATALOG.map((rec) => ({
+  value: rec.id,
+  label: `${rec.id}: ${rec.title}`,
+}));
+
+const standardizedInsightSection: PortalSectionConfig = {
+  id: "insights",
+  title: "Key Findings & Next Steps",
+  fields: [
+    {
+      key: "insightsKeyFindings",
+      label: "Key findings",
+      type: "textarea",
+      required: true,
+      helperText: "What did we observe in decoding/fluency/comprehension?",
+    },
+    {
+      key: "insightsWhatWentWell",
+      label: "What went well",
+      type: "textarea",
+      helperText: "What routines worked well?",
+    },
+    {
+      key: "insightsChallenges",
+      label: "Challenges",
+      type: "textarea",
+      helperText: "What barriers did teachers report?",
+    },
+    {
+      key: "insightsRecommendationsRecIds",
+      label: "Recommendations (REC mapped)",
+      type: "multiselect",
+      required: true,
+      options: insightRecommendationOptions,
+      helperText: "Select approved REC items. Priority and notes are captured below each selected REC.",
+    },
+    {
+      key: "insightsConclusionsNextSteps",
+      label: "Conclusions + next steps",
+      type: "textarea",
+      required: true,
+      helperText: "Include follow-up date where applicable.",
+    },
+  ],
+};
 
 const trainingConfig: PortalModuleConfig = {
   module: "training",
@@ -300,6 +347,7 @@ const trainingConfig: PortalModuleConfig = {
         { key: "trainingNotes", label: "Training notes", type: "textarea" },
       ],
     },
+    standardizedInsightSection,
   ],
 };
 
@@ -324,32 +372,110 @@ const visitConfig: PortalModuleConfig = {
   navLabel: "Visits",
   pageTitle: "School Visits",
   description:
-    "Ozeki Reading Bridge Foundation Lesson Observation Sheet (Nursery and Primary Classes). Use this to log school visits, teacher performance, and coaching decisions for professional development and progress reporting.",
+    "Capture school-scoped coaching visits with an implementation check gate that routes each visit into observation, demo + leadership meeting, or mixed pathway.",
   newLabel: "+ New School Visit",
-  programTypeLabel: "Visit purpose",
+  programTypeLabel: "Visit type",
   programTypeOptions: [
-    { value: "Coaching", label: "Coaching" },
-    { value: "Observation", label: "Observation" },
-    { value: "Mentorship", label: "Mentorship" },
-    { value: "Literacy routine setup", label: "Literacy routine setup" },
-    { value: "Leadership support", label: "Leadership support" },
+    { value: "Baseline", label: "Baseline" },
+    { value: "Follow-up", label: "Follow-up" },
+    { value: "Support", label: "Support" },
+    { value: "Other", label: "Other" },
   ],
   sections: [
     {
-      id: "basics",
-      title: "Header details",
+      id: "visitContext",
+      title: "Step 1: Visit Context",
+      fields: [
+        {
+          key: "coachObserver",
+          label: "Coach/Observer",
+          type: "text",
+          required: true,
+          helperText: "Auto-filled from the signed-in user.",
+        },
+        {
+          key: "purposeTags",
+          label: "Purpose tags",
+          type: "multiselect",
+          required: true,
+          options: [
+            { value: "coaching", label: "Coaching" },
+            { value: "monitoring", label: "Monitoring" },
+            { value: "demo", label: "Demo" },
+            { value: "leadership", label: "Leadership" },
+          ],
+        },
+        { key: "startTime", label: "Visit start time", type: "time", required: true },
+        { key: "endTime", label: "Visit end time", type: "time", required: true },
+        { key: "subCounty", label: "Sub-county", type: "text", required: true },
+        { key: "parish", label: "Parish", type: "text", required: true },
+        { key: "village", label: "Village (optional)", type: "text" },
+        ...sponsorshipFields,
+      ],
+    },
+    {
+      id: "implementationGate",
+      title: "Step 2: Implementation Check",
+      fields: [
+        {
+          key: "implementationStatus",
+          label:
+            "Has the school started implementing the reading method learned from training (structured phonics routines)?",
+          type: "select",
+          required: true,
+          options: [
+            { value: "started", label: "Yes — Implementation has started" },
+            { value: "not_started", label: "No — Not yet started" },
+            { value: "partial", label: "Partially — Started in some classes only" },
+          ],
+        },
+        {
+          key: "classesImplementing",
+          label: "Classes implementing",
+          type: "multiselect",
+          options: [
+            { value: "P1", label: "P1" },
+            { value: "P2", label: "P2" },
+            { value: "P3", label: "P3" },
+            { value: "P4", label: "P4" },
+            { value: "P5", label: "P5" },
+            { value: "P6", label: "P6" },
+            { value: "P7", label: "P7" },
+          ],
+          helperText:
+            "Required when implementation status is Partial.",
+        },
+        {
+          key: "classesNotImplementing",
+          label: "Classes not implementing",
+          type: "multiselect",
+          options: [
+            { value: "P1", label: "P1" },
+            { value: "P2", label: "P2" },
+            { value: "P3", label: "P3" },
+            { value: "P4", label: "P4" },
+            { value: "P5", label: "P5" },
+            { value: "P6", label: "P6" },
+            { value: "P7", label: "P7" },
+          ],
+          helperText: "Date is captured in the visit metadata above.",
+        },
+      ],
+    },
+    {
+      id: "observationContext",
+      title: "Step 3A: Classroom Observation & Coaching",
       fields: [
         {
           key: "teacherObserved",
-          label: "Teacher",
+          label: "Teacher observed",
           type: "text",
           required: true,
-          helperText:
-            "Form title: Ozeki Reading Bridge Foundation Lesson Observation Sheet (Nursery and Primary Classes). School is captured from the selected school account above.",
+          helperText: "Select a teacher from the school roster.",
         },
         {
           key: "classLevel",
-          label: "Class",
+          label: "Class observed",
           type: "select",
           required: true,
           options: [
@@ -360,24 +486,34 @@ const visitConfig: PortalModuleConfig = {
             { value: "P5", label: "P5" },
             { value: "P6", label: "P6" },
             { value: "P7", label: "P7" },
-            { value: "Nursery - Baby", label: "Nursery - Baby" },
-            { value: "Nursery - Middle", label: "Nursery - Middle" },
-            { value: "Nursery - Top", label: "Nursery - Top" },
           ],
         },
         { key: "classSize", label: "Class size", type: "number", min: 0 },
         {
-          key: "startTime",
-          label: "Visit start time",
-          type: "time",
-          required: true,
-          helperText: "Date is captured in the visit metadata above.",
+          key: "lessonFocusAreas",
+          label: "Lesson focus",
+          type: "multiselect",
+          options: [
+            { value: "sounds", label: "Sounds" },
+            { value: "decoding", label: "Decoding" },
+            { value: "blending", label: "Blending" },
+            { value: "segmenting", label: "Segmenting" },
+            { value: "fluency", label: "Fluency" },
+            { value: "comprehension", label: "Comprehension" },
+            { value: "tricky_words", label: "Tricky words" },
+          ],
         },
-        { key: "endTime", label: "Visit end time", type: "time", required: true },
-        { key: "subCounty", label: "Sub-county", type: "text", required: true },
-        { key: "parish", label: "Parish", type: "text", required: true },
-        { key: "village", label: "Village (optional)", type: "text" },
-        ...sponsorshipFields,
+        {
+          key: "learnerSpotCheckCount",
+          label: "Quick learner spot-check count (optional)",
+          type: "number",
+          min: 0,
+        },
+        {
+          key: "learnerSpotCheckNote",
+          label: "Quick learner spot-check note (optional)",
+          type: "textarea",
+        },
       ],
     },
     {
@@ -525,18 +661,192 @@ const visitConfig: PortalModuleConfig = {
       ],
     },
     {
-      id: "actions",
-      title: "Actions, feedback and follow-up",
+      id: "observationCoaching",
+      title: "Observation coaching notes",
       fields: [
-        { key: "strengthsObserved", label: "Strengths observed", type: "textarea" },
-        { key: "gapsIdentified", label: "Gaps identified", type: "textarea" },
-        { key: "coachingProvided", label: "Coaching provided", type: "textarea" },
+        { key: "strengthsObserved", label: "Key findings", type: "textarea" },
+        { key: "gapsIdentified", label: "What went well", type: "textarea" },
+        { key: "coachingProvided", label: "Challenges", type: "textarea" },
         {
           key: "teacherActions",
-          label: "Agreed teacher actions (max 3)",
+          label: "REC recommendations",
           type: "textarea",
         },
-        { key: "nextVisitFocus", label: "Next visit focus", type: "text" },
+        { key: "nextVisitFocus", label: "Conclusions / next steps", type: "text" },
+      ],
+    },
+    {
+      id: "lessonDemo",
+      title: "Step 3B: Lesson Demonstration",
+      fields: [
+        {
+          key: "demoDelivered",
+          label: "Demo delivered?",
+          type: "select",
+          required: true,
+          options: [
+            { value: "yes", label: "Yes" },
+            { value: "no", label: "No" },
+          ],
+        },
+        { key: "demoClass", label: "Class for demo (grade/stream)", type: "text", required: true },
+        { key: "demoFocus", label: "Demo focus", type: "text", required: true },
+        { key: "demoMinutes", label: "Period length (minutes)", type: "number", required: true, min: 1 },
+        {
+          key: "demoComponents",
+          label: "Demo approach used",
+          type: "multiselect",
+          required: true,
+          options: [
+            { value: "sound review routine", label: "Sound review routine" },
+            { value: "new sound modeling", label: "New sound modeling" },
+            { value: "blending routine", label: "Blending routine" },
+            { value: "segmenting routine", label: "Segmenting routine" },
+            { value: "decoding practice", label: "Decoding practice" },
+            { value: "fluency practice", label: "Fluency practice" },
+            { value: "quick check", label: "Quick check" },
+          ],
+        },
+        {
+          key: "demoMaterialsUsed",
+          label: "Materials used",
+          type: "multiselect",
+          options: [
+            { value: "teacher guide", label: "Teacher guide" },
+            { value: "learner books", label: "Learner books" },
+            { value: "flash cards", label: "Flash cards" },
+            { value: "sound chart", label: "Sound chart" },
+            { value: "board/chalk", label: "Board/chalk" },
+            { value: "other", label: "Other" },
+          ],
+        },
+        {
+          key: "demoTeachersPresentContactIds",
+          label: "Teacher(s) present",
+          type: "multiselect",
+          required: true,
+          helperText: "Select from school contacts.",
+        },
+        {
+          key: "demoTakeawaysText",
+          label: "Key demonstration takeaways",
+          type: "textarea",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "implementationStartPlan",
+      title: "Implementation start plan",
+      fields: [
+        { key: "implementationStartDate", label: "Start date", type: "date", required: true },
+        {
+          key: "dailyReadingTimeMinutes",
+          label: "Daily reading time agreed (minutes)",
+          type: "number",
+          required: true,
+          min: 0,
+        },
+        {
+          key: "classesToStartFirst",
+          label: "Classes to start first",
+          type: "multiselect",
+          required: true,
+          options: [
+            { value: "P1", label: "P1" },
+            { value: "P2", label: "P2" },
+            { value: "P3", label: "P3" },
+            { value: "P4", label: "P4" },
+            { value: "P5", label: "P5" },
+            { value: "P6", label: "P6" },
+            { value: "P7", label: "P7" },
+          ],
+        },
+        {
+          key: "implementationResponsibleContactId",
+          label: "Responsible person at school",
+          type: "select",
+          required: true,
+          helperText: "Default recommendation: Headteacher or DOS.",
+        },
+        {
+          key: "supportNeededFromOzeki",
+          label: "Support needed from Ozeki",
+          type: "multiselect",
+          required: true,
+          options: [
+            { value: "refresher training", label: "Refresher training" },
+            { value: "materials", label: "Materials" },
+            { value: "coaching follow-up", label: "Coaching follow-up" },
+            { value: "assessment setup", label: "Assessment setup" },
+          ],
+        },
+      ],
+    },
+    {
+      id: "leadershipMeeting",
+      title: "Headteacher / DOS meeting summary",
+      fields: [
+        {
+          key: "leadershipMeetingHeld",
+          label: "Meeting held?",
+          type: "select",
+          required: true,
+          options: [
+            { value: "yes", label: "Yes" },
+            { value: "no", label: "No" },
+          ],
+        },
+        {
+          key: "leadershipAttendeesContactIds",
+          label: "Attendees",
+          type: "multiselect",
+          options: [],
+          helperText: "Select from school contacts (Proprietor/HT/DOS/Teacher).",
+        },
+        {
+          key: "leadershipSummary",
+          label: "Summary of conversation",
+          type: "textarea",
+          required: true,
+        },
+        {
+          key: "leadershipAgreements",
+          label: "Agreements made",
+          type: "textarea",
+          required: true,
+        },
+        {
+          key: "leadershipRisks",
+          label: "Risks/barriers discussed",
+          type: "textarea",
+          required: true,
+        },
+        {
+          key: "leadershipNextActionsJson",
+          label: "Next actions + owner + due date",
+          type: "text",
+          required: true,
+        },
+        {
+          key: "leadershipNextVisitDate",
+          label: "Next visit date",
+          type: "date",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "visitInsights",
+      title: "Step 4: Submit & Follow-up",
+      fields: [
+        {
+          key: "visitPathway",
+          label: "Visit pathway (auto)",
+          type: "text",
+          helperText: "Auto-calculated from implementation status.",
+        },
+        ...standardizedInsightSection.fields,
         { key: "evidenceNotes", label: "Evidence notes", type: "textarea" },
       ],
     },
@@ -658,6 +968,11 @@ const assessmentConfig: PortalModuleConfig = {
             "Accuracy formula reference: Accuracy % = (Correct Words / (Correct Words + Errors)) x 100",
         },
       ],
+    },
+    {
+      ...standardizedInsightSection,
+      id: "assessmentInsights",
+      title: "SECTION F: KEY FINDINGS & NEXT STEPS",
     },
     performanceSection,
     {
@@ -781,8 +1096,13 @@ const storyConfig: PortalModuleConfig = {
       ],
     },
     {
+      ...standardizedInsightSection,
+      id: "storyInsights",
+      title: "Section 5: Key Findings & Next Steps",
+    },
+    {
       id: "evidence",
-      title: "Section 5: Evidence Uploads",
+      title: "Section 6: Evidence Uploads",
       fields: [{ key: "evidenceNotes", label: "Evidence notes", type: "textarea" }],
     },
   ],

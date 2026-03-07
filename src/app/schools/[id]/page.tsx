@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicImpactAggregate, listPublishedStoriesBySchool, listPublishedAnthologiesBySchool } from "@/lib/db";
 import { TeacherEvaluationPerformanceCards } from "@/components/impact/TeacherEvaluationPerformanceCards";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ type Params = Promise<{ id: string }>;
 
 type DomainCardProps = {
   title: string;
+  description: string;
   baseline: number | null;
   latest: number | null;
   sampleSize: number;
@@ -17,6 +19,7 @@ type DomainCardProps = {
 
 function DomainCard({
   title,
+  description,
   baseline,
   latest,
   sampleSize,
@@ -25,6 +28,7 @@ function DomainCard({
   return (
     <article className="impact-domain-mini-card">
       <h4>{title}</h4>
+      <p className="impact-domain-mini-meta">{description}</p>
       <p>
         <strong>{latest ?? "Data not available"}</strong>
       </p>
@@ -117,42 +121,48 @@ export default async function SchoolPage({ params }: { params: Params }) {
             <h3 style={{ marginTop: 0 }}>Learning Outcomes</h3>
             <div className="impact-domain-mini-grid">
               <DomainCard
-                title="Letter Names"
+                title={LEARNING_DOMAIN_DICTIONARY.letter_names.label_full}
+                description={LEARNING_DOMAIN_DICTIONARY.letter_names.description}
                 baseline={aggregate.outcomes.letterNames.baseline}
                 latest={aggregate.outcomes.letterNames.latest ?? aggregate.outcomes.letterNames.endline}
                 sampleSize={aggregate.outcomes.letterNames.n}
                 benchmarkPct={aggregate.outcomes.letterNames.benchmarkPct}
               />
               <DomainCard
-                title="Letter Sounds"
+                title={LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full}
+                description={LEARNING_DOMAIN_DICTIONARY.letter_sounds.description}
                 baseline={aggregate.outcomes.letterSounds.baseline}
                 latest={aggregate.outcomes.letterSounds.latest ?? aggregate.outcomes.letterSounds.endline}
                 sampleSize={aggregate.outcomes.letterSounds.n}
                 benchmarkPct={aggregate.outcomes.letterSounds.benchmarkPct}
               />
               <DomainCard
-                title="Real Words"
+                title={LEARNING_DOMAIN_DICTIONARY.real_words.label_full}
+                description={LEARNING_DOMAIN_DICTIONARY.real_words.description}
                 baseline={aggregate.outcomes.realWords.baseline}
                 latest={aggregate.outcomes.realWords.latest ?? aggregate.outcomes.realWords.endline}
                 sampleSize={aggregate.outcomes.realWords.n}
                 benchmarkPct={aggregate.outcomes.realWords.benchmarkPct}
               />
               <DomainCard
-                title="Made Up Words"
+                title={LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full}
+                description={LEARNING_DOMAIN_DICTIONARY.made_up_words.description}
                 baseline={aggregate.outcomes.madeUpWords.baseline}
                 latest={aggregate.outcomes.madeUpWords.latest ?? aggregate.outcomes.madeUpWords.endline}
                 sampleSize={aggregate.outcomes.madeUpWords.n}
                 benchmarkPct={aggregate.outcomes.madeUpWords.benchmarkPct}
               />
               <DomainCard
-                title="Story Reading"
+                title={LEARNING_DOMAIN_DICTIONARY.story_reading.label_full}
+                description={LEARNING_DOMAIN_DICTIONARY.story_reading.description}
                 baseline={aggregate.outcomes.storyReading.baseline}
                 latest={aggregate.outcomes.storyReading.latest ?? aggregate.outcomes.storyReading.endline}
                 sampleSize={aggregate.outcomes.storyReading.n}
                 benchmarkPct={aggregate.outcomes.storyReading.benchmarkPct}
               />
               <DomainCard
-                title="Comprehension"
+                title={LEARNING_DOMAIN_DICTIONARY.comprehension.label_full}
+                description={LEARNING_DOMAIN_DICTIONARY.comprehension.description}
                 baseline={aggregate.outcomes.comprehension.baseline}
                 latest={
                   aggregate.outcomes.comprehension.latest ?? aggregate.outcomes.comprehension.endline

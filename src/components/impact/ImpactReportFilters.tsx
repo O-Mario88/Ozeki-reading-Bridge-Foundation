@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
 
 type GeoOption = { id: string; name: string };
 type SchoolOption = { id: number; name: string; district: string };
@@ -9,11 +10,19 @@ type SchoolOption = { id: number; name: string; district: string };
 type ImpactReportFiltersProps = {
   initialYear: string;
   initialReportType: string;
+  initialReportCategory: string;
+  initialPeriodType: string;
+  initialOutput: string;
+  initialAudience: string;
   initialRegion: string;
   initialSubRegion: string;
   initialDistrict: string;
   initialSchoolId: string;
   reportTypes: string[];
+  reportCategories: string[];
+  periodTypes: string[];
+  outputs: string[];
+  audiences: string[];
   period?: string;
 };
 
@@ -35,11 +44,19 @@ function normalize(value: string) {
 export function ImpactReportFilters({
   initialYear,
   initialReportType,
+  initialReportCategory,
+  initialPeriodType,
+  initialOutput,
+  initialAudience,
   initialRegion,
   initialSubRegion,
   initialDistrict,
   initialSchoolId,
   reportTypes,
+  reportCategories,
+  periodTypes,
+  outputs,
+  audiences,
   period,
 }: ImpactReportFiltersProps) {
   const router = useRouter();
@@ -47,6 +64,10 @@ export function ImpactReportFilters({
 
   const [year, setYear] = useState(initialYear);
   const [reportType, setReportType] = useState(initialReportType);
+  const [reportCategory, setReportCategory] = useState(initialReportCategory);
+  const [periodType, setPeriodType] = useState(initialPeriodType || "FY");
+  const [output, setOutput] = useState(initialOutput || "PDF");
+  const [audience, setAudience] = useState(initialAudience || "Public-safe");
   const [region, setRegion] = useState(initialRegion);
   const [subRegion, setSubRegion] = useState(initialSubRegion);
   const [district, setDistrict] = useState(initialDistrict);
@@ -228,6 +249,10 @@ export function ImpactReportFilters({
     if (period) query.set("period", period);
     if (year) query.set("year", year);
     if (reportType) query.set("reportType", reportType);
+    if (reportCategory) query.set("reportCategory", reportCategory);
+    if (periodType) query.set("periodType", periodType);
+    if (output) query.set("output", output);
+    if (audience) query.set("audience", audience);
     if (region) query.set("region", region);
     if (subRegion) query.set("subRegion", subRegion);
     if (district) query.set("district", district);
@@ -241,6 +266,10 @@ export function ImpactReportFilters({
     query.set("year", initialYear);
     setYear(initialYear);
     setReportType("");
+    setReportCategory("");
+    setPeriodType("FY");
+    setOutput("PDF");
+    setAudience("Public-safe");
     setRegion("");
     setSubRegion("");
     setDistrict("");
@@ -266,6 +295,51 @@ export function ImpactReportFilters({
         <select value={reportType} onChange={(event) => setReportType(event.target.value)}>
           <option value="">All report types</option>
           {reportTypes.map((type) => (
+            <option value={type} key={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label>
+        <span>Report Category</span>
+        <select value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}>
+          <option value="">All categories</option>
+          {reportCategories.map((category) => (
+            <option value={category} key={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label>
+        <span>Period Type</span>
+        <select value={periodType} onChange={(event) => setPeriodType(event.target.value)}>
+          {periodTypes.map((type) => (
+            <option value={type} key={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label>
+        <span>Output</span>
+        <select value={output} onChange={(event) => setOutput(event.target.value)}>
+          {outputs.map((type) => (
+            <option value={type} key={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label>
+        <span>Audience</span>
+        <select value={audience} onChange={(event) => setAudience(event.target.value)}>
+          {audiences.map((type) => (
             <option value={type} key={type}>
               {type}
             </option>
@@ -353,12 +427,12 @@ export function ImpactReportFilters({
       </p>
 
       <div className="action-row" style={{ gridColumn: "1 / -1" }}>
-        <button className="button" type="submit">
+        <Button type="submit">
           Apply Filters
-        </button>
-        <button className="button button-ghost" type="button" onClick={clearFilters}>
+        </Button>
+        <Button variant="secondary" type="button" onClick={clearFilters}>
           Clear
-        </button>
+        </Button>
       </div>
     </form>
   );

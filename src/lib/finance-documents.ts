@@ -112,28 +112,6 @@ function formatMoney(currency: FinanceCurrency, value: number) {
   return `${currency} ${normalized.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
-function splitText(text: string, maxChars = 98): string[] {
-  const lines: string[] = [];
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  let current = "";
-  words.forEach((word) => {
-    if (!current) {
-      current = word;
-      return;
-    }
-    if (`${current} ${word}`.length <= maxChars) {
-      current = `${current} ${word}`;
-      return;
-    }
-    lines.push(current);
-    current = word;
-  });
-  if (current) {
-    lines.push(current);
-  }
-  return lines.length > 0 ? lines : [""];
-}
-
 function wrapTextByWidth(
   text: string,
   font: PDFFont,
@@ -164,6 +142,46 @@ function wrapTextByWidth(
     lines.push(current);
   }
   return lines;
+}
+
+function sanitizeInvoicePaymentInstructions(
+  rawInstructions: string | undefined,
+  invoiceNumber: string,
+) {
+  const fallback =
+    "Payments can be made via bank transfer or mobile money. Use the invoice number as payment reference. Contact support@ozekiread.org for account details.";
+  const normalized = (rawInstructions || "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return fallback;
+  }
+
+  const sentences = normalized
+    .split(/(?<=[.?!])\s+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const duplicatePatterns = [
+    /bank name/i,
+    /account name/i,
+    /account number/i,
+    /equity bank/i,
+    /1007203565985/i,
+    /reference\s*[:#]?\s*orbf[-\w]*/i,
+  ];
+
+  const deduped = sentences.filter(
+    (sentence) => !duplicatePatterns.some((pattern) => pattern.test(sentence)),
+  );
+
+  const withReference =
+    deduped.some((sentence) => /reference/i.test(sentence) || sentence.includes(invoiceNumber))
+      ? deduped
+      : [...deduped, `Use ${invoiceNumber} as the payment reference.`];
+
+  if (withReference.length === 0) {
+    return fallback;
+  }
+  return withReference.join(" ");
 }
 
 function formatStatementAmount(value: number) {
@@ -286,19 +304,138 @@ export async function generateInvoicePdfFile(input: InvoicePdfInput): Promise<Pd
   page.drawLine({ start: { x: 70, y }, end: { x: 525, y }, thickness: 2, color: rgb(0.1, 0.13, 0.18) });
   y -= 16;
 
-  input.lineItems.forEach((item) => {
-    const lines = splitText(item.description, 38);
-    lines.forEach((line, idx) => {
-      page.drawText(line, { x: 70, y, size: 10.2, font, color: dark });
-      if (idx === 0) {
-        page.drawText(formatMoney(input.currency, item.unitPrice), { x: 322, y, size: 10, font, color: muted });
-        page.drawText(`${item.qty}`, { x: 402, y, size: 10.2, font, color: dark });
-        page.drawText(formatMoney(input.currency, item.amount), { x: 468, y, size: 10.2, font, color: dark });
-      }
-      y -= 14;
+  const tableBodyStartY = y;
+  const footerTop = 170;
+  const footerBottom = 84;
+  const minPreTotalsY = 270;
+  const descriptionWidth = 238;
+
+  type InvoiceTableProfile = {
+    descSize: number;
+    valueSize: number;
+    lineHeight: number;
+    rowGap: number;
+    maxDescriptionLines: number;
+  };
+  type InvoiceRenderRow = {
+    descriptionLines: string[];
+    rateText: string;
+    qtyText: string;
+    amountText: string;
+    amountNumeric: number;
+  };
+
+  const tableProfiles: InvoiceTableProfile[] = [
+    { descSize: 10.2, valueSize: 10, lineHeight: 14, rowGap: 8, maxDescriptionLines: 2 },
+    { descSize: 9.7, valueSize: 9.5, lineHeight: 12.5, rowGap: 6, maxDescriptionLines: 2 },
+    { descSize: 9.2, valueSize: 9, lineHeight: 11, rowGap: 5, maxDescriptionLines: 1 },
+  ];
+
+  const buildInvoiceRows = (profile: InvoiceTableProfile): InvoiceRenderRow[] =>
+    input.lineItems.map((item) => {
+      const descriptionLines = wrapTextByWidth(
+        item.description || "-",
+        font,
+        profile.descSize,
+        descriptionWidth,
+      ).slice(0, profile.maxDescriptionLines);
+      return {
+        descriptionLines: descriptionLines.length > 0 ? descriptionLines : ["-"],
+        rateText: formatMoney(input.currency, item.unitPrice),
+        qtyText: `${item.qty}`,
+        amountText: formatMoney(input.currency, item.amount),
+        amountNumeric: Number(item.amount || 0),
+      };
     });
-    page.drawLine({ start: { x: 70, y: y + 4 }, end: { x: 525, y: y + 4 }, thickness: 0.7, color: rgb(0.78, 0.8, 0.84) });
-    y -= 8;
+
+  const measureRowsBottom = (profile: InvoiceTableProfile, rows: InvoiceRenderRow[]) => {
+    let probeY = tableBodyStartY;
+    rows.forEach((row) => {
+      probeY -= row.descriptionLines.length * profile.lineHeight;
+      probeY -= profile.rowGap;
+    });
+    return probeY;
+  };
+
+  const rowHeight = (profile: InvoiceTableProfile, row: InvoiceRenderRow) =>
+    row.descriptionLines.length * profile.lineHeight + profile.rowGap;
+
+  let selectedProfile = tableProfiles[tableProfiles.length - 1];
+  let renderedRows = buildInvoiceRows(selectedProfile);
+  let rowsFit = false;
+
+  for (const profile of tableProfiles) {
+    const candidate = buildInvoiceRows(profile);
+    if (measureRowsBottom(profile, candidate) >= minPreTotalsY) {
+      selectedProfile = profile;
+      renderedRows = candidate;
+      rowsFit = true;
+      break;
+    }
+  }
+
+  if (!rowsFit) {
+    const allRows = buildInvoiceRows(selectedProfile);
+    const availableHeight = Math.max(0, tableBodyStartY - minPreTotalsY);
+    const keptRows: InvoiceRenderRow[] = [];
+    let usedHeight = 0;
+    let cutoffIndex = allRows.length;
+
+    for (let idx = 0; idx < allRows.length; idx += 1) {
+      const current = allRows[idx];
+      const currentHeight = rowHeight(selectedProfile, current);
+      if (usedHeight + currentHeight > availableHeight) {
+        cutoffIndex = idx;
+        break;
+      }
+      keptRows.push(current);
+      usedHeight += currentHeight;
+      cutoffIndex = idx + 1;
+    }
+
+    if (cutoffIndex < allRows.length) {
+      const omittedRows = allRows.slice(cutoffIndex);
+      const omittedAmount = omittedRows.reduce((sum, row) => sum + row.amountNumeric, 0);
+      const summaryRow: InvoiceRenderRow = {
+        descriptionLines: [`Additional line items (${omittedRows.length})`],
+        rateText: "-",
+        qtyText: "-",
+        amountText: formatMoney(input.currency, omittedAmount),
+        amountNumeric: omittedAmount,
+      };
+      const summaryHeight = rowHeight(selectedProfile, summaryRow);
+      while (keptRows.length > 0 && usedHeight + summaryHeight > availableHeight) {
+        const removed = keptRows.pop();
+        if (!removed) {
+          break;
+        }
+        usedHeight -= rowHeight(selectedProfile, removed);
+      }
+      if (usedHeight + summaryHeight <= availableHeight) {
+        keptRows.push(summaryRow);
+      }
+    }
+
+    renderedRows = keptRows.length > 0 ? keptRows : allRows.slice(0, 1);
+  }
+
+  renderedRows.forEach((row) => {
+    row.descriptionLines.forEach((line, idx) => {
+      page.drawText(line, { x: 70, y, size: selectedProfile.descSize, font, color: dark });
+      if (idx === 0) {
+        page.drawText(row.rateText, { x: 322, y, size: selectedProfile.valueSize, font, color: muted });
+        page.drawText(row.qtyText, { x: 402, y, size: selectedProfile.valueSize, font, color: dark });
+        page.drawText(row.amountText, { x: 468, y, size: selectedProfile.valueSize, font, color: dark });
+      }
+      y -= selectedProfile.lineHeight;
+    });
+    page.drawLine({
+      start: { x: 70, y: y + Math.max(2, selectedProfile.rowGap / 2) },
+      end: { x: 525, y: y + Math.max(2, selectedProfile.rowGap / 2) },
+      thickness: 0.7,
+      color: rgb(0.78, 0.8, 0.84),
+    });
+    y -= selectedProfile.rowGap;
   });
 
   const totalsRight = 525;
@@ -306,19 +443,19 @@ export async function generateInvoicePdfFile(input: InvoicePdfInput): Promise<Pd
   y -= 6;
   page.drawLine({ start: { x: 312, y }, end: { x: totalsRight, y }, thickness: 2, color: rgb(0.1, 0.13, 0.18) });
   y -= 22;
-  page.drawText("Sub-Total", { x: totalsLabelX, y, size: 10.5, font, color: muted });
-  page.drawText(formatMoney(input.currency, input.subtotal), { x: 468, y, size: 10.5, font, color: dark });
+  const totalsFontSize = y < 320 ? 10 : 10.5;
+  const totalValueFontSize = y < 320 ? 12.2 : 13;
+  page.drawText("Sub-Total", { x: totalsLabelX, y, size: totalsFontSize, font, color: muted });
+  page.drawText(formatMoney(input.currency, input.subtotal), { x: 468, y, size: totalsFontSize, font, color: dark });
   y -= 16;
-  page.drawText("Tax", { x: totalsLabelX, y, size: 10.5, font, color: muted });
-  page.drawText(formatMoney(input.currency, input.tax), { x: 468, y, size: 10.5, font, color: dark });
+  page.drawText("Tax", { x: totalsLabelX, y, size: totalsFontSize, font, color: muted });
+  page.drawText(formatMoney(input.currency, input.tax), { x: 468, y, size: totalsFontSize, font, color: dark });
   y -= 14;
   page.drawLine({ start: { x: 312, y }, end: { x: totalsRight, y }, thickness: 1, color: rgb(0.32, 0.36, 0.42) });
   y -= 22;
-  page.drawText("TOTAL", { x: totalsLabelX, y, size: 13, font: fontBold, color: dark });
-  page.drawText(formatMoney(input.currency, input.total), { x: 455, y, size: 13, font: fontBold, color: dark });
+  page.drawText("TOTAL", { x: totalsLabelX, y, size: totalValueFontSize, font: fontBold, color: dark });
+  page.drawText(formatMoney(input.currency, input.total), { x: 455, y, size: totalValueFontSize, font: fontBold, color: dark });
 
-  const footerTop = 186;
-  const footerBottom = 84;
   const leftColX = 70;
   const leftColW = 245;
   const rightColX = 332;
@@ -351,7 +488,9 @@ export async function generateInvoicePdfFile(input: InvoicePdfInput): Promise<Pd
     leftY -= 4;
     page.drawText("Notes", { x: leftColX, y: leftY, size: 9.8, font: fontBold, color: dark });
     leftY -= 14;
-    wrapTextByWidth(input.notes, font, 8.7, leftColW).slice(0, 3).forEach((line) => {
+    const maxNotesLines = 2;
+    const noteLines = wrapTextByWidth(input.notes, font, 8.7, leftColW).slice(0, maxNotesLines);
+    noteLines.forEach((line) => {
       page.drawText(line, { x: leftColX, y: leftY, size: 8.7, font, color: muted });
       leftY -= 10.5;
     });
@@ -360,12 +499,24 @@ export async function generateInvoicePdfFile(input: InvoicePdfInput): Promise<Pd
   let rightY = footerTop;
   page.drawText("Payment Instructions", { x: rightColX, y: rightY, size: 10.8, font: fontBold, color: dark });
   rightY -= 14;
-  const instructionText = input.paymentInstructions && input.paymentInstructions.trim().length > 0
-    ? input.paymentInstructions
-    : "Payments can be made via bank transfer or mobile money. Bank Name: Equity Bank. Account Number: 1007203565985. Account Name: Ozeki Reading Bridge Foundation. Contact support@ozekiread.org for account details.";
-  wrapTextByWidth(instructionText, font, 8.6, rightColW).slice(0, 8).forEach((line) => {
+  const instructionText = sanitizeInvoicePaymentInstructions(
+    input.paymentInstructions,
+    input.invoiceNumber,
+  );
+  const instructionLineHeight = 10.5;
+  const maxInstructionLines = Math.max(
+    3,
+    Math.floor((footerTop - footerBottom - 14) / instructionLineHeight),
+  );
+  const wrappedInstructionLines = wrapTextByWidth(instructionText, font, 8.6, rightColW);
+  const instructionLines = wrappedInstructionLines.slice(0, maxInstructionLines);
+  if (wrappedInstructionLines.length > instructionLines.length && instructionLines.length > 0) {
+    const lastIndex = instructionLines.length - 1;
+    instructionLines[lastIndex] = `${instructionLines[lastIndex].replace(/[. ]+$/, "")}...`;
+  }
+  instructionLines.forEach((line) => {
     page.drawText(line, { x: rightColX, y: rightY, size: 8.6, font, color: muted });
-    rightY -= 10.5;
+    rightY -= instructionLineHeight;
   });
 
   const minimumEndY = Math.min(leftY, rightY);
@@ -450,9 +601,7 @@ export async function generateReceiptPdfFile(input: ReceiptPdfInput): Promise<Pd
   y -= 24;
   const descriptionText = (input.description || "").trim();
   const hasDescription = descriptionText.length > 0;
-  if (hasDescription) {
-    page.drawText("DESCRIPTION", { x: 70, y, size: 11, font: fontBold, color: dark });
-  }
+  page.drawText("DESCRIPTION / PARTICULARS", { x: 70, y, size: 11, font: fontBold, color: dark });
   page.drawText("AMOUNT", { x: 468, y, size: 11, font: fontBold, color: dark });
   y -= 12;
   page.drawLine({ start: { x: 70, y }, end: { x: 525, y }, thickness: 2, color: rgb(0.1, 0.13, 0.18) });
@@ -460,36 +609,30 @@ export async function generateReceiptPdfFile(input: ReceiptPdfInput): Promise<Pd
 
   const descriptionBoxX = 70;
   const descriptionBoxWidth = 352;
-  const descriptionBoxHeight = hasDescription ? 66 : 0;
+  const descriptionBoxHeight = 66;
   const descriptionBoxY = y - descriptionBoxHeight;
   const amountBoxX = 430;
   const amountBoxY = y - 44;
   const amountBoxWidth = 95;
   const amountBoxHeight = 44;
 
-  if (hasDescription) {
-    page.drawRectangle({
-      x: descriptionBoxX,
-      y: descriptionBoxY,
-      width: descriptionBoxWidth,
-      height: descriptionBoxHeight,
-      borderWidth: 1,
-      borderColor: rgb(0.78, 0.8, 0.84),
-      color: rgb(0.99, 0.99, 1),
-    });
-    const labeledDescription = `Description: ${descriptionText}`;
-    wrapTextByWidth(labeledDescription, font, 9.6, descriptionBoxWidth - 12).slice(0, 4).forEach((line, idx) => {
-      page.drawText(line, { x: descriptionBoxX + 6, y: y - 14 - idx * 11, size: 9.6, font, color: dark });
-    });
-  }
+  page.drawRectangle({
+    x: descriptionBoxX,
+    y: descriptionBoxY,
+    width: descriptionBoxWidth,
+    height: descriptionBoxHeight,
+    color: rgb(0.99, 0.99, 1),
+  });
+  const receiptParticulars = hasDescription ? descriptionText : "No description provided.";
+  wrapTextByWidth(receiptParticulars, font, 9.6, descriptionBoxWidth - 12).slice(0, 4).forEach((line, idx) => {
+    page.drawText(line, { x: descriptionBoxX + 6, y: y - 14 - idx * 11, size: 9.6, font, color: dark });
+  });
 
   page.drawRectangle({
     x: amountBoxX,
     y: amountBoxY,
     width: amountBoxWidth,
     height: amountBoxHeight,
-    borderWidth: 1,
-    borderColor: rgb(0.78, 0.8, 0.84),
     color: rgb(0.99, 0.99, 1),
   });
   page.drawText(formatMoney(input.currency, input.amount), {

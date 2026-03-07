@@ -6,6 +6,7 @@ import { organizationName, tagline } from "@/lib/content";
 import {
   INTELLIGENCE_LOOP,
   INSIGHT_TILES,
+  PROGRAM_DIRECTORY_DETAILS,
   PARTNERSHIP_OPTIONS,
   TRUST_LINKS,
 } from "@/lib/home-static-data";
@@ -73,9 +74,88 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className={styles.trustStrip}>
+        <div className="container">
+          <ul className={styles.trustLinks}>
+            {TRUST_LINKS.map((item) => (
+              <li key={item.label}>
+                <Link href={item.href}>{item.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className={`section ${styles.problemSection}`}>
         <div className="container">
           <div className={styles.sectionHeading}>
+            <h2>Reading is the gateway skill: Uganda can&apos;t afford weak foundations.</h2>
+          </div>
+          <div className={styles.problemLayout}>
+            <aside className={styles.problemPhotoCard}>
+              <Image
+                src="/photos/PXL_20260218_134438769.jpg"
+                alt="Teachers and learners in a literacy classroom session in Uganda."
+                fill
+                className={styles.problemPhotoImage}
+                sizes="(max-width: 1024px) 100vw, 42vw"
+                loading="lazy"
+              />
+              <div className={styles.problemPhotoOverlay} />
+              <div className={styles.problemPhotoContent}>
+                <p className={styles.problemPhotoKicker}>Impact Overview</p>
+                <p>
+                  Public dashboard data is aggregated from verified staff submissions and
+                  published with privacy controls.
+                </p>
+              </div>
+            </aside>
+            <div className={styles.problemNarrative}>
+              <p>
+                Across Uganda, reading is the single skill that determines whether children
+                can access the rest of the curriculum. Yet national evidence shows that too
+                many learners are still not mastering foundational literacy early enough.
+                Uganda has made progress, but large numbers of children still move through
+                school without fluent reading-slowing learning in every subject and widening
+                inequality between regions, school types, and communities. This is why a
+                national response must be practical, measurable, and focused on the
+                classroom: when reading is weak, every other learning goal becomes harder.
+              </p>
+              <p>
+                Northern Uganda shows what happens when education systems are disrupted for
+                long periods. Years of conflict and displacement interrupted schooling,
+                reduced consistent instructional time, and left many classrooms rebuilding
+                with limited materials, large class sizes, and teacher shortages. Even after
+                stability returns, the learning gap does not close automatically-early
+                reading requires systematic instruction and repeated practice. The good news
+                is that recovery is possible when support is structured, sustained, and
+                measured.
+              </p>
+              <p>
+                That is the purpose of a National Literacy Intelligence Platform: strengthen
+                teachers through structured phonics and coaching, measure learner progress
+                through simple, trusted reading outcomes, and turn data into targeted
+                action-school by school, district by district. NLIP helps partners and
+                schools move from &quot;support everywhere&quot; to &quot;support where it matters most,&quot;
+                and it proves progress with credible evidence that government, donors, and
+                communities can trust.
+              </p>
+            </div>
+          </div>
+          <div className={styles.ctaRow}>
+            <Link className={`button ${styles.primaryCta}`} href="/impact">
+              Open the Impact Hub
+            </Link>
+            <Link className={`button ${styles.outlineCta}`} href="/programs">
+              See Our Programs
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container">
+          <div className={`${styles.sectionHeading} ${styles.loopSectionHeading}`}>
             <h2>How Our National Literacy Intelligence Platform works</h2>
           </div>
           <div className={styles.loopGrid}>
@@ -95,73 +175,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={`section ${styles.problemSection}`}>
-        <div className="container">
-          <aside className={styles.problemPhotoCard}>
-            <Image
-              src="/photos/PXL_20260218_134438769.jpg"
-              alt="Teachers and learners in a literacy classroom session in Uganda."
-              fill
-              className={styles.problemPhotoImage}
-              sizes="(max-width: 860px) 100vw, 1200px"
-            />
-            <div className={styles.problemPhotoOverlay} />
-            <div className={styles.problemPhotoContent}>
-              <p className={styles.problemPhotoKicker}>Impact Overview</p>
-              <h2 className={styles.problemPhotoTitle}>
-                Reading is the gateway skill: Uganda can&apos;t afford weak foundations.
-              </h2>
-              <p>
-                Public dashboard data is aggregated from verified staff submissions and
-                published with privacy controls.
-              </p>
-            </div>
-          </aside>
-          <div className={styles.problemNarrative}>
-            <p>
-              Across Uganda, reading is the single skill that determines whether children
-              can access the rest of the curriculum. Yet national evidence shows that too
-              many learners are still not mastering foundational literacy early enough.
-              Uganda has made progress, but large numbers of children still move through
-              school without fluent reading-slowing learning in every subject and widening
-              inequality between regions, school types, and communities. This is why a
-              national response must be practical, measurable, and focused on the
-              classroom: when reading is weak, every other learning goal becomes harder.
-            </p>
-            <p>
-              Northern Uganda shows what happens when education systems are disrupted for
-              long periods. Years of conflict and displacement interrupted schooling,
-              reduced consistent instructional time, and left many classrooms rebuilding
-              with limited materials, large class sizes, and teacher shortages. Even after
-              stability returns, the learning gap does not close automatically-early
-              reading requires systematic instruction and repeated practice. The good news
-              is that recovery is possible when support is structured, sustained, and
-              measured.
-            </p>
-            <p>
-              That is the purpose of a National Literacy Intelligence Platform: strengthen
-              teachers through structured phonics and coaching, measure learner progress
-              through simple, trusted reading outcomes, and turn data into targeted
-              action-school by school, district by district. NLIP helps partners and
-              schools move from &quot;support everywhere&quot; to &quot;support where it matters most,&quot;
-              and it proves progress with credible evidence that government, donors, and
-              communities can trust.
-            </p>
-          </div>
-          <div className={styles.ctaRow}>
-            <Link className={`button ${styles.primaryCta}`} href="/impact">
-              Open the Impact Hub
-            </Link>
-            <Link className={`button ${styles.outlineCta}`} href="/programs">
-              See Our Programs
-            </Link>
-          </div>
-        </div>
-      </section>
-
       <section className={`section ${styles.programOverviewSection}`}>
         <div className="container">
-          <div className={styles.sectionHeading}>
+          <div className={`${styles.sectionHeading} ${styles.programSectionHeading}`}>
             <h2>Programs powering national literacy improvement</h2>
           </div>
           <div className={styles.programOverview}>
@@ -182,6 +198,18 @@ export default function HomePage() {
               decision-making.
             </p>
           </div>
+          <div className={styles.programGrid}>
+            {PROGRAM_DIRECTORY_DETAILS.map((program) => (
+              <article className={styles.programCard} key={program.title}>
+                <h3>
+                  <Link href={program.href} className={styles.programLink}>
+                    {program.title}
+                  </Link>
+                </h3>
+                <p>{program.description}</p>
+              </article>
+            ))}
+          </div>
           <div className={styles.ctaRow}>
             <Link className={`button ${styles.primaryCta}`} href="/programs">
               Open Program Directory
@@ -198,6 +226,10 @@ export default function HomePage() {
           <div className={styles.sectionHeading}>
             <h2>What NLIP reveals nationwide</h2>
           </div>
+          <p className={styles.insightLead}>
+            Public dashboard data is aggregated from verified staff submissions and
+            published with privacy controls.
+          </p>
           <div className={styles.insightGrid}>
             {INSIGHT_TILES.map((tile) => (
               <article className={styles.insightTile} key={tile}>
@@ -298,18 +330,6 @@ export default function HomePage() {
               triggerClassName={`button ${styles.primaryCta}`}
             />
           </div>
-        </div>
-      </section>
-
-      <section className={styles.trustStrip}>
-        <div className="container">
-          <ul className={styles.trustLinks}>
-            {TRUST_LINKS.map((item) => (
-              <li key={item.label}>
-                <Link href={item.href}>{item.label}</Link>
-              </li>
-            ))}
-          </ul>
         </div>
       </section>
     </>

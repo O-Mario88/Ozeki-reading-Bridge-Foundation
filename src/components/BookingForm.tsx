@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { serviceOptions } from "@/lib/content";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 import { BaseContactForm } from "./BaseContactForm";
 
@@ -34,13 +35,7 @@ export function BookingForm({
     const payload = Object.fromEntries(formData.entries());
 
     try {
-      const response = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await response.json()) as {
+      const result = await submitJsonWithOfflineQueue<{
         error?: string;
         message?: string;
         calendar?: {
@@ -48,9 +43,25 @@ export function BookingForm({
           meetLink: string | null;
         } | null;
         calendarWarning?: string;
-      };
+      }>("/api/bookings", {
+        payload,
+        label: "Booking request",
+      });
 
-      if (!response.ok) {
+      if (result.queued) {
+        setState({
+          status: "success",
+          message:
+            "No internet connection. Booking request saved on this device and will sync automatically when connected.",
+          eventLink: null,
+          meetLink: null,
+        });
+        return;
+      }
+
+      const data = result.data ?? {};
+
+      if (!result.response.ok) {
         throw new Error(data.error ?? "Could not submit booking request.");
       }
 

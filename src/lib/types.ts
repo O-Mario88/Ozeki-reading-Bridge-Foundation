@@ -1239,12 +1239,62 @@ export interface PortalRecordFilters {
   programType?: string;
 }
 
+export type ActivityInsightActivityType =
+  | "training"
+  | "visit"
+  | "assessment"
+  | "lesson_evaluation"
+  | "story_activity";
+
+export type ActivityInsightScopeType =
+  | "school"
+  | "district"
+  | "region"
+  | "subregion"
+  | "country";
+
+export type ActivityRecommendationPriority = "high" | "medium" | "low";
+
+export interface ActivityInsightRecord {
+  insightsId: number;
+  activityType: ActivityInsightActivityType;
+  activityId: number;
+  scopeType: ActivityInsightScopeType;
+  scopeId: string;
+  keyFindings: string | null;
+  whatWentWell: string | null;
+  challenges: string | null;
+  conclusionsNextSteps: string | null;
+  createdByUserId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActivityRecommendationRecord {
+  recLinkId: number;
+  insightsId: number;
+  recId: string;
+  priority: ActivityRecommendationPriority;
+  notes: string | null;
+}
+
+export interface SchoolInsightsRollupRecord {
+  schoolId: number;
+  lastUpdated: string | null;
+  latestFindings: string;
+  openActions: string;
+  recommendationIds: string[];
+}
+
 export interface DashboardKpis {
   trainingsLogged: number;
   schoolVisits: number;
   assessments: number;
   storyActivities: number;
   learnersReached: number;
+  schoolsImplementingPercent: number;
+  schoolsNotImplementingPercent: number;
+  demoVisitsConducted: number;
 }
 
 export interface DashboardAgendaItem {
@@ -1931,6 +1981,12 @@ export interface PortalSchoolReportRow {
   teacherObservationAverage: number | null;
   teacherObservationCount: number;
   learnerAssessments: number;
+  implementationStartedVisits: number;
+  implementationNotStartedVisits: number;
+  implementationPartialVisits: number;
+  demoVisits: number;
+  latestImplementationStatus: "started" | "not_started" | "partial" | null;
+  latestVisitPathway: "observation" | "demo_and_meeting" | "mixed" | null;
   contactsCount: number;
   totalRecords: number;
 }
@@ -1975,6 +2031,13 @@ export interface PortalOperationalReportsData {
     learnerAssessments: number;
     schoolsWithContacts: number;
     teacherObservationCount: number;
+    schoolsImplementingPercent: number;
+    schoolsNotImplementingPercent: number;
+    schoolsWithImplementationData: number;
+    implementationStartedVisits: number;
+    implementationNotStartedVisits: number;
+    implementationPartialVisits: number;
+    demoVisitsConducted: number;
   };
   districts: PortalDistrictReportSummary[];
   schools: PortalSchoolReportRow[];
@@ -2229,7 +2292,24 @@ export type ImpactReportType =
   | "Headteacher Summary"
   | "Partner Snapshot Report";
 
+export type ReportCategory =
+  | "Assessment Report"
+  | "Training Report"
+  | "School Coaching Visit Report"
+  | "Teaching Quality Report (Lesson Evaluations)"
+  | "Remedial & Catch-Up Intervention Report"
+  | "1001 Story Project Report"
+  | "Implementation Fidelity & Coverage Report"
+  | "District Literacy Brief"
+  | "Graduation Readiness & Alumni Monitoring Report"
+  | "Partner/Donor Report (Scoped)"
+  | "Data Quality & Credibility Report"
+  | "School Profile Report (Headteacher Pack)";
+
 export type ImpactReportScopeType = "National" | "Region" | "Sub-region" | "District" | "Sub-county" | "Parish" | "School";
+export type ImpactReportPeriodType = "FY" | "Term" | "Quarter" | "Custom";
+export type ImpactReportAudience = "Public-safe" | "Staff-only";
+export type ImpactReportOutput = "PDF" | "HTML preview";
 
 export type ImpactReportProgramType =
   | "training"
@@ -2270,14 +2350,42 @@ export interface ImpactReportSectionNarrative {
 export interface ImpactReportBuildInput {
   title?: string;
   reportType: ImpactReportType;
+  reportCategory?: ReportCategory;
   scopeType: ImpactReportScopeType;
   scopeValue?: string;
+  regionId?: string;
+  subRegionId?: string;
+  districtId?: string;
+  schoolId?: number;
   partnerName?: string;
+  periodType?: ImpactReportPeriodType;
   periodStart: string;
   periodEnd: string;
-  programsIncluded: ImpactReportProgramType[];
+  programsIncluded?: ImpactReportProgramType[];
+  audience?: ImpactReportAudience;
+  output?: ImpactReportOutput;
   isPublic: boolean;
   version: string;
+}
+
+export interface ImpactReportDataTrustFooter {
+  n: number;
+  completenessPercent: number;
+  toolVersion: string;
+  lastUpdated: string;
+}
+
+export interface CategoryReportFactsJson {
+  keyFindings: Array<{ text: string; metricPath: string }>;
+  whatWentWell: Array<{ text: string; metricPath: string }>;
+  challenges: Array<{ text: string; metricPath: string }>;
+  recommendations: Array<{
+    recId: string;
+    priority: "high" | "medium" | "low";
+    text: string;
+    metricPath: string;
+  }>;
+  conclusionsNextSteps: Array<{ text: string; metricPath: string }>;
 }
 
 export interface ImpactReportCoverageBlock {
@@ -2293,6 +2401,19 @@ export interface ImpactReportCoverageBlock {
     progress: number;
     endline: number;
   };
+}
+
+export interface ImpactReportSponsorshipEntry {
+  sponsorType: string;
+  sponsoredBy: string;
+  activities: number;
+  modules: PortalRecordModule[];
+}
+
+export interface ImpactReportSponsorshipBlock {
+  totalAttributedActivities: number;
+  uniqueSponsors: number;
+  topSponsors: ImpactReportSponsorshipEntry[];
 }
 
 export interface ImpactReportEngagementBlock {
@@ -2336,6 +2457,20 @@ export interface ImpactReportInstructionQualityBlock {
   routineAdoptionRate: number | null;
   observationScoreChange: number | null;
   topGaps: string[];
+}
+
+export interface ImpactReportVisitPathwayBlock {
+  startedVisits: number;
+  notStartedVisits: number;
+  partialVisits: number;
+  observationVisits: number;
+  demoAndMeetingVisits: number;
+  mixedVisits: number;
+  demoVisitsConducted: number;
+  demoSummariesLogged: number;
+  implementationStartPlansLogged: number;
+  leadershipMeetingsLogged: number;
+  leadershipAgreementsLogged: number;
 }
 
 export interface ImpactReportDataQualityBlock {
@@ -2436,11 +2571,22 @@ export interface ImpactReportTeacherEvaluationBlock {
 export interface ImpactReportFactPack {
   generatedAt: string;
   reportType: ImpactReportType;
+  reportCategory?: ReportCategory;
+  periodType?: ImpactReportPeriodType;
+  audience?: ImpactReportAudience;
+  output?: ImpactReportOutput;
   scopeType: ImpactReportScopeType;
   scopeValue: string;
+  regionId?: string | null;
+  subRegionId?: string | null;
+  districtId?: string | null;
+  schoolId?: number | null;
   periodStart: string;
   periodEnd: string;
   programsIncluded: ImpactReportProgramType[];
+  categoryData?: Record<string, unknown>;
+  categoryFactsJson?: CategoryReportFactsJson;
+  dataTrust?: ImpactReportDataTrustFooter;
   definitions: {
     learnersReached: string;
     schoolsImpacted: string;
@@ -2449,10 +2595,12 @@ export interface ImpactReportFactPack {
     reportingCalendar: string;
   };
   coverageDelivery: ImpactReportCoverageBlock;
+  sponsorship?: ImpactReportSponsorshipBlock;
   engagement: ImpactReportEngagementBlock;
   learningOutcomes: ImpactReportLearningOutcomesBlock;
   readingLevels?: ReadingLevelsBlock;
   instructionQuality: ImpactReportInstructionQualityBlock;
+  visitPathways?: ImpactReportVisitPathwayBlock;
   teacherLessonEvaluation?: ImpactReportTeacherEvaluationBlock;
   teacherImprovementSummary?: ImpactReportTeacherImprovementSummary;
   teachingLearningAlignment?: TeachingLearningAlignmentAggregate;
@@ -2486,8 +2634,16 @@ export interface ImpactReportRecord {
   reportCode: string;
   title: string;
   reportType: ImpactReportType;
+  reportCategory?: ReportCategory;
+  periodType?: ImpactReportPeriodType;
+  audience?: ImpactReportAudience;
+  output?: ImpactReportOutput;
   scopeType: ImpactReportScopeType;
   scopeValue: string;
+  regionId?: string | null;
+  subRegionId?: string | null;
+  districtId?: string | null;
+  schoolId?: number | null;
   partnerName: string | null;
   periodStart: string;
   periodEnd: string;

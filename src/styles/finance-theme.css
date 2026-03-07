@@ -7,28 +7,28 @@
 
 /* ── Design Tokens ── */
 .finance-shell {
-    --fin-bg: #F6F8FB;
-    --fin-card-bg: #ffffff;
-    --fin-border: #E8EDF3;
-    --fin-border-hover: #CBD5E1;
-    --fin-primary: #2563EB;
-    --fin-primary-light: #EFF6FF;
-    --fin-primary-dark: #1D4ED8;
-    --fin-success: #FA7D15;
-    --fin-success-bg: #FFF9F5;
-    --fin-danger: #DC2626;
-    --fin-danger-bg: #FEF2F2;
-    --fin-warning: #D97706;
-    --fin-warning-bg: #FFFBEB;
-    --fin-text: #0F172A;
-    --fin-text-secondary: #475569;
-    --fin-text-muted: #64748B;
-    --fin-text-light: #94A3B8;
-    --fin-radius: 16px;
+    --fin-bg: var(--color-bg, #F6F8FB);
+    --fin-card-bg: var(--color-surface, #ffffff);
+    --fin-border: var(--color-border, #D8E2EA);
+    --fin-border-hover: color-mix(in oklab, var(--color-border, #D8E2EA), black 12%);
+    --fin-primary: var(--color-brand-blue, #084F66);
+    --fin-primary-light: color-mix(in oklab, var(--color-brand-blue, #084F66), white 92%);
+    --fin-primary-dark: var(--color-brand-blue-dark, #063748);
+    --fin-success: var(--color-brand-orange, #FA7D15);
+    --fin-success-bg: color-mix(in oklab, var(--color-brand-orange, #FA7D15), white 90%);
+    --fin-danger: var(--color-state-danger, #DC2626);
+    --fin-danger-bg: color-mix(in oklab, var(--color-state-danger, #DC2626), white 90%);
+    --fin-warning: var(--color-state-warning, #D97706);
+    --fin-warning-bg: color-mix(in oklab, var(--color-state-warning, #D97706), white 90%);
+    --fin-text: var(--color-text, #1F2C38);
+    --fin-text-secondary: var(--color-text, #1F2C38);
+    --fin-text-muted: var(--color-text-muted, #5D7081);
+    --fin-text-light: color-mix(in oklab, var(--color-text-muted, #5D7081), white 35%);
+    --fin-radius: 14px;
     --fin-radius-sm: 10px;
     --fin-radius-xs: 6px;
-    --fin-shadow: 0 1px 3px rgba(15, 23, 42, .04), 0 1px 2px rgba(15, 23, 42, .02);
-    --fin-shadow-md: 0 4px 12px rgba(15, 23, 42, .06), 0 2px 4px rgba(15, 23, 42, .03);
+    --fin-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .04), 0 1px 2px rgba(15, 23, 42, .02));
+    --fin-shadow-md: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, .06), 0 2px 4px rgba(15, 23, 42, .03));
     --fin-sidebar-w: 260px;
     --fin-topbar-h: 64px;
     --fin-transition: 0.2s cubic-bezier(.4, 0, .2, 1);

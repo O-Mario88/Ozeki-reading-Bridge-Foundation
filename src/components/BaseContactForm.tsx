@@ -7,10 +7,15 @@ export type SubmitState = {
     message: string;
 };
 
+export type BaseContactSubmitResult = {
+    mode?: "online" | "queued";
+    successMessage?: string;
+};
+
 const initialState: SubmitState = { status: "idle", message: "" };
 
 interface BaseContactFormProps {
-    onSubmit: (formData: FormData) => Promise<void>;
+    onSubmit: (formData: FormData) => Promise<void | BaseContactSubmitResult>;
     onSuccess?: () => void;
     onCancel?: () => void;
     successMessage: string;
@@ -35,11 +40,11 @@ export function BaseContactForm({
         setState({ status: "submitting", message: "Submitting..." });
 
         try {
-            await onSubmit(new FormData(event.currentTarget));
+            const result = await onSubmit(new FormData(event.currentTarget));
             event.currentTarget.reset();
             setState({
                 status: "success",
-                message: successMessage,
+                message: result?.successMessage || successMessage,
             });
             if (onSuccess) {
                 window.setTimeout(() => {

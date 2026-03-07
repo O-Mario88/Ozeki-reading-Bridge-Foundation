@@ -1,4 +1,5 @@
 import { getApplicableRecommendations } from "@/lib/recommendations";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 import type {
   DomainGainData,
   PublicImpactAggregate,
@@ -236,12 +237,12 @@ export function buildPriorityActionsFromPublicAggregate(
     { baseline: number | null; latest: number | null; endline?: number | null } | undefined
   >;
   const domainMap: Array<{ key: string; label: string }> = [
-    { key: "letterNames", label: "Letter Names" },
-    { key: "letterSounds", label: "Letter Sounds" },
-    { key: "realWords", label: "Real Words" },
-    { key: "madeUpWords", label: "Made Up Words" },
-    { key: "storyReading", label: "Story Reading" },
-    { key: "comprehension", label: "Comprehension" },
+    { key: "letterNames", label: LEARNING_DOMAIN_DICTIONARY.letter_names.label_full },
+    { key: "letterSounds", label: LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full },
+    { key: "realWords", label: LEARNING_DOMAIN_DICTIONARY.real_words.label_full },
+    { key: "madeUpWords", label: LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full },
+    { key: "storyReading", label: LEARNING_DOMAIN_DICTIONARY.story_reading.label_full },
+    { key: "comprehension", label: LEARNING_DOMAIN_DICTIONARY.comprehension.label_full },
   ];
   const domainGains: Array<{ domain: string; change: number | null }> = domainMap.map(({ key, label }) => {
     const outcome = safeOutcomes[key];

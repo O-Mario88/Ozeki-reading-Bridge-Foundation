@@ -5,12 +5,12 @@
  * for learner assessments under the NLIS/Ozeki reading programme.
  *
  * 6 Domains (each graded 0–10):
- *   1. Letter Names
- *   2. Letter Sounds
- *   3. Real Words
- *   4. Made Up Words
+ *   1. Knowing Letter Names
+ *   2. Knowing Letter Sounds
+ *   3. Reading Real Words
+ *   4. Reading Made Up Words
  *   5. Story Reading
- *   6. Comprehension
+ *   6. Reading Comprehension
  *
  * Reading Levels:
  *   Non-Reader  → composite avg 0.0 – 1.9
@@ -21,6 +21,10 @@
  */
 
 import type { AssessmentRecordInput } from "@/lib/types";
+import {
+    LEARNING_DOMAIN_DICTIONARY,
+    PUBLIC_OUTCOME_TO_DOMAIN_KEY,
+} from "@/lib/domain-dictionary";
 
 /* ─── Types ───────────────────────────────────────── */
 
@@ -40,12 +44,12 @@ export const READING_LEVELS: ReadingLevel[] = [
 ];
 
 export const READING_DOMAIN_LABELS = [
-    "Letter Names",
-    "Letter Sounds",
-    "Real Words",
-    "Made Up Words",
-    "Story Reading",
-    "Comprehension",
+    LEARNING_DOMAIN_DICTIONARY.letter_names.label_full,
+    LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full,
+    LEARNING_DOMAIN_DICTIONARY.real_words.label_full,
+    LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full,
+    LEARNING_DOMAIN_DICTIONARY.story_reading.label_full,
+    LEARNING_DOMAIN_DICTIONARY.comprehension.label_full,
 ] as const;
 
 export type ReadingDomainLabel = (typeof READING_DOMAIN_LABELS)[number];
@@ -72,12 +76,12 @@ export const READING_DOMAIN_KEYS: ReadingDomainKey[] = [
 
 /** Mapping from domain key to its human-readable label. */
 export const DOMAIN_KEY_TO_LABEL: Record<ReadingDomainKey, ReadingDomainLabel> = {
-    letterNames: "Letter Names",
-    letterSounds: "Letter Sounds",
-    realWords: "Real Words",
-    madeUpWords: "Made Up Words",
-    storyReading: "Story Reading",
-    comprehension: "Comprehension",
+    letterNames: LEARNING_DOMAIN_DICTIONARY[PUBLIC_OUTCOME_TO_DOMAIN_KEY.letterNames].label_full,
+    letterSounds: LEARNING_DOMAIN_DICTIONARY[PUBLIC_OUTCOME_TO_DOMAIN_KEY.letterSounds].label_full,
+    realWords: LEARNING_DOMAIN_DICTIONARY[PUBLIC_OUTCOME_TO_DOMAIN_KEY.realWords].label_full,
+    madeUpWords: LEARNING_DOMAIN_DICTIONARY[PUBLIC_OUTCOME_TO_DOMAIN_KEY.madeUpWords].label_full,
+    storyReading: LEARNING_DOMAIN_DICTIONARY[PUBLIC_OUTCOME_TO_DOMAIN_KEY.storyReading].label_full,
+    comprehension: LEARNING_DOMAIN_DICTIONARY[PUBLIC_OUTCOME_TO_DOMAIN_KEY.comprehension].label_full,
 };
 
 /* ─── Core Functions ──────────────────────────────── */

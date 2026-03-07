@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
+import { startOfflineFormQueueSync } from "@/lib/offline-form-queue";
 
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
+    startOfflineFormQueueSync();
     if (!("serviceWorker" in navigator)) {
       return;
     }

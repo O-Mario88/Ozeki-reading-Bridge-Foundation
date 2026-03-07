@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import { SupportRequestInput, SupportRequestUrgency, SupportType } from "@/lib/types";
 
 interface SchoolOption {
@@ -52,15 +53,18 @@ export default function SupportRequestForm() {
         setError(null);
 
         try {
-            const res = await fetch("/api/portal/support", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
+            const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/portal/support", {
+                payload: formData,
+                label: "School support request"
             });
 
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || "Failed to submit request");
+            if (result.queued) {
+                setSubmitted(true);
+                return;
+            }
+
+            if (!result.response.ok) {
+                throw new Error(result.data?.error || "Failed to submit request");
             }
 
             setSubmitted(true);

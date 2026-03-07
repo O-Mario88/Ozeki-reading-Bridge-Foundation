@@ -5,6 +5,7 @@ import { FloatingSurface } from "@/components/FloatingSurface";
 import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import type { FinanceContactRecord, FinanceInvoiceRecord, FinanceReceiptRecord } from "@/lib/types";
 
 type PortalFinanceReceiptsManagerProps = {
@@ -116,30 +117,46 @@ export function PortalFinanceReceiptsManager({
     setSaving(true);
     setStatusMessage("");
     try {
-      const response = await fetch("/api/portal/finance/receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactId: Number(form.contactId),
-          category: form.category,
-          receivedFrom: form.receivedFrom,
-          receiptDate: form.receiptDate,
-          currency: form.currency,
-          amountReceived: Number(form.amountReceived),
-          paymentMethod: form.paymentMethod,
-          referenceNo: form.referenceNo || undefined,
-          relatedInvoiceId: form.relatedInvoiceId ? Number(form.relatedInvoiceId) : undefined,
-          description: trimmedDescription || undefined,
-          notes: form.notes || undefined,
-          issueNow: form.issueNow,
-          sendEmail: form.issueNow ? form.sendEmail : false,
-        }),
+      const payload = {
+        contactId: Number(form.contactId),
+        category: form.category,
+        receivedFrom: form.receivedFrom,
+        receiptDate: form.receiptDate,
+        currency: form.currency,
+        amountReceived: Number(form.amountReceived),
+        paymentMethod: form.paymentMethod,
+        referenceNo: form.referenceNo || undefined,
+        relatedInvoiceId: form.relatedInvoiceId ? Number(form.relatedInvoiceId) : undefined,
+        description: trimmedDescription || undefined,
+        notes: form.notes || undefined,
+        issueNow: form.issueNow,
+        sendEmail: form.issueNow ? form.sendEmail : false,
+      };
+      const result = await submitJsonWithOfflineQueue<{
+        error?: string;
+        receipt?: FinanceReceiptRecord;
+        email?: { status?: string };
+        issuedNow?: boolean;
+      }>("/api/portal/finance/receipts", {
+        payload,
+        label: "Finance receipt",
       });
-      const data = await response.json();
-      if (!response.ok) {
+
+      if (result.queued) {
+        resetForm();
+        setOpen(false);
+        setStatusMessage(
+          "No internet connection. Receipt saved on this device and will sync automatically when connected.",
+        );
+        return;
+      }
+
+      const data = result.data ?? {};
+      const createdReceipt = data.receipt;
+      if (!result.response.ok || !createdReceipt) {
         throw new Error(data.error || "Failed to create receipt.");
       }
-      setReceipts((prev) => [data.receipt as FinanceReceiptRecord, ...prev]);
+      setReceipts((prev) => [createdReceipt, ...prev]);
       resetForm();
       setOpen(false);
       setStatusMessage(
@@ -338,6 +355,7 @@ export function PortalFinanceReceiptsManager({
                   <th>Receipt</th>
                   <th>Date</th>
                   <th>Category</th>
+                  <th>Description / Particulars</th>
                   <th>Amount</th>
                   <th>Method</th>
                   <th>Status</th>
@@ -353,6 +371,9 @@ export function PortalFinanceReceiptsManager({
                     </td>
                     <td>{formatDate(item.receiptDate)}</td>
                     <td>{item.category}</td>
+                    <td title={item.description || "No description provided."}>
+                      {item.description?.trim() ? item.description : <span className="portal-muted">-</span>}
+                    </td>
                     <td>{formatMoney(item.currency, item.amountReceived)}</td>
                     <td>{item.paymentMethod}</td>
                     <td><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></td>

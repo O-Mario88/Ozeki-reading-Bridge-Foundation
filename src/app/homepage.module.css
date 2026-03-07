@@ -1,19 +1,26 @@
 .hero {
   background:
-    radial-gradient(circle at top right, rgba(250, 125, 21, 0.2), transparent 42%),
-    linear-gradient(160deg, rgba(13, 51, 48, 0.08), rgba(13, 51, 48, 0.02));
-  border-bottom: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 30%);
+    radial-gradient(circle at 92% 12%, color-mix(in oklab, var(--color-brand-orange), transparent 76%), transparent 44%),
+    linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--color-brand-blue), white 92%) 0%,
+      color-mix(in oklab, var(--color-brand-blue), white 97%) 62%,
+      #ffffff 100%
+    );
+  border-bottom: 1px solid color-mix(in oklab, var(--color-brand-blue), white 76%);
 }
 
 .heroInner {
   display: grid;
-  gap: 1rem;
-  max-width: 860px;
+  gap: var(--space-4);
+  max-width: 920px;
 }
 
 .heroKicker {
-  color: var(--md-sys-color-tertiary);
-  font-size: 0.8rem;
+  align-items: center;
+  color: var(--color-brand-orange-dark);
+  display: inline-flex;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   margin: 0;
@@ -21,16 +28,16 @@
 }
 
 .heroSubhead {
-  color: var(--md-sys-color-on-surface);
-  font-size: clamp(1.05rem, 1.7vw, 1.34rem);
-  line-height: 1.55;
+  color: var(--color-text);
+  font-size: clamp(1rem, 1.3vw, 1.2rem);
+  line-height: 1.6;
   margin: 0;
-  max-width: 75ch;
+  max-width: 72ch;
 }
 
 .microline {
-  color: var(--md-sys-color-on-surface-variant);
-  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  font-size: 13px;
   margin: 0;
 }
 
@@ -38,131 +45,120 @@
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.72rem;
+  gap: var(--space-3);
 }
 
 .primaryCta {
-  background: #fa7d15 !important;
-  border-color: #fa7d15 !important;
+  background: var(--color-brand-blue) !important;
+  border-color: var(--color-brand-blue) !important;
   color: #ffffff !important;
-  font-size: 0.88rem !important;
-  min-height: 40px !important;
-  padding: 0.55rem 1rem !important;
 }
 
 .primaryCta:hover,
 .primaryCta:focus-visible {
-  background: #e86f0b !important;
-  border-color: #e86f0b !important;
-  box-shadow: 0 8px 18px rgba(250, 125, 21, 0.28) !important;
+  background: var(--color-brand-blue-dark) !important;
+  border-color: var(--color-brand-blue-dark) !important;
 }
 
 .outlineCta {
-  background: transparent !important;
-  border-color: color-mix(in oklab, var(--md-sys-color-primary), white 40%) !important;
+  background: #ffffff !important;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 58%) !important;
+  color: var(--color-brand-blue) !important;
   box-shadow: none !important;
-  color: var(--md-sys-color-primary) !important;
-  font-size: 0.88rem !important;
-  min-height: 40px !important;
-  padding: 0.55rem 1rem !important;
 }
 
 .outlineCta:hover,
 .outlineCta:focus-visible {
-  background: color-mix(in oklab, var(--md-sys-color-primary), white 90%) !important;
-  border-color: var(--md-sys-color-primary) !important;
-  color: var(--md-sys-color-primary) !important;
+  background: color-mix(in oklab, var(--color-brand-blue), white 94%) !important;
+  border-color: var(--color-brand-blue) !important;
+  color: var(--color-brand-blue-dark) !important;
 }
 
 .sectionHeading {
-  margin-bottom: 1.4rem;
+  margin-bottom: var(--space-6);
 }
 
 .sectionHeading h2 {
-  font-size: clamp(1.38rem, 1.9vw, 2.2rem);
-  line-height: 1.2;
   margin: 0;
-  text-wrap: balance;
+  max-width: 32ch;
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
-.problemTitle {
-  max-width: min(100%, 30ch);
-}
-
-.loopGrid {
-  display: grid;
-  gap: 0.85rem;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-}
-
-.loopCard {
+.trustStrip {
   background: #ffffff;
-  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 22%);
-  border-radius: 1rem;
-  display: grid;
-  gap: 0.55rem;
-  padding: 1rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  border-top: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  padding: var(--space-4) 0;
 }
 
-.loopCard h3 {
-  color: var(--md-sys-color-primary);
-  font-size: 1rem;
-  margin: 0;
-}
-
-.loopCard p {
-  font-size: 0.92rem;
-  margin: 0;
-}
-
-.loopIcon {
+.trustLinks {
   align-items: center;
-  background: color-mix(in oklab, #fa7d15, white 78%);
-  border-radius: 999px;
-  color: #a34c09;
-  display: inline-flex;
-  font-size: 0.78rem;
-  font-weight: 700;
-  height: 1.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
   justify-content: center;
-  width: 1.7rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.loopCtaWrap {
-  margin: 0.85rem 0 0;
-}
-
-.inlineLink {
-  color: var(--md-sys-color-primary);
+.trustLinks a {
+  background: color-mix(in oklab, var(--color-brand-blue), white 94%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 74%);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-blue);
   display: inline-flex;
-  font-size: 0.9rem;
+  font-size: 12px;
   font-weight: 700;
-  gap: 0.3rem;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in oklab, var(--md-sys-color-primary), white 42%);
-  text-underline-offset: 0.25rem;
+  line-height: 1.2;
+  padding: var(--space-2) var(--space-3);
+  text-decoration: none;
 }
 
-.inlineLink:hover,
-.inlineLink:focus-visible {
-  color: #fa7d15;
+.trustLinks a:hover,
+.trustLinks a:focus-visible {
+  border-color: var(--color-brand-blue);
+  color: var(--color-brand-blue-dark);
 }
 
 .problemSection {
-  background: color-mix(in oklab, var(--md-sys-color-surface-container), white 45%);
-  border-block: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 24%);
+  background: color-mix(in oklab, var(--color-brand-blue), white 96%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 82%);
+}
+
+.problemSection .sectionHeading h2 {
+  max-width: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.loopSectionHeading h2 {
+  max-width: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.programSectionHeading h2 {
+  max-width: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.problemLayout {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  margin-bottom: var(--space-5);
 }
 
 .problemPhotoCard {
-  background: #0f4254;
-  border: 0;
-  border-radius: 0.95rem;
-  margin-bottom: 1rem;
-  min-height: clamp(300px, 38vw, 520px);
+  background: var(--color-brand-blue);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 64%);
+  border-radius: var(--radius-lg);
+  min-height: 340px;
   overflow: hidden;
   position: relative;
-  width: 100%;
 }
 
 .problemPhotoImage {
@@ -172,77 +168,118 @@
 .problemPhotoOverlay {
   background: linear-gradient(
     90deg,
-    rgba(7, 57, 72, 0.86) 0%,
-    rgba(7, 57, 72, 0.72) 42%,
-    rgba(7, 57, 72, 0.38) 74%,
-    rgba(7, 57, 72, 0.12) 100%
+    rgba(6, 55, 72, 0.92) 0%,
+    rgba(6, 55, 72, 0.74) 52%,
+    rgba(6, 55, 72, 0.24) 100%
   );
   inset: 0;
-  pointer-events: none;
   position: absolute;
 }
 
 .problemPhotoContent {
-  color: #f7fafc;
+  color: #ffffff;
   display: grid;
-  gap: 0.72rem;
-  left: clamp(0.9rem, 1.8vw, 1.7rem);
-  max-width: min(94%, 46rem);
+  gap: var(--space-2);
+  left: var(--space-4);
+  max-width: 40ch;
   position: absolute;
-  top: clamp(0.9rem, 1.8vw, 1.7rem);
-  z-index: 2;
+  top: var(--space-4);
+  z-index: 1;
 }
 
 .problemPhotoKicker {
   align-items: center;
-  border: 1px solid rgba(233, 240, 247, 0.35);
-  border-radius: 0.62rem;
+  background: color-mix(in oklab, var(--color-brand-orange), white 16%);
+  border-radius: var(--radius-sm);
+  color: #ffffff;
   display: inline-flex;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.07em;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   margin: 0;
   max-width: max-content;
-  padding: 0.36rem 0.62rem;
+  padding: var(--space-1) var(--space-2);
   text-transform: uppercase;
 }
 
-.problemPhotoKicker::before {
-  background: #fa7d15;
-  border-radius: 999px;
-  content: "";
-  display: inline-block;
-  height: 2px;
-  margin-right: 0.52rem;
-  width: 1.65rem;
-}
-
-.problemPhotoTitle {
-  font-size: clamp(1.45rem, 3.2vw, 3.3rem);
-  line-height: 1.05;
+.problemPhotoContent p {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 14px;
+  line-height: 1.55;
   margin: 0;
-  text-wrap: balance;
-}
-
-.problemPhotoContent > p:last-child {
-  font-size: 0.92rem;
-  line-height: 1.5;
-  margin: 0;
-  max-width: 38ch;
 }
 
 .problemNarrative {
   display: grid;
-  gap: 0.95rem;
-  margin-bottom: 1rem;
-  max-width: 100%;
-  width: 100%;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .problemNarrative p {
-  font-size: 1rem;
-  line-height: 1.72;
+  color: var(--color-text);
+  line-height: 1.7;
   margin: 0;
+}
+
+.loopGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.loopCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.loopCard h3 {
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.loopCard p {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.loopIcon {
+  align-items: center;
+  background: color-mix(in oklab, var(--color-brand-orange), white 82%);
+  border-radius: 999px;
+  color: var(--color-brand-orange-dark);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.loopCtaWrap {
+  margin: var(--space-4) 0 0;
+}
+
+.inlineLink {
+  color: var(--color-brand-blue);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-brand-blue), white 48%);
+  text-underline-offset: 4px;
+}
+
+.inlineLink:hover,
+.inlineLink:focus-visible {
+  color: var(--color-brand-orange-dark);
 }
 
 .programOverviewSection {
@@ -251,98 +288,160 @@
 
 .programOverview {
   display: grid;
-  gap: 0.92rem;
-  margin-bottom: 1rem;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
 .programOverview p {
+  color: var(--color-text);
+  line-height: 1.68;
+  margin: 0;
+}
+
+.programGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: var(--space-5);
+}
+
+.programCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.programCard h3 {
+  margin: 0;
+}
+
+.programLink {
+  color: var(--color-brand-blue);
   font-size: 1rem;
-  line-height: 1.72;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.programLink:hover,
+.programLink:focus-visible {
+  color: var(--color-brand-orange-dark);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-brand-orange), white 42%);
+}
+
+.programCard p {
+  color: var(--color-text-muted);
+  line-height: 1.6;
   margin: 0;
 }
 
 .insightSection {
-  background: linear-gradient(180deg, rgba(13, 51, 48, 0.05), rgba(13, 51, 48, 0));
-  border-block: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 24%);
+  background:
+    radial-gradient(circle at 2% 90%, color-mix(in oklab, var(--color-brand-orange), transparent 82%), transparent 36%),
+    linear-gradient(180deg, color-mix(in oklab, var(--color-brand-blue), white 95%), #ffffff 56%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+}
+
+.insightLead {
+  color: var(--color-text);
+  margin: 0 0 var(--space-4);
 }
 
 .insightGrid {
   display: grid;
-  gap: 0.8rem;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .insightTile {
   background: #ffffff;
-  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 18%);
-  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   display: grid;
-  min-height: 100px;
-  padding: 0.95rem;
+  min-height: 108px;
+  padding: var(--space-4);
 }
 
 .insightTile h3 {
-  color: var(--md-sys-color-primary);
-  font-size: 0.98rem;
-  line-height: 1.4;
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  line-height: 1.45;
   margin: 0;
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+  word-break: break-word;
 }
 
 .centeredCta {
   display: flex;
   justify-content: center;
-  margin-top: 1rem;
+  margin-top: var(--space-5);
 }
 
 .partnerGrid {
   display: grid;
-  gap: 0.82rem;
-  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .partnerCard {
   background: #ffffff;
-  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 16%);
-  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   display: grid;
-  gap: 0.52rem;
-  padding: 1rem;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
 }
 
 .partnerCard h3 {
-  color: var(--md-sys-color-primary);
+  color: var(--color-brand-blue);
   font-size: 1rem;
   margin: 0;
 }
 
 .partnerCard p {
-  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  line-height: 1.55;
   margin: 0;
 }
 
+.partnerCard strong {
+  color: var(--color-text);
+}
+
 .testimonialSection {
-  background: color-mix(in oklab, var(--md-sys-color-surface-container), white 38%);
+  background: color-mix(in oklab, var(--color-brand-blue), white 96%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
 }
 
 .testimonialGrid {
   display: grid;
-  gap: 0.82rem;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .testimonialCard {
   background: #ffffff;
-  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 14%);
-  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   display: grid;
-  gap: 0.65rem;
-  padding: 1rem;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
 }
 
 .quote {
-  color: var(--md-sys-color-on-surface);
-  font-size: 0.95rem;
-  line-height: 1.64;
+  color: var(--color-text);
+  line-height: 1.65;
   margin: 0;
 }
 
@@ -350,38 +449,42 @@
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.52rem;
+  gap: var(--space-2);
 }
 
 .roleChip {
-  background: color-mix(in oklab, var(--md-sys-color-primary), white 87%);
+  background: color-mix(in oklab, var(--color-brand-blue), white 90%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 74%);
   border-radius: 999px;
-  color: var(--md-sys-color-primary);
-  font-size: 0.72rem;
+  color: var(--color-brand-blue);
+  font-size: 11px;
   font-weight: 700;
-  padding: 0.28rem 0.62rem;
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
 }
 
 .geoMeta {
-  color: var(--md-sys-color-on-surface-variant);
-  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-size: 12px;
   font-weight: 600;
 }
 
 .supportSection {
-  padding-top: 2rem;
+  padding-top: var(--space-7);
 }
 
 .supportCard {
   align-items: start;
   background:
-    linear-gradient(120deg, rgba(13, 51, 48, 0.93), rgba(13, 51, 48, 0.82)),
-    radial-gradient(circle at top right, rgba(250, 125, 21, 0.28), transparent 44%);
-  border-radius: 1.1rem;
+    radial-gradient(circle at 90% 16%, color-mix(in oklab, var(--color-brand-orange), transparent 66%), transparent 36%),
+    linear-gradient(132deg, var(--color-brand-blue), color-mix(in oklab, var(--color-brand-blue), black 18%));
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 48%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   color: #ffffff;
   display: grid;
-  gap: 0.86rem;
-  padding: clamp(1.1rem, 1.9vw, 1.7rem);
+  gap: var(--space-4);
+  padding: var(--space-5);
 }
 
 .supportCard h2 {
@@ -390,76 +493,97 @@
 }
 
 .supportCard p {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.92);
   margin: 0;
-  max-width: 76ch;
+  max-width: 72ch;
 }
 
-.trustStrip {
-  background: #f0ede3;
-  border-top: 1px solid color-mix(in oklab, var(--md-sys-color-outline), white 22%);
-  padding: 1rem 0;
+.supportCard .primaryCta {
+  background: var(--color-brand-orange) !important;
+  border-color: var(--color-brand-orange) !important;
 }
 
-.trustLinks {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  justify-content: center;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.supportCard .primaryCta:hover,
+.supportCard .primaryCta:focus-visible {
+  background: var(--color-brand-orange-dark) !important;
+  border-color: var(--color-brand-orange-dark) !important;
 }
 
-.trustLinks a {
-  color: var(--md-sys-color-primary);
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in oklab, var(--md-sys-color-primary), white 44%);
-  text-underline-offset: 0.23rem;
-}
-
-.trustLinks a:hover,
-.trustLinks a:focus-visible {
-  color: #fa7d15;
-}
-
-@media (max-width: 860px) {
-  .hero {
-    padding-block: 2rem 1.7rem;
+@media (max-width: 1120px) {
+  .problemLayout {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .problemPhotoCard {
-    min-height: 270px;
+    min-height: 320px;
   }
 
-  .problemPhotoContent {
-    max-width: min(95%, 35rem);
+  .loopGrid,
+  .programGrid,
+  .insightGrid,
+  .partnerGrid,
+  .testimonialGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .sectionHeading {
+    margin-bottom: var(--space-5);
   }
 
-  .problemPhotoTitle {
-    font-size: clamp(1.4rem, 5.6vw, 2.3rem);
+  .problemSection .sectionHeading h2 {
+    white-space: normal;
   }
+
+  .loopSectionHeading h2 {
+    white-space: normal;
+  }
+
+  .programSectionHeading h2 {
+    white-space: normal;
+  }
+
+  .problemPhotoCard {
+    min-height: 292px;
+  }
+
+  .ctaRow {
+    gap: var(--space-2);
+  }
+}
 
 @media (max-width: 640px) {
   .heroInner {
-    gap: 0.82rem;
+    gap: var(--space-3);
   }
 
-  .sectionHeading {
-    margin-bottom: 1rem;
+  .trustLinks {
+    justify-content: flex-start;
   }
 
-  .partnerGrid,
+  .trustLinks a {
+    width: 100%;
+  }
+
+  .loopGrid,
+  .programGrid,
   .insightGrid,
+  .partnerGrid,
   .testimonialGrid {
     grid-template-columns: 1fr;
   }
 
-  .trustLinks {
-    align-items: flex-start;
-    flex-direction: column;
+  .supportCard {
+    padding: var(--space-4);
+  }
+
+  .centeredCta {
+    justify-content: flex-start;
+  }
+
+  .ctaRow :global(.button),
+  .ctaRow :global(button.button) {
+    width: 100%;
   }
 }

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getReportPreviewStats } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { REPORT_CATEGORIES, programsFromReportCategory } from "@/lib/report-data-contracts";
+import { ReportCategory } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -19,9 +21,16 @@ const previewPayloadSchema = z
     .object({
         scopeType: scopeTypeSchema,
         scopeValue: z.string().trim().max(120).optional(),
+        reportCategory: z
+            .string()
+            .refine(
+                (value): value is ReportCategory =>
+                    REPORT_CATEGORIES.includes(value as ReportCategory),
+                "Invalid report category.",
+            ),
         periodStart: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
         periodEnd: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
-        programsIncluded: z.array(programSchema).min(1).max(12),
+        programsIncluded: z.array(programSchema).min(1).max(12).optional(),
     })
     .superRefine((payload, ctx) => {
         if (payload.scopeType !== "National" && (!payload.scopeValue || !payload.scopeValue.trim())) {
@@ -29,6 +38,17 @@ const previewPayloadSchema = z
                 code: z.ZodIssueCode.custom,
                 path: ["scopeValue"],
                 message: "Scope value is required for Region, Sub-region, District, or School reports.",
+            });
+        }
+
+        const startYear = Number(payload.periodStart.slice(0, 4));
+        const endYear = Number(payload.periodEnd.slice(0, 4));
+        const inRange = (year: number) => Number.isInteger(year) && year >= 2025 && year <= 2050;
+        if (!inRange(startYear) || !inRange(endYear)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["periodStart"],
+                message: "Report year must be within 2025 to 2050.",
             });
         }
     });
@@ -47,7 +67,7 @@ export async function POST(request: Request) {
             scopeValue: payload.scopeValue || "",
             periodStart: payload.periodStart,
             periodEnd: payload.periodEnd,
-            programsIncluded: payload.programsIncluded,
+            programsIncluded: programsFromReportCategory(payload.reportCategory),
         });
         return NextResponse.json({ ok: true, stats });
     } catch (error) {

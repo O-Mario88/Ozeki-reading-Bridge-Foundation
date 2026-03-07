@@ -1,6 +1,8 @@
 "use client";
 
 import { BaseContactForm } from "./BaseContactForm";
+import type { BaseContactSubmitResult } from "./BaseContactForm";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 export function PartnerActionForm({
   type,
@@ -17,7 +19,7 @@ export function PartnerActionForm({
   onSuccess?: () => void;
   onCancel?: () => void;
 }) {
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(formData: FormData): Promise<BaseContactSubmitResult> {
     const payload = {
       type,
       name: String(formData.get("name") || ""),
@@ -41,16 +43,24 @@ export function PartnerActionForm({
         .join("\n"),
     };
 
-    const response = await fetch("/api/contacts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/contacts", {
+      payload,
+      label: `Partner action: ${type}`,
     });
 
-    if (!response.ok) {
-      const data = (await response.json()) as { error?: string };
-      throw new Error(data.error ?? "Could not submit request.");
+    if (result.queued) {
+      return {
+        mode: "queued",
+        successMessage:
+          "No internet connection. Request saved on this device and will sync automatically when connected.",
+      };
     }
+
+    if (!result.response.ok) {
+      throw new Error(result.data?.error ?? "Could not submit request.");
+    }
+
+    return { mode: "online" };
   }
 
   return (

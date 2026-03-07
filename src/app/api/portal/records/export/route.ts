@@ -17,6 +17,27 @@ function csvEscape(value: string | number | null | undefined) {
   return text;
 }
 
+function readFirstString(payload: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+function readSponsorship(payload: unknown) {
+  const record =
+    payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>)
+      : {};
+  return {
+    sponsorshipType: readFirstString(record, ["sponsorshipType", "sponsorType", "sponsor_category"]),
+    sponsoredBy: readFirstString(record, ["sponsoredBy", "sponsorName", "sponsored_by"]),
+  };
+}
+
 function parseFilters(request: Request): PortalRecordFilters {
   const { searchParams } = new URL(request.url);
   const module = moduleSchema.parse(searchParams.get("module"));
@@ -76,11 +97,14 @@ export async function GET(request: Request) {
       "Created At",
       "Updated At",
       "Review Note",
+      "Sponsorship Type",
+      "Sponsored By",
       "Payload JSON",
     ];
 
-    const data = rows.map((row) =>
-      [
+    const data = rows.map((row) => {
+      const sponsorship = readSponsorship(row.payload);
+      return [
         row.id,
         row.recordCode,
         row.module,
@@ -94,11 +118,13 @@ export async function GET(request: Request) {
         row.createdAt,
         row.updatedAt,
         row.reviewNote ?? "",
+        sponsorship.sponsorshipType,
+        sponsorship.sponsoredBy,
         JSON.stringify(row.payload),
       ]
         .map((value) => csvEscape(value))
-        .join(","),
-    );
+        .join(",");
+    });
 
     const csv = [header.join(","), ...data].join("\n");
     const now = new Date().toISOString().slice(0, 10);

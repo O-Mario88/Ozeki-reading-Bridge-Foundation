@@ -2,16 +2,18 @@
 
 import { FormEvent, useState } from "react";
 import { GraduationSettingsRecord } from "@/lib/types";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 type PortalGraduationSettingsManagerProps = {
   initialSettings: GraduationSettingsRecord;
 };
 
 const domainOptions = [
-  { key: "letter_sounds", label: "Letter sounds" },
+  { key: "letter_sounds", label: LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full },
   { key: "decoding", label: "Decoding" },
   { key: "fluency", label: "Fluency" },
-  { key: "comprehension", label: "Comprehension" },
+  { key: "comprehension", label: LEARNING_DOMAIN_DICTIONARY.comprehension.label_full },
 ] as const;
 
 export function PortalGraduationSettingsManager({
@@ -26,13 +28,20 @@ export function PortalGraduationSettingsManager({
     setSaving(true);
     setFeedback("");
     try {
-      const response = await fetch("/api/portal/graduation/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
-      const json = (await response.json()) as { settings?: GraduationSettingsRecord; error?: string };
-      if (!response.ok || !json.settings) {
+      const result = await submitJsonWithOfflineQueue<{ settings?: GraduationSettingsRecord; error?: string }>(
+        "/api/portal/graduation/settings",
+        {
+          method: "PUT",
+          payload: settings,
+          label: "Graduation settings update",
+        },
+      );
+      if (result.queued) {
+        setFeedback("No internet connection. Graduation settings saved offline and queued for sync.");
+        return;
+      }
+      const json = result.data ?? {};
+      if (!result.response.ok || !json.settings) {
         throw new Error(json.error ?? "Failed to save graduation settings.");
       }
       setSettings(json.settings);
@@ -374,4 +383,3 @@ export function PortalGraduationSettingsManager({
     </section>
   );
 }
-

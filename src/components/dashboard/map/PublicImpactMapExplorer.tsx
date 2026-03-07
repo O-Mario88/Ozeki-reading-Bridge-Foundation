@@ -13,6 +13,7 @@ import {
   readingLevelFromAverage,
   readingLevelOrdinal,
 } from "@/lib/reading-assessment-utils";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 type PublicImpactMapExplorerProps = {
   compact?: boolean;
@@ -83,9 +84,11 @@ function mapScopeToDetailHref(level: ScopeLevel, id: string) {
 
 function DomainOutcomeCard({
   title,
+  description,
   domain,
 }: {
   title: string;
+  description: string;
   domain: PublicImpactAggregate["outcomes"]["letterSounds"];
 }) {
   const baseline = domain.baseline ?? 0;
@@ -93,7 +96,12 @@ function DomainOutcomeCard({
   const change = latest - baseline;
   return (
     <article className="impact-domain-mini-card">
-      <h4>{title}</h4>
+      <h4>
+        {title}{" "}
+        <span title={description} aria-label={description} style={{ cursor: "help" }}>
+          (i)
+        </span>
+      </h4>
       <p>
         <strong>{domain.latest ?? domain.endline ?? "Data not available"}</strong>
       </p>
@@ -110,14 +118,14 @@ function DomainOutcomeCard({
 
 const OUTCOME_DOMAIN_CONFIG: Array<{
   key: keyof PublicImpactAggregate["outcomes"];
-  label: string;
+  domainKey: keyof typeof LEARNING_DOMAIN_DICTIONARY;
 }> = [
-  { key: "letterNames", label: "Letter Names" },
-  { key: "letterSounds", label: "Letter Sounds" },
-  { key: "realWords", label: "Real Words" },
-  { key: "madeUpWords", label: "Made Up Words" },
-  { key: "storyReading", label: "Story Reading" },
-  { key: "comprehension", label: "Comprehension" },
+  { key: "letterNames", domainKey: "letter_names" },
+  { key: "letterSounds", domainKey: "letter_sounds" },
+  { key: "realWords", domainKey: "real_words" },
+  { key: "madeUpWords", domainKey: "made_up_words" },
+  { key: "storyReading", domainKey: "story_reading" },
+  { key: "comprehension", domainKey: "comprehension" },
 ];
 
 function normalizeDomainScoreForReadingLevel(value: number) {
@@ -147,7 +155,7 @@ function deriveReadingLevelsFromOutcomes(outcomes?: PublicImpactAggregate["outco
             endline: null,
           };
     return {
-      label: item.label,
+      label: LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short,
       baseline: domain.baseline,
       latest: domain.latest ?? domain.endline,
     };
@@ -472,78 +480,24 @@ export function PublicImpactMapExplorer({
           <article className="card">
             <h3>Learning Outcomes by Domain</h3>
             <div className="impact-domain-mini-grid">
-              <DomainOutcomeCard
-                title="Letter Names"
-                domain={
-                  payload?.outcomes?.letterNames ?? {
-                    baseline: null,
-                    latest: null,
-                    endline: null,
-                    benchmarkPct: null,
-                    n: 0,
-                  }
-                }
-              />
-              <DomainOutcomeCard
-                title="Letter Sounds"
-                domain={
-                  payload?.outcomes?.letterSounds ?? {
-                    baseline: null,
-                    latest: null,
-                    endline: null,
-                    benchmarkPct: null,
-                    n: 0,
-                  }
-                }
-              />
-              <DomainOutcomeCard
-                title="Real Words"
-                domain={
-                  payload?.outcomes?.realWords ?? {
-                    baseline: null,
-                    latest: null,
-                    endline: null,
-                    benchmarkPct: null,
-                    n: 0,
-                  }
-                }
-              />
-              <DomainOutcomeCard
-                title="Made Up Words"
-                domain={
-                  payload?.outcomes?.madeUpWords ?? {
-                    baseline: null,
-                    latest: null,
-                    endline: null,
-                    benchmarkPct: null,
-                    n: 0,
-                  }
-                }
-              />
-              <DomainOutcomeCard
-                title="Story Reading"
-                domain={
-                  payload?.outcomes?.storyReading ?? {
-                    baseline: null,
-                    latest: null,
-                    endline: null,
-                    benchmarkPct: null,
-                    n: 0,
-                  }
-                }
-              />
-              <DomainOutcomeCard
-                title="Comprehension"
-                domain={
-                  payload?.outcomes?.comprehension ?? {
-                    baseline: null,
-                    latest: null,
-                    endline: null,
-                    benchmarkPct: null,
-                    n: 0,
-                  }
-                }
-              />
+              {OUTCOME_DOMAIN_CONFIG.map((item) => {
+                const descriptor = LEARNING_DOMAIN_DICTIONARY[item.domainKey];
+                const domain = payload?.outcomes?.[item.key] ?? {
+                  baseline: null,
+                  latest: null,
+                  endline: null,
+                  benchmarkPct: null,
+                  n: 0,
+                };
+                return (
+                  <DomainOutcomeCard
+                    key={item.key}
+                    title={descriptor.label_short}
+                    description={descriptor.description}
+                    domain={domain}
+                  />
+                );
+              })}
             </div>
             <p className="impact-mini-footer">
               Scores reflect average learner performance. Benchmark: 60%.
@@ -654,7 +608,11 @@ export function PublicImpactMapExplorer({
 
                 <p className="impact-mini-footer">
                   Reading levels are computed from the six assessment outcome domains:
-                  Letter Names, Letter Sounds, Real Words, Made Up Words, Story Reading, and Comprehension.
+                  {" "}
+                  {OUTCOME_DOMAIN_CONFIG.map(
+                    (item) => LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short,
+                  ).join(", ")}
+                  .
                 </p>
               </div>
             ) : (
@@ -878,7 +836,9 @@ export function PublicImpactMapExplorer({
                           <th>Teaching quality</th>
                           <th>Decoding</th>
                           <th>Fluency</th>
-                          <th>Comprehension</th>
+                          <th title={LEARNING_DOMAIN_DICTIONARY.comprehension.description}>
+                            {LEARNING_DOMAIN_DICTIONARY.comprehension.label_short}
+                          </th>
                           <th>Non-reader %</th>
                           <th>20+ CWPM %</th>
                           <th>Story sessions</th>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getImpactSummary, listPublicImpactReports } from "@/lib/db";
+import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 export const metadata = {
   title: "Impact Methodology",
@@ -33,12 +34,12 @@ export default function ImpactMethodologyPage() {
           <article className="card">
             <h2>A) Learning Outcomes by Domain</h2>
             <ul>
-              <li>Letter Names</li>
-              <li>Letter Sounds</li>
-              <li>Real Words</li>
-              <li>Made Up Words</li>
-              <li>Story Reading</li>
-              <li>Comprehension</li>
+              <li>{LEARNING_DOMAIN_DICTIONARY.letter_names.label_full}: {LEARNING_DOMAIN_DICTIONARY.letter_names.description}</li>
+              <li>{LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full}: {LEARNING_DOMAIN_DICTIONARY.letter_sounds.description}</li>
+              <li>{LEARNING_DOMAIN_DICTIONARY.real_words.label_full}: {LEARNING_DOMAIN_DICTIONARY.real_words.description}</li>
+              <li>{LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full}: {LEARNING_DOMAIN_DICTIONARY.made_up_words.description}</li>
+              <li>{LEARNING_DOMAIN_DICTIONARY.story_reading.label_full}: {LEARNING_DOMAIN_DICTIONARY.story_reading.description}</li>
+              <li>{LEARNING_DOMAIN_DICTIONARY.comprehension.label_full}: {LEARNING_DOMAIN_DICTIONARY.comprehension.description}</li>
             </ul>
           </article>
           <article className="card">

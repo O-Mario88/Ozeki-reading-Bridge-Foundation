@@ -36,7 +36,7 @@ export function CardRef<T extends ElementType = "section">({
   const hasFooter = Boolean(footer);
 
   return (
-    <Component className={cx("card-ref", className)}>
+    <Component className={cx("card", "card-ref", className)}>
       {hasHeader ? (
         <header className="card-ref-head">
           <div className="card-ref-title-wrap">

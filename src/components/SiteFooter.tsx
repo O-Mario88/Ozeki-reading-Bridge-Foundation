@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { officialContact, officialContactLinks } from "@/lib/contact";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import { Facebook, Instagram, Twitter, Youtube, Send, Mail, Phone, MapPin } from "lucide-react";
 
 type FooterSubscribeState = {
@@ -30,15 +31,23 @@ export function SiteFooter() {
     setSubscribeState({ status: "submitting", message: "Saving..." });
 
     try {
-      const response = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+      const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/newsletter", {
+        payload: { email },
+        label: "Footer newsletter signup",
       });
 
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
-        throw new Error(data.error ?? "Could not subscribe right now.");
+      if (result.queued) {
+        form.reset();
+        setSubscribeState({
+          status: "success",
+          message:
+            "No internet connection. Subscription saved on this device and will sync automatically when connected.",
+        });
+        return;
+      }
+
+      if (!result.response.ok) {
+        throw new Error(result.data?.error ?? "Could not subscribe right now.");
       }
 
       form.reset();

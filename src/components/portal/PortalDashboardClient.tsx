@@ -52,12 +52,13 @@ function readQueueCount() {
   }
 
   try {
-    const raw = window.localStorage.getItem("portal-offline-queue");
-    if (!raw) {
-      return 0;
-    }
-    const queue = JSON.parse(raw) as unknown[];
-    return Array.isArray(queue) ? queue.length : 0;
+    const portalRaw = window.localStorage.getItem("portal-offline-queue");
+    const globalRaw = window.localStorage.getItem("orbf-offline-form-queue-v1");
+    const portalQueue = portalRaw ? (JSON.parse(portalRaw) as unknown[]) : [];
+    const globalQueue = globalRaw ? (JSON.parse(globalRaw) as unknown[]) : [];
+    const portalCount = Array.isArray(portalQueue) ? portalQueue.length : 0;
+    const globalCount = Array.isArray(globalQueue) ? globalQueue.length : 0;
+    return portalCount + globalCount;
   } catch {
     return 0;
   }
@@ -137,11 +138,23 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
 
   const kpiCards = useMemo(
     () => [
-      { label: "Learners Reached", value: dashboard.kpis.learnersReached },
-      { label: "Trainings Logged", value: dashboard.kpis.trainingsLogged },
-      { label: "School Visits", value: dashboard.kpis.schoolVisits },
-      { label: "Assessments", value: dashboard.kpis.assessments },
-      { label: "1001 Activities", value: dashboard.kpis.storyActivities },
+      { label: "Learners Reached", value: dashboard.kpis.learnersReached.toLocaleString() },
+      { label: "Trainings Logged", value: dashboard.kpis.trainingsLogged.toLocaleString() },
+      { label: "School Visits", value: dashboard.kpis.schoolVisits.toLocaleString() },
+      { label: "Assessments", value: dashboard.kpis.assessments.toLocaleString() },
+      { label: "1001 Activities", value: dashboard.kpis.storyActivities.toLocaleString() },
+      {
+        label: "Schools Implementing",
+        value: `${dashboard.kpis.schoolsImplementingPercent.toFixed(1)}%`,
+      },
+      {
+        label: "Schools Not Implementing",
+        value: `${dashboard.kpis.schoolsNotImplementingPercent.toFixed(1)}%`,
+      },
+      {
+        label: "Demo Visits Conducted",
+        value: dashboard.kpis.demoVisitsConducted.toLocaleString(),
+      },
     ],
     [dashboard.kpis],
   );
@@ -152,7 +165,7 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
         {kpiCards.map((item) => (
           <article className="portal-kpi-card" key={item.label}>
             <p>{item.label}</p>
-            <strong>{item.value.toLocaleString()}</strong>
+            <strong>{item.value}</strong>
           </article>
         ))}
       </section>

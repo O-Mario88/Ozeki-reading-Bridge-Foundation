@@ -5,6 +5,7 @@ import { FloatingSurface } from "@/components/FloatingSurface";
 import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import type { FinanceContactRecord, FinanceInvoiceRecord } from "@/lib/types";
 
 type PortalFinanceInvoicesManagerProps = {
@@ -135,23 +136,42 @@ export function PortalFinanceInvoicesManager({
         .map((item) => item.trim())
         .filter(Boolean);
 
-      const response = await fetch("/api/portal/finance/contacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: contactForm.name,
-          emails,
-          phone: contactForm.phone || undefined,
-          address: contactForm.address || undefined,
-          contactType: contactForm.contactType,
-        }),
+      const payload = {
+        name: contactForm.name,
+        emails,
+        phone: contactForm.phone || undefined,
+        address: contactForm.address || undefined,
+        contactType: contactForm.contactType,
+      };
+      const result = await submitJsonWithOfflineQueue<{
+        error?: string;
+        contact?: FinanceContactRecord;
+      }>("/api/portal/finance/contacts", {
+        payload,
+        label: "Finance contact",
       });
-      const data = await response.json();
-      if (!response.ok) {
+      if (result.queued) {
+        setContactForm({
+          name: "",
+          emails: "",
+          phone: "",
+          address: "",
+          contactType: "partner",
+        });
+        setContactOpen(false);
+        setStatusMessage(
+          "No internet connection. Contact saved on this device and will sync automatically when connected.",
+        );
+        return;
+      }
+
+      const data = result.data ?? {};
+      const createdContact = data.contact;
+      if (!result.response.ok || !createdContact) {
         throw new Error(data.error || "Failed to create contact.");
       }
 
-      setContacts((prev) => [data.contact as FinanceContactRecord, ...prev]);
+      setContacts((prev) => [createdContact, ...prev]);
       setContactForm({
         name: "",
         emails: "",
@@ -189,17 +209,29 @@ export function PortalFinanceInvoicesManager({
         })),
       };
 
-      const response = await fetch("/api/portal/finance/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const result = await submitJsonWithOfflineQueue<{
+        error?: string;
+        invoice?: FinanceInvoiceRecord;
+      }>("/api/portal/finance/invoices", {
+        payload,
+        label: "Finance invoice",
       });
-      const data = await response.json();
-      if (!response.ok) {
+      if (result.queued) {
+        resetCreateForm();
+        setCreateOpen(false);
+        setStatusMessage(
+          "No internet connection. Invoice saved on this device and will sync automatically when connected.",
+        );
+        return;
+      }
+
+      const data = result.data ?? {};
+      const createdInvoice = data.invoice;
+      if (!result.response.ok || !createdInvoice) {
         throw new Error(data.error || "Failed to create invoice.");
       }
 
-      setInvoices((prev) => [data.invoice as FinanceInvoiceRecord, ...prev]);
+      setInvoices((prev) => [createdInvoice, ...prev]);
       resetCreateForm();
       setCreateOpen(false);
       setStatusMessage("Invoice created.");

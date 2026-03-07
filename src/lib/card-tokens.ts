@@ -1,17 +1,19 @@
+import { uiTokens } from "@/ui/tokens";
+
 export const cardTokens = {
-  background: "#FFFFFF",
-  borderRadius: "22px",
-  borderColor: "#EEF2F6",
-  shadow: "0 18px 44px rgba(15, 23, 42, 0.07)",
-  paddingDesktop: "24px",
-  paddingMobile: "20px",
-  textPrimary: "#0F172A",
-  textMuted: "#64748B",
-  divider: "#EEF2F6",
-  focusRing: "0 0 0 3px rgba(14, 75, 90, 0.25)",
-  progressTrack: "#EEF2F6",
-  progressPrimary: "#5B6DFF",
-  progressSecondary: "#7B86F8",
+  background: uiTokens.neutral.surface,
+  borderRadius: `${uiTokens.radius.lg}px`,
+  borderColor: uiTokens.neutral.border,
+  shadow: uiTokens.shadow.sm,
+  paddingDesktop: `${uiTokens.space[5]}px`,
+  paddingMobile: `${uiTokens.space[4]}px`,
+  textPrimary: uiTokens.neutral.text,
+  textMuted: uiTokens.neutral.textMuted,
+  divider: uiTokens.neutral.border,
+  focusRing: "0 0 0 3px color-mix(in oklab, var(--color-brand-blue), white 72%)",
+  progressTrack: uiTokens.neutral.border,
+  progressPrimary: uiTokens.brand.blue.primary,
+  progressSecondary: uiTokens.brand.orange.primary,
 } as const;
 
 export type CardTokenKey = keyof typeof cardTokens;

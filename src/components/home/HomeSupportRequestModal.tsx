@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { FloatingFormModal } from "@/components/FloatingFormModal";
+import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import { SupportRequestUrgency, SupportType } from "@/lib/types";
 import styles from "./HomeSupportRequestModal.module.css";
 
@@ -103,23 +104,32 @@ function SupportRequestPopupForm({
     }
 
     try {
-      const response = await fetch("/api/portal/support", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locationText: form.locationText.trim(),
-          contactName: form.contactName.trim(),
-          contactRole: form.contactRole.trim(),
-          contactInfo: form.contactInfo.trim(),
-          supportTypes: form.supportTypes,
-          urgency: form.urgency,
-          message: form.message.trim(),
-        }),
+      const payload = {
+        locationText: form.locationText.trim(),
+        contactName: form.contactName.trim(),
+        contactRole: form.contactRole.trim(),
+        contactInfo: form.contactInfo.trim(),
+        supportTypes: form.supportTypes,
+        urgency: form.urgency,
+        message: form.message.trim(),
+      };
+      const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/portal/support", {
+        payload,
+        label: "School support request",
       });
 
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
-        throw new Error(data.error ?? "Could not submit support request.");
+      if (result.queued) {
+        setSubmitState({
+          status: "success",
+          message:
+            "No internet connection. Request saved on this device and will sync automatically when connected.",
+        });
+        setForm(createInitialFormState(presetMessage, presetSupportTypes, presetUrgency));
+        return;
+      }
+
+      if (!result.response.ok) {
+        throw new Error(result.data?.error ?? "Could not submit support request.");
       }
 
       setSubmitState({
