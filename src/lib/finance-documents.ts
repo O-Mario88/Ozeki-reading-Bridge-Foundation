@@ -3,6 +3,7 @@ import path from "node:path";
 import { PDFDocument, PDFImage, PDFPage, PDFFont, rgb } from "pdf-lib";
 import { officialContact } from "@/lib/contact";
 import {
+  drawBrandFooter,
   drawBrandFrame,
   drawBrandHeader,
   drawBrandWatermark,
@@ -772,7 +773,6 @@ export async function generateStatementPdfFile(input: StatementPdfInput): Promis
   const marginLeft = 24;
   const marginRight = 24;
   const contentWidth = pageWidth - marginLeft - marginRight;
-  const footerText = `${ORG_FOOTER} • ${officialContact.address} • ${officialContact.postalAddress} • ${officialContact.email} • ${officialContact.phoneDisplay}`;
 
   const logo = await loadBrandLogo(doc);
   const drawPageShell = (
@@ -780,49 +780,42 @@ export async function generateStatementPdfFile(input: StatementPdfInput): Promis
     title: string,
     subtitle: string,
     titleColor: ReturnType<typeof rgb>,
+    includeHeader: boolean,
   ) => {
     drawDocumentFrame(targetPage);
     drawDocumentWatermark(targetPage, logo);
-    drawBrandHeader({
-      page: targetPage,
-      font,
-      fontBold,
-      logo,
-      title,
-      documentNumber: statement.month,
-      subtitle: `${subtitle} • Amounts in ${statement.currency}`,
-      titleColor,
-      mutedColor: muted,
-      titleSize: 22,
-      numberSize: 14,
-      subtitleSize: 10.5,
-    });
+    if (includeHeader) {
+      drawBrandHeader({
+        page: targetPage,
+        font,
+        fontBold,
+        logo,
+        title,
+        documentNumber: statement.month,
+        subtitle: `${subtitle} • Amounts in ${statement.currency}`,
+        titleColor,
+        mutedColor: muted,
+        titleSize: 22,
+        numberSize: 14,
+        subtitleSize: 10.5,
+      });
+    }
   };
 
-  const drawFooter = (targetPage: PDFPage, pageLabel: string) => {
-    const meta = [
+  const footerSummary = (pageLabel: string) =>
+    [
       `Generated: ${statement.generatedAt.slice(0, 19).replace("T", " ")}`,
       `Period: ${statement.month}`,
-      `Money In: ${formatMoney(statement.currency, statement.totalMoneyIn)}`,
-      `Money Out: ${formatMoney(statement.currency, statement.totalMoneyOut)}`,
       `Net: ${formatMoney(statement.currency, statement.net)}`,
       pageLabel,
     ].join(" • ");
-    targetPage.drawText(meta, { x: marginLeft, y: 40, size: 7.4, font, color: muted });
-    targetPage.drawLine({
-      start: { x: marginLeft, y: 32 },
-      end: { x: marginLeft + contentWidth, y: 32 },
-      thickness: 1,
-      color: rgb(0.9, 0.92, 0.95),
-    });
-    targetPage.drawText(footerText, { x: marginLeft, y: 20, size: 6.8, font, color: muted });
-  };
 
   drawPageShell(
     page,
     balanceDocumentTitle,
     `For year ended ${formatStatementAsOfDate(position.asOfDate)}`,
     accent,
+    true,
   );
 
   const labelX = marginLeft + 2;
@@ -935,14 +928,13 @@ export async function generateStatementPdfFile(input: StatementPdfInput): Promis
   drawAmount(subtotalRight, y, totalLiabilitiesAndEquity, true);
   page.drawLine({ start: { x: totalLineStart, y: y - 3 }, end: { x: subtotalRight, y: y - 3 }, thickness: 1.2, color: dark });
 
-  drawFooter(page, balanceFooterLabel);
-
   const incomePage = doc.addPage(pageSize);
   drawPageShell(
     incomePage,
     "INCOME STATEMENT",
     `For year ended ${formatStatementAsOfDate(income.asOfDate)}`,
     incomeAccent,
+    false,
   );
 
   const incomeLabelX = marginLeft + 2;
@@ -1020,7 +1012,19 @@ export async function generateStatementPdfFile(input: StatementPdfInput): Promis
   incomeSubLine(iy - 4);
   incomeSubLine(iy - 8);
 
-  drawFooter(incomePage, "Income Statement");
+  const footerLabels = [balanceFooterLabel, "Income Statement"];
+  const docPages = doc.getPages();
+  const totalPages = docPages.length;
+  docPages.forEach((docPage, index) => {
+    drawBrandFooter({
+      page: docPage,
+      font,
+      footerNote: footerSummary(footerLabels[index] || "Financial Statement"),
+      pageNumber: index + 1,
+      totalPages,
+      mutedColor: muted,
+    });
+  });
 
   const baseName = `statement-${statement.month}-${statement.currency}`;
   const docType = requestedDocumentType;
@@ -1063,7 +1067,12 @@ export async function generateSnapshotPdfFile(
     font: regularFont,
     fontBold: titleFont,
     logo,
-    title: "",
+    title: "FINANCIAL SNAPSHOT",
+    documentNumber: input.quarter ? `FY${input.fy} • ${input.quarter}` : `FY${input.fy}`,
+    subtitle: "Transparency ledger summary",
+    titleSize: 20,
+    numberSize: 11,
+    subtitleSize: 9,
   });
   cursorY -= 70;
 
@@ -1146,14 +1155,7 @@ export async function generateSnapshotPdfFile(
   const ensureSpace = (p: PDFPage, currentY: number, needed: number): { page: PDFPage; y: number } => {
     if (currentY - needed < margin + 50) {
       const newPage = doc.addPage([595.28, 841.89]);
-      drawBrandHeader({
-        page: newPage,
-        font: regularFont,
-        fontBold: titleFont,
-        logo,
-        title: "",
-      });
-      return { page: newPage, y: height - margin - 70 };
+      return { page: newPage, y: height - margin };
     }
     return { page: p, y: currentY };
   };
@@ -1206,17 +1208,19 @@ export async function generateSnapshotPdfFile(
     cursorY -= 15;
   }
 
-  // Final Footer per page
-  for (const docPage of doc.getPages()) {
+  const docPages = doc.getPages();
+  const totalPages = docPages.length;
+  for (const [index, docPage] of docPages.entries()) {
     drawDocumentFrame(docPage);
     drawDocumentWatermark(docPage, logo);
-
-    docPage.drawText(ORG_FOOTER + " | Generated from live operational data. May precede official external audit.", {
-      x: margin,
-      y: margin - 15,
-      size: 8,
+    drawBrandFooter({
+      page: docPage,
       font: regularFont,
-      color: rgb(0.5, 0.5, 0.5),
+      footerNote:
+        ORG_FOOTER + " | Generated from live operational data. May precede official external audit.",
+      pageNumber: index + 1,
+      totalPages,
+      mutedColor: rgb(0.32, 0.38, 0.48),
     });
   }
 

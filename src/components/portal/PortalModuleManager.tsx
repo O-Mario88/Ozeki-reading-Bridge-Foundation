@@ -346,6 +346,52 @@ const visitDemoMeetingFieldKeys = new Set([
   "leadershipNextVisitDate",
 ]);
 
+const autoLinkedGeoPayloadKeys = new Set([
+  "region",
+  "subRegion",
+  "district",
+  "subCounty",
+  "parish",
+]);
+
+const trainingAutoAttendanceKeys = new Set([
+  "numberAttended",
+  "femaleCount",
+  "maleCount",
+  "teachersFemale",
+  "teachersMale",
+  "schoolLeadersFemale",
+  "schoolLeadersMale",
+]);
+
+const trainingPhysicalFieldKeys = new Set([
+  "trainingVenue",
+  "clusterName",
+  "village",
+  "gpsLocation",
+  "subRegion",
+  "subCounty",
+  "parish",
+]);
+
+function applySchoolGeoPayload(
+  payload: FormPayloadState,
+  school: SchoolDirectoryRecord | null,
+): FormPayloadState {
+  if (!school) {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    region: school.region,
+    subRegion: school.subRegion,
+    district: school.district,
+    subCounty: school.subCounty,
+    parish: school.parish,
+  };
+}
+
 function normalizeVisitImplementationStatus(value: unknown): VisitImplementationStatus {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (normalized === "not_started" || normalized === "not started" || normalized === "no") {
@@ -361,6 +407,11 @@ function deriveVisitPathway(status: VisitImplementationStatus): VisitPathway {
   if (status === "not_started") return "demo_and_meeting";
   if (status === "partial") return "mixed";
   return "observation";
+}
+
+function isOnlineTrainingDeliveryMode(value: unknown): boolean {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized.includes("online") || normalized.includes("virtual");
 }
 
 function parseVisitNextActions(value: unknown): VisitNextActionRow[] {
@@ -545,6 +596,7 @@ function inferInputMode(field: PortalFieldConfig) {
 function inferAutoComplete(field: PortalFieldConfig) {
   const normalizedKey = field.key.toLowerCase();
   if (normalizedKey.includes("school")) return "organization";
+  if (normalizedKey.includes("subregion")) return "address-level1";
   if (normalizedKey.includes("district")) return "address-level1";
   if (normalizedKey.includes("subcounty")) return "address-level2";
   if (normalizedKey.includes("parish")) return "address-level3";
@@ -560,6 +612,7 @@ function inferPlaceholder(field: PortalFieldConfig) {
   }
 
   const normalizedKey = field.key.toLowerCase();
+  if (normalizedKey.includes("subregion")) return "e.g. Acholi";
   if (normalizedKey.includes("district")) return "e.g. Oyam";
   if (normalizedKey.includes("school")) return "e.g. Bright Future Primary";
   if (normalizedKey.includes("subcounty")) return "e.g. Loro";
@@ -1151,6 +1204,12 @@ export function PortalModuleManager({
     if (config.module === "visit") {
       return [...initialSchools].sort((left, right) => left.name.localeCompare(right.name));
     }
+    if (
+      config.module === "training" &&
+      isOnlineTrainingDeliveryMode(formState.payload.deliveryMode)
+    ) {
+      return [...initialSchools].sort((left, right) => left.name.localeCompare(right.name));
+    }
     const region = formState.region.trim();
     const district = formState.district.trim().toLowerCase();
     const list = initialSchools.filter((school) => {
@@ -1164,17 +1223,30 @@ export function PortalModuleManager({
     });
 
     return list.sort((left, right) => left.name.localeCompare(right.name));
-  }, [config.module, formState.district, formState.region, initialSchools]);
+  }, [config.module, formState.district, formState.payload.deliveryMode, formState.region, initialSchools]);
   const trainingParticipantStats = useMemo(() => {
     const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
+    const teacherRows = activeRows.filter((row) => row.role === "Teacher");
+    const leaderRows = activeRows.filter((row) => row.role === "Leader");
     return {
       total: activeRows.length,
-      teachers: activeRows.filter((row) => row.role === "Teacher").length,
-      leaders: activeRows.filter((row) => row.role === "Leader").length,
+      teachers: teacherRows.length,
+      leaders: leaderRows.length,
       male: activeRows.filter((row) => row.gender === "Male").length,
       female: activeRows.filter((row) => row.gender === "Female").length,
+      teacherFemale: teacherRows.filter((row) => row.gender === "Female").length,
+      teacherMale: teacherRows.filter((row) => row.gender === "Male").length,
+      leaderFemale: leaderRows.filter((row) => row.gender === "Female").length,
+      leaderMale: leaderRows.filter((row) => row.gender === "Male").length,
     };
   }, [trainingParticipants]);
+  const selectedFormSchool = useMemo(
+    () =>
+      formState.schoolId && schoolsById.has(Number(formState.schoolId))
+        ? schoolsById.get(Number(formState.schoolId)) ?? null
+        : null,
+    [formState.schoolId, schoolsById],
+  );
   const followUpMinDate = useMemo(
     () =>
       config.module === "training"
@@ -1182,6 +1254,14 @@ export function PortalModuleManager({
         : formState.date || getToday(),
     [config.module, formState.date],
   );
+  const isOnlineTrainingModeActive = useMemo(
+    () =>
+      config.module === "training" &&
+      isOnlineTrainingDeliveryMode(formState.payload.deliveryMode),
+    [config.module, formState.payload.deliveryMode],
+  );
+  const hideTrainingPhysicalLocationContext =
+    config.module === "training" && isOnlineTrainingModeActive;
   const followUpOwnerOptions = useMemo(
     () => initialUsers.map((entry) => ({ id: entry.id, fullName: entry.fullName })),
     [initialUsers],
@@ -1257,7 +1337,11 @@ export function PortalModuleManager({
 
   const newFormState = useCallback(
     (options?: { schoolId?: number | null; programType?: string }): FormState => {
-      const defaults = buildDefaultPayload(config);
+      const selectedSchool =
+        typeof options?.schoolId === "number" && Number.isInteger(options.schoolId)
+          ? schoolsById.get(options.schoolId) ?? null
+          : null;
+      const defaults = applySchoolGeoPayload(buildDefaultPayload(config), selectedSchool);
       if (config.module === "visit") {
         defaults.coachObserver = currentUser.fullName;
         defaults.implementationStatus = "";
@@ -1265,6 +1349,11 @@ export function PortalModuleManager({
         defaults.demoDelivered = "yes";
         defaults.leadershipMeetingHeld = "yes";
         defaults.leadershipNextActionsJson = "[]";
+      }
+      if (config.module === "training" && selectedSchool) {
+        if (!String(defaults.trainingVenue ?? "").trim()) {
+          defaults.trainingVenue = selectedSchool.name;
+        }
       }
       const schoolDefaults = getSchoolScopeDefaults(options?.schoolId);
 
@@ -1287,7 +1376,7 @@ export function PortalModuleManager({
         payload: defaults,
       };
     },
-    [config, currentUser.fullName, defaultFollowUpOwnerId, getSchoolScopeDefaults],
+    [config, currentUser.fullName, defaultFollowUpOwnerId, getSchoolScopeDefaults, schoolsById],
   );
 
   const openNewForm = useCallback((options?: { schoolId?: number | null; programType?: string }) => {
@@ -1367,6 +1456,7 @@ export function PortalModuleManager({
         nextPayload[key] = sanitizeForInput(value);
       }
     });
+    const hydratedPayload = applySchoolGeoPayload(nextPayload, matchedSchool);
 
     if (config.module === "visit") {
       if (!String(nextPayload.coachObserver ?? "").trim()) {
@@ -1398,16 +1488,16 @@ export function PortalModuleManager({
       followUpOwnerUserId: record.followUpOwnerUserId ? String(record.followUpOwnerUserId) : defaultFollowUpOwnerId,
       status: record.status,
       reviewNote: record.reviewNote ?? "",
-      payload: nextPayload,
+      payload: hydratedPayload,
     });
     setIsFormOpen(true);
     setVisitStep(1);
     setVisitNextActions(parseVisitNextActions(nextPayload.leadershipNextActionsJson));
-    const recIds = Array.isArray(nextPayload.insightsRecommendationsRecIds)
-      ? nextPayload.insightsRecommendationsRecIds
+    const recIds = Array.isArray(hydratedPayload.insightsRecommendationsRecIds)
+      ? hydratedPayload.insightsRecommendationsRecIds
       : [];
     const parsedRecRows = parseInsightRecommendationRows(
-      nextPayload.insightsRecommendationsRecJson,
+      hydratedPayload.insightsRecommendationsRecJson,
     );
     const recRowsById = new Map(parsedRecRows.map((row) => [row.recId, row]));
     const mergedRows: InsightRecommendationRow[] = recIds.map((recId) => {
@@ -1933,6 +2023,7 @@ export function PortalModuleManager({
       if (config.module === "training" && schoolForSelection) {
         setFormState((prev) => ({
           ...prev,
+          payload: applySchoolGeoPayload(prev.payload, schoolForSelection),
           schoolId: String(schoolForSelection.id),
           schoolName: schoolForSelection.name,
           district: schoolForSelection.district,
@@ -2059,10 +2150,20 @@ export function PortalModuleManager({
   const validateForm = useCallback((nextStatus: PortalRecordStatus) => {
     const enforceInsights = nextStatus !== "Draft";
     const requiresDistrict = config.module !== "training";
-    if (!formState.date || !formState.region.trim() || (requiresDistrict && !formState.district.trim())) {
+    const onlineTrainingMode =
+      config.module === "training" &&
+      isOnlineTrainingDeliveryMode(formState.payload.deliveryMode);
+    const requiresRegion = !onlineTrainingMode;
+    if (
+      !formState.date ||
+      (requiresRegion && !formState.region.trim()) ||
+      (requiresDistrict && !formState.district.trim())
+    ) {
       return requiresDistrict
         ? "Date, region, and district are required."
-        : "Date and region are required.";
+        : requiresRegion
+          ? "Date and region are required."
+          : "Date is required.";
     }
     if (!formState.programType.trim()) {
       return `${config.programTypeLabel} is required.`;
@@ -2080,6 +2181,14 @@ export function PortalModuleManager({
       const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
       if (activeRows.length === 0) {
         return "Add at least one participant.";
+      }
+
+      const deliveryMode = String(formState.payload.deliveryMode ?? "").trim().toLowerCase();
+      if (!onlineTrainingMode && deliveryMode.includes("cluster")) {
+        const clusterName = String(formState.payload.clusterName ?? "").trim();
+        if (!clusterName) {
+          return "Cluster name is required when delivery mode is Cluster-based.";
+        }
       }
 
       if (!formState.followUpDate) {
@@ -2195,6 +2304,13 @@ export function PortalModuleManager({
             continue;
           }
         }
+        if (
+          config.module === "training" &&
+          onlineTrainingMode &&
+          trainingPhysicalFieldKeys.has(field.key)
+        ) {
+          continue;
+        }
 
         const value = formState.payload[field.key];
         if (field.type === "multiselect") {
@@ -2250,9 +2366,7 @@ export function PortalModuleManager({
         }
         if (
           config.module === "training" &&
-          (field.key === "numberAttended" ||
-            field.key === "femaleCount" ||
-            field.key === "maleCount")
+          trainingAutoAttendanceKeys.has(field.key)
         ) {
           continue;
         }
@@ -2334,6 +2448,24 @@ export function PortalModuleManager({
 
         payload[key] = String(value ?? "").trim();
       });
+
+      if (selectedSchool) {
+        payload.region = selectedSchool.region;
+        payload.subRegion = selectedSchool.subRegion;
+        payload.district = selectedSchool.district;
+        payload.subCounty = selectedSchool.subCounty;
+        payload.parish = selectedSchool.parish;
+        payload.schoolCode = selectedSchool.schoolCode;
+      } else {
+        if (formState.region.trim()) payload.region = formState.region.trim();
+        if (formState.district.trim()) payload.district = formState.district.trim();
+        const payloadSubRegion = String(formState.payload.subRegion ?? "").trim();
+        const payloadSubCounty = String(formState.payload.subCounty ?? "").trim();
+        const payloadParish = String(formState.payload.parish ?? "").trim();
+        if (payloadSubRegion) payload.subRegion = payloadSubRegion;
+        if (payloadSubCounty) payload.subCounty = payloadSubCounty;
+        if (payloadParish) payload.parish = payloadParish;
+      }
 
       const selectedInsightRecIds = sanitizeContactIds(
         Array.isArray(formState.payload.insightsRecommendationsRecIds)
@@ -2435,9 +2567,6 @@ export function PortalModuleManager({
 
       }
 
-      if (formState.region.trim()) {
-        payload.region = formState.region.trim();
-      }
       if (config.module === "training") {
         payload.followUpType = formState.followUpType.trim();
         payload.followUpOwnerUserId = formState.followUpOwnerUserId.trim()
@@ -2482,6 +2611,18 @@ export function PortalModuleManager({
         payload.schoolLeaders = participantRows.filter((row) => row.role === "Leader").length;
         payload.femaleCount = participantRows.filter((row) => row.gender === "Female").length;
         payload.maleCount = participantRows.filter((row) => row.gender === "Male").length;
+        payload.teachersFemale = participantRows.filter(
+          (row) => row.role === "Teacher" && row.gender === "Female",
+        ).length;
+        payload.teachersMale = participantRows.filter(
+          (row) => row.role === "Teacher" && row.gender === "Male",
+        ).length;
+        payload.schoolLeadersFemale = participantRows.filter(
+          (row) => row.role === "Leader" && row.gender === "Female",
+        ).length;
+        payload.schoolLeadersMale = participantRows.filter(
+          (row) => row.role === "Leader" && row.gender === "Male",
+        ).length;
         payload.numberAttended = participantRows.length;
 
         return {
@@ -3235,8 +3376,14 @@ export function PortalModuleManager({
                   {!isVisitModule || visitStep === 1 ? (
                     <>
                   <div className="portal-modal-context-header">
-                    <h4>Context & Location</h4>
-                    <p className="portal-muted">Standard data entry context</p>
+                    <h4>{config.module === "training" ? "Location" : "Context & Location"}</h4>
+                    <p className="portal-muted">
+                      {config.module === "training"
+                        ? hideTrainingPhysicalLocationContext
+                          ? "Online training selected. Physical location, venue, and cluster fields are disabled."
+                          : "Capture location once from the selected school account: region, sub-region, district, sub-county, and parish."
+                        : "Standard data entry context"}
+                    </p>
 
                     <div className="portal-context-selectors">
                       {isVisitModule ? (
@@ -3253,7 +3400,7 @@ export function PortalModuleManager({
 
                                 setFormState((prev) => ({
                                   ...prev,
-                                  payload: {
+                                  payload: applySchoolGeoPayload({
                                     ...prev.payload,
                                     teacherObserved: "",
                                     teacherContactId: "",
@@ -3264,7 +3411,7 @@ export function PortalModuleManager({
                                     leadershipAttendeesContactIds: [],
                                     implementationResponsibleContactId: "",
                                     leadershipNextActionsJson: "[]",
-                                  },
+                                  }, selectedSchool ?? null),
                                   schoolId: nextSchoolId,
                                   schoolName: selectedSchool?.name ?? "",
                                   district: selectedSchool?.district ?? prev.district,
@@ -3308,85 +3455,113 @@ export function PortalModuleManager({
                             <input value={formState.region} readOnly placeholder="Auto from school" />
                           </label>
                           <label>
+                            {renderLabel("Sub-region", true)}
+                            <input
+                              value={selectedFormSchool?.subRegion ?? ""}
+                              readOnly
+                              placeholder="Auto from school"
+                            />
+                          </label>
+                          <label>
                             {renderLabel("District", true)}
                             <input value={formState.district} readOnly placeholder="Auto from school" />
+                          </label>
+                          <label>
+                            {renderLabel("Sub-county", true)}
+                            <input
+                              value={selectedFormSchool?.subCounty ?? ""}
+                              readOnly
+                              placeholder="Auto from school"
+                            />
+                          </label>
+                          <label>
+                            {renderLabel("Parish", true)}
+                            <input
+                              value={selectedFormSchool?.parish ?? ""}
+                              readOnly
+                              placeholder="Auto from school"
+                            />
                           </label>
                         </>
                       ) : (
                         <>
-                          <label>
-                            {renderLabel("Region", true)}
-                            <select
-                              value={formState.region}
-                              onChange={(event) =>
-                                setFormState((prev) => {
-                                  const nextRegion = event.target.value;
-                                  const options = getDistrictsByRegion(nextRegion);
-                                  const nextDistrict = options.includes(prev.district) ? prev.district : "";
-                                  const selectedSchool = prev.schoolId
-                                    ? schoolsById.get(Number(prev.schoolId))
-                                    : undefined;
-                                  const keepSchool = Boolean(
-                                    selectedSchool &&
-                                    (!nextRegion ||
-                                      inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
-                                    (!nextDistrict || selectedSchool.district === nextDistrict),
-                                  );
-                                  return {
-                                    ...prev,
-                                    region: nextRegion,
-                                    district: nextDistrict,
-                                    schoolId: keepSchool ? prev.schoolId : "",
-                                    schoolName: keepSchool
-                                      ? selectedSchool?.name ?? prev.schoolName
-                                      : "",
-                                  };
-                                })
-                              }
-                              required
-                            >
-                              <option value="">Select region</option>
-                              {ugandaRegions.map((entry) => (
-                                <option key={entry.region} value={entry.region}>
-                                  {entry.region}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label>
-                            {renderLabel("District", true)}
-                            <select
-                              value={formState.district}
-                              onChange={(event) =>
-                                setFormState((prev) => {
-                                  const nextDistrict = event.target.value;
-                                  const selectedSchool = prev.schoolId
-                                    ? schoolsById.get(Number(prev.schoolId))
-                                    : undefined;
-                                  const keepSchool = Boolean(
-                                    selectedSchool &&
-                                    (!nextDistrict || selectedSchool.district === nextDistrict),
-                                  );
-                                  return {
-                                    ...prev,
-                                    district: nextDistrict,
-                                    schoolId: keepSchool ? prev.schoolId : "",
-                                    schoolName: keepSchool
-                                      ? selectedSchool?.name ?? prev.schoolName
-                                      : "",
-                                  };
-                                })
-                              }
-                              required
-                            >
-                              <option value="">Select district</option>
-                              {formDistrictOptions.map((district) => (
-                                <option key={district} value={district}>
-                                  {district}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                          {hideTrainingPhysicalLocationContext ? null : (
+                            <>
+                              <label>
+                                {renderLabel("Region", true)}
+                                <select
+                                  value={formState.region}
+                                  onChange={(event) =>
+                                    setFormState((prev) => {
+                                      const nextRegion = event.target.value;
+                                      const options = getDistrictsByRegion(nextRegion);
+                                      const nextDistrict = options.includes(prev.district) ? prev.district : "";
+                                      const selectedSchool = prev.schoolId
+                                        ? schoolsById.get(Number(prev.schoolId))
+                                        : undefined;
+                                      const keepSchool = Boolean(
+                                        selectedSchool &&
+                                        (!nextRegion ||
+                                          inferRegionFromDistrict(selectedSchool.district) === nextRegion) &&
+                                        (!nextDistrict || selectedSchool.district === nextDistrict),
+                                      );
+                                      return {
+                                        ...prev,
+                                        region: nextRegion,
+                                        district: nextDistrict,
+                                        schoolId: keepSchool ? prev.schoolId : "",
+                                        schoolName: keepSchool
+                                          ? selectedSchool?.name ?? prev.schoolName
+                                          : "",
+                                      };
+                                    })
+                                  }
+                                  required
+                                >
+                                  <option value="">Select region</option>
+                                  {ugandaRegions.map((entry) => (
+                                    <option key={entry.region} value={entry.region}>
+                                      {entry.region}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                {renderLabel("District", true)}
+                                <select
+                                  value={formState.district}
+                                  onChange={(event) =>
+                                    setFormState((prev) => {
+                                      const nextDistrict = event.target.value;
+                                      const selectedSchool = prev.schoolId
+                                        ? schoolsById.get(Number(prev.schoolId))
+                                        : undefined;
+                                      const keepSchool = Boolean(
+                                        selectedSchool &&
+                                        (!nextDistrict || selectedSchool.district === nextDistrict),
+                                      );
+                                      return {
+                                        ...prev,
+                                        district: nextDistrict,
+                                        schoolId: keepSchool ? prev.schoolId : "",
+                                        schoolName: keepSchool
+                                          ? selectedSchool?.name ?? prev.schoolName
+                                          : "",
+                                      };
+                                    })
+                                  }
+                                  required
+                                >
+                                  <option value="">Select district</option>
+                                  {formDistrictOptions.map((district) => (
+                                    <option key={district} value={district}>
+                                      {district}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            </>
+                          )}
                           <label>
                             {renderLabel("School Account", true)}
                             <select
@@ -3397,16 +3572,40 @@ export function PortalModuleManager({
                                   ? schoolsById.get(Number(nextSchoolId))
                                   : undefined;
 
-                                setFormState((prev) => ({
-                                  ...prev,
-                                  schoolId: nextSchoolId,
-                                  schoolName: selectedSchool?.name ?? "",
-                                  district: selectedSchool?.district ?? prev.district,
-                                  region: selectedSchool
-                                    ? inferRegionFromDistrict(selectedSchool.district) ??
-                                    prev.region
-                                    : prev.region,
-                                }));
+                                setFormState((prev) => {
+                                  const geoPayload = applySchoolGeoPayload(
+                                    prev.payload,
+                                    selectedSchool ?? null,
+                                  );
+                                  const onlineMode =
+                                    config.module === "training" &&
+                                    isOnlineTrainingDeliveryMode(prev.payload.deliveryMode);
+                                  const nextPayload = onlineMode
+                                    ? {
+                                        ...geoPayload,
+                                        trainingVenue: "Online (Live session)",
+                                        clusterName: "",
+                                        village: "",
+                                        gpsLocation: "",
+                                      }
+                                    : config.module === "training" &&
+                                        selectedSchool &&
+                                        !String(geoPayload.trainingVenue ?? "").trim()
+                                      ? { ...geoPayload, trainingVenue: selectedSchool.name }
+                                      : geoPayload;
+
+                                  return {
+                                    ...prev,
+                                    payload: nextPayload,
+                                    schoolId: nextSchoolId,
+                                    schoolName: selectedSchool?.name ?? "",
+                                    district: selectedSchool?.district ?? prev.district,
+                                    region: selectedSchool
+                                      ? inferRegionFromDistrict(selectedSchool.district) ??
+                                        prev.region
+                                      : prev.region,
+                                  };
+                                });
 
                                 if (config.module === "training") {
                                   setTrainingParticipants((prev) =>
@@ -3452,7 +3651,40 @@ export function PortalModuleManager({
                                 If the school is missing, create it first in School Accounts, then refresh and select it here.
                               </small>
                             </div>
+                            {hideTrainingPhysicalLocationContext ? (
+                              <small className="portal-field-help">
+                                Online sessions use virtual follow-up and hide physical location fields.
+                              </small>
+                            ) : null}
                           </label>
+                          {hideTrainingPhysicalLocationContext ? null : (
+                            <>
+                              <label>
+                                {renderLabel("Sub-region", true)}
+                                <input
+                                  value={selectedFormSchool?.subRegion ?? ""}
+                                  readOnly
+                                  placeholder="Auto from school"
+                                />
+                              </label>
+                              <label>
+                                {renderLabel("Sub-county", true)}
+                                <input
+                                  value={selectedFormSchool?.subCounty ?? ""}
+                                  readOnly
+                                  placeholder="Auto from school"
+                                />
+                              </label>
+                              <label>
+                                {renderLabel("Parish", true)}
+                                <input
+                                  value={selectedFormSchool?.parish ?? ""}
+                                  readOnly
+                                  placeholder="Auto from school"
+                                />
+                              </label>
+                            </>
+                          )}
                         </>
                       )}
                     </div>
@@ -3511,6 +3743,39 @@ export function PortalModuleManager({
                         ))}
                       </select>
                     </label>
+                    {config.module === "training" ? (
+                      <label>
+                        {renderLabel("Training type", true)}
+                        <select
+                          value={String(formState.payload.deliveryMode ?? "")}
+                          onChange={(event) => {
+                            const nextMode = event.target.value;
+                            const onlineMode = isOnlineTrainingDeliveryMode(nextMode);
+                            setFormState((prev) => ({
+                              ...prev,
+                              followUpType: onlineMode ? "virtual_check_in" : prev.followUpType,
+                              payload: {
+                                ...prev.payload,
+                                deliveryMode: nextMode,
+                                trainingVenue: onlineMode
+                                  ? "Online (Live session)"
+                                  : String(prev.payload.trainingVenue ?? ""),
+                                clusterName: onlineMode ? "" : String(prev.payload.clusterName ?? ""),
+                                village: onlineMode ? "" : String(prev.payload.village ?? ""),
+                                gpsLocation: onlineMode ? "" : String(prev.payload.gpsLocation ?? ""),
+                              },
+                            }));
+                          }}
+                          required
+                        >
+                          <option value="">Select training type</option>
+                          <option value="Grouped">Grouped</option>
+                          <option value="Cluster-based">Cluster-based</option>
+                          <option value="In-school">In-school</option>
+                          <option value="Online">Online</option>
+                        </select>
+                      </label>
+                    ) : null}
 
                     <label>
                       {renderLabel(
@@ -3536,12 +3801,18 @@ export function PortalModuleManager({
                           onChange={(event) =>
                             setFormState((prev) => ({ ...prev, followUpType: event.target.value }))
                           }
+                          disabled={isOnlineTrainingModeActive}
                           required
                         >
                           <option value="virtual_check_in">Virtual check-in</option>
                           <option value="school_visit">School visit</option>
                           <option value="refresher_session">Refresher session</option>
                         </select>
+                        {isOnlineTrainingModeActive ? (
+                          <small className="portal-field-help">
+                            Follow-up type is fixed to Virtual check-in for online trainings.
+                          </small>
+                        ) : null}
                       </label>
                     ) : null}
                     {config.module === "training" ? (
@@ -3611,6 +3882,12 @@ export function PortalModuleManager({
                             (visitObservationOnlyFieldKeys.has(field.key) || isVisitObservationField(field.key));
                           const isVisitDemoMeetingFieldForUi =
                             isVisitModule && visitDemoMeetingFieldKeys.has(field.key);
+                          const isClusterBasedTraining =
+                            config.module === "training" &&
+                            String(formState.payload.deliveryMode ?? "")
+                              .trim()
+                              .toLowerCase()
+                              .includes("cluster");
                           const isFieldRequired =
                             Boolean(field.required) &&
                             (!isVisitModule ||
@@ -3619,6 +3896,19 @@ export function PortalModuleManager({
                               (!isVisitObservationFieldForUi && !isVisitDemoMeetingFieldForUi));
 
                           if (isVisitModule && !visitAllowsObservation && isVisitObservationFieldForUi) {
+                            return null;
+                          }
+                          if (config.module === "training" && field.key === "deliveryMode") {
+                            return null;
+                          }
+                          if (
+                            config.module === "training" &&
+                            isOnlineTrainingModeActive &&
+                            trainingPhysicalFieldKeys.has(field.key)
+                          ) {
+                            return null;
+                          }
+                          if (config.module === "training" && field.key === "clusterName" && !isClusterBasedTraining) {
                             return null;
                           }
                           if (field.type === "egraLearners") {
@@ -4406,9 +4696,21 @@ export function PortalModuleManager({
                               {(() => {
                                 const isTrainingAutoAttendanceField =
                                   config.module === "training" &&
-                                  (field.key === "numberAttended" ||
-                                    field.key === "femaleCount" ||
-                                    field.key === "maleCount");
+                                  trainingAutoAttendanceKeys.has(field.key);
+                                const isAutoLinkedGeoField = autoLinkedGeoPayloadKeys.has(field.key);
+                                const geoFieldValue = isAutoLinkedGeoField
+                                  ? field.key === "region"
+                                    ? selectedFormSchool?.region ?? sanitizeForInput(value)
+                                    : field.key === "subRegion"
+                                      ? selectedFormSchool?.subRegion ?? sanitizeForInput(value)
+                                      : field.key === "district"
+                                        ? selectedFormSchool?.district ?? sanitizeForInput(value)
+                                        : field.key === "subCounty"
+                                          ? selectedFormSchool?.subCounty ?? sanitizeForInput(value)
+                                          : field.key === "parish"
+                                            ? selectedFormSchool?.parish ?? sanitizeForInput(value)
+                                            : sanitizeForInput(value)
+                                  : sanitizeForInput(value);
                                 const computedValue =
                                   field.key === "numberAttended"
                                     ? String(trainingParticipantStats.total)
@@ -4416,9 +4718,17 @@ export function PortalModuleManager({
                                       ? String(trainingParticipantStats.female)
                                       : field.key === "maleCount"
                                         ? String(trainingParticipantStats.male)
+                                        : field.key === "teachersFemale"
+                                          ? String(trainingParticipantStats.teacherFemale)
+                                          : field.key === "teachersMale"
+                                            ? String(trainingParticipantStats.teacherMale)
+                                            : field.key === "schoolLeadersFemale"
+                                              ? String(trainingParticipantStats.leaderFemale)
+                                              : field.key === "schoolLeadersMale"
+                                                ? String(trainingParticipantStats.leaderMale)
                                         : Array.isArray(value)
                                           ? value.join(", ")
-                                          : sanitizeForInput(value);
+                                          : geoFieldValue;
 
                                 return (
                                   <input
@@ -4434,7 +4744,7 @@ export function PortalModuleManager({
                                       updatePayloadField(field.key, event.target.value)
                                     }
                                     required={isFieldRequired}
-                                    readOnly={isTrainingAutoAttendanceField}
+                                    readOnly={isTrainingAutoAttendanceField || isAutoLinkedGeoField}
                                   />
                                 );
                               })()}
@@ -4442,9 +4752,7 @@ export function PortalModuleManager({
                                 <small className="portal-field-help">{field.helperText}</small>
                               ) : null}
                               {config.module === "training" &&
-                                (field.key === "numberAttended" ||
-                                  field.key === "femaleCount" ||
-                                  field.key === "maleCount") ? (
+                                trainingAutoAttendanceKeys.has(field.key) ? (
                                 <small className="portal-field-help">
                                   Auto-calculated from participant entries.
                                 </small>
@@ -4516,7 +4824,7 @@ export function PortalModuleManager({
                             }
                           />
                           <small className="portal-field-help">
-                            Files are uploaded after Save Draft or Submit.
+                            Files are uploaded after Save Draft or Submit. Report generators auto-pick the best photos for evidence sections.
                           </small>
                         </label>
                         <div className="full-width">

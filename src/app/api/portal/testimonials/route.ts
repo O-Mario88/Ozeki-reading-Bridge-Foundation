@@ -24,9 +24,29 @@ const textSchema = z.object({
   storytellerRole: z.string().trim().min(2).max(120),
   schoolName: z.string().trim().min(2).max(160),
   district: z.string().trim().min(2).max(120),
-  storyText: z.string().trim().min(30).max(6000),
+  storyTitle: z.string().trim().max(180).optional(),
+  baselineChallenge: z.string().trim().max(2200).optional(),
+  whatHappened: z.string().trim().max(2200).optional(),
+  measurableChange: z.string().trim().max(2200).optional(),
+  nextSteps: z.string().trim().max(2200).optional(),
+  storyText: z.string().trim().max(6000).optional(),
   youtubeVideoTitle: z.string().trim().max(240).optional(),
   youtubeChannelId: z.string().trim().max(120).optional(),
+}).superRefine((value, ctx) => {
+  const hasNarrative = (value.storyText?.trim().length ?? 0) >= 30;
+  const hasStructured =
+    (value.storyTitle?.trim().length ?? 0) >= 6 &&
+    (value.baselineChallenge?.trim().length ?? 0) >= 20 &&
+    (value.whatHappened?.trim().length ?? 0) >= 20 &&
+    (value.measurableChange?.trim().length ?? 0) >= 20;
+
+  if (!hasNarrative && !hasStructured) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        "Provide either a full change story narrative (30+ chars) or complete the structured change story fields.",
+    });
+  }
 });
 
 type ResolvedYouTubeVideo = {
@@ -314,21 +334,48 @@ export async function POST(request: Request) {
       storytellerRole: formData.get("storytellerRole"),
       schoolName: formData.get("schoolName"),
       district: formData.get("district"),
-      storyText: formData.get("storyText"),
+      storyTitle: formData.get("storyTitle") ?? undefined,
+      baselineChallenge: formData.get("baselineChallenge") ?? undefined,
+      whatHappened: formData.get("whatHappened") ?? undefined,
+      measurableChange: formData.get("measurableChange") ?? undefined,
+      nextSteps: formData.get("nextSteps") ?? undefined,
+      storyText: formData.get("storyText") ?? undefined,
       youtubeVideoTitle: formData.get("youtubeVideoTitle") ?? undefined,
       youtubeChannelId: formData.get("youtubeChannelId") ?? undefined,
     });
+
+    const storyParts: string[] = [];
+    if (parsedText.storyTitle?.trim()) {
+      storyParts.push(`Title: ${parsedText.storyTitle.trim()}`);
+    }
+    if (parsedText.baselineChallenge?.trim()) {
+      storyParts.push(`Baseline challenge:\n${parsedText.baselineChallenge.trim()}`);
+    }
+    if (parsedText.whatHappened?.trim()) {
+      storyParts.push(`What happened:\n${parsedText.whatHappened.trim()}`);
+    }
+    if (parsedText.measurableChange?.trim()) {
+      storyParts.push(`Measurable change:\n${parsedText.measurableChange.trim()}`);
+    }
+    if (parsedText.nextSteps?.trim()) {
+      storyParts.push(`Next steps:\n${parsedText.nextSteps.trim()}`);
+    }
+    if (parsedText.storyText?.trim()) {
+      storyParts.push(`Story narrative:\n${parsedText.storyText.trim()}`);
+    }
+
+    const finalStoryText = storyParts.join("\n\n").trim();
+    if (finalStoryText.length < 30) {
+      return NextResponse.json(
+        { error: "Change story content is too short. Add more detail before publishing." },
+        { status: 400 },
+      );
+    }
 
     const video = formData.get("video");
     const uploadVideo = video instanceof File && video.size > 0 ? video : null;
     const normalizedYouTubeTitle = parsedText.youtubeVideoTitle?.trim() ?? "";
     const inferredTitle = normalizedYouTubeTitle || titleFromUploadedFile(uploadVideo);
-    if (!inferredTitle) {
-      return NextResponse.json(
-        { error: "Provide a YouTube video title, or upload a file with a name that matches the YouTube video title." },
-        { status: 400 },
-      );
-    }
 
     const photoField = formData.get("photo");
     const photo =
@@ -336,10 +383,18 @@ export async function POST(request: Request) {
     validateOptionalPhoto(photo);
 
     let resolvedYouTube: ResolvedYouTubeVideo | null = null;
-    resolvedYouTube = await resolveYouTubeVideoByTitle(
-      inferredTitle,
-      parsedText.youtubeChannelId,
-    );
+    if (inferredTitle) {
+      try {
+        resolvedYouTube = await resolveYouTubeVideoByTitle(
+          inferredTitle,
+          parsedText.youtubeChannelId,
+        );
+      } catch (error) {
+        if (normalizedYouTubeTitle) {
+          throw error;
+        }
+      }
+    }
 
     let testimonialsDir: string | null = null;
     if (photo) {
@@ -349,9 +404,9 @@ export async function POST(request: Request) {
     }
 
     const savedVideo = {
-      fileName: uploadVideo?.name || resolvedYouTube.title,
+      fileName: uploadVideo?.name || resolvedYouTube?.title || "No video attached",
       storedPath: "",
-      mimeType: "video/youtube",
+      mimeType: resolvedYouTube ? "video/youtube" : "video/placeholder",
       sizeBytes: 0,
     };
     const savedPhoto = photo
@@ -363,8 +418,8 @@ export async function POST(request: Request) {
       storytellerRole: parsedText.storytellerRole,
       schoolName: parsedText.schoolName,
       district: parsedText.district,
-      storyText: parsedText.storyText,
-      videoSourceType: "youtube",
+      storyText: finalStoryText,
+      videoSourceType: resolvedYouTube ? "youtube" : "upload",
       videoFileName: savedVideo.fileName,
       videoStoredPath: savedVideo.storedPath,
       videoMimeType: savedVideo.mimeType,

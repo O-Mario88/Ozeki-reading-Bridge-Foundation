@@ -200,7 +200,7 @@ const trainingConfig: PortalModuleConfig = {
   sections: [
     {
       id: "basics",
-      title: "Section 1: Basics",
+      title: "Section 1: Training Metadata",
       fields: [
         {
           key: "trainingStatus",
@@ -214,10 +214,34 @@ const trainingConfig: PortalModuleConfig = {
             { value: "Canceled", label: "Canceled" },
           ],
         },
+        { key: "trainingName", label: "Training name", type: "text", required: true },
+        {
+          key: "deliveryMode",
+          label: "Training type",
+          type: "select",
+          required: true,
+          options: [
+            { value: "Grouped", label: "Grouped" },
+            { value: "Cluster-based", label: "Cluster-based" },
+            { value: "In-school", label: "In-school" },
+            { value: "Online", label: "Online" },
+          ],
+        },
         { key: "startTime", label: "Start time", type: "time", required: true },
         { key: "endTime", label: "End time", type: "time", required: true },
-        { key: "subCounty", label: "Sub-county", type: "text", required: true },
-        { key: "parish", label: "Parish", type: "text", required: true },
+      ],
+    },
+    {
+      id: "location",
+      title: "Section 2: Location & Venue",
+      fields: [
+        { key: "trainingVenue", label: "Training venue", type: "text", required: true },
+        {
+          key: "clusterName",
+          label: "Cluster name (required for Cluster-based)",
+          type: "text",
+          helperText: "Only required when Training type is Cluster-based.",
+        },
         { key: "village", label: "Village (optional)", type: "text" },
         { key: "gpsLocation", label: "GPS (optional)", type: "text" },
         ...sponsorshipFields,
@@ -225,7 +249,7 @@ const trainingConfig: PortalModuleConfig = {
     },
     {
       id: "program",
-      title: "Section 2: Program Details",
+      title: "Section 3: Training Details",
       fields: [
         {
           key: "audience",
@@ -274,7 +298,7 @@ const trainingConfig: PortalModuleConfig = {
     },
     {
       id: "results",
-      title: "Section 3: Results / Scores",
+      title: "Section 4: Results / Scores",
       fields: [
         {
           key: "numberAttended",
@@ -285,6 +309,10 @@ const trainingConfig: PortalModuleConfig = {
         },
         { key: "femaleCount", label: "Female attended (auto)", type: "number", min: 0 },
         { key: "maleCount", label: "Male attended (auto)", type: "number", min: 0 },
+        { key: "teachersFemale", label: "Teachers (Female, auto)", type: "number", min: 0 },
+        { key: "teachersMale", label: "Teachers (Male, auto)", type: "number", min: 0 },
+        { key: "schoolLeadersFemale", label: "School leaders (Female, auto)", type: "number", min: 0 },
+        { key: "schoolLeadersMale", label: "School leaders (Male, auto)", type: "number", min: 0 },
         {
           key: "preTestAverage",
           label: "Pre-test average (%)",
@@ -296,7 +324,7 @@ const trainingConfig: PortalModuleConfig = {
     },
     {
       id: "actions",
-      title: "Section 4: Actions & Follow-up",
+      title: "Section 5: Actions & Follow-up",
       fields: [
         {
           key: "how_training_changed_teaching",
@@ -325,6 +353,11 @@ const trainingConfig: PortalModuleConfig = {
         {
           key: "challenges_participant",
           label: "Participant feedback: Challenges",
+          type: "textarea",
+        },
+        {
+          key: "needsImprovement",
+          label: "Training feedback: Areas needing improvement",
           type: "textarea",
         },
         {
@@ -669,7 +702,7 @@ const visitConfig: PortalModuleConfig = {
         { key: "coachingProvided", label: "Challenges", type: "textarea" },
         {
           key: "teacherActions",
-          label: "REC recommendations",
+          label: "Recommendations / action points",
           type: "textarea",
         },
         { key: "nextVisitFocus", label: "Conclusions / next steps", type: "text" },
@@ -780,6 +813,13 @@ const visitConfig: PortalModuleConfig = {
             { value: "coaching follow-up", label: "Coaching follow-up" },
             { value: "assessment setup", label: "Assessment setup" },
           ],
+        },
+        {
+          key: "visitAssessmentPlan",
+          label: "Assessment actions agreed",
+          type: "textarea",
+          helperText:
+            "Capture any baseline/progress/endline assessment actions linked to this visit.",
         },
       ],
     },

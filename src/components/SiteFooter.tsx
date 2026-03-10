@@ -92,6 +92,7 @@ export function SiteFooter() {
               <li><Link href="/">Home</Link></li>
               <li><Link href="/programs">Programs</Link></li>
               <li><Link href="/impact">Impact Hub</Link></li>
+              <li><Link href="/newsletter">Newsletter</Link></li>
               <li><Link href="/stories">1001 Story Library</Link></li>
               <li><Link href="/resources">Resources</Link></li>
             </ul>

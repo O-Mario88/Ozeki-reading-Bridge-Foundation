@@ -45,6 +45,7 @@ const programsGroup: NavGroup = {
   links: [
     { href: "/phonics-training", label: "Signature Program: Phonics Training & School Support" },
     { href: "/teacher-professional-development", label: "Teacher Professional Development" },
+    { href: "/events", label: "Live Training Sessions" },
     { href: "/in-school-coaching-mentorship", label: "In-School Coaching & Mentorship" },
     {
       href: "/learner-reading-assessments-progress-tracking",
@@ -99,9 +100,13 @@ const aboutGroup: NavGroup = {
   href: "/about",
   description: "Who we are, how we govern, and how we protect children, data, and funds.",
   links: [
-    { href: "/about", label: "Who We Are" },
-    { href: "/problem", label: "The Problem: Why Reading?" },
-    { href: "/transparency", label: "Trust & Accountability" },
+    { href: "/about#mission-vision", label: "Mission & Vision" },
+    { href: "/about/leadership-team", label: "Leadership Team" },
+    { href: "/about#financial-annual-report", label: "Financials/Annual Report" },
+    { href: "/about/our-story", label: "Our Story" },
+    { href: "/about#core-values", label: "Core Values & Beliefs" },
+    { href: "/faqs", label: "FAQs" },
+    { href: "/contact", label: "Contact" },
   ],
 };
 

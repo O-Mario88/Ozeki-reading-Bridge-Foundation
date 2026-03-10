@@ -212,6 +212,23 @@ function readingLevelColor(label: string, index: number) {
   return fallback[index % fallback.length];
 }
 
+function formatSignedDelta(
+  value: number | null | undefined,
+  {
+    digits = 1,
+    suffix = "",
+  }: {
+    digits?: number;
+    suffix?: string;
+  } = {},
+) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "Data not available";
+  }
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(digits)}${suffix}`;
+}
+
 export function PublicImpactMapExplorer({
   compact = false,
   syncUrl = false,
@@ -226,6 +243,7 @@ export function PublicImpactMapExplorer({
   );
   const [selectionHistory, setSelectionHistory] = useState<PublicMapSelection[]>([]);
   const [payload, setPayload] = useState<PublicImpactAggregate | null>(null);
+  const [navigatorSnapshot, setNavigatorSnapshot] = useState<PublicImpactAggregate["navigator"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"outcomes" | "readingLevels" | "implementation" | "teaching" | "equity" | "quality">("outcomes");
@@ -239,7 +257,7 @@ export function PublicImpactMapExplorer({
       setError(null);
       try {
         const response = await fetch(scopeEndpoint(scope.level, scope.id, period), {
-          cache: "force-cache",
+          cache: "no-store",
         });
         if (!response.ok) {
           throw new Error("stats-unavailable");
@@ -263,6 +281,32 @@ export function PublicImpactMapExplorer({
       active = false;
     };
   }, [period, scope.id, scope.level]);
+
+  useEffect(() => {
+    let active = true;
+    async function fetchNavigatorSnapshot() {
+      try {
+        const response = await fetch(`/api/impact/country?period=${encodeURIComponent(period)}`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error("navigator-unavailable");
+        }
+        const json = (await response.json()) as PublicImpactAggregate;
+        if (active) {
+          setNavigatorSnapshot(json.navigator ?? null);
+        }
+      } catch {
+        if (active) {
+          setNavigatorSnapshot(null);
+        }
+      }
+    }
+    fetchNavigatorSnapshot();
+    return () => {
+      active = false;
+    };
+  }, [period]);
 
   useEffect(() => {
     if (!syncUrl) {
@@ -311,18 +355,42 @@ export function PublicImpactMapExplorer({
     setSelection({ region: "", subRegion: "", district: "", school: "" });
   };
 
+  const navigatorSchools = navigatorSnapshot?.schools ?? payload?.navigator?.schools ?? [];
+  const selectedSchoolName = selection.school
+    ? navigatorSchools.find((school) => String(school.id) === selection.school)?.name ?? null
+    : null;
   const breadcrumb = [
-    "Uganda",
-    selection.region || null,
+    selection.region || "All locations",
     selection.subRegion || null,
     selection.district || null,
-    selection.school
-      ? payload?.navigator?.schools.find((school) => String(school.id) === selection.school)?.name ?? null
-      : null,
+    selectedSchoolName,
   ].filter((value): value is string => Boolean(value));
 
   const detailHref = mapScopeToDetailHref(scope.level, scope.id);
-  const schoolOptions = payload?.navigator?.schools ?? [];
+  const reportEngineQuery = useMemo(() => {
+    const query = new URLSearchParams();
+    query.set("scopeLevel", scope.level);
+    query.set("scopeId", scope.id);
+    query.set("period", period);
+    return query.toString();
+  }, [period, scope.id, scope.level]);
+  const reportEngineHtmlHref = `/api/impact/report-engine?${reportEngineQuery}&format=html`;
+  const reportEnginePdfHref = `/api/impact/report-engine?${reportEngineQuery}&format=pdf`;
+  const districtSearchOptions = useMemo(() => {
+    const districtToSubRegion = new Map<string, string>();
+    navigatorSchools.forEach((school) => {
+      const district = school.district?.trim();
+      if (!district) {
+        return;
+      }
+      if (!districtToSubRegion.has(district)) {
+        districtToSubRegion.set(district, school.subRegion ?? "");
+      }
+    });
+    return [...districtToSubRegion.entries()]
+      .sort((left, right) => left[0].localeCompare(right[0]))
+      .map(([district, subRegion]) => ({ district, subRegion }));
+  }, [navigatorSchools]);
   const derivedReadingLevels = useMemo(
     () => deriveReadingLevelsFromOutcomes(payload?.outcomes),
     [payload?.outcomes],
@@ -342,6 +410,126 @@ export function PublicImpactMapExplorer({
   const fidelityDrivers = payload?.fidelity?.drivers ?? [];
   const mostImprovedRankings = payload?.rankings?.mostImproved ?? [];
   const prioritySupportRankings = payload?.rankings?.prioritySupport ?? [];
+  const kpis = payload?.kpis;
+  const teachersSupportedTotal =
+    (kpis?.teachersSupportedMale ?? 0) + (kpis?.teachersSupportedFemale ?? 0);
+  const alignmentSummary = teachingLearningAlignment?.summary;
+  const latestAlignmentPoint =
+    teachingLearningAlignmentPoints.length > 0
+      ? teachingLearningAlignmentPoints[teachingLearningAlignmentPoints.length - 1]
+      : null;
+  const previousAlignmentPoint =
+    teachingLearningAlignmentPoints.length > 1
+      ? teachingLearningAlignmentPoints[teachingLearningAlignmentPoints.length - 2]
+      : null;
+  const storySessionsDelta =
+    latestAlignmentPoint && previousAlignmentPoint
+      ? latestAlignmentPoint.storySessionsCount - previousAlignmentPoint.storySessionsCount
+      : null;
+
+  const momentumCards = [
+    {
+      label: "Schools supported",
+      value: (kpis?.schoolsSupported ?? 0).toLocaleString(),
+      helper: "Current implementation footprint",
+    },
+    {
+      label: "Learners assessed",
+      value: (kpis?.learnersAssessedUnique ?? 0).toLocaleString(),
+      helper: "Directly assessed learners (n)",
+    },
+    {
+      label: "Teachers supported",
+      value: teachersSupportedTotal.toLocaleString(),
+      helper: "Male + female reading teachers",
+    },
+    {
+      label: "Teaching quality change",
+      value: formatSignedDelta(alignmentSummary?.teachingDelta, { digits: 2 }),
+      helper: "Average lesson quality delta",
+    },
+    {
+      label: "Non-reader reduction",
+      value: formatSignedDelta(alignmentSummary?.nonReaderReductionPp, {
+        digits: 1,
+        suffix: " pp",
+      }),
+      helper: "Baseline to latest period",
+    },
+    {
+      label: "20+ CWPM gain",
+      value: formatSignedDelta(alignmentSummary?.cwpm20PlusDeltaPp, {
+        digits: 1,
+        suffix: " pp",
+      }),
+      helper: "Fluency benchmark movement",
+    },
+    {
+      label: "Story sessions change",
+      value:
+        typeof storySessionsDelta === "number"
+          ? formatSignedDelta(storySessionsDelta, { digits: 0 })
+          : "Data not available",
+      helper: previousAlignmentPoint ? "Latest period vs prior period" : "Need at least 2 periods",
+    },
+    {
+      label: "Assessment completion",
+      value: `${(kpis?.assessmentCycleCompletionPct ?? 0).toFixed(1)}%`,
+      helper: "Scope-level cycle completion",
+    },
+  ];
+
+  const funnelStages = [
+    {
+      label: "Schools trained",
+      value: payload?.funnel?.trained ?? 0,
+      helper: "Capacity-building entry point",
+    },
+    {
+      label: "Coached / visited",
+      value: payload?.funnel?.coached ?? 0,
+      helper: "Ongoing implementation support",
+    },
+    {
+      label: "Baseline assessed",
+      value: payload?.funnel?.baselineAssessed ?? 0,
+      helper: "Initial learner evidence",
+    },
+    {
+      label: "Endline assessed",
+      value: payload?.funnel?.endlineAssessed ?? 0,
+      helper: "Measured outcome follow-through",
+    },
+    {
+      label: "Story active schools",
+      value: payload?.funnel?.storyActive ?? 0,
+      helper: "Reading culture extension",
+    },
+  ];
+  const funnelBaseline = Math.max(funnelStages[0]?.value ?? 0, 1);
+  const funnelPeak = Math.max(
+    1,
+    ...funnelStages.map((item) => item.value),
+  );
+  const funnelRows = funnelStages.map((stage, index) => {
+    const previous = index === 0 ? stage.value : funnelStages[index - 1]?.value ?? 0;
+    const stepRate = previous > 0 ? (stage.value / previous) * 100 : index === 0 ? 100 : 0;
+    const cumulativeRate = (stage.value / funnelBaseline) * 100;
+    return {
+      ...stage,
+      stepRate,
+      cumulativeRate,
+      widthPct: (stage.value / funnelPeak) * 100,
+    };
+  });
+
+  const teachingTrendPoints = (payload?.teachingQuality?.trend ?? [])
+    .filter((point) => typeof point.averageScore === "number" && Number.isFinite(point.averageScore))
+    .slice(-8);
+  const teachingTrendMax = Math.max(
+    1,
+    ...teachingTrendPoints.map((point) => point.averageScore ?? 0),
+  );
 
   return (
     <section className={`impact-explorer ${compact ? "impact-explorer--compact" : ""}`}>
@@ -375,17 +563,147 @@ export function PublicImpactMapExplorer({
             </span>
           )}
         </div>
+        <div className="impact-report-actions">
+          <a
+            className="button button-ghost"
+            href={reportEngineHtmlHref}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open A4 Report
+          </a>
+          <a
+            className="button"
+            href={reportEnginePdfHref}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Download A4 PDF
+          </a>
+        </div>
         <button type="button" className="impact-map-clear-link" onClick={onReset}>
           Clear
         </button>
       </div>
+
+      {!compact ? (
+        <div className="impact-attract-grid">
+          <article className="card impact-attract-card impact-attract-card--momentum">
+            <header>
+              <h3>What Changed This Period</h3>
+              <p>Quick momentum indicators to understand impact movement at a glance.</p>
+            </header>
+            <div className="impact-attract-momentum-grid">
+              {momentumCards.map((item) => (
+                <article key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{loading ? "Loading..." : item.value}</strong>
+                  <small>{item.helper}</small>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <article className="card impact-attract-card impact-attract-card--funnel">
+            <header>
+              <h3>Implementation Conversion Funnel</h3>
+              <p>From initial training to measured endline outcomes and story activation.</p>
+            </header>
+            <div className="impact-attract-funnel-list">
+              {funnelRows.map((row) => (
+                <article key={row.label}>
+                  <div className="impact-attract-funnel-head">
+                    <strong>{row.label}</strong>
+                    <span>{loading ? "Loading..." : row.value.toLocaleString()}</span>
+                  </div>
+                  <div className="impact-attract-funnel-track" aria-hidden="true">
+                    <i style={{ width: `${Math.max(row.widthPct, row.value > 0 ? 6 : 0)}%` }} />
+                  </div>
+                  <p>
+                    {row.helper} • Step retention:{" "}
+                    <strong>{loading ? "Loading..." : `${row.stepRate.toFixed(1)}%`}</strong> • Cumulative:{" "}
+                    <strong>{loading ? "Loading..." : `${row.cumulativeRate.toFixed(1)}%`}</strong>
+                  </p>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <article className="card impact-attract-card impact-attract-card--trust">
+            <header>
+              <h3>Data Trust & Action Center</h3>
+              <p>Transparency details and next actions for partners and supporters.</p>
+            </header>
+            <div className="impact-attract-trust-stats">
+              <p>
+                Completeness:{" "}
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : payload?.meta?.dataCompleteness === "Complete"
+                      ? "Complete"
+                      : "Partial"}
+                </strong>
+              </p>
+              <p>
+                Sample size (n):{" "}
+                <strong>{loading ? "Loading..." : (payload?.meta?.sampleSize ?? 0).toLocaleString()}</strong>
+              </p>
+              <p>
+                Last updated:{" "}
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : payload?.meta?.lastUpdated
+                      ? new Date(payload.meta.lastUpdated).toLocaleString()
+                      : "Data not available"}
+                </strong>
+              </p>
+            </div>
+            {teachingTrendPoints.length > 0 ? (
+              <div
+                className="impact-attract-trend"
+                role="img"
+                aria-label="Teaching quality trend over recent periods"
+              >
+                {teachingTrendPoints.map((point) => {
+                  const average = point.averageScore ?? 0;
+                  const heightPct = (average / teachingTrendMax) * 100;
+                  return (
+                    <div key={point.period} className="impact-attract-trend-bar">
+                      <i style={{ height: `${Math.max(heightPct, 8)}%` }} />
+                      <span>{point.period}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="impact-mini-footer">Trend data not available for this scope/period.</p>
+            )}
+            <p className="impact-mini-footer">
+              {teachingLearningAlignment?.caveat ?? "Data is aggregated from verified submissions only."}
+            </p>
+            <div className="impact-attract-actions">
+              <Link className="button" href="/sponsor-a-district">
+                Sponsor a District
+              </Link>
+              <Link className="button button-ghost" href="/impact#reports">
+                Download Reports
+              </Link>
+              <Link className="inline-download-link" href="/impact/case-studies">
+                Read Change Stories
+              </Link>
+            </div>
+          </article>
+        </div>
+      ) : null}
 
       <div className="impact-explorer-layout">
         <LocationNavigator
           period={period}
           onPeriodChange={setPeriod}
           selection={selection}
-          schoolOptions={schoolOptions.map((school) => ({ id: school.id, name: school.name }))}
+          navigatorSchools={navigatorSchools}
           onSelectionChange={onSelectionChange}
           onReset={onReset}
           onBack={onBack}
@@ -407,6 +725,7 @@ export function PublicImpactMapExplorer({
                 school: "",
               })
             }
+            districtSearchOptions={districtSearchOptions}
             compact={compact}
           />
         </div>

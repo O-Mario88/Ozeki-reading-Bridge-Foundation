@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { caseStudies } from "@/lib/content";
+import { getPublishedChangeStoryBySlug } from "@/lib/change-stories";
 
-export async function generateStaticParams() {
-  return caseStudies.map((study) => ({ slug: study.slug }));
+export const dynamic = "force-dynamic";
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export default async function ImpactCaseStudyDetailPage({
@@ -12,9 +18,9 @@ export default async function ImpactCaseStudyDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const study = caseStudies.find((item) => item.slug === slug);
+  const story = getPublishedChangeStoryBySlug(slug);
 
-  if (!study) {
+  if (!story) {
     notFound();
   }
 
@@ -22,69 +28,71 @@ export default async function ImpactCaseStudyDetailPage({
     <>
       <section className="page-hero">
         <div className="container">
-          <p className="kicker">Case study</p>
-          <h1>{study.school}</h1>
-          <p>{study.district}</p>
+          <p className="kicker">Change story</p>
+          <h1>{story.title}</h1>
+          <p>
+            {story.schoolName}, {story.district}
+          </p>
+          <p className="meta-line">
+            Submitted by {story.storytellerName} ({story.storytellerRole}) •{" "}
+            {formatDate(story.createdAt)}
+          </p>
         </div>
       </section>
 
       <section className="section">
         <div className="container split">
           <article className="card">
-            <h2>Baseline challenge</h2>
-            <p>{study.challenge}</p>
+            <h2>Summary</h2>
+            <p>{story.excerpt}</p>
+            {story.videoUrl ? (
+              <div className="action-row">
+                <a className="button button-ghost" href={story.videoUrl} target="_blank" rel="noreferrer">
+                  Open related video evidence
+                </a>
+              </div>
+            ) : null}
           </article>
+
           <article className="card">
-            <h2>What we implemented</h2>
-            <ul>
-              {study.intervention.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            <h2>Photo evidence</h2>
+            {story.photoUrl ? (
+              <img
+                src={story.photoUrl}
+                alt={`Photo evidence for ${story.title}`}
+                loading="lazy"
+                decoding="async"
+                style={{
+                  width: "100%",
+                  maxHeight: "420px",
+                  objectFit: "cover",
+                  borderRadius: "12px",
+                }}
+              />
+            ) : (
+              <p>No photo was uploaded for this story.</p>
+            )}
           </article>
         </div>
       </section>
 
       <section className="section">
-        <div className="container cards-grid">
-          <article className="card">
-            <h2>What changed</h2>
-            <ul>
-              {study.results.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-          <article className="card">
-            <h2>What we learned</h2>
-            <ul>
-              <li>Structured coaching strengthens daily reading lesson consistency.</li>
-              <li>Data reviews help schools prioritize the highest-leverage support actions.</li>
-            </ul>
-          </article>
-          <article className="card">
-            <h2>Next steps</h2>
-            <ul>
-              <li>Continue coaching cycles for routine fidelity in target classes.</li>
-              <li>Expand remedial grouping for the lowest-performing learners.</li>
-              <li>Run periodic progress checks to guide adjustments.</li>
-            </ul>
-          </article>
-        </div>
-      </section>
+        <div className="container card flow">
+          <h2>Full change story details</h2>
+          {story.sections.length > 0 ? (
+            story.sections.map((section) => (
+              <article key={`${story.id}-${section.heading}`} className="flow">
+                <h3>{section.heading}</h3>
+                <p>{section.body}</p>
+              </article>
+            ))
+          ) : (
+            <p>{story.storyText}</p>
+          )}
 
-      <section className="section">
-        <div className="container card">
-          <h2>Recommended downloads</h2>
           <div className="action-row">
-            <Link className="button" href="/resources">
-              Open resource library
-            </Link>
-            <Link className="button button-ghost" href="/portal/schools">
-              Open school profiles
-            </Link>
             <Link className="button button-ghost" href="/impact/case-studies">
-              Back to case studies
+              Back to stories of measurable change
             </Link>
           </div>
         </div>

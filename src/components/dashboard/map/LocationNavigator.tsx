@@ -1,8 +1,5 @@
 "use client";
 
-import { getMapSubRegionsByRegion, getDistrictsByMapSubRegion, UGANDA_MAP_SUB_REGIONS } from "@/lib/uganda-map-taxonomy";
-import { ugandaRegions } from "@/lib/uganda-locations";
-
 export type PublicMapSelection = {
   region: string;
   subRegion: string;
@@ -14,7 +11,13 @@ type LocationNavigatorProps = {
   period: string;
   onPeriodChange: (next: string) => void;
   selection: PublicMapSelection;
-  schoolOptions: Array<{ id: number; name: string }>;
+  navigatorSchools: Array<{
+    id: number;
+    name: string;
+    district: string;
+    subRegion: string;
+    region: string;
+  }>;
   onSelectionChange: (next: PublicMapSelection) => void;
   onReset: () => void;
   onBack: () => void;
@@ -30,23 +33,35 @@ export function LocationNavigator({
   period,
   onPeriodChange,
   selection,
-  schoolOptions,
+  navigatorSchools,
   onSelectionChange,
   onReset,
   onBack,
 }: LocationNavigatorProps) {
-  const regionOptions = ugandaRegions.map((entry) => entry.region);
-  const subRegionOptions =
-    selection.region.length > 0
-      ? getMapSubRegionsByRegion(selection.region).map((entry) => entry.subRegion)
-      : UGANDA_MAP_SUB_REGIONS.map((entry) => entry.subRegion);
+  const regionOptions = [...new Set(navigatorSchools.map((school) => school.region))]
+    .filter((value) => value.trim().length > 0)
+    .sort((left, right) => left.localeCompare(right));
 
-  const districtOptions =
-    selection.subRegion.length > 0
-      ? getDistrictsByMapSubRegion(selection.subRegion)
-      : selection.region.length > 0
-        ? getMapSubRegionsByRegion(selection.region).flatMap((entry) => entry.districts)
-        : UGANDA_MAP_SUB_REGIONS.flatMap((entry) => entry.districts);
+  const schoolsForRegion = selection.region
+    ? navigatorSchools.filter((school) => school.region === selection.region)
+    : navigatorSchools;
+  const subRegionOptions = [...new Set(schoolsForRegion.map((school) => school.subRegion))]
+    .filter((value) => value.trim().length > 0)
+    .sort((left, right) => left.localeCompare(right));
+
+  const schoolsForSubRegion = selection.subRegion
+    ? schoolsForRegion.filter((school) => school.subRegion === selection.subRegion)
+    : schoolsForRegion;
+  const districtOptions = [...new Set(schoolsForSubRegion.map((school) => school.district))]
+    .filter((value) => value.trim().length > 0)
+    .sort((left, right) => left.localeCompare(right));
+
+  const schoolsForDistrict = selection.district
+    ? schoolsForSubRegion.filter((school) => school.district === selection.district)
+    : schoolsForSubRegion;
+  const schoolOptions = [...schoolsForDistrict]
+    .filter((school) => Number.isFinite(school.id) && school.id > 0)
+    .sort((left, right) => left.name.localeCompare(right.name));
 
   return (
     <aside className="location-navigator">

@@ -572,7 +572,7 @@ export function StoryStudioDrawer({
     <FloatingSurface
       open={open}
       onClose={onClose}
-      variant="drawer"
+      variant="modal"
       maxWidth="780px"
       title={storyId ? "Story Studio — Edit Story" : "Story Studio — New Story"}
       description="Build story details, add simple content blocks, preview, then publish."

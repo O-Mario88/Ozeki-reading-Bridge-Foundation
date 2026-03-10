@@ -1,43 +1,76 @@
 import Link from "next/link";
-import { caseStudies } from "@/lib/content";
+import { listPublishedChangeStories } from "@/lib/change-stories";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Impact Case Studies",
+  title: "Stories of Measurable Change",
   description:
-    "Explore real school stories with before-and-after data, implementation actions, and learning outcomes.",
+    "Staff-entered change stories with field evidence and measurable outcomes from supported schools.",
 };
 
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function ImpactCaseStudiesPage() {
+  const stories = listPublishedChangeStories(240);
+
   return (
     <>
       <section className="page-hero">
         <div className="container">
           <p className="kicker">Impact</p>
           <h1>Stories of measurable change</h1>
-          <p>Real schools. Clear actions. Verified results.</p>
+          <p>Summaries from staff-entered change stories. Full details are available per story.</p>
         </div>
       </section>
 
       <section className="section">
         <div className="container cards-grid">
-          {caseStudies.map((study) => (
-            <article className="card" key={study.slug}>
-              <p className="meta-pill">{study.district}</p>
-              <h2>{study.school}</h2>
-              <p>
-                <strong>Baseline challenge:</strong> {study.challenge}
-              </p>
-              <ul>
-                <li>Grade band: Early primary</li>
-                <li>Teachers trained: Data tracked in implementation cycle</li>
-                <li>Coaching visits: Included in support package</li>
-                <li>Learners assessed: Included in cycle reporting</li>
-              </ul>
-              <p className="meta-line">Headline improvement</p>
-              <p className="note-box">{study.results[0]}</p>
+          {stories.length === 0 ? (
+            <article className="card">
+              <h2>No change stories published yet</h2>
+              <p>Staff can submit stories from the portal. Approved stories appear here automatically.</p>
               <div className="action-row">
-                <Link className="button" href={`/impact/case-studies/${study.slug}`}>
-                  Read case study
+                <Link className="button" href="/portal/testimonials">
+                  Open staff change story form
+                </Link>
+              </div>
+            </article>
+          ) : null}
+
+          {stories.map((story) => (
+            <article className="card" key={story.id}>
+              {story.photoUrl ? (
+                <img
+                  src={story.photoUrl}
+                  alt={`Evidence photo for ${story.title}`}
+                  loading="lazy"
+                  decoding="async"
+                  style={{
+                    width: "100%",
+                    aspectRatio: "16 / 9",
+                    objectFit: "cover",
+                    borderRadius: "12px",
+                    marginBottom: "0.85rem",
+                  }}
+                />
+              ) : null}
+              <p className="meta-pill">{story.district}</p>
+              <h2>{story.title}</h2>
+              <p>{story.excerpt}</p>
+              <p className="meta-line">
+                {story.schoolName} • {story.storytellerName} ({story.storytellerRole}) •{" "}
+                {formatDate(story.createdAt)}
+              </p>
+              <div className="action-row">
+                <Link className="button" href={`/impact/case-studies/${story.slug}`}>
+                  Read full change story
                 </Link>
               </div>
             </article>

@@ -174,33 +174,35 @@ export default async function ImpactDashboardPage({
 
   return (
     <>
-      {/* ═══ Hero ═══ */}
-      <section className="page-hero">
-        <div className="container">
-          <p className="kicker">Impact overview</p>
-          <h1>Live Literacy Impact Dashboard</h1>
-          <p>
-            Public dashboard data is aggregated from verified staff submissions and published
-            with privacy controls.
-          </p>
-        </div>
-      </section>
+      <div className="impact-live-compact-zone">
+        {/* ═══ Hero ═══ */}
+        <section className="page-hero impact-page-hero">
+          <div className="container impact-page-hero-container">
+            <p className="kicker">Impact overview</p>
+            <h1>Live Literacy Impact Dashboard</h1>
+            <p>
+              Public dashboard data is aggregated from verified staff submissions and published
+              with privacy controls.
+            </p>
+          </div>
+        </section>
 
-      {/* ═══ Interactive Dashboard ═══ */}
-      <section className="section">
-        <div className="container">
-          <PublicImpactMapExplorer
-            syncUrl
-            initialPeriod={firstValue(params.period) || "FY"}
-            initialSelection={{
-              region: firstValue(params.region),
-              subRegion: firstValue(params.subRegion),
-              district: firstValue(params.district),
-              school: firstValue(params.school),
-            }}
-          />
-        </div>
-      </section>
+        {/* ═══ Interactive Dashboard ═══ */}
+        <section className="section impact-dashboard-section">
+          <div className="container impact-dashboard-container">
+            <PublicImpactMapExplorer
+              syncUrl
+              initialPeriod={firstValue(params.period) || "FY"}
+              initialSelection={{
+                region: firstValue(params.region),
+                subRegion: firstValue(params.subRegion),
+                district: firstValue(params.district),
+                school: firstValue(params.school),
+              }}
+            />
+          </div>
+        </section>
+      </div>
 
       {/* ═══ Report Filters & Downloads ═══ */}
       <section id="reports" className="section" style={{ background: "var(--md-sys-color-surface-container, #f5f5f5)" }}>
@@ -275,7 +277,7 @@ export default async function ImpactDashboardPage({
                     </a>
                   </p>
                   <p>
-                    <Link className="inline-download-link" href={`/impact/reports/${report.reportCode}`}>
+                    <Link className="inline-download-link" href={`/impact-reports/${report.reportCode}`}>
                       View Web Version
                     </Link>
                   </p>

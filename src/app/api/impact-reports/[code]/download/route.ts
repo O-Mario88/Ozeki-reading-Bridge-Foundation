@@ -4,6 +4,7 @@ import { getImpactReportByCode, incrementImpactReportDownloadCount } from "@/lib
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import {
+  drawBrandFooter,
   drawBrandFrame,
   drawBrandHeader,
   drawBrandWatermark,
@@ -300,6 +301,19 @@ export async function GET(
     ...wrapText(report.narrative.methodsNote),
     ...wrapText(report.narrative.limitations),
   ]);
+
+  const pages = doc.getPages();
+  const totalPages = pages.length;
+  pages.forEach((pdfPage, index) => {
+    drawBrandFooter({
+      page: pdfPage,
+      font,
+      footerNote: "Aggregated, privacy-protected impact report.",
+      pageNumber: index + 1,
+      totalPages,
+      mutedColor: rgb(0.2, 0.24, 0.3),
+    });
+  });
 
   const bytes = await doc.save();
   incrementImpactReportDownloadCount(report.reportCode);

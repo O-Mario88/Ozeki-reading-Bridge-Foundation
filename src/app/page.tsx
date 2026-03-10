@@ -6,7 +6,6 @@ import { organizationName, tagline } from "@/lib/content";
 import {
   INTELLIGENCE_LOOP,
   INSIGHT_TILES,
-  PROGRAM_DIRECTORY_DETAILS,
   PARTNERSHIP_OPTIONS,
   TRUST_LINKS,
 } from "@/lib/home-static-data";
@@ -19,6 +18,16 @@ const TESTIMONIAL_FIELDS = new Set([
   "what_you_will_do_to_improve_reading_levels",
 ]);
 
+const WORKING_PARTNERS = [
+  {
+    name: "Edify",
+    href: "https://edify.org/uganda/",
+    logoSrc: "/partners/edify-logo.svg?v=edify-uganda",
+    width: 220,
+    height: 72,
+  },
+];
+
 function clipQuote(text: string, maxChars: number) {
   const clean = text.trim();
   if (clean.length <= maxChars) {
@@ -28,13 +37,18 @@ function clipQuote(text: string, maxChars: number) {
 }
 
 export default function HomePage() {
-  const testimonialRows = listPublishedPortalTestimonials(90)
-    .filter(
-      (item) =>
-        item.sourceType === "training_feedback" &&
-        TESTIMONIAL_FIELDS.has(String(item.quoteField ?? "")),
-    )
-    .slice(0, 6);
+  let testimonialRows: ReturnType<typeof listPublishedPortalTestimonials> = [];
+  try {
+    testimonialRows = listPublishedPortalTestimonials(90)
+      .filter(
+        (item) =>
+          item.sourceType === "training_feedback" &&
+          TESTIMONIAL_FIELDS.has(String(item.quoteField ?? "")),
+      )
+      .slice(0, 6);
+  } catch (error) {
+    console.error("Failed to load homepage testimonials.", error);
+  }
 
   const orgSchema = {
     "@context": "https://schema.org",
@@ -89,58 +103,56 @@ export default function HomePage() {
       <section className={`section ${styles.problemSection}`}>
         <div className="container">
           <div className={styles.sectionHeading}>
-            <h2>Reading is the gateway skill: Uganda can&apos;t afford weak foundations.</h2>
+            <h2 className={styles.problemSectionTitle}>
+              Reading is the gateway skill: Uganda can&apos;t afford weak foundations.
+            </h2>
           </div>
-          <div className={styles.problemLayout}>
+          <div className={styles.problemPhotoWrap}>
             <aside className={styles.problemPhotoCard}>
               <Image
-                src="/photos/PXL_20260218_134438769.jpg"
-                alt="Teachers and learners in a literacy classroom session in Uganda."
+                src="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg"
+                alt="Reading session in Dokolo Greater Bata Cluster."
                 fill
                 className={styles.problemPhotoImage}
-                sizes="(max-width: 1024px) 100vw, 42vw"
+                sizes="(max-width: 1024px) 100vw, 1200px"
                 loading="lazy"
               />
-              <div className={styles.problemPhotoOverlay} />
-              <div className={styles.problemPhotoContent}>
-                <p className={styles.problemPhotoKicker}>Impact Overview</p>
-                <p>
-                  Public dashboard data is aggregated from verified staff submissions and
-                  published with privacy controls.
-                </p>
-              </div>
             </aside>
-            <div className={styles.problemNarrative}>
-              <p>
-                Across Uganda, reading is the single skill that determines whether children
-                can access the rest of the curriculum. Yet national evidence shows that too
-                many learners are still not mastering foundational literacy early enough.
-                Uganda has made progress, but large numbers of children still move through
-                school without fluent reading-slowing learning in every subject and widening
-                inequality between regions, school types, and communities. This is why a
-                national response must be practical, measurable, and focused on the
-                classroom: when reading is weak, every other learning goal becomes harder.
-              </p>
-              <p>
-                Northern Uganda shows what happens when education systems are disrupted for
-                long periods. Years of conflict and displacement interrupted schooling,
-                reduced consistent instructional time, and left many classrooms rebuilding
-                with limited materials, large class sizes, and teacher shortages. Even after
-                stability returns, the learning gap does not close automatically-early
-                reading requires systematic instruction and repeated practice. The good news
-                is that recovery is possible when support is structured, sustained, and
-                measured.
-              </p>
-              <p>
-                That is the purpose of a National Literacy Intelligence Platform: strengthen
-                teachers through structured phonics and coaching, measure learner progress
-                through simple, trusted reading outcomes, and turn data into targeted
-                action-school by school, district by district. NLIP helps partners and
-                schools move from &quot;support everywhere&quot; to &quot;support where it matters most,&quot;
-                and it proves progress with credible evidence that government, donors, and
-                communities can trust.
-              </p>
-            </div>
+          </div>
+          <div className={styles.problemNarrative}>
+            <p className={styles.problemLead}>
+              Public dashboard data is aggregated from verified staff submissions and
+              published with privacy controls.
+            </p>
+            <p>
+              Across Uganda, reading is the single skill that determines whether children
+              can access the rest of the curriculum. Yet national evidence shows that too
+              many learners are still not mastering foundational literacy early enough.
+              Uganda has made progress, but large numbers of children still move through
+              school without fluent reading-slowing learning in every subject and widening
+              inequality between regions, school types, and communities. This is why a
+              national response must be practical, measurable, and focused on the
+              classroom: when reading is weak, every other learning goal becomes harder.
+            </p>
+            <p>
+              Northern Uganda shows what happens when education systems are disrupted for
+              long periods. Years of conflict and displacement interrupted schooling,
+              reduced consistent instructional time, and left many classrooms rebuilding
+              with limited materials, large class sizes, and teacher shortages. Even after
+              stability returns, the learning gap does not close automatically-early
+              reading requires systematic instruction and repeated practice. The good news
+              is that recovery is possible when support is structured, sustained, and
+              measured.
+            </p>
+            <p>
+              That is the purpose of a National Literacy Intelligence Platform: strengthen
+              teachers through structured phonics and coaching, measure learner progress
+              through simple, trusted reading outcomes, and turn data into targeted
+              action-school by school, district by district. NLIP helps partners and
+              schools move from &quot;support everywhere&quot; to &quot;support where it matters most,&quot;
+              and it proves progress with credible evidence that government, donors, and
+              communities can trust.
+            </p>
           </div>
           <div className={styles.ctaRow}>
             <Link className={`button ${styles.primaryCta}`} href="/impact">
@@ -175,52 +187,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={`section ${styles.programOverviewSection}`}>
-        <div className="container">
-          <div className={`${styles.sectionHeading} ${styles.programSectionHeading}`}>
-            <h2>Programs powering national literacy improvement</h2>
-          </div>
-          <div className={styles.programOverview}>
-            <p>
-              The full Program Directory now lives on the Programs page as the canonical
-              &quot;What We Do&quot; reference, with detailed implementation pathways,
-              outcomes, and evidence lines for each service stream.
-            </p>
-            <p>
-              On the homepage, we keep a concise national view. Use the Programs page to
-              explore teacher professional development, coaching and mentorship, learner
-              assessments, remedial support, instructional leadership, MER, and the 1001
-              Story Project in depth.
-            </p>
-            <p>
-              Each program page shows what is delivered, how performance is measured, and
-              what data is generated for school, district, regional, and national
-              decision-making.
-            </p>
-          </div>
-          <div className={styles.programGrid}>
-            {PROGRAM_DIRECTORY_DETAILS.map((program) => (
-              <article className={styles.programCard} key={program.title}>
-                <h3>
-                  <Link href={program.href} className={styles.programLink}>
-                    {program.title}
-                  </Link>
-                </h3>
-                <p>{program.description}</p>
-              </article>
-            ))}
-          </div>
-          <div className={styles.ctaRow}>
-            <Link className={`button ${styles.primaryCta}`} href="/programs">
-              Open Program Directory
-            </Link>
-            <Link className={`button ${styles.outlineCta}`} href="/partner-with-us">
-              Discuss Implementation Support
-            </Link>
-          </div>
-        </div>
-      </section>
-
       <section className={`section ${styles.insightSection}`}>
         <div className="container">
           <div className={styles.sectionHeading}>
@@ -245,31 +211,39 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" id="funding-packages">
         <div className="container">
           <div className={styles.sectionHeading}>
             <h2>Fund literacy by geography</h2>
           </div>
           <div className={styles.partnerGrid}>
             {PARTNERSHIP_OPTIONS.map((option) => (
-              <article className={styles.partnerCard} key={option.title}>
+              <article
+                className={`${styles.partnerCard}${option.fullRow ? ` ${styles.partnerCardFullRow}` : ""}`}
+                key={option.title}
+              >
                 <h3>{option.title}</h3>
-                <p>
-                  <strong>What you fund:</strong> {option.fund}
-                </p>
-                <p>
-                  <strong>What happens:</strong> {option.happens}
-                </p>
-                <p>
-                  <strong>What evidence you receive:</strong> {option.evidence}
-                </p>
+                {option.href ? (
+                  <p>
+                    <Link className="button button-ghost" href={option.href}>
+                      Open package details
+                    </Link>
+                  </p>
+                ) : null}
               </article>
             ))}
           </div>
           <div className={styles.ctaRow}>
-            <Link className={`button ${styles.primaryCta}`} href="/partner-with-us">
-              Partner With Us
+            <Link className={`button ${styles.outlineCta}`} href="/impact/calculator">
+              Open Funding Calculator
             </Link>
+            <HomeSupportRequestModal
+              triggerLabel="Partner With Us"
+              title="Partnership request form"
+              description="Share your partnership interest and geography focus, and our team will follow up."
+              triggerClassName={`button ${styles.primaryCta}`}
+              presetMessage="I would like to partner with Ozeki Reading Bridge Foundation."
+            />
             <HomeSupportRequestModal
               triggerLabel="Request a concept note"
               title="Request a proposal concept note"
@@ -323,13 +297,56 @@ export default function HomePage() {
               Need training, coaching, assessment support, or 1001 Story activation?
               Submit a request and our team will route it to the right support lead.
             </p>
-            <HomeSupportRequestModal
-              triggerLabel="Request Support"
-              title="Request school literacy support"
-              description="Tell us the support needed and the team will follow up."
-              triggerClassName={`button ${styles.primaryCta}`}
-            />
+            <article className={styles.liveSessionCard}>
+              <h3>Live training sessions</h3>
+              <p>
+                Join scheduled virtual sessions on phonics instruction, coaching practice,
+                learner assessment routines, and literacy leadership.
+              </p>
+            </article>
+            <div className={styles.supportActionRow}>
+              <HomeSupportRequestModal
+                triggerLabel="Request Support"
+                title="Request school literacy support"
+                description="Tell us the support needed and the team will follow up."
+                triggerClassName={`button ${styles.primaryCta} ${styles.supportCompactButton}`}
+              />
+              <Link
+                className={`button ${styles.supportCompactButton} ${styles.supportSecondaryButton}`}
+                href="/events"
+              >
+                Signup for Live Training Sessions
+              </Link>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section className={styles.partnerLogoStrip} aria-label="Partners we work with">
+        <div className={`container ${styles.partnerLogoContainer}`}>
+          <ul className={styles.partnerLogoList}>
+            {WORKING_PARTNERS.map((partner) => (
+              <li key={partner.name} className={styles.partnerLogoItem}>
+                <a
+                  href={partner.href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  aria-label={`Visit ${partner.name}`}
+                  className={styles.partnerLogoLink}
+                >
+                  <img
+                    src={partner.logoSrc}
+                    alt={`${partner.name} logo`}
+                    width={partner.width}
+                    height={partner.height}
+                    className={styles.partnerLogoImage}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
     </>

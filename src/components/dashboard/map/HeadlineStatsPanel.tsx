@@ -37,6 +37,20 @@ export function HeadlineStatsPanel({
   compact = false,
 }: HeadlineStatsPanelProps) {
   const kpis = data?.kpis;
+  const storyTimelinePoints = data?.teachingLearningAlignment?.points ?? [];
+  const storySessionsTotal = storyTimelinePoints.reduce(
+    (sum, point) => sum + Number(point.storySessionsCount ?? 0),
+    0,
+  );
+  const storiesPublishedTotal = storyTimelinePoints.reduce(
+    (sum, point) => sum + Number(point.storyPublishedCount ?? 0),
+    0,
+  );
+  const storyActiveSchools = data?.funnel?.storyActive ?? 0;
+  const storyCoverage =
+    (kpis?.schoolsSupported ?? 0) > 0
+      ? `${((storyActiveSchools / Math.max(kpis?.schoolsSupported ?? 1, 1)) * 100).toFixed(1)}% coverage`
+      : "0.0% coverage";
 
   return (
     <aside className={`headline-stats-panel ${compact ? "headline-stats-panel--compact" : ""}`}>
@@ -77,6 +91,28 @@ export function HeadlineStatsPanel({
           value={`${(kpis?.assessmentsBaselineCount ?? 0).toLocaleString()} / ${(kpis?.assessmentsProgressCount ?? 0).toLocaleString()} / ${(kpis?.assessmentsEndlineCount ?? 0).toLocaleString()}`}
           loading={loading}
         />
+      </div>
+
+      <div className="headline-stats-subsection">
+        <h4>1001 Story Statistics</h4>
+        <div className="headline-stats-grid">
+          <MetricCard
+            label="Story-active schools"
+            value={storyActiveSchools.toLocaleString()}
+            helper={storyCoverage}
+            loading={loading}
+          />
+          <MetricCard
+            label="Story sessions logged"
+            value={storySessionsTotal.toLocaleString()}
+            loading={loading}
+          />
+          <MetricCard
+            label="Stories published"
+            value={storiesPublishedTotal.toLocaleString()}
+            loading={loading}
+          />
+        </div>
       </div>
 
       <div className="headline-stats-actions">

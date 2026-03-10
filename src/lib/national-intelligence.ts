@@ -4,6 +4,13 @@ import path from "node:path";
 import OpenAI from "openai";
 import { PDFDocument, rgb } from "pdf-lib";
 import { getDb, logAuditEvent } from "@/lib/db";
+import {
+  drawBrandFooter,
+  drawBrandFrame,
+  drawBrandHeader,
+  drawBrandWatermark,
+  loadBrandLogo,
+} from "@/lib/pdf-branding";
 import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import type { PortalUser } from "@/lib/types";
 
@@ -1104,41 +1111,67 @@ async function generateNationalReportPdf(args: {
   const pdf = await PDFDocument.create();
   const serif = await embedPdfSerifFonts(pdf);
   const sans = await embedPdfSansFonts(pdf);
-  const page = pdf.addPage([595.28, 841.89]);
+  const logo = await loadBrandLogo(pdf);
+  const pageSize: [number, number] = [595.28, 841.89];
+  const marginX = 48;
+  const bottomMargin = 84;
+  const firstPageTopY = 600;
+  const continuationTopY = pageSize[1] - 74;
+  const maxWidth = pageSize[0] - marginX * 2;
 
-  const margin = 48;
-  let y = page.getHeight() - margin;
+  let page = pdf.addPage(pageSize);
+  let y = firstPageTopY;
+  const openNextPage = () => {
+    page = pdf.addPage(pageSize);
+    y = continuationTopY;
+  };
 
   const drawParagraph = (text: string, fontSize = 11, bold = false) => {
     const font = bold ? sans.bold : serif.regular;
-    const maxWidth = page.getWidth() - margin * 2;
     const words = text.split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      y -= fontSize + 4;
+      return;
+    }
+
+    const lineHeight = fontSize + 4;
     let line = "";
+
     words.forEach((word) => {
       const candidate = line ? `${line} ${word}` : word;
       if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
         line = candidate;
         return;
       }
-      page.drawText(line, {
-        x: margin,
-        y,
-        size: fontSize,
-        font,
-        color: rgb(0.1, 0.1, 0.1),
-      });
-      y -= fontSize + 4;
+
+      if (line) {
+        if (y - lineHeight < bottomMargin) {
+          openNextPage();
+        }
+        page.drawText(line, {
+          x: marginX,
+          y,
+          size: fontSize,
+          font,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+        y -= lineHeight;
+      }
       line = word;
     });
+
     if (line) {
+      if (y - lineHeight < bottomMargin) {
+        openNextPage();
+      }
       page.drawText(line, {
-        x: margin,
+        x: marginX,
         y,
         size: fontSize,
         font,
         color: rgb(0.1, 0.1, 0.1),
       });
-      y -= fontSize + 8;
+      y -= lineHeight + 4;
     }
   };
 
@@ -1155,12 +1188,42 @@ async function generateNationalReportPdf(args: {
   ];
 
   sections.forEach(([heading, body]) => {
-    if (y < 120) {
-      y = page.getHeight() - margin;
-      pdf.addPage([595.28, 841.89]);
+    if (y < bottomMargin + 28) {
+      openNextPage();
     }
     drawParagraph(heading, 13, true);
     drawParagraph(body, 11, false);
+  });
+
+  const pages = pdf.getPages();
+  const totalPages = pages.length;
+  pages.forEach((pdfPage, index) => {
+    drawBrandFrame(pdfPage);
+    drawBrandWatermark(pdfPage, logo);
+    if (index === 0) {
+      drawBrandHeader({
+        page: pdfPage,
+        font: serif.regular,
+        fontBold: sans.bold,
+        logo,
+        title: "NATIONAL REPORT",
+        documentNumber: args.reportCode,
+        subtitle: `${args.periodStart} to ${args.periodEnd}`,
+        titleColor: rgb(0.05, 0.1, 0.2),
+        mutedColor: rgb(0.2, 0.24, 0.3),
+        titleSize: 22,
+        numberSize: 12,
+        subtitleSize: 9,
+      });
+    }
+    drawBrandFooter({
+      page: pdfPage,
+      font: serif.regular,
+      footerNote: "Aggregated national intelligence report.",
+      pageNumber: index + 1,
+      totalPages,
+      mutedColor: rgb(0.2, 0.24, 0.3),
+    });
   });
 
   return pdf.save();

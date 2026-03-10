@@ -6,8 +6,8 @@ import { requirePortalUser } from "@/lib/portal-auth";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Testimonial Stories",
-  description: "Portal form for staff and volunteers to submit testimonial stories.",
+  title: "Change Stories",
+  description: "Portal form for staff and volunteers to submit measurable change stories.",
 };
 
 export default async function PortalTestimonialsPage() {
@@ -26,8 +26,8 @@ export default async function PortalTestimonialsPage() {
     <PortalShell
       user={user}
       activeHref="/portal/testimonials"
-      title="Testimonial Story Collection"
-      description="Capture text stories and video testimony in one submission workflow."
+      title="Stories of Measurable Change"
+      description="Capture measurable change stories with photo/video evidence in one workflow."
     >
       <PortalTestimonialsManager initialTestimonials={testimonials} canModerate={canModerate} />
     </PortalShell>

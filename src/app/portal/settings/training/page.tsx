@@ -3,12 +3,26 @@
 import { useState, useEffect } from "react";
 import { Settings, Save, AlertCircle, CheckCircle2, Server, Key, Bot } from "lucide-react";
 
+type GoogleWorkspaceStatus = {
+    configured: boolean;
+    googleConnected: boolean;
+    calendarId: string | null;
+    missingEnv: string[];
+    grantedScopes: string[];
+    missingScopes: string[];
+    calendarAccessible: boolean;
+    calendarSummary: string | null;
+    tokenValid: boolean;
+    error: string | null;
+};
+
 export default function TrainingSettingsPage() {
     const [settings, setSettings] = useState({
         googleConnected: false,
         defaultMeetingsRecorded: true,
         aiNotesEnabled: true,
         aiModel: "gpt-4o-mini",
+        googleStatus: null as GoogleWorkspaceStatus | null,
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -81,6 +95,11 @@ export default function TrainingSettingsPage() {
                             <div>
                                 <h3 className="font-semibold text-gray-900">Connection Status</h3>
                                 <p className="text-sm text-gray-500 mt-1">Authenticate Ozeki to schedule Meets on behalf of staff.</p>
+                                {settings.googleStatus?.calendarId ? (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Calendar ID: <strong>{settings.googleStatus.calendarId}</strong>
+                                    </p>
+                                ) : null}
                             </div>
                             <div className="mt-1">
                                 {settings.googleConnected ? (
@@ -95,14 +114,37 @@ export default function TrainingSettingsPage() {
                             </div>
                         </div>
 
+                        {settings.googleStatus?.missingEnv?.length ? (
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                                <strong>Missing environment variables:</strong> {settings.googleStatus.missingEnv.join(", ")}
+                            </div>
+                        ) : null}
+
+                        {settings.googleStatus?.missingScopes?.length ? (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                <strong>Missing OAuth scopes:</strong> {settings.googleStatus.missingScopes.join(", ")}
+                            </div>
+                        ) : null}
+
+                        {settings.googleStatus?.error ? (
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                                <strong>Last Google check:</strong> {settings.googleStatus.error}
+                            </div>
+                        ) : null}
+
                         <div className="pt-4 border-t border-gray-100">
-                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center">
+                            <a
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors inline-flex items-center"
+                                href="/api/portal/integrations/google/status"
+                                target="_blank"
+                                rel="noreferrer"
+                            >
                                 <Key className="w-4 h-4 mr-2 text-gray-500" />
-                                {settings.googleConnected ? "Reconnect Google Auth" : "Connect Google Workspace"}
-                            </button>
+                                {settings.googleConnected ? "View Live Google Status" : "Check Google Workspace Setup"}
+                            </a>
                             <p className="text-xs text-gray-400 mt-2 flex items-center">
                                 <AlertCircle className="w-3 h-3 mr-1" />
-                                Requires Google Workspace Administrator approval.
+                                Requires Google Cloud project credentials and OAuth scopes for Calendar + Meet.
                             </p>
                         </div>
                     </div>

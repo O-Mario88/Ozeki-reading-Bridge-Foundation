@@ -10,8 +10,9 @@ export const metadata = {
 const givingOptions = [
   {
     title: "Fund a School",
-    amount: "$1,800",
-    outcome: "Support one school with training, coaching, assessments, and starter resources.",
+    amount: "$1,100",
+    outcome:
+      "Support one school for a full two-year cycle with training, coaching, assessments, and follow-up reporting.",
   },
   {
     title: "Print Readers",

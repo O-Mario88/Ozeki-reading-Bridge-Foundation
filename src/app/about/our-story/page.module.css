@@ -1,0 +1,145 @@
+.problemSection {
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--color-brand-blue), black 24%), color-mix(in oklab, var(--color-brand-blue), black 10%));
+}
+
+.problemSurface {
+  background: color-mix(in oklab, var(--color-brand-blue), black 22%);
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 12%);
+  box-shadow: 0 22px 58px rgba(6, 34, 48, 0.26);
+}
+
+.problemSurface h2,
+.problemSurface h3,
+.problemSurface p {
+  color: color-mix(in oklab, white, var(--color-brand-blue) 6%);
+}
+
+.solutionSection {
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--color-surface), white 10%), color-mix(in oklab, var(--color-surface), var(--color-brand-blue) 4%));
+}
+
+.solutionSurface {
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 72%);
+  box-shadow: 0 16px 38px rgba(11, 42, 60, 0.1);
+}
+
+.sectionHeader {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.sectionHeader h2 {
+  margin: 0;
+}
+
+.iconWrap {
+  align-items: center;
+  background: color-mix(in oklab, var(--color-brand-orange), white 84%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-orange), white 48%);
+  border-radius: 999px;
+  color: #9d4a08;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  min-width: 34px;
+}
+
+.problemSurface p,
+.solutionSurface p {
+  font-size: 1.01rem;
+  line-height: 1.68;
+  margin: 0 0 var(--space-3);
+  max-width: 84ch;
+}
+
+.pullQuote {
+  border-left: 3px solid var(--color-brand-orange);
+  font-size: 1.04rem;
+  font-style: italic;
+  font-weight: 700;
+  margin: 0 0 var(--space-3);
+  padding: 0.12rem 0 0.12rem var(--space-3);
+}
+
+.transitionLine {
+  border-top: 1px solid color-mix(in oklab, white, var(--color-brand-blue) 22%);
+  font-size: 1.03rem;
+  font-weight: 700;
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+}
+
+.highlightLine {
+  background: color-mix(in oklab, var(--color-brand-orange), white 87%);
+  border-left: 3px solid var(--color-brand-orange);
+  border-radius: var(--radius-sm);
+  color: color-mix(in oklab, #8a4306, black 6%);
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 var(--space-3);
+  padding: 0.7rem 0.9rem;
+}
+
+.loopStrip {
+  display: grid;
+  gap: 0.48rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: var(--space-3);
+}
+
+.loopStrip span {
+  align-items: center;
+  background: color-mix(in oklab, var(--color-brand-blue), white 92%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 72%);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-blue);
+  display: inline-flex;
+  font-size: 0.84rem;
+  font-weight: 600;
+  gap: 0.44rem;
+  min-height: 2rem;
+  padding: 0.36rem 0.54rem;
+}
+
+.ctaBand {
+  align-items: center;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-brand-blue), white 94%),
+    color-mix(in oklab, var(--color-brand-blue), white 88%)
+  );
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 64%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
+  margin-top: var(--space-4);
+}
+
+.ctaBand h3 {
+  color: var(--color-brand-blue);
+  margin: 0 0 0.35rem;
+}
+
+.ctaBand p {
+  margin: 0;
+}
+
+.ctaRow {
+  justify-content: flex-start;
+}
+
+@media (max-width: 860px) {
+  .loopStrip {
+    grid-template-columns: 1fr;
+  }
+
+  .problemSurface p,
+  .solutionSurface p {
+    font-size: 0.98rem;
+  }
+}

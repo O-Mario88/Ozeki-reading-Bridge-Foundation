@@ -4,14 +4,20 @@
   "description": "Ozeki Reading Bridge Foundation full-stack webapp",
   "main": "index.js",
   "scripts": {
+    "verify:native": "node scripts/verify-native-modules.mjs",
+    "prebuild": "npm run verify:native",
     "test": "npm run test:privacy && npm run test:school-first && npm run test:finance",
     "test:privacy": "tsx --test src/tests/public-impact-privacy.test.ts src/tests/report-geo-cascade.test.ts src/tests/graduation-eligibility.test.ts",
     "test:school-first": "tsx --test src/tests/school-first-participants.test.ts",
     "test:finance": "tsx --test src/tests/finance-module.test.ts",
     "dev": "next dev",
     "build": "next build",
+    "prestart": "npm run verify:native",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "google:auth:url": "tsx scripts/google-workspace-oauth.ts url",
+    "google:auth:exchange": "tsx scripts/google-workspace-oauth.ts exchange",
+    "google:status": "tsx scripts/google-workspace-diagnostics.ts"
   },
   "repository": {
     "type": "git",
@@ -21,6 +27,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0 <25"
+  },
   "bugs": {
     "url": "https://github.com/O-Mario88/Ozeki-reading-Bridge-Foundation/issues"
   },

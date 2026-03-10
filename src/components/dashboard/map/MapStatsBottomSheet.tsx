@@ -51,7 +51,10 @@ export function MapStatsBottomSheet({
         <ul className="impact-map-sheet-list">
           {metrics.map((metric) => (
             <li key={`${title}-${metric.label}`}>
-              <span>{metric.label}</span>
+              <span>
+                {metric.label}
+                {metric.helper ? <small>{metric.helper}</small> : null}
+              </span>
               <strong>{metric.value}</strong>
             </li>
           ))}

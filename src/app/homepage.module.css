@@ -13,7 +13,10 @@
 .heroInner {
   display: grid;
   gap: var(--space-4);
-  max-width: 920px;
+  justify-items: center;
+  margin-inline: auto;
+  max-width: min(1080px, 100%);
+  text-align: center;
 }
 
 .heroKicker {
@@ -22,8 +25,10 @@
   display: inline-flex;
   font-size: 12px;
   font-weight: 700;
+  justify-content: center;
   letter-spacing: 0.08em;
   margin: 0;
+  text-align: center;
   text-transform: uppercase;
 }
 
@@ -32,13 +37,17 @@
   font-size: clamp(1rem, 1.3vw, 1.2rem);
   line-height: 1.6;
   margin: 0;
-  max-width: 72ch;
+  max-width: 84ch;
+  text-align: center;
+  text-wrap: pretty;
 }
 
 .microline {
   color: var(--color-text-muted);
   font-size: 13px;
   margin: 0;
+  text-align: center;
+  text-wrap: pretty;
 }
 
 .ctaRow {
@@ -46,6 +55,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+  justify-content: center;
 }
 
 .primaryCta {
@@ -129,34 +139,48 @@
 
 .problemSection .sectionHeading h2 {
   max-width: none;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  white-space: normal;
+  width: 100%;
+}
+
+.problemSectionTitle {
+  font-size: clamp(0.95rem, 2.2vw, 2.2rem) !important;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  min-width: 0;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  text-wrap: nowrap !important;
   width: 100%;
 }
 
 .loopSectionHeading h2 {
   max-width: none;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  white-space: normal;
   width: 100%;
 }
 
 .programSectionHeading h2 {
   max-width: none;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  white-space: normal;
   width: 100%;
 }
 
-.problemLayout {
-  display: grid;
-  gap: var(--space-5);
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-  margin-bottom: var(--space-5);
+.problemPhotoWrap {
+  margin-bottom: var(--space-4);
 }
 
 .problemPhotoCard {
   background: var(--color-brand-blue);
   border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 64%);
   border-radius: var(--radius-lg);
-  min-height: 340px;
+  min-height: 440px;
   overflow: hidden;
   position: relative;
 }
@@ -165,54 +189,15 @@
   object-fit: cover;
 }
 
-.problemPhotoOverlay {
-  background: linear-gradient(
-    90deg,
-    rgba(6, 55, 72, 0.92) 0%,
-    rgba(6, 55, 72, 0.74) 52%,
-    rgba(6, 55, 72, 0.24) 100%
-  );
-  inset: 0;
-  position: absolute;
-}
-
-.problemPhotoContent {
-  color: #ffffff;
-  display: grid;
-  gap: var(--space-2);
-  left: var(--space-4);
-  max-width: 40ch;
-  position: absolute;
-  top: var(--space-4);
-  z-index: 1;
-}
-
-.problemPhotoKicker {
-  align-items: center;
-  background: color-mix(in oklab, var(--color-brand-orange), white 16%);
-  border-radius: var(--radius-sm);
-  color: #ffffff;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  margin: 0;
-  max-width: max-content;
-  padding: var(--space-1) var(--space-2);
-  text-transform: uppercase;
-}
-
-.problemPhotoContent p {
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 14px;
-  line-height: 1.55;
-  margin: 0;
-}
-
 .problemNarrative {
   display: grid;
   gap: var(--space-4);
   min-width: 0;
+}
+
+.problemLead {
+  color: var(--color-brand-blue-dark);
+  font-weight: 600;
 }
 
 .problemNarrative p {
@@ -236,6 +221,10 @@
   gap: var(--space-3);
   min-width: 0;
   padding: var(--space-4);
+}
+
+.loopGrid .loopCard:last-child {
+  grid-column: 1 / -1;
 }
 
 .loopCard h3 {
@@ -298,48 +287,6 @@
   margin: 0;
 }
 
-.programGrid {
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: var(--space-5);
-}
-
-.programCard {
-  background: #ffffff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  display: grid;
-  gap: var(--space-3);
-  min-width: 0;
-  padding: var(--space-4);
-}
-
-.programCard h3 {
-  margin: 0;
-}
-
-.programLink {
-  color: var(--color-brand-blue);
-  font-size: 1rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.programLink:hover,
-.programLink:focus-visible {
-  color: var(--color-brand-orange-dark);
-  text-decoration: underline;
-  text-decoration-color: color-mix(in oklab, var(--color-brand-orange), white 42%);
-}
-
-.programCard p {
-  color: var(--color-text-muted);
-  line-height: 1.6;
-  margin: 0;
-}
-
 .insightSection {
   background:
     radial-gradient(circle at 2% 90%, color-mix(in oklab, var(--color-brand-orange), transparent 82%), transparent 36%),
@@ -399,6 +346,10 @@
   gap: var(--space-2);
   min-width: 0;
   padding: var(--space-4);
+}
+
+.partnerCardFullRow {
+  grid-column: 1 / -1;
 }
 
 .partnerCard h3 {
@@ -484,18 +435,45 @@
   color: #ffffff;
   display: grid;
   gap: var(--space-4);
+  min-width: 0;
   padding: var(--space-5);
 }
 
 .supportCard h2 {
   color: #ffffff;
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .supportCard p {
   color: rgba(255, 255, 255, 0.92);
   margin: 0;
   max-width: 72ch;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.liveSessionCard {
+  background: color-mix(in oklab, var(--color-brand-blue), black 12%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 30%);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3);
+}
+
+.liveSessionCard h3 {
+  color: #ffffff;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.liveSessionCard p {
+  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  max-width: none;
 }
 
 .supportCard .primaryCta {
@@ -509,17 +487,111 @@
   border-color: var(--color-brand-orange-dark) !important;
 }
 
-@media (max-width: 1120px) {
-  .problemLayout {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.supportActionRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
 
+.supportCompactButton {
+  font-size: 0.85rem !important;
+  min-height: 36px !important;
+  padding: 0.48rem 0.9rem !important;
+}
+
+.supportSecondaryButton {
+  background: color-mix(in oklab, var(--color-brand-blue), black 8%) !important;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 34%) !important;
+  color: #ffffff !important;
+}
+
+.supportSecondaryButton:hover,
+.supportSecondaryButton:focus-visible {
+  background: color-mix(in oklab, var(--color-brand-blue), black 20%) !important;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 24%) !important;
+  color: #ffffff !important;
+}
+
+.partnerLogoStrip {
+  background: #efefef;
+  border-top: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  padding: clamp(1.4rem, 2.3vw, 2rem) 0;
+}
+
+.partnerLogoContainer {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.partnerLogoList {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 2.2vw, 2.5rem);
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.partnerLogoItem {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.partnerLogoLink {
+  align-items: center;
+  background: #f8f8f8;
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 78%);
+  border-radius: 10px;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 86px;
+  min-width: 250px;
+  padding: 0.5rem 0.8rem;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.partnerLogoImage {
+  display: block;
+  filter: grayscale(1) contrast(1.08) brightness(0.72);
+  height: auto;
+  max-height: 74px;
+  transition:
+    filter 0.22s ease,
+    transform 0.22s ease;
+  width: min(220px, 100%);
+}
+
+.partnerLogoLink:hover,
+.partnerLogoLink:focus-visible,
+.partnerLogoLink:active {
+  background: #ffffff;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 62%);
+}
+
+.partnerLogoLink:hover .partnerLogoImage,
+.partnerLogoLink:focus-visible .partnerLogoImage,
+.partnerLogoLink:active .partnerLogoImage {
+  filter: none;
+  transform: translateY(-1px);
+}
+
+.partnerLogoLink:focus-visible {
+  outline: 2px solid var(--color-brand-blue);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1120px) {
   .problemPhotoCard {
-    min-height: 320px;
+    min-height: 360px;
   }
 
   .loopGrid,
-  .programGrid,
   .insightGrid,
   .partnerGrid,
   .testimonialGrid {
@@ -545,7 +617,7 @@
   }
 
   .problemPhotoCard {
-    min-height: 292px;
+    min-height: 300px;
   }
 
   .ctaRow {
@@ -567,7 +639,6 @@
   }
 
   .loopGrid,
-  .programGrid,
   .insightGrid,
   .partnerGrid,
   .testimonialGrid {
@@ -576,6 +647,25 @@
 
   .supportCard {
     padding: var(--space-4);
+  }
+
+  .supportActionRow {
+    width: 100%;
+  }
+
+  .supportActionRow :global(.button),
+  .supportActionRow :global(button.button) {
+    width: 100%;
+  }
+
+  .partnerLogoImage {
+    max-height: 62px;
+  }
+
+  .partnerLogoLink {
+    min-height: 74px;
+    min-width: 220px;
+    padding: 0.4rem 0.7rem;
   }
 
   .centeredCta {

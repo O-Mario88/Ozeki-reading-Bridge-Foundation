@@ -1363,7 +1363,12 @@ export interface StoryActivityRecord extends StoryActivityInput {
 /* ─── NLIS Support Requests ───────────────────────── */
 
 export type SupportRequestStatus = "New" | "Contacted" | "Scheduled" | "Delivered" | "Closed";
-export type SupportType = "phonics training" | "coaching visit" | "learner assessment" | "1001 story";
+export type SupportType =
+  | "phonics training"
+  | "coaching visit"
+  | "learner assessment"
+  | "remedial & catch-up support"
+  | "1001 story";
 export type SupportRequestUrgency = "low" | "medium" | "high" | "this_term" | "next_term";
 
 export interface SupportRequestInput {
@@ -1385,6 +1390,29 @@ export interface SupportRequestRecord extends SupportRequestInput {
   followUpStarted?: boolean;
   followUpNotes?: string;
   createdAt: string;
+}
+
+export type ConceptNoteRequesterType = "school" | "partner_donor";
+export type ConceptNoteRequestStatus = "new" | "in_review" | "responded" | "closed";
+export type ConceptNoteOwnerTeam = "support" | "partnerships";
+
+export interface ConceptNoteRequestInput {
+  requesterType: ConceptNoteRequesterType;
+  sourcePage?: string;
+  region?: string;
+  subRegion?: string;
+  district?: string;
+  payload: Record<string, unknown>;
+}
+
+export interface ConceptNoteRequestRecord extends ConceptNoteRequestInput {
+  id: number;
+  requestId: string;
+  status: ConceptNoteRequestStatus;
+  submittedByUserId?: number;
+  assignedOwnerUserId?: number;
+  assignedOwnerTeam: ConceptNoteOwnerTeam;
+  submittedAt: string;
 }
 
 /* ─── Finance Module ─────────────────────────────── */

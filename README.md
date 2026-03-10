@@ -69,6 +69,16 @@ This project currently runs on SQLite for local delivery speed. The Supabase sca
 - `GET|POST /api/portal/online-trainings`:
   Secure online training scheduler with Google Calendar + Google Meet integration.
 
+## Google Meet + Calendar Integration
+- Full setup guide:
+  - `docs/google-workspace-meet-calendar-setup.md`
+- Status endpoint (admin/super-admin):
+  - `GET /api/portal/integrations/google/status`
+- OAuth helper scripts:
+  - `npm run google:auth:url`
+  - `npm run google:auth:exchange -- --code=...`
+  - `npm run google:status`
+
 SQLite database file is created at `data/app.db`.
 
 ## Portal Data Model
@@ -100,6 +110,8 @@ Set custom credentials in `.env.local` (or copy from `.env.example`):
 - `GOOGLE_REFRESH_TOKEN`
 - `GOOGLE_CALENDAR_ID`
 - `GOOGLE_CALENDAR_TIMEZONE`
+- `GOOGLE_WORKSPACE_OAUTH_REDIRECT_URI`
+- `APP_ORIGIN`
 - `BOOKING_CALENDAR_DURATION_MINUTES`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
@@ -135,10 +147,36 @@ npm run lint
 npm run build
 ```
 
-Both commands currently pass.
+`npm run build` runs a native-module preflight (`verify:native`) before the Next.js build.
 
 ## Deployment Prep
-1. Set `PORTAL_AUTO_SEED_USERS=false`.
-2. Set strong real credentials and secrets in environment variables.
-3. Purge test/dummy records from Super Admin > Data Management.
-4. Start from a clean runtime `data/` volume (or remove old local runtime artifacts).
+1. Use Node.js `22.x` to `24.x` (see `package.json` `engines` field).
+2. Install dependencies with the deployment Node version (`npm ci` recommended).
+3. If Node version changed after install, rebuild native dependencies:
+   ```bash
+   npm rebuild better-sqlite3
+   ```
+4. Set `PORTAL_AUTO_SEED_USERS=false`.
+5. Set strong real credentials and secrets in environment variables.
+6. Purge test/dummy records from Super Admin > Data Management.
+7. Start from a clean runtime `data/` volume (or remove old local runtime artifacts).
+
+This project now uses Next.js `output: "standalone"` for deployment-friendly server bundles.
+
+## Docker
+Build image:
+```bash
+docker build -t ozeki-reading-bridge-foundation:latest .
+```
+
+Run container:
+```bash
+docker run --rm -p 3000:3000 \
+  --env-file .env \
+  -v "$(pwd)/data:/app/data" \
+  ozeki-reading-bridge-foundation:latest
+```
+
+Notes:
+- SQLite data is persisted via `/app/data` volume mount.
+- The image includes Chromium and sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` for newsletter PDF generation.

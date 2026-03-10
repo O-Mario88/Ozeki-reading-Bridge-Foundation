@@ -61,11 +61,11 @@ const packageConfig: Record<
 const usdToUgx = 3800;
 const averageLearnersPerSchool = 250;
 const costPerSchoolUsd = {
-  schoolVisits: 90.45,
-  trainingMaterials: 56.53,
-  mealCosts: 8.48,
-  facilitationFee: 1.98,
-  total: 157.43,
+  schoolVisits: 632.0,
+  trainingMaterials: 394.98,
+  mealCosts: 59.26,
+  facilitationFee: 13.76,
+  total: 1100.0,
 };
 
 const costLineItems: Array<{
@@ -81,14 +81,14 @@ const costLineItems: Array<{
   {
     id: "visits",
     icon: "🚗",
-    title: "School Support Visits (4 total)",
+    title: "School Support Visits (8 total)",
     price: costPerSchoolUsd.schoolVisits,
-    valueLine: "Coaching that turns training into daily classroom practice.",
+    valueLine: "Two years of coaching that turns training into daily classroom practice.",
     includes: [
       "Classroom observation using simple rubrics",
       "Immediate feedback + teacher improvement targets",
       "Model lessons / co-teaching where needed",
-      "Progress review + next-step plan with school leadership",
+      "Progress review + next-step plan with school leadership across the full cycle",
     ],
     outcomeLine:
       "Stronger routine adoption, better lesson structure, sustained phonics delivery.",
@@ -97,18 +97,19 @@ const costLineItems: Array<{
   {
     id: "materials",
     icon: "📚",
-    title: "Training & Reading Materials",
+    title: "Training, Reading & 1001 Story Materials (2 years)",
     price: costPerSchoolUsd.trainingMaterials,
     valueLine:
-      "Phonics-aligned tools that make teaching consistent and practice possible.",
+      "Phonics-aligned tools, 1001 Story Project activation support, and refresh packs that keep teaching consistent over two years.",
     includes: [
       "Decodable readers / practice texts aligned to taught sounds",
       "Sound charts, flashcards, word lists, blending tools",
       "Lesson routine guides and templates",
+      "1001 Story Project writing prompts, drafting support, and anthology preparation resources",
       "Printable practice sheets (where applicable)",
     ],
     outcomeLine:
-      "More successful reading practice -> faster decoding and stronger fluency.",
+      "More successful reading and writing practice -> faster decoding, stronger fluency, and improved learner confidence.",
     accordionId: "material-details",
   },
   {
@@ -146,12 +147,12 @@ const accordionSections: Array<{
 }> = [
   {
     id: "visit-details",
-    title: "What happens in the 4 school support visits?",
+    title: "What happens in the 8 school support visits?",
     points: [
-      "Visit 1: diagnostic + baseline support + routine setup",
-      "Visit 2: coaching + error correction + pacing support",
-      "Visit 3: follow-up coaching + catch-up grouping for struggling readers",
-      "Visit 4: progress review + leadership accountability + next-term plan",
+      "Year 1 visits: diagnostic + routine setup + coaching + leadership check-ins",
+      "Year 2 visits: reinforcement coaching + remediation support + follow-up planning",
+      "Each visit includes observations, teacher feedback, and agreed next actions",
+      "Implementation is tracked from baseline through endline",
     ],
   },
   {
@@ -161,6 +162,7 @@ const accordionSections: Array<{
       "Decodable reading passages aligned to taught sounds",
       "Sound charts, flashcards, blending tools",
       "Teacher lesson templates + routine guides",
+      "1001 Story Project activation and learner story development resources",
       "Practice sheets and word lists for daily drills",
     ],
   },
@@ -179,7 +181,7 @@ const accordionSections: Array<{
 const fundingTimeline = [
   {
     icon: "1",
-    text: "Train teachers in structured phonics routines",
+    text: "Train teachers in structured phonics routines (year 1)",
   },
   {
     icon: "2",
@@ -191,7 +193,7 @@ const fundingTimeline = [
   },
   {
     icon: "4",
-    text: "Support school leadership to sustain routines beyond one term",
+    text: "Reinforce and sustain routines with leadership support and 1001 Story Project implementation (year 2)",
   },
 ];
 
@@ -268,16 +270,12 @@ export default function ImpactCalculatorPage() {
     const amountUsd = Math.max(0, toUsd(amount, currency));
     const frequencyMultiplier = frequency === "monthly" ? 12 : 1;
     const annualContributionUsd = amountUsd * frequencyMultiplier;
-
-    // Minimum school counts are always respected by package.
-    const scaling = Math.max(1, annualContributionUsd / config.baseAmountUsd);
-    const schoolsSupported = Math.max(
-      config.minSchools,
-      Math.round(config.minSchools * scaling),
-    );
-    const learnersSupported = schoolsSupported * averageLearnersPerSchool;
+    const schoolsEquivalent = annualContributionUsd / costPerSchoolUsd.total;
+    const schoolsSupportedFull = Math.floor(schoolsEquivalent);
+    const partialSchoolPercent = (schoolsEquivalent - schoolsSupportedFull) * 100;
+    const learnersSupported = Math.round(schoolsEquivalent * averageLearnersPerSchool);
     const costPerLearnerUsd = costPerSchoolUsd.total / averageLearnersPerSchool;
-    const totalImplementationCostUsd = schoolsSupported * costPerSchoolUsd.total;
+    const benchmarkImplementationCostUsd = config.minSchools * costPerSchoolUsd.total;
 
     let regionsCovered = 1;
     let districtsCovered = 1;
@@ -290,27 +288,29 @@ export default function ImpactCalculatorPage() {
     }
 
     const fundingCoveragePercent =
-      totalImplementationCostUsd > 0
-        ? Math.min(100, (annualContributionUsd / totalImplementationCostUsd) * 100)
+      benchmarkImplementationCostUsd > 0
+        ? Math.min(100, (annualContributionUsd / benchmarkImplementationCostUsd) * 100)
         : 0;
-    const fundingGapUsd = Math.max(0, totalImplementationCostUsd - annualContributionUsd);
-    const fundingSurplusUsd = Math.max(0, annualContributionUsd - totalImplementationCostUsd);
+    const fundingGapUsd = Math.max(0, benchmarkImplementationCostUsd - annualContributionUsd);
+    const fundingSurplusUsd = Math.max(0, annualContributionUsd - benchmarkImplementationCostUsd);
 
     return {
       regionsCovered,
       districtsCovered,
-      schoolsSupported,
-      teachersSupported: Math.round(schoolsSupported * config.teachersPerSchool),
+      schoolsEquivalent,
+      schoolsSupportedFull,
+      partialSchoolPercent,
+      teachersSupported: Math.round(schoolsEquivalent * config.teachersPerSchool),
       learnersSupported,
       learnersAssessed: Math.round(learnersSupported * config.assessmentCoverage),
       annualContributionUsd,
-      totalImplementationCostUsd,
+      benchmarkImplementationCostUsd,
       costPerLearnerUsd,
       fundingCoveragePercent,
       fundingGapUsd,
       fundingSurplusUsd,
-      visitsDelivered: Math.round(schoolsSupported * config.visitsPerSchool),
-      materialsProduced: Math.round(schoolsSupported * config.materialsPerSchool),
+      visitsDelivered: Math.round(schoolsEquivalent * config.visitsPerSchool),
+      materialsProduced: Math.round(schoolsEquivalent * config.materialsPerSchool),
       reportPackage: config.reportPackage,
     };
   }, [amount, currency, districtsInSelectedRegion.length, frequency, packageKey]);
@@ -442,10 +442,10 @@ export default function ImpactCalculatorPage() {
             </div>
 
             <p className="note-box">
-              Baseline assumptions: Country minimum = 15,000 schools; Region
-              minimum = 3,000 schools; District minimum = 300 schools; average
-              enrollment = 250 learners per school. Unit cost per school ={" "}
-              {formatUsdAmount(costPerSchoolUsd.total)}.
+              Funding conversion used in this calculator: 1 school (2-year package) ={" "}
+              {formatUsdAmount(costPerSchoolUsd.total)}. Equivalent learners per school ={" "}
+              {averageLearnersPerSchool.toLocaleString()}. Package benchmark sizes:
+              Country 15,000 schools, Region 3,000 schools, District 300 schools.
             </p>
           </article>
 
@@ -457,7 +457,16 @@ export default function ImpactCalculatorPage() {
             <ul>
               <li>Estimated regions covered: {outcome.regionsCovered.toLocaleString()}</li>
               <li>Estimated districts covered: {outcome.districtsCovered.toLocaleString()}</li>
-              <li>Estimated schools supported: {outcome.schoolsSupported.toLocaleString()}</li>
+              <li>
+                Full schools funded (2-year package):{" "}
+                {outcome.schoolsSupportedFull.toLocaleString()}
+              </li>
+              <li>
+                Total school-equivalent funded: {outcome.schoolsEquivalent.toFixed(2)}
+              </li>
+              <li>
+                Partial school coverage: {outcome.partialSchoolPercent.toFixed(1)}%
+              </li>
               <li>Teachers trained/coached: {outcome.teachersSupported.toLocaleString()}</li>
               <li>
                 Learners supported with literacy:{" "}
@@ -468,11 +477,11 @@ export default function ImpactCalculatorPage() {
               <li>Materials produced/printed: {outcome.materialsProduced.toLocaleString()}</li>
               <li>Estimated cost per learner: {formatUsdAmount(outcome.costPerLearnerUsd)}</li>
               <li>
-                Estimated implementation cost:{" "}
-                {formatUsdAmount(outcome.totalImplementationCostUsd)}
+                Full selected-scope benchmark cost:{" "}
+                {formatUsdAmount(outcome.benchmarkImplementationCostUsd)}
               </li>
               <li>
-                Estimated funding coverage: {outcome.fundingCoveragePercent.toFixed(1)}%
+                Coverage of selected-scope benchmark: {outcome.fundingCoveragePercent.toFixed(1)}%
               </li>
               {outcome.fundingGapUsd > 0 ? (
                 <li>Estimated funding gap: {formatUsdAmount(outcome.fundingGapUsd)}</li>
@@ -576,8 +585,9 @@ export default function ImpactCalculatorPage() {
           </div>
 
           <p className="cost-trust-line">
-            Costs are based on a standard support package and may vary slightly by
-            location, school size, and delivery schedule.
+            Costs are based on the standard 2-year support package, including 1001 Story
+            Project activation support, and may vary slightly by location, school size,
+            and delivery schedule.
           </p>
 
           <div className="cards-grid cost-card-grid">
@@ -624,11 +634,11 @@ export default function ImpactCalculatorPage() {
                   </thead>
                   <tbody>
                     <tr>
-                      <td>School Support Visits (4 total)</td>
+                      <td>School Support Visits (8 total)</td>
                       <td>{formatUsdAmount(costPerSchoolUsd.schoolVisits)}</td>
                     </tr>
                     <tr>
-                      <td>Training &amp; Reading Materials</td>
+                      <td>Training, Reading &amp; 1001 Story Materials</td>
                       <td>{formatUsdAmount(costPerSchoolUsd.trainingMaterials)}</td>
                     </tr>
                     <tr>

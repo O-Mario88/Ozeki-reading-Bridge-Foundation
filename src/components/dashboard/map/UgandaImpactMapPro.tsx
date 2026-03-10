@@ -14,6 +14,10 @@ import {
   type GeoDistrictBoundary,
 } from "@/lib/uganda-geojson-boundaries";
 import { PublicImpactAggregate } from "@/lib/types";
+import {
+  getReadingLevelPerformanceSummary,
+  type ReadingLevelPerformanceSummary,
+} from "@/lib/reading-level-performance";
 import { FloatingMetric, FloatingStatCard } from "./FloatingStatCard";
 import { MapStatsBottomSheet } from "./MapStatsBottomSheet";
 import { useHoverIntent } from "./useHoverIntent";
@@ -51,10 +55,16 @@ type MapTarget = {
   profileHref?: string;
 };
 
+type BestDistrictReadingPerformance = {
+  district: string;
+  performance: ReadingLevelPerformanceSummary;
+};
+
 type UgandaImpactMapProProps = {
   periodLabel: string;
   selection: MapSelection;
   onSelectionChange: (next: MapSelection) => void;
+  districtSearchOptions?: Array<{ district: string; subRegion: string }>;
   compact?: boolean;
   className?: string;
 };
@@ -62,15 +72,15 @@ type UgandaImpactMapProProps = {
 function pathForTarget(target: MapTarget, periodLabel: string) {
   const period = encodeURIComponent(periodLabel);
   if (target.level === "country") {
-    return `/impact/country?period=${period}`;
+    return `/api/impact/country?period=${period}`;
   }
   if (target.level === "region") {
-    return `/impact/region/${encodeURIComponent(target.id)}?period=${period}`;
+    return `/api/impact/region/${encodeURIComponent(target.id)}?period=${period}`;
   }
   if (target.level === "subregion") {
-    return `/impact/subregion/${encodeURIComponent(target.id)}?period=${period}`;
+    return `/api/impact/subregion/${encodeURIComponent(target.id)}?period=${period}`;
   }
-  return `/impact/district/${encodeURIComponent(target.id)}?period=${period}`;
+  return `/api/impact/district/${encodeURIComponent(target.id)}?period=${period}`;
 }
 
 function toFriendlyTime(value?: string) {
@@ -84,7 +94,23 @@ function toFriendlyTime(value?: string) {
   return date.toLocaleString();
 }
 
-function toFloatingMetrics(data?: PublicImpactAggregate | null): FloatingMetric[] {
+function cycleLabel(cycle: string) {
+  if (cycle === "endline") {
+    return "endline";
+  }
+  if (cycle === "latest") {
+    return "latest";
+  }
+  if (cycle === "progress") {
+    return "progress";
+  }
+  return "baseline";
+}
+
+function toFloatingMetrics(
+  data?: PublicImpactAggregate | null,
+  bestDistrict?: BestDistrictReadingPerformance | null,
+): FloatingMetric[] {
   if (!data) {
     return [
       { label: "Schools supported", value: "Data not available" },
@@ -92,8 +118,27 @@ function toFloatingMetrics(data?: PublicImpactAggregate | null): FloatingMetric[
       { label: "Teachers supported", value: "Data not available" },
       { label: "Enrollment (estimated reach)", value: "Data not available" },
       { label: "Assessments (B / P / E)", value: "Data not available" },
+      { label: "Reading levels performance", value: "Data not available" },
+      { label: "Vs best-performing district", value: "Data not available" },
       { label: "Coaching visits", value: "Data not available" },
     ];
+  }
+
+  const readingPerformance = getReadingLevelPerformanceSummary(data.readingLevels);
+  const bestPerformance = bestDistrict?.performance ?? null;
+  let comparisonValue = "Data not available";
+  let comparisonHelper: string | undefined;
+
+  if (readingPerformance && bestPerformance) {
+    const delta = Number(
+      (readingPerformance.performancePercent - bestPerformance.performancePercent).toFixed(1),
+    );
+    const signedDelta = delta > 0 ? `+${delta.toFixed(1)} pp` : `${delta.toFixed(1)} pp`;
+    comparisonValue =
+      data.scope.level === "district" && data.scope.name === bestDistrict?.district
+        ? "Top performer"
+        : signedDelta;
+    comparisonHelper = `Best district: ${bestDistrict?.district} (${bestPerformance.performancePercent.toFixed(1)}%)`;
   }
 
   return [
@@ -117,6 +162,20 @@ function toFloatingMetrics(data?: PublicImpactAggregate | null): FloatingMetric[
     {
       label: "Assessments (B / P / E)",
       value: `${data.kpis.assessmentsBaselineCount.toLocaleString()} / ${data.kpis.assessmentsProgressCount.toLocaleString()} / ${data.kpis.assessmentsEndlineCount.toLocaleString()}`,
+    },
+    {
+      label: "Reading levels performance",
+      value: readingPerformance
+        ? `${readingPerformance.performancePercent.toFixed(1)}%`
+        : "Data not available",
+      helper: readingPerformance
+        ? `After ${cycleLabel(readingPerformance.cycle)} assessments (n=${readingPerformance.sampleSize.toLocaleString()})`
+        : "Assessment distribution not available",
+    },
+    {
+      label: "Vs best-performing district",
+      value: comparisonValue,
+      helper: comparisonHelper,
     },
     {
       label: "Coaching visits",
@@ -166,6 +225,7 @@ export function UgandaImpactMapPro({
   periodLabel,
   selection,
   onSelectionChange,
+  districtSearchOptions = [],
   compact = false,
   className,
 }: UgandaImpactMapProProps) {
@@ -184,6 +244,7 @@ export function UgandaImpactMapPro({
   const [floatingPosition, setFloatingPosition] = useState<{ left: number; top: number } | null>(null);
   const [mobileSheetTarget, setMobileSheetTarget] = useState<MapTarget | null>(null);
   const [statsCache, setStatsCache] = useState<Record<string, PublicImpactAggregate>>({});
+  const [bestDistrictStats, setBestDistrictStats] = useState<BestDistrictReadingPerformance | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mapMode, setMapMode] = useState<"coverage" | "improvement" | "fidelity">("coverage");
 
@@ -257,7 +318,7 @@ export function UgandaImpactMapPro({
         return statsCache[key];
       }
 
-      const response = await fetch(pathForTarget(target, periodLabel), { cache: "force-cache" });
+      const response = await fetch(pathForTarget(target, periodLabel), { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Failed to load map stats");
       }
@@ -274,6 +335,34 @@ export function UgandaImpactMapPro({
       // keep map interactive even when one fetch fails
     });
   }, [fetchStats, selection]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBestDistrictStats(null);
+    const loadBestDistrict = async () => {
+      const period = encodeURIComponent(periodLabel);
+      const response = await fetch(`/api/impact/best-district?period=${period}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load best district comparison");
+      }
+      const payload = (await response.json()) as {
+        bestDistrict?: BestDistrictReadingPerformance | null;
+      };
+      if (!cancelled) {
+        setBestDistrictStats(payload.bestDistrict ?? null);
+      }
+    };
+    loadBestDistrict().catch(() => {
+      if (!cancelled) {
+        setBestDistrictStats(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [periodLabel]);
 
   useEffect(() => {
     if (!hoveredTarget || !isOpen) {
@@ -366,7 +455,7 @@ export function UgandaImpactMapPro({
   );
 
   const selectDistrict = useCallback(
-    (district: string, subRegion: UgandaMapSubRegionName) => {
+    (district: string, subRegion: string) => {
       const region = UGANDA_MAP_SUB_REGIONS.find((entry) => entry.subRegion === subRegion)?.region ?? "";
       const target: MapTarget = {
         level: "district",
@@ -472,6 +561,7 @@ export function UgandaImpactMapPro({
       </div>
 
       <DistrictSearchInput
+        districtOptions={districtSearchOptions}
         onSelectDistrict={(name, subRegion) => selectDistrict(name, subRegion)}
         className="impact-map-search-above"
       />
@@ -664,7 +754,7 @@ export function UgandaImpactMapPro({
           periodLabel={currentStats?.period.label ?? periodLabel}
           lastUpdatedFriendly={toFriendlyTime(currentStats?.meta.lastUpdated)}
           position={floatingPosition}
-          metrics={toFloatingMetrics(currentStats)}
+          metrics={toFloatingMetrics(currentStats, bestDistrictStats)}
           profileHref={currentTarget.profileHref}
           dataCompleteness={completeness}
           onClearSelection={clearSelection}
@@ -679,6 +769,7 @@ export function UgandaImpactMapPro({
           mobileSheetTarget
             ? statsCache[`${mobileSheetTarget.level}:${mobileSheetTarget.id}:${periodLabel}`]
             : null,
+          bestDistrictStats,
         )}
         profileHref={mobileSheetTarget?.profileHref}
         periodLabel={

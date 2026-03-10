@@ -114,6 +114,11 @@ import {
   SupportRequestInput,
   SupportRequestUrgency,
   SupportRequestStatus,
+  ConceptNoteRequestRecord,
+  ConceptNoteRequestInput,
+  ConceptNoteRequesterType,
+  ConceptNoteOwnerTeam,
+  ConceptNoteRequestStatus,
   LessonEvaluationInput,
   LessonEvaluationRecord,
   LessonEvaluationDomainKey,
@@ -2558,6 +2563,38 @@ export function getDb() {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS newsletter_issues (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    preheader TEXT NOT NULL DEFAULT '',
+    html_content TEXT NOT NULL,
+    plain_text TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published')),
+    auto_send_enabled INTEGER NOT NULL DEFAULT 1,
+    published_at TEXT,
+    auto_sent_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_newsletter_issues_status_published
+    ON newsletter_issues(status, published_at DESC, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS newsletter_dispatch_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    issue_id INTEGER NOT NULL,
+    recipient_email TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('sent', 'failed', 'skipped')),
+    provider_message TEXT,
+    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(issue_id) REFERENCES newsletter_issues(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_newsletter_dispatch_issue
+    ON newsletter_dispatch_logs(issue_id, sent_at DESC);
+
   CREATE TABLE IF NOT EXISTS portal_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     full_name TEXT NOT NULL,
@@ -3178,6 +3215,32 @@ function ensureSupportRequestTables(db: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_support_requests_status ON support_requests(status);
     CREATE INDEX IF NOT EXISTS idx_support_requests_staff ON support_requests(assigned_staff_id);
+
+    CREATE TABLE IF NOT EXISTS concept_note_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_id TEXT NOT NULL UNIQUE,
+      requester_type TEXT NOT NULL CHECK(requester_type IN ('school', 'partner_donor')),
+      status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new', 'in_review', 'responded', 'closed')),
+      source_page TEXT,
+      region TEXT,
+      sub_region TEXT,
+      district TEXT,
+      payload_json TEXT NOT NULL,
+      submitted_by_user_id INTEGER,
+      assigned_owner_user_id INTEGER,
+      assigned_owner_team TEXT NOT NULL DEFAULT 'support' CHECK(assigned_owner_team IN ('support', 'partnerships')),
+      submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(submitted_by_user_id) REFERENCES portal_users(id),
+      FOREIGN KEY(assigned_owner_user_id) REFERENCES portal_users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_concept_note_requests_type_status
+      ON concept_note_requests(requester_type, status);
+    CREATE INDEX IF NOT EXISTS idx_concept_note_requests_owner
+      ON concept_note_requests(assigned_owner_user_id, assigned_owner_team);
+    CREATE INDEX IF NOT EXISTS idx_concept_note_requests_geo
+      ON concept_note_requests(region, sub_region, district);
     
     CREATE TABLE IF NOT EXISTS story_activities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3763,6 +3826,627 @@ export function saveNewsletterSubscriber(payload: { name: string; email: string 
     `,
     )
     .run(payload);
+}
+
+export type NewsletterIssueStatus = "draft" | "published";
+export type NewsletterDispatchStatus = "sent" | "failed" | "skipped";
+
+export type NewsletterIssueRecord = {
+  id: number;
+  slug: string;
+  title: string;
+  preheader: string;
+  htmlContent: string;
+  plainText: string;
+  status: NewsletterIssueStatus;
+  autoSendEnabled: boolean;
+  publishedAt: string | null;
+  autoSentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type NewsletterSubscriberRecord = {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+export type NewsletterDispatchLogRecord = {
+  id: number;
+  issueId: number;
+  recipientEmail: string;
+  status: NewsletterDispatchStatus;
+  providerMessage: string | null;
+  sentAt: string;
+  createdAt: string;
+};
+
+export type NewsletterDispatchWriteInput = {
+  recipientEmail: string;
+  status: NewsletterDispatchStatus;
+  providerMessage?: string | null;
+  sentAt?: string;
+};
+
+function stripHtmlToText(html: string) {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function slugifyNewsletterSegment(value: string) {
+  const normalized = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return normalized.slice(0, 120);
+}
+
+function normalizeNewsletterIssueStatus(
+  status: NewsletterIssueStatus | string | null | undefined,
+): NewsletterIssueStatus {
+  return status === "published" ? "published" : "draft";
+}
+
+function parseNewsletterIssueRow(row: {
+  id: number;
+  slug: string;
+  title: string;
+  preheader: string;
+  htmlContent: string;
+  plainText: string;
+  status: string;
+  autoSendEnabled: number;
+  publishedAt: string | null;
+  autoSentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}): NewsletterIssueRecord {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    preheader: row.preheader,
+    htmlContent: row.htmlContent,
+    plainText: row.plainText,
+    status: normalizeNewsletterIssueStatus(row.status),
+    autoSendEnabled: Boolean(row.autoSendEnabled),
+    publishedAt: row.publishedAt || null,
+    autoSentAt: row.autoSentAt || null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function parseNewsletterDispatchLogRow(row: {
+  id: number;
+  issueId: number;
+  recipientEmail: string;
+  status: string;
+  providerMessage: string | null;
+  sentAt: string;
+  createdAt: string;
+}): NewsletterDispatchLogRecord {
+  return {
+    id: row.id,
+    issueId: row.issueId,
+    recipientEmail: row.recipientEmail,
+    status:
+      row.status === "sent" || row.status === "failed" || row.status === "skipped"
+        ? row.status
+        : "failed",
+    providerMessage: row.providerMessage,
+    sentAt: row.sentAt,
+    createdAt: row.createdAt,
+  };
+}
+
+function ensureUniqueNewsletterSlug(rawSlug: string, issueIdToExclude?: number) {
+  const db = getDb();
+  const base = slugifyNewsletterSegment(rawSlug) || `newsletter-${new Date().toISOString().slice(0, 10)}`;
+  let candidate = base;
+  let suffix = 2;
+
+  while (true) {
+    const existing = db
+      .prepare(
+        `
+        SELECT id
+        FROM newsletter_issues
+        WHERE slug = @slug
+        LIMIT 1
+      `,
+      )
+      .get({ slug: candidate }) as { id: number } | undefined;
+
+    if (!existing || (issueIdToExclude && existing.id === issueIdToExclude)) {
+      return candidate;
+    }
+
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+}
+
+export function listNewsletterSubscribers(limit = 5000): NewsletterSubscriberRecord[] {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 50000);
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        name,
+        email,
+        created_at AS createdAt
+      FROM newsletter_subscribers
+      ORDER BY datetime(created_at) DESC, id DESC
+      LIMIT @limit
+    `,
+    )
+    .all({ limit: safeLimit }) as Array<{
+    id: number;
+    name: string;
+    email: string;
+    createdAt: string;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    createdAt: row.createdAt,
+  }));
+}
+
+export function listNewsletterSubscriberEmails() {
+  return listNewsletterSubscribers(50000)
+    .map((row) => row.email.trim().toLowerCase())
+    .filter((email, index, list) => email.length > 3 && list.indexOf(email) === index);
+}
+
+export function createNewsletterIssue(input: {
+  title: string;
+  preheader?: string;
+  htmlContent: string;
+  plainText?: string;
+  status?: NewsletterIssueStatus;
+  autoSendEnabled?: boolean;
+  publishedAt?: string | null;
+  slug?: string;
+}): NewsletterIssueRecord {
+  const title = input.title.trim();
+  const htmlContent = input.htmlContent.trim();
+  if (title.length < 3) {
+    throw new Error("Newsletter title must be at least 3 characters.");
+  }
+  if (!htmlContent) {
+    throw new Error("Newsletter HTML content is required.");
+  }
+
+  const status = normalizeNewsletterIssueStatus(input.status);
+  const now = new Date().toISOString();
+  const slug = ensureUniqueNewsletterSlug(input.slug || title);
+  const publishedAt =
+    status === "published" ? input.publishedAt?.trim() || now : null;
+
+  const result = getDb()
+    .prepare(
+      `
+      INSERT INTO newsletter_issues (
+        slug,
+        title,
+        preheader,
+        html_content,
+        plain_text,
+        status,
+        auto_send_enabled,
+        published_at,
+        created_at,
+        updated_at
+      ) VALUES (
+        @slug,
+        @title,
+        @preheader,
+        @htmlContent,
+        @plainText,
+        @status,
+        @autoSendEnabled,
+        @publishedAt,
+        @createdAt,
+        @updatedAt
+      )
+    `,
+    )
+    .run({
+      slug,
+      title,
+      preheader: input.preheader?.trim() || "",
+      htmlContent,
+      plainText: input.plainText?.trim() || stripHtmlToText(htmlContent),
+      status,
+      autoSendEnabled: input.autoSendEnabled === false ? 0 : 1,
+      publishedAt,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+  const issue = getNewsletterIssueById(Number(result.lastInsertRowid));
+  if (!issue) {
+    throw new Error("Failed to create newsletter issue.");
+  }
+  return issue;
+}
+
+export function getNewsletterIssueById(id: number): NewsletterIssueRecord | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        slug,
+        title,
+        preheader,
+        html_content AS htmlContent,
+        plain_text AS plainText,
+        status,
+        auto_send_enabled AS autoSendEnabled,
+        published_at AS publishedAt,
+        auto_sent_at AS autoSentAt,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM newsletter_issues
+      WHERE id = @id
+      LIMIT 1
+    `,
+    )
+    .get({ id }) as
+    | {
+      id: number;
+      slug: string;
+      title: string;
+      preheader: string;
+      htmlContent: string;
+      plainText: string;
+      status: string;
+      autoSendEnabled: number;
+      publishedAt: string | null;
+      autoSentAt: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+  return row ? parseNewsletterIssueRow(row) : null;
+}
+
+export function getNewsletterIssueBySlug(slug: string): NewsletterIssueRecord | null {
+  const normalized = slug.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        slug,
+        title,
+        preheader,
+        html_content AS htmlContent,
+        plain_text AS plainText,
+        status,
+        auto_send_enabled AS autoSendEnabled,
+        published_at AS publishedAt,
+        auto_sent_at AS autoSentAt,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM newsletter_issues
+      WHERE lower(slug) = @slug
+      LIMIT 1
+    `,
+    )
+    .get({ slug: normalized }) as
+    | {
+      id: number;
+      slug: string;
+      title: string;
+      preheader: string;
+      htmlContent: string;
+      plainText: string;
+      status: string;
+      autoSendEnabled: number;
+      publishedAt: string | null;
+      autoSentAt: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+  return row ? parseNewsletterIssueRow(row) : null;
+}
+
+export function getLatestPublishedNewsletterIssue(): NewsletterIssueRecord | null {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        slug,
+        title,
+        preheader,
+        html_content AS htmlContent,
+        plain_text AS plainText,
+        status,
+        auto_send_enabled AS autoSendEnabled,
+        published_at AS publishedAt,
+        auto_sent_at AS autoSentAt,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM newsletter_issues
+      WHERE status = 'published'
+      ORDER BY datetime(COALESCE(published_at, created_at)) DESC, id DESC
+      LIMIT 1
+    `,
+    )
+    .get() as
+    | {
+      id: number;
+      slug: string;
+      title: string;
+      preheader: string;
+      htmlContent: string;
+      plainText: string;
+      status: string;
+      autoSendEnabled: number;
+      publishedAt: string | null;
+      autoSentAt: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+  return row ? parseNewsletterIssueRow(row) : null;
+}
+
+export function listNewsletterIssues(input?: {
+  status?: NewsletterIssueStatus;
+  limit?: number;
+}): NewsletterIssueRecord[] {
+  const limit = Math.min(Math.max(Math.trunc(input?.limit ?? 200), 1), 5000);
+  const where = input?.status === "published" ? "WHERE status = 'published'" : "";
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        slug,
+        title,
+        preheader,
+        html_content AS htmlContent,
+        plain_text AS plainText,
+        status,
+        auto_send_enabled AS autoSendEnabled,
+        published_at AS publishedAt,
+        auto_sent_at AS autoSentAt,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM newsletter_issues
+      ${where}
+      ORDER BY datetime(COALESCE(published_at, created_at)) DESC, id DESC
+      LIMIT @limit
+    `,
+    )
+    .all({ limit }) as Array<{
+    id: number;
+    slug: string;
+    title: string;
+    preheader: string;
+    htmlContent: string;
+    plainText: string;
+    status: string;
+    autoSendEnabled: number;
+    publishedAt: string | null;
+    autoSentAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+
+  return rows.map(parseNewsletterIssueRow);
+}
+
+export function listPendingNewsletterAutoSendIssues(limit = 20): NewsletterIssueRecord[] {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 500);
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        slug,
+        title,
+        preheader,
+        html_content AS htmlContent,
+        plain_text AS plainText,
+        status,
+        auto_send_enabled AS autoSendEnabled,
+        published_at AS publishedAt,
+        auto_sent_at AS autoSentAt,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM newsletter_issues
+      WHERE status = 'published'
+        AND auto_send_enabled = 1
+        AND auto_sent_at IS NULL
+      ORDER BY datetime(COALESCE(published_at, created_at)) ASC, id ASC
+      LIMIT @limit
+    `,
+    )
+    .all({ limit: safeLimit }) as Array<{
+    id: number;
+    slug: string;
+    title: string;
+    preheader: string;
+    htmlContent: string;
+    plainText: string;
+    status: string;
+    autoSendEnabled: number;
+    publishedAt: string | null;
+    autoSentAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+
+  return rows.map(parseNewsletterIssueRow);
+}
+
+export function markNewsletterIssuePublished(issueId: number, publishedAt?: string) {
+  const now = new Date().toISOString();
+  getDb()
+    .prepare(
+      `
+      UPDATE newsletter_issues
+      SET status = 'published',
+          published_at = @publishedAt,
+          updated_at = @updatedAt
+      WHERE id = @id
+    `,
+    )
+    .run({
+      id: issueId,
+      publishedAt: publishedAt?.trim() || now,
+      updatedAt: now,
+    });
+  return getNewsletterIssueById(issueId);
+}
+
+export function markNewsletterIssueAutoSent(issueId: number, sentAt?: string) {
+  const now = sentAt?.trim() || new Date().toISOString();
+  getDb()
+    .prepare(
+      `
+      UPDATE newsletter_issues
+      SET auto_sent_at = @sentAt,
+          updated_at = @updatedAt
+      WHERE id = @id
+    `,
+    )
+    .run({
+      id: issueId,
+      sentAt: now,
+      updatedAt: now,
+    });
+}
+
+export function saveNewsletterDispatchLogs(issueId: number, rows: NewsletterDispatchWriteInput[]) {
+  if (rows.length === 0) {
+    return { inserted: 0 };
+  }
+
+  const now = new Date().toISOString();
+  const db = getDb();
+  const insert = db.prepare(
+    `
+    INSERT INTO newsletter_dispatch_logs (
+      issue_id,
+      recipient_email,
+      status,
+      provider_message,
+      sent_at,
+      created_at
+    ) VALUES (
+      @issueId,
+      @recipientEmail,
+      @status,
+      @providerMessage,
+      @sentAt,
+      @createdAt
+    )
+  `,
+  );
+  const transaction = db.transaction((inputs: NewsletterDispatchWriteInput[]) => {
+    inputs.forEach((row) => {
+      insert.run({
+        issueId,
+        recipientEmail: row.recipientEmail.trim().toLowerCase(),
+        status: row.status,
+        providerMessage: row.providerMessage ?? null,
+        sentAt: row.sentAt?.trim() || now,
+        createdAt: now,
+      });
+    });
+  });
+
+  transaction(rows);
+  return { inserted: rows.length };
+}
+
+export function listNewsletterDispatchLogs(issueId: number, limit = 2000): NewsletterDispatchLogRecord[] {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 50000);
+  const rows = getDb()
+    .prepare(
+      `
+      SELECT
+        id,
+        issue_id AS issueId,
+        recipient_email AS recipientEmail,
+        status,
+        provider_message AS providerMessage,
+        sent_at AS sentAt,
+        created_at AS createdAt
+      FROM newsletter_dispatch_logs
+      WHERE issue_id = @issueId
+      ORDER BY datetime(sent_at) DESC, id DESC
+      LIMIT @limit
+    `,
+    )
+    .all({ issueId, limit: safeLimit }) as Array<{
+    id: number;
+    issueId: number;
+    recipientEmail: string;
+    status: string;
+    providerMessage: string | null;
+    sentAt: string;
+    createdAt: string;
+  }>;
+
+  return rows.map(parseNewsletterDispatchLogRow);
+}
+
+export function getNewsletterDispatchSummary(issueId: number) {
+  const row = getDb()
+    .prepare(
+      `
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS sentCount,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failedCount,
+        SUM(CASE WHEN status = 'skipped' THEN 1 ELSE 0 END) AS skippedCount,
+        MAX(sent_at) AS lastSentAt
+      FROM newsletter_dispatch_logs
+      WHERE issue_id = @issueId
+    `,
+    )
+    .get({ issueId }) as {
+    total: number;
+    sentCount: number | null;
+    failedCount: number | null;
+    skippedCount: number | null;
+    lastSentAt: string | null;
+  };
+
+  return {
+    total: Number(row.total || 0),
+    sent: Number(row.sentCount || 0),
+    failed: Number(row.failedCount || 0),
+    skipped: Number(row.skippedCount || 0),
+    lastSentAt: row.lastSentAt || null,
+  };
 }
 
 function parsePortalUserRow(row: {
@@ -26142,6 +26826,14 @@ type SupportRequestCreateInput = SupportRequestInput & {
   consentFollowUp?: boolean;
 };
 
+const CONCEPT_NOTE_DEFAULT_STATUS: ConceptNoteRequestStatus = "new";
+
+function createConceptRequestId() {
+  const token = crypto.randomBytes(3).toString("hex").toUpperCase();
+  const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  return `CNR-${date}-${token}`;
+}
+
 function normalizeSupportRequestUrgency(value: SupportRequestUrgency): "low" | "medium" | "high" {
   if (value === "high" || value === "this_term") return "high";
   if (value === "low") return "low";
@@ -26164,7 +26856,14 @@ function resolveSupportRequestDistrict(
 
   const location = String(input.locationText ?? "").trim();
   if (location) {
-    return location.split(",")[0]?.trim() ?? "";
+    const parts = location
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (parts.length > 1) {
+      return parts[parts.length - 1] ?? "";
+    }
+    return parts[0] ?? "";
   }
   return "";
 }
@@ -26192,6 +26891,61 @@ function findAutoAssignedStaffId(
     `,
     )
     .get({ scope: `%district:${district}%` }) as { id: number } | undefined;
+  return row?.id ?? null;
+}
+
+function findSupportLeadByScope(
+  db: Database.Database,
+  scopeType: "district" | "sub-region" | "region",
+  scopeValue: string,
+) {
+  if (!scopeValue) {
+    return null;
+  }
+  const row = db
+    .prepare(
+      `
+      SELECT id
+      FROM portal_users
+      WHERE role IN ('Staff', 'Volunteer')
+        AND lower(trim(COALESCE(geography_scope, ''))) LIKE lower(trim(@scope))
+      ORDER BY
+        CASE role
+          WHEN 'Staff' THEN 0
+          ELSE 1
+        END,
+        id ASC
+      LIMIT 1
+      `,
+    )
+    .get({ scope: `%${scopeType}:${scopeValue}%` }) as { id: number } | undefined;
+  return row?.id ?? null;
+}
+
+function findPartnershipLeadId(db: Database.Database) {
+  const row = db
+    .prepare(
+      `
+      SELECT id
+      FROM portal_users
+      WHERE
+        lower(COALESCE(geography_scope, '')) LIKE '%partnership%'
+        OR lower(COALESCE(geography_scope, '')) LIKE '%partner%'
+        OR COALESCE(is_admin, 0) = 1
+        OR COALESCE(is_superadmin, 0) = 1
+      ORDER BY
+        CASE
+          WHEN lower(COALESCE(geography_scope, '')) LIKE '%partnership%' THEN 0
+          WHEN lower(COALESCE(geography_scope, '')) LIKE '%partner%' THEN 1
+          WHEN COALESCE(is_superadmin, 0) = 1 THEN 2
+          WHEN COALESCE(is_admin, 0) = 1 THEN 3
+          ELSE 4
+        END,
+        id ASC
+      LIMIT 1
+      `,
+    )
+    .get() as { id: number } | undefined;
   return row?.id ?? null;
 }
 
@@ -26249,6 +27003,147 @@ export function createSupportRequest(
     followUpStarted: Boolean(row.follow_up_started),
     followUpNotes: row.follow_up_notes ?? undefined,
     createdAt: row.created_at as string,
+  };
+}
+
+export function createConceptNoteRequest(
+  input: ConceptNoteRequestInput,
+  options?: { submittedByUserId?: number | null },
+): ConceptNoteRequestRecord {
+  const db = getDb();
+  const payload = input.payload ?? {};
+  const payloadRegion =
+    typeof payload.region === "string" ? payload.region.trim() : "";
+  const payloadSubRegion =
+    typeof payload.sub_region === "string"
+      ? payload.sub_region.trim()
+      : typeof payload.subRegion === "string"
+        ? payload.subRegion.trim()
+        : "";
+  const payloadDistrict =
+    typeof payload.district === "string" ? payload.district.trim() : "";
+
+  const region = String(input.region ?? payloadRegion).trim();
+  const subRegion = String(input.subRegion ?? payloadSubRegion).trim();
+  const district = String(input.district ?? payloadDistrict).trim();
+
+  const requesterType: ConceptNoteRequesterType =
+    input.requesterType === "partner_donor" ? "partner_donor" : "school";
+
+  const assignedOwnerTeam: ConceptNoteOwnerTeam =
+    requesterType === "school" ? "support" : "partnerships";
+  let assignedOwnerUserId: number | null = null;
+
+  if (requesterType === "school") {
+    assignedOwnerUserId =
+      findAutoAssignedStaffId(db, district) ??
+      findSupportLeadByScope(db, "sub-region", subRegion) ??
+      findSupportLeadByScope(db, "region", region);
+  } else {
+    assignedOwnerUserId = findPartnershipLeadId(db);
+  }
+
+  const requestId = createConceptRequestId();
+  const result = db
+    .prepare(
+      `
+      INSERT INTO concept_note_requests (
+        request_id,
+        requester_type,
+        status,
+        source_page,
+        region,
+        sub_region,
+        district,
+        payload_json,
+        submitted_by_user_id,
+        assigned_owner_user_id,
+        assigned_owner_team,
+        submitted_at,
+        updated_at
+      ) VALUES (
+        @requestId,
+        @requesterType,
+        @status,
+        @sourcePage,
+        @region,
+        @subRegion,
+        @district,
+        @payloadJson,
+        @submittedByUserId,
+        @assignedOwnerUserId,
+        @assignedOwnerTeam,
+        datetime('now'),
+        datetime('now')
+      )
+      `,
+    )
+    .run({
+      requestId,
+      requesterType,
+      status: CONCEPT_NOTE_DEFAULT_STATUS,
+      sourcePage: input.sourcePage ? input.sourcePage.trim() : null,
+      region: region || null,
+      subRegion: subRegion || null,
+      district: district || null,
+      payloadJson: JSON.stringify(payload),
+      submittedByUserId: options?.submittedByUserId ?? null,
+      assignedOwnerUserId,
+      assignedOwnerTeam,
+    });
+
+  const row = db
+    .prepare(
+      `
+      SELECT
+        id,
+        request_id,
+        requester_type,
+        status,
+        source_page,
+        region,
+        sub_region,
+        district,
+        payload_json,
+        submitted_by_user_id,
+        assigned_owner_user_id,
+        assigned_owner_team,
+        submitted_at
+      FROM concept_note_requests
+      WHERE id = @id
+      LIMIT 1
+      `,
+    )
+    .get({ id: Number(result.lastInsertRowid) }) as {
+    id: number;
+    request_id: string;
+    requester_type: ConceptNoteRequesterType;
+    status: ConceptNoteRequestStatus;
+    source_page: string | null;
+    region: string | null;
+    sub_region: string | null;
+    district: string | null;
+    payload_json: string;
+    submitted_by_user_id: number | null;
+    assigned_owner_user_id: number | null;
+    assigned_owner_team: ConceptNoteOwnerTeam;
+    submitted_at: string;
+  };
+
+  return {
+    id: row.id,
+    requestId: row.request_id,
+    requesterType: row.requester_type,
+    status: row.status,
+    sourcePage: row.source_page ?? undefined,
+    region: row.region ?? undefined,
+    subRegion: row.sub_region ?? undefined,
+    district: row.district ?? undefined,
+    payload: JSON.parse(row.payload_json) as Record<string, unknown>,
+    submittedByUserId: row.submitted_by_user_id ?? undefined,
+    assignedOwnerUserId: row.assigned_owner_user_id ?? undefined,
+    assignedOwnerTeam: row.assigned_owner_team,
+    submittedAt: row.submitted_at,
   };
 }
 

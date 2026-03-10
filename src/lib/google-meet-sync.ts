@@ -1,20 +1,13 @@
-import { google, calendar_v3 } from "googleapis";
+import { calendar_v3 } from "googleapis";
+import {
+  createGoogleCalendarClient,
+  createGoogleMeetClient,
+  createGoogleOAuthClient,
+  getGoogleWorkspaceConfig,
+} from "@/lib/google-workspace";
 
-// Assuming we have some way to get an authenticated OAuth2 client for the system or a specific user
-// In a real app, you'd load credentials from DB or Vault. For this feature, we simulate retrieving it.
 export async function getGoogleAuthClient() {
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-  );
-
-  // Example: load tokens from a portal_settings table or env for testing
-  oauth2Client.setCredentials({
-    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
-  });
-
-  return oauth2Client;
+  return createGoogleOAuthClient();
 }
 
 export type MeetEventResult = {
@@ -32,8 +25,8 @@ export async function createMeetEvent(
   endTime: string,
   timezone: string = "UTC"
 ): Promise<MeetEventResult> {
-  const auth = await getGoogleAuthClient();
-  const calendar = google.calendar({ version: "v3", auth });
+  const calendar = createGoogleCalendarClient();
+  const calendarId = getGoogleWorkspaceConfig().calendarId || "primary";
 
   const event: calendar_v3.Schema$Event = {
     summary: title,
@@ -57,7 +50,7 @@ export async function createMeetEvent(
   };
 
   const res = await calendar.events.insert({
-    calendarId: "primary",
+    calendarId,
     requestBody: event,
     conferenceDataVersion: 1, // Must be 1 to create conference data
   });
@@ -79,9 +72,8 @@ export async function createMeetEvent(
  * Currently, googleapis supports this via the 'meet' API (v2 or v1beta).
  */
 export async function getMeetArtifactsMetadata(conferenceRecordId: string) {
-  const auth = await getGoogleAuthClient();
   // Using discovery or meet client if available. This is a generic implementation.
-  const meet = google.meet({ version: "v2", auth });
+  const meet = createGoogleMeetClient();
 
   try {
     await meet.conferenceRecords.get({ name: conferenceRecordId });
@@ -103,8 +95,7 @@ export async function getMeetArtifactsMetadata(conferenceRecordId: string) {
  * Downloads a specific transcript
  */
 export async function downloadTranscriptContent(transcriptName: string): Promise<string> {
-  const auth = await getGoogleAuthClient();
-  const meet = google.meet({ version: "v2", auth });
+  const meet = createGoogleMeetClient();
 
   try {
     // List transcript entries

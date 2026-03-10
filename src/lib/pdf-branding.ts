@@ -20,6 +20,16 @@ type DrawBrandHeaderOptions = {
   subtitleSize?: number;
 };
 
+type DrawBrandFooterOptions = {
+  page: PDFPage;
+  font: PDFFont;
+  footerNote?: string;
+  pageNumber?: number;
+  totalPages?: number;
+  mutedColor?: HeaderColor;
+  lineColor?: HeaderColor;
+};
+
 function drawCenteredText(
   page: PDFPage,
   font: PDFFont,
@@ -133,5 +143,46 @@ export function drawBrandHeader({
 
   if (subtitle && subtitle.trim().length > 0) {
     drawCenteredText(page, font, subtitle, nextLineY, subtitleSize, mutedColor);
+  }
+}
+
+export function drawBrandFooter({
+  page,
+  font,
+  footerNote,
+  pageNumber,
+  totalPages,
+  mutedColor = rgb(0.35, 0.4, 0.5),
+  lineColor = rgb(0.1, 0.13, 0.18),
+}: DrawBrandFooterOptions) {
+  const lineY = 64;
+  const lineLeft = 34;
+  const lineRight = page.getWidth() - 34;
+  const pageLabel =
+    Number.isFinite(pageNumber) && Number.isFinite(totalPages) && Number(pageNumber) > 0
+      ? `Page ${Number(pageNumber)} of ${Number(totalPages)}`
+      : "";
+  const metaLineTwoCore = `${officialContact.postalAddress} • TIN ${officialContact.tin} • REG ${officialContact.regNo}`;
+  const metaLineTwo = pageLabel ? `${metaLineTwoCore} • ${pageLabel}` : metaLineTwoCore;
+
+  page.drawLine({
+    start: { x: lineLeft, y: lineY },
+    end: { x: lineRight, y: lineY },
+    thickness: 1.6,
+    color: lineColor,
+  });
+
+  drawCenteredText(
+    page,
+    font,
+    `${officialContact.address} • ${officialContact.phoneDisplay} • ${officialContact.email}`,
+    lineY - 12,
+    8,
+    mutedColor,
+  );
+  drawCenteredText(page, font, metaLineTwo, lineY - 22, 7.3, mutedColor);
+
+  if (footerNote && footerNote.trim().length > 0) {
+    drawCenteredText(page, font, footerNote, lineY - 31.5, 6.8, mutedColor);
   }
 }

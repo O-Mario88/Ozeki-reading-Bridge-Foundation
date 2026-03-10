@@ -851,7 +851,7 @@ export function LessonEvaluationPanel({
         onClose={() => setFormOpen(false)}
         title={draft.id ? "Edit Lesson Evaluation" : "New Lesson Evaluation"}
         description={`${schoolName ?? "School"}${draft.visitId ? ` • Visit #${draft.visitId}` : ""}`}
-        variant="drawer"
+        variant="modal"
         maxWidth="760px"
         closeLabel="Close"
       >

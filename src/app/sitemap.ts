@@ -1,21 +1,31 @@
 import { MetadataRoute } from "next";
 import { listPublishedStories } from "@/lib/db";
+import { listPublishedChangeStories } from "@/lib/change-stories";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://ozekireadingbridge.org";
   const routes = [
     "",
     "/about",
+    "/about/our-story",
+    "/about/leadership-team",
     "/problem",
+    "/faqs",
     "/programs",
     "/impact",
     "/impact/case-studies",
     "/impact/methodology",
     "/impact/gallery",
     "/impact/calculator",
+    "/newsletter",
     "/partner/portal",
     "/donor-pack",
     "/donate",
+    "/sponsor-a-school",
+    "/sponsor-a-district",
+    "/sponsor-a-sub-region",
+    "/sponsor-a-region",
+    "/sponsor-uganda",
     "/teacher-professional-development",
     "/in-school-coaching-mentorship",
     "/learner-reading-assessments-progress-tracking",
@@ -34,11 +44,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/book-visit",
     "/partner",
     "/contact",
-    "/case-studies",
     "/testimonials",
     "/partners",
     "/media",
     "/transparency",
+    "/transparency/financials",
     "/academy",
     "/pricing",
     "/for-teachers",
@@ -66,6 +76,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // DB may not be ready during build
   }
 
-  return [...routes, ...storyRoutes];
-}
+  let changeStoryRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const changeStories = listPublishedChangeStories(200);
+    changeStoryRoutes = changeStories.map((story) => ({
+      url: `${base}/impact/case-studies/${story.slug}`,
+      lastModified: story.createdAt ? new Date(story.createdAt) : new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }));
+  } catch {
+    // DB may not be ready during build
+  }
 
+  return [...routes, ...storyRoutes, ...changeStoryRoutes];
+}

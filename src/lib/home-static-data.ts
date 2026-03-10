@@ -105,37 +105,44 @@ export const INSIGHT_TILES = [
     "Data completeness and credibility indicators (n, coverage, last updated)",
 ];
 
-export const PARTNERSHIP_OPTIONS = [
-    {
-        title: "Country-wide partnership",
-        fund: "National benchmarked literacy delivery, data systems, and reporting packs.",
-        happens: "Coordinated implementation and evidence tracking across Uganda geographies.",
-        evidence: "National snapshots, movement trends, priority queue updates, and quarterly evidence packs.",
-    },
-    {
-        title: "Region partnership",
-        fund: "Regional training, coaching, and assessment cycles aligned to local needs.",
-        happens: "Regional implementation teams prioritize low-performing clusters and follow-up support.",
-        evidence: "Regional dashboards, district comparisons, and intervention progress summaries.",
-    },
-    {
-        title: "District partnership",
-        fund: "District-level teacher support, school coaching, and data quality reinforcement.",
-        happens: "District action plans are executed with school-by-school monitoring and escalation.",
-        evidence: "District literacy briefs, school risk profiles, and verified implementation records.",
-    },
+type PartnershipOption = {
+    title: string;
+    fullRow?: boolean;
+    href?: string;
+};
+
+export const PARTNERSHIP_OPTIONS: PartnershipOption[] = [
     {
         title: "Sponsor a school",
-        fund: "Targeted support for one school's literacy improvement cycle.",
-        happens: "Teachers and leaders receive structured support with measurable classroom follow-through.",
-        evidence: "School coaching pack, reading movement indicators, and documented follow-up actions.",
+        fullRow: true,
+        href: "/sponsor-a-school",
+    },
+    {
+        title: "Sponsor a district",
+        fullRow: true,
+        href: "/sponsor-a-district",
+    },
+    {
+        title: "Sponsor a sub-region",
+        fullRow: true,
+        href: "/sponsor-a-sub-region",
+    },
+    {
+        title: "Sponsor a region",
+        fullRow: true,
+        href: "/sponsor-a-region",
+    },
+    {
+        title: "Sponsor the country",
+        fullRow: true,
+        href: "/sponsor-uganda",
     },
 ];
 
 export const TRUST_LINKS = [
-    { label: "Governance", href: "/governance" },
-    { label: "Safeguarding", href: "/safeguarding" },
+    { label: "Governance", href: "/transparency#governance-oversight" },
+    { label: "Safeguarding", href: "/transparency#safeguarding-child-protection" },
     { label: "Methodology", href: "/methodology" },
-    { label: "Financial Transparency", href: "/transparency" },
-    { label: "Reports", href: "/reports" },
+    { label: "Financial Transparency", href: "/transparency#anti-fraud-financial-controls" },
+    { label: "Reports", href: "/impact#reports" },
 ];

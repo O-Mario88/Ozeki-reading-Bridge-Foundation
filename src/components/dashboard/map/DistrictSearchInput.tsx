@@ -1,19 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-    GEO_DISTRICT_BOUNDARIES,
-    type GeoDistrictBoundary,
-} from "@/lib/uganda-geojson-boundaries";
-import type { UgandaMapSubRegionName } from "@/lib/uganda-map-taxonomy";
+
+type DistrictSearchOption = {
+    district: string;
+    subRegion: string;
+};
 
 type DistrictSearchInputProps = {
-    onSelectDistrict: (districtName: string, subRegion: UgandaMapSubRegionName) => void;
+    districtOptions: DistrictSearchOption[];
+    onSelectDistrict: (districtName: string, subRegion: string) => void;
     placeholder?: string;
     className?: string;
 };
 
 export function DistrictSearchInput({
+    districtOptions,
     onSelectDistrict,
     placeholder = "Search district\u2026",
     className,
@@ -25,34 +27,34 @@ export function DistrictSearchInput({
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
 
-    const matches = useMemo((): GeoDistrictBoundary[] => {
+    const matches = useMemo((): DistrictSearchOption[] => {
         const q = query.trim().toLowerCase();
         if (!q) return [];
 
-        const startsWith: GeoDistrictBoundary[] = [];
-        const contains: GeoDistrictBoundary[] = [];
+        const startsWith: DistrictSearchOption[] = [];
+        const contains: DistrictSearchOption[] = [];
 
-        for (const d of GEO_DISTRICT_BOUNDARIES) {
-            const name = d.name.toLowerCase();
+        for (const option of districtOptions) {
+            const name = option.district.toLowerCase();
             if (name.startsWith(q)) {
-                startsWith.push(d);
+                startsWith.push(option);
             } else if (name.includes(q)) {
-                contains.push(d);
+                contains.push(option);
             }
         }
 
         // Sort each group alphabetically, then combine
-        startsWith.sort((a, b) => a.name.localeCompare(b.name));
-        contains.sort((a, b) => a.name.localeCompare(b.name));
+        startsWith.sort((a, b) => a.district.localeCompare(b.district));
+        contains.sort((a, b) => a.district.localeCompare(b.district));
         return [...startsWith, ...contains].slice(0, 20);
-    }, [query]);
+    }, [districtOptions, query]);
 
     const handleSelect = useCallback(
-        (district: GeoDistrictBoundary) => {
-            setQuery(district.name);
+        (district: DistrictSearchOption) => {
+            setQuery(district.district);
             setOpen(false);
             setActiveIndex(-1);
-            onSelectDistrict(district.name, district.subRegion);
+            onSelectDistrict(district.district, district.subRegion);
         },
         [onSelectDistrict],
     );
@@ -154,7 +156,7 @@ export function DistrictSearchInput({
                     ) : (
                         matches.map((d, i) => (
                             <li
-                                key={`${d.subRegion}-${d.name}`}
+                                key={`${d.subRegion}-${d.district}`}
                                 role="option"
                                 aria-selected={i === activeIndex}
                                 data-active={i === activeIndex ? "" : undefined}
@@ -164,7 +166,7 @@ export function DistrictSearchInput({
                                     handleSelect(d);
                                 }}
                             >
-                                <span className="impact-map-search-district">{d.name}</span>
+                                <span className="impact-map-search-district">{d.district}</span>
                                 <span className="impact-map-search-subregion">{d.subRegion}</span>
                             </li>
                         ))

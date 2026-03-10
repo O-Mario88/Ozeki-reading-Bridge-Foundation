@@ -1,6 +1,5 @@
 import {
   BlogPost,
-  CaseStudy,
   Partner,
   Program,
   ResourceItem,
@@ -308,47 +307,6 @@ export const testimonials: Testimonial[] = [
     role: "P1 Teacher, Mbarara Junior Academy",
     quote:
       "Phonics routines are now consistent across classes, and we can see stronger blending and spelling accuracy.",
-  },
-];
-
-export const caseStudies: CaseStudy[] = [
-  {
-    slug: "makindye-literacy-turnaround",
-    school: "Makindye Community School",
-    district: "Kampala",
-    challenge:
-      "P2 and P3 learners showed weak decoding and low oral reading fluency despite regular reading periods.",
-    intervention: [
-      "Teacher phonics refresher and model lessons",
-      "Weekly coaching with observation rubrics",
-      "Baseline to endline learner fluency tracking",
-    ],
-    results: [
-      "Teacher routine adoption rose from 38% to 86%",
-      "Average oral reading fluency improved by 31 words per minute",
-      "Non-reader proportion reduced by 22 percentage points",
-    ],
-    testimonial:
-      "The structured routines changed everything. We now know exactly what to teach and how to track it.",
-  },
-  {
-    slug: "gulu-remedial-acceleration",
-    school: "Gulu Sunrise Primary",
-    district: "Gulu",
-    challenge:
-      "Large group of non-readers in P4 required accelerated catch-up support without disrupting regular classes.",
-    intervention: [
-      "Skill-grouped remedial lessons three times per week",
-      "Decodable practice packs and progress checks",
-      "Instructional leadership mentoring for school management",
-    ],
-    results: [
-      "74% of targeted learners progressed at least one fluency band",
-      "Teachers sustained intervention routines after coaching phase",
-      "School integrated literacy tracking into weekly supervision",
-    ],
-    testimonial:
-      "Our catch-up learners gained confidence and now participate fully in class reading tasks.",
   },
 ];
 

@@ -88,7 +88,7 @@ export function PortalTestimonialsManager({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setFeedback({ kind: "success", message: "Publishing testimonial..." });
+    setFeedback({ kind: "success", message: "Publishing change story..." });
 
     const formData = new FormData(event.currentTarget);
     if (!district) {
@@ -109,7 +109,7 @@ export function PortalTestimonialsManager({
       };
 
       if (!response.ok || !data.testimonial) {
-        throw new Error(data.error ?? "Could not submit testimonial.");
+        throw new Error(data.error ?? "Could not submit change story.");
       }
 
       setTestimonials((prev) => [data.testimonial as PortalTestimonialView, ...prev]);
@@ -122,11 +122,11 @@ export function PortalTestimonialsManager({
       setPlayingVideoIds({});
       setFeedback({
         kind: "success",
-        message: "Testimonial submitted and published successfully.",
+        message: "Change story submitted and published successfully.",
       });
       setIsCreateOpen(false);
     } catch (error) {
-      const fallback = "Could not submit testimonial.";
+      const fallback = "Could not submit change story.";
       setFeedback({
         kind: "error",
         message: error instanceof Error ? error.message : fallback,
@@ -139,15 +139,14 @@ export function PortalTestimonialsManager({
   return (
     <div className="portal-grid">
       <section className="card">
-        <h2>Submit Testimonial Story</h2>
+        <h2>Submit Change Story</h2>
         <p>
-          Staff and volunteers can capture story text and link each testimonial
-          to a matching video on the Ozeki YouTube channel by title.
-          New submissions appear on the public testimonials page automatically.
+          Staff and volunteers can capture measurable change stories with photo evidence.
+          Approved submissions appear automatically in the public stories of measurable change pages.
         </p>
         <div className="action-row portal-form-actions">
           <button className="button" type="button" onClick={() => setIsCreateOpen(true)}>
-            + New Testimonial
+            + New Change Story
           </button>
         </div>
         {feedback.message ? (
@@ -161,9 +160,9 @@ export function PortalTestimonialsManager({
       </section>
 
       <section className="card">
-        <h2>Recent Testimonial Submissions</h2>
+        <h2>Recent Change Story Submissions</h2>
         {testimonials.length === 0 ? (
-          <p>No testimonial submissions yet.</p>
+          <p>No change story submissions yet.</p>
         ) : (
           <div className="media-showcase-grid">
             {testimonials.map((item) => (
@@ -225,7 +224,7 @@ export function PortalTestimonialsManager({
                   )}
                 </div>
                 <div className="media-showcase-content">
-                  <p className="meta-pill">Portal testimonial</p>
+                  <p className="meta-pill">Change story</p>
                   <p className="media-showcase-quote">"{item.storyText}"</p>
                   <p className="media-showcase-meta">
                     <strong>{item.storytellerName}</strong> · {item.storytellerRole}
@@ -281,8 +280,8 @@ export function PortalTestimonialsManager({
       <FloatingSurface
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title="Submit Testimonial Story"
-        description="Capture a field story and publish it to the public testimonials wall."
+        title="Submit Change Story"
+        description="Capture baseline challenge, what happened, and measurable change from the field."
         closeLabel="Close"
         maxWidth="980px"
       >
@@ -386,34 +385,96 @@ export function PortalTestimonialsManager({
           </label>
 
           <label className="full-width">
+            <span className="portal-field-label">Story title</span>
+            <input
+              name="storyTitle"
+              required
+              minLength={6}
+              placeholder="e.g. Reading recovery in Dokolo cluster schools"
+            />
+          </label>
+
+          <label className="full-width">
             <span className="portal-field-label">
-              <span>Story Text</span>
+              <span>Baseline challenge</span>
               <span className="portal-required-indicator">
                 *<span className="visually-hidden">required</span>
               </span>
             </span>
             <textarea
-              name="storyText"
+              name="baselineChallenge"
               required
-              minLength={30}
-              rows={6}
-              placeholder="Capture the challenge, intervention, and change observed in the school."
+              minLength={20}
+              rows={4}
+              placeholder="What was the literacy challenge before support started?"
+            />
+          </label>
+
+          <label className="full-width">
+            <span className="portal-field-label">
+              <span>What happened</span>
+              <span className="portal-required-indicator">
+                *<span className="visually-hidden">required</span>
+              </span>
+            </span>
+            <textarea
+              name="whatHappened"
+              required
+              minLength={20}
+              rows={4}
+              placeholder="What support actions were implemented in the school?"
+            />
+          </label>
+
+          <label className="full-width">
+            <span className="portal-field-label">
+              <span>Measurable change observed</span>
+              <span className="portal-required-indicator">
+                *<span className="visually-hidden">required</span>
+              </span>
+            </span>
+            <textarea
+              name="measurableChange"
+              required
+              minLength={20}
+              rows={4}
+              placeholder="What changed for teaching and learners? Include measurable evidence."
+            />
+          </label>
+
+          <label className="full-width">
+            <span className="portal-field-label">Recommendation / next steps (optional)</span>
+            <textarea
+              name="nextSteps"
+              rows={3}
+              placeholder="What should happen next to sustain gains?"
+            />
+          </label>
+
+          <label className="full-width">
+            <span className="portal-field-label">
+              <span>Additional narrative (optional)</span>
+            </span>
+            <textarea
+              name="storyText"
+              minLength={10}
+              rows={5}
+              placeholder="Optional free-form context for the full change story."
             />
             <small className="portal-field-help">
-              Include context, what was done, and measurable change observed.
+              This is optional. Structured sections above are used to render summaries and details.
             </small>
           </label>
 
           <label>
-            <span className="portal-field-label">YouTube Video Title (preferred)</span>
+            <span className="portal-field-label">YouTube Video Title (optional)</span>
             <input
               name="youtubeVideoTitle"
               minLength={3}
               placeholder="Paste the exact YouTube title from your channel"
             />
             <small className="portal-field-help">
-              If provided, the system links that YouTube video automatically and shows
-              thumbnail-to-play on the website.
+              Optional: if provided, the system links matching YouTube evidence.
             </small>
           </label>
           <label>
@@ -440,8 +501,7 @@ export function PortalTestimonialsManager({
               }
             />
             <small className="portal-field-help">
-              Optional helper only. We use the uploaded file name to find a
-              matching YouTube title. Video files are not stored.
+              Optional helper only. If added, the file name can help match the YouTube title.
             </small>
           </label>
           <label>
@@ -474,7 +534,7 @@ export function PortalTestimonialsManager({
 
           <div className="full-width action-row portal-form-actions">
             <button className="button" type="submit" disabled={saving}>
-              {saving ? "Uploading..." : "Publish testimonial"}
+              {saving ? "Uploading..." : "Publish change story"}
             </button>
             <button
               className="button button-ghost"

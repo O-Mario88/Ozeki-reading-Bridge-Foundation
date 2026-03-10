@@ -7,6 +7,7 @@ import {
 } from "@/lib/safeguarding-policy";
 import { embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import {
+  drawBrandFooter,
   drawBrandFrame,
   drawBrandHeader,
   drawBrandWatermark,
@@ -17,6 +18,8 @@ const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
 const MARGIN_X = 48;
 const MARGIN_BOTTOM = 52;
+const FIRST_PAGE_START_Y = 600;
+const CONTINUATION_PAGE_START_Y = 768;
 
 function wrapTextByWidth(
   text: string,
@@ -76,29 +79,31 @@ export async function GET() {
   const regularFont = serifFonts.regular;
   const boldFont = serifFonts.bold;
   const logo = await loadBrandLogo(document);
-  const createBrandedPage = (subtitle: string) => {
+  const createBrandedPage = (subtitle: string, includeHeader: boolean) => {
     const nextPage = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     drawBrandFrame(nextPage);
     drawBrandWatermark(nextPage, logo);
-    drawBrandHeader({
-      page: nextPage,
-      font: regularFont,
-      fontBold: boldFont,
-      logo,
-      title: safeguardingPolicyTitle,
-      documentNumber: "FULL POLICY",
-      subtitle,
-      titleColor: rgb(0.03, 0.31, 0.4),
-      mutedColor: rgb(0.2, 0.24, 0.3),
-      titleSize: 20,
-      numberSize: 12,
-      subtitleSize: 9,
-    });
+    if (includeHeader) {
+      drawBrandHeader({
+        page: nextPage,
+        font: regularFont,
+        fontBold: boldFont,
+        logo,
+        title: safeguardingPolicyTitle,
+        documentNumber: "FULL POLICY",
+        subtitle,
+        titleColor: rgb(0.03, 0.31, 0.4),
+        mutedColor: rgb(0.2, 0.24, 0.3),
+        titleSize: 20,
+        numberSize: 12,
+        subtitleSize: 9,
+      });
+    }
     return nextPage;
   };
 
-  let page = createBrandedPage("Document type: Full policy text");
-  let cursorY = 600;
+  let page = createBrandedPage("Document type: Full policy text", true);
+  let cursorY = FIRST_PAGE_START_Y;
 
   const lineGapMultiplier = 1.35;
 
@@ -109,8 +114,8 @@ export async function GET() {
 
   const ensureSpace = (heightNeeded: number) => {
     if (cursorY - heightNeeded < MARGIN_BOTTOM) {
-      page = createBrandedPage("Policy continuation");
-      cursorY = 600;
+      page = createBrandedPage("Policy continuation", false);
+      cursorY = CONTINUATION_PAGE_START_Y;
     }
   };
 
@@ -172,8 +177,8 @@ export async function GET() {
     });
   });
 
-  page = createBrandedPage("Policy body and clauses");
-  cursorY = 600;
+  page = createBrandedPage("Policy body and clauses", false);
+  cursorY = CONTINUATION_PAGE_START_Y;
 
   const lines = safeguardingPolicyBody.replace(/\r/g, "").trim().split("\n");
 
@@ -183,8 +188,8 @@ export async function GET() {
     if (!line) {
       cursorY -= 4;
       if (cursorY < MARGIN_BOTTOM) {
-        page = createBrandedPage("Policy continuation");
-        cursorY = 600;
+        page = createBrandedPage("Policy continuation", false);
+        cursorY = CONTINUATION_PAGE_START_Y;
       }
       continue;
     }
@@ -225,6 +230,19 @@ export async function GET() {
       paragraphGap: 5,
     });
   }
+
+  const pages = document.getPages();
+  const totalPages = pages.length;
+  pages.forEach((pdfPage, index) => {
+    drawBrandFooter({
+      page: pdfPage,
+      font: regularFont,
+      footerNote: "Official safeguarding policy document.",
+      pageNumber: index + 1,
+      totalPages,
+      mutedColor: rgb(0.2, 0.24, 0.3),
+    });
+  });
 
   const pdfBytes = await document.save();
 

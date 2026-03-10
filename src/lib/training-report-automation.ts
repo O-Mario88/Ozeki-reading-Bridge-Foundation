@@ -4,6 +4,13 @@ import path from "node:path";
 import OpenAI from "openai";
 import { PDFDocument, rgb } from "pdf-lib";
 import { getDb, logAuditEvent } from "@/lib/db";
+import {
+  drawBrandFooter,
+  drawBrandFrame,
+  drawBrandHeader,
+  drawBrandWatermark,
+  loadBrandLogo,
+} from "@/lib/pdf-branding";
 import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import type {
   PortalUser,
@@ -27,6 +34,27 @@ type FeedbackTheme = {
   theme: string;
   mentions: number;
   sampleQuote: string | null;
+};
+
+type TrainingReportEvidenceTag =
+  | "training"
+  | "lesson_observation_coaching"
+  | "lesson_demo"
+  | "school_leader_conversation"
+  | "assessment";
+
+type TrainingReportEvidencePhoto = {
+  id: number;
+  recordId: number;
+  module: "training" | "visit" | "assessment";
+  date: string;
+  schoolName: string;
+  fileName: string;
+  storedPath: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+  tags: TrainingReportEvidenceTag[];
 };
 
 const FEEDBACK_THEME_RULES: Array<{ theme: string; keywords: string[] }> = [
@@ -323,6 +351,321 @@ function extractFeedbackThemes(texts: string[]): FeedbackTheme[] {
     .slice(0, 8);
 }
 
+function isImageMimeType(mimeType: string) {
+  return mimeType.trim().toLowerCase().startsWith("image/");
+}
+
+function parseJsonObject(value: string | null | undefined) {
+  if (!value || !value.trim()) {
+    return {} as Record<string, unknown>;
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function tagsForVisitPayload(payload: Record<string, unknown>) {
+  const tags = new Set<TrainingReportEvidenceTag>();
+  const visitPathway = String(payload.visitPathway ?? payload.visit_pathway ?? "")
+    .trim()
+    .toLowerCase();
+  const hasObservationSignals =
+    visitPathway === "observation" ||
+    visitPathway === "mixed" ||
+    String(payload.teacherObserved ?? "").trim().length > 0 ||
+    String(payload.coachingProvided ?? "").trim().length > 0;
+  const hasDemoSignals =
+    visitPathway === "demo_and_meeting" ||
+    visitPathway === "mixed" ||
+    String(payload.demoDelivered ?? "").trim().toLowerCase() === "yes" ||
+    String(payload.demoTakeawaysText ?? "").trim().length > 0;
+  const hasLeadershipSignals =
+    String(payload.leadershipMeetingHeld ?? "").trim().toLowerCase() === "yes" ||
+    String(payload.leadershipSummary ?? "").trim().length > 0 ||
+    String(payload.leadershipAgreements ?? "").trim().length > 0;
+
+  if (hasObservationSignals) {
+    tags.add("lesson_observation_coaching");
+  }
+  if (hasDemoSignals) {
+    tags.add("lesson_demo");
+  }
+  if (hasLeadershipSignals) {
+    tags.add("school_leader_conversation");
+  }
+  return [...tags];
+}
+
+function selectBestEvidencePhotos(candidates: TrainingReportEvidencePhoto[], maxPhotos = 12) {
+  const ranked = [...candidates].sort((left, right) => {
+    if (right.sizeBytes !== left.sizeBytes) {
+      return right.sizeBytes - left.sizeBytes;
+    }
+    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  });
+
+  const selected: TrainingReportEvidencePhoto[] = [];
+  const pickedPaths = new Set<string>();
+  const perTagCount = new Map<TrainingReportEvidenceTag, number>();
+  const perTagLimit = 4;
+
+  for (const candidate of ranked) {
+    if (selected.length >= maxPhotos) {
+      break;
+    }
+    if (pickedPaths.has(candidate.storedPath)) {
+      continue;
+    }
+    const wouldAddByTag = candidate.tags.some((tag) => (perTagCount.get(tag) ?? 0) < perTagLimit);
+    if (!wouldAddByTag) {
+      continue;
+    }
+    selected.push(candidate);
+    pickedPaths.add(candidate.storedPath);
+    candidate.tags.forEach((tag) => {
+      perTagCount.set(tag, (perTagCount.get(tag) ?? 0) + 1);
+    });
+  }
+
+  return selected;
+}
+
+function collectEvidencePhotos(
+  facts: TrainingReportFacts,
+  includeObservedInsights: boolean,
+): TrainingReportEvidencePhoto[] {
+  const db = getDb();
+  const trainingRecordIds = [
+    ...new Set(
+      facts.followUpPlans
+        .map((row) => Number(row.trainingRecordId))
+        .filter((value) => Number.isInteger(value) && value > 0),
+    ),
+  ];
+  if (trainingRecordIds.length === 0) {
+    return [];
+  }
+
+  const { clause: trainingClause, params: trainingParams } = buildSqlInClause(
+    trainingRecordIds,
+    "reportTraining",
+  );
+  const trainingSchoolRows = db
+    .prepare(
+      `
+      SELECT DISTINCT school_id AS schoolId
+      FROM portal_records
+      WHERE id IN (${trainingClause})
+        AND school_id IS NOT NULL
+      `,
+    )
+    .all(trainingParams) as Array<{ schoolId: number | null }>;
+  const schoolIds = [
+    ...new Set(
+      trainingSchoolRows
+        .map((row) => Number(row.schoolId ?? 0))
+        .filter((value) => Number.isInteger(value) && value > 0),
+    ),
+  ];
+
+  const reportEndDate = new Date(`${facts.periodEnd}T00:00:00.000Z`);
+  if (includeObservedInsights) {
+    reportEndDate.setUTCDate(reportEndDate.getUTCDate() + 120);
+  }
+  const evidencePeriodEnd = toIsoDate(reportEndDate);
+  const { clause: visitSchoolClause, params: visitSchoolParams } = buildSqlInClause(
+    schoolIds,
+    "visitSchool",
+  );
+  const { clause: assessmentSchoolClause, params: assessmentSchoolParams } = buildSqlInClause(
+    schoolIds,
+    "assessmentSchool",
+  );
+
+  const visitRows =
+    schoolIds.length > 0
+      ? (db
+          .prepare(
+            `
+            SELECT
+              pr.id,
+              pr.payload_json AS payloadJson
+            FROM portal_records pr
+            WHERE pr.module = 'visit'
+              AND pr.deleted_at IS NULL
+              AND pr.school_id IN (${visitSchoolClause})
+              AND date(pr.date) >= date(@periodStart)
+              AND date(pr.date) <= date(@periodEnd)
+            `,
+          )
+          .all({
+            ...visitSchoolParams,
+            periodStart: facts.periodStart,
+            periodEnd: evidencePeriodEnd,
+          }) as Array<{ id: number; payloadJson: string | null }>)
+      : [];
+
+  const assessmentRows =
+    schoolIds.length > 0
+      ? (db
+          .prepare(
+            `
+            SELECT
+              pr.id
+            FROM portal_records pr
+            WHERE pr.module = 'assessment'
+              AND pr.deleted_at IS NULL
+              AND pr.school_id IN (${assessmentSchoolClause})
+              AND date(pr.date) >= date(@periodStart)
+              AND date(pr.date) <= date(@periodEnd)
+            `,
+          )
+          .all({
+            ...assessmentSchoolParams,
+            periodStart: facts.periodStart,
+            periodEnd: evidencePeriodEnd,
+          }) as Array<{ id: number }>)
+      : [];
+
+  const visitRecordIds = visitRows.map((row) => Number(row.id)).filter((value) => value > 0);
+  const assessmentRecordIds = assessmentRows
+    .map((row) => Number(row.id))
+    .filter((value) => value > 0);
+
+  const candidateRecordIds = [
+    ...new Set([...trainingRecordIds, ...visitRecordIds, ...assessmentRecordIds]),
+  ];
+  if (candidateRecordIds.length === 0) {
+    return [];
+  }
+
+  const { clause: recordClause, params: recordParams } = buildSqlInClause(
+    candidateRecordIds,
+    "evidenceRecord",
+  );
+  const evidenceRows = db
+    .prepare(
+      `
+      SELECT
+        pe.id,
+        pe.record_id AS recordId,
+        pe.module,
+        pe.date,
+        pe.school_name AS schoolName,
+        pe.file_name AS fileName,
+        pe.stored_path AS storedPath,
+        pe.mime_type AS mimeType,
+        pe.size_bytes AS sizeBytes,
+        pe.created_at AS createdAt
+      FROM portal_evidence pe
+      WHERE pe.record_id IN (${recordClause})
+        AND pe.module IN ('training', 'visit', 'assessment')
+        AND lower(pe.mime_type) LIKE 'image/%'
+      `,
+    )
+    .all(recordParams) as Array<{
+    id: number;
+    recordId: number | null;
+    module: "training" | "visit" | "assessment";
+    date: string;
+    schoolName: string;
+    fileName: string;
+    storedPath: string;
+    mimeType: string;
+    sizeBytes: number;
+    createdAt: string;
+  }>;
+
+  const trainingRecordIdSet = new Set(trainingRecordIds);
+  const assessmentRecordIdSet = new Set(assessmentRecordIds);
+  const visitPayloadByRecordId = new Map<number, Record<string, unknown>>();
+  visitRows.forEach((row) => {
+    visitPayloadByRecordId.set(Number(row.id), parseJsonObject(row.payloadJson));
+  });
+
+  const candidates = evidenceRows
+    .filter(
+      (row) =>
+        Number.isInteger(row.recordId) &&
+        Number(row.recordId) > 0 &&
+        isImageMimeType(row.mimeType),
+    )
+    .map((row) => {
+      const recordId = Number(row.recordId);
+      const tags = new Set<TrainingReportEvidenceTag>();
+      if (trainingRecordIdSet.has(recordId) || row.module === "training") {
+        tags.add("training");
+      }
+      if (assessmentRecordIdSet.has(recordId) || row.module === "assessment") {
+        tags.add("assessment");
+      }
+      const visitPayload = visitPayloadByRecordId.get(recordId);
+      if (visitPayload) {
+        tagsForVisitPayload(visitPayload).forEach((tag) => tags.add(tag));
+      }
+      if (tags.size === 0 && row.module === "visit") {
+        tags.add("lesson_observation_coaching");
+      }
+
+      return {
+        id: Number(row.id),
+        recordId,
+        module: row.module,
+        date: row.date,
+        schoolName: row.schoolName,
+        fileName: row.fileName,
+        storedPath: row.storedPath,
+        mimeType: row.mimeType,
+        sizeBytes: Number(row.sizeBytes),
+        createdAt: row.createdAt,
+        tags: [...tags],
+      } as TrainingReportEvidencePhoto;
+    })
+    .filter((row) => row.tags.length > 0);
+
+  return selectBestEvidencePhotos(candidates);
+}
+
+function renderEvidenceGallery(
+  photos: TrainingReportEvidencePhoto[],
+  sectionTitle: string,
+  targetTag: TrainingReportEvidenceTag,
+) {
+  const items = photos.filter((photo) => photo.tags.includes(targetTag));
+  if (items.length === 0) {
+    return `
+      <section class="evidence-section">
+        <h3>${escapeHtml(sectionTitle)}</h3>
+        <p>No photo evidence found in this reporting window.</p>
+      </section>
+    `;
+  }
+
+  const cards = items
+    .map(
+      (photo) => `
+      <figure class="evidence-card">
+        <img src="/api/portal/evidence/${photo.id}/download" alt="${escapeHtml(`${sectionTitle} - ${photo.schoolName}`)}" loading="lazy" />
+        <figcaption>
+          <strong>${escapeHtml(photo.schoolName || "School")}</strong><br />
+          <span>${escapeHtml(photo.date)} • ${escapeHtml(photo.fileName)}</span>
+        </figcaption>
+      </figure>
+    `,
+    )
+    .join("");
+
+  return `
+    <section class="evidence-section">
+      <h3>${escapeHtml(sectionTitle)}</h3>
+      <div class="evidence-grid">${cards}</div>
+    </section>
+  `;
+}
+
 function getOpenAiClient() {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
@@ -479,6 +822,7 @@ function buildHtmlReport(
   facts: TrainingReportFacts,
   narrative: TrainingReportNarrative,
   reportCode: string,
+  evidencePhotos: TrainingReportEvidencePhoto[],
 ) {
   const section = narrative.sections;
   const geographyRows = facts.geographyBreakdown
@@ -527,6 +871,24 @@ function buildHtmlReport(
     `,
     )
     .join("");
+
+  const evidenceSectionHtml = `
+    <h2>Photo Evidence (Best Selected Images)</h2>
+    <p>Images are auto-selected from uploaded evidence using file quality (size) and recency ranking.</p>
+    ${renderEvidenceGallery(evidencePhotos, "Training Session Photos", "training")}
+    ${renderEvidenceGallery(
+      evidencePhotos,
+      "School Visit: Lesson Observation & Coaching",
+      "lesson_observation_coaching",
+    )}
+    ${renderEvidenceGallery(evidencePhotos, "School Visit: Lesson Demo", "lesson_demo")}
+    ${renderEvidenceGallery(
+      evidencePhotos,
+      "School Visit: School Leader Conversation",
+      "school_leader_conversation",
+    )}
+    ${renderEvidenceGallery(evidencePhotos, "Assessments", "assessment")}
+  `;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -612,6 +974,33 @@ function buildHtmlReport(
     }
     blockquote p { margin: 0 0 4px; }
     blockquote footer { color: var(--muted); font-size: 11px; }
+    .evidence-section { margin: 10px 0 14px; }
+    .evidence-section h3 { margin-bottom: 6px; }
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .evidence-card {
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .evidence-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+      background: #f8fafc;
+    }
+    .evidence-card figcaption {
+      font-size: 11px;
+      color: var(--muted);
+      padding: 8px;
+      line-height: 1.35;
+    }
   </style>
 </head>
 <body>
@@ -664,6 +1053,7 @@ function buildHtmlReport(
 
   <h2>Approved Quotes</h2>
   ${quoteRows || "<p>No approved quotes in this scope.</p>"}
+  ${evidenceSectionHtml}
 </body>
 </html>`;
 }
@@ -672,7 +1062,10 @@ function createPdfLines(
   facts: TrainingReportFacts,
   narrative: TrainingReportNarrative,
   reportCode: string,
+  evidencePhotos: TrainingReportEvidencePhoto[],
 ) {
+  const countByTag = (tag: TrainingReportEvidenceTag) =>
+    evidencePhotos.filter((photo) => photo.tags.includes(tag)).length;
   const lines: string[] = [
     "Training Report",
     `Report Code: ${reportCode}`,
@@ -701,6 +1094,13 @@ function createPdfLines(
     "",
     "Approved Quotes:",
     ...facts.approvedQuotes.slice(0, 6).map((quote) => `- "${sentenceClip(quote.quote, 180)}"`),
+    "",
+    "Photo Evidence (best selected images):",
+    `- Training sessions: ${countByTag("training")}`,
+    `- Lesson observation & coaching visits: ${countByTag("lesson_observation_coaching")}`,
+    `- Lesson demo visits: ${countByTag("lesson_demo")}`,
+    `- School leader conversation visits: ${countByTag("school_leader_conversation")}`,
+    `- Assessments: ${countByTag("assessment")}`,
   ];
   return lines;
 }
@@ -725,29 +1125,49 @@ function wrapTextLine(text: string, maxWidth: number, font: { widthOfTextAtSize:
   return lines;
 }
 
+async function tryEmbedEvidenceImage(doc: PDFDocument, storedPath: string) {
+  try {
+    const bytes = await fs.readFile(storedPath);
+    try {
+      return await doc.embedJpg(bytes);
+    } catch {
+      try {
+        return await doc.embedPng(bytes);
+      } catch {
+        return null;
+      }
+    }
+  } catch {
+    return null;
+  }
+}
+
 async function generatePdfBytes(
   facts: TrainingReportFacts,
   narrative: TrainingReportNarrative,
   reportCode: string,
+  evidencePhotos: TrainingReportEvidencePhoto[],
 ) {
   const doc = await PDFDocument.create();
   const serif = await embedPdfSerifFonts(doc);
   const sans = await embedPdfSansFonts(doc);
+  const logo = await loadBrandLogo(doc);
 
   const pageWidth = 595.28;
   const pageHeight = 841.89;
   const marginX = 50;
-  const marginTop = 56;
-  const marginBottom = 52;
+  const firstPageTopY = 600;
+  const continuationPageTopY = pageHeight - 72;
+  const marginBottom = 82;
   const maxWidth = pageWidth - marginX * 2;
 
   let page = doc.addPage([pageWidth, pageHeight]);
-  let cursorY = pageHeight - marginTop;
+  let cursorY = firstPageTopY;
 
   const ensureSpace = (needed: number) => {
     if (cursorY - needed < marginBottom) {
       page = doc.addPage([pageWidth, pageHeight]);
-      cursorY = pageHeight - marginTop;
+      cursorY = continuationPageTopY;
     }
   };
 
@@ -781,7 +1201,7 @@ async function generatePdfBytes(
   drawTextWrapped(`Period: ${facts.periodStart} to ${facts.periodEnd}`, { size: 11, lineHeight: 14 });
   cursorY -= 4;
 
-  createPdfLines(facts, narrative, reportCode).forEach((line) => {
+  createPdfLines(facts, narrative, reportCode, evidencePhotos).forEach((line) => {
     const isHeading =
       line === "Training Report" ||
       line === "Top Feedback Themes:" ||
@@ -801,6 +1221,122 @@ async function generatePdfBytes(
     if (line === "") {
       cursorY -= 2;
     }
+  });
+
+  const topEvidencePhotos = evidencePhotos.slice(0, 8);
+  if (topEvidencePhotos.length > 0) {
+    let galleryPage = doc.addPage([pageWidth, pageHeight]);
+    let galleryCursorY = pageHeight - 76;
+    const headingColor = rgb(0.05, 0.1, 0.2);
+    const captionColor = rgb(0.25, 0.25, 0.25);
+
+    const ensureGallerySpace = (required: number) => {
+      if (galleryCursorY - required < marginBottom) {
+        galleryPage = doc.addPage([pageWidth, pageHeight]);
+        galleryCursorY = continuationPageTopY;
+      }
+    };
+
+    galleryPage.drawText("Photo Evidence (Best Selected Images)", {
+      x: marginX,
+      y: galleryCursorY,
+      size: 14,
+      font: sans.bold,
+      color: headingColor,
+    });
+    galleryCursorY -= 20;
+    galleryPage.drawText(
+      "Selected from uploaded training, visit, and assessment media by quality and recency.",
+      {
+        x: marginX,
+        y: galleryCursorY,
+        size: 9,
+        font: serif.regular,
+        color: captionColor,
+      },
+    );
+    galleryCursorY -= 16;
+
+    for (const photo of topEvidencePhotos) {
+      const embedded = await tryEmbedEvidenceImage(doc, photo.storedPath);
+      if (!embedded) {
+        continue;
+      }
+
+      const maxImageWidth = pageWidth - marginX * 2;
+      const maxImageHeight = 180;
+      const ratio = Math.min(maxImageWidth / embedded.width, maxImageHeight / embedded.height, 1);
+      const drawWidth = embedded.width * ratio;
+      const drawHeight = embedded.height * ratio;
+      const blockHeight = drawHeight + 26;
+      ensureGallerySpace(blockHeight + 12);
+
+      galleryPage.drawImage(embedded, {
+        x: marginX + (maxImageWidth - drawWidth) / 2,
+        y: galleryCursorY - drawHeight,
+        width: drawWidth,
+        height: drawHeight,
+      });
+      galleryCursorY -= drawHeight + 6;
+
+      const tagLabel = photo.tags
+        .map((tag) =>
+          tag === "lesson_observation_coaching"
+            ? "Observation/Coaching"
+            : tag === "lesson_demo"
+              ? "Lesson Demo"
+              : tag === "school_leader_conversation"
+                ? "School Leader Conversation"
+                : tag === "training"
+                  ? "Training"
+                  : "Assessment",
+        )
+        .join(", ");
+      const caption = `${photo.date} • ${photo.schoolName} • ${tagLabel}`;
+      const captionLines = wrapTextLine(caption, maxImageWidth, serif.regular, 8.7).slice(0, 2);
+      captionLines.forEach((line) => {
+        galleryPage.drawText(line, {
+          x: marginX,
+          y: galleryCursorY,
+          size: 8.7,
+          font: serif.regular,
+          color: captionColor,
+        });
+        galleryCursorY -= 10.5;
+      });
+      galleryCursorY -= 8;
+    }
+  }
+
+  const pages = doc.getPages();
+  const totalPages = pages.length;
+  pages.forEach((pdfPage, index) => {
+    drawBrandFrame(pdfPage);
+    drawBrandWatermark(pdfPage, logo);
+    if (index === 0) {
+      drawBrandHeader({
+        page: pdfPage,
+        font: serif.regular,
+        fontBold: sans.bold,
+        logo,
+        title: "TRAINING REPORT",
+        documentNumber: reportCode,
+        subtitle: `${facts.scopeLabel} • ${facts.periodStart} to ${facts.periodEnd}`,
+        titleColor: rgb(0.05, 0.1, 0.2),
+        mutedColor: rgb(0.2, 0.24, 0.3),
+        titleSize: 22,
+        numberSize: 12,
+        subtitleSize: 9,
+      });
+    }
+    drawBrandFooter({
+      page: pdfPage,
+      font: serif.regular,
+      footerNote: "Aggregated, privacy-protected training report.",
+      pageNumber: index + 1,
+      totalPages,
+      mutedColor: rgb(0.2, 0.24, 0.3),
+    });
   });
 
   return doc.save();
@@ -1227,9 +1763,13 @@ export async function generateTrainingReportArtifact(input: {
     includeObservedInsights: input.includeObservedInsights,
   });
   const narrative = await aiNarrative(facts);
+  const evidencePhotos = collectEvidencePhotos(
+    facts,
+    input.includeObservedInsights ?? true,
+  );
   const reportCode = `TRN-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-  const htmlReport = buildHtmlReport(facts, narrative, reportCode);
-  const pdfBytes = await generatePdfBytes(facts, narrative, reportCode);
+  const htmlReport = buildHtmlReport(facts, narrative, reportCode, evidencePhotos);
+  const pdfBytes = await generatePdfBytes(facts, narrative, reportCode, evidencePhotos);
   const pdfStoredPath = await savePdfToDisk(reportCode, pdfBytes);
 
   const db = getDb();
