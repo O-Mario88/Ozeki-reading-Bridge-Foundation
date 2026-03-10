@@ -8869,6 +8869,12 @@ nav[aria-label="Staff navigation"] {
   filter: brightness(1.15) saturate(1.4);
 }
 
+.impact-map-district-shape[data-dimmed] {
+  stroke: rgba(99, 99, 99, 0.52);
+  stroke-width: 1.1;
+  filter: saturate(0.2) brightness(0.96);
+}
+
 /* District text labels */
 .impact-map-district-label {
   pointer-events: none;

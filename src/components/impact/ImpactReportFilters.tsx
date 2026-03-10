@@ -81,6 +81,31 @@ export function ImpactReportFilters({
 
   const years = useMemo(() => yearValues(), []);
 
+  // Keep local form controls in sync with URL-driven server props.
+  useEffect(() => {
+    setYear(initialYear);
+    setReportType(initialReportType);
+    setReportCategory(initialReportCategory);
+    setPeriodType(initialPeriodType || "FY");
+    setOutput(initialOutput || "PDF");
+    setAudience(initialAudience || "Public-safe");
+    setRegion(initialRegion);
+    setSubRegion(initialSubRegion);
+    setDistrict(initialDistrict);
+    setSchoolId(initialSchoolId);
+  }, [
+    initialAudience,
+    initialDistrict,
+    initialOutput,
+    initialPeriodType,
+    initialRegion,
+    initialReportCategory,
+    initialReportType,
+    initialSchoolId,
+    initialSubRegion,
+    initialYear,
+  ]);
+
   const selectedRegionOption = useMemo(
     () =>
       regions.find(

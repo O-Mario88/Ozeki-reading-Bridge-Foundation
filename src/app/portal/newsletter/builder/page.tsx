@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { PortalNewsletterManager } from "@/components/portal/PortalNewsletterManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import Link from "next/link";
 import {
   getNewsletterDispatchSummary,
   listNewsletterIssues,
@@ -11,12 +11,11 @@ import { requirePortalStaffUser } from "@/lib/portal-auth";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Newsletter Manager",
-  description:
-    "Create newsletter issues, publish, and send grouped newsletter emails to website subscribers.",
+  title: "Newsletter Builder",
+  description: "Build newsletter issues with structured text and image slots.",
 };
 
-export default async function PortalNewsletterPage() {
+export default async function PortalNewsletterBuilderPage() {
   const user = await requirePortalStaffUser();
   const initialIssues = listNewsletterIssues({ limit: 120 }).map((issue) => ({
     id: issue.id,
@@ -35,20 +34,21 @@ export default async function PortalNewsletterPage() {
   return (
     <PortalShell
       user={user}
-      activeHref="/portal/newsletter"
-      title="Newsletter Manager"
-      description="Collect subscribers, publish newsletter issues, and trigger grouped sends."
-      actions={(
+      activeHref="/portal/newsletter/builder"
+      title="Newsletter Builder"
+      description="Upload content and images into the fixed newsletter template layout."
+      actions={
         <div className="action-row">
-          <Link className="button button-ghost" href="/portal/newsletter/builder">
-            Open Dedicated Builder Form
+          <Link className="button button-ghost" href="/portal/newsletter">
+            Open Newsletter Manager
           </Link>
         </div>
-      )}
+      }
     >
       <PortalNewsletterManager
         initialIssues={initialIssues}
         initialSubscribersCount={subscribersCount}
+        showIssueList={false}
       />
     </PortalShell>
   );

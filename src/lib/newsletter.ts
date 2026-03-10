@@ -18,6 +18,10 @@ function normalizeOrigin(origin: string) {
   return origin.replace(/\/+$/, "");
 }
 
+function hasEditorialTemplateContent(html: string) {
+  return /newsletter-template-editorial/i.test(html);
+}
+
 export function getNewsletterPublicUrl(issue: Pick<NewsletterIssueRecord, "slug">, origin: string) {
   const base = normalizeOrigin(origin);
   return `${base}/newsletter/${encodeURIComponent(issue.slug)}`;
@@ -31,14 +35,18 @@ export function getNewsletterPdfUrl(issue: Pick<NewsletterIssueRecord, "slug">, 
 export function buildNewsletterPageFragment(
   issue: Pick<NewsletterIssueRecord, "title" | "preheader" | "htmlContent" | "publishedAt">,
 ) {
+  const templateMode = hasEditorialTemplateContent(issue.htmlContent);
   return `
-    <article class="newsletter-document">
+    <article class="newsletter-document${templateMode ? " newsletter-document-template" : ""}">
+      ${templateMode
+        ? ""
+        : `
       <header class="newsletter-document-header">
         <p class="newsletter-kicker">Ozeki Reading Bridge Newsletter</p>
         <h1>${escapeHtml(issue.title)}</h1>
         ${issue.preheader ? `<p class="newsletter-preheader">${escapeHtml(issue.preheader)}</p>` : ""}
         ${issue.publishedAt ? `<p class="newsletter-date">Published: ${escapeHtml(issue.publishedAt.slice(0, 10))}</p>` : ""}
-      </header>
+      </header>`}
       <section class="newsletter-content">${issue.htmlContent}</section>
     </article>
   `;
@@ -66,6 +74,7 @@ export function buildNewsletterStandaloneHtml(
     body { margin: 0; background: #f5f7fb; color: #0f172a; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
     .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
     .newsletter-document { background: #fff; border: 1px solid #d8deea; border-radius: 14px; padding: 26px 24px; }
+    .newsletter-document.newsletter-document-template { background: transparent; border: 0; border-radius: 0; padding: 0; }
     .newsletter-document-header h1 { margin: 0 0 10px; line-height: 1.15; font-size: clamp(1.65rem, 3vw, 2.2rem); color: #0d3330; }
     .newsletter-kicker { margin: 0 0 10px; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: #0f5c7b; }
     .newsletter-preheader { margin: 0 0 8px; color: #334155; font-size: 1rem; }

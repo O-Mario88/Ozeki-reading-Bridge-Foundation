@@ -22,6 +22,7 @@ const portalNavItems: PortalNavItem[] = [
   { href: "/portal/stories", label: "Story Library", staffOnly: true },
   { href: "/portal/resources", label: "Resources", staffOnly: true },
   { href: "/portal/newsletter", label: "Newsletter", roles: ["Staff", "Admin"] },
+  { href: "/portal/newsletter/builder", label: "Newsletter Builder", roles: ["Staff", "Admin"] },
 
   { href: "/portal/events", label: "Events", staffOnly: true },
   { href: "/portal/testimonials", label: "Change Stories" },

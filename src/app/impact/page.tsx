@@ -142,7 +142,7 @@ export default async function ImpactDashboardPage({
   const selectedRegion = firstValue(params.region);
   const selectedSubRegion = firstValue(params.subRegion);
   const selectedDistrict = firstValue(params.district);
-  const selectedSchoolId = firstValue(params.schoolId);
+  const selectedSchoolId = firstValue(params.schoolId) || firstValue(params.school);
 
   const facets = getImpactReportFilterFacets();
   const selectedYear = resolveReportYear(selectedYearParam, facets.years);
@@ -197,7 +197,7 @@ export default async function ImpactDashboardPage({
                 region: firstValue(params.region),
                 subRegion: firstValue(params.subRegion),
                 district: firstValue(params.district),
-                school: firstValue(params.school),
+                school: firstValue(params.school) || firstValue(params.schoolId),
               }}
             />
           </div>

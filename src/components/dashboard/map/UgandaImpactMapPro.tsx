@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   stableDistrictId,
   stableSubRegionId,
@@ -237,7 +237,7 @@ export function UgandaImpactMapPro({
     zoomOut,
     resetView,
     fitBounds,
-  } = useMapZoom({ minScale: 1, maxScale: 8 });
+  } = useMapZoom({ minScale: 1, maxScale: 5 });
   const [hoverLevel, setHoverLevel] = useState<HoverLevel>("district");
   const [hoveredTarget, setHoveredTarget] = useState<MapTarget | null>(null);
   const [pinnedTarget, setPinnedTarget] = useState<MapTarget | null>(null);
@@ -247,6 +247,7 @@ export function UgandaImpactMapPro({
   const [bestDistrictStats, setBestDistrictStats] = useState<BestDistrictReadingPerformance | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mapMode, setMapMode] = useState<"coverage" | "improvement" | "fidelity">("coverage");
+  const suppressNextCanvasResetRef = useRef(false);
 
   const { isOpen, scheduleOpen, scheduleClose, forceOpen, forceClose } = useHoverIntent({
     openDelayMs: 95,
@@ -286,14 +287,17 @@ export function UgandaImpactMapPro({
     };
   }, []);
 
+  const hasDistrictSelection = Boolean(selection.district);
+  const activeSubRegionFilter = hasDistrictSelection ? "" : selection.subRegion;
+
   const districtPaths: GeoDistrictBoundary[] = useMemo(() => {
-    if (selection.subRegion) {
+    if (activeSubRegionFilter) {
       return GEO_DISTRICT_BOUNDARIES.filter(
-        (d) => d.subRegion === selection.subRegion,
+        (d) => d.subRegion === activeSubRegionFilter,
       );
     }
     return GEO_DISTRICT_BOUNDARIES;
-  }, [selection.subRegion]);
+  }, [activeSubRegionFilter]);
 
   /* ── Fixed viewBox — zoom/pan is handled by CSS transform ── */
   const viewBox = `0 0 ${GEO_MAP_VIEWBOX.width} ${GEO_MAP_VIEWBOX.height}`;
@@ -422,12 +426,31 @@ export function UgandaImpactMapPro({
   }, [scheduleClose]);
 
   const clearSelection = useCallback(() => {
+    suppressNextCanvasResetRef.current = false;
     setPinnedTarget(null);
     setHoveredTarget(null);
     forceClose();
     onSelectionChange({ region: "", subRegion: "", district: "" });
     resetView();
   }, [forceClose, onSelectionChange, resetView]);
+
+  const handleCanvasClickReset = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (suppressNextCanvasResetRef.current) {
+        suppressNextCanvasResetRef.current = false;
+        return;
+      }
+      const target = event.target as HTMLElement;
+      if (
+        target.closest(".impact-map-zoom-controls") ||
+        target.closest(".impact-map-floating-card")
+      ) {
+        return;
+      }
+      clearSelection();
+    },
+    [clearSelection],
+  );
 
   const selectSubRegion = useCallback(
     (subRegion: UgandaMapSubRegionName) => {
@@ -439,6 +462,7 @@ export function UgandaImpactMapPro({
         chip: "Sub-region",
         profileHref: `/sub-regions/${encodeURIComponent(subRegion)}`,
       };
+      suppressNextCanvasResetRef.current = true;
       setPinnedTarget(target);
       setHoveredTarget(target);
       forceOpen();
@@ -464,6 +488,7 @@ export function UgandaImpactMapPro({
         chip: "District",
         profileHref: `/districts/${encodeURIComponent(district)}`,
       };
+      suppressNextCanvasResetRef.current = true;
       setPinnedTarget(target);
       setHoveredTarget(target);
       forceOpen();
@@ -474,7 +499,7 @@ export function UgandaImpactMapPro({
       // Fit map to district bounding box
       const dMatch = GEO_DISTRICT_BOUNDARIES.filter((d) => d.name === district);
       const bbox = computePathsBbox(dMatch);
-      if (bbox) fitBounds(bbox, 0.2);
+      if (bbox) fitBounds(bbox, 0.42);
     },
     [computePathsBbox, fetchStats, fitBounds, forceOpen, onSelectionChange],
   );
@@ -514,6 +539,30 @@ export function UgandaImpactMapPro({
 
   const completeness = currentStats?.meta.dataCompleteness ?? "Complete";
 
+  useEffect(() => {
+    if (selection.district) {
+      const districtMatch = GEO_DISTRICT_BOUNDARIES.filter((district) => district.name === selection.district);
+      const districtBbox = computePathsBbox(districtMatch);
+      if (districtBbox) {
+        fitBounds(districtBbox, 0.42);
+      }
+      return;
+    }
+
+    if (selection.subRegion) {
+      const subRegionDistricts = GEO_DISTRICT_BOUNDARIES.filter(
+        (district) => district.subRegion === selection.subRegion,
+      );
+      const subRegionBbox = computePathsBbox(subRegionDistricts);
+      if (subRegionBbox) {
+        fitBounds(subRegionBbox, 0.15);
+      }
+      return;
+    }
+
+    resetView();
+  }, [computePathsBbox, fitBounds, resetView, selection.district, selection.subRegion]);
+
   return (
     <article className={`impact-map-card ${compact ? "impact-map-card--compact" : ""} ${className ?? ""}`.trim()}>
       <header className="impact-map-card-header">
@@ -551,7 +600,7 @@ export function UgandaImpactMapPro({
 
       <div className="impact-map-breadcrumb-row">
         <p>
-          Uganda
+          All districts
           {selection.subRegion ? ` > ${selection.subRegion}` : ""}
           {selection.district ? ` > ${selection.district}` : ""}
         </p>
@@ -566,9 +615,14 @@ export function UgandaImpactMapPro({
         className="impact-map-search-above"
       />
 
-      <div ref={containerRef} className="impact-map-canvas" onMouseLeave={endHover}>
+      <div
+        ref={containerRef}
+        className="impact-map-canvas"
+        onMouseLeave={endHover}
+        onClick={handleCanvasClickReset}
+      >
         {/* Zoom controls */}
-        <div className="impact-map-zoom-controls">
+        <div className="impact-map-zoom-controls" onClick={(event) => event.stopPropagation()}>
           <button type="button" title="Zoom in" aria-label="Zoom in" onClick={zoomIn}>+</button>
           <button type="button" title="Zoom out" aria-label="Zoom out" onClick={zoomOut}>−</button>
           <button type="button" title="Reset zoom" aria-label="Reset zoom" onClick={() => { resetView(); clearSelection(); }}>⟲</button>
@@ -587,7 +641,9 @@ export function UgandaImpactMapPro({
               {GEO_SUBREGION_BOUNDARIES.map((overlay) => {
                 const srId = stableSubRegionId(overlay.subRegion);
                 const active = selectedSubRegionId === srId;
-                const dimmed = selection.subRegion && !active;
+                const dimmed = hasDistrictSelection
+                  ? selection.subRegion !== overlay.subRegion
+                  : selection.subRegion && !active;
                 const target: MapTarget = {
                   level: "subregion",
                   id: overlay.subRegion,
@@ -627,7 +683,8 @@ export function UgandaImpactMapPro({
                       onBlur={() => {
                         endHover();
                       }}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         if (dimmed) return;
                         if (isMobile) {
                           mobileOpenTarget(target);
@@ -674,8 +731,13 @@ export function UgandaImpactMapPro({
                 };
                 const selected = selectedDistrictId === dId;
                 const hiddenBySubRegion =
-                  selection.subRegion && selection.subRegion !== districtShape.subRegion;
-                const inFocusedSubRegion = !selection.subRegion || selection.subRegion === districtShape.subRegion;
+                  !hasDistrictSelection &&
+                  activeSubRegionFilter &&
+                  activeSubRegionFilter !== districtShape.subRegion;
+                const dimmedByDistrictSelection = hasDistrictSelection && !selected;
+                const inFocusedSubRegion = hasDistrictSelection ||
+                  !activeSubRegionFilter ||
+                  activeSubRegionFilter === districtShape.subRegion;
 
                 return (
                   <g key={`${districtShape.subRegion}-${districtShape.name}`}>
@@ -685,14 +747,17 @@ export function UgandaImpactMapPro({
                       style={{
                         fill: hiddenBySubRegion
                           ? "transparent"
-                          : SUB_REGION_COLORS[districtShape.subRegion],
-                        opacity: hiddenBySubRegion ? 0.08 : undefined,
+                          : dimmedByDistrictSelection
+                            ? "rgba(148, 163, 184, 0.42)"
+                            : SUB_REGION_COLORS[districtShape.subRegion],
+                        opacity: hiddenBySubRegion ? 0.08 : dimmedByDistrictSelection ? 0.9 : undefined,
                       }}
                       data-district-id={dId}
                       data-district-name={districtShape.name}
                       data-subregion-id={srId}
                       data-subregion-name={districtShape.subRegion}
                       data-selected={selected ? "" : undefined}
+                      data-dimmed={dimmedByDistrictSelection ? "" : undefined}
                       role="button"
                       tabIndex={hiddenBySubRegion ? -1 : 0}
                       aria-label={`${districtShape.name} District. Click to view aggregated impact stats and filter dashboard.`}
@@ -711,7 +776,8 @@ export function UgandaImpactMapPro({
                       onBlur={() => {
                         endHover();
                       }}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         if (hiddenBySubRegion) return;
                         if (isMobile) {
                           mobileOpenTarget(markerTarget);

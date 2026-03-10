@@ -1,5 +1,7 @@
 "use client";
 
+import { UGANDA_MAP_SUB_REGIONS } from "@/lib/uganda-map-taxonomy";
+
 export type PublicMapSelection = {
   region: string;
   subRegion: string;
@@ -38,23 +40,73 @@ export function LocationNavigator({
   onReset,
   onBack,
 }: LocationNavigatorProps) {
-  const regionOptions = [...new Set(navigatorSchools.map((school) => school.region))]
+  const regionOptions = [
+    ...new Set([
+      ...UGANDA_MAP_SUB_REGIONS.map((entry) => entry.region),
+      ...navigatorSchools.map((school) => school.region),
+      selection.region,
+    ]),
+  ]
     .filter((value) => value.trim().length > 0)
     .sort((left, right) => left.localeCompare(right));
+
+  const schoolsByRegion = navigatorSchools.reduce<Record<string, number>>((acc, school) => {
+    const key = school.region?.trim();
+    if (!key) {
+      return acc;
+    }
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const schoolsForRegion = selection.region
     ? navigatorSchools.filter((school) => school.region === selection.region)
     : navigatorSchools;
-  const subRegionOptions = [...new Set(schoolsForRegion.map((school) => school.subRegion))]
+  const subRegionOptions = [
+    ...new Set([
+      ...UGANDA_MAP_SUB_REGIONS
+        .filter((entry) => !selection.region || entry.region === selection.region)
+        .map((entry) => entry.subRegion),
+      ...schoolsForRegion.map((school) => school.subRegion),
+      selection.subRegion,
+    ]),
+  ]
     .filter((value) => value.trim().length > 0)
     .sort((left, right) => left.localeCompare(right));
+
+  const schoolsBySubRegion = schoolsForRegion.reduce<Record<string, number>>((acc, school) => {
+    const key = school.subRegion?.trim();
+    if (!key) {
+      return acc;
+    }
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const schoolsForSubRegion = selection.subRegion
     ? schoolsForRegion.filter((school) => school.subRegion === selection.subRegion)
     : schoolsForRegion;
-  const districtOptions = [...new Set(schoolsForSubRegion.map((school) => school.district))]
+  const districtOptions = [
+    ...new Set([
+      ...UGANDA_MAP_SUB_REGIONS
+        .filter((entry) => !selection.region || entry.region === selection.region)
+        .filter((entry) => !selection.subRegion || entry.subRegion === selection.subRegion)
+        .flatMap((entry) => entry.districts),
+      ...schoolsForSubRegion.map((school) => school.district),
+      selection.district,
+    ]),
+  ]
     .filter((value) => value.trim().length > 0)
     .sort((left, right) => left.localeCompare(right));
+
+  const schoolsByDistrict = schoolsForSubRegion.reduce<Record<string, number>>((acc, school) => {
+    const key = school.district?.trim();
+    if (!key) {
+      return acc;
+    }
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const schoolsForDistrict = selection.district
     ? schoolsForSubRegion.filter((school) => school.district === selection.district)
@@ -67,7 +119,7 @@ export function LocationNavigator({
     <aside className="location-navigator">
       <header>
         <h3>Location Navigator</h3>
-        <p>Drill down from Uganda to district and school.</p>
+        <p>Drill down: Region → Sub-region → District → School.</p>
       </header>
 
       <div>
@@ -98,7 +150,7 @@ export function LocationNavigator({
             <option value="">All regions</option>
             {regionOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {option} ({(schoolsByRegion[option] ?? 0).toLocaleString()} schools)
               </option>
             ))}
           </select>
@@ -120,7 +172,7 @@ export function LocationNavigator({
             <option value="">All sub-regions</option>
             {subRegionOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {option} ({(schoolsBySubRegion[option] ?? 0).toLocaleString()} schools)
               </option>
             ))}
           </select>
@@ -141,7 +193,7 @@ export function LocationNavigator({
             <option value="">All districts</option>
             {[...new Set(districtOptions)].sort((a, b) => a.localeCompare(b)).map((option) => (
               <option key={option} value={option}>
-                {option}
+                {option} ({(schoolsByDistrict[option] ?? 0).toLocaleString()} schools)
               </option>
             ))}
           </select>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { PublicImpactAggregate } from "@/lib/types";
 import { UgandaImpactMapPro } from "./UgandaImpactMapPro";
 import { HeadlineStatsPanel } from "./HeadlineStatsPanel";
@@ -237,6 +237,8 @@ export function PublicImpactMapExplorer({
 }: PublicImpactMapExplorerProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchSnapshot = searchParams.toString();
   const [period, setPeriod] = useState(initialPeriod);
   const [selection, setSelection] = useState<PublicMapSelection>(
     defaultSelection(initialSelection),
@@ -312,14 +314,57 @@ export function PublicImpactMapExplorer({
     if (!syncUrl) {
       return;
     }
-    const query = new URLSearchParams();
+    const query = new URLSearchParams(searchSnapshot);
     query.set("period", period);
-    if (selection.region) query.set("region", selection.region);
-    if (selection.subRegion) query.set("subRegion", selection.subRegion);
-    if (selection.district) query.set("district", selection.district);
-    if (selection.school) query.set("school", selection.school);
-    router.replace(`${pathname}?${query.toString()}`);
-  }, [pathname, period, router, selection, syncUrl]);
+
+    if (selection.region) {
+      query.set("region", selection.region);
+    } else {
+      query.delete("region");
+    }
+    if (selection.subRegion) {
+      query.set("subRegion", selection.subRegion);
+    } else {
+      query.delete("subRegion");
+    }
+    if (selection.district) {
+      query.set("district", selection.district);
+    } else {
+      query.delete("district");
+    }
+    if (selection.school) {
+      query.set("school", selection.school);
+      query.set("schoolId", selection.school);
+    } else {
+      query.delete("school");
+      query.delete("schoolId");
+    }
+
+    // Keep report filters aligned with map drill-down scope.
+    if (selection.district) {
+      query.set("reportType", "District Report");
+      query.set("scopeType", "District");
+      query.set("scopeValue", selection.district);
+    } else if (selection.subRegion) {
+      query.set("reportType", "Sub-region Report");
+      query.set("scopeType", "Sub-region");
+      query.set("scopeValue", selection.subRegion);
+    } else if (selection.region) {
+      query.set("reportType", "Regional Impact Report");
+      query.set("scopeType", "Region");
+      query.set("scopeValue", selection.region);
+    } else {
+      query.delete("reportType");
+      query.set("scopeType", "National");
+      query.delete("scopeValue");
+    }
+
+    const nextQuery = query.toString();
+    if (nextQuery === searchSnapshot) {
+      return;
+    }
+    router.replace(`${pathname}?${nextQuery}`, { scroll: false });
+  }, [pathname, period, router, searchSnapshot, selection, syncUrl]);
 
   const onSelectionChange = (next: PublicMapSelection) => {
     setSelectionHistory((previous) => [...previous.slice(-8), selection]);

@@ -56,6 +56,12 @@ export async function GET(
       background: #ffffff;
     }
 
+    .newsletter-document.newsletter-document-template {
+      border: none;
+      padding: 0;
+      background: transparent;
+    }
+
     .newsletter-document-header h1 {
       margin: 0 0 8px;
       font-size: 23pt;
