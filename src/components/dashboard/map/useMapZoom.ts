@@ -53,6 +53,8 @@ export function useMapZoom(options: UseMapZoomOptions = {}): UseMapZoomReturn {
     // Pointer tracking for pan (drag)
     const isDragging = useRef(false);
     const lastPointer = useRef({ x: 0, y: 0 });
+    const dragStartPointer = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+    const dragStartThresholdPx = 5;
 
     // Multi-touch tracking for pinch zoom
     const touchCache = useRef<PointerEvent[]>([]);
@@ -182,32 +184,29 @@ export function useMapZoom(options: UseMapZoomOptions = {}): UseMapZoomReturn {
 
             const containerRect = container.getBoundingClientRect();
             const svgRect = svg.getBoundingClientRect();
-            const currentT = transformRef.current;
-
-            // Convert bbox (SVG user units) to container pixels at current scale
-            // First figure out the SVG → container pixel ratio at scale=1
             const viewBox = svg.viewBox.baseVal;
-            const svgPixelsPerUnit = svgRect.width / (currentT.scale * viewBox.width);
+            const pxPerUnitX = svgRect.width / viewBox.width;
+            const pxPerUnitY = svgRect.height / viewBox.height;
 
-            // Target bbox in container pixels at scale=1
-            const bboxPxX = bbox.x * svgPixelsPerUnit;
-            const bboxPxY = bbox.y * svgPixelsPerUnit;
-            const bboxPxW = bbox.width * svgPixelsPerUnit;
-            const bboxPxH = bbox.height * svgPixelsPerUnit;
+            // Work in SVG user units. CSS translate() on SVG groups is interpreted in this space.
+            const fitWUnits = bbox.width * (1 + padding * 2);
+            const fitHUnits = bbox.height * (1 + padding * 2);
 
-            const padX = bboxPxW * padding;
-            const padY = bboxPxH * padding;
+            const viewportWUnits = containerRect.width / pxPerUnitX;
+            const viewportHUnits = containerRect.height / pxPerUnitY;
 
-            const fitW = bboxPxW + padX * 2;
-            const fitH = bboxPxH + padY * 2;
-
-            const scaleX = containerRect.width / fitW;
-            const scaleY = containerRect.height / fitH;
+            const scaleX = viewportWUnits / fitWUnits;
+            const scaleY = viewportHUnits / fitHUnits;
             const targetScale = clampScale(Math.min(scaleX, scaleY));
 
-            // Center the bbox
-            const targetTx = containerRect.width / 2 - (bboxPxX + bboxPxW / 2) * targetScale;
-            const targetTy = containerRect.height / 2 - (bboxPxY + bboxPxH / 2) * targetScale;
+            const bboxCenterXUnits = bbox.x + bbox.width / 2;
+            const bboxCenterYUnits = bbox.y + bbox.height / 2;
+            const targetCenterXUnits = (containerRect.width / 2) / pxPerUnitX;
+            const targetCenterYUnits = (containerRect.height / 2) / pxPerUnitY;
+
+            // Center selected bounds in the middle of the map canvas.
+            const targetTx = targetCenterXUnits - bboxCenterXUnits * targetScale;
+            const targetTy = targetCenterYUnits - bboxCenterYUnits * targetScale;
 
             animateTo({
                 scale: targetScale,
@@ -260,10 +259,14 @@ export function useMapZoom(options: UseMapZoomOptions = {}): UseMapZoomReturn {
             if (e.pointerType === "mouse" && e.button !== 0) return;
 
             touchCache.current.push(e);
-            container.setPointerCapture(e.pointerId);
 
             if (touchCache.current.length === 1) {
-                isDragging.current = true;
+                isDragging.current = false;
+                dragStartPointer.current = {
+                    x: e.clientX,
+                    y: e.clientY,
+                    pointerId: e.pointerId,
+                };
                 lastPointer.current = { x: e.clientX, y: e.clientY };
             }
         };
@@ -296,7 +299,24 @@ export function useMapZoom(options: UseMapZoomOptions = {}): UseMapZoomReturn {
             }
 
             // Single-finger drag pan
-            if (isDragging.current && touchCache.current.length === 1) {
+            if (touchCache.current.length === 1) {
+                if (!isDragging.current) {
+                    const start = dragStartPointer.current;
+                    if (!start || start.pointerId !== e.pointerId) {
+                        return;
+                    }
+                    const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+                    if (moved < dragStartThresholdPx) {
+                        return;
+                    }
+                    isDragging.current = true;
+                    if (!container.hasPointerCapture(e.pointerId)) {
+                        container.setPointerCapture(e.pointerId);
+                    }
+                    lastPointer.current = { x: e.clientX, y: e.clientY };
+                    return;
+                }
+
                 const dx = e.clientX - lastPointer.current.x;
                 const dy = e.clientY - lastPointer.current.y;
                 lastPointer.current = { x: e.clientX, y: e.clientY };
@@ -313,12 +333,17 @@ export function useMapZoom(options: UseMapZoomOptions = {}): UseMapZoomReturn {
         const handlePointerUp = (e: PointerEvent) => {
             touchCache.current = touchCache.current.filter((p) => p.pointerId !== e.pointerId);
 
+            if (container.hasPointerCapture(e.pointerId)) {
+                container.releasePointerCapture(e.pointerId);
+            }
+
             if (touchCache.current.length < 2) {
                 prevPinchDist.current = null;
             }
 
             if (touchCache.current.length === 0) {
                 isDragging.current = false;
+                dragStartPointer.current = null;
             }
         };
 

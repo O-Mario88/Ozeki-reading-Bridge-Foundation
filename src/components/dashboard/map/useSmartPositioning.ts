@@ -18,30 +18,35 @@ export function useSmartPositioning() {
     const cardHeight = input.cardHeight ?? 220;
     const offsetX = input.offsetX ?? 6;
     const offsetY = input.offsetY ?? 6;
+    const minMargin = 8;
 
-    // Default: position card so cursor is at the lower-left corner
-    // Card goes above the cursor and to the right
-    let localX = input.clientX - input.containerRect.left + offsetX;
-    let localY = input.clientY - input.containerRect.top - cardHeight - offsetY;
+    const cursorLocalX = input.clientX - input.containerRect.left;
+    const cursorLocalY = input.clientY - input.containerRect.top;
 
-    const maxX = Math.max(8, input.containerRect.width - cardWidth - 8);
+    const maxX = Math.max(minMargin, input.containerRect.width - cardWidth - minMargin);
+    const maxY = Math.max(minMargin, input.containerRect.height - cardHeight - minMargin);
 
-    // If card would go above the container, flip below cursor
-    if (localY < 8) {
-      localY = input.clientY - input.containerRect.top + offsetY;
-    }
+    // Default anchor: card appears above/right of cursor so pointer stays near its lower-left corner.
+    let localX = cursorLocalX + offsetX;
+    let localY = cursorLocalY - cardHeight - offsetY;
 
-    // If card would go past right edge, flip to left side of cursor
+    // If right edge overflows, place card on the left side of cursor.
     if (localX > maxX) {
-      localX = Math.max(8, input.clientX - input.containerRect.left - cardWidth - offsetX);
+      localX = cursorLocalX - cardWidth - offsetX;
     }
 
-    const maxY = Math.max(8, input.containerRect.height - cardHeight - 8);
+    // If top edge overflows, place card below the cursor.
+    if (localY < minMargin) {
+      localY = cursorLocalY + offsetY;
+    }
+
+    // Clamp final position to keep entire card visible within canvas bounds.
+    localX = Math.min(Math.max(minMargin, localX), maxX);
+    localY = Math.min(Math.max(minMargin, localY), maxY);
 
     return {
-      left: Math.min(Math.max(8, localX), maxX),
-      top: Math.min(Math.max(8, localY), maxY),
+      left: localX,
+      top: localY,
     };
   }, []);
 }
-

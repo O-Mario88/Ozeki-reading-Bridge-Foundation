@@ -8,6 +8,7 @@ import {
   saveAssessmentRecord,
   validateParticipantBelongsToSchool,
 } from "@/lib/db";
+import { ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1 } from "@/lib/mastery-assessment";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 import { AssessmentRecordInput } from "@/lib/types";
 
@@ -40,6 +41,12 @@ const assessmentSchema = z.object({
   decodingScore: optionalScore(100).optional(),
   fluencyScore: optionalScore(150).optional(),
   comprehensionScore: optionalScore(100).optional(),
+  assessmentModelVersion: z.string().trim().optional(),
+  benchmarkVersion: z.string().trim().optional(),
+  scoringProfileVersion: z.string().trim().optional(),
+  learnerExpectedGrade: z.string().trim().optional(),
+  masteryDomainInputs: z.record(z.string(), z.any()).optional(),
+  masteryItemResponses: z.array(z.any()).optional(),
 
   notes: z.string().optional(),
 });
@@ -116,6 +123,12 @@ export async function POST(request: Request) {
       storyReadingScore: payload.storyReadingScore ?? payload.fluencyScore ?? null,
       readingComprehensionScore:
         payload.readingComprehensionScore ?? payload.comprehensionScore ?? null,
+      assessmentModelVersion: ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1,
+      benchmarkVersion: payload.benchmarkVersion,
+      scoringProfileVersion: payload.scoringProfileVersion,
+      learnerExpectedGrade: payload.learnerExpectedGrade,
+      masteryDomainInputs: payload.masteryDomainInputs,
+      masteryItemResponses: payload.masteryItemResponses as AssessmentRecordInput["masteryItemResponses"],
       notes: payload.notes,
     };
 

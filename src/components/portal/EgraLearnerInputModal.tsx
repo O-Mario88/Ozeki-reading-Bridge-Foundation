@@ -1,5 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { SchoolRosterPicker, RosterEntry, RosterLearner } from "./SchoolRosterPicker";
+import {
+  ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1,
+  computeOneTestStyleMasteryAssessment,
+} from "@/lib/mastery-assessment";
 
 export interface EgraLearner {
     no: number;
@@ -19,62 +23,47 @@ export interface EgraLearner {
 }
 
 const READING_LEVEL_RULE_TOOLTIP =
-  "UG-RLv1 rule: CWPM 0=Level0, 1–19=Level1, 20–39=Level2, 40–59=Level3, 60+=Level4. Comprehension gate (>=70% or >=4/5) is applied when available.";
+  `${ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1}: deterministic mastery scoring uses domain progression plus benchmark alignment.`;
 
 function toNumberOrNull(value: number | string) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function computeReadingLevelPreview(input: {
-  storyReading: number | string;
-  readingComprehension: number | string;
-}) {
-  const cwpm = toNumberOrNull(input.storyReading) ?? 0;
-  const comprehensionRaw = toNumberOrNull(input.readingComprehension);
-  const comprehensionPct =
-    comprehensionRaw === null
-      ? null
-      : comprehensionRaw <= 5
-        ? (comprehensionRaw / 5) * 100
-        : comprehensionRaw;
+function computeReadingLevelPreview(input: EgraLearner) {
+  const computed = computeOneTestStyleMasteryAssessment({
+    grade: "P1",
+    age: toNumberOrNull(input.age) ?? null,
+    legacyScores: {
+      letterIdentificationScore: toNumberOrNull(input.letterIdentification),
+      soundIdentificationScore: toNumberOrNull(input.soundIdentification),
+      decodableWordsScore: toNumberOrNull(input.decodableWords),
+      undecodableWordsScore: toNumberOrNull(input.undecodableWords),
+      madeUpWordsScore: toNumberOrNull(input.madeUpWords),
+      storyReadingScore: toNumberOrNull(input.storyReading),
+      readingComprehensionScore: toNumberOrNull(input.readingComprehension),
+    },
+  });
+  return computed;
+}
 
-  let band = 0;
-  if (cwpm <= 0) {
-    band = 0;
-  } else if (cwpm <= 19) {
-    band = 1;
-  } else if (cwpm <= 39) {
-    band = 2;
-  } else if (cwpm <= 59) {
-    band = 3;
-  } else {
-    band = 4;
-  }
+function statusShortLabel(status: "green" | "amber" | "red") {
+  if (status === "green") return "G";
+  if (status === "amber") return "A";
+  return "R";
+}
 
-  const comprehensionOk =
-    comprehensionPct === null || comprehensionPct >= 70 || (comprehensionRaw !== null && comprehensionRaw >= 4);
-  const adjustedBand = comprehensionOk ? band : Math.max(0, band - 1);
-
-  const level =
-    adjustedBand <= 0
-      ? "Level0 Non-reader"
-      : adjustedBand === 1
-        ? "Level1 Emergent"
-        : adjustedBand === 2
-          ? "Level2 Minimum"
-          : adjustedBand === 3
-            ? "Level3 Competent"
-            : "Level4 Strong";
-
-  return {
-    level,
-    band: adjustedBand,
-    cwpm,
-    comprehensionRaw,
-    comprehensionPct,
-    comprehensionOk,
-  };
+function formatMasteryProfile(
+  computed: ReturnType<typeof computeOneTestStyleMasteryAssessment>,
+) {
+  return [
+    `PA:${statusShortLabel(computed.domains.phonemic_awareness.domainMasteryStatus)}`,
+    `GPC:${statusShortLabel(computed.domains.grapheme_phoneme_correspondence.domainMasteryStatus)}`,
+    `BD:${statusShortLabel(computed.domains.blending_decoding.domainMasteryStatus)}`,
+    `WRF:${statusShortLabel(computed.domains.word_recognition_fluency.domainMasteryStatus)}`,
+    `SPC:${statusShortLabel(computed.domains.sentence_paragraph_construction.domainMasteryStatus)}`,
+    `C:${statusShortLabel(computed.domains.comprehension.domainMasteryStatus)}`,
+  ].join(" | ");
 }
 
 interface EgraLearnerInputModalProps {
@@ -111,17 +100,13 @@ export function EgraLearnerInputModal({
         madeUpWords: "",
         storyReading: "",
         readingComprehension: "",
-        fluencyLevel: "Level0 Non-reader",
+        fluencyLevel: "Pre-Reader",
     });
 
     const [selectedLearnerUid, setSelectedLearnerUid] = useState("");
     const readingPreview = useMemo(
-        () =>
-            computeReadingLevelPreview({
-                storyReading: learner.storyReading,
-                readingComprehension: learner.readingComprehension,
-            }),
-        [learner.readingComprehension, learner.storyReading],
+        () => computeReadingLevelPreview(learner),
+        [learner],
     );
 
     // Reset form when modal opens or nextLearnerId changes
@@ -141,7 +126,7 @@ export function EgraLearnerInputModal({
                 madeUpWords: "",
                 storyReading: "",
                 readingComprehension: "",
-                fluencyLevel: "Level0 Non-reader",
+                fluencyLevel: "Pre-Reader",
             });
             setSelectedLearnerUid("");
             setValidationError("");
@@ -163,7 +148,7 @@ export function EgraLearnerInputModal({
         setValidationError("");
         onSave({
             ...learner,
-            fluencyLevel: readingPreview.level,
+            fluencyLevel: readingPreview.readingStageLabel,
         });
     };
 
@@ -248,7 +233,7 @@ export function EgraLearnerInputModal({
                     )}
 
                     <label>
-                        <span className="label-text">Letter Identification</span>
+                        <span className="label-text">Phonemic Awareness</span>
                         <input
                             type="number" min="0"
                             value={learner.letterIdentification}
@@ -257,7 +242,7 @@ export function EgraLearnerInputModal({
                     </label>
 
                     <label>
-                        <span className="label-text">Sound Identification</span>
+                        <span className="label-text">Grapheme-Phoneme Correspondence</span>
                         <input
                             type="number" min="0"
                             value={learner.soundIdentification}
@@ -266,7 +251,7 @@ export function EgraLearnerInputModal({
                     </label>
 
                     <label>
-                        <span className="label-text">Decodable Words</span>
+                        <span className="label-text">Blending & Decoding</span>
                         <input
                             type="number" min="0"
                             value={learner.decodableWords}
@@ -275,16 +260,7 @@ export function EgraLearnerInputModal({
                     </label>
 
                     <label>
-                        <span className="label-text">Undecodable Words</span>
-                        <input
-                            type="number" min="0"
-                            value={learner.undecodableWords}
-                            onChange={(e) => updateField("undecodableWords", e.target.value)}
-                        />
-                    </label>
-
-                    <label>
-                        <span className="label-text">Made-up Words</span>
+                        <span className="label-text">Word Recognition & Fluency</span>
                         <input
                             type="number" min="0"
                             value={learner.madeUpWords}
@@ -293,7 +269,7 @@ export function EgraLearnerInputModal({
                     </label>
 
                     <label>
-                        <span className="label-text">Story Reading</span>
+                        <span className="label-text">Sentence & Paragraph Construction</span>
                         <input
                             type="number" min="0"
                             value={learner.storyReading}
@@ -302,7 +278,7 @@ export function EgraLearnerInputModal({
                     </label>
 
                     <label>
-                        <span className="label-text">Reading Comprehension</span>
+                        <span className="label-text">Comprehension</span>
                         <input
                             type="number" min="0"
                             value={learner.readingComprehension}
@@ -311,23 +287,21 @@ export function EgraLearnerInputModal({
                     </label>
 
                     <label className="full-width">
-                        <span className="label-text">Computed Reading Level</span>
+                        <span className="label-text">Computed Reading Stage</span>
                         <div
                             className="computed-reading-level"
                             title={READING_LEVEL_RULE_TOOLTIP}
                             aria-label={READING_LEVEL_RULE_TOOLTIP}
                         >
-                            <strong>{readingPreview.level}</strong>
+                            <strong>{readingPreview.readingStageLabel}</strong>
                             <span>
-                                CWPM: {readingPreview.cwpm.toFixed(1)} | Comprehension:{" "}
-                                {readingPreview.comprehensionRaw === null
-                                    ? "N/A"
-                                    : `${readingPreview.comprehensionRaw}${readingPreview.comprehensionRaw <= 5 ? "/5" : "%"}`}
+                                Benchmark level: {readingPreview.benchmarkGradeLevel}
                             </span>
                             <span className="portal-muted">
-                                {readingPreview.comprehensionOk
-                                    ? "Comprehension gate passed."
-                                    : "Comprehension below threshold; level adjusted down by 1 band."}
+                                {readingPreview.expectedVsActualStatus}
+                            </span>
+                            <span className="portal-muted" style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: "0.74rem" }}>
+                                Rubric profile: {formatMasteryProfile(readingPreview)}
                             </span>
                         </div>
                     </label>

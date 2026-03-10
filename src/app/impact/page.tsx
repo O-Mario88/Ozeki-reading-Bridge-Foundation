@@ -4,14 +4,13 @@ import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpact
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
 import { getImpactReportFilterFacets, listPublicImpactReports, getSchoolLearnerAnalysis } from "@/lib/db";
 import {
-  ImpactReportAudience,
   ImpactReportOutput,
   ImpactReportPeriodType,
   ImpactReportScopeType,
   ImpactReportType,
   ReportCategory,
 } from "@/lib/types";
-import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
+import { MASTERY_DOMAIN_SEQUENCE } from "@/lib/mastery-assessment";
 
 export const metadata: Metadata = {
   title: "Impact",
@@ -67,11 +66,6 @@ function parsePeriodType(value: string): ImpactReportPeriodType | undefined {
   return (allowed as string[]).includes(value) ? (value as ImpactReportPeriodType) : undefined;
 }
 
-function parseAudience(value: string): ImpactReportAudience | undefined {
-  const allowed: ImpactReportAudience[] = ["Public-safe", "Staff-only"];
-  return (allowed as string[]).includes(value) ? (value as ImpactReportAudience) : undefined;
-}
-
 function parseOutput(value: string): ImpactReportOutput | undefined {
   const allowed: ImpactReportOutput[] = ["PDF", "HTML preview"];
   return (allowed as string[]).includes(value) ? (value as ImpactReportOutput) : undefined;
@@ -109,18 +103,54 @@ function resolveReportYear(rawYear: string, availableYears: string[]) {
   return "2025";
 }
 
-function scoreColor(score: number | null): string {
-  if (score === null || score === undefined) return "var(--color-text-muted)";
-  if (score >= 70) return "var(--color-brand-orange-dark)";
-  if (score >= 40) return "color-mix(in oklab, var(--color-brand-orange), black 18%)";
-  return "var(--color-state-danger)";
+function normalizeTrafficLightStatus(value: unknown): "green" | "amber" | "red" {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "green") return "green";
+  if (normalized === "amber") return "amber";
+  return "red";
 }
 
-function scoreBg(score: number | null): string {
-  if (score === null || score === undefined) return "transparent";
-  if (score >= 70) return "color-mix(in oklab, var(--color-brand-orange), white 90%)";
-  if (score >= 40) return "color-mix(in oklab, var(--color-brand-orange), white 88%)";
-  return "color-mix(in oklab, var(--color-state-danger), white 90%)";
+function trafficPill(statusRaw: unknown) {
+  const status = normalizeTrafficLightStatus(statusRaw);
+  const styles: Record<
+    "green" | "amber" | "red",
+    { bg: string; fg: string; label: string }
+  > = {
+    green: {
+      bg: "#16a34a",
+      fg: "#ffffff",
+      label: "Green",
+    },
+    amber: {
+      bg: "#d97706",
+      fg: "#ffffff",
+      label: "Amber",
+    },
+    red: {
+      bg: "#dc2626",
+      fg: "#ffffff",
+      label: "Red",
+    },
+  };
+  const style = styles[status];
+  return (
+    <span
+      style={{
+        background: style.bg,
+        color: style.fg,
+        borderRadius: "999px",
+        padding: "0.12rem 0.52rem",
+        fontSize: "0.68rem",
+        fontWeight: 700,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minWidth: "56px",
+      }}
+    >
+      {style.label}
+    </span>
+  );
 }
 
 export default async function ImpactDashboardPage({
@@ -135,7 +165,6 @@ export default async function ImpactDashboardPage({
   const selectedType = firstValue(params.reportType);
   const selectedCategory = firstValue(params.reportCategory);
   const selectedPeriodType = firstValue(params.periodType);
-  const selectedAudience = firstValue(params.audience);
   const selectedOutput = firstValue(params.output);
   const selectedScopeType = firstValue(params.scopeType);
   const selectedScopeValue = firstValue(params.scopeValue);
@@ -151,7 +180,7 @@ export default async function ImpactDashboardPage({
     reportType: parseReportType(selectedType),
     reportCategory: parseReportCategory(selectedCategory),
     periodType: parsePeriodType(selectedPeriodType),
-    audience: parseAudience(selectedAudience),
+    audience: "Public-safe",
     output: parseOutput(selectedOutput),
     scopeType: parseScopeType(selectedScopeType),
     scopeValue: selectedScopeValue || undefined,
@@ -171,6 +200,8 @@ export default async function ImpactDashboardPage({
   const selectedSchoolName = schoolIdNum
     ? facets.schools.find((s) => s.id === schoolIdNum)?.name ?? ""
     : "";
+  const topFilteredReport = reports[0] ?? null;
+  const hasMultipleFilteredReports = reports.length > 1;
 
   return (
     <>
@@ -178,11 +209,11 @@ export default async function ImpactDashboardPage({
         {/* ═══ Hero ═══ */}
         <section className="page-hero impact-page-hero">
           <div className="container impact-page-hero-container">
-            <p className="kicker">Impact overview</p>
-            <h1>Live Literacy Impact Dashboard</h1>
+            <p className="kicker">National Literacy Intelligence Platform</p>
+            <h1>Ozeki National Literacy Intelligence Dashboard</h1>
             <p>
-              Public dashboard data is aggregated from verified staff submissions and published
-              with privacy controls.
+              Practical Literacy. Strong Teachers. Confident Readers, measured and improved
+              with real classroom data across Uganda.
             </p>
           </div>
         </section>
@@ -224,7 +255,6 @@ export default async function ImpactDashboardPage({
               initialReportCategory={selectedCategory}
               initialPeriodType={selectedPeriodType}
               initialOutput={selectedOutput}
-              initialAudience={selectedAudience}
               initialRegion={selectedRegion}
               initialSubRegion={selectedSubRegion}
               initialDistrict={selectedDistrict}
@@ -233,9 +263,29 @@ export default async function ImpactDashboardPage({
               reportCategories={facets.reportCategories}
               periodTypes={facets.periodTypes}
               outputs={facets.outputs}
-              audiences={facets.audiences}
               period={firstValue(params.period) || undefined}
             />
+            <div className="action-row" style={{ marginTop: "0.9rem", alignItems: "center", gap: "0.9rem" }}>
+              {topFilteredReport ? (
+                <>
+                  <a className="button" href={`/api/impact-reports/${topFilteredReport.reportCode}/download`}>
+                    {hasMultipleFilteredReports
+                      ? "Download Top Filtered Report (PDF)"
+                      : "Download Filtered Report (PDF)"}
+                  </a>
+                  <Link className="button button-ghost" href={`/impact-reports/${topFilteredReport.reportCode}`}>
+                    View Selected Report
+                  </Link>
+                  {hasMultipleFilteredReports ? (
+                    <span className="meta-line">
+                      {reports.length.toLocaleString()} reports match current filters. Download targets the latest match.
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="meta-line">No report matches the current filters yet.</span>
+              )}
+            </div>
           </div>
 
           {/* Report cards */}
@@ -305,8 +355,8 @@ export default async function ImpactDashboardPage({
                 Learner Analysis{selectedSchoolName ? `: ${selectedSchoolName}` : ""}
               </h2>
               <p>
-                Individual learner scores across 6 EGRA domains. Learners scoring below 40% in
-                any domain are flagged as <strong style={{ color: "var(--color-state-danger)" }}>struggling</strong>.
+                Individual learner mastery outcomes across six sequential reading domains, shown
+                using the updated rubric: Green (Proficient), Amber (Developing), Red (Emergent).
               </p>
             </div>
 
@@ -344,42 +394,48 @@ export default async function ImpactDashboardPage({
                       <th>Class</th>
                       <th>Type</th>
                       <th>Date</th>
-                        <th title={LEARNING_DOMAIN_DICTIONARY.letter_names.description}>{LEARNING_DOMAIN_DICTIONARY.letter_names.label_short}</th>
-                        <th title={LEARNING_DOMAIN_DICTIONARY.letter_sounds.description}>{LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_short}</th>
-                        <th title={LEARNING_DOMAIN_DICTIONARY.real_words.description}>{LEARNING_DOMAIN_DICTIONARY.real_words.label_short}</th>
-                        <th title={LEARNING_DOMAIN_DICTIONARY.made_up_words.description}>{LEARNING_DOMAIN_DICTIONARY.made_up_words.label_short}</th>
-                        <th title={LEARNING_DOMAIN_DICTIONARY.story_reading.description}>{LEARNING_DOMAIN_DICTIONARY.story_reading.label_short}</th>
-                        <th title={LEARNING_DOMAIN_DICTIONARY.comprehension.description}>{LEARNING_DOMAIN_DICTIONARY.comprehension.label_short}</th>
-                      <th>Avg</th>
-                      <th>Status</th>
+                      <th title={MASTERY_DOMAIN_SEQUENCE[0].description}>
+                        {MASTERY_DOMAIN_SEQUENCE[0].displayName}
+                      </th>
+                      <th title={MASTERY_DOMAIN_SEQUENCE[1].description}>
+                        {MASTERY_DOMAIN_SEQUENCE[1].displayName}
+                      </th>
+                      <th title={MASTERY_DOMAIN_SEQUENCE[2].description}>
+                        {MASTERY_DOMAIN_SEQUENCE[2].displayName}
+                      </th>
+                      <th title={MASTERY_DOMAIN_SEQUENCE[3].description}>
+                        {MASTERY_DOMAIN_SEQUENCE[3].displayName}
+                      </th>
+                      <th title={MASTERY_DOMAIN_SEQUENCE[4].description}>
+                        {MASTERY_DOMAIN_SEQUENCE[4].displayName}
+                      </th>
+                      <th title={MASTERY_DOMAIN_SEQUENCE[5].description}>
+                        {MASTERY_DOMAIN_SEQUENCE[5].displayName}
+                      </th>
+                      <th>Reading Stage</th>
+                      <th>Benchmark</th>
+                      <th>Expected vs Actual</th>
+                      <th>Recommended Next Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {learnerAnalysis.map((row, idx) => (
-                      <tr key={`${row.learnerUid}-${row.assessmentType}-${idx}`} style={row.isStruggling ? { background: "color-mix(in oklab, var(--color-state-danger), white 94%)" } : undefined}>
+                      <tr key={`${row.learnerUid}-${row.assessmentType}-${idx}`}>
                         <td style={{ fontWeight: 600 }}>{row.learnerName}</td>
                         <td>{row.gender}</td>
                         <td>{row.classGrade}</td>
                         <td><span className="meta-pill" style={{ fontSize: "0.65rem" }}>{row.assessmentType}</span></td>
                         <td style={{ fontSize: "0.78rem" }}>{row.assessmentDate}</td>
-                        <td style={{ color: scoreColor(row.letterNamesScore), background: scoreBg(row.letterNamesScore), fontWeight: 700, textAlign: "center" }}>{row.letterNamesScore ?? "—"}</td>
-                        <td style={{ color: scoreColor(row.letterSoundsScore), background: scoreBg(row.letterSoundsScore), fontWeight: 700, textAlign: "center" }}>{row.letterSoundsScore ?? "—"}</td>
-                        <td style={{ color: scoreColor(row.realWordsScore), background: scoreBg(row.realWordsScore), fontWeight: 700, textAlign: "center" }}>{row.realWordsScore ?? "—"}</td>
-                        <td style={{ color: scoreColor(row.madeUpWordsScore), background: scoreBg(row.madeUpWordsScore), fontWeight: 700, textAlign: "center" }}>{row.madeUpWordsScore ?? "—"}</td>
-                        <td style={{ color: scoreColor(row.storyReadingScore), background: scoreBg(row.storyReadingScore), fontWeight: 700, textAlign: "center" }}>{row.storyReadingScore ?? "—"}</td>
-                        <td style={{ color: scoreColor(row.comprehensionScore), background: scoreBg(row.comprehensionScore), fontWeight: 700, textAlign: "center" }}>{row.comprehensionScore ?? "—"}</td>
-                        <td style={{ fontWeight: 700, textAlign: "center" }}>{row.averageScore ?? "—"}</td>
-                        <td>
-                          {row.isStruggling ? (
-                            <span style={{ background: "var(--color-state-danger)", color: "#fff", borderRadius: "999px", padding: "0.15rem 0.55rem", fontSize: "0.68rem", fontWeight: 700 }}>
-                              Needs Support
-                            </span>
-                          ) : (
-                            <span style={{ background: "var(--color-brand-orange)", color: "#fff", borderRadius: "999px", padding: "0.15rem 0.55rem", fontSize: "0.68rem", fontWeight: 700 }}>
-                              On Track
-                            </span>
-                          )}
-                        </td>
+                        <td style={{ textAlign: "center" }}>{trafficPill(row.phonemicAwareness)}</td>
+                        <td style={{ textAlign: "center" }}>{trafficPill(row.graphemePhonemeCorrespondence)}</td>
+                        <td style={{ textAlign: "center" }}>{trafficPill(row.blendingDecoding)}</td>
+                        <td style={{ textAlign: "center" }}>{trafficPill(row.wordRecognitionFluency)}</td>
+                        <td style={{ textAlign: "center" }}>{trafficPill(row.sentenceParagraphConstruction)}</td>
+                        <td style={{ textAlign: "center" }}>{trafficPill(row.comprehension)}</td>
+                        <td style={{ fontWeight: 700 }}>{row.readingStageLabel}</td>
+                        <td>{row.benchmarkGradeLevel}</td>
+                        <td>{row.expectedVsActualStatus}</td>
+                        <td style={{ fontSize: "0.78rem", minWidth: "220px" }}>{row.recommendedNextAction}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -394,13 +450,13 @@ export default async function ImpactDashboardPage({
 
             <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem", justifyContent: "center", flexWrap: "wrap" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.78rem" }}>
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "var(--color-brand-orange)", display: "inline-block" }} /> ≥ 70% (Strong)
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#16a34a", display: "inline-block" }} /> Green means the learner has mastered the skill.
               </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.78rem" }}>
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "color-mix(in oklab, var(--color-brand-orange), black 18%)", display: "inline-block" }} /> 40–69% (Developing)
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#d97706", display: "inline-block" }} /> Amber means the learner is developing but needs more speed or consistency.
               </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.78rem" }}>
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "var(--color-state-danger)", display: "inline-block" }} /> &lt; 40% (Needs Support)
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#dc2626", display: "inline-block" }} /> Red means the learner needs targeted support.
               </span>
             </div>
           </div>

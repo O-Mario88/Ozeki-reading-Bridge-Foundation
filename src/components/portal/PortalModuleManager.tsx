@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import {
@@ -25,6 +25,12 @@ import { SchoolRosterPicker, RosterEntry } from "./SchoolRosterPicker";
 import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
 import { EXTENDED_RECOMMENDATION_CATALOG } from "@/lib/recommendations";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
+import {
+  ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1,
+  computeOneTestStyleMasteryAssessment,
+  type MasteryDomainKey,
+  type MasteryStatus,
+} from "@/lib/mastery-assessment";
 
 type FilterState = {
   region: string;
@@ -206,41 +212,158 @@ interface PortalModuleManagerProps {
 const queueStorageKey = "portal-offline-queue";
 const defaultRegion = ugandaRegions[0]?.region ?? "";
 const EGRA_ROW_COUNT = 20;
+const ASSESSMENT_IMPORT_TEMPLATE_HEADERS = [
+  "no",
+  "learnerUid",
+  "learnerId",
+  "learnerName",
+  "sex",
+  "age",
+  "phonemicAwareness",
+  "graphemePhonemeCorrespondence",
+  "blendingDecoding",
+  "undecodableWords",
+  "wordRecognitionFluency",
+  "sentenceParagraphConstruction",
+  "comprehension",
+] as const;
+const ASSESSMENT_IMPORT_TEMPLATE_ROWS: Array<Record<(typeof ASSESSMENT_IMPORT_TEMPLATE_HEADERS)[number], string | number>> = [
+  {
+    no: 1,
+    learnerUid: "LRN-0001",
+    learnerId: "101",
+    learnerName: "Example Learner 1",
+    sex: "F",
+    age: 7,
+    phonemicAwareness: 82,
+    graphemePhonemeCorrespondence: 78,
+    blendingDecoding: 74,
+    undecodableWords: 69,
+    wordRecognitionFluency: 72,
+    sentenceParagraphConstruction: 70,
+    comprehension: 66,
+  },
+  {
+    no: 2,
+    learnerUid: "LRN-0002",
+    learnerId: "102",
+    learnerName: "Example Learner 2",
+    sex: "M",
+    age: 8,
+    phonemicAwareness: 91,
+    graphemePhonemeCorrespondence: 87,
+    blendingDecoding: 83,
+    undecodableWords: 76,
+    wordRecognitionFluency: 85,
+    sentenceParagraphConstruction: 81,
+    comprehension: 78,
+  },
+];
+const ASSESSMENT_IMPORT_HEADER_ALIASES: Record<Exclude<keyof EgraLearnerRow, "no">, string[]> = {
+  learnerUid: ["learneruid", "learner_uid", "uid"],
+  learnerId: ["learnerid", "learner_id", "childid", "internalchildid", "id"],
+  learnerName: ["learnername", "learner_name", "childname", "fullname", "name"],
+  sex: ["sex", "gender"],
+  age: ["age"],
+  letterIdentification: [
+    "phonemicawareness",
+    "phonemic_awareness",
+    "letteridentification",
+    "letter_identification",
+    "pa",
+  ],
+  soundIdentification: [
+    "graphemephonemecorrespondence",
+    "grapheme_phoneme_correspondence",
+    "soundidentification",
+    "sound_identification",
+    "gpc",
+  ],
+  decodableWords: [
+    "blendingdecoding",
+    "blending_decoding",
+    "decodablewords",
+    "decodable_words",
+    "bd",
+  ],
+  undecodableWords: ["undecodablewords", "undecodable_words"],
+  madeUpWords: [
+    "wordrecognitionfluency",
+    "word_recognition_fluency",
+    "madeupwords",
+    "made_up_words",
+    "wrf",
+  ],
+  storyReading: [
+    "sentenceparagraphconstruction",
+    "sentence_paragraph_construction",
+    "storyreading",
+    "story_reading",
+    "spc",
+  ],
+  readingComprehension: [
+    "comprehension",
+    "readingcomprehension",
+    "reading_comprehension",
+    "c",
+  ],
+  fluencyLevel: ["fluencylevel", "readingstage", "reading_stage", "readingstagelabel"],
+};
 const egraMetricLabels: Array<{ key: EgraMetricKey; label: string }> = [
   {
     key: "letterIdentification",
-    label: `${LEARNING_DOMAIN_DICTIONARY.letter_names.label_full} (letters/min)`,
+    label: `${LEARNING_DOMAIN_DICTIONARY.letter_names.label_full} (accuracy %)`,
   },
   {
     key: "soundIdentification",
-    label: `${LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full} (sounds/min)`,
+    label: `${LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full} (accuracy %)`,
   },
   {
     key: "decodableWords",
-    label: `${LEARNING_DOMAIN_DICTIONARY.real_words.label_full} (words/min)`,
+    label: `${LEARNING_DOMAIN_DICTIONARY.real_words.label_full} (mastery score)`,
   },
-  { key: "undecodableWords", label: "Reading Real Words (Extended Set) (words/min)" },
   {
     key: "madeUpWords",
-    label: `${LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full} (words/min)`,
+    label: `${LEARNING_DOMAIN_DICTIONARY.made_up_words.label_full} (mastery score)`,
   },
   {
     key: "storyReading",
-    label: `${LEARNING_DOMAIN_DICTIONARY.story_reading.label_full} (words/min)`,
+    label: `${LEARNING_DOMAIN_DICTIONARY.story_reading.label_full} (mastery score)`,
   },
   {
     key: "readingComprehension",
-    label: `${LEARNING_DOMAIN_DICTIONARY.comprehension.label_full} (correct Qs)`,
+    label: `${LEARNING_DOMAIN_DICTIONARY.comprehension.label_full} (mastery score)`,
   },
 ];
 
 const egraLevelLabels = [
-  "Level0 Non-reader",
-  "Level1 Emergent",
-  "Level2 Minimum",
-  "Level3 Competent",
-  "Level4 Strong",
+  "Pre-Reader",
+  "Early Decoder",
+  "Developing Reader",
+  "Fluent Reader",
+  "Comprehending Reader",
 ] as const;
+
+type EgraMasterySignals = Pick<
+  EgraLearnerRow,
+  | "age"
+  | "letterIdentification"
+  | "soundIdentification"
+  | "decodableWords"
+  | "undecodableWords"
+  | "madeUpWords"
+  | "storyReading"
+  | "readingComprehension"
+>;
+
+const masteryProfileLegend: Array<{ key: MasteryDomainKey; short: string }> = [
+  { key: "phonemic_awareness", short: "PA" },
+  { key: "grapheme_phoneme_correspondence", short: "GPC" },
+  { key: "blending_decoding", short: "BD" },
+  { key: "word_recognition_fluency", short: "WRF" },
+  { key: "sentence_paragraph_construction", short: "SPC" },
+  { key: "comprehension", short: "C" },
+];
 
 const visitObservationScoreByRating: Record<string, number> = {
   "Very Good": 5,
@@ -492,15 +615,60 @@ function applySuggestedInsightRecIds(
 ): string[] {
   const recIds = new Set<string>();
   if (module === "assessment") {
-    const nonReaders = Number(payload.nonReaders ?? 0);
-    const learnersAssessed = Number(payload.learnersAssessed ?? 0);
-    if (learnersAssessed > 0 && nonReaders / learnersAssessed >= 0.3) {
+    let masteryInputs: Record<string, unknown> = {};
+    const rawMastery = payload.masteryDomainInputs;
+    if (typeof rawMastery === "string" && rawMastery.trim()) {
+      try {
+        const parsed = JSON.parse(rawMastery);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          masteryInputs = parsed as Record<string, unknown>;
+        }
+      } catch {
+        masteryInputs = {};
+      }
+    }
+
+    const readMasteryStatus = (key: string) => {
+      const row = masteryInputs[key];
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        return "";
+      }
+      return String((row as Record<string, unknown>).domainMasteryStatus ?? "")
+        .trim()
+        .toLowerCase();
+    };
+
+    const pa = readMasteryStatus("phonemic_awareness");
+    const gpc = readMasteryStatus("grapheme_phoneme_correspondence");
+    const blend = readMasteryStatus("blending_decoding");
+    const fluency = readMasteryStatus("word_recognition_fluency");
+    const comprehension = readMasteryStatus("comprehension");
+
+    if (pa === "red" || gpc === "red" || blend === "red") {
       recIds.add("REC-01");
       recIds.add("REC-09");
     }
-    const fluency = Number(payload.storyReadingScore ?? 0);
-    if (Number.isFinite(fluency) && fluency < 20) {
+    if (fluency === "amber") {
       recIds.add("REC-10");
+    }
+    if (blend === "green" && (comprehension === "amber" || comprehension === "red")) {
+      recIds.add("REC-11");
+    }
+    if (pa === "green" && gpc === "green" && blend === "green" && comprehension === "green") {
+      recIds.add("REC-13");
+    }
+
+    if (recIds.size === 0) {
+      const nonReaders = Number(payload.nonReaders ?? 0);
+      const learnersAssessed = Number(payload.learnersAssessed ?? 0);
+      if (learnersAssessed > 0 && nonReaders / learnersAssessed >= 0.3) {
+        recIds.add("REC-01");
+        recIds.add("REC-09");
+      }
+      const fluencyScore = Number(payload.storyReadingScore ?? 0);
+      if (Number.isFinite(fluencyScore) && fluencyScore < 20) {
+        recIds.add("REC-10");
+      }
     }
   }
   if (module === "visit") {
@@ -852,70 +1020,58 @@ function roundOne(value: number) {
   return Number(value.toFixed(1));
 }
 
-function determineFluencyLevel(storyReadingValue: string, comprehensionValue?: string) {
-  const storyReading = toNumberOrNull(storyReadingValue);
-  if (storyReading === null) {
-    return "";
-  }
+function computeLearnerMasteryFromSignals(row: EgraMasterySignals, classGrade = "P1") {
+  const computed = computeOneTestStyleMasteryAssessment({
+    grade: classGrade,
+    age: toNumberOrNull(row.age),
+    legacyScores: {
+      letterIdentificationScore: toNumberOrNull(row.letterIdentification),
+      soundIdentificationScore: toNumberOrNull(row.soundIdentification),
+      decodableWordsScore: toNumberOrNull(row.decodableWords),
+      undecodableWordsScore: toNumberOrNull(row.undecodableWords),
+      madeUpWordsScore: toNumberOrNull(row.madeUpWords),
+      storyReadingScore: toNumberOrNull(row.storyReading),
+      readingComprehensionScore: toNumberOrNull(row.readingComprehension),
+    },
+  });
+  return computed;
+}
 
-  let band = 0;
-  if (storyReading <= 0) {
-    band = 0;
-  } else if (storyReading <= 19) {
-    band = 1;
-  } else if (storyReading <= 39) {
-    band = 2;
-  } else if (storyReading <= 59) {
-    band = 3;
-  } else {
-    band = 4;
-  }
-
-  const comprehension = toNumberOrNull(comprehensionValue ?? "");
-  if (comprehension !== null) {
-    const comprehensionPct = comprehension <= 5 ? (comprehension / 5) * 100 : comprehension;
-    const comprehensionOk = comprehensionPct >= 70 || comprehension >= 4;
-    if (!comprehensionOk) {
-      band = Math.max(0, band - 1);
-    }
-  }
-
-  if (band <= 0) {
-    return "Level0 Non-reader";
-  }
-  if (band === 1) {
-    return "Level1 Emergent";
-  }
-  if (band === 2) {
-    return "Level2 Minimum";
-  }
-  if (band === 3) {
-    return "Level3 Competent";
-  }
-  return "Level4 Strong";
+function determineFluencyLevel(row: EgraMasterySignals, classGrade = "P1") {
+  const computed = computeLearnerMasteryFromSignals(row, classGrade);
+  return computed.readingStageLabel;
 }
 
 function normalizeEgraLevelLabel(
   value: string,
-  storyReadingValue: string,
-  comprehensionValue?: string,
+  row: EgraMasterySignals,
+  classGrade = "P1",
 ) {
   const normalized = value.trim();
   if (
-    normalized === "Level0 Non-reader" ||
-    normalized === "Level1 Emergent" ||
-    normalized === "Level2 Minimum" ||
-    normalized === "Level3 Competent" ||
-    normalized === "Level4 Strong"
+    normalized === "Pre-Reader" ||
+    normalized === "Early Decoder" ||
+    normalized === "Developing Reader" ||
+    normalized === "Fluent Reader" ||
+    normalized === "Comprehending Reader"
   ) {
     return normalized;
   }
-  if (normalized === "Non-Reader") return "Level0 Non-reader";
-  if (normalized === "Emerging Reader" || normalized === "Letter Reader") return "Level1 Emergent";
-  if (normalized === "Developing Reader" || normalized === "Syllable Reader") return "Level2 Minimum";
-  if (normalized === "Transitional Reader" || normalized === "Word Reader") return "Level3 Competent";
-  if (normalized === "Fluent Reader" || normalized === "Story Reader") return "Level4 Strong";
-  return determineFluencyLevel(storyReadingValue, comprehensionValue);
+  return determineFluencyLevel(row, classGrade);
+}
+
+function masteryStatusShortLabel(status: MasteryStatus) {
+  if (status === "green") return "G";
+  if (status === "amber") return "A";
+  return "R";
+}
+
+function formatMasteryProfileCompact(
+  mastery: ReturnType<typeof computeOneTestStyleMasteryAssessment>,
+) {
+  return masteryProfileLegend
+    .map(({ key, short }) => `${short}:${masteryStatusShortLabel(mastery.domains[key].domainMasteryStatus)}`)
+    .join(" | ");
 }
 
 function rowHasAssessmentData(row: EgraLearnerRow) {
@@ -961,16 +1117,12 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
   };
 
   activeRows.forEach((row) => {
-    const level = normalizeEgraLevelLabel(
-      row.fluencyLevel,
-      row.storyReading,
-      row.readingComprehension,
-    );
-    if (level === "Level0 Non-reader") profileCounts.nonReaders += 1;
-    if (level === "Level1 Emergent") profileCounts.emerging += 1;
-    if (level === "Level2 Minimum") profileCounts.developing += 1;
-    if (level === "Level3 Competent") profileCounts.transitional += 1;
-    if (level === "Level4 Strong") profileCounts.fluent += 1;
+    const level = normalizeEgraLevelLabel(row.fluencyLevel, row);
+    if (level === "Pre-Reader") profileCounts.nonReaders += 1;
+    if (level === "Early Decoder") profileCounts.emerging += 1;
+    if (level === "Developing Reader") profileCounts.developing += 1;
+    if (level === "Fluent Reader") profileCounts.transitional += 1;
+    if (level === "Comprehending Reader") profileCounts.fluent += 1;
   });
 
   const total = activeRows.length || 1;
@@ -1007,11 +1159,7 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
       madeUpWords: toNumberOrNull(row.madeUpWords),
       storyReading: toNumberOrNull(row.storyReading),
       readingComprehension: toNumberOrNull(row.readingComprehension),
-      fluencyLevel: normalizeEgraLevelLabel(
-        row.fluencyLevel,
-        row.storyReading,
-        row.readingComprehension,
-      ),
+      fluencyLevel: normalizeEgraLevelLabel(row.fluencyLevel, row),
     })),
   };
 }
@@ -1022,6 +1170,252 @@ function normalizeSex(value: unknown): "" | "M" | "F" {
     return normalized;
   }
   return "";
+}
+
+function normalizeAssessmentImportHeader(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function normalizeAssessmentImportSex(value: unknown): "" | "M" | "F" {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) {
+    return "";
+  }
+  if (normalized === "m" || normalized === "male" || normalized === "boy") {
+    return "M";
+  }
+  if (normalized === "f" || normalized === "female" || normalized === "girl") {
+    return "F";
+  }
+  return "";
+}
+
+function normalizeAssessmentImportNumeric(value: unknown) {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return "";
+  }
+  const parsed = Number(text);
+  if (!Number.isFinite(parsed)) {
+    return "";
+  }
+  return String(parsed);
+}
+
+function normalizeAssessmentImportAge(value: unknown) {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return "";
+  }
+  const parsed = Number(text);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return "";
+  }
+  return String(Math.round(parsed));
+}
+
+function getAssessmentImportValue(
+  normalizedRow: Map<string, string>,
+  aliases: string[],
+) {
+  for (const alias of aliases) {
+    const value = normalizedRow.get(alias);
+    if (value && value.trim()) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+function ensureAssessmentTemplateRowLimit(rows: EgraLearnerRow[]) {
+  if (rows.length > EGRA_ROW_COUNT) {
+    throw new Error(
+      `Upload has ${rows.length} learner rows. Maximum supported per upload is ${EGRA_ROW_COUNT}. Split into smaller files.`,
+    );
+  }
+}
+
+function replaceWithImportedLearners(rows: EgraLearnerRow[]) {
+  const mergedRows = createDefaultEgraRows();
+  rows.forEach((row, index) => {
+    mergedRows[index] = {
+      ...row,
+      no: index + 1,
+    };
+  });
+  return mergedRows;
+}
+
+function buildAssessmentTemplateCsv() {
+  const escapeCell = (value: string | number) => {
+    const text = String(value ?? "");
+    if (/[",\n]/.test(text)) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  };
+  const lines = [
+    ASSESSMENT_IMPORT_TEMPLATE_HEADERS.join(","),
+    ...ASSESSMENT_IMPORT_TEMPLATE_ROWS.map((row) =>
+      ASSESSMENT_IMPORT_TEMPLATE_HEADERS.map((header) => escapeCell(row[header])).join(","),
+    ),
+  ];
+  return lines.join("\n");
+}
+
+async function parseAssessmentImportWorkbookRows(file: File) {
+  const fileName = file.name.trim().toLowerCase();
+  if (
+    !fileName.endsWith(".csv") &&
+    !fileName.endsWith(".xlsx") &&
+    !fileName.endsWith(".xls")
+  ) {
+    throw new Error("Use a CSV or Excel file (.csv, .xlsx, .xls).");
+  }
+  const XLSX = await import("xlsx");
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "array", raw: false });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) {
+    throw new Error("No worksheet found in file.");
+  }
+  const worksheet = workbook.Sheets[sheetName];
+  return XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+    defval: "",
+    raw: false,
+  });
+}
+
+function mapAssessmentImportRows(
+  sourceRows: Array<Record<string, unknown>>,
+  classGrade: string,
+) {
+  const mappedRows = sourceRows
+    .map((sourceRow, index) => {
+      const normalizedRow = new Map<string, string>();
+      Object.entries(sourceRow).forEach(([key, value]) => {
+        const normalizedKey = normalizeAssessmentImportHeader(key);
+        if (!normalizedKey) {
+          return;
+        }
+        normalizedRow.set(normalizedKey, String(value ?? "").trim());
+      });
+
+      const learnerUid = getAssessmentImportValue(
+        normalizedRow,
+        ASSESSMENT_IMPORT_HEADER_ALIASES.learnerUid,
+      );
+      const learnerId = getAssessmentImportValue(
+        normalizedRow,
+        ASSESSMENT_IMPORT_HEADER_ALIASES.learnerId,
+      );
+      const learnerName = getAssessmentImportValue(
+        normalizedRow,
+        ASSESSMENT_IMPORT_HEADER_ALIASES.learnerName,
+      );
+      const sex = normalizeAssessmentImportSex(
+        getAssessmentImportValue(normalizedRow, ASSESSMENT_IMPORT_HEADER_ALIASES.sex),
+      );
+      const age = normalizeAssessmentImportAge(
+        getAssessmentImportValue(normalizedRow, ASSESSMENT_IMPORT_HEADER_ALIASES.age),
+      );
+      const letterIdentification = normalizeAssessmentImportNumeric(
+        getAssessmentImportValue(
+          normalizedRow,
+          ASSESSMENT_IMPORT_HEADER_ALIASES.letterIdentification,
+        ),
+      );
+      const soundIdentification = normalizeAssessmentImportNumeric(
+        getAssessmentImportValue(
+          normalizedRow,
+          ASSESSMENT_IMPORT_HEADER_ALIASES.soundIdentification,
+        ),
+      );
+      const decodableWords = normalizeAssessmentImportNumeric(
+        getAssessmentImportValue(
+          normalizedRow,
+          ASSESSMENT_IMPORT_HEADER_ALIASES.decodableWords,
+        ),
+      );
+      const undecodableWords = normalizeAssessmentImportNumeric(
+        getAssessmentImportValue(
+          normalizedRow,
+          ASSESSMENT_IMPORT_HEADER_ALIASES.undecodableWords,
+        ),
+      );
+      const madeUpWords = normalizeAssessmentImportNumeric(
+        getAssessmentImportValue(
+          normalizedRow,
+          ASSESSMENT_IMPORT_HEADER_ALIASES.madeUpWords,
+        ),
+      );
+      const storyReading = normalizeAssessmentImportNumeric(
+        getAssessmentImportValue(
+          normalizedRow,
+          ASSESSMENT_IMPORT_HEADER_ALIASES.storyReading,
+        ),
+      );
+      const readingComprehension = normalizeAssessmentImportNumeric(
+        getAssessmentImportValue(
+          normalizedRow,
+          ASSESSMENT_IMPORT_HEADER_ALIASES.readingComprehension,
+        ),
+      );
+
+      const rowSignals: EgraMasterySignals = {
+        age,
+        letterIdentification,
+        soundIdentification,
+        decodableWords,
+        undecodableWords,
+        madeUpWords,
+        storyReading,
+        readingComprehension,
+      };
+      const rawFluencyLevel = getAssessmentImportValue(
+        normalizedRow,
+        ASSESSMENT_IMPORT_HEADER_ALIASES.fluencyLevel,
+      );
+      const fluencyLevel = normalizeEgraLevelLabel(
+        rawFluencyLevel,
+        rowSignals,
+        classGrade,
+      );
+
+      return {
+        no: index + 1,
+        learnerUid,
+        learnerId,
+        learnerName,
+        sex,
+        age,
+        letterIdentification,
+        soundIdentification,
+        decodableWords,
+        undecodableWords,
+        madeUpWords,
+        storyReading,
+        readingComprehension,
+        fluencyLevel,
+      } as EgraLearnerRow;
+    })
+    .filter((row) => rowHasAssessmentData(row));
+
+  if (mappedRows.length === 0) {
+    throw new Error("No learner rows were detected. Use the provided template.");
+  }
+
+  const missingIdentifierRows = mappedRows
+    .filter((row) => !row.learnerUid.trim() && !row.learnerId.trim())
+    .map((row) => row.no);
+  if (missingIdentifierRows.length > 0) {
+    throw new Error(
+      `Each row must include learnerUid or learnerId. Fix row(s): ${missingIdentifierRows.join(", ")}.`,
+    );
+  }
+
+  ensureAssessmentTemplateRowLimit(mappedRows);
+  return mappedRows.map((row, index) => ({ ...row, no: index + 1 }));
 }
 
 function parseEgraRows(raw: unknown): EgraLearnerRow[] {
@@ -1036,12 +1430,27 @@ function parseEgraRows(raw: unknown): EgraLearnerRow[] {
       return template;
     }
     const entry = source as Record<string, unknown>;
+    const letterIdentification = sanitizeForInput(entry.letterIdentification);
+    const soundIdentification = sanitizeForInput(entry.soundIdentification);
+    const decodableWords = sanitizeForInput(entry.decodableWords);
+    const undecodableWords = sanitizeForInput(entry.undecodableWords);
+    const madeUpWords = sanitizeForInput(entry.madeUpWords);
     const storyReading = sanitizeForInput(entry.storyReading);
     const readingComprehension = sanitizeForInput(entry.readingComprehension);
-    const fluencyLevel = normalizeEgraLevelLabel(
-      sanitizeForInput(entry.fluencyLevel),
+    const age = sanitizeForInput(entry.age);
+    const rowSignals: EgraMasterySignals = {
+      age,
+      letterIdentification,
+      soundIdentification,
+      decodableWords,
+      undecodableWords,
+      madeUpWords,
       storyReading,
       readingComprehension,
+    };
+    const fluencyLevel = normalizeEgraLevelLabel(
+      sanitizeForInput(entry.fluencyLevel),
+      rowSignals,
     );
 
     return {
@@ -1050,12 +1459,12 @@ function parseEgraRows(raw: unknown): EgraLearnerRow[] {
       learnerId: sanitizeForInput(entry.learnerId),
       learnerName: sanitizeForInput(entry.learnerName),
       sex: normalizeSex(entry.sex),
-      age: sanitizeForInput(entry.age),
-      letterIdentification: sanitizeForInput(entry.letterIdentification),
-      soundIdentification: sanitizeForInput(entry.soundIdentification),
-      decodableWords: sanitizeForInput(entry.decodableWords),
-      undecodableWords: sanitizeForInput(entry.undecodableWords),
-      madeUpWords: sanitizeForInput(entry.madeUpWords),
+      age,
+      letterIdentification,
+      soundIdentification,
+      decodableWords,
+      undecodableWords,
+      madeUpWords,
       storyReading,
       readingComprehension,
       fluencyLevel,
@@ -1124,6 +1533,8 @@ export function PortalModuleManager({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
+  const assessmentImportInputRef = useRef<HTMLInputElement | null>(null);
+  const [importingAssessmentFile, setImportingAssessmentFile] = useState(false);
   const [gpsSeededSchoolIds, setGpsSeededSchoolIds] = useState<number[]>([]);
   const [egraLearners, setEgraLearners] = useState<EgraLearnerRow[]>(() => createDefaultEgraRows());
   const [trainingParticipants, setTrainingParticipants] = useState<TrainingParticipantRow[]>(
@@ -1177,6 +1588,17 @@ export function PortalModuleManager({
     visitImplementationStatus === "not_started" || visitImplementationStatus === "partial";
 
   const egraSummary = useMemo(() => computeEgraSummary(egraLearners), [egraLearners]);
+  const egraLearnerMasteryProfiles = useMemo(() => {
+    const classGrade = String(formState.payload.classLevel ?? "").trim() || "P1";
+    const profiles = new Map<number, ReturnType<typeof computeOneTestStyleMasteryAssessment>>();
+    egraLearners.forEach((row) => {
+      if (!rowHasAssessmentData(row)) {
+        return;
+      }
+      profiles.set(row.no, computeLearnerMasteryFromSignals(row, classGrade));
+    });
+    return profiles;
+  }, [egraLearners, formState.payload.classLevel]);
   const formDistrictOptions = useMemo(() => {
     if (formState.region) {
       return getDistrictsByRegion(formState.region);
@@ -2102,6 +2524,90 @@ export function PortalModuleManager({
     setIsEgraModalOpen(true);
   }, [egraLearners, formState.payload.classLevel, formState.schoolId, schoolsById]);
 
+  const downloadAssessmentTemplate = useCallback(async (format: "csv" | "xlsx") => {
+    try {
+      if (format === "csv") {
+        const csvContent = buildAssessmentTemplateCsv();
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "assessment-upload-template.csv";
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return;
+      }
+
+      const XLSX = await import("xlsx");
+      const worksheet = XLSX.utils.json_to_sheet(ASSESSMENT_IMPORT_TEMPLATE_ROWS, {
+        header: [...ASSESSMENT_IMPORT_TEMPLATE_HEADERS],
+      });
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "AssessmentTemplate");
+      const binary = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([binary], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "assessment-upload-template.xlsx";
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not generate template file.";
+      setFeedback({ kind: "error", message });
+    }
+  }, []);
+
+  const openAssessmentImportPicker = useCallback(() => {
+    assessmentImportInputRef.current?.click();
+  }, []);
+
+  const handleAssessmentImportFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = event.target.files?.[0];
+      if (!selectedFile) {
+        return;
+      }
+      if (config.module !== "assessment") {
+        event.target.value = "";
+        return;
+      }
+      if (!formState.schoolId.trim()) {
+        setFeedback({
+          kind: "error",
+          message: "Select a school account first before importing assessment rows.",
+        });
+        event.target.value = "";
+        return;
+      }
+
+      setImportingAssessmentFile(true);
+      try {
+        const workbookRows = await parseAssessmentImportWorkbookRows(selectedFile);
+        const classGrade = String(formState.payload.classLevel ?? "").trim() || "P1";
+        const importedRows = mapAssessmentImportRows(workbookRows, classGrade);
+        setEgraLearners(replaceWithImportedLearners(importedRows));
+        setFeedback({
+          kind: "success",
+          message: `Imported ${importedRows.length} learner row(s) from ${selectedFile.name}. Previous learner rows were replaced.`,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Assessment import failed. Use the system template and try again.";
+        setFeedback({ kind: "error", message });
+      } finally {
+        setImportingAssessmentFile(false);
+        event.target.value = "";
+      }
+    },
+    [config.module, formState.payload.classLevel, formState.schoolId],
+  );
+
   const handleSaveLearner = useCallback((learner: EgraLearner) => {
     setEgraLearners((prev) => {
       const newRows = [...prev];
@@ -2646,9 +3152,29 @@ export function PortalModuleManager({
       }
 
       if (config.module === "assessment") {
+        const classGrade = String(formState.payload.classLevel ?? "").trim() || "P1";
+        const classMastery = computeOneTestStyleMasteryAssessment({
+          grade: classGrade,
+          legacyScores: {
+            letterIdentificationScore: egraSummary.averages.class.letterIdentification,
+            soundIdentificationScore: egraSummary.averages.class.soundIdentification,
+            decodableWordsScore: egraSummary.averages.class.decodableWords,
+            undecodableWordsScore: egraSummary.averages.class.undecodableWords,
+            madeUpWordsScore: egraSummary.averages.class.madeUpWords,
+            storyReadingScore: egraSummary.averages.class.storyReading,
+            readingComprehensionScore: egraSummary.averages.class.readingComprehension,
+          },
+        });
         payload.egraLearnersData = JSON.stringify(egraSummary.rowsForPayload);
         payload.egraSummaryData = JSON.stringify(egraSummary.averages);
         payload.egraProfileData = JSON.stringify(egraSummary.profile);
+        payload.assessmentModelVersion = ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1;
+        payload.benchmarkVersion = "UG-MASTERY-BENCHMARK-v1";
+        payload.scoringProfileVersion = "UG-MASTERY-SCORING-v1";
+        payload.readingStageLabel = classMastery.readingStageLabel;
+        payload.benchmarkGradeLevel = classMastery.benchmarkGradeLevel;
+        payload.expectedVsActualStatus = classMastery.expectedVsActualStatus;
+        payload.masteryProfileSummary = classMastery.masteryProfileSummary;
         payload.learnersAssessed = egraSummary.learnersAssessed;
         payload.nonReaders = egraSummary.profile.nonReaders;
         payload.emergingReaders = egraSummary.profile.emerging;
@@ -2662,6 +3188,41 @@ export function PortalModuleManager({
         payload.madeUpWordsScore = egraSummary.averages.class.madeUpWords;
         payload.storyReadingScore = egraSummary.averages.class.storyReading;
         payload.readingComprehensionScore = egraSummary.averages.class.readingComprehension;
+        payload.masteryDomainInputs = JSON.stringify({
+          phonemic_awareness: {
+            domainScoreRaw: egraSummary.averages.class.letterIdentification,
+            domainAccuracy: egraSummary.averages.class.letterIdentification,
+            domainMasteryStatus: classMastery.domains.phonemic_awareness.domainMasteryStatus,
+          },
+          grapheme_phoneme_correspondence: {
+            domainScoreRaw: egraSummary.averages.class.soundIdentification,
+            domainAccuracy: egraSummary.averages.class.soundIdentification,
+            domainMasteryStatus:
+              classMastery.domains.grapheme_phoneme_correspondence.domainMasteryStatus,
+          },
+          blending_decoding: {
+            domainScoreRaw: egraSummary.averages.class.decodableWords,
+            domainAccuracy: egraSummary.averages.class.decodableWords,
+            domainMasteryStatus: classMastery.domains.blending_decoding.domainMasteryStatus,
+          },
+          word_recognition_fluency: {
+            domainScoreRaw: egraSummary.averages.class.madeUpWords,
+            domainAccuracy: egraSummary.averages.class.madeUpWords,
+            domainMasteryStatus:
+              classMastery.domains.word_recognition_fluency.domainMasteryStatus,
+          },
+          sentence_paragraph_construction: {
+            domainScoreRaw: egraSummary.averages.class.storyReading,
+            domainAccuracy: egraSummary.averages.class.storyReading,
+            domainMasteryStatus:
+              classMastery.domains.sentence_paragraph_construction.domainMasteryStatus,
+          },
+          comprehension: {
+            domainScoreRaw: egraSummary.averages.class.readingComprehension,
+            domainAccuracy: egraSummary.averages.class.readingComprehension,
+            domainMasteryStatus: classMastery.domains.comprehension.domainMasteryStatus,
+          },
+        });
         if (typeof payload.storiesPublished !== "number") {
           payload.storiesPublished = 0;
         }
@@ -3916,17 +4477,51 @@ export function PortalModuleManager({
                               <div key={field.key} className="full-width">
                                 <div className="portal-participants-header">
                                   {renderLabel(field.label, isFieldRequired)}
-                                  <button
-                                    className="button button-ghost"
-                                    type="button"
-                                    onClick={handleOpenEgraModal}
-                                  >
-                                    + Add Learner Result
-                                  </button>
+                                  <div className="action-row" style={{ gap: "0.45rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                    <button
+                                      className="button button-ghost"
+                                      type="button"
+                                      onClick={() => void downloadAssessmentTemplate("csv")}
+                                    >
+                                      Download CSV Template
+                                    </button>
+                                    <button
+                                      className="button button-ghost"
+                                      type="button"
+                                      onClick={() => void downloadAssessmentTemplate("xlsx")}
+                                    >
+                                      Download Excel Template
+                                    </button>
+                                    <button
+                                      className="button button-ghost"
+                                      type="button"
+                                      onClick={openAssessmentImportPicker}
+                                      disabled={importingAssessmentFile}
+                                    >
+                                      {importingAssessmentFile ? "Importing..." : "Upload CSV/Excel"}
+                                    </button>
+                                    <button
+                                      className="button button-ghost"
+                                      type="button"
+                                      onClick={handleOpenEgraModal}
+                                    >
+                                      + Add Learner Result
+                                    </button>
+                                  </div>
                                 </div>
                                 <p className="portal-muted">
-                                  {field.helperText || "Enter learner-level scores exactly as captured on the EGRA baseline sheet."}
+                                  {field.helperText || "Enter learner-level scores using the six-domain mastery rubric."}
                                 </p>
+                                <p className="portal-muted" style={{ marginTop: "-0.35rem" }}>
+                                  Importing replaces old learner rows in the current form. Template max: {EGRA_ROW_COUNT} learners per upload.
+                                </p>
+                                <input
+                                  ref={assessmentImportInputRef}
+                                  type="file"
+                                  accept=".csv,.xlsx,.xls"
+                                  className="visually-hidden"
+                                  onChange={handleAssessmentImportFileChange}
+                                />
 
                                 {/* Summary Table of Added Learners */}
                                 <div className="table-wrap egra-table-wrap">
@@ -3938,31 +4533,56 @@ export function PortalModuleManager({
                                         <th>Learner Name</th>
                                         <th>Sex</th>
                                         <th>Age</th>
-                                        <th>Fluency Level</th>
+                                        <th>Reading Stage</th>
+                                        <th>Benchmark Grade Level</th>
+                                        <th>Expected vs Actual</th>
+                                        <th>Rubric Profile (PA/GPC/BD/WRF/SPC/C)</th>
                                         <th>Action</th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {egraLearners.filter(rowHasAssessmentData).map((row) => (
-                                        <tr key={row.no}>
-                                          <td>{row.no}</td>
-                                          <td>{row.learnerId}</td>
-                                          <td>{row.learnerName || "-"}</td>
-                                          <td>{row.sex}</td>
-                                          <td>{row.age}</td>
-                                          <td>{normalizeEgraLevelLabel(row.fluencyLevel, row.storyReading, row.readingComprehension)}</td>
-                                          <td>
-                                            {/* Edit button could go here */}
-                                            <button type="button" className="button button-small button-ghost" onClick={() => {
-                                              setModalLearnerNo(row.no);
-                                              setModalLearnerId(row.learnerId);
-                                              setIsEgraModalOpen(true);
-                                            }}>Edit</button>
-                                          </td>
-                                        </tr>
-                                      ))}
+                                      {egraLearners.filter(rowHasAssessmentData).map((row) => {
+                                        const classGrade =
+                                          String(formState.payload.classLevel ?? "").trim() || "P1";
+                                        const mastery =
+                                          egraLearnerMasteryProfiles.get(row.no) ??
+                                          computeLearnerMasteryFromSignals(row, classGrade);
+                                        const readingStage = normalizeEgraLevelLabel(
+                                          row.fluencyLevel,
+                                          row,
+                                          classGrade,
+                                        );
+                                        return (
+                                          <tr key={row.no}>
+                                            <td>{row.no}</td>
+                                            <td>{row.learnerId}</td>
+                                            <td>{row.learnerName || "-"}</td>
+                                            <td>{row.sex}</td>
+                                            <td>{row.age}</td>
+                                            <td>{readingStage}</td>
+                                            <td>{mastery.benchmarkGradeLevel}</td>
+                                            <td>{mastery.expectedVsActualStatus}</td>
+                                            <td style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: "0.75rem" }}>
+                                              {formatMasteryProfileCompact(mastery)}
+                                            </td>
+                                            <td>
+                                              <button
+                                                type="button"
+                                                className="button button-small button-ghost"
+                                                onClick={() => {
+                                                  setModalLearnerNo(row.no);
+                                                  setModalLearnerId(row.learnerId);
+                                                  setIsEgraModalOpen(true);
+                                                }}
+                                              >
+                                                Edit
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
                                       {egraLearners.filter(rowHasAssessmentData).length === 0 && (
-                                        <tr><td colSpan={7} className="text-center p-4 text-slate-500">No learners added yet. Click "+ Add Learner Result" to begin.</td></tr>
+                                        <tr><td colSpan={10} className="text-center p-4 text-slate-500">No learners added yet. Click "+ Add Learner Result" to begin.</td></tr>
                                       )}
                                     </tbody>
                                   </table>
@@ -3977,7 +4597,7 @@ export function PortalModuleManager({
                                 <table>
                                   <thead>
                                     <tr>
-                                      <th>Baseline Snapshot</th>
+                                      <th>Domain Mastery Snapshot</th>
                                       <th>Boys Avg</th>
                                       <th>Girls Avg</th>
                                       <th>Class Avg</th>
@@ -4004,7 +4624,7 @@ export function PortalModuleManager({
                                 <table>
                                   <thead>
                                     <tr>
-                                      <th>Reading Level</th>
+                                      <th>Reading Stage</th>
                                       <th>No. Learners</th>
                                       <th>% Class</th>
                                     </tr>

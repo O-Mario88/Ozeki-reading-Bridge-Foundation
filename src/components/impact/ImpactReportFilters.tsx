@@ -13,7 +13,6 @@ type ImpactReportFiltersProps = {
   initialReportCategory: string;
   initialPeriodType: string;
   initialOutput: string;
-  initialAudience: string;
   initialRegion: string;
   initialSubRegion: string;
   initialDistrict: string;
@@ -22,7 +21,6 @@ type ImpactReportFiltersProps = {
   reportCategories: string[];
   periodTypes: string[];
   outputs: string[];
-  audiences: string[];
   period?: string;
 };
 
@@ -47,7 +45,6 @@ export function ImpactReportFilters({
   initialReportCategory,
   initialPeriodType,
   initialOutput,
-  initialAudience,
   initialRegion,
   initialSubRegion,
   initialDistrict,
@@ -56,7 +53,6 @@ export function ImpactReportFilters({
   reportCategories,
   periodTypes,
   outputs,
-  audiences,
   period,
 }: ImpactReportFiltersProps) {
   const router = useRouter();
@@ -67,7 +63,6 @@ export function ImpactReportFilters({
   const [reportCategory, setReportCategory] = useState(initialReportCategory);
   const [periodType, setPeriodType] = useState(initialPeriodType || "FY");
   const [output, setOutput] = useState(initialOutput || "PDF");
-  const [audience, setAudience] = useState(initialAudience || "Public-safe");
   const [region, setRegion] = useState(initialRegion);
   const [subRegion, setSubRegion] = useState(initialSubRegion);
   const [district, setDistrict] = useState(initialDistrict);
@@ -88,13 +83,11 @@ export function ImpactReportFilters({
     setReportCategory(initialReportCategory);
     setPeriodType(initialPeriodType || "FY");
     setOutput(initialOutput || "PDF");
-    setAudience(initialAudience || "Public-safe");
     setRegion(initialRegion);
     setSubRegion(initialSubRegion);
     setDistrict(initialDistrict);
     setSchoolId(initialSchoolId);
   }, [
-    initialAudience,
     initialDistrict,
     initialOutput,
     initialPeriodType,
@@ -277,7 +270,6 @@ export function ImpactReportFilters({
     if (reportCategory) query.set("reportCategory", reportCategory);
     if (periodType) query.set("periodType", periodType);
     if (output) query.set("output", output);
-    if (audience) query.set("audience", audience);
     if (region) query.set("region", region);
     if (subRegion) query.set("subRegion", subRegion);
     if (district) query.set("district", district);
@@ -294,7 +286,6 @@ export function ImpactReportFilters({
     setReportCategory("");
     setPeriodType("FY");
     setOutput("PDF");
-    setAudience("Public-safe");
     setRegion("");
     setSubRegion("");
     setDistrict("");
@@ -354,17 +345,6 @@ export function ImpactReportFilters({
         <span>Output</span>
         <select value={output} onChange={(event) => setOutput(event.target.value)}>
           {outputs.map((type) => (
-            <option value={type} key={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label>
-        <span>Audience</span>
-        <select value={audience} onChange={(event) => setAudience(event.target.value)}>
-          {audiences.map((type) => (
             <option value={type} key={type}>
               {type}
             </option>

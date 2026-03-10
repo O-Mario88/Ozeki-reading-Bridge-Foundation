@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 
 export type FloatingMetric = {
@@ -20,6 +21,7 @@ type FloatingStatCardProps = {
   profileHref?: string;
   dataCompleteness?: "Complete" | "Partial";
   onClearSelection?: () => void;
+  onSizeChange?: (size: { width: number; height: number }) => void;
 };
 
 export function FloatingStatCard({
@@ -34,17 +36,49 @@ export function FloatingStatCard({
   profileHref,
   dataCompleteness,
   onClearSelection,
+  onSizeChange,
 }: FloatingStatCardProps) {
   const show = open && position;
+  const cardRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!onSizeChange || !cardRef.current) {
+      return;
+    }
+    const node = cardRef.current;
+    const reportSize = () => {
+      const rect = node.getBoundingClientRect();
+      onSizeChange({
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+    reportSize();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      reportSize();
+    });
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [onSizeChange]);
 
   return (
     <aside
+      ref={cardRef}
       className="impact-map-floating-card"
       style={{
         left: position?.left ?? 0,
         top: position?.top ?? 0,
       }}
       data-open={show ? "" : undefined}
+      data-pinned={pinned ? "" : undefined}
       aria-live="polite"
     >
       <header className="impact-map-floating-card-header">
@@ -90,4 +124,3 @@ export function FloatingStatCard({
     </aside>
   );
 }
-

@@ -446,6 +446,14 @@ export function PublicImpactMapExplorer({
     payload?.readingLevels?.distribution.find((item) => item.cycle === "endline") ??
     payload?.readingLevels?.distribution.find((item) => item.cycle === "latest") ??
     null;
+  const masteryDomains = payload?.masteryDomains ?? null;
+  const readingStageDistribution = payload?.readingStageDistribution ?? [];
+  const benchmarkStatus = payload?.benchmarkStatus ?? null;
+  const trafficLightExplanations = payload?.publicExplanation ?? {
+    green: "Green means the learner has mastered the skill.",
+    amber: "Amber means the learner is developing but needs more speed or consistency.",
+    red: "Red means the learner needs targeted support.",
+  };
   const readingLevelLabels =
     payload?.readingLevels?.levels?.map((item) => item.label) ??
     READING_LEVELS;
@@ -864,18 +872,81 @@ export function PublicImpactMapExplorer({
               })}
             </div>
             <p className="impact-mini-footer">
-              Scores reflect average learner performance. Benchmark: 60%.
+              Scores reflect average learner performance. Benchmark interpretation follows mastery progression by domain.
             </p>
+            {masteryDomains ? (
+              <>
+                <h4 style={{ marginTop: "1rem" }}>Mastery Traffic-Light Distribution</h4>
+                <div className="impact-domain-mini-grid">
+                  {OUTCOME_DOMAIN_CONFIG.map((item) => {
+                    const domainMap: Record<string, keyof typeof masteryDomains> = {
+                      letterNames: "phonemic_awareness",
+                      letterSounds: "grapheme_phoneme_correspondence",
+                      realWords: "blending_decoding",
+                      madeUpWords: "word_recognition_fluency",
+                      storyReading: "sentence_paragraph_construction",
+                      comprehension: "comprehension",
+                    };
+                    const masteryKey = domainMap[item.key] ?? "comprehension";
+                    const mastery = masteryDomains[masteryKey];
+                    if (!mastery) return null;
+                    return (
+                      <article className="impact-domain-mini-card" key={`mastery-${item.key}`}>
+                        <h4>{LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short}</h4>
+                        <p className="impact-domain-mini-meta">
+                          Green: <strong>{mastery.green.percent}%</strong> ({mastery.green.count})
+                        </p>
+                        <p className="impact-domain-mini-meta">
+                          Amber: <strong>{mastery.amber.percent}%</strong> ({mastery.amber.count})
+                        </p>
+                        <p className="impact-domain-mini-meta">
+                          Red: <strong>{mastery.red.percent}%</strong> ({mastery.red.count})
+                        </p>
+                        <p className="impact-domain-mini-meta">n = {mastery.n.toLocaleString()}</p>
+                      </article>
+                    );
+                  })}
+                </div>
+                {benchmarkStatus ? (
+                  <p className="impact-mini-footer">
+                    Benchmark status: Below expected {benchmarkStatus.belowExpected.percent}%,
+                    At expected {benchmarkStatus.atExpected.percent}%,
+                    Above expected {benchmarkStatus.aboveExpected.percent}% (n={benchmarkStatus.n}).
+                  </p>
+                ) : null}
+                <p className="impact-mini-footer">
+                  {trafficLightExplanations.green} {trafficLightExplanations.amber} {trafficLightExplanations.red}
+                </p>
+              </>
+            ) : null}
           </article>
         )}
 
         {activeTab === "readingLevels" && (
           <article className="card">
-            <h3>Reading Levels (Calculated from Domain Outcomes)</h3>
+            <h3>Reading Stages & Benchmark Alignment</h3>
             {loading ? (
               <p>Loading reading levels...</p>
             ) : derivedReadingLevels ? (
               <div className="impact-reading-level-panel">
+                {readingStageDistribution.length > 0 ? (
+                  <div className="impact-reading-level-summary-grid">
+                    {readingStageDistribution.map((row) => (
+                      <article key={`stage-${row.label}`}>
+                        <span>{row.label}</span>
+                        <strong>{row.percent.toFixed(1)}%</strong>
+                        <small>{row.count.toLocaleString()} learners</small>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+                {benchmarkStatus ? (
+                  <p className="impact-mini-footer">
+                    Expected benchmark alignment: Below {benchmarkStatus.belowExpected.percent}%,
+                    At {benchmarkStatus.atExpected.percent}%,
+                    Above {benchmarkStatus.aboveExpected.percent}%.
+                  </p>
+                ) : null}
                 <div className="impact-reading-level-summary-grid">
                   <article>
                     <span>Baseline level</span>

@@ -155,6 +155,24 @@ import {
   readingLevelOrdinal,
 } from "@/lib/reading-assessment-utils";
 import {
+  ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1,
+  PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS,
+  MASTERY_DOMAIN_SEQUENCE,
+  MASTERY_STAGE_METADATA,
+  computeOneTestStyleMasteryAssessment,
+  emptyDomainMasteryDistribution,
+  getDefaultOneTestMasterySettings,
+  isOneTestStyleModelVersion,
+  masteryStatusLabel,
+  masterDomainDisplayName,
+  normalizeMasteryStatus,
+  parseDomainInputsFromUnknown,
+  parseItemResponsesFromUnknown,
+  type MasteryDomainKey,
+  type MasteryStatus,
+  type OneTestMasterySettings,
+} from "@/lib/mastery-assessment";
+import {
   getDistrictsByRegion,
   inferRegionFromDistrict,
   inferSubRegionFromDistrict,
@@ -187,6 +205,28 @@ const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-s
 const ASSESSMENT_READING_RULE_VERSION = "UG-RLv1";
 const SCHOOL_SUPPORT_RULE_VERSION = "UG-Support-v1";
 const TEACHER_SUPPORT_RULE_VERSION = "UG-TeacherSupport-v1";
+const ASSESSMENT_LEGACY_MODEL_VERSION = "UG-RLv1-legacy";
+
+const MASTERY_DOMAIN_COLUMNS: Array<{
+  key: MasteryDomainKey;
+  prefix: string;
+}> = [
+  { key: "phonemic_awareness", prefix: "phonemic_awareness" },
+  {
+    key: "grapheme_phoneme_correspondence",
+    prefix: "grapheme_phoneme_correspondence",
+  },
+  { key: "blending_decoding", prefix: "blending_decoding" },
+  {
+    key: "word_recognition_fluency",
+    prefix: "word_recognition_fluency",
+  },
+  {
+    key: "sentence_paragraph_construction",
+    prefix: "sentence_paragraph_construction",
+  },
+  { key: "comprehension", prefix: "comprehension" },
+];
 
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -1975,6 +2015,147 @@ function ensureAssessmentDomainsColumns(db: Database.Database) {
   ensureColumn(db, "assessment_records", "reading_comprehension_score", "INTEGER");
 }
 
+function ensureMasteryAssessmentSchema(db: Database.Database) {
+  ensureColumn(db, "assessment_sessions", "model_version", "TEXT");
+  ensureColumn(db, "assessment_sessions", "benchmark_version", "TEXT");
+  ensureColumn(db, "assessment_sessions", "scoring_profile_version", "TEXT");
+
+  ensureColumn(db, "assessment_records", "model_version", "TEXT");
+  ensureColumn(db, "assessment_records", "benchmark_version", "TEXT");
+  ensureColumn(db, "assessment_records", "scoring_profile_version", "TEXT");
+  ensureColumn(db, "assessment_records", "learner_expected_grade", "TEXT");
+  ensureColumn(db, "assessment_records", "reading_stage_label", "TEXT");
+  ensureColumn(db, "assessment_records", "reading_stage_order", "INTEGER");
+  ensureColumn(db, "assessment_records", "benchmark_grade_level", "TEXT");
+  ensureColumn(db, "assessment_records", "expected_vs_actual_status", "TEXT");
+  ensureColumn(db, "assessment_records", "mastery_profile_summary_json", "TEXT");
+  ensureColumn(db, "assessment_records", "stage_reason_code", "TEXT");
+  ensureColumn(db, "assessment_records", "stage_reason_summary", "TEXT");
+  ensureColumn(db, "assessment_records", "assessment_model_computed_at", "TEXT");
+
+  ensureColumn(db, "assessment_session_results", "model_version", "TEXT");
+  ensureColumn(db, "assessment_session_results", "benchmark_version", "TEXT");
+  ensureColumn(db, "assessment_session_results", "scoring_profile_version", "TEXT");
+  ensureColumn(db, "assessment_session_results", "reading_stage_label", "TEXT");
+  ensureColumn(db, "assessment_session_results", "reading_stage_order", "INTEGER");
+  ensureColumn(db, "assessment_session_results", "benchmark_grade_level", "TEXT");
+  ensureColumn(db, "assessment_session_results", "expected_vs_actual_status", "TEXT");
+  ensureColumn(db, "assessment_session_results", "mastery_profile_summary_json", "TEXT");
+  ensureColumn(db, "assessment_session_results", "stage_reason_code", "TEXT");
+  ensureColumn(db, "assessment_session_results", "stage_reason_summary", "TEXT");
+
+  MASTERY_DOMAIN_COLUMNS.forEach(({ prefix }) => {
+    ensureColumn(db, "assessment_records", `${prefix}_score_raw`, "REAL");
+    ensureColumn(db, "assessment_records", `${prefix}_accuracy`, "REAL");
+    ensureColumn(db, "assessment_records", `${prefix}_latency_avg`, "REAL");
+    ensureColumn(db, "assessment_records", `${prefix}_attempts_avg`, "REAL");
+    ensureColumn(db, "assessment_records", `${prefix}_support_usage_rate`, "REAL");
+    ensureColumn(db, "assessment_records", `${prefix}_mastery_status`, "TEXT");
+
+    ensureColumn(db, "assessment_session_results", `${prefix}_score_raw`, "REAL");
+    ensureColumn(db, "assessment_session_results", `${prefix}_accuracy`, "REAL");
+    ensureColumn(db, "assessment_session_results", `${prefix}_latency_avg`, "REAL");
+    ensureColumn(db, "assessment_session_results", `${prefix}_attempts_avg`, "REAL");
+    ensureColumn(db, "assessment_session_results", `${prefix}_support_usage_rate`, "REAL");
+    ensureColumn(db, "assessment_session_results", `${prefix}_mastery_status`, "TEXT");
+  });
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS assessment_item_responses (
+      item_response_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      learner_result_id INTEGER NOT NULL,
+      assessment_session_result_id INTEGER,
+      assessment_session_id INTEGER,
+      learner_uid TEXT,
+      domain_key TEXT NOT NULL,
+      item_key TEXT NOT NULL,
+      accuracy INTEGER NOT NULL DEFAULT 0,
+      latency_ms REAL,
+      attempts INTEGER NOT NULL DEFAULT 1,
+      hint_used INTEGER NOT NULL DEFAULT 0,
+      correction_used INTEGER NOT NULL DEFAULT 0,
+      item_score REAL,
+      latency_score REAL,
+      attempt_support_score REAL,
+      model_version TEXT,
+      scoring_profile_version TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(learner_result_id) REFERENCES assessment_records(id) ON DELETE CASCADE,
+      FOREIGN KEY(assessment_session_result_id) REFERENCES assessment_session_results(id) ON DELETE CASCADE,
+      FOREIGN KEY(assessment_session_id) REFERENCES assessment_sessions(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_assessment_item_responses_result
+      ON assessment_item_responses(learner_result_id);
+    CREATE INDEX IF NOT EXISTS idx_assessment_item_responses_domain
+      ON assessment_item_responses(domain_key, model_version);
+
+    CREATE TABLE IF NOT EXISTS assessment_model_settings (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      model_version TEXT NOT NULL,
+      benchmark_version TEXT NOT NULL,
+      scoring_profile_version TEXT NOT NULL,
+      item_weights_json TEXT NOT NULL,
+      mastery_thresholds_json TEXT NOT NULL,
+      latency_thresholds_json TEXT NOT NULL,
+      attempt_thresholds_json TEXT NOT NULL,
+      benchmark_expectations_json TEXT NOT NULL,
+      stage_metadata_json TEXT NOT NULL,
+      public_explanations_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  const defaults = getDefaultOneTestMasterySettings();
+  const row = db
+    .prepare("SELECT id FROM assessment_model_settings WHERE id = 1 LIMIT 1")
+    .get() as { id: number } | undefined;
+  if (!row) {
+    db.prepare(
+      `
+      INSERT INTO assessment_model_settings (
+        id,
+        model_version,
+        benchmark_version,
+        scoring_profile_version,
+        item_weights_json,
+        mastery_thresholds_json,
+        latency_thresholds_json,
+        attempt_thresholds_json,
+        benchmark_expectations_json,
+        stage_metadata_json,
+        public_explanations_json,
+        updated_at
+      ) VALUES (
+        1,
+        @modelVersion,
+        @benchmarkVersion,
+        @scoringProfileVersion,
+        @itemWeightsJson,
+        @masteryThresholdsJson,
+        @latencyThresholdsJson,
+        @attemptThresholdsJson,
+        @benchmarkExpectationsJson,
+        @stageMetadataJson,
+        @publicExplanationsJson,
+        @updatedAt
+      )
+      `,
+    ).run({
+      modelVersion: defaults.modelVersion,
+      benchmarkVersion: defaults.benchmarkVersion,
+      scoringProfileVersion: defaults.scoringProfileVersion,
+      itemWeightsJson: JSON.stringify(defaults.itemWeights),
+      masteryThresholdsJson: JSON.stringify(defaults.masteryThresholds),
+      latencyThresholdsJson: JSON.stringify(defaults.latencyThresholdsMs),
+      attemptThresholdsJson: JSON.stringify(defaults.attemptThresholds),
+      benchmarkExpectationsJson: JSON.stringify(defaults.benchmarkExpectations),
+      stageMetadataJson: JSON.stringify(MASTERY_STAGE_METADATA),
+      publicExplanationsJson: JSON.stringify(PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+}
+
 function ensureAutomationTables(db: Database.Database) {
   ensureColumn(db, "portal_records", "follow_up_type", "TEXT");
   ensureColumn(db, "portal_records", "follow_up_owner_user_id", "INTEGER");
@@ -3084,6 +3265,7 @@ export function getDb() {
   ensureGraduationTables(db);
   ensurePortalTestimonialVideoColumns(db);
   ensureAssessmentDomainsColumns(db);
+  ensureMasteryAssessmentSchema(db);
   ensureAutomationTables(db);
   ensureStoryLibraryColumns(db);
   ensurePaginatedReaderColumns(db);
@@ -5647,6 +5829,38 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
   if (!learnerRecord) {
     throw new Error("Could not resolve learner roster record.");
   }
+  const masterySettings = getOneTestMasterySettings(db);
+  const resolvedModelVersion = ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1;
+  const isOneTestModel = isOneTestStyleModelVersion(resolvedModelVersion);
+  const resolvedBenchmarkVersion = String(payload.benchmarkVersion ?? "").trim();
+  const resolvedScoringProfileVersion = String(payload.scoringProfileVersion ?? "").trim();
+  const domainInputs = parseDomainInputsFromUnknown(payload.masteryDomainInputs);
+  const itemResponses = parseItemResponsesFromUnknown(payload.masteryItemResponses);
+
+  const masteryComputation = isOneTestModel
+    ? computeOneTestStyleMasteryAssessment({
+      grade: payload.learnerExpectedGrade ?? payload.classGrade,
+      age: payload.age,
+      domainInputs,
+      itemResponses,
+      legacyScores: {
+        letterIdentificationScore: payload.letterIdentificationScore,
+        soundIdentificationScore: payload.soundIdentificationScore,
+        decodableWordsScore: payload.decodableWordsScore,
+        undecodableWordsScore: payload.undecodableWordsScore,
+        madeUpWordsScore: payload.madeUpWordsScore,
+        storyReadingScore: payload.storyReadingScore,
+        readingComprehensionScore: payload.readingComprehensionScore,
+        fluencyAccuracyScore: payload.fluencyAccuracyScore ?? null,
+      },
+      settings: masterySettings,
+      modelVersion: resolvedModelVersion,
+      benchmarkVersion: resolvedBenchmarkVersion || masterySettings.benchmarkVersion,
+      scoringProfileVersion:
+        resolvedScoringProfileVersion || masterySettings.scoringProfileVersion,
+    })
+    : null;
+
   const readingRuleSettings = getAssessmentReadingRuleSettings(db, {
     grade: payload.classGrade,
     language: "English",
@@ -5661,6 +5875,18 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
     readingRuleSettings,
   );
   const computedAt = new Date().toISOString();
+  const computedReadingLevelForInsert = masteryComputation
+    ? toLegacyReadingLabelFromStage(
+      masteryComputation.readingStageOrder,
+      masteryComputation.readingStageLabel,
+    )
+    : computedReading.computedReadingLevel;
+  const computedLevelBandForInsert = masteryComputation
+    ? stageBandFromOrder(masteryComputation.readingStageOrder)
+    : computedReading.computedLevelBand;
+  const readingRulesVersionForInsert = masteryComputation
+    ? masteryComputation.modelVersion
+    : computedReading.rulesVersion;
 
   const insertResult = db
     .prepare(
@@ -5737,15 +5963,46 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
       storyReadingScore: payload.storyReadingScore,
       fluencyAccuracyScore: payload.fluencyAccuracyScore ?? null,
       readingComprehensionScore: payload.readingComprehensionScore,
-      computedReadingLevel: computedReading.computedReadingLevel,
-      computedLevelBand: computedReading.computedLevelBand,
-      readingRulesVersion: computedReading.rulesVersion,
+      computedReadingLevel: computedReadingLevelForInsert,
+      computedLevelBand: computedLevelBandForInsert,
+      readingRulesVersion: readingRulesVersionForInsert,
       readingLevelComputedAt: computedAt,
       notes: payload.notes?.trim() ? payload.notes : null,
       createdByUserId,
     });
 
   const assessmentId = Number(insertResult.lastInsertRowid);
+  if (masteryComputation) {
+    persistMasteryForAssessmentRecord({
+      db,
+      assessmentRecordId: assessmentId,
+      mastery: masteryComputation,
+      learnerExpectedGrade: payload.learnerExpectedGrade ?? payload.classGrade,
+      computedAt,
+    });
+    replaceAssessmentItemResponses({
+      db,
+      learnerResultId: assessmentId,
+      learnerUid: learnerRecord.learnerUid,
+      mastery: masteryComputation,
+    });
+  } else {
+    db.prepare(
+      `
+      UPDATE assessment_records
+      SET
+        model_version = @modelVersion,
+        benchmark_version = @benchmarkVersion,
+        scoring_profile_version = @scoringProfileVersion
+      WHERE id = @assessmentId
+      `,
+    ).run({
+      assessmentId,
+      modelVersion: resolvedModelVersion || ASSESSMENT_LEGACY_MODEL_VERSION,
+      benchmarkVersion: resolvedBenchmarkVersion || null,
+      scoringProfileVersion: resolvedScoringProfileVersion || null,
+    });
+  }
   const row = db
     .prepare(
       `
@@ -5771,6 +6028,14 @@ export function saveAssessmentRecord(payload: AssessmentRecordInput, createdByUs
         computed_reading_level AS computedReadingLevel,
         computed_level_band AS computedLevelBand,
         reading_rules_version AS readingRulesVersion,
+        model_version AS assessmentModelVersion,
+        reading_stage_label AS readingStageLabel,
+        reading_stage_order AS readingStageOrder,
+        benchmark_grade_level AS benchmarkGradeLevel,
+        expected_vs_actual_status AS expectedVsActualStatus,
+        stage_reason_code AS stageReasonCode,
+        stage_reason_summary AS stageReasonSummary,
+        mastery_profile_summary_json AS masteryProfileSummaryJson,
         notes,
         created_at AS createdAt
       FROM assessment_records
@@ -5815,6 +6080,14 @@ export function listAssessmentRecords(limit = 20): AssessmentRecord[] {
         computed_reading_level AS computedReadingLevel,
         computed_level_band AS computedLevelBand,
         reading_rules_version AS readingRulesVersion,
+        model_version AS assessmentModelVersion,
+        reading_stage_label AS readingStageLabel,
+        reading_stage_order AS readingStageOrder,
+        benchmark_grade_level AS benchmarkGradeLevel,
+        expected_vs_actual_status AS expectedVsActualStatus,
+        stage_reason_code AS stageReasonCode,
+        stage_reason_summary AS stageReasonSummary,
+        mastery_profile_summary_json AS masteryProfileSummaryJson,
         notes,
         created_by_user_id AS createdByUserId,
         created_at AS createdAt
@@ -6670,6 +6943,409 @@ function computeAssessmentReadingLevel(
   };
 }
 
+function safeParseJson<T>(value: string | null | undefined, fallback: T): T {
+  if (!value) {
+    return fallback;
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (parsed && typeof parsed === "object") {
+      return parsed as T;
+    }
+  } catch {
+    return fallback;
+  }
+  return fallback;
+}
+
+function getOneTestMasterySettings(db: Database.Database): OneTestMasterySettings {
+  const defaults = getDefaultOneTestMasterySettings();
+  const row = db
+    .prepare(
+      `
+      SELECT
+        model_version AS modelVersion,
+        benchmark_version AS benchmarkVersion,
+        scoring_profile_version AS scoringProfileVersion,
+        item_weights_json AS itemWeightsJson,
+        mastery_thresholds_json AS masteryThresholdsJson,
+        latency_thresholds_json AS latencyThresholdsJson,
+        attempt_thresholds_json AS attemptThresholdsJson,
+        benchmark_expectations_json AS benchmarkExpectationsJson
+      FROM assessment_model_settings
+      WHERE id = 1
+      LIMIT 1
+      `,
+    )
+    .get() as
+    | {
+      modelVersion: string;
+      benchmarkVersion: string;
+      scoringProfileVersion: string;
+      itemWeightsJson: string;
+      masteryThresholdsJson: string;
+      latencyThresholdsJson: string;
+      attemptThresholdsJson: string;
+      benchmarkExpectationsJson: string;
+    }
+    | undefined;
+
+  if (!row) {
+    return defaults;
+  }
+
+  return {
+    modelVersion: row.modelVersion || defaults.modelVersion,
+    benchmarkVersion: row.benchmarkVersion || defaults.benchmarkVersion,
+    scoringProfileVersion: row.scoringProfileVersion || defaults.scoringProfileVersion,
+    itemWeights: {
+      ...defaults.itemWeights,
+      ...safeParseJson<Partial<OneTestMasterySettings["itemWeights"]>>(
+        row.itemWeightsJson,
+        {},
+      ),
+    },
+    masteryThresholds: {
+      ...defaults.masteryThresholds,
+      ...safeParseJson<Partial<OneTestMasterySettings["masteryThresholds"]>>(
+        row.masteryThresholdsJson,
+        {},
+      ),
+    },
+    latencyThresholdsMs: {
+      ...defaults.latencyThresholdsMs,
+      ...safeParseJson<Partial<OneTestMasterySettings["latencyThresholdsMs"]>>(
+        row.latencyThresholdsJson,
+        {},
+      ),
+    } as OneTestMasterySettings["latencyThresholdsMs"],
+    attemptThresholds: {
+      ...defaults.attemptThresholds,
+      ...safeParseJson<Partial<OneTestMasterySettings["attemptThresholds"]>>(
+        row.attemptThresholdsJson,
+        {},
+      ),
+    },
+    benchmarkExpectations: {
+      ...defaults.benchmarkExpectations,
+      ...safeParseJson<Partial<OneTestMasterySettings["benchmarkExpectations"]>>(
+        row.benchmarkExpectationsJson,
+        {},
+      ),
+    },
+  };
+}
+
+function stageBandFromOrder(order: number | null | undefined) {
+  const numeric = Number(order ?? 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.min(4, Math.round(numeric) - 1));
+}
+
+function toSnakeFromMasteryStatus(status: MasteryStatus) {
+  if (status === "green") return "green";
+  if (status === "amber") return "amber";
+  return "red";
+}
+
+function toLegacyReadingLabelFromStage(order: number | null | undefined, stageLabel: string) {
+  const numeric = Number(order ?? 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return stageLabel || "Pre-Reader";
+  }
+  if (numeric <= 1) return "Level0 Non-reader";
+  if (numeric === 2) return "Level1 Emergent";
+  if (numeric === 3) return "Level2 Minimum";
+  if (numeric === 4) return "Level3 Competent";
+  return "Level4 Strong";
+}
+
+function buildMasteryDomainPersistencePayload(
+  mastery: ReturnType<typeof computeOneTestStyleMasteryAssessment>,
+) {
+  const payload: Record<string, unknown> = {};
+  MASTERY_DOMAIN_COLUMNS.forEach(({ key, prefix }) => {
+    const domain = mastery.domains[key];
+    payload[`${prefix}_score_raw`] = domain.domainScoreRaw;
+    payload[`${prefix}_accuracy`] = domain.domainAccuracy;
+    payload[`${prefix}_latency_avg`] = domain.domainLatencyAvgMs;
+    payload[`${prefix}_attempts_avg`] = domain.domainAttemptsAvg;
+    payload[`${prefix}_support_usage_rate`] = domain.domainSupportUsageRate;
+    payload[`${prefix}_mastery_status`] = toSnakeFromMasteryStatus(domain.domainMasteryStatus);
+  });
+  return payload;
+}
+
+function persistMasteryForAssessmentRecord(args: {
+  db: Database.Database;
+  assessmentRecordId: number;
+  mastery: ReturnType<typeof computeOneTestStyleMasteryAssessment>;
+  learnerExpectedGrade?: string | null;
+  computedAt: string;
+}) {
+  const { db, assessmentRecordId, mastery, learnerExpectedGrade, computedAt } = args;
+  const domainPayload = buildMasteryDomainPersistencePayload(mastery);
+  db.prepare(
+    `
+    UPDATE assessment_records
+    SET
+      model_version = @modelVersion,
+      benchmark_version = @benchmarkVersion,
+      scoring_profile_version = @scoringProfileVersion,
+      learner_expected_grade = @learnerExpectedGrade,
+      computed_reading_level = @computedReadingLevel,
+      computed_level_band = @computedLevelBand,
+      reading_rules_version = @readingRulesVersion,
+      reading_level_computed_at = @computedAt,
+      reading_stage_label = @readingStageLabel,
+      reading_stage_order = @readingStageOrder,
+      benchmark_grade_level = @benchmarkGradeLevel,
+      expected_vs_actual_status = @expectedVsActualStatus,
+      mastery_profile_summary_json = @masteryProfileSummaryJson,
+      stage_reason_code = @stageReasonCode,
+      stage_reason_summary = @stageReasonSummary,
+      assessment_model_computed_at = @computedAt,
+      phonemic_awareness_score_raw = @phonemic_awareness_score_raw,
+      phonemic_awareness_accuracy = @phonemic_awareness_accuracy,
+      phonemic_awareness_latency_avg = @phonemic_awareness_latency_avg,
+      phonemic_awareness_attempts_avg = @phonemic_awareness_attempts_avg,
+      phonemic_awareness_support_usage_rate = @phonemic_awareness_support_usage_rate,
+      phonemic_awareness_mastery_status = @phonemic_awareness_mastery_status,
+      grapheme_phoneme_correspondence_score_raw = @grapheme_phoneme_correspondence_score_raw,
+      grapheme_phoneme_correspondence_accuracy = @grapheme_phoneme_correspondence_accuracy,
+      grapheme_phoneme_correspondence_latency_avg = @grapheme_phoneme_correspondence_latency_avg,
+      grapheme_phoneme_correspondence_attempts_avg = @grapheme_phoneme_correspondence_attempts_avg,
+      grapheme_phoneme_correspondence_support_usage_rate = @grapheme_phoneme_correspondence_support_usage_rate,
+      grapheme_phoneme_correspondence_mastery_status = @grapheme_phoneme_correspondence_mastery_status,
+      blending_decoding_score_raw = @blending_decoding_score_raw,
+      blending_decoding_accuracy = @blending_decoding_accuracy,
+      blending_decoding_latency_avg = @blending_decoding_latency_avg,
+      blending_decoding_attempts_avg = @blending_decoding_attempts_avg,
+      blending_decoding_support_usage_rate = @blending_decoding_support_usage_rate,
+      blending_decoding_mastery_status = @blending_decoding_mastery_status,
+      word_recognition_fluency_score_raw = @word_recognition_fluency_score_raw,
+      word_recognition_fluency_accuracy = @word_recognition_fluency_accuracy,
+      word_recognition_fluency_latency_avg = @word_recognition_fluency_latency_avg,
+      word_recognition_fluency_attempts_avg = @word_recognition_fluency_attempts_avg,
+      word_recognition_fluency_support_usage_rate = @word_recognition_fluency_support_usage_rate,
+      word_recognition_fluency_mastery_status = @word_recognition_fluency_mastery_status,
+      sentence_paragraph_construction_score_raw = @sentence_paragraph_construction_score_raw,
+      sentence_paragraph_construction_accuracy = @sentence_paragraph_construction_accuracy,
+      sentence_paragraph_construction_latency_avg = @sentence_paragraph_construction_latency_avg,
+      sentence_paragraph_construction_attempts_avg = @sentence_paragraph_construction_attempts_avg,
+      sentence_paragraph_construction_support_usage_rate = @sentence_paragraph_construction_support_usage_rate,
+      sentence_paragraph_construction_mastery_status = @sentence_paragraph_construction_mastery_status,
+      comprehension_score_raw = @comprehension_score_raw,
+      comprehension_accuracy = @comprehension_accuracy,
+      comprehension_latency_avg = @comprehension_latency_avg,
+      comprehension_attempts_avg = @comprehension_attempts_avg,
+      comprehension_support_usage_rate = @comprehension_support_usage_rate,
+      comprehension_mastery_status = @comprehension_mastery_status
+    WHERE id = @assessmentRecordId
+    `,
+  ).run({
+    assessmentRecordId,
+    modelVersion: mastery.modelVersion,
+    benchmarkVersion: mastery.benchmarkVersion,
+    scoringProfileVersion: mastery.scoringProfileVersion,
+    learnerExpectedGrade: learnerExpectedGrade ?? null,
+    computedReadingLevel: toLegacyReadingLabelFromStage(
+      mastery.readingStageOrder,
+      mastery.readingStageLabel,
+    ),
+    computedLevelBand: stageBandFromOrder(mastery.readingStageOrder),
+    readingRulesVersion: mastery.modelVersion,
+    computedAt,
+    readingStageLabel: mastery.readingStageLabel,
+    readingStageOrder: mastery.readingStageOrder,
+    benchmarkGradeLevel: mastery.benchmarkGradeLevel,
+    expectedVsActualStatus: mastery.expectedVsActualStatus,
+    masteryProfileSummaryJson: JSON.stringify({
+      text: mastery.masteryProfileSummary,
+      domains: MASTERY_DOMAIN_SEQUENCE.map((domain) => ({
+        key: domain.key,
+        label: domain.displayName,
+        status: masteryStatusLabel(mastery.domains[domain.key].domainMasteryStatus),
+      })),
+    }),
+    stageReasonCode: mastery.stageReasonCode,
+    stageReasonSummary: mastery.stageReasonSummary,
+    ...domainPayload,
+  });
+}
+
+function persistMasteryForSessionResult(args: {
+  db: Database.Database;
+  sessionResultId: number;
+  mastery: ReturnType<typeof computeOneTestStyleMasteryAssessment>;
+  computedAt: string;
+}) {
+  const { db, sessionResultId, mastery, computedAt } = args;
+  const domainPayload = buildMasteryDomainPersistencePayload(mastery);
+  db.prepare(
+    `
+    UPDATE assessment_session_results
+    SET
+      model_version = @modelVersion,
+      benchmark_version = @benchmarkVersion,
+      scoring_profile_version = @scoringProfileVersion,
+      computed_reading_level = @computedReadingLevel,
+      computed_level_band = @computedLevelBand,
+      rules_version = @rulesVersion,
+      computed_at = @computedAt,
+      reading_stage_label = @readingStageLabel,
+      reading_stage_order = @readingStageOrder,
+      benchmark_grade_level = @benchmarkGradeLevel,
+      expected_vs_actual_status = @expectedVsActualStatus,
+      mastery_profile_summary_json = @masteryProfileSummaryJson,
+      stage_reason_code = @stageReasonCode,
+      stage_reason_summary = @stageReasonSummary,
+      phonemic_awareness_score_raw = @phonemic_awareness_score_raw,
+      phonemic_awareness_accuracy = @phonemic_awareness_accuracy,
+      phonemic_awareness_latency_avg = @phonemic_awareness_latency_avg,
+      phonemic_awareness_attempts_avg = @phonemic_awareness_attempts_avg,
+      phonemic_awareness_support_usage_rate = @phonemic_awareness_support_usage_rate,
+      phonemic_awareness_mastery_status = @phonemic_awareness_mastery_status,
+      grapheme_phoneme_correspondence_score_raw = @grapheme_phoneme_correspondence_score_raw,
+      grapheme_phoneme_correspondence_accuracy = @grapheme_phoneme_correspondence_accuracy,
+      grapheme_phoneme_correspondence_latency_avg = @grapheme_phoneme_correspondence_latency_avg,
+      grapheme_phoneme_correspondence_attempts_avg = @grapheme_phoneme_correspondence_attempts_avg,
+      grapheme_phoneme_correspondence_support_usage_rate = @grapheme_phoneme_correspondence_support_usage_rate,
+      grapheme_phoneme_correspondence_mastery_status = @grapheme_phoneme_correspondence_mastery_status,
+      blending_decoding_score_raw = @blending_decoding_score_raw,
+      blending_decoding_accuracy = @blending_decoding_accuracy,
+      blending_decoding_latency_avg = @blending_decoding_latency_avg,
+      blending_decoding_attempts_avg = @blending_decoding_attempts_avg,
+      blending_decoding_support_usage_rate = @blending_decoding_support_usage_rate,
+      blending_decoding_mastery_status = @blending_decoding_mastery_status,
+      word_recognition_fluency_score_raw = @word_recognition_fluency_score_raw,
+      word_recognition_fluency_accuracy = @word_recognition_fluency_accuracy,
+      word_recognition_fluency_latency_avg = @word_recognition_fluency_latency_avg,
+      word_recognition_fluency_attempts_avg = @word_recognition_fluency_attempts_avg,
+      word_recognition_fluency_support_usage_rate = @word_recognition_fluency_support_usage_rate,
+      word_recognition_fluency_mastery_status = @word_recognition_fluency_mastery_status,
+      sentence_paragraph_construction_score_raw = @sentence_paragraph_construction_score_raw,
+      sentence_paragraph_construction_accuracy = @sentence_paragraph_construction_accuracy,
+      sentence_paragraph_construction_latency_avg = @sentence_paragraph_construction_latency_avg,
+      sentence_paragraph_construction_attempts_avg = @sentence_paragraph_construction_attempts_avg,
+      sentence_paragraph_construction_support_usage_rate = @sentence_paragraph_construction_support_usage_rate,
+      sentence_paragraph_construction_mastery_status = @sentence_paragraph_construction_mastery_status,
+      comprehension_score_raw = @comprehension_score_raw,
+      comprehension_accuracy = @comprehension_accuracy,
+      comprehension_latency_avg = @comprehension_latency_avg,
+      comprehension_attempts_avg = @comprehension_attempts_avg,
+      comprehension_support_usage_rate = @comprehension_support_usage_rate,
+      comprehension_mastery_status = @comprehension_mastery_status
+    WHERE id = @sessionResultId
+    `,
+  ).run({
+    sessionResultId,
+    modelVersion: mastery.modelVersion,
+    benchmarkVersion: mastery.benchmarkVersion,
+    scoringProfileVersion: mastery.scoringProfileVersion,
+    computedReadingLevel: toLegacyReadingLabelFromStage(
+      mastery.readingStageOrder,
+      mastery.readingStageLabel,
+    ),
+    computedLevelBand: stageBandFromOrder(mastery.readingStageOrder),
+    rulesVersion: mastery.modelVersion,
+    computedAt,
+    readingStageLabel: mastery.readingStageLabel,
+    readingStageOrder: mastery.readingStageOrder,
+    benchmarkGradeLevel: mastery.benchmarkGradeLevel,
+    expectedVsActualStatus: mastery.expectedVsActualStatus,
+    masteryProfileSummaryJson: JSON.stringify({
+      text: mastery.masteryProfileSummary,
+      domains: MASTERY_DOMAIN_SEQUENCE.map((domain) => ({
+        key: domain.key,
+        label: domain.displayName,
+        status: masteryStatusLabel(mastery.domains[domain.key].domainMasteryStatus),
+      })),
+    }),
+    stageReasonCode: mastery.stageReasonCode,
+    stageReasonSummary: mastery.stageReasonSummary,
+    ...domainPayload,
+  });
+}
+
+function replaceAssessmentItemResponses(args: {
+  db: Database.Database;
+  learnerResultId: number;
+  assessmentSessionResultId?: number | null;
+  assessmentSessionId?: number | null;
+  learnerUid?: string | null;
+  mastery: ReturnType<typeof computeOneTestStyleMasteryAssessment>;
+}) {
+  const { db, learnerResultId, assessmentSessionResultId, assessmentSessionId, learnerUid, mastery } = args;
+  db.prepare("DELETE FROM assessment_item_responses WHERE learner_result_id = @learnerResultId").run({
+    learnerResultId,
+  });
+  if (mastery.itemScores.length === 0) {
+    return;
+  }
+  const insert = db.prepare(
+    `
+    INSERT INTO assessment_item_responses (
+      learner_result_id,
+      assessment_session_result_id,
+      assessment_session_id,
+      learner_uid,
+      domain_key,
+      item_key,
+      accuracy,
+      latency_ms,
+      attempts,
+      hint_used,
+      correction_used,
+      item_score,
+      latency_score,
+      attempt_support_score,
+      model_version,
+      scoring_profile_version
+    ) VALUES (
+      @learnerResultId,
+      @assessmentSessionResultId,
+      @assessmentSessionId,
+      @learnerUid,
+      @domainKey,
+      @itemKey,
+      @accuracy,
+      @latencyMs,
+      @attempts,
+      @hintUsed,
+      @correctionUsed,
+      @itemScore,
+      @latencyScore,
+      @attemptSupportScore,
+      @modelVersion,
+      @scoringProfileVersion
+    )
+    `,
+  );
+  mastery.itemScores.forEach((item) => {
+    insert.run({
+      learnerResultId,
+      assessmentSessionResultId: assessmentSessionResultId ?? null,
+      assessmentSessionId: assessmentSessionId ?? null,
+      learnerUid: learnerUid ?? null,
+      domainKey: item.domainKey,
+      itemKey: item.itemKey,
+      accuracy: item.accuracy ? 1 : 0,
+      latencyMs: item.latencyMs,
+      attempts: item.attempts,
+      hintUsed: item.hintUsed ? 1 : 0,
+      correctionUsed: item.correctionUsed ? 1 : 0,
+      itemScore: item.itemScore,
+      latencyScore: item.latencyScore,
+      attemptSupportScore: item.attemptSupportScore,
+      modelVersion: mastery.modelVersion,
+      scoringProfileVersion: mastery.scoringProfileVersion,
+    });
+  });
+}
+
 function getSchoolSupportRuleSettings(db: Database.Database): SchoolSupportRuleSettings {
   const row = db
     .prepare(
@@ -7001,7 +7677,13 @@ function upsertSchoolSupportStatusSnapshot(
       SELECT
         computed_level_band AS computedLevelBand,
         fluency_score AS fluencyScore,
-        decoding_score AS decodingScore
+        decoding_score AS decodingScore,
+        model_version AS modelVersion,
+        phonemic_awareness_mastery_status AS phonemicAwarenessMasteryStatus,
+        grapheme_phoneme_correspondence_mastery_status AS graphemePhonemeCorrespondenceMasteryStatus,
+        blending_decoding_mastery_status AS blendingDecodingMasteryStatus,
+        word_recognition_fluency_mastery_status AS wordRecognitionFluencyMasteryStatus,
+        comprehension_mastery_status AS comprehensionMasteryStatus
       FROM assessment_session_results
       WHERE assessment_session_id = @sessionId
       `,
@@ -7010,6 +7692,12 @@ function upsertSchoolSupportStatusSnapshot(
       computedLevelBand: number | null;
       fluencyScore: number | null;
       decodingScore: number | null;
+      modelVersion: string | null;
+      phonemicAwarenessMasteryStatus: string | null;
+      graphemePhonemeCorrespondenceMasteryStatus: string | null;
+      blendingDecodingMasteryStatus: string | null;
+      wordRecognitionFluencyMasteryStatus: string | null;
+      comprehensionMasteryStatus: string | null;
     }>;
   const latest = computeAssessmentDistributionMetrics(
     db,
@@ -7076,6 +7764,35 @@ function upsertSchoolSupportStatusSnapshot(
       ? Number((latest.at20PlusPct - baseline.at20PlusPct).toFixed(1))
       : null;
 
+  const masteryRows = latestRows.filter((row) =>
+    isOneTestStyleModelVersion(row.modelVersion),
+  );
+  const masteryFoundationalRedCount = masteryRows.filter((row) => {
+    const pa = normalizeMasteryStatus(row.phonemicAwarenessMasteryStatus) ?? "red";
+    const gpc = normalizeMasteryStatus(row.graphemePhonemeCorrespondenceMasteryStatus) ?? "red";
+    const blend = normalizeMasteryStatus(row.blendingDecodingMasteryStatus) ?? "red";
+    return pa === "red" || gpc === "red" || blend === "red";
+  }).length;
+  const masteryFluencyAmberCount = masteryRows.filter((row) => {
+    const fluency = normalizeMasteryStatus(row.wordRecognitionFluencyMasteryStatus) ?? "red";
+    return fluency === "amber";
+  }).length;
+  const masteryFoundationalGreenAndCompCount = masteryRows.filter((row) => {
+    const pa = normalizeMasteryStatus(row.phonemicAwarenessMasteryStatus) ?? "red";
+    const gpc = normalizeMasteryStatus(row.graphemePhonemeCorrespondenceMasteryStatus) ?? "red";
+    const blend = normalizeMasteryStatus(row.blendingDecodingMasteryStatus) ?? "red";
+    const comp = normalizeMasteryStatus(row.comprehensionMasteryStatus) ?? "red";
+    return pa === "green" && gpc === "green" && blend === "green" && comp === "green";
+  }).length;
+  const masteryFoundationalRedPct =
+    masteryRows.length > 0 ? toPercentSafe(masteryFoundationalRedCount, masteryRows.length) : null;
+  const masteryFluencyAmberPct =
+    masteryRows.length > 0 ? toPercentSafe(masteryFluencyAmberCount, masteryRows.length) : null;
+  const masteryProgressingPct =
+    masteryRows.length > 0
+      ? toPercentSafe(masteryFoundationalGreenAndCompCount, masteryRows.length)
+      : null;
+
   let status:
     | "Requires Remedial & Catch-Up"
     | "Progressing (Maintain + Strengthen)"
@@ -7083,6 +7800,24 @@ function upsertSchoolSupportStatusSnapshot(
     | "Graduation Eligible";
   if (graduationEligible) {
     status = "Graduation Eligible";
+  } else if (
+    masteryRows.length > 0 &&
+    masteryFoundationalRedPct !== null &&
+    masteryFoundationalRedPct >= 40
+  ) {
+    status = "Requires Remedial & Catch-Up";
+  } else if (
+    masteryRows.length > 0 &&
+    masteryProgressingPct !== null &&
+    masteryProgressingPct >= 70
+  ) {
+    status = "Graduation Prep (Approaching criteria)";
+  } else if (
+    masteryRows.length > 0 &&
+    masteryFluencyAmberPct !== null &&
+    masteryFluencyAmberPct >= 35
+  ) {
+    status = "Progressing (Maintain + Strengthen)";
   } else if (
     latest.n <= 0 ||
     latest.nonReadersPct >= settings.nonReadersThreshold ||
@@ -7118,6 +7853,10 @@ function upsertSchoolSupportStatusSnapshot(
     belowMinimumDropPp: belowMinimumDrop,
     at20PlusGainPp: cwpm20Gain,
     graduationEligible: graduationEligible ? "yes" : "no",
+    masteryAssessedN: masteryRows.length,
+    foundationalRedPct: masteryFoundationalRedPct,
+    fluencyAmberPct: masteryFluencyAmberPct,
+    foundationalGreenAndComprehensionGreenPct: masteryProgressingPct,
   };
   const recommendedActions = SCHOOL_SUPPORT_ACTIONS[status] ?? [];
   const periodKey = getPeriodKey(latestSession.assessmentDate);
@@ -8258,6 +8997,15 @@ function syncPortalRecordLinkages(
     const classGrade = String(args.payload.classLevel ?? args.payload.classGrade ?? "").trim() || "Unspecified";
     const toolVersion = String(args.payload.toolVersion ?? "EGRA-v1").trim() || "EGRA-v1";
     const assessmentType = normalizeAssessmentType(args.payload.assessmentType ?? args.programType);
+    const masterySettings = getOneTestMasterySettings(db);
+    const resolvedModelVersion = ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1;
+    const resolvedBenchmarkVersion = String(
+      args.payload.benchmarkVersion ?? masterySettings.benchmarkVersion,
+    ).trim() || masterySettings.benchmarkVersion;
+    const resolvedScoringProfileVersion = String(
+      args.payload.scoringProfileVersion ?? masterySettings.scoringProfileVersion,
+    ).trim() || masterySettings.scoringProfileVersion;
+    const isOneTestModel = isOneTestStyleModelVersion(resolvedModelVersion);
     const rows = asRecordArray(args.payload.egraLearnersData);
 
     const existingSession = db
@@ -8337,6 +9085,22 @@ function syncPortalRecordLinkages(
       return;
     }
 
+    db.prepare(
+      `
+      UPDATE assessment_sessions
+      SET
+        model_version = @modelVersion,
+        benchmark_version = @benchmarkVersion,
+        scoring_profile_version = @scoringProfileVersion
+      WHERE id = @sessionId
+      `,
+    ).run({
+      sessionId,
+      modelVersion: resolvedModelVersion,
+      benchmarkVersion: resolvedBenchmarkVersion,
+      scoringProfileVersion: resolvedScoringProfileVersion,
+    });
+
     db.prepare("DELETE FROM assessment_session_results WHERE assessment_session_id = @sessionId").run({
       sessionId,
     });
@@ -8350,7 +9114,7 @@ function syncPortalRecordLinkages(
     });
     const computedAt = new Date().toISOString();
 
-    const insertResult = db.prepare(`
+    const insertSessionResult = db.prepare(`
       INSERT INTO assessment_session_results (
         assessment_session_id,
         source_row_key,
@@ -8476,6 +9240,7 @@ function syncPortalRecordLinkages(
         decodingCandidates.length > 0
           ? decodingCandidates.reduce((sum, score) => sum + score, 0) / decodingCandidates.length
           : toNumberOrNull(row.decodingScore);
+
       const computed = computeAssessmentReadingLevel(
         {
           fluencyCwpm: fluencyScore,
@@ -8485,8 +9250,70 @@ function syncPortalRecordLinkages(
         readingRuleSettings,
       );
 
+      const rowDomainInputsRaw =
+        row.masteryDomainInputs ?? row.mastery_domains ?? row.domain_mastery_inputs ?? null;
+      const rowItemResponsesRaw =
+        row.masteryItemResponses ??
+        row.mastery_item_responses ??
+        row.itemResponses ??
+        row.assessmentItemResponses ??
+        null;
+      const rowDomainInputs = parseDomainInputsFromUnknown(
+        typeof rowDomainInputsRaw === "string"
+          ? safeParseJson<Record<string, unknown>>(rowDomainInputsRaw, {})
+          : rowDomainInputsRaw,
+      );
+      const rowItemResponses = parseItemResponsesFromUnknown(
+        typeof rowItemResponsesRaw === "string"
+          ? safeParseJson<unknown[]>(rowItemResponsesRaw, [])
+          : rowItemResponsesRaw,
+      );
+      const rowExpectedGrade =
+        String(
+          row.learnerExpectedGrade ??
+            row.expectedGradeLevel ??
+            row.gradeExpectation ??
+            classGrade,
+        ).trim() || classGrade;
+
+      const masteryComputation = isOneTestModel
+        ? computeOneTestStyleMasteryAssessment({
+          grade: rowExpectedGrade,
+          age,
+          domainInputs: rowDomainInputs,
+          itemResponses: rowItemResponses,
+          legacyScores: {
+            letterIdentificationScore,
+            soundIdentificationScore,
+            decodableWordsScore,
+            undecodableWordsScore,
+            madeUpWordsScore,
+            storyReadingScore: fluencyScore,
+            readingComprehensionScore: comprehensionScore,
+            fluencyAccuracyScore,
+          },
+          settings: masterySettings,
+          modelVersion: resolvedModelVersion,
+          benchmarkVersion: resolvedBenchmarkVersion,
+          scoringProfileVersion: resolvedScoringProfileVersion,
+        })
+        : null;
+
       const sourceRowKey = String(row.no ?? index + 1);
-      insertResult.run({
+      const computedReadingLevel = masteryComputation
+        ? toLegacyReadingLabelFromStage(
+          masteryComputation.readingStageOrder,
+          masteryComputation.readingStageLabel,
+        )
+        : computed.computedReadingLevel;
+      const computedLevelBand = masteryComputation
+        ? stageBandFromOrder(masteryComputation.readingStageOrder)
+        : computed.computedLevelBand;
+      const rulesVersion = masteryComputation
+        ? masteryComputation.modelVersion
+        : computed.rulesVersion;
+
+      const insertedSession = insertSessionResult.run({
         assessmentSessionId: sessionId,
         sourceRowKey,
         learnerId: learner.learnerId,
@@ -8497,13 +9324,14 @@ function syncPortalRecordLinkages(
         fluencyScore: fluencyScore ?? null,
         fluencyAccuracyScore: fluencyAccuracyScore ?? null,
         comprehensionScore: comprehensionScore ?? null,
-        computedReadingLevel: computed.computedReadingLevel,
-        computedLevelBand: computed.computedLevelBand,
-        rulesVersion: computed.rulesVersion,
+        computedReadingLevel,
+        computedLevelBand,
+        rulesVersion,
         computedAt,
       });
+      const sessionResultId = Number(insertedSession.lastInsertRowid);
 
-      insertAssessment.run({
+      const insertedAssessment = insertAssessment.run({
         learnerUid,
         childName: learnerName,
         childId,
@@ -8521,15 +9349,73 @@ function syncPortalRecordLinkages(
         storyReadingScore: fluencyScore ?? null,
         fluencyAccuracyScore: fluencyAccuracyScore ?? null,
         readingComprehensionScore: comprehensionScore ?? null,
-        computedReadingLevel: computed.computedReadingLevel,
-        computedLevelBand: computed.computedLevelBand,
-        rulesVersion: computed.rulesVersion,
+        computedReadingLevel,
+        computedLevelBand,
+        rulesVersion,
         computedAt,
         notes: null,
         createdByUserId: args.userId,
         sourcePortalRecordId: args.recordId,
         sourceRowKey,
       });
+      const assessmentRecordId = Number(insertedAssessment.lastInsertRowid);
+
+      if (masteryComputation) {
+        persistMasteryForSessionResult({
+          db,
+          sessionResultId,
+          mastery: masteryComputation,
+          computedAt,
+        });
+        persistMasteryForAssessmentRecord({
+          db,
+          assessmentRecordId,
+          mastery: masteryComputation,
+          learnerExpectedGrade: rowExpectedGrade,
+          computedAt,
+        });
+        replaceAssessmentItemResponses({
+          db,
+          learnerResultId: assessmentRecordId,
+          assessmentSessionResultId: sessionResultId,
+          assessmentSessionId: sessionId,
+          learnerUid,
+          mastery: masteryComputation,
+        });
+      } else {
+        db.prepare(
+          `
+          UPDATE assessment_session_results
+          SET
+            model_version = @modelVersion,
+            benchmark_version = @benchmarkVersion,
+            scoring_profile_version = @scoringProfileVersion
+          WHERE id = @id
+          `,
+        ).run({
+          id: sessionResultId,
+          modelVersion: resolvedModelVersion || ASSESSMENT_LEGACY_MODEL_VERSION,
+          benchmarkVersion: resolvedBenchmarkVersion || null,
+          scoringProfileVersion: resolvedScoringProfileVersion || null,
+        });
+        db.prepare(
+          `
+          UPDATE assessment_records
+          SET
+            model_version = @modelVersion,
+            benchmark_version = @benchmarkVersion,
+            scoring_profile_version = @scoringProfileVersion,
+            learner_expected_grade = @learnerExpectedGrade
+          WHERE id = @id
+          `,
+        ).run({
+          id: assessmentRecordId,
+          modelVersion: resolvedModelVersion || ASSESSMENT_LEGACY_MODEL_VERSION,
+          benchmarkVersion: resolvedBenchmarkVersion || null,
+          scoringProfileVersion: resolvedScoringProfileVersion || null,
+          learnerExpectedGrade: rowExpectedGrade || null,
+        });
+      }
     });
 
     upsertSchoolSupportStatusSnapshot(db, args.schoolId);
@@ -13823,6 +14709,30 @@ type ScopedAssessmentAnalytics = {
   metrics: AssessmentMetricAccumulators;
   proficiencyBandMovementPercent: number | null;
   reductionInNonReadersPercent: number | null;
+  domainMasteryDistribution: Record<
+    MasteryDomainKey,
+    {
+      green: { count: number; percent: number };
+      amber: { count: number; percent: number };
+      red: { count: number; percent: number };
+      n: number;
+    }
+  >;
+  readingStageDistribution: Array<{
+    label: string;
+    order: number;
+    count: number;
+    percent: number;
+  }>;
+  benchmarkStatus: {
+    belowExpected: { count: number; percent: number };
+    atExpected: { count: number; percent: number };
+    aboveExpected: { count: number; percent: number };
+    n: number;
+  };
+  assessmentModelVersion: string | null;
+  benchmarkVersion: string | null;
+  scoringProfileVersion: string | null;
 };
 
 function createAssessmentStageAccumulator(): AssessmentStageAccumulator {
@@ -14357,12 +15267,18 @@ function collectScopedAssessmentAnalytics(args: {
 }): ScopedAssessmentAnalytics {
   const db = getDb();
   const canViewAll = canViewAllRecords(args.user);
+  const assessmentModelVersion = ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1;
   const params = canViewAll
-    ? { startDate: args.startDate, endDate: args.endDate }
+    ? {
+      startDate: args.startDate,
+      endDate: args.endDate,
+      assessmentModelVersion,
+    }
     : {
       startDate: args.startDate,
       endDate: args.endDate,
       currentUserId: args.user.id,
+      assessmentModelVersion,
     };
   const recordFilter = canViewAll ? "" : "AND ar.created_by_user_id = @currentUserId";
   const sessionFilter = canViewAll ? "" : "AND s.assessor_user_id = @currentUserId";
@@ -14411,6 +15327,19 @@ function collectScopedAssessmentAnalytics(args: {
     progress: { total: 0, nonReaders: 0 },
     endline: { total: 0, nonReaders: 0 },
   } as Record<AssessmentStage, { total: number; nonReaders: number }>;
+  const latestMasteryByLearner = new Map<
+    string,
+    {
+      assessmentDate: string;
+      modelVersion: string | null;
+      benchmarkVersion: string | null;
+      scoringProfileVersion: string | null;
+      readingStageLabel: string | null;
+      readingStageOrder: number | null;
+      expectedVsActualStatus: string | null;
+      statuses: Record<MasteryDomainKey, MasteryStatus>;
+    }
+  >();
 
   const learnerRowsByUid = new Map<
     string,
@@ -14425,20 +15354,36 @@ function collectScopedAssessmentAnalytics(args: {
         ar.learner_uid AS learnerUid,
         ar.assessment_type AS assessmentType,
         ar.assessment_date AS assessmentDate,
+        ar.class_grade AS classGrade,
+        ar.age AS age,
         ar.letter_identification_score AS letterIdentificationScore,
         ar.sound_identification_score AS soundIdentificationScore,
         ar.decodable_words_score AS decodableWordsScore,
         ar.undecodable_words_score AS undecodableWordsScore,
         ar.made_up_words_score AS madeUpWordsScore,
         ar.story_reading_score AS storyReadingScore,
+        ar.fluency_accuracy_score AS fluencyAccuracyScore,
         ar.reading_comprehension_score AS readingComprehensionScore,
         ar.computed_level_band AS computedLevelBand,
+        ar.model_version AS modelVersion,
+        ar.benchmark_version AS benchmarkVersion,
+        ar.scoring_profile_version AS scoringProfileVersion,
+        ar.reading_stage_label AS readingStageLabel,
+        ar.reading_stage_order AS readingStageOrder,
+        ar.expected_vs_actual_status AS expectedVsActualStatus,
+        ar.phonemic_awareness_mastery_status AS phonemicAwarenessMasteryStatus,
+        ar.grapheme_phoneme_correspondence_mastery_status AS graphemePhonemeCorrespondenceMasteryStatus,
+        ar.blending_decoding_mastery_status AS blendingDecodingMasteryStatus,
+        ar.word_recognition_fluency_mastery_status AS wordRecognitionFluencyMasteryStatus,
+        ar.sentence_paragraph_construction_mastery_status AS sentenceParagraphConstructionMasteryStatus,
+        ar.comprehension_mastery_status AS comprehensionMasteryStatus,
         sd.name AS schoolName,
         sd.district AS district
       FROM assessment_records ar
       JOIN schools_directory sd ON sd.id = ar.school_id
       WHERE ar.assessment_date >= @startDate
         AND ar.assessment_date <= @endDate
+        AND ar.model_version = @assessmentModelVersion
         ${recordFilter}
       `,
     )
@@ -14447,14 +15392,29 @@ function collectScopedAssessmentAnalytics(args: {
       learnerUid: string | null;
       assessmentType: string;
       assessmentDate: string;
+      classGrade: string | null;
+      age: number | null;
       letterIdentificationScore: number | null;
       soundIdentificationScore: number | null;
       decodableWordsScore: number | null;
       undecodableWordsScore: number | null;
       madeUpWordsScore: number | null;
       storyReadingScore: number | null;
+      fluencyAccuracyScore: number | null;
       readingComprehensionScore: number | null;
       computedLevelBand: number | null;
+      modelVersion: string | null;
+      benchmarkVersion: string | null;
+      scoringProfileVersion: string | null;
+      readingStageLabel: string | null;
+      readingStageOrder: number | null;
+      expectedVsActualStatus: string | null;
+      phonemicAwarenessMasteryStatus: string | null;
+      graphemePhonemeCorrespondenceMasteryStatus: string | null;
+      blendingDecodingMasteryStatus: string | null;
+      wordRecognitionFluencyMasteryStatus: string | null;
+      sentenceParagraphConstructionMasteryStatus: string | null;
+      comprehensionMasteryStatus: string | null;
       schoolName: string;
       district: string;
     }>;
@@ -14535,6 +15495,39 @@ function collectScopedAssessmentAnalytics(args: {
           learnerRowsByUid.set(learnerUid, bucket);
         }
       }
+
+      const learnerUid = String(row.learnerUid ?? "").trim();
+      if (learnerUid) {
+        const rowStatuses: Partial<Record<MasteryDomainKey, MasteryStatus>> = {
+          phonemic_awareness: normalizeMasteryStatus(row.phonemicAwarenessMasteryStatus) ?? undefined,
+          grapheme_phoneme_correspondence:
+            normalizeMasteryStatus(row.graphemePhonemeCorrespondenceMasteryStatus) ?? undefined,
+          blending_decoding: normalizeMasteryStatus(row.blendingDecodingMasteryStatus) ?? undefined,
+          word_recognition_fluency:
+            normalizeMasteryStatus(row.wordRecognitionFluencyMasteryStatus) ?? undefined,
+          sentence_paragraph_construction:
+            normalizeMasteryStatus(row.sentenceParagraphConstructionMasteryStatus) ?? undefined,
+          comprehension: normalizeMasteryStatus(row.comprehensionMasteryStatus) ?? undefined,
+        };
+        const statuses = {} as Record<MasteryDomainKey, MasteryStatus>;
+        MASTERY_DOMAIN_SEQUENCE.forEach((domain) => {
+          statuses[domain.key] = rowStatuses[domain.key] ?? "red";
+        });
+        const current = latestMasteryByLearner.get(learnerUid);
+        if (!current || row.assessmentDate >= current.assessmentDate) {
+          latestMasteryByLearner.set(learnerUid, {
+            assessmentDate: row.assessmentDate,
+            modelVersion: String(row.modelVersion ?? "").trim() || null,
+            benchmarkVersion: String(row.benchmarkVersion ?? "").trim() || null,
+            scoringProfileVersion: String(row.scoringProfileVersion ?? "").trim() || null,
+            readingStageLabel: row.readingStageLabel?.trim() || "Pre-Reader",
+            readingStageOrder: Number(row.readingStageOrder ?? 1) || 1,
+            expectedVsActualStatus:
+              row.expectedVsActualStatus?.trim() || "Data not available",
+            statuses,
+          });
+        }
+      }
     });
 
   let reductionInNonReadersPercent: number | null = null;
@@ -14587,6 +15580,126 @@ function collectScopedAssessmentAnalytics(args: {
     );
   }
 
+  const masteryTallies = emptyDomainMasteryDistribution();
+  const stageCounts = new Map<string, { order: number; count: number }>();
+  const benchmarkCounts = {
+    belowExpected: 0,
+    atExpected: 0,
+    aboveExpected: 0,
+    n: 0,
+  };
+  const modelVersionCounts = new Map<string, number>();
+  const benchmarkVersionCounts = new Map<string, number>();
+  const scoringProfileCounts = new Map<string, number>();
+
+  latestMasteryByLearner.forEach((entry) => {
+    MASTERY_DOMAIN_SEQUENCE.forEach((domain) => {
+      const status = entry.statuses[domain.key];
+      masteryTallies[domain.key].n += 1;
+      if (status === "green") masteryTallies[domain.key].green += 1;
+      if (status === "amber") masteryTallies[domain.key].amber += 1;
+      if (status === "red") masteryTallies[domain.key].red += 1;
+    });
+
+    const stageLabel = entry.readingStageLabel || "Pre-Reader";
+    const stageOrder = Number(entry.readingStageOrder ?? 1) || 1;
+    const stageBucket = stageCounts.get(stageLabel) ?? { order: stageOrder, count: 0 };
+    stageBucket.order = stageOrder;
+    stageBucket.count += 1;
+    stageCounts.set(stageLabel, stageBucket);
+
+    const expected = String(entry.expectedVsActualStatus ?? "").toLowerCase();
+    if (expected.includes("below expected")) {
+      benchmarkCounts.belowExpected += 1;
+      benchmarkCounts.n += 1;
+    } else if (expected.includes("above expected")) {
+      benchmarkCounts.aboveExpected += 1;
+      benchmarkCounts.n += 1;
+    } else if (expected.includes("at expected")) {
+      benchmarkCounts.atExpected += 1;
+      benchmarkCounts.n += 1;
+    }
+
+    if (entry.modelVersion) {
+      modelVersionCounts.set(
+        entry.modelVersion,
+        (modelVersionCounts.get(entry.modelVersion) ?? 0) + 1,
+      );
+    }
+    if (entry.benchmarkVersion) {
+      benchmarkVersionCounts.set(
+        entry.benchmarkVersion,
+        (benchmarkVersionCounts.get(entry.benchmarkVersion) ?? 0) + 1,
+      );
+    }
+    if (entry.scoringProfileVersion) {
+      scoringProfileCounts.set(
+        entry.scoringProfileVersion,
+        (scoringProfileCounts.get(entry.scoringProfileVersion) ?? 0) + 1,
+      );
+    }
+  });
+
+  const domainMasteryDistribution = MASTERY_DOMAIN_SEQUENCE.reduce((acc, domain) => {
+    const tally = masteryTallies[domain.key];
+    const total = Math.max(1, tally.n);
+    acc[domain.key] = {
+      green: {
+        count: tally.green,
+        percent: Number(((tally.green / total) * 100).toFixed(1)),
+      },
+      amber: {
+        count: tally.amber,
+        percent: Number(((tally.amber / total) * 100).toFixed(1)),
+      },
+      red: {
+        count: tally.red,
+        percent: Number(((tally.red / total) * 100).toFixed(1)),
+      },
+      n: tally.n,
+    };
+    return acc;
+  }, {} as ScopedAssessmentAnalytics["domainMasteryDistribution"]);
+
+  const readingStageDistribution = [...stageCounts.entries()]
+    .map(([label, value]) => ({
+      label,
+      order: value.order,
+      count: value.count,
+      percent:
+        latestMasteryByLearner.size > 0
+          ? Number(((value.count / latestMasteryByLearner.size) * 100).toFixed(1))
+          : 0,
+    }))
+    .sort((left, right) => left.order - right.order);
+
+  const benchmarkStatus: ScopedAssessmentAnalytics["benchmarkStatus"] = {
+    belowExpected: {
+      count: benchmarkCounts.belowExpected,
+      percent:
+        benchmarkCounts.n > 0
+          ? Number(((benchmarkCounts.belowExpected / benchmarkCounts.n) * 100).toFixed(1))
+          : 0,
+    },
+    atExpected: {
+      count: benchmarkCounts.atExpected,
+      percent:
+        benchmarkCounts.n > 0
+          ? Number(((benchmarkCounts.atExpected / benchmarkCounts.n) * 100).toFixed(1))
+          : 0,
+    },
+    aboveExpected: {
+      count: benchmarkCounts.aboveExpected,
+      percent:
+        benchmarkCounts.n > 0
+          ? Number(((benchmarkCounts.aboveExpected / benchmarkCounts.n) * 100).toFixed(1))
+          : 0,
+    },
+    n: benchmarkCounts.n,
+  };
+  const pickMostCommon = (map: Map<string, number>) =>
+    [...map.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+
   return {
     schoolsImpacted,
     linkedPortalRecordIds,
@@ -14595,6 +15708,12 @@ function collectScopedAssessmentAnalytics(args: {
     metrics,
     proficiencyBandMovementPercent,
     reductionInNonReadersPercent,
+    domainMasteryDistribution,
+    readingStageDistribution,
+    benchmarkStatus,
+    assessmentModelVersion: pickMostCommon(modelVersionCounts),
+    benchmarkVersion: pickMostCommon(benchmarkVersionCounts),
+    scoringProfileVersion: pickMostCommon(scoringProfileCounts),
   };
 }
 
@@ -15563,6 +16682,14 @@ function calculateImpactFactPack(input: {
   const metricMaps = createAssessmentMetricAccumulators();
   const bandMovementValues: number[] = [];
   const nonReaderReductionValues: number[] = [];
+  let masteryDomainDistribution: ImpactReportLearningOutcomesBlock["domainMasteryDistribution"] =
+    undefined;
+  let masteryReadingStageDistribution: ImpactReportLearningOutcomesBlock["readingStageDistribution"] =
+    undefined;
+  let masteryBenchmarkStatus: ImpactReportLearningOutcomesBlock["benchmarkStatus"] = undefined;
+  let masteryAssessmentModelVersion: string | null = null;
+  let masteryBenchmarkVersion: string | null = null;
+  let masteryScoringProfileVersion: string | null = null;
 
   const payloadAssessmentMetricKeys: Record<keyof AssessmentMetricAccumulators, string[]> = {
     letterIdentification: ["letterIdentification", "letterIdentificationScore"],
@@ -15594,7 +16721,11 @@ function calculateImpactFactPack(input: {
   };
 
   const linkedPortalAssessmentIds = new Set<number>();
-  let fallbackPortalAssessmentRows = byModule.assessment;
+  let fallbackPortalAssessmentRows = byModule.assessment.filter(
+    (row) =>
+      String(row.payload.assessmentModelVersion ?? row.payload.modelVersion ?? "").trim() ===
+      ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1,
+  );
 
   if (input.programsIncluded.includes("assessment")) {
     const assessmentAnalytics = collectScopedAssessmentAnalytics({
@@ -15635,9 +16766,18 @@ function calculateImpactFactPack(input: {
     if (assessmentAnalytics.reductionInNonReadersPercent !== null) {
       nonReaderReductionValues.push(assessmentAnalytics.reductionInNonReadersPercent);
     }
+    masteryDomainDistribution = assessmentAnalytics.domainMasteryDistribution;
+    masteryReadingStageDistribution = assessmentAnalytics.readingStageDistribution;
+    masteryBenchmarkStatus = assessmentAnalytics.benchmarkStatus;
+    masteryAssessmentModelVersion = assessmentAnalytics.assessmentModelVersion;
+    masteryBenchmarkVersion = assessmentAnalytics.benchmarkVersion;
+    masteryScoringProfileVersion = assessmentAnalytics.scoringProfileVersion;
 
     fallbackPortalAssessmentRows = byModule.assessment.filter(
-      (row) => !linkedPortalAssessmentIds.has(row.id),
+      (row) =>
+        !linkedPortalAssessmentIds.has(row.id) &&
+        String(row.payload.assessmentModelVersion ?? row.payload.modelVersion ?? "").trim() ===
+          ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1,
     );
   }
 
@@ -15874,6 +17014,12 @@ function calculateImpactFactPack(input: {
           ).toFixed(2),
         )
         : null,
+    domainMasteryDistribution: masteryDomainDistribution,
+    readingStageDistribution: masteryReadingStageDistribution,
+    benchmarkStatus: masteryBenchmarkStatus,
+    assessmentModelVersion: masteryAssessmentModelVersion,
+    benchmarkVersion: masteryBenchmarkVersion,
+    scoringProfileVersion: masteryScoringProfileVersion,
   };
 
   const visitScores: number[] = [];
@@ -16217,6 +17363,11 @@ function calculateImpactFactPack(input: {
     sponsorship,
     engagement,
     learningOutcomes,
+    masteryPublicExplanation: {
+      green: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.green,
+      amber: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.amber,
+      red: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.red,
+    },
     instructionQuality,
     visitPathways,
     teacherLessonEvaluation,
@@ -16301,7 +17452,7 @@ function buildSectionSummary(
     case "6-coaching-results":
       return `Routine adoption rate: ${quality.routineAdoptionRate ?? "Data not available for this period."}; top gaps: ${quality.topGaps.slice(0, 3).join(", ") || "Data not available for this period."}; lesson evaluations: ${teacherEvaluation?.totalEvaluations ?? 0}, average score ${teacherEvaluation?.averageOverallScore ?? "Data not available for this period."}; teachers improved: ${teacherImprovement?.improvedTeachersPercent ?? "Data not available"}%. ${visitPathwaySummary} ${sponsorshipSummary}`;
     case "7-learner-outcomes":
-      return `Learning outcomes include changes in ${LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full.toLowerCase()} (${outcomes.soundIdentification.change ?? "N/A"}), ${LEARNING_DOMAIN_DICTIONARY.real_words.label_full.toLowerCase()} (${outcomes.decodableWords.change ?? "N/A"}), and ${LEARNING_DOMAIN_DICTIONARY.comprehension.label_full.toLowerCase()} (${outcomes.readingComprehension.change ?? "N/A"}). Teaching-learning alignment delta: ${alignment?.summary.teachingDelta ?? "Data not available"}, non-reader reduction: ${alignment?.summary.nonReaderReductionPp ?? "Data not available"} pp. ${sponsorshipSummary}`;
+      return `Learning outcomes include changes in ${LEARNING_DOMAIN_DICTIONARY.letter_sounds.label_full.toLowerCase()} (${outcomes.soundIdentification.change ?? "N/A"}), ${LEARNING_DOMAIN_DICTIONARY.real_words.label_full.toLowerCase()} (${outcomes.decodableWords.change ?? "N/A"}), and ${LEARNING_DOMAIN_DICTIONARY.comprehension.label_full.toLowerCase()} (${outcomes.readingComprehension.change ?? "N/A"}). Mastery benchmark status: below expected ${outcomes.benchmarkStatus?.belowExpected.percent ?? "Data not available"}%, at expected ${outcomes.benchmarkStatus?.atExpected.percent ?? "Data not available"}%, above expected ${outcomes.benchmarkStatus?.aboveExpected.percent ?? "Data not available"}%. Teaching-learning alignment delta: ${alignment?.summary.teachingDelta ?? "Data not available"}, non-reader reduction: ${alignment?.summary.nonReaderReductionPp ?? "Data not available"} pp. ${sponsorshipSummary}`;
     case "8-remedial-results":
       return "Remedial and catch-up evidence is summarized from intervention-linked records and progress indicators where available.";
     case "9-resource-utilization":
@@ -16670,12 +17821,12 @@ function pickCategoryCoreMetrics(
         metricPath: "coverageDelivery.assessmentsConducted",
       },
       {
-        text: `${labelForFactPackOutcome("storyReading")} change: ${outcomes.storyReading.change ?? "Data not available"}.`,
-        metricPath: "learningOutcomes.storyReading.change",
+        text: `Below expected benchmark: ${outcomes.benchmarkStatus?.belowExpected.percent ?? "Data not available"}%.`,
+        metricPath: "learningOutcomes.benchmarkStatus.belowExpected.percent",
       },
       {
-        text: `${labelForFactPackOutcome("readingComprehension")} change: ${outcomes.readingComprehension.change ?? "Data not available"}.`,
-        metricPath: "learningOutcomes.readingComprehension.change",
+        text: `Top mastery domain signal (${masterDomainDisplayName("blending_decoding")} Green): ${outcomes.domainMasteryDistribution?.blending_decoding?.green.percent ?? "Data not available"}%.`,
+        metricPath: "learningOutcomes.domainMasteryDistribution.blending_decoding.green.percent",
       },
     ];
   }
@@ -18505,41 +19656,47 @@ export function getImpactReportFilterFacets() {
 }
 
 /**
- * Per-child learner analysis for a specific school.
- * Returns individual learner scores across all 6 EGRA domains
- * with a "struggling" flag for learners scoring below 40% in any domain.
+ * Per-learner mastery analysis for a specific school.
+ * Returns rubric-aligned traffic-light statuses, stage, benchmark interpretation,
+ * and recommended next action per learner row.
  */
 export function getSchoolLearnerAnalysis(schoolId: number, assessmentType?: string) {
   const db = getDb();
-  const typeCond = assessmentType ? "AND asn.assessment_type = @assessmentType" : "";
-  const params: Record<string, string | number> = { schoolId };
+  const assessmentModelVersion = ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1;
+  const typeCond = assessmentType ? "AND ar.assessment_type = @assessmentType" : "";
+  const params: Record<string, string | number> = {
+    schoolId,
+    assessmentModelVersion,
+  };
   if (assessmentType) params.assessmentType = assessmentType;
 
   const rows = db
     .prepare(
       `
       SELECT
-        lr.learner_uid AS learnerUid,
-        lr.full_name AS learnerName,
-        lr.gender,
-        lr.class_grade AS classGrade,
-        asn.assessment_type AS assessmentType,
-        asn.assessment_date AS assessmentDate,
-        asr.letter_sounds_score AS letterSoundsScore,
-        asr.decoding_score AS realWordsScore,
-        asr.fluency_score AS storyReadingScore,
-        asr.comprehension_score AS comprehensionScore,
-        ar.sound_identification_score AS letterNamesScore,
-        ar.made_up_words_score AS madeUpWordsScore
-      FROM assessment_session_results asr
-      JOIN assessment_sessions asn ON asn.id = asr.assessment_session_id
-      JOIN learner_roster lr ON lr.learner_uid = asr.learner_uid
-      LEFT JOIN assessment_records ar
-        ON ar.learner_uid = asr.learner_uid
-        AND ar.school_id = asn.school_id
-        AND ar.assessment_type = asn.assessment_type
-      WHERE asn.school_id = @schoolId ${typeCond}
-      ORDER BY lr.full_name, asn.assessment_date DESC
+        ar.learner_uid AS learnerUid,
+        COALESCE(lr.full_name, ar.child_name) AS learnerName,
+        COALESCE(lr.gender, ar.gender) AS gender,
+        COALESCE(lr.class_grade, ar.class_grade) AS classGrade,
+        ar.assessment_type AS assessmentType,
+        ar.assessment_date AS assessmentDate,
+        ar.reading_stage_label AS readingStageLabel,
+        ar.benchmark_grade_level AS benchmarkGradeLevel,
+        ar.expected_vs_actual_status AS expectedVsActualStatus,
+        ar.stage_reason_summary AS stageReasonSummary,
+        ar.phonemic_awareness_mastery_status AS phonemicAwarenessStatus,
+        ar.grapheme_phoneme_correspondence_mastery_status AS graphemePhonemeCorrespondenceStatus,
+        ar.blending_decoding_mastery_status AS blendingDecodingStatus,
+        ar.word_recognition_fluency_mastery_status AS wordRecognitionFluencyStatus,
+        ar.sentence_paragraph_construction_mastery_status AS sentenceParagraphConstructionStatus,
+        ar.comprehension_mastery_status AS comprehensionStatus
+      FROM assessment_records ar
+      LEFT JOIN learner_roster lr
+        ON lr.learner_uid = ar.learner_uid
+      WHERE ar.school_id = @schoolId
+        AND ar.model_version = @assessmentModelVersion
+        ${typeCond}
+      ORDER BY COALESCE(lr.full_name, ar.child_name), ar.assessment_date DESC
     `,
     )
     .all(params) as Array<{
@@ -18549,35 +19706,87 @@ export function getSchoolLearnerAnalysis(schoolId: number, assessmentType?: stri
       classGrade: string;
       assessmentType: string;
       assessmentDate: string;
-      letterNamesScore: number | null;
-      letterSoundsScore: number | null;
-      realWordsScore: number | null;
-      madeUpWordsScore: number | null;
-      storyReadingScore: number | null;
-      comprehensionScore: number | null;
+      readingStageLabel: string | null;
+      benchmarkGradeLevel: string | null;
+      expectedVsActualStatus: string | null;
+      stageReasonSummary: string | null;
+      phonemicAwarenessStatus: string | null;
+      graphemePhonemeCorrespondenceStatus: string | null;
+      blendingDecodingStatus: string | null;
+      wordRecognitionFluencyStatus: string | null;
+      sentenceParagraphConstructionStatus: string | null;
+      comprehensionStatus: string | null;
     }>;
 
-  const STRUGGLING_THRESHOLD = 40;
-
   return rows.map((row) => {
-    const scores = [
-      row.letterNamesScore,
-      row.letterSoundsScore,
-      row.realWordsScore,
-      row.madeUpWordsScore,
-      row.storyReadingScore,
-      row.comprehensionScore,
-    ];
-    const validScores = scores.filter((s): s is number => s !== null && s !== undefined);
-    const isStruggling = validScores.some((s) => s < STRUGGLING_THRESHOLD);
-    const averageScore = validScores.length > 0
-      ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
-      : null;
+    const statuses = {
+      phonemic_awareness: normalizeMasteryStatus(row.phonemicAwarenessStatus) ?? undefined,
+      grapheme_phoneme_correspondence:
+        normalizeMasteryStatus(row.graphemePhonemeCorrespondenceStatus) ?? undefined,
+      blending_decoding: normalizeMasteryStatus(row.blendingDecodingStatus) ?? undefined,
+      word_recognition_fluency:
+        normalizeMasteryStatus(row.wordRecognitionFluencyStatus) ?? undefined,
+      sentence_paragraph_construction:
+        normalizeMasteryStatus(row.sentenceParagraphConstructionStatus) ?? undefined,
+      comprehension: normalizeMasteryStatus(row.comprehensionStatus) ?? undefined,
+    };
+    const domainStatuses = {
+      phonemicAwareness:
+        statuses.phonemic_awareness ?? "red",
+      graphemePhonemeCorrespondence:
+        statuses.grapheme_phoneme_correspondence ?? "red",
+      blendingDecoding:
+        statuses.blending_decoding ?? "red",
+      wordRecognitionFluency:
+        statuses.word_recognition_fluency ?? "red",
+      sentenceParagraphConstruction:
+        statuses.sentence_paragraph_construction ?? "red",
+      comprehension:
+        statuses.comprehension ?? "red",
+    };
+
+    const readingStageLabel = String(row.readingStageLabel ?? "").trim() || "Pre-Reader";
+    const benchmarkGradeLevel = String(row.benchmarkGradeLevel ?? "").trim() || "Data not available";
+    const expectedVsActualStatus =
+      String(row.expectedVsActualStatus ?? "").trim() || "Data not available";
+    const stageReasonSummary = String(row.stageReasonSummary ?? "").trim() || "Data not available";
+
+    let recommendedNextAction = "Continue progression and monitor developing domains.";
+    if (
+      domainStatuses.phonemicAwareness === "red" ||
+      domainStatuses.graphemePhonemeCorrespondence === "red" ||
+      domainStatuses.blendingDecoding === "red"
+    ) {
+      recommendedNextAction = "Urgent foundational intervention (phonemic/phonics/decoding catch-up).";
+    } else if (domainStatuses.wordRecognitionFluency === "amber") {
+      recommendedNextAction = "Fluency strengthening (speed and automaticity practice).";
+    } else if (
+      domainStatuses.blendingDecoding === "green" &&
+      domainStatuses.comprehension !== "green"
+    ) {
+      recommendedNextAction = "Comprehension instruction focus (meaning-making and recall).";
+    } else if (
+      domainStatuses.phonemicAwareness === "green" &&
+      domainStatuses.graphemePhonemeCorrespondence === "green" &&
+      domainStatuses.blendingDecoding === "green" &&
+      domainStatuses.comprehension === "green"
+    ) {
+      recommendedNextAction = "Progressing / Graduation prep support.";
+    }
 
     return {
-      ...row,
-      averageScore,
-      isStruggling,
+      learnerUid: row.learnerUid,
+      learnerName: row.learnerName,
+      gender: row.gender,
+      classGrade: row.classGrade,
+      assessmentType: row.assessmentType,
+      assessmentDate: row.assessmentDate,
+      readingStageLabel,
+      benchmarkGradeLevel,
+      expectedVsActualStatus,
+      stageReasonSummary,
+      recommendedNextAction,
+      ...domainStatuses,
     };
   });
 }
@@ -22662,6 +23871,10 @@ function listSchoolsForPublicScope(level: PublicImpactScopeLevel, id: string) {
 
 type AssessmentRowForRL = {
   learnerUid: string | null;
+  assessmentDate?: string | null;
+  modelVersion?: string | null;
+  readingStageLabel?: string | null;
+  readingStageOrder?: number | null;
   letterIdentificationScore: number | null;
   soundIdentificationScore: number | null;
   decodableWordsScore: number | null;
@@ -22695,6 +23908,117 @@ function buildReadingLevelsBlock(
   endlineRows: AssessmentRowForRL[],
   latestRows: AssessmentRowForRL[],
 ): ReadingLevelsBlock {
+  const hasMasteryStages =
+    [...baselineRows, ...endlineRows, ...latestRows].some(
+      (row) =>
+        isOneTestStyleModelVersion(row.modelVersion ?? null) ||
+        Boolean(row.readingStageLabel && row.readingStageOrder),
+    );
+
+  if (hasMasteryStages) {
+    const stageMeta = MASTERY_STAGE_METADATA.map((item) => ({
+      level: item.order - 1,
+      label: item.label,
+    }));
+    const cycles: Array<{
+      cycle: "baseline" | "endline" | "latest";
+      rows: AssessmentRowForRL[];
+    }> = [
+      { cycle: "baseline", rows: baselineRows },
+      { cycle: "endline", rows: endlineRows },
+      ...(endlineRows.length === 0 ? [{ cycle: "latest" as const, rows: latestRows }] : []),
+    ];
+    const distribution = cycles
+      .map((entry) => {
+        const counts: Record<string, number> = {};
+        const percents: Record<string, number> = {};
+        stageMeta.forEach((stage) => {
+          counts[stage.label] = 0;
+          percents[stage.label] = 0;
+        });
+        entry.rows.forEach((row) => {
+          const label = row.readingStageLabel?.trim();
+          const normalized =
+            label && counts[label] !== undefined
+              ? label
+              : stageMeta[Math.max(0, Math.min(stageMeta.length - 1, Number(row.readingStageOrder ?? 1) - 1))]
+                ?.label ?? "Pre-Reader";
+          counts[normalized] = (counts[normalized] ?? 0) + 1;
+        });
+        const n = entry.rows.length;
+        if (n > 0) {
+          Object.keys(counts).forEach((label) => {
+            percents[label] = Math.round((counts[label] / n) * 1000) / 10;
+          });
+        }
+        return { cycle: entry.cycle, n, counts, percents };
+      })
+      .filter((row) => row.n > 0);
+
+    const movement = (() => {
+      const baselineMap = new Map<string, number>();
+      const endlineMap = new Map<string, number>();
+      baselineRows.forEach((row) => {
+        const uid = row.learnerUid?.trim();
+        if (!uid) return;
+        baselineMap.set(uid, Number(row.readingStageOrder ?? 1));
+      });
+      endlineRows.forEach((row) => {
+        const uid = row.learnerUid?.trim();
+        if (!uid) return;
+        endlineMap.set(uid, Number(row.readingStageOrder ?? 1));
+      });
+      const matched = [...baselineMap.keys()].filter((uid) => endlineMap.has(uid));
+      if (matched.length === 0) {
+        return null;
+      }
+      let movedUp = 0;
+      let stayedSame = 0;
+      let movedDown = 0;
+      const transition = new Map<string, number>();
+      matched.forEach((uid) => {
+        const from = baselineMap.get(uid) ?? 1;
+        const to = endlineMap.get(uid) ?? 1;
+        if (to > from) movedUp += 1;
+        else if (to < from) movedDown += 1;
+        else stayedSame += 1;
+        const fromLabel = stageMeta[Math.max(0, Math.min(stageMeta.length - 1, from - 1))]?.label ?? "Pre-Reader";
+        const toLabel = stageMeta[Math.max(0, Math.min(stageMeta.length - 1, to - 1))]?.label ?? "Pre-Reader";
+        const key = `${fromLabel}→${toLabel}`;
+        transition.set(key, (transition.get(key) ?? 0) + 1);
+      });
+      const n = matched.length;
+      const topTransitions = [...transition.entries()]
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 5)
+        .map(([key, count]) => {
+          const [from, to] = key.split("→");
+          return {
+            from,
+            to,
+            count,
+            percent: Math.round((count / n) * 1000) / 10,
+          };
+        });
+      return {
+        n_matched: n,
+        moved_up_1plus_count: movedUp,
+        moved_up_1plus_percent: Math.round((movedUp / n) * 1000) / 10,
+        stayed_same_percent: Math.round((stayedSame / n) * 1000) / 10,
+        moved_down_percent: Math.round((movedDown / n) * 1000) / 10,
+        top_transitions: topTransitions,
+      };
+    })();
+
+    return {
+      definition_version: ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1,
+      levels: stageMeta,
+      distribution,
+      by_grade: [],
+      movement,
+    };
+  }
+
   // Extract domain scores per cycle
   const baselineScores = baselineRows
     .map(extractScoresFromRow)
@@ -22879,6 +24203,8 @@ export function getPublicImpactAggregate(
               school_id AS schoolId,
               assessment_date AS assessmentDate,
               assessment_type AS assessmentType,
+              class_grade AS classGrade,
+              age,
               learner_uid AS learnerUid,
               letter_identification_score AS letterIdentificationScore,
               sound_identification_score AS soundIdentificationScore,
@@ -22886,7 +24212,21 @@ export function getPublicImpactAggregate(
               undecodable_words_score AS undecodableWordsScore,
               made_up_words_score AS madeUpWordsScore,
               story_reading_score AS storyReadingScore,
+              fluency_accuracy_score AS fluencyAccuracyScore,
               reading_comprehension_score AS readingComprehensionScore,
+              model_version AS modelVersion,
+              benchmark_version AS benchmarkVersion,
+              scoring_profile_version AS scoringProfileVersion,
+              reading_stage_label AS readingStageLabel,
+              reading_stage_order AS readingStageOrder,
+              benchmark_grade_level AS benchmarkGradeLevel,
+              expected_vs_actual_status AS expectedVsActualStatus,
+              phonemic_awareness_mastery_status AS phonemicAwarenessMasteryStatus,
+              grapheme_phoneme_correspondence_mastery_status AS graphemePhonemeCorrespondenceMasteryStatus,
+              blending_decoding_mastery_status AS blendingDecodingMasteryStatus,
+              word_recognition_fluency_mastery_status AS wordRecognitionFluencyMasteryStatus,
+              sentence_paragraph_construction_mastery_status AS sentenceParagraphConstructionMasteryStatus,
+              comprehension_mastery_status AS comprehensionMasteryStatus,
               created_at AS createdAt
             FROM assessment_records
             WHERE school_id IN ${schoolClause}
@@ -22897,6 +24237,8 @@ export function getPublicImpactAggregate(
           schoolId: number;
           assessmentDate: string;
           assessmentType: "baseline" | "progress" | "endline";
+          classGrade: string | null;
+          age: number | null;
           learnerUid: string | null;
           letterIdentificationScore: number | null;
           soundIdentificationScore: number | null;
@@ -22904,7 +24246,21 @@ export function getPublicImpactAggregate(
           undecodableWordsScore: number | null;
           madeUpWordsScore: number | null;
           storyReadingScore: number | null;
+          fluencyAccuracyScore: number | null;
           readingComprehensionScore: number | null;
+          modelVersion: string | null;
+          benchmarkVersion: string | null;
+          scoringProfileVersion: string | null;
+          readingStageLabel: string | null;
+          readingStageOrder: number | null;
+          benchmarkGradeLevel: string | null;
+          expectedVsActualStatus: string | null;
+          phonemicAwarenessMasteryStatus: string | null;
+          graphemePhonemeCorrespondenceMasteryStatus: string | null;
+          blendingDecodingMasteryStatus: string | null;
+          wordRecognitionFluencyMasteryStatus: string | null;
+          sentenceParagraphConstructionMasteryStatus: string | null;
+          comprehensionMasteryStatus: string | null;
           createdAt: string;
         }>);
 
@@ -23218,6 +24574,171 @@ export function getPublicImpactAggregate(
       ? endlineRows
       : scopedAssessments.filter((row) => row.assessmentDate === latestDate);
 
+  const latestMasteryRows = latestRows.map((row) => {
+    const rowStatuses: Partial<Record<MasteryDomainKey, MasteryStatus>> = {
+      phonemic_awareness: normalizeMasteryStatus(row.phonemicAwarenessMasteryStatus) ?? undefined,
+      grapheme_phoneme_correspondence:
+        normalizeMasteryStatus(row.graphemePhonemeCorrespondenceMasteryStatus) ?? undefined,
+      blending_decoding: normalizeMasteryStatus(row.blendingDecodingMasteryStatus) ?? undefined,
+      word_recognition_fluency:
+        normalizeMasteryStatus(row.wordRecognitionFluencyMasteryStatus) ?? undefined,
+      sentence_paragraph_construction:
+        normalizeMasteryStatus(row.sentenceParagraphConstructionMasteryStatus) ?? undefined,
+      comprehension: normalizeMasteryStatus(row.comprehensionMasteryStatus) ?? undefined,
+    };
+    const hasCompleteStatuses = MASTERY_DOMAIN_SEQUENCE.every(
+      (domain) => Boolean(rowStatuses[domain.key]),
+    );
+
+    const computedMastery = !hasCompleteStatuses || !row.readingStageLabel || !row.readingStageOrder
+      ? computeOneTestStyleMasteryAssessment({
+        grade: row.classGrade,
+        age: row.age,
+        legacyScores: {
+          letterIdentificationScore: row.letterIdentificationScore,
+          soundIdentificationScore: row.soundIdentificationScore,
+          decodableWordsScore: row.decodableWordsScore,
+          undecodableWordsScore: row.undecodableWordsScore,
+          madeUpWordsScore: row.madeUpWordsScore,
+          storyReadingScore: row.storyReadingScore,
+          readingComprehensionScore: row.readingComprehensionScore,
+          fluencyAccuracyScore: row.fluencyAccuracyScore,
+        },
+      })
+      : null;
+
+    const finalStatuses = {} as Record<MasteryDomainKey, MasteryStatus>;
+    MASTERY_DOMAIN_SEQUENCE.forEach((domain) => {
+      finalStatuses[domain.key] =
+        rowStatuses[domain.key] ??
+        computedMastery?.domains[domain.key].domainMasteryStatus ??
+        "red";
+    });
+
+    return {
+      modelVersion:
+        String(row.modelVersion ?? "").trim() ||
+        computedMastery?.modelVersion ||
+        ASSESSMENT_LEGACY_MODEL_VERSION,
+      benchmarkVersion:
+        String(row.benchmarkVersion ?? "").trim() || computedMastery?.benchmarkVersion || null,
+      scoringProfileVersion:
+        String(row.scoringProfileVersion ?? "").trim() ||
+        computedMastery?.scoringProfileVersion ||
+        null,
+      readingStageLabel:
+        row.readingStageLabel?.trim() || computedMastery?.readingStageLabel || "Pre-Reader",
+      readingStageOrder: Number(row.readingStageOrder ?? computedMastery?.readingStageOrder ?? 1),
+      expectedVsActualStatus:
+        row.expectedVsActualStatus?.trim() ||
+        computedMastery?.expectedVsActualStatus ||
+        "Data not available",
+      statuses: finalStatuses,
+    };
+  });
+
+  const masteryDistribution = emptyDomainMasteryDistribution();
+  const stageDistributionMap = new Map<string, { order: number; count: number }>();
+  const benchmarkTally = {
+    belowExpected: 0,
+    atExpected: 0,
+    aboveExpected: 0,
+    n: 0,
+  };
+  const masteryModelVersions = new Set<string>();
+  const masteryBenchmarkVersions = new Set<string>();
+  const masteryScoringProfileVersions = new Set<string>();
+
+  latestMasteryRows.forEach((row) => {
+    masteryModelVersions.add(row.modelVersion);
+    if (row.benchmarkVersion) masteryBenchmarkVersions.add(row.benchmarkVersion);
+    if (row.scoringProfileVersion) masteryScoringProfileVersions.add(row.scoringProfileVersion);
+
+    MASTERY_DOMAIN_SEQUENCE.forEach((domain) => {
+      const status = row.statuses[domain.key];
+      masteryDistribution[domain.key].n += 1;
+      if (status === "green") masteryDistribution[domain.key].green += 1;
+      if (status === "amber") masteryDistribution[domain.key].amber += 1;
+      if (status === "red") masteryDistribution[domain.key].red += 1;
+    });
+
+    const stageKey = row.readingStageLabel || "Pre-Reader";
+    const bucket = stageDistributionMap.get(stageKey) ?? { order: row.readingStageOrder || 1, count: 0 };
+    bucket.order = Math.max(1, Number(row.readingStageOrder || bucket.order || 1));
+    bucket.count += 1;
+    stageDistributionMap.set(stageKey, bucket);
+
+    const expectedStatus = row.expectedVsActualStatus.toLowerCase();
+    if (expectedStatus.includes("below expected")) {
+      benchmarkTally.belowExpected += 1;
+      benchmarkTally.n += 1;
+    } else if (expectedStatus.includes("above expected")) {
+      benchmarkTally.aboveExpected += 1;
+      benchmarkTally.n += 1;
+    } else if (expectedStatus.includes("at expected")) {
+      benchmarkTally.atExpected += 1;
+      benchmarkTally.n += 1;
+    }
+  });
+
+  const masteryDomains = MASTERY_DOMAIN_SEQUENCE.reduce((acc, domain) => {
+    const tally = masteryDistribution[domain.key];
+    const total = Math.max(1, tally.n);
+    acc[domain.key] = {
+      green: {
+        count: tally.green,
+        percent: Number(((tally.green / total) * 100).toFixed(1)),
+      },
+      amber: {
+        count: tally.amber,
+        percent: Number(((tally.amber / total) * 100).toFixed(1)),
+      },
+      red: {
+        count: tally.red,
+        percent: Number(((tally.red / total) * 100).toFixed(1)),
+      },
+      n: tally.n,
+    };
+    return acc;
+  }, {} as NonNullable<PublicImpactAggregate["masteryDomains"]>);
+
+  const readingStageDistribution = [...stageDistributionMap.entries()]
+    .map(([label, value]) => ({
+      label,
+      order: value.order,
+      count: value.count,
+      percent:
+        latestMasteryRows.length > 0
+          ? Number(((value.count / latestMasteryRows.length) * 100).toFixed(1))
+          : 0,
+    }))
+    .sort((left, right) => left.order - right.order);
+
+  const benchmarkStatus: NonNullable<PublicImpactAggregate["benchmarkStatus"]> = {
+    belowExpected: {
+      count: benchmarkTally.belowExpected,
+      percent:
+        benchmarkTally.n > 0
+          ? Number(((benchmarkTally.belowExpected / benchmarkTally.n) * 100).toFixed(1))
+          : 0,
+    },
+    atExpected: {
+      count: benchmarkTally.atExpected,
+      percent:
+        benchmarkTally.n > 0
+          ? Number(((benchmarkTally.atExpected / benchmarkTally.n) * 100).toFixed(1))
+          : 0,
+    },
+    aboveExpected: {
+      count: benchmarkTally.aboveExpected,
+      percent:
+        benchmarkTally.n > 0
+          ? Number(((benchmarkTally.aboveExpected / benchmarkTally.n) * 100).toFixed(1))
+          : 0,
+    },
+    n: benchmarkTally.n,
+  };
+
   // 6-domain extraction: each domain maps to its own DB column
   const baselineLetterNameValues = baselineRows.map((row) => row.letterIdentificationScore ?? null);
   const latestLetterNameValues = latestRows.map((row) => row.letterIdentificationScore ?? null);
@@ -23443,6 +24964,14 @@ export function getPublicImpactAggregate(
         latestComprehensionValues,
         50,
       ),
+    },
+    masteryDomains,
+    readingStageDistribution,
+    benchmarkStatus,
+    publicExplanation: {
+      green: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.green,
+      amber: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.amber,
+      red: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.red,
     },
     funnel: {
       trained: trainedSchools.size,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   stableDistrictId,
   stableSubRegionId,
@@ -242,18 +242,45 @@ export function UgandaImpactMapPro({
   const [hoveredTarget, setHoveredTarget] = useState<MapTarget | null>(null);
   const [pinnedTarget, setPinnedTarget] = useState<MapTarget | null>(null);
   const [floatingPosition, setFloatingPosition] = useState<{ left: number; top: number } | null>(null);
+  const [floatingCardSize, setFloatingCardSize] = useState<{ width: number; height: number }>(() => ({
+    width: compact ? 300 : 330,
+    height: compact ? 250 : 300,
+  }));
   const [mobileSheetTarget, setMobileSheetTarget] = useState<MapTarget | null>(null);
   const [statsCache, setStatsCache] = useState<Record<string, PublicImpactAggregate>>({});
   const [bestDistrictStats, setBestDistrictStats] = useState<BestDistrictReadingPerformance | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mapMode, setMapMode] = useState<"coverage" | "improvement" | "fidelity">("coverage");
-  const suppressNextCanvasResetRef = useRef(false);
 
   const { isOpen, scheduleOpen, scheduleClose, forceOpen, forceClose } = useHoverIntent({
     openDelayMs: 95,
     closeDelayMs: 300,
   });
   const smartPosition = useSmartPositioning();
+  const hoverCardGap = compact ? 24 : 32;
+
+  useEffect(() => {
+    setFloatingCardSize({
+      width: compact ? 300 : 330,
+      height: compact ? 250 : 300,
+    });
+  }, [compact]);
+
+  const handleFloatingCardSizeChange = useCallback(
+    (next: { width: number; height: number }) => {
+      const minWidth = compact ? 300 : 330;
+      const minHeight = compact ? 240 : 280;
+      const width = Math.max(minWidth, Math.round(next.width));
+      const height = Math.max(minHeight, Math.round(next.height));
+      setFloatingCardSize((previous) => {
+        if (previous.width === width && previous.height === height) {
+          return previous;
+        }
+        return { width, height };
+      });
+    },
+    [compact],
+  );
 
   /** Compute bounding box of district paths for fitBounds. */
   const computePathsBbox = useCallback((districts: GeoDistrictBoundary[]) => {
@@ -389,15 +416,15 @@ export function UgandaImpactMapPro({
           clientX: event.clientX,
           clientY: event.clientY,
           containerRect: rect,
-          cardWidth: compact ? 300 : 330,
-          cardHeight: compact ? 220 : 240,
-          offsetX: 14,
-          offsetY: 14,
+          cardWidth: floatingCardSize.width,
+          cardHeight: floatingCardSize.height,
+          offsetX: hoverCardGap,
+          offsetY: hoverCardGap,
         }),
       );
       scheduleOpen();
     },
-    [compact, scheduleOpen, smartPosition],
+    [floatingCardSize.height, floatingCardSize.width, hoverCardGap, scheduleOpen, smartPosition],
   );
 
   const moveHover = useCallback(
@@ -411,14 +438,14 @@ export function UgandaImpactMapPro({
           clientX: event.clientX,
           clientY: event.clientY,
           containerRect: rect,
-          cardWidth: compact ? 300 : 330,
-          cardHeight: compact ? 220 : 240,
-          offsetX: 14,
-          offsetY: 14,
+          cardWidth: floatingCardSize.width,
+          cardHeight: floatingCardSize.height,
+          offsetX: hoverCardGap,
+          offsetY: hoverCardGap,
         }),
       );
     },
-    [compact, smartPosition],
+    [floatingCardSize.height, floatingCardSize.width, hoverCardGap, smartPosition],
   );
 
   const endHover = useCallback(() => {
@@ -426,7 +453,6 @@ export function UgandaImpactMapPro({
   }, [scheduleClose]);
 
   const clearSelection = useCallback(() => {
-    suppressNextCanvasResetRef.current = false;
     setPinnedTarget(null);
     setHoveredTarget(null);
     forceClose();
@@ -434,12 +460,22 @@ export function UgandaImpactMapPro({
     resetView();
   }, [forceClose, onSelectionChange, resetView]);
 
-  const handleCanvasClickReset = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      if (suppressNextCanvasResetRef.current) {
-        suppressNextCanvasResetRef.current = false;
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
         return;
       }
+      clearSelection();
+    };
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => {
+      window.removeEventListener("keydown", handleKeydown);
+    };
+  }, [clearSelection]);
+
+  const handleCanvasClickReset = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement;
       if (
         target.closest(".impact-map-zoom-controls") ||
@@ -462,7 +498,6 @@ export function UgandaImpactMapPro({
         chip: "Sub-region",
         profileHref: `/sub-regions/${encodeURIComponent(subRegion)}`,
       };
-      suppressNextCanvasResetRef.current = true;
       setPinnedTarget(target);
       setHoveredTarget(target);
       forceOpen();
@@ -488,7 +523,6 @@ export function UgandaImpactMapPro({
         chip: "District",
         profileHref: `/districts/${encodeURIComponent(district)}`,
       };
-      suppressNextCanvasResetRef.current = true;
       setPinnedTarget(target);
       setHoveredTarget(target);
       forceOpen();
@@ -631,6 +665,7 @@ export function UgandaImpactMapPro({
 
         <svg
           viewBox={viewBox}
+          preserveAspectRatio="xMidYMid meet"
           className="impact-map-svg"
           role="img"
           aria-label="Uganda literacy implementation map"
@@ -824,6 +859,7 @@ export function UgandaImpactMapPro({
           profileHref={currentTarget.profileHref}
           dataCompleteness={completeness}
           onClearSelection={clearSelection}
+          onSizeChange={handleFloatingCardSizeChange}
         />
       </div>
 

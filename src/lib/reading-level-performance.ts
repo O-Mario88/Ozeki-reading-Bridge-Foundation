@@ -1,9 +1,9 @@
 import type { ReadingLevelCycleDist, ReadingLevelsBlock } from "@/lib/types";
 
 export const READING_LEVEL_PERFORMANCE_LEVELS = [
-  "Developing",
-  "Transitional",
-  "Fluent",
+  "Developing Reader",
+  "Fluent Reader",
+  "Comprehending Reader",
 ] as const;
 
 const PREFERRED_CYCLE_ORDER: ReadonlyArray<ReadingLevelCycleDist["cycle"]> = [
@@ -76,4 +76,3 @@ export function getReadingLevelPerformanceSummary(
     levelLabels: READING_LEVEL_PERFORMANCE_LEVELS,
   };
 }
-

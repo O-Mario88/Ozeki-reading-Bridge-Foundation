@@ -899,7 +899,7 @@ const assessmentConfig: PortalModuleConfig = {
   navLabel: "Assessments",
   pageTitle: "Assessments",
   description:
-    "Capture Early Grade Reading Assessment (EGRA) baseline data with learner-level records and school summaries.",
+    "Capture mastery-based learner reading assessments with traffic-light outputs and benchmarked reading stages.",
   newLabel: "+ New Assessment",
   programTypeLabel: "Type",
   programTypeOptions: [
@@ -947,28 +947,29 @@ const assessmentConfig: PortalModuleConfig = {
           label: "Learner table",
           type: "egraLearners",
           required: true,
-          helperText: "Enter up to 20 learners, matching the baseline assessment sheet.",
+          helperText:
+            "Enter up to 20 learners using the six-domain mastery rubric (Green/Amber/Red).",
         },
       ],
     },
     {
       id: "results",
-      title: "SECTION C: SCHOOL SUMMARY",
+      title: "SECTION C: MASTERY SUMMARY",
       fields: [
         {
           key: "egraSummary",
-          label: "Baseline snapshot",
+          label: "Domain mastery snapshot",
           type: "egraSummary",
         },
       ],
     },
     {
       id: "actions",
-      title: "SECTION D: READING PROFILE",
+      title: "SECTION D: READING STAGE PROFILE",
       fields: [
         {
           key: "egraProfile",
-          label: "Reading level profile",
+          label: "Reading stage distribution",
           type: "egraProfile",
         },
       ],
@@ -983,20 +984,20 @@ const assessmentConfig: PortalModuleConfig = {
           type: "multiselect",
           options: [
             {
-              value: "Majority are Non-Readers - Focus on phonemic awareness plus letter sounds",
-              label: "Majority are Non-Readers",
+              value: "Red in foundational domains - Remedial & Catch-Up Reading Interventions",
+              label: "Foundational domains Red",
             },
             {
-              value: "Weak in Made-up Words - Strengthen decoding instruction",
-              label: "Weak in Made-up Words",
+              value: "Amber in Word Recognition & Fluency - Fluency strengthening",
+              label: "Fluency domain Amber",
             },
             {
-              value: "Low comprehension with good story reading - Work on vocabulary plus questioning",
-              label: "Low comprehension with good story reading",
+              value: "Green decoding with weak comprehension - Comprehension instruction focus",
+              label: "Comprehension gap",
             },
             {
-              value: "Fluency plateau - Increase guided repeated reading",
-              label: "Fluency plateau",
+              value: "Mostly Green across foundational domains - Progressing / Graduation Prep",
+              label: "Progressing / Graduation Prep",
             },
           ],
         },
@@ -1005,7 +1006,7 @@ const assessmentConfig: PortalModuleConfig = {
           label: "Assessor comments",
           type: "textarea",
           helperText:
-            "Accuracy formula reference: Accuracy % = (Correct Words / (Correct Words + Errors)) x 100",
+            "Mastery outputs are generated from accuracy, latency, attempts, and support signals.",
         },
       ],
     },

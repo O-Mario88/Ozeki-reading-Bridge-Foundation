@@ -2,6 +2,24 @@ import OpenAI from "openai";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 import type { PublicImpactAggregate } from "@/lib/types";
 
+const MASTERY_DOMAIN_ORDER: Array<{
+  key:
+    | "phonemic_awareness"
+    | "grapheme_phoneme_correspondence"
+    | "blending_decoding"
+    | "word_recognition_fluency"
+    | "sentence_paragraph_construction"
+    | "comprehension";
+  label: string;
+}> = [
+  { key: "phonemic_awareness", label: "Phonemic Awareness" },
+  { key: "grapheme_phoneme_correspondence", label: "Grapheme-Phoneme Correspondence" },
+  { key: "blending_decoding", label: "Blending & Decoding" },
+  { key: "word_recognition_fluency", label: "Word Recognition & Fluency" },
+  { key: "sentence_paragraph_construction", label: "Sentence & Paragraph Construction" },
+  { key: "comprehension", label: "Comprehension" },
+];
+
 export type PublicReportEngineFormat = "json" | "html" | "pdf";
 
 export interface PublicDashboardNarrative {
@@ -391,6 +409,20 @@ function buildTemplateSections(
         .join("; ") +
       (readingLevels.movementSummary ? ` ${readingLevels.movementSummary}` : "")
     : "Data not available for this period.";
+  const masterySection = aggregate.masteryDomains
+    ? MASTERY_DOMAIN_ORDER.map((entry) => {
+      const domain = aggregate.masteryDomains?.[entry.key];
+      if (!domain) return null;
+      return `${entry.label}: Green ${toFixedOrNA(domain.green.percent)}%, Amber ${toFixedOrNA(
+        domain.amber.percent,
+      )}%, Red ${toFixedOrNA(domain.red.percent)}% (n=${domain.n.toLocaleString()})`;
+    })
+      .filter((value): value is string => Boolean(value))
+      .join("; ")
+    : "Data not available for this period.";
+  const benchmarkSection = aggregate.benchmarkStatus
+    ? `Below expected ${aggregate.benchmarkStatus.belowExpected.percent.toFixed(1)}%, at expected ${aggregate.benchmarkStatus.atExpected.percent.toFixed(1)}%, above expected ${aggregate.benchmarkStatus.aboveExpected.percent.toFixed(1)}% (n=${aggregate.benchmarkStatus.n.toLocaleString()}).`
+    : "Data not available for this period.";
 
   const sections: PublicDashboardTemplateSection[] = [
     {
@@ -411,9 +443,23 @@ function buildTemplateSections(
       content: outcomes.map(lineForOutcome).join(" "),
     },
     {
+      id: "mastery-traffic-light-distribution",
+      title: "Mastery Traffic-Light Distribution",
+      content:
+        `${masterySection}. ` +
+        `${aggregate.publicExplanation?.green ?? "Green means the learner has mastered the skill."} ` +
+        `${aggregate.publicExplanation?.amber ?? "Amber means the learner is developing but needs more speed or consistency."} ` +
+        `${aggregate.publicExplanation?.red ?? "Red means the learner needs targeted support."}`,
+    },
+    {
       id: "reading-levels-profile-and-movement",
       title: "Reading Levels Profile and Movement",
       content: readingLevelsSection,
+    },
+    {
+      id: "benchmark-grade-alignment",
+      title: "Benchmark Grade Alignment",
+      content: benchmarkSection,
     },
     {
       id: "program-implementation-funnel",

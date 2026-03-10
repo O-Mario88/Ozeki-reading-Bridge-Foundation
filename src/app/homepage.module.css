@@ -164,14 +164,6 @@
   width: 100%;
 }
 
-.programSectionHeading h2 {
-  max-width: none;
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-  white-space: normal;
-  width: 100%;
-}
-
 .problemPhotoWrap {
   margin-bottom: var(--space-4);
 }
@@ -269,22 +261,6 @@
 .inlineLink:hover,
 .inlineLink:focus-visible {
   color: var(--color-brand-orange-dark);
-}
-
-.programOverviewSection {
-  background: #ffffff;
-}
-
-.programOverview {
-  display: grid;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-}
-
-.programOverview p {
-  color: var(--color-text);
-  line-height: 1.68;
-  margin: 0;
 }
 
 .insightSection {
@@ -609,10 +585,6 @@
   }
 
   .loopSectionHeading h2 {
-    white-space: normal;
-  }
-
-  .programSectionHeading h2 {
     white-space: normal;
   }
 

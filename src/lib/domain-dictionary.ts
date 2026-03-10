@@ -17,40 +17,40 @@ export const LEARNING_DOMAIN_DICTIONARY: Record<
   LearningDomainDictionaryEntry
 > = {
   letter_names: {
-    label_short: "Knowing Letter Names",
-    label_full: "Knowing Letter Names",
+    label_short: "Phonemic Awareness",
+    label_full: "Phonemic Awareness",
     description:
-      "Measures whether a learner can correctly name printed letters of the alphabet.",
+      "The ability to hear and identify individual sounds (phonemes) in spoken words.",
   },
   letter_sounds: {
-    label_short: "Knowing Letter Sounds",
-    label_full: "Knowing Letter Sounds",
+    label_short: "Grapheme-Phoneme Correspondence",
+    label_full: "Grapheme-Phoneme Correspondence",
     description:
-      "Measures whether a learner can correctly produce the sound each letter (or letter group) represents.",
+      'Matching sounds to their written letters (e.g., knowing "b" makes the /b/ sound).',
   },
   real_words: {
-    label_short: "Reading Real Words",
-    label_full: "Reading Real Words",
+    label_short: "Blending & Decoding",
+    label_full: "Blending & Decoding",
     description:
-      "Measures whether a learner can accurately read familiar, meaningful words in print.",
+      'Joining sounds together to read a word (e.g., /c/-/a/-/t/ = "cat").',
   },
   made_up_words: {
-    label_short: "Reading Made Up Words",
-    label_full: "Reading Made Up Words",
+    label_short: "Word Recognition & Fluency",
+    label_full: "Word Recognition & Fluency",
     description:
-      "Measures whether a learner can decode unfamiliar ‘nonsense’ words using phonics (not memorization).",
+      "Transitioning from sounding out to recognizing words instantly. This includes sight words that do not follow standard rules.",
   },
   story_reading: {
-    label_short: "Story Reading",
-    label_full: "Story Reading",
+    label_short: "Sentence & Paragraph Construction",
+    label_full: "Sentence & Paragraph Construction",
     description:
-      "Measures how fluently and accurately a learner can read a short connected passage (often reported as correct words per minute).",
+      "Understanding how words work together in phrases and sentences, including basic punctuation.",
   },
   comprehension: {
-    label_short: "Reading Comprehension",
-    label_full: "Reading Comprehension",
+    label_short: "Comprehension",
+    label_full: "Comprehension",
     description:
-      "Measures whether a learner understands what they read by answering questions about the passage.",
+      "The ultimate goal—reading a story and demonstrating an understanding of the plot, characters, or facts.",
   },
 };
 

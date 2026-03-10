@@ -30,6 +30,10 @@ export function toPublicImpactResponse(payload: PublicImpactAggregate) {
       story_reading: payload.outcomes.storyReading,
       comprehension: payload.outcomes.comprehension,
     },
+    mastery_domains: payload.masteryDomains ?? null,
+    reading_stage_distribution: payload.readingStageDistribution ?? null,
+    benchmark_status: payload.benchmarkStatus ?? null,
+    traffic_light_explanations: payload.publicExplanation ?? null,
     funnel: {
       ...payload.funnel,
       baseline_assessed: payload.funnel.baselineAssessed,

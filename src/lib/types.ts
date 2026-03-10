@@ -962,6 +962,39 @@ export type TeacherSupportStatus =
   | "Needs Coaching & Follow-up"
   | "On Track";
 
+export type MasteryDomainKey =
+  | "phonemic_awareness"
+  | "grapheme_phoneme_correspondence"
+  | "blending_decoding"
+  | "word_recognition_fluency"
+  | "sentence_paragraph_construction"
+  | "comprehension";
+
+export type MasteryStatus = "green" | "amber" | "red";
+
+export interface AssessmentMasteryDomainInput {
+  domainScoreRaw?: number | null;
+  domainAccuracy?: number | null;
+  domainLatencyAvgMs?: number | null;
+  domainAttemptsAvg?: number | null;
+  domainSupportUsageRate?: number | null;
+  domainMasteryStatus?: MasteryStatus | "Green" | "Amber" | "Red" | null;
+}
+
+export interface AssessmentItemResponseInput {
+  domainKey: MasteryDomainKey;
+  itemKey: string;
+  accuracy: boolean | number;
+  latencyMs?: number | null;
+  attempts?: number | null;
+  hintUsed?: boolean | null;
+  correctionPromptUsed?: boolean | null;
+  itemDifficulty?: string | null;
+  gradeBand?: string | null;
+  promptType?: string | null;
+  audioSupportUsed?: boolean | null;
+}
+
 export type { ReadingLevel } from "@/lib/reading-assessment-utils";
 
 export interface AssessmentRecordInput {
@@ -982,6 +1015,12 @@ export interface AssessmentRecordInput {
   storyReadingScore: number | null;
   readingComprehensionScore: number | null;
   fluencyAccuracyScore?: number | null;
+  assessmentModelVersion?: string | null;
+  benchmarkVersion?: string | null;
+  scoringProfileVersion?: string | null;
+  learnerExpectedGrade?: string | null;
+  masteryDomainInputs?: Partial<Record<MasteryDomainKey, AssessmentMasteryDomainInput>>;
+  masteryItemResponses?: AssessmentItemResponseInput[];
   notes?: string;
 }
 
@@ -994,6 +1033,14 @@ export interface AssessmentRecord extends AssessmentRecordInput {
   computedReadingLevel?: AssessmentComputedReadingLevel | null;
   computedLevelBand?: number | null;
   readingRulesVersion?: string | null;
+  assessmentModelVersion?: string | null;
+  readingStageLabel?: string | null;
+  readingStageOrder?: number | null;
+  benchmarkGradeLevel?: string | null;
+  expectedVsActualStatus?: string | null;
+  stageReasonCode?: string | null;
+  stageReasonSummary?: string | null;
+  masteryProfileSummaryJson?: string | null;
 }
 
 export interface DomainOutcomes {
@@ -1109,6 +1156,32 @@ export interface PublicImpactAggregate {
     madeUpWords: PublicImpactDomainAggregate;
     storyReading: PublicImpactDomainAggregate;
     comprehension: PublicImpactDomainAggregate;
+  };
+  masteryDomains?: Record<
+    MasteryDomainKey,
+    {
+      green: { count: number; percent: number };
+      amber: { count: number; percent: number };
+      red: { count: number; percent: number };
+      n: number;
+    }
+  >;
+  readingStageDistribution?: Array<{
+    label: string;
+    order: number;
+    count: number;
+    percent: number;
+  }>;
+  benchmarkStatus?: {
+    belowExpected: { count: number; percent: number };
+    atExpected: { count: number; percent: number };
+    aboveExpected: { count: number; percent: number };
+    n: number;
+  };
+  publicExplanation?: {
+    green: string;
+    amber: string;
+    red: string;
   };
   funnel: {
     trained: number;
@@ -2479,6 +2552,30 @@ export interface ImpactReportLearningOutcomesBlock {
   readingComprehension: ImpactReportLearningOutcomeMetric;
   proficiencyBandMovementPercent: number | null;
   reductionInNonReadersPercent: number | null;
+  domainMasteryDistribution?: Record<
+    MasteryDomainKey,
+    {
+      green: { count: number; percent: number };
+      amber: { count: number; percent: number };
+      red: { count: number; percent: number };
+      n: number;
+    }
+  >;
+  readingStageDistribution?: Array<{
+    label: string;
+    order: number;
+    count: number;
+    percent: number;
+  }>;
+  benchmarkStatus?: {
+    belowExpected: { count: number; percent: number };
+    atExpected: { count: number; percent: number };
+    aboveExpected: { count: number; percent: number };
+    n: number;
+  };
+  assessmentModelVersion?: string | null;
+  benchmarkVersion?: string | null;
+  scoringProfileVersion?: string | null;
 }
 
 export interface ImpactReportInstructionQualityBlock {
@@ -2626,6 +2723,11 @@ export interface ImpactReportFactPack {
   sponsorship?: ImpactReportSponsorshipBlock;
   engagement: ImpactReportEngagementBlock;
   learningOutcomes: ImpactReportLearningOutcomesBlock;
+  masteryPublicExplanation?: {
+    green: string;
+    amber: string;
+    red: string;
+  };
   readingLevels?: ReadingLevelsBlock;
   instructionQuality: ImpactReportInstructionQualityBlock;
   visitPathways?: ImpactReportVisitPathwayBlock;
