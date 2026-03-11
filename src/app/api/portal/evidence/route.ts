@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { listPortalEvidence, savePortalEvidence } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";
 
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
     });
 
     const monthSegment = new Date().toISOString().slice(0, 7);
-    const evidenceDir = path.join(process.cwd(), "data", "evidence", monthSegment);
+    const evidenceDir = path.join(getRuntimeDataDir(), "evidence", monthSegment);
     await fs.mkdir(evidenceDir, { recursive: true });
 
     const extension = path.extname(file.name).slice(0, 12);

@@ -2,6 +2,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { getPublishedPortalResourceById } from "@/lib/db";
 import { createMediaFileResponse, resolveMimeType } from "@/lib/media-response";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,7 @@ function toId(raw: string) {
 }
 
 function ensureSafePath(storedPath: string) {
-  const normalizedRoot = path.resolve(process.cwd(), "data", "resources");
+  const normalizedRoot = path.resolve(getRuntimeDataDir(), "resources");
   const normalizedFile = path.resolve(storedPath);
   if (!normalizedFile.startsWith(`${normalizedRoot}${path.sep}`)) {
     throw new Error("Invalid resource file path.");

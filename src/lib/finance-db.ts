@@ -6,6 +6,7 @@ import { getDb, logAuditEvent } from "@/lib/db";
 import { generateInvoicePdfFile, generateReceiptPdfFile, generateStatementPdfFile } from "@/lib/finance-documents";
 import { sendFinanceMail } from "@/lib/finance-email";
 import { officialContact } from "@/lib/contact";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import {
   createFinanceIncomeBreakdownZero,
   FINANCE_INCOME_CATEGORIES,
@@ -5559,7 +5560,7 @@ export async function createFinanceFileRecord(
   actor: FinanceActor,
 ) {
   ensureFinanceSchema();
-  const folder = path.join(process.cwd(), "data", "finance", "uploads", input.sourceType);
+  const folder = path.join(getRuntimeDataDir(), "finance", "uploads", input.sourceType);
   await fs.mkdir(folder, { recursive: true });
   const ext = path.extname(input.fileName || "").toLowerCase();
   const safeName = path.basename(input.fileName || "file", ext).replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 80);

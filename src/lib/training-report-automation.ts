@@ -12,6 +12,7 @@ import {
   loadBrandLogo,
 } from "@/lib/pdf-branding";
 import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import type {
   PortalUser,
   TrainingReportArtifactRecord,
@@ -1343,7 +1344,7 @@ async function generatePdfBytes(
 }
 
 async function savePdfToDisk(reportCode: string, pdfBytes: Uint8Array) {
-  const folder = path.join(process.cwd(), "data", "training", "reports");
+  const folder = path.join(getRuntimeDataDir(), "training", "reports");
   await fs.mkdir(folder, { recursive: true });
   const safeCode = reportCode.replace(/[^a-zA-Z0-9_-]/g, "_");
   const storedPath = path.join(folder, `${safeCode}.pdf`);

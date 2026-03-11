@@ -11,6 +11,7 @@ import {
 } from "@/lib/db";
 import { resolveMimeType } from "@/lib/media-response";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";
 
@@ -412,7 +413,7 @@ export async function POST(request: Request) {
     let testimonialsDir: string | null = null;
     if (photo) {
       const monthSegment = new Date().toISOString().slice(0, 7);
-      testimonialsDir = path.join(process.cwd(), "data", "testimonials", monthSegment);
+      testimonialsDir = path.join(getRuntimeDataDir(), "testimonials", monthSegment);
       await fs.mkdir(testimonialsDir, { recursive: true });
     }
 

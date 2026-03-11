@@ -1,6 +1,7 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { createMediaFileResponse, resolveMimeType } from "@/lib/media-response";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,7 @@ function resolveSafeAssetPath(segments: string[]) {
     throw new Error("Invalid asset path.");
   }
 
-  const root = path.resolve(process.cwd(), "data", "newsletter-assets");
+  const root = path.resolve(getRuntimeDataDir(), "newsletter-assets");
   const resolved = path.resolve(root, ...decoded);
   if (!resolved.startsWith(`${root}${path.sep}`)) {
     throw new Error("Invalid asset path.");

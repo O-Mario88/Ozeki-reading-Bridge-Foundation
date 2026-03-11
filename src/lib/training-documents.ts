@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, rgb } from "pdf-lib";
 import { embedPdfSerifFonts } from "@/lib/pdf-fonts";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 /**
  * Generate PDF for AI meeting notes strictly in Times New Roman.
@@ -46,7 +47,7 @@ export async function generateMeetingNotesPdf(
  * Save meeting notes PDF to disk safely
  */
 export async function saveMeetingNotesPdf(sessionId: string, pdfBytes: Uint8Array): Promise<string> {
-  const folder = path.join(process.cwd(), "data", "training", "pdfs");
+  const folder = path.join(getRuntimeDataDir(), "training", "pdfs");
   await fs.mkdir(folder, { recursive: true });
   const safeId = sessionId.replace(/[^a-zA-Z0-9_-]+/g, "_");
   const fileName = `meet_notes_${safeId}.pdf`;

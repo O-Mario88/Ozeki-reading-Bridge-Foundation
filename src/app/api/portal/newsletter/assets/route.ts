@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";
 
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
             : ".jpg";
 
     const monthSegment = new Date().toISOString().slice(0, 7);
-    const rootDir = path.join(process.cwd(), "data", "newsletter-assets");
+    const rootDir = path.join(getRuntimeDataDir(), "newsletter-assets");
     const monthDir = path.join(rootDir, monthSegment);
     await fs.mkdir(monthDir, { recursive: true });
 

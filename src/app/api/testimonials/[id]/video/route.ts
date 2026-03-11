@@ -2,6 +2,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { getPublishedPortalTestimonialById } from "@/lib/db";
 import { createMediaFileResponse, resolveMimeType } from "@/lib/media-response";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";
 const YOUTUBE_API_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
@@ -16,7 +17,7 @@ function toId(raw: string) {
 }
 
 function ensureSafePath(storedPath: string) {
-  const normalizedRoot = path.resolve(process.cwd(), "data", "testimonials");
+  const normalizedRoot = path.resolve(getRuntimeDataDir(), "testimonials");
   const normalizedFile = path.resolve(storedPath);
   if (!normalizedFile.startsWith(`${normalizedRoot}${path.sep}`)) {
     throw new Error("Invalid testimonial media path.");

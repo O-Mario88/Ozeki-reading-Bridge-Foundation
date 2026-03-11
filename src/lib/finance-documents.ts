@@ -16,6 +16,7 @@ import type {
   FinanceInvoiceLineItemRecord,
   FinanceMonthlyStatementRecord,
 } from "@/lib/types";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 const ORG_FOOTER =
   "Aggregated, privacy-protected operational finance record. Internal use only.";
@@ -214,7 +215,7 @@ async function writePdfBytesToPath(
   segment: "invoices" | "receipts" | "statements" | "transparency",
   fileBase: string,
 ): Promise<PdfWriteResult> {
-  const folder = path.join(process.cwd(), "data", "finance", "pdfs", segment);
+  const folder = path.join(getRuntimeDataDir(), "finance", "pdfs", segment);
   await fs.mkdir(folder, { recursive: true });
   const safeBase = fileBase.replace(/[^a-zA-Z0-9_-]+/g, "_");
   const fileName = `${safeBase}.pdf`;

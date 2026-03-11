@@ -196,9 +196,10 @@ import {
 import {
   LEARNING_DOMAIN_DICTIONARY,
 } from "@/lib/domain-dictionary";
+import { getRuntimeDataDir, getRuntimeDbFilePath } from "@/lib/runtime-paths";
 
-const dataDir = path.join(process.cwd(), "data");
-const dbFile = path.join(dataDir, "app.db");
+const dataDir = getRuntimeDataDir();
+const dbFile = getRuntimeDbFilePath();
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-salt";
 const ASSESSMENT_READING_RULE_VERSION = "UG-RLv1";

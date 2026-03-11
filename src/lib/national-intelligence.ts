@@ -12,6 +12,7 @@ import {
   loadBrandLogo,
 } from "@/lib/pdf-branding";
 import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import type { PortalUser } from "@/lib/types";
 
 export type NlisGeoScopeType =
@@ -1087,7 +1088,7 @@ function buildNationalReportHtml(args: {
 }
 
 async function saveNationalReportPdf(reportCode: string, pdfBytes: Uint8Array) {
-  const folder = path.join(process.cwd(), "data", "reports", "national");
+  const folder = path.join(getRuntimeDataDir(), "reports", "national");
   await fs.mkdir(folder, { recursive: true });
   const safeCode = reportCode.replace(/[^A-Za-z0-9_-]/g, "_");
   const filePath = path.join(folder, `${safeCode}.pdf`);

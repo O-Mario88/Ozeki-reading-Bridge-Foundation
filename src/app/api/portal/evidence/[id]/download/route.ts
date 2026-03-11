@@ -3,6 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { getPortalEvidenceById } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";
 
@@ -31,10 +32,12 @@ export async function GET(
       return NextResponse.json({ error: "Evidence not found." }, { status: 404 });
     }
 
-    const normalizedRoot = path.join(process.cwd(), "data");
-    const normalizedFile = path.normalize(evidence.storedPath);
-
-    if (!normalizedFile.startsWith(normalizedRoot)) {
+    const normalizedRoot = path.resolve(getRuntimeDataDir());
+    const normalizedFile = path.resolve(evidence.storedPath);
+    const inAllowedRoot =
+      normalizedFile === normalizedRoot
+      || normalizedFile.startsWith(`${normalizedRoot}${path.sep}`);
+    if (!inAllowedRoot) {
       return NextResponse.json({ error: "Invalid evidence path." }, { status: 400 });
     }
 

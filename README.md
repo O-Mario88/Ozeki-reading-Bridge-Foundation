@@ -79,7 +79,8 @@ This project currently runs on SQLite for local delivery speed. The Supabase sca
   - `npm run google:auth:exchange -- --code=...`
   - `npm run google:status`
 
-SQLite database file is created at `data/app.db`.
+SQLite database defaults to `data/app.db` and can be overridden with `APP_DATA_DIR` or
+`SQLITE_DB_PATH` / `DATABASE_PATH`.
 
 ## Portal Data Model
 - Training sessions capture:
@@ -113,6 +114,9 @@ Set custom credentials in `.env.local` (or copy from `.env.example`):
 - `GOOGLE_WORKSPACE_OAUTH_REDIRECT_URI`
 - `APP_ORIGIN`
 - `BOOKING_CALENDAR_DURATION_MINUTES`
+- `APP_DATA_DIR`
+- `SQLITE_DB_PATH`
+- `DATABASE_PATH`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -159,9 +163,23 @@ npm run build
 4. Set `PORTAL_AUTO_SEED_USERS=false`.
 5. Set strong real credentials and secrets in environment variables.
 6. Purge test/dummy records from Super Admin > Data Management.
-7. Start from a clean runtime `data/` volume (or remove old local runtime artifacts).
+7. Start from a clean runtime data volume (`APP_DATA_DIR`, defaults to `./data`).
+8. Use `npm start` (runs `node .next/standalone/server.js`).
 
 This project now uses Next.js `output: "standalone"` for deployment-friendly server bundles.
+
+Health endpoint:
+- `GET /api/health`
+
+## AWS Deployment
+- AWS guide:
+  - `docs/aws-deployment.md`
+- For source deployments (Elastic Beanstalk/App Runner source), the included `Procfile` uses:
+  - `web: npm run start:standalone`
+- App Runner source deployments can also use the included:
+  - `apprunner.yaml`
+- For ECS/Fargate + Docker, set container health check path to:
+  - `/api/health`
 
 ## Docker
 Build image:
@@ -180,3 +198,4 @@ docker run --rm -p 3000:3000 \
 Notes:
 - SQLite data is persisted via `/app/data` volume mount.
 - The image includes Chromium and sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` for newsletter PDF generation.
+- Docker image healthcheck probes `http://127.0.0.1:${PORT:-3000}/api/health`.

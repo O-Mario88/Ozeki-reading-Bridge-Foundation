@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
 import { uploadAuditedStatement } from "@/lib/finance-db";
+import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Only PDFs are allowed" }, { status: 400 });
         }
 
-        const folder = path.join(process.cwd(), "data", "finance", "audited");
+        const folder = path.join(getRuntimeDataDir(), "finance", "audited");
         await fs.mkdir(folder, { recursive: true });
 
         const safeFilename = crypto.randomBytes(16).toString("hex") + ".pdf";
