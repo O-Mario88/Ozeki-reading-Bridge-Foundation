@@ -69,7 +69,8 @@ const payloadSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["scopeValue"],
-        message: "Scope value is required for Region, Sub-region, District, or School reports.",
+        message:
+          "Scope value is required for Region, Sub-region, District, Sub-county, Parish, or School reports.",
       });
     }
 
@@ -90,9 +91,6 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (user.role === "Volunteer") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const reports = listPortalImpactReports(user, 180);
   return NextResponse.json({ reports });
@@ -103,12 +101,18 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (user.role === "Volunteer") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   try {
     const payload = payloadSchema.parse(await request.json());
+    if (user.role === "Volunteer" && payload.audience === "Staff-only") {
+      return NextResponse.json(
+        {
+          error:
+            "Volunteers can generate Public-safe reports only. Detailed school reading performance reports are staff-generated on request.",
+        },
+        { status: 403 },
+      );
+    }
     const report = await createImpactReport(payload, user);
     return NextResponse.json({ ok: true, report });
   } catch (error) {

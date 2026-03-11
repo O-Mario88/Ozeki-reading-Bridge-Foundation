@@ -10,6 +10,7 @@ export interface EgraLearner {
     learnerUid?: string;
     learnerId: string;
     learnerName: string;
+    classGrade: string;
     sex: string;
     age: number | string; // Allow string for empty state
     letterIdentification: number | string;
@@ -70,6 +71,7 @@ interface EgraLearnerInputModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (learner: EgraLearner) => void;
+    onSaveAndClose?: (learner: EgraLearner) => void;
     nextLearnerId: string;
     nextNo: number;
     schoolId?: number | null;
@@ -80,6 +82,7 @@ export function EgraLearnerInputModal({
     isOpen,
     onClose,
     onSave,
+    onSaveAndClose,
     nextLearnerId,
     nextNo,
     schoolId,
@@ -91,6 +94,7 @@ export function EgraLearnerInputModal({
         learnerUid: "",
         learnerId: nextLearnerId,
         learnerName: "",
+        classGrade: "",
         sex: "M",
         age: "",
         letterIdentification: "",
@@ -117,6 +121,7 @@ export function EgraLearnerInputModal({
                 learnerUid: "",
                 learnerId: nextLearnerId,
                 learnerName: "",
+                classGrade: "",
                 sex: "M",
                 age: "",
                 letterIdentification: "",
@@ -135,8 +140,7 @@ export function EgraLearnerInputModal({
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const persistLearner = (closeAfterSave: boolean) => {
         if (!schoolId) {
             setValidationError("Select a school first, then pick a learner from that school roster.");
             return;
@@ -146,10 +150,20 @@ export function EgraLearnerInputModal({
             return;
         }
         setValidationError("");
-        onSave({
+        const payload: EgraLearner = {
             ...learner,
             fluencyLevel: readingPreview.readingStageLabel,
-        });
+        };
+        if (closeAfterSave && onSaveAndClose) {
+            onSaveAndClose(payload);
+            return;
+        }
+        onSave(payload);
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        persistLearner(false);
     };
 
     const updateField = (field: keyof EgraLearner, value: EgraLearner[keyof EgraLearner]) => {
@@ -159,7 +173,15 @@ export function EgraLearnerInputModal({
     const handleLearnerSelect = (entry: RosterEntry | null) => {
         if (!entry) {
             setSelectedLearnerUid("");
-            setLearner((prev) => ({ ...prev, learnerUid: "", learnerId: "", learnerName: "", sex: "M", age: "" }));
+            setLearner((prev) => ({
+                ...prev,
+                learnerUid: "",
+                learnerId: nextLearnerId,
+                learnerName: "",
+                classGrade: "",
+                sex: "M",
+                age: "",
+            }));
             return;
         }
         const l = entry as RosterLearner & { learnerId?: number };
@@ -167,8 +189,9 @@ export function EgraLearnerInputModal({
         setLearner((prev) => ({
             ...prev,
             learnerUid: l.learnerUid,
-            learnerId: l.learnerId ? String(l.learnerId) : l.learnerUid,
+            learnerId: l.learnerUid || (l.learnerId ? String(l.learnerId) : nextLearnerId),
             learnerName: l.fullName,
+            classGrade: l.classGrade ?? "",
             sex: l.gender === "Boy" ? "M" : l.gender === "Girl" ? "F" : "",
             age: l.age,
         }));
@@ -222,8 +245,12 @@ export function EgraLearnerInputModal({
                                 <input value={learner.learnerName} readOnly className="bg-slate-100" />
                             </label>
                             <label>
-                                <span className="label-text">Sex</span>
+                                <span className="label-text">Gender</span>
                                 <input value={learner.sex === "M" ? "Male" : learner.sex === "F" ? "Female" : "-"} readOnly className="bg-slate-100" />
+                            </label>
+                            <label>
+                                <span className="label-text">Class</span>
+                                <input value={learner.classGrade || "-"} readOnly className="bg-slate-100" />
                             </label>
                             <label>
                                 <span className="label-text">Age</span>
@@ -310,6 +337,14 @@ export function EgraLearnerInputModal({
                         <button type="button" className="button button-ghost" onClick={onClose}>
                             Cancel
                         </button>
+                        <button
+                            type="button"
+                            className="button button-ghost"
+                            disabled={!schoolId || !selectedLearnerUid.trim()}
+                            onClick={() => persistLearner(true)}
+                        >
+                            Save
+                        </button>
                         <button type="submit" className="button" disabled={!schoolId || !selectedLearnerUid.trim()}>
                             Save & Add Next
                         </button>
@@ -337,7 +372,7 @@ export function EgraLearnerInputModal({
         }
         .portal-modal-content {
           width: 90%;
-          max-width: 500px;
+          max-width: 860px;
           max-height: 90vh;
           overflow-y: auto;
           background: white;
@@ -354,11 +389,18 @@ export function EgraLearnerInputModal({
           border-bottom: 1px solid var(--md-sys-color-surface-container);
           padding-bottom: 1rem;
         }
-        .portal-modal-header h2 {
+        .portal-modal-header h3 {
           color: var(--md-sys-color-primary);
           font-weight: 700;
           font-size: 1.25rem;
           margin: 0;
+        }
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea {
+          min-height: 3.2rem;
+          padding: 0.8rem 0.95rem;
+          font-size: 1.02rem;
         }
         .grid-cols-2 {
           display: grid;

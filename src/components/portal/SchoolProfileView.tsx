@@ -7,7 +7,6 @@ import {
 } from "@/lib/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
 import { GraduationReviewModal } from "./GraduationReviewModal";
 
 type SupervisorOption = {
@@ -17,12 +16,10 @@ type SupervisorOption = {
 
 interface SchoolProfileViewProps {
   school: SchoolDirectoryRecord;
-  canVoidLessonEvaluations?: boolean;
 }
 
 export function SchoolProfileView({
   school,
-  canVoidLessonEvaluations = false,
 }: SchoolProfileViewProps) {
   const [activeTab, setActiveTab] = useState<"details" | "related" | "activity">("details");
   const [graduationLoading, setGraduationLoading] = useState(false);
@@ -274,18 +271,18 @@ export function SchoolProfileView({
               <span className="link-count">(0)</span>
             </Link>
 
+            <Link href={`/portal/testimonials?schoolId=${school.id}`} className="quick-link-card">
+              <div className="icon-wrapper gold">📈</div>
+              <span className="link-title">Change Stories</span>
+              <span className="link-count">(Open)</span>
+            </Link>
+
             <Link href={`/portal/resources?school=${school.id}`} className="quick-link-card">
               <div className="icon-wrapper teal">📚</div>
               <span className="link-title">Resource Engagements</span>
               <span className="link-count">(0)</span>
             </Link>
           </div>
-
-          <LessonEvaluationPanel
-            schoolId={school.id}
-            schoolName={school.name}
-            allowVoid={canVoidLessonEvaluations}
-          />
 
           {/* Tabs */}
           <div className="tabs-container">
@@ -702,6 +699,7 @@ export function SchoolProfileView({
         .icon-wrapper.orange { background-color: #ffedd5; color: #ea580c; }
         .icon-wrapper.red { background-color: #fee2e2; color: #dc2626; }
         .icon-wrapper.teal { background-color: #ccfbf1; color: #0d9488; }
+        .icon-wrapper.gold { background-color: #fef3c7; color: #b45309; }
 
 
         .link-title {

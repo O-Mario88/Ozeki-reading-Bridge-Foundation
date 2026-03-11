@@ -16,7 +16,7 @@ const schoolSchema = z.object({
   parish: z.string().trim().optional(),
   village: z.string().trim().optional(),
   notes: z.string().trim().optional(),
-  enrollmentTotal: z.coerce.number().int().min(1),
+  enrollmentTotal: z.coerce.number().int().min(0).optional(),
   enrollmentByGrade: z.string().trim().optional(),
   enrolledBoys: z.coerce.number().int().min(0).optional(),
   enrolledGirls: z.coerce.number().int().min(0).optional(),
@@ -25,11 +25,22 @@ const schoolSchema = z.object({
   contactName: z.string().trim().optional(),
   contactPhone: z.string().trim().optional(),
   proprietor: z.object({
-    fullName: z.string().trim().min(2, "Proprietor full name is required."),
+    fullName: z.string().trim().min(2, "Primary contact full name is required."),
     gender: z.enum(["Male", "Female", "Other"]),
     phone: z.string().trim().optional(),
     email: z.string().trim().email().optional().or(z.literal("")),
     whatsapp: z.string().trim().optional(),
+    category: z
+      .enum([
+        "Proprietor",
+        "Head Teacher",
+        "DOS",
+        "Teacher",
+        "Administrator",
+        "Deputy Head Teacher",
+        "Accountant",
+      ])
+      .optional(),
     roleTitle: z.string().trim().optional(),
   }),
 });
@@ -42,7 +53,7 @@ const schoolUpdateSchema = z.object({
   parish: z.string().trim().min(2).optional(),
   village: z.string().trim().nullable().optional(),
   notes: z.string().trim().nullable().optional(),
-  enrollmentTotal: z.coerce.number().int().min(1).optional(),
+  enrollmentTotal: z.coerce.number().int().min(0).optional(),
   enrollmentByGrade: z.string().trim().nullable().optional(),
   enrolledBoys: z.coerce.number().int().min(0).optional(),
   enrolledGirls: z.coerce.number().int().min(0).optional(),
@@ -99,6 +110,7 @@ export async function POST(request: Request) {
         phone: payload.proprietor.phone?.trim() || undefined,
         email: payload.proprietor.email?.trim() || undefined,
         whatsapp: payload.proprietor.whatsapp?.trim() || undefined,
+        category: payload.proprietor.category,
         roleTitle: payload.proprietor.roleTitle?.trim() || undefined,
       },
     });

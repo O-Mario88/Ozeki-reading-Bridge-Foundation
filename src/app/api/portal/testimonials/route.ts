@@ -4,6 +4,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  getSchoolDirectoryRecord,
   listPortalTestimonials,
   savePortalTestimonial,
   setPortalTestimonialModerationStatus,
@@ -22,8 +23,7 @@ const allowedPhotoExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif
 const textSchema = z.object({
   storytellerName: z.string().trim().min(2).max(120),
   storytellerRole: z.string().trim().min(2).max(120),
-  schoolName: z.string().trim().min(2).max(160),
-  district: z.string().trim().min(2).max(120),
+  schoolId: z.coerce.number().int().positive(),
   storyTitle: z.string().trim().max(180).optional(),
   baselineChallenge: z.string().trim().max(2200).optional(),
   whatHappened: z.string().trim().max(2200).optional(),
@@ -304,13 +304,20 @@ async function persistUpload(
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getAuthenticatedPortalUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const testimonials = listPortalTestimonials(user, 180).map((item) => ({
+  const { searchParams } = new URL(request.url);
+  const schoolIdParam = searchParams.get("schoolId");
+  const schoolId = schoolIdParam ? Number.parseInt(schoolIdParam, 10) : NaN;
+  const testimonials = listPortalTestimonials(
+    user,
+    180,
+    Number.isInteger(schoolId) && schoolId > 0 ? { schoolId } : undefined,
+  ).map((item) => ({
     ...item,
     videoUrl:
       item.videoSourceType === "youtube"
@@ -332,8 +339,7 @@ export async function POST(request: Request) {
     const parsedText = textSchema.parse({
       storytellerName: formData.get("storytellerName"),
       storytellerRole: formData.get("storytellerRole"),
-      schoolName: formData.get("schoolName"),
-      district: formData.get("district"),
+      schoolId: formData.get("schoolId"),
       storyTitle: formData.get("storyTitle") ?? undefined,
       baselineChallenge: formData.get("baselineChallenge") ?? undefined,
       whatHappened: formData.get("whatHappened") ?? undefined,
@@ -343,6 +349,13 @@ export async function POST(request: Request) {
       youtubeVideoTitle: formData.get("youtubeVideoTitle") ?? undefined,
       youtubeChannelId: formData.get("youtubeChannelId") ?? undefined,
     });
+    const school = getSchoolDirectoryRecord(parsedText.schoolId);
+    if (!school) {
+      return NextResponse.json(
+        { error: "Selected school profile was not found. Select a valid school before publishing." },
+        { status: 400 },
+      );
+    }
 
     const storyParts: string[] = [];
     if (parsedText.storyTitle?.trim()) {
@@ -416,8 +429,9 @@ export async function POST(request: Request) {
     const testimonial = savePortalTestimonial({
       storytellerName: parsedText.storytellerName,
       storytellerRole: parsedText.storytellerRole,
-      schoolName: parsedText.schoolName,
-      district: parsedText.district,
+      schoolId: school.id,
+      schoolName: school.name,
+      district: school.district,
       storyText: finalStoryText,
       videoSourceType: resolvedYouTube ? "youtube" : "upload",
       videoFileName: savedVideo.fileName,

@@ -16,22 +16,28 @@ const SchoolRosterPicker = dynamic(
   { ssr: false, loading: () => <div>Loading roster...</div> },
 );
 
-const LessonEvaluationPanel = dynamic(
-  () => import("./LessonEvaluationPanel").then((mod) => mod.LessonEvaluationPanel),
-  { ssr: false, loading: () => <div>Loading evaluations...</div> },
-);
-
 import { FloatingSurface } from "@/components/FloatingSurface";
 
 interface PortalSchoolsManagerProps {
   initialSchools: SchoolDirectoryRecord[];
-  canVoidLessonEvaluations?: boolean;
 }
 
 type Feedback = {
   kind: "idle" | "success" | "error";
   message: string;
 };
+
+const primaryContactRoleOptions = [
+  "Proprietor",
+  "Head Teacher",
+  "DOS",
+  "Teacher",
+  "Administrator",
+  "Deputy Head Teacher",
+  "Accountant",
+] as const;
+
+type PrimaryContactRole = (typeof primaryContactRoleOptions)[number];
 
 function parseOptionalNumber(value: string) {
   const trimmed = value.trim();
@@ -104,7 +110,6 @@ async function getBrowserCoordinates() {
 
 export function PortalSchoolsManager({
   initialSchools,
-  canVoidLessonEvaluations = false,
 }: PortalSchoolsManagerProps) {
   const [schools, setSchools] = useState(initialSchools);
   const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(
@@ -127,7 +132,7 @@ export function PortalSchoolsManager({
   const [createContactGender, setCreateContactGender] = useState<"Male" | "Female" | "Other" | "">("");
   const [createContactEmail, setCreateContactEmail] = useState("");
   const [createContactWhatsapp, setCreateContactWhatsapp] = useState("");
-  const [createContactRoleTitle, setCreateContactRoleTitle] = useState("Director");
+  const [createContactRoleTitle, setCreateContactRoleTitle] = useState<PrimaryContactRole>("Proprietor");
   const [editContactName, setEditContactName] = useState("");
   const [editContactPhone, setEditContactPhone] = useState("");
 
@@ -304,7 +309,6 @@ export function PortalSchoolsManager({
       parish: String(formData.get("parish") ?? ""),
       village: String(formData.get("village") ?? ""),
       notes: String(formData.get("notes") ?? ""),
-      enrollmentTotal: String(formData.get("enrollmentTotal") ?? "0"),
       enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
       enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
       enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
@@ -313,10 +317,6 @@ export function PortalSchoolsManager({
       enrolledP1: String(formData.get("enrolledP1") ?? "0"),
       enrolledP2: String(formData.get("enrolledP2") ?? "0"),
       enrolledP3: String(formData.get("enrolledP3") ?? "0"),
-      enrolledP4: String(formData.get("enrolledP4") ?? "0"),
-      enrolledP5: String(formData.get("enrolledP5") ?? "0"),
-      enrolledP6: String(formData.get("enrolledP6") ?? "0"),
-      enrolledP7: String(formData.get("enrolledP7") ?? "0"),
       gpsLat: String(formData.get("gpsLat") ?? ""),
       gpsLng: String(formData.get("gpsLng") ?? ""),
       contactName: String(formData.get("contactName") ?? ""),
@@ -324,7 +324,7 @@ export function PortalSchoolsManager({
       proprietorGender: String(formData.get("proprietorGender") ?? ""),
       proprietorEmail: String(formData.get("proprietorEmail") ?? ""),
       proprietorWhatsapp: String(formData.get("proprietorWhatsapp") ?? ""),
-      proprietorRoleTitle: String(formData.get("proprietorRoleTitle") ?? "Director"),
+      primaryContactRole: String(formData.get("primaryContactRole") ?? "Proprietor"),
     };
 
     if (!region || !district) {
@@ -357,7 +357,7 @@ export function PortalSchoolsManager({
     if (!isValidPhone(payload.contactPhone)) {
       setCreateFeedback({
         kind: "error",
-        message: "Proprietor phone format is invalid. Use digits and optional +, space, (), or -.",
+        message: "Primary contact phone format is invalid. Use digits and optional +, space, (), or -.",
       });
       setSavingSchool(false);
       return;
@@ -365,7 +365,7 @@ export function PortalSchoolsManager({
     if (!payload.contactName.trim()) {
       setCreateFeedback({
         kind: "error",
-        message: "Proprietor full name is required.",
+        message: "Primary contact full name is required.",
       });
       setSavingSchool(false);
       return;
@@ -377,18 +377,35 @@ export function PortalSchoolsManager({
     ) {
       setCreateFeedback({
         kind: "error",
-        message: "Proprietor gender is required.",
+        message: "Primary contact gender is required.",
+      });
+      setSavingSchool(false);
+      return;
+    }
+    if (!primaryContactRoleOptions.includes(payload.primaryContactRole as PrimaryContactRole)) {
+      setCreateFeedback({
+        kind: "error",
+        message: "Select a valid primary contact role.",
       });
       setSavingSchool(false);
       return;
     }
     const enrolledBoys = toWholeNumber(payload.enrolledBoys);
     const enrolledGirls = toWholeNumber(payload.enrolledGirls);
-    const enrollmentTotal = toWholeNumber(payload.enrollmentTotal);
-    if (Number.isNaN(enrollmentTotal) || enrollmentTotal <= 0) {
+    const enrolledBaby = toWholeNumber(payload.enrolledBaby);
+    const enrolledMiddle = toWholeNumber(payload.enrolledMiddle);
+    const enrolledTop = toWholeNumber(payload.enrolledTop);
+    const enrolledP1 = toWholeNumber(payload.enrolledP1);
+    const enrolledP2 = toWholeNumber(payload.enrolledP2);
+    const enrolledP3 = toWholeNumber(payload.enrolledP3);
+    if (
+      [enrolledBaby, enrolledMiddle, enrolledTop, enrolledP1, enrolledP2, enrolledP3].some((value) =>
+        Number.isNaN(value),
+      )
+    ) {
       setCreateFeedback({
         kind: "error",
-        message: "Enrollment total is required and must be a whole number greater than 0.",
+        message: "New enrollment counts must be whole numbers greater than or equal to 0.",
       });
       setSavingSchool(false);
       return;
@@ -409,6 +426,7 @@ export function PortalSchoolsManager({
       setSavingSchool(false);
       return;
     }
+    const enrollmentTotal = enrolledBoys + enrolledGirls;
 
     try {
       const response = await fetch("/api/portal/schools", {
@@ -419,23 +437,24 @@ export function PortalSchoolsManager({
           enrollmentTotal,
           enrolledBoys,
           enrolledGirls,
-          enrolledBaby: toWholeNumber(payload.enrolledBaby),
-          enrolledMiddle: toWholeNumber(payload.enrolledMiddle),
-          enrolledTop: toWholeNumber(payload.enrolledTop),
-          enrolledP1: toWholeNumber(payload.enrolledP1),
-          enrolledP2: toWholeNumber(payload.enrolledP2),
-          enrolledP3: toWholeNumber(payload.enrolledP3),
-          enrolledP4: toWholeNumber(payload.enrolledP4),
-          enrolledP5: toWholeNumber(payload.enrolledP5),
-          enrolledP6: toWholeNumber(payload.enrolledP6),
-          enrolledP7: toWholeNumber(payload.enrolledP7),
+          enrolledBaby,
+          enrolledMiddle,
+          enrolledTop,
+          enrolledP1,
+          enrolledP2,
+          enrolledP3,
+          enrolledP4: 0,
+          enrolledP5: 0,
+          enrolledP6: 0,
+          enrolledP7: 0,
           proprietor: {
             fullName: payload.contactName.trim(),
             gender: payload.proprietorGender as "Male" | "Female" | "Other",
             phone: payload.contactPhone.trim() || undefined,
             email: payload.proprietorEmail.trim() || undefined,
             whatsapp: payload.proprietorWhatsapp.trim() || undefined,
-            roleTitle: payload.proprietorRoleTitle.trim() || "Director",
+            category: payload.primaryContactRole as PrimaryContactRole,
+            roleTitle: payload.primaryContactRole as PrimaryContactRole,
           },
         }),
       });
@@ -458,7 +477,7 @@ export function PortalSchoolsManager({
       setCreateContactGender("");
       setCreateContactEmail("");
       setCreateContactWhatsapp("");
-      setCreateContactRoleTitle("Director");
+      setCreateContactRoleTitle("Proprietor");
       setIsCreateFormOpen(false);
       setCreateFeedback({
         kind: "success",
@@ -492,17 +511,12 @@ export function PortalSchoolsManager({
       notes: String(formData.get("notes") ?? ""),
       enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
       enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
-      enrollmentTotal: String(formData.get("enrollmentTotal") ?? selectedSchool.enrollmentTotal ?? "0"),
       enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
       enrolledMiddle: String(formData.get("enrolledMiddle") ?? "0"),
       enrolledTop: String(formData.get("enrolledTop") ?? "0"),
       enrolledP1: String(formData.get("enrolledP1") ?? "0"),
       enrolledP2: String(formData.get("enrolledP2") ?? "0"),
       enrolledP3: String(formData.get("enrolledP3") ?? "0"),
-      enrolledP4: String(formData.get("enrolledP4") ?? "0"),
-      enrolledP5: String(formData.get("enrolledP5") ?? "0"),
-      enrolledP6: String(formData.get("enrolledP6") ?? "0"),
-      enrolledP7: String(formData.get("enrolledP7") ?? "0"),
       gpsLat: String(formData.get("gpsLat") ?? ""),
       gpsLng: String(formData.get("gpsLng") ?? ""),
       contactName: String(formData.get("contactName") ?? ""),
@@ -538,7 +552,12 @@ export function PortalSchoolsManager({
 
     const enrolledBoys = toWholeNumber(payload.enrolledBoys);
     const enrolledGirls = toWholeNumber(payload.enrolledGirls);
-    const enrollmentTotal = toWholeNumber(payload.enrollmentTotal);
+    const enrolledBaby = toWholeNumber(payload.enrolledBaby);
+    const enrolledMiddle = toWholeNumber(payload.enrolledMiddle);
+    const enrolledTop = toWholeNumber(payload.enrolledTop);
+    const enrolledP1 = toWholeNumber(payload.enrolledP1);
+    const enrolledP2 = toWholeNumber(payload.enrolledP2);
+    const enrolledP3 = toWholeNumber(payload.enrolledP3);
     if (Number.isNaN(enrolledBoys) || Number.isNaN(enrolledGirls)) {
       setProfileFeedback({
         kind: "error",
@@ -547,14 +566,19 @@ export function PortalSchoolsManager({
       setSavingProfile(false);
       return;
     }
-    if (Number.isNaN(enrollmentTotal) || enrollmentTotal <= 0) {
+    if (
+      [enrolledBaby, enrolledMiddle, enrolledTop, enrolledP1, enrolledP2, enrolledP3].some((value) =>
+        Number.isNaN(value),
+      )
+    ) {
       setProfileFeedback({
         kind: "error",
-        message: "Enrollment total is required and must be greater than 0.",
+        message: "New enrollment counts must be whole numbers greater than or equal to 0.",
       });
       setSavingProfile(false);
       return;
     }
+    const enrollmentTotal = enrolledBoys + enrolledGirls;
 
     try {
       const response = await fetch("/api/portal/schools", {
@@ -571,16 +595,16 @@ export function PortalSchoolsManager({
           enrollmentTotal,
           enrolledBoys,
           enrolledGirls,
-          enrolledBaby: toWholeNumber(payload.enrolledBaby),
-          enrolledMiddle: toWholeNumber(payload.enrolledMiddle),
-          enrolledTop: toWholeNumber(payload.enrolledTop),
-          enrolledP1: toWholeNumber(payload.enrolledP1),
-          enrolledP2: toWholeNumber(payload.enrolledP2),
-          enrolledP3: toWholeNumber(payload.enrolledP3),
-          enrolledP4: toWholeNumber(payload.enrolledP4),
-          enrolledP5: toWholeNumber(payload.enrolledP5),
-          enrolledP6: toWholeNumber(payload.enrolledP6),
-          enrolledP7: toWholeNumber(payload.enrolledP7),
+          enrolledBaby,
+          enrolledMiddle,
+          enrolledTop,
+          enrolledP1,
+          enrolledP2,
+          enrolledP3,
+          enrolledP4: selectedSchool.enrolledP4 ?? 0,
+          enrolledP5: selectedSchool.enrolledP5 ?? 0,
+          enrolledP6: selectedSchool.enrolledP6 ?? 0,
+          enrolledP7: selectedSchool.enrolledP7 ?? 0,
           gpsLat: payload.gpsLat.trim() || null,
           gpsLng: payload.gpsLng.trim() || null,
           contactName: payload.contactName.trim() || null,
@@ -701,23 +725,6 @@ export function PortalSchoolsManager({
               </label>
               <label>
                 <span className="portal-field-label">
-                  <span>Enrollment Total</span>
-                  <span className="portal-required-indicator">
-                    *<span className="visually-hidden">required</span>
-                  </span>
-                </span>
-                <input
-                  name="enrollmentTotal"
-                  type="number"
-                  min={1}
-                  step={1}
-                  required
-                  defaultValue={0}
-                  inputMode="numeric"
-                />
-              </label>
-              <label>
-                <span className="portal-field-label">
                   <span>Sub-county (optional)</span>
                 </span>
                 <input
@@ -749,7 +756,7 @@ export function PortalSchoolsManager({
                 />
               </label>
               <fieldset className="portal-fieldset">
-                <legend>Class Enrollment</legend>
+                <legend>New Enrollment (Immediate Ozeki Impact)</legend>
                 <div className="form-grid-3">
                   <label>
                     <span className="portal-field-label">Baby</span>
@@ -775,24 +782,11 @@ export function PortalSchoolsManager({
                     <span className="portal-field-label">P3</span>
                     <input name="enrolledP3" type="number" min={0} defaultValue={0} />
                   </label>
-                  <label>
-                    <span className="portal-field-label">P4</span>
-                    <input name="enrolledP4" type="number" min={0} defaultValue={0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">P5</span>
-                    <input name="enrolledP5" type="number" min={0} defaultValue={0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">P6</span>
-                    <input name="enrolledP6" type="number" min={0} defaultValue={0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">P7</span>
-                    <input name="enrolledP7" type="number" min={0} defaultValue={0} />
-                  </label>
                 </div>
               </fieldset>
+              <p className="full-width portal-muted">
+                Directly impacted learners are auto-calculated as Baby + Middle + Top + P1 + P2 + P3.
+              </p>
               <label>
                 <span className="portal-field-label">Total Boys</span>
                 <input
@@ -815,6 +809,9 @@ export function PortalSchoolsManager({
                   inputMode="numeric"
                 />
               </label>
+              <p className="full-width portal-muted">
+                General enrollment impact is auto-calculated from Total Boys + Total Girls.
+              </p>
               <label>
                 <span className="portal-field-label">GPS Latitude (optional)</span>
                 <input name="gpsLat" placeholder="e.g. 2.7746" inputMode="decimal" />
@@ -825,7 +822,7 @@ export function PortalSchoolsManager({
               </label>
               <label>
                 <span className="portal-field-label">
-                  <span>Proprietor Name (Primary Contact)</span>
+                  <span>Primary Contact Name</span>
                   <span className="portal-required-indicator">
                     *<span className="visually-hidden">required</span>
                   </span>
@@ -840,7 +837,7 @@ export function PortalSchoolsManager({
                 />
               </label>
               <label>
-                <span className="portal-field-label">Proprietor Phone (optional)</span>
+                <span className="portal-field-label">Primary Contact Phone (optional)</span>
                 <input
                   name="contactPhone"
                   placeholder="+2567xxxxxxxx"
@@ -852,7 +849,7 @@ export function PortalSchoolsManager({
               </label>
               <label>
                 <span className="portal-field-label">
-                  <span>Proprietor Gender</span>
+                  <span>Primary Contact Gender</span>
                   <span className="portal-required-indicator">
                     *<span className="visually-hidden">required</span>
                   </span>
@@ -872,7 +869,7 @@ export function PortalSchoolsManager({
                 </select>
               </label>
               <label>
-                <span className="portal-field-label">Proprietor Email (optional)</span>
+                <span className="portal-field-label">Primary Contact Email (optional)</span>
                 <input
                   name="proprietorEmail"
                   type="email"
@@ -883,7 +880,7 @@ export function PortalSchoolsManager({
                 />
               </label>
               <label>
-                <span className="portal-field-label">Proprietor WhatsApp (optional)</span>
+                <span className="portal-field-label">Primary Contact WhatsApp (optional)</span>
                 <input
                   name="proprietorWhatsapp"
                   placeholder="+2567xxxxxxxx"
@@ -893,13 +890,20 @@ export function PortalSchoolsManager({
                 />
               </label>
               <label>
-                <span className="portal-field-label">Proprietor Role Title (optional)</span>
-                <input
-                  name="proprietorRoleTitle"
-                  placeholder="Director"
+                <span className="portal-field-label">Primary Contact Role</span>
+                <select
+                  name="primaryContactRole"
                   value={createContactRoleTitle}
-                  onChange={(event) => setCreateContactRoleTitle(event.target.value)}
-                />
+                  onChange={(event) =>
+                    setCreateContactRoleTitle(event.target.value as PrimaryContactRole)
+                  }
+                >
+                  {primaryContactRoleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
               </label>
               {createDuplicateContactMatches.length > 0 ? (
                 <p className="full-width portal-warning-note" role="status">
@@ -960,14 +964,18 @@ export function PortalSchoolsManager({
                 ) : null}
               </div>
               <div className="portal-school-profile-actions">
+                <button
+                  type="button"
+                  className="button button-compact"
+                  onClick={() => setEditingProfile(true)}
+                >
+                  New Enrollment
+                </button>
                 <Link href={`/portal/trainings?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New Training
                 </Link>
                 <Link href={`/portal/visits?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New School Visit
-                </Link>
-                <Link href="#lesson-evaluations" className="button button-compact">
-                  New Lesson Evaluation
                 </Link>
                 <Link href={`/portal/assessments?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New Assessment
@@ -988,8 +996,12 @@ export function PortalSchoolsManager({
                 <span>Girls Enrolled</span>
               </article>
               <article>
+                <strong>{Number(selectedSchool.directImpactLearners ?? 0).toLocaleString()}</strong>
+                <span>Directly Impacted (Baby-P3)</span>
+              </article>
+              <article>
                 <strong>{Number(selectedSchool.enrolledLearners ?? 0).toLocaleString()}</strong>
-                <span>Total Enrollment</span>
+                <span>Overall Impact (General Enrollment)</span>
               </article>
               <article>
                 <strong>
@@ -1027,12 +1039,6 @@ export function PortalSchoolsManager({
                 </div>
               </div>
             </div>
-
-            <LessonEvaluationPanel
-              schoolId={selectedSchool.id}
-              schoolName={selectedSchool.name}
-              allowVoid={canVoidLessonEvaluations}
-            />
 
             {!editingProfile ? (
               <div className="action-row portal-form-actions">
@@ -1085,7 +1091,7 @@ export function PortalSchoolsManager({
                   </label>
 
                   <fieldset className="portal-fieldset full-width">
-                    <legend>Class Enrollment</legend>
+                    <legend>New Enrollment (Immediate Ozeki Impact)</legend>
                     <div className="form-grid-3">
                       <label>
                         <span className="portal-field-label">Baby</span>
@@ -1111,36 +1117,13 @@ export function PortalSchoolsManager({
                         <span className="portal-field-label">P3</span>
                         <input name="enrolledP3" type="number" min={0} defaultValue={selectedSchool.enrolledP3 ?? 0} />
                       </label>
-                      <label>
-                        <span className="portal-field-label">P4</span>
-                        <input name="enrolledP4" type="number" min={0} defaultValue={selectedSchool.enrolledP4 ?? 0} />
-                      </label>
-                      <label>
-                        <span className="portal-field-label">P5</span>
-                        <input name="enrolledP5" type="number" min={0} defaultValue={selectedSchool.enrolledP5 ?? 0} />
-                      </label>
-                      <label>
-                        <span className="portal-field-label">P6</span>
-                        <input name="enrolledP6" type="number" min={0} defaultValue={selectedSchool.enrolledP6 ?? 0} />
-                      </label>
-                      <label>
-                        <span className="portal-field-label">P7</span>
-                        <input name="enrolledP7" type="number" min={0} defaultValue={selectedSchool.enrolledP7 ?? 0} />
-                      </label>
                     </div>
                   </fieldset>
+                  <p className="full-width portal-muted">
+                    Directly impacted learners are auto-calculated as Baby + Middle + Top + P1 + P2 + P3.
+                  </p>
 
                   <div className="form-grid-2 full-width">
-                    <label>
-                      <span className="portal-field-label">Enrollment Total</span>
-                      <input
-                        name="enrollmentTotal"
-                        type="number"
-                        min={1}
-                        defaultValue={selectedSchool.enrollmentTotal ?? selectedSchool.enrolledLearners ?? 0}
-                        required
-                      />
-                    </label>
                     <label>
                       <span className="portal-field-label">Total Boys</span>
                       <input name="enrolledBoys" type="number" defaultValue={selectedSchool.enrolledBoys ?? 0} />
@@ -1150,6 +1133,9 @@ export function PortalSchoolsManager({
                       <input name="enrolledGirls" type="number" defaultValue={selectedSchool.enrolledGirls ?? 0} />
                     </label>
                   </div>
+                  <p className="full-width portal-muted">
+                    General enrollment impact is auto-calculated from Total Boys + Total Girls.
+                  </p>
                   <label>
                     <span className="portal-field-label">District</span>
                     <select
@@ -1189,26 +1175,6 @@ export function PortalSchoolsManager({
                       rows={3}
                       defaultValue={selectedSchool.notes ?? ""}
                       placeholder="School metadata notes, access details, or additional context."
-                    />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Enrolled Boys</span>
-                    <input
-                      name="enrolledBoys"
-                      type="number"
-                      min={0}
-                      step={1}
-                      defaultValue={selectedSchool.enrolledBoys ?? 0}
-                    />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Enrolled Girls</span>
-                    <input
-                      name="enrolledGirls"
-                      type="number"
-                      min={0}
-                      step={1}
-                      defaultValue={selectedSchool.enrolledGirls ?? 0}
                     />
                   </label>
                   <label>

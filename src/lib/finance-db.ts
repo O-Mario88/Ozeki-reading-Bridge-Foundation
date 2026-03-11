@@ -686,9 +686,9 @@ function ensureFinanceSchema() {
       id INTEGER PRIMARY KEY CHECK(id = 1),
       from_email TEXT,
       cc_finance_email TEXT,
-      invoice_prefix TEXT NOT NULL DEFAULT 'ORBF-INV',
-      receipt_prefix TEXT NOT NULL DEFAULT 'ORBF-RCT',
-      expense_prefix TEXT NOT NULL DEFAULT 'ORBF-EXP',
+      invoice_prefix TEXT NOT NULL DEFAULT 'INV',
+      receipt_prefix TEXT NOT NULL DEFAULT 'RCT',
+      expense_prefix TEXT NOT NULL DEFAULT 'EXP',
       subcategories_json TEXT NOT NULL DEFAULT '{}',
       invoice_email_template TEXT NOT NULL,
       receipt_email_template TEXT NOT NULL,
@@ -804,9 +804,9 @@ function ensureFinanceSchema() {
         1,
         @fromEmail,
         @ccFinanceEmail,
-        'ORBF-INV',
-        'ORBF-RCT',
-        'ORBF-EXP',
+        'INV',
+        'RCT',
+        'EXP',
         @subcategoriesJson,
         @invoiceEmailTemplate,
         @receiptEmailTemplate,
@@ -854,6 +854,48 @@ function ensureFinanceSchema() {
     legacyPaymentInstructions: LEGACY_DEFAULT_PAYMENT_INSTRUCTIONS,
     updatedAt: nowIso(),
   });
+
+  db.prepare(
+    `
+      UPDATE finance_settings
+      SET invoice_prefix = 'INV',
+          updated_at = @updatedAt
+      WHERE id = 1
+        AND (
+          invoice_prefix IS NULL
+          OR TRIM(invoice_prefix) = ''
+          OR TRIM(invoice_prefix) = 'ORBF-INV'
+        )
+    `,
+  ).run({ updatedAt: nowIso() });
+
+  db.prepare(
+    `
+      UPDATE finance_settings
+      SET receipt_prefix = 'RCT',
+          updated_at = @updatedAt
+      WHERE id = 1
+        AND (
+          receipt_prefix IS NULL
+          OR TRIM(receipt_prefix) = ''
+          OR TRIM(receipt_prefix) = 'ORBF-RCT'
+        )
+    `,
+  ).run({ updatedAt: nowIso() });
+
+  db.prepare(
+    `
+      UPDATE finance_settings
+      SET expense_prefix = 'EXP',
+          updated_at = @updatedAt
+      WHERE id = 1
+        AND (
+          expense_prefix IS NULL
+          OR TRIM(expense_prefix) = ''
+          OR TRIM(expense_prefix) = 'ORBF-EXP'
+        )
+    `,
+  ).run({ updatedAt: nowIso() });
 
   /* ── V2: New tables for reconciliation, payment allocation, budgets ── */
   db.exec(`
@@ -1039,9 +1081,9 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
     return {
       fromEmail: officialContact.email,
       ccFinanceEmail: officialContact.email,
-      invoicePrefix: "ORBF-INV",
-      receiptPrefix: "ORBF-RCT",
-      expensePrefix: "ORBF-EXP",
+      invoicePrefix: "INV",
+      receiptPrefix: "RCT",
+      expensePrefix: "EXP",
       categorySubcategories: { ...DEFAULT_CATEGORY_SUBCATEGORIES },
       invoiceEmailTemplate: DEFAULT_INVOICE_TEMPLATE,
       receiptEmailTemplate: DEFAULT_RECEIPT_TEMPLATE,
@@ -1075,9 +1117,9 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
   return {
     fromEmail: row.fromEmail,
     ccFinanceEmail: row.ccFinanceEmail,
-    invoicePrefix: row.invoicePrefix || "ORBF-INV",
-    receiptPrefix: row.receiptPrefix || "ORBF-RCT",
-    expensePrefix: row.expensePrefix || "ORBF-EXP",
+    invoicePrefix: row.invoicePrefix || "INV",
+    receiptPrefix: row.receiptPrefix || "RCT",
+    expensePrefix: row.expensePrefix || "EXP",
     categorySubcategories,
     invoiceEmailTemplate: row.invoiceEmailTemplate || DEFAULT_INVOICE_TEMPLATE,
     receiptEmailTemplate: row.receiptEmailTemplate || DEFAULT_RECEIPT_TEMPLATE,
@@ -1104,14 +1146,23 @@ function nextNumberFor(
   table: "finance_invoices" | "finance_receipts" | "finance_expenses",
   column: "invoice_number" | "receipt_number" | "expense_number",
   prefix: string,
-  date: string,
+  _date: string,
 ) {
-  const year = (date || todayIsoDate()).slice(0, 4);
-  const base = `${prefix}-${year}-`;
-  const row = db.prepare(`SELECT ${column} AS num FROM ${table} WHERE ${column} LIKE @needle ORDER BY ${column} DESC LIMIT 1`)
-    .get({ needle: `${base}%` }) as { num: string } | undefined;
-  const nextSeq = row?.num ? Number(row.num.split("-").pop() || "0") + 1 : 1;
-  return `${base}${String(nextSeq).padStart(4, "0")}`;
+  const normalizedPrefix = String(prefix || "").trim() || "ID";
+  const rows = db
+    .prepare(`SELECT ${column} AS num FROM ${table} WHERE ${column} LIKE @needle`)
+    .all({ needle: `${normalizedPrefix}-%` }) as Array<{ num: string | null }>;
+  let maxSeq = 0;
+  rows.forEach((row) => {
+    const raw = String(row.num ?? "").trim();
+    const segments = raw.split("-");
+    const candidate = Number(segments[segments.length - 1] ?? "0");
+    if (Number.isInteger(candidate) && candidate > maxSeq) {
+      maxSeq = candidate;
+    }
+  });
+  const nextSeq = maxSeq > 0 ? maxSeq + 1 : 1001;
+  return `${normalizedPrefix}-${String(nextSeq).padStart(4, "0")}`;
 }
 
 function parseContactRow(row: {
@@ -2504,7 +2555,7 @@ export function createFinanceInvoice(input: FinanceInvoiceInput, actor: FinanceA
       db,
       "finance_invoices",
       "invoice_number",
-      settings.invoicePrefix || "ORBF-INV",
+      settings.invoicePrefix || "INV",
       issueDate,
     );
     const insert = db.prepare(
@@ -3342,7 +3393,7 @@ export function createFinanceReceipt(input: FinanceReceiptInput, actor: FinanceA
     db,
     "finance_receipts",
     "receipt_number",
-    settings.receiptPrefix || "ORBF-RCT",
+    settings.receiptPrefix || "RCT",
     receiptDate,
   );
 
@@ -4397,7 +4448,7 @@ export function createFinanceExpense(input: FinanceExpenseInput, actor: FinanceA
     db,
     "finance_expenses",
     "expense_number",
-    settings.expensePrefix || "ORBF-EXP",
+    settings.expensePrefix || "EXP",
     input.date || todayIsoDate(),
   );
   const createdAt = nowIso();

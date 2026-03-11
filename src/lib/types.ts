@@ -888,7 +888,10 @@ export type SchoolContactCategory =
   | "Head Teacher"
   | "Deputy Head Teacher"
   | "DOS"
-  | "Teacher";
+  | "Head Teacher Lower"
+  | "Teacher"
+  | "Administrator"
+  | "Accountant";
 
 export interface SchoolContactInput {
   schoolId: number;
@@ -1140,6 +1143,9 @@ export interface PublicImpactAggregate {
     schoolsSupported: number;
     teachersSupportedMale: number;
     teachersSupportedFemale: number;
+    onlineLiveSessionsCovered: number;
+    onlineTeachersSupported: number;
+    learnersDirectlyImpacted: number;
     enrollmentEstimatedReach: number;
     learnersAssessedUnique: number;
     learnersReachedEstimated: number;
@@ -1203,6 +1209,24 @@ export interface PublicImpactAggregate {
   teachingQuality: PublicTeachingQualitySummary;
   teachingLearningAlignment: TeachingLearningAlignmentAggregate;
   readingLevels?: ReadingLevelsBlock;
+  readingLevelAverages?: {
+    method: "school_average";
+    scopeAveragePercent: number | null;
+    scopeLevels: Array<{
+      label: string;
+      percent: number;
+    }>;
+    districtAverages: Array<{
+      district: string;
+      averagePercent: number;
+      schoolCount: number;
+      sampleSize: number;
+      levels: Array<{
+        label: string;
+        percent: number;
+      }>;
+    }>;
+  };
   meta: {
     lastUpdated: string;
     dataCompleteness: "Complete" | "Partial";
@@ -2176,6 +2200,7 @@ export interface SchoolDirectoryInput {
     phone?: string;
     email?: string;
     whatsapp?: string;
+    category?: SchoolContactCategory;
     roleTitle?: string;
   };
 }
@@ -2197,6 +2222,7 @@ export interface SchoolDirectoryRecord {
   enrolledBoys: number;
   enrolledGirls: number;
   enrolledLearners: number;
+  directImpactLearners: number;
   enrolledBaby: number;
   enrolledMiddle: number;
   enrolledTop: number;
@@ -2354,6 +2380,7 @@ export interface PortalTestimonialRecord {
   id: number;
   storytellerName: string;
   storytellerRole: string;
+  schoolId: number | null;
   schoolName: string;
   district: string;
   storyText: string;

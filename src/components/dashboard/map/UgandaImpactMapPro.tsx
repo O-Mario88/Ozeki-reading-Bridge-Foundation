@@ -114,9 +114,10 @@ function toFloatingMetrics(
   if (!data) {
     return [
       { label: "Schools supported", value: "Data not available" },
-      { label: "Learners assessed (n)", value: "Data not available", helper: "Direct impact" },
+      { label: "Learners directly impacted", value: "Data not available" },
+      { label: "Overall impact", value: "Data not available" },
+      { label: "Learners assessed (n)", value: "Data not available" },
       { label: "Teachers supported", value: "Data not available" },
-      { label: "Enrollment (estimated reach)", value: "Data not available" },
       { label: "Assessments (B / P / E)", value: "Data not available" },
       { label: "Reading levels performance", value: "Data not available" },
       { label: "Vs best-performing district", value: "Data not available" },
@@ -125,13 +126,30 @@ function toFloatingMetrics(
   }
 
   const readingPerformance = getReadingLevelPerformanceSummary(data.readingLevels);
+  const averagedReadingPerformance = data.readingLevelAverages?.scopeAveragePercent ?? null;
+  const readingValue =
+    averagedReadingPerformance !== null
+      ? `${averagedReadingPerformance.toFixed(1)}%`
+      : readingPerformance
+        ? `${readingPerformance.performancePercent.toFixed(1)}%`
+        : "Data not available";
+  const readingHelperRows = data.readingLevelAverages?.scopeLevels ?? [];
+  const readingHelper =
+    readingHelperRows.length > 0
+      ? `Avg by school: ${readingHelperRows
+        .map((row) => `${row.label} ${row.percent.toFixed(1)}%`)
+        .join(" | ")}`
+      : readingPerformance
+        ? `After ${cycleLabel(readingPerformance.cycle)} assessments (n=${readingPerformance.sampleSize.toLocaleString()})`
+        : "Assessment distribution not available";
   const bestPerformance = bestDistrict?.performance ?? null;
   let comparisonValue = "Data not available";
   let comparisonHelper: string | undefined;
 
-  if (readingPerformance && bestPerformance) {
+  const currentReadingPerformance = averagedReadingPerformance ?? readingPerformance?.performancePercent ?? null;
+  if (currentReadingPerformance !== null && bestPerformance) {
     const delta = Number(
-      (readingPerformance.performancePercent - bestPerformance.performancePercent).toFixed(1),
+      (currentReadingPerformance - bestPerformance.performancePercent).toFixed(1),
     );
     const signedDelta = delta > 0 ? `+${delta.toFixed(1)} pp` : `${delta.toFixed(1)} pp`;
     comparisonValue =
@@ -147,17 +165,30 @@ function toFloatingMetrics(
       value: data.kpis.schoolsSupported.toLocaleString(),
     },
     {
+      label: "Learners directly impacted",
+      value: data.kpis.learnersDirectlyImpacted.toLocaleString(),
+      helper: "Baby, Middle, Top, P1, P2, P3",
+    },
+    {
+      label: "Overall impact",
+      value: data.kpis.enrollmentEstimatedReach.toLocaleString(),
+      helper: "General enrollment (boys + girls)",
+    },
+    {
       label: "Learners assessed (n)",
       value: data.kpis.learnersAssessedUnique.toLocaleString(),
-      helper: "Direct impact",
     },
     {
       label: "Teachers supported",
       value: `${data.kpis.teachersSupportedMale.toLocaleString()} M / ${data.kpis.teachersSupportedFemale.toLocaleString()} F`,
     },
     {
-      label: "Enrollment (estimated reach)",
-      value: data.kpis.enrollmentEstimatedReach.toLocaleString(),
+      label: "Online live sessions covered",
+      value: data.kpis.onlineLiveSessionsCovered.toLocaleString(),
+    },
+    {
+      label: "Teachers supported (online)",
+      value: data.kpis.onlineTeachersSupported.toLocaleString(),
     },
     {
       label: "Assessments (B / P / E)",
@@ -165,12 +196,8 @@ function toFloatingMetrics(
     },
     {
       label: "Reading levels performance",
-      value: readingPerformance
-        ? `${readingPerformance.performancePercent.toFixed(1)}%`
-        : "Data not available",
-      helper: readingPerformance
-        ? `After ${cycleLabel(readingPerformance.cycle)} assessments (n=${readingPerformance.sampleSize.toLocaleString()})`
-        : "Assessment distribution not available",
+      value: readingValue,
+      helper: readingHelper,
     },
     {
       label: "Vs best-performing district",

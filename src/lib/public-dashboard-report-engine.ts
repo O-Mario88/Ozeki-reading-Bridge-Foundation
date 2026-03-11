@@ -82,7 +82,7 @@ function escapeHtml(value: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
 
@@ -554,12 +554,12 @@ function levelColor(index: number) {
 
 function renderRankRows(rows: Array<{ name: string; score: number }>, emptyText: string) {
   if (rows.length === 0) {
-    return `<tr><td colspan=\"2\">${escapeHtml(emptyText)}</td></tr>`;
+    return `<tr><td colspan="2">${escapeHtml(emptyText)}</td></tr>`;
   }
   return rows
     .map(
       (row) =>
-        `<tr><td>${escapeHtml(row.name)}</td><td style=\"text-align:right;\">${row.score.toLocaleString()}</td></tr>`,
+        `<tr><td>${escapeHtml(row.name)}</td><td style="text-align:right;">${row.score.toLocaleString()}</td></tr>`,
     )
     .join("\n");
 }
@@ -577,9 +577,9 @@ export function renderPublicDashboardReportHtml(args: {
 
   const readingLevelsHtml = report.readingLevels
     ? `
-      <section class=\"panel\">
+      <section class="panel">
         <h2>Reading Levels: Baseline vs Latest</h2>
-        <p class=\"muted\">Baseline n=${report.readingLevels.baselineN.toLocaleString()} | Latest n=${report.readingLevels.latestN.toLocaleString()}</p>
+        <p class="muted">Baseline n=${report.readingLevels.baselineN.toLocaleString()} | Latest n=${report.readingLevels.latestN.toLocaleString()}</p>
         <table>
           <thead>
             <tr>
@@ -597,9 +597,9 @@ export function renderPublicDashboardReportHtml(args: {
                 const delta = latest - base;
                 const sign = delta > 0 ? "+" : "";
                 return `<tr>
-                  <td><span class=\"chip\" style=\"background:${levelColor(
+                  <td><span class="chip" style="background:${levelColor(
                     report.readingLevels?.labels.indexOf(label) ?? 0,
-                  )};\"></span>${escapeHtml(label)}</td>
+                  )};"></span>${escapeHtml(label)}</td>
                   <td>${base.toFixed(1)}%</td>
                   <td>${latest.toFixed(1)}%</td>
                   <td>${sign}${delta.toFixed(1)} pp</td>
@@ -615,10 +615,10 @@ export function renderPublicDashboardReportHtml(args: {
   const teachingDistribution = report.teachingQuality.levelDistribution;
 
   return `<!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-  <meta charset=\"UTF-8\" />
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Public Dashboard Report - ${escapeHtml(report.scope.name)}</title>
   <style>
     @page { size: A4 portrait; margin: 12mm; }
@@ -835,19 +835,19 @@ export function renderPublicDashboardReportHtml(args: {
   </style>
 </head>
 <body>
-  <main class=\"wrap\">
-    <section class=\"no-print\">
-      <button class=\"btn\" onclick=\"window.print()\">Print A4</button>
-      <a class=\"btn primary\" href=\"${escapeHtml(pdfHref)}\">Download A4 PDF</a>
-      <a class=\"btn\" href=\"${escapeHtml(dashboardHref)}\">Back to dashboard</a>
+  <main class="wrap">
+    <section class="no-print">
+      <button class="btn" onclick="window.print()">Print A4</button>
+      <a class="btn primary" href="${escapeHtml(pdfHref)}">Download A4 PDF</a>
+      <a class="btn" href="${escapeHtml(dashboardHref)}">Back to dashboard</a>
     </section>
 
-    <section class=\"hero\">
+    <section class="hero">
       <h1>Public Dashboard Report (A4)</h1>
       <p>${escapeHtml(report.scope.name)} | Period: ${escapeHtml(report.period.label)} | Generated ${escapeHtml(
     new Date(report.generatedAt).toLocaleString(),
   )}</p>
-      <div class=\"hero-meta\">
+      <div class="hero-meta">
         <span>${escapeHtml(report.scope.level.toUpperCase())}</span>
         <span>${escapeHtml(dataStatus)}</span>
         <span>Template: ${escapeHtml(report.template.name)}</span>
@@ -857,20 +857,20 @@ export function renderPublicDashboardReportHtml(args: {
       </div>
     </section>
 
-    <section class=\"kpi-grid\">
-      <article class=\"kpi\"><span>Schools supported</span><strong>${report.kpis.schoolsSupported.toLocaleString()}</strong></article>
-      <article class=\"kpi\"><span>Learners assessed</span><strong>${report.kpis.learnersAssessedUnique.toLocaleString()}</strong></article>
-      <article class=\"kpi\"><span>Teachers supported</span><strong>${(
+    <section class="kpi-grid">
+      <article class="kpi"><span>Schools supported</span><strong>${report.kpis.schoolsSupported.toLocaleString()}</strong></article>
+      <article class="kpi"><span>Learners assessed</span><strong>${report.kpis.learnersAssessedUnique.toLocaleString()}</strong></article>
+      <article class="kpi"><span>Teachers supported</span><strong>${(
     report.kpis.teachersSupportedMale + report.kpis.teachersSupportedFemale
   ).toLocaleString()}</strong></article>
-      <article class=\"kpi\"><span>Cycle completion</span><strong>${report.kpis.assessmentCycleCompletionPct.toFixed(
+      <article class="kpi"><span>Cycle completion</span><strong>${report.kpis.assessmentCycleCompletionPct.toFixed(
     1,
   )}%</strong></article>
     </section>
 
-    <section class=\"panel\">
+    <section class="panel">
       <h2>Table of Contents</h2>
-      <ol class=\"toc\">
+      <ol class="toc">
         ${report.template.tableOfContents
           .map((item, index) => `<li>${index + 1}. ${escapeHtml(item)}</li>`)
           .join("\n")}
@@ -880,7 +880,7 @@ export function renderPublicDashboardReportHtml(args: {
     ${report.template.sections
       .map(
         (section, index) => `
-          <section class=\"panel template-section\">
+          <section class="panel template-section">
             <h2>${index + 1}. ${escapeHtml(section.title)}</h2>
             <p>${escapeHtmlWithBreaks(section.content)}</p>
           </section>
@@ -888,24 +888,24 @@ export function renderPublicDashboardReportHtml(args: {
       )
       .join("\n")}
 
-    <section class=\"two-col\">
-      <article class=\"panel\">
+    <section class="two-col">
+      <article class="panel">
         <h2>AI Highlights</h2>
         <ul>
           ${report.narrative.keyHighlights.map((line) => `<li>${escapeHtml(line)}</li>`).join("\n")}
         </ul>
       </article>
-      <article class=\"panel\">
+      <article class="panel">
         <h2>Priority Actions</h2>
         <ul>
           ${report.narrative.priorityActions.map((line) => `<li>${escapeHtml(line)}</li>`).join("\n")}
         </ul>
-        <p class=\"muted\"><strong>Methods:</strong> ${escapeHtml(report.narrative.methodsNote)}</p>
-        <p class=\"muted\"><strong>Limitations:</strong> ${escapeHtml(report.narrative.limitations)}</p>
+        <p class="muted"><strong>Methods:</strong> ${escapeHtml(report.narrative.methodsNote)}</p>
+        <p class="muted"><strong>Limitations:</strong> ${escapeHtml(report.narrative.limitations)}</p>
       </article>
     </section>
 
-    <section class=\"panel\">
+    <section class="panel">
       <h2>Learning Outcomes (Detailed Table)</h2>
       <table>
         <thead>
@@ -922,7 +922,7 @@ export function renderPublicDashboardReportHtml(args: {
           ${report.outcomes
             .map(
               (row) => `<tr>
-            <td><strong>${escapeHtml(row.label)}</strong><br/><span class=\"muted\">${escapeHtml(
+            <td><strong>${escapeHtml(row.label)}</strong><br/><span class="muted">${escapeHtml(
                 row.description,
               )}</span></td>
             <td>${toFixedOrNA(row.baseline)}</td>
@@ -941,24 +941,24 @@ export function renderPublicDashboardReportHtml(args: {
 
     ${readingLevelsHtml}
 
-    <section class=\"two-col\">
-      <article class=\"panel\">
+    <section class="two-col">
+      <article class="panel">
         <h2>Implementation Funnel (Detailed)</h2>
-        <div class=\"funnel-list\">
+        <div class="funnel-list">
           ${report.funnelRows
             .map(
-              (row) => `<div class=\"funnel-row\">
+              (row) => `<div class="funnel-row">
               <span>${escapeHtml(row.label)}</span>
-              <span class=\"track\"><i style=\"width:${Math.max(3, row.widthPct)}%;\"></i></span>
-              <strong style=\"text-align:right;\">${row.value.toLocaleString()}</strong>
+              <span class="track"><i style="width:${Math.max(3, row.widthPct)}%;"></i></span>
+              <strong style="text-align:right;">${row.value.toLocaleString()}</strong>
             </div>`,
             )
             .join("\n")}
         </div>
       </article>
-      <article class=\"panel\">
+      <article class="panel">
         <h2>Teaching Quality Snapshot</h2>
-        <p class=\"muted\">Evaluations: ${report.teachingQuality.evaluationsCount.toLocaleString()} | Avg score: ${
+        <p class="muted">Evaluations: ${report.teachingQuality.evaluationsCount.toLocaleString()} | Avg score: ${
     typeof report.teachingQuality.avgOverallScore === "number"
       ? report.teachingQuality.avgOverallScore.toFixed(2)
       : "Data not available"
@@ -989,15 +989,15 @@ export function renderPublicDashboardReportHtml(args: {
       </article>
     </section>
 
-    <section class=\"two-col\">
-      <article class=\"panel\">
+    <section class="two-col">
+      <article class="panel">
         <h2>Top Movers</h2>
         <table>
           <thead><tr><th>District</th><th>Improvement</th></tr></thead>
           <tbody>${renderRankRows(report.rankings.mostImproved, "Data not available")}</tbody>
         </table>
       </article>
-      <article class=\"panel\">
+      <article class="panel">
         <h2>Priority Support</h2>
         <table>
           <thead><tr><th>District</th><th>Priority Score</th></tr></thead>
@@ -1006,15 +1006,15 @@ export function renderPublicDashboardReportHtml(args: {
       </article>
     </section>
 
-    <section class=\"panel\">
+    <section class="panel">
       <h2>Data Trust</h2>
-      <p class=\"muted\">
+      <p class="muted">
         Last updated: ${escapeHtml(new Date(report.meta.lastUpdated).toLocaleString())} |
         Sample size: ${report.meta.sampleSize.toLocaleString()} |
-        Completeness: <span class=\"pill\">${escapeHtml(report.meta.dataCompleteness)}</span>
+        Completeness: <span class="pill">${escapeHtml(report.meta.dataCompleteness)}</span>
       </p>
-      <p class=\"muted\">This report is generated from the same filtered public dashboard aggregate and excludes personally identifying learner/teacher data.</p>
-      <p class=\"foot\">Ozeki Reading Bridge Foundation | Public Dashboard Report Engine</p>
+      <p class="muted">This report is generated from the same filtered public dashboard aggregate and excludes personally identifying learner/teacher data.</p>
+      <p class="foot">Ozeki Reading Bridge Foundation | Public Dashboard Report Engine</p>
     </section>
   </main>
 </body>

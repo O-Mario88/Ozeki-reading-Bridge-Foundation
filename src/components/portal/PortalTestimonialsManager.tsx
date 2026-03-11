@@ -1,10 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import {
-  getDistrictsByRegion,
-  ugandaRegions,
-} from "@/lib/uganda-locations";
+import { FormEvent, useMemo, useState } from "react";
 import { PortalTestimonialRecord } from "@/lib/types";
 import { buildVideoThumbnailFallback } from "@/lib/media-placeholders";
 import { FloatingSurface } from "@/components/FloatingSurface";
@@ -17,6 +13,14 @@ type PortalTestimonialView = PortalTestimonialRecord & {
 interface PortalTestimonialsManagerProps {
   initialTestimonials: PortalTestimonialView[];
   canModerate: boolean;
+  schoolOptions: Array<{
+    id: number;
+    name: string;
+    district: string;
+    region: string;
+    subRegion: string;
+  }>;
+  defaultSchoolId?: number | null;
 }
 
 type FeedbackState = {
@@ -40,10 +44,16 @@ function formatDate(value: string) {
 export function PortalTestimonialsManager({
   initialTestimonials,
   canModerate,
+  schoolOptions,
+  defaultSchoolId = null,
 }: PortalTestimonialsManagerProps) {
   const [testimonials, setTestimonials] = useState(initialTestimonials);
-  const [region, setRegion] = useState(ugandaRegions[0]?.region ?? "");
-  const [district, setDistrict] = useState("");
+  const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(() => {
+    if (defaultSchoolId && schoolOptions.some((item) => item.id === defaultSchoolId)) {
+      return defaultSchoolId;
+    }
+    return null;
+  });
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>({
     kind: "idle",
@@ -52,9 +62,12 @@ export function PortalTestimonialsManager({
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [playingVideoIds, setPlayingVideoIds] = useState<Record<number, boolean>>({});
-  const districtOptions = region ? getDistrictsByRegion(region) : [];
   const [formKey, setFormKey] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const selectedSchool = useMemo(
+    () => schoolOptions.find((item) => item.id === selectedSchoolId) ?? null,
+    [schoolOptions, selectedSchoolId],
+  );
 
   async function handleModeration(
     testimonialId: number,
@@ -91,12 +104,12 @@ export function PortalTestimonialsManager({
     setFeedback({ kind: "success", message: "Publishing change story..." });
 
     const formData = new FormData(event.currentTarget);
-    if (!district) {
-      setFeedback({ kind: "error", message: "Please select a district." });
+    if (!selectedSchoolId || !selectedSchool) {
+      setFeedback({ kind: "error", message: "Please select a school profile." });
       setSaving(false);
       return;
     }
-    formData.set("district", district);
+    formData.set("schoolId", String(selectedSchoolId));
 
     try {
       const response = await fetch("/api/portal/testimonials", {
@@ -115,8 +128,7 @@ export function PortalTestimonialsManager({
       setTestimonials((prev) => [data.testimonial as PortalTestimonialView, ...prev]);
       event.currentTarget.reset();
       setFormKey((prev) => prev + 1);
-      setRegion(ugandaRegions[0]?.region ?? "");
-      setDistrict("");
+      setSelectedSchoolId(defaultSchoolId ?? null);
       setSelectedVideo(null);
       setSelectedPhoto(null);
       setPlayingVideoIds({});
@@ -320,68 +332,33 @@ export function PortalTestimonialsManager({
             />
           </label>
 
-          <label>
+          <label className="full-width">
             <span className="portal-field-label">
-              <span>School Name</span>
-              <span className="portal-required-indicator">
-                *<span className="visually-hidden">required</span>
-              </span>
-            </span>
-            <input
-              name="schoolName"
-              required
-              minLength={2}
-              placeholder="e.g. Bright Future Primary"
-              autoComplete="organization"
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">
-              <span>Region</span>
+              <span>School Profile</span>
               <span className="portal-required-indicator">
                 *<span className="visually-hidden">required</span>
               </span>
             </span>
             <select
-              value={region}
-              onChange={(event) => {
-                const nextRegion = event.target.value;
-                const options = getDistrictsByRegion(nextRegion);
-                setRegion(nextRegion);
-                setDistrict((current) =>
-                  options.includes(current) ? current : "",
-                );
-              }}
+              name="schoolId"
+              value={selectedSchoolId ?? ""}
+              onChange={(event) =>
+                setSelectedSchoolId(event.target.value ? Number.parseInt(event.target.value, 10) : null)
+              }
               required
             >
-              <option value="">Select region</option>
-              {ugandaRegions.map((entry) => (
-                <option key={entry.region} value={entry.region}>
-                  {entry.region}
+              <option value="">Select school profile</option>
+              {schoolOptions.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name} ({entry.district})
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            <span className="portal-field-label">
-              <span>District</span>
-              <span className="portal-required-indicator">
-                *<span className="visually-hidden">required</span>
-              </span>
-            </span>
-            <select
-              name="district"
-              value={district}
-              onChange={(event) => setDistrict(event.target.value)}
-              required
-            >
-              <option value="">Select district</option>
-              {districtOptions.map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry}
-                </option>
-              ))}
-            </select>
+            <small className="portal-field-help">
+              {selectedSchool
+                ? `${selectedSchool.region} • ${selectedSchool.subRegion} • ${selectedSchool.district}`
+                : "Every change story must be linked to a school profile."}
+            </small>
           </label>
 
           <label className="full-width">
@@ -542,8 +519,7 @@ export function PortalTestimonialsManager({
               disabled={saving}
               onClick={() => {
                 setFormKey((prev) => prev + 1);
-                setRegion(ugandaRegions[0]?.region ?? "");
-                setDistrict("");
+                setSelectedSchoolId(defaultSchoolId ?? null);
                 setSelectedVideo(null);
                 setSelectedPhoto(null);
                 setPlayingVideoIds({});

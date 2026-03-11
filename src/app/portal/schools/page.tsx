@@ -29,10 +29,7 @@ export default async function PortalSchoolsPage() {
         </div>
       }
     >
-      <PortalSchoolsManager
-        initialSchools={schools}
-        canVoidLessonEvaluations={user.isSuperAdmin}
-      />
+      <PortalSchoolsManager initialSchools={schools} />
     </PortalShell>
   );
 }

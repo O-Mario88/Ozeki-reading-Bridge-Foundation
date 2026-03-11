@@ -10,7 +10,15 @@ export interface RosterTeacher {
     teacherUid: string;
     fullName: string;
     gender: "Male" | "Female" | "Other";
-    category: "Proprietor" | "Head Teacher" | "Deputy Head Teacher" | "DOS" | "Teacher";
+    category:
+    | "Proprietor"
+    | "Head Teacher"
+    | "Deputy Head Teacher"
+    | "DOS"
+    | "Head Teacher Lower"
+    | "Teacher"
+    | "Administrator"
+    | "Accountant";
     roleTitle?: string;
     isPrimaryContact: boolean;
     isReadingTeacher?: boolean;
@@ -46,12 +54,15 @@ interface SchoolRosterPickerProps {
 
 interface AddTeacherForm {
     fullName: string;
-    gender: "Male" | "Female" | "Other" | "";
-    category: "Proprietor" | "Head Teacher" | "Deputy Head Teacher" | "DOS" | "Teacher" | "";
+    gender: "Male" | "Female" | "";
+    category:
+    | "Head Teacher"
+    | "Deputy Head Teacher"
+    | "DOS"
+    | "Head Teacher Lower"
+    | "Teacher"
+    | "";
     roleTitle: string;
-    classTaught: string;
-    subjectTaught: string;
-    phone: string;
     email: string;
     whatsapp: string;
 }
@@ -86,9 +97,6 @@ export function SchoolRosterPicker({
         gender: "",
         category: "Teacher",
         roleTitle: "",
-        classTaught: "",
-        subjectTaught: "",
-        phone: "",
         email: "",
         whatsapp: "",
     });
@@ -172,14 +180,6 @@ export function SchoolRosterPicker({
                     setAdding(false);
                     return;
                 }
-                if (
-                    teacherForm.category === "Teacher" &&
-                    (!teacherForm.classTaught.trim() || !teacherForm.subjectTaught.trim())
-                ) {
-                    setAddError("Teacher contacts require class taught and subject taught.");
-                    setAdding(false);
-                    return;
-                }
                 body = {
                     schoolId,
                     type: "contact",
@@ -187,11 +187,6 @@ export function SchoolRosterPicker({
                     gender: teacherForm.gender,
                     category: teacherForm.category,
                     roleTitle: teacherForm.roleTitle || undefined,
-                    classTaught:
-                        teacherForm.category === "Teacher" ? teacherForm.classTaught : undefined,
-                    subjectTaught:
-                        teacherForm.category === "Teacher" ? teacherForm.subjectTaught : undefined,
-                    phone: teacherForm.phone || undefined,
                     email: teacherForm.email || undefined,
                     whatsapp: teacherForm.whatsapp || undefined,
                 };
@@ -223,9 +218,6 @@ export function SchoolRosterPicker({
                 gender: "",
                 category: "Teacher",
                 roleTitle: "",
-                classTaught: "",
-                subjectTaught: "",
-                phone: "",
                 email: "",
                 whatsapp: "",
             });
@@ -362,18 +354,17 @@ export function SchoolRosterPicker({
                                         onChange={(e) =>
                                             setTeacherForm((p) => ({
                                                 ...p,
-                                                gender: e.target.value as "Male" | "Female" | "Other" | "",
+                                                gender: e.target.value as "Male" | "Female" | "",
                                             }))
                                         }
                                     >
                                         <option value="">Select</option>
                                         <option value="Male">Male</option>
                                         <option value="Female">Female</option>
-                                        <option value="Other">Other</option>
                                     </select>
                                 </label>
                                 <label>
-                                    Category *
+                                    Role *
                                     <select
                                         value={teacherForm.category}
                                         onChange={(e) =>
@@ -384,10 +375,10 @@ export function SchoolRosterPicker({
                                         }
                                     >
                                         <option value="">Select</option>
-                                        <option value="Proprietor">Proprietor</option>
                                         <option value="Head Teacher">Head Teacher</option>
                                         <option value="Deputy Head Teacher">Deputy Head Teacher</option>
                                         <option value="DOS">DOS</option>
+                                        <option value="Head Teacher Lower">Head Teacher Lower</option>
                                         <option value="Teacher">Teacher</option>
                                     </select>
                                 </label>
@@ -402,43 +393,6 @@ export function SchoolRosterPicker({
                                         placeholder="e.g. Reading Coordinator"
                                     />
                                 </label>
-                                {teacherForm.category === "Teacher" ? (
-                                    <>
-                                        <label>
-                                            Class taught *
-                                            <input
-                                                type="text"
-                                                value={teacherForm.classTaught}
-                                                onChange={(e) =>
-                                                    setTeacherForm((p) => ({ ...p, classTaught: e.target.value }))
-                                                }
-                                                placeholder="e.g. P3"
-                                            />
-                                        </label>
-                                        <label>
-                                            Subject taught *
-                                            <input
-                                                type="text"
-                                                value={teacherForm.subjectTaught}
-                                                onChange={(e) =>
-                                                    setTeacherForm((p) => ({ ...p, subjectTaught: e.target.value }))
-                                                }
-                                                placeholder="e.g. Literacy"
-                                            />
-                                        </label>
-                                    </>
-                                ) : null}
-                                <label>
-                                    Phone (optional)
-                                    <input
-                                        type="tel"
-                                        value={teacherForm.phone}
-                                        onChange={(e) =>
-                                            setTeacherForm((p) => ({ ...p, phone: e.target.value }))
-                                        }
-                                        placeholder="+2567xxxxxxxx"
-                                    />
-                                </label>
                                 <label>
                                     Email (optional)
                                     <input
@@ -451,7 +405,7 @@ export function SchoolRosterPicker({
                                     />
                                 </label>
                                 <label>
-                                    WhatsApp (optional)
+                                    WhatsApp Number (optional)
                                     <input
                                         type="tel"
                                         value={teacherForm.whatsapp}

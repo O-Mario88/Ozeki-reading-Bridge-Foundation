@@ -78,7 +78,7 @@ function createTestSchool(tag: string) {
   });
 }
 
-test("school creation requires proprietor primary contact", async () => {
+test("school creation requires primary contact", async () => {
   assert.throws(
     () =>
       createSchoolDirectoryRecord({
@@ -90,7 +90,7 @@ test("school creation requires proprietor primary contact", async () => {
           gender: "Male",
         },
       }),
-    /Proprietor primary contact is required/i,
+    /A primary contact is required/i,
   );
 });
 

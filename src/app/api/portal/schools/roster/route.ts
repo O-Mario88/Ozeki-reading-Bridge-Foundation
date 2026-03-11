@@ -19,22 +19,23 @@ const contactCategorySchema = z.enum([
   "Head Teacher",
   "Deputy Head Teacher",
   "DOS",
+  "Head Teacher Lower",
   "Teacher",
+  "Administrator",
+  "Accountant",
 ]);
 
 const addContactSchema = z.object({
   schoolId: z.coerce.number().int().positive(),
   type: z.enum(["contact", "teacher"]).default("contact"),
   fullName: z.string().trim().min(2, "Name must be at least 2 characters"),
-  gender: z.enum(["Male", "Female", "Other"]),
+  gender: z.enum(["Male", "Female"]),
   phone: z.string().trim().optional(),
   email: z.string().trim().optional(),
   whatsapp: z.string().trim().optional(),
   category: contactCategorySchema.optional(),
   roleTitle: z.string().trim().optional(),
   isPrimaryContact: z.boolean().optional().default(false),
-  classTaught: z.string().trim().optional(),
-  subjectTaught: z.string().trim().optional(),
   isReadingTeacher: z.boolean().optional(),
 });
 
@@ -52,15 +53,13 @@ const updateContactSchema = z.object({
   uid: z.string().min(1),
   type: z.enum(["contact", "teacher"]).default("contact"),
   fullName: z.string().trim().min(2).optional(),
-  gender: z.enum(["Male", "Female", "Other"]).optional(),
+  gender: z.enum(["Male", "Female"]).optional(),
   phone: z.string().trim().nullable().optional(),
   email: z.string().trim().nullable().optional(),
   whatsapp: z.string().trim().nullable().optional(),
   category: contactCategorySchema.optional(),
   roleTitle: z.string().trim().nullable().optional(),
   isPrimaryContact: z.boolean().optional(),
-  classTaught: z.string().trim().nullable().optional(),
-  subjectTaught: z.string().trim().nullable().optional(),
   isReadingTeacher: z.boolean().optional(),
 });
 
@@ -153,8 +152,6 @@ export async function POST(request: Request) {
       category,
       roleTitle,
       isPrimaryContact: data.isPrimaryContact,
-      classTaught: category === "Teacher" ? data.classTaught ?? "Not assigned" : undefined,
-      subjectTaught: category === "Teacher" ? data.subjectTaught ?? "Not assigned" : undefined,
     });
     return NextResponse.json({ ok: true, entry });
   } catch (error) {
@@ -227,8 +224,6 @@ export async function PATCH(request: Request) {
       category,
       roleTitle,
       isPrimaryContact: data.isPrimaryContact,
-      classTaught: category === "Teacher" ? data.classTaught ?? undefined : undefined,
-      subjectTaught: category === "Teacher" ? data.subjectTaught ?? undefined : undefined,
     });
     return NextResponse.json({ ok: true, entry });
   } catch (error) {

@@ -37,6 +37,7 @@ type LessonEvaluationPanelProps = {
   defaultVisitId?: number | null;
   title?: string;
   description?: string;
+  newButtonLabel?: string;
   allowVoid?: boolean;
 };
 
@@ -162,6 +163,7 @@ export function LessonEvaluationPanel({
   defaultVisitId = null,
   title = "Lesson Evaluations",
   description = "Ozeki Phonics Lesson Evaluation Tool (Coaching Standard)",
+  newButtonLabel = "New Lesson Evaluation",
   allowVoid = false,
 }: LessonEvaluationPanelProps) {
   const [evaluations, setEvaluations] = useState<LessonEvaluationRecord[]>([]);
@@ -521,7 +523,7 @@ export function LessonEvaluationPanel({
           onClick={openNewForm}
           disabled={!hasTeachers}
         >
-          New Lesson Evaluation
+          {newButtonLabel}
         </button>
       </div>
 

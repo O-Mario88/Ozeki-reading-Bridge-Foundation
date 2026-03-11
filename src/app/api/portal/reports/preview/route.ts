@@ -7,7 +7,15 @@ import { ReportCategory } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const scopeTypeSchema = z.enum(["National", "Region", "Sub-region", "District", "School"]);
+const scopeTypeSchema = z.enum([
+    "National",
+    "Region",
+    "Sub-region",
+    "District",
+    "Sub-county",
+    "Parish",
+    "School",
+]);
 const programSchema = z.enum([
     "training",
     "visit",
@@ -37,7 +45,8 @@ const previewPayloadSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ["scopeValue"],
-                message: "Scope value is required for Region, Sub-region, District, or School reports.",
+                message:
+                    "Scope value is required for Region, Sub-region, District, Sub-county, Parish, or School reports.",
             });
         }
 

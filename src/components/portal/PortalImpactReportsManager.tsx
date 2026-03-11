@@ -34,6 +34,8 @@ const scopeTypeOptions: ImpactReportScopeType[] = [
   "Region",
   "Sub-region",
   "District",
+  "Sub-county",
+  "Parish",
   "School",
 ];
 
@@ -80,10 +82,14 @@ export function PortalImpactReportsManager({
   const [regions, setRegions] = useState<Array<{ id: string; name: string }>>([]);
   const [subregions, setSubregions] = useState<Array<{ id: string; name: string }>>([]);
   const [districts, setDistricts] = useState<Array<{ id: string; name: string }>>([]);
+  const [subcounties, setSubcounties] = useState<Array<{ id: string; name: string }>>([]);
+  const [parishes, setParishes] = useState<Array<{ id: string; name: string }>>([]);
 
   const [selectedRegionId, setSelectedRegionId] = useState("");
   const [selectedSubRegionId, setSelectedSubRegionId] = useState("");
   const [selectedDistrictId, setSelectedDistrictId] = useState("");
+  const [selectedSubCountyId, setSelectedSubCountyId] = useState("");
+  const [selectedParishId, setSelectedParishId] = useState("");
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
 
@@ -118,11 +124,21 @@ export function PortalImpactReportsManager({
 
   const computedScopeValue = useMemo(() => {
     if (scopeType === "School") return selectedSchoolId;
+    if (scopeType === "Parish") return selectedParishId;
+    if (scopeType === "Sub-county") return selectedSubCountyId;
     if (scopeType === "District") return selectedDistrictId;
     if (scopeType === "Sub-region") return selectedSubRegionId;
     if (scopeType === "Region") return selectedRegionId;
     return "";
-  }, [scopeType, selectedDistrictId, selectedRegionId, selectedSchoolId, selectedSubRegionId]);
+  }, [
+    scopeType,
+    selectedDistrictId,
+    selectedParishId,
+    selectedRegionId,
+    selectedSchoolId,
+    selectedSubCountyId,
+    selectedSubRegionId,
+  ]);
 
   useEffect(() => {
     setSelectedPrograms(programsFromReportCategory(selectedReportCategory));
@@ -164,6 +180,33 @@ export function PortalImpactReportsManager({
     }
     setSelectedDistrictId("");
   }, [selectedSubRegionId, selectedYear]);
+
+  useEffect(() => {
+    if (
+      selectedDistrictId &&
+      (scopeType === "Sub-county" || scopeType === "Parish")
+    ) {
+      fetch(`/api/geo/subcounties?districtId=${encodeURIComponent(selectedDistrictId)}`)
+        .then((r) => r.json())
+        .then((data) => setSubcounties(data.subcounties || []))
+        .catch(() => setSubcounties([]));
+    } else {
+      setSubcounties([]);
+    }
+    setSelectedSubCountyId("");
+  }, [scopeType, selectedDistrictId]);
+
+  useEffect(() => {
+    if (selectedSubCountyId && scopeType === "Parish") {
+      fetch(`/api/geo/parishes?subcountyId=${encodeURIComponent(selectedSubCountyId)}`)
+        .then((r) => r.json())
+        .then((data) => setParishes(data.parishes || []))
+        .catch(() => setParishes([]));
+    } else {
+      setParishes([]);
+    }
+    setSelectedParishId("");
+  }, [scopeType, selectedSubCountyId]);
 
   useEffect(() => {
     if (scopeType === "School" && selectedDistrictId) {
@@ -287,6 +330,8 @@ export function PortalImpactReportsManager({
       setSelectedRegionId("");
       setSelectedSubRegionId("");
       setSelectedDistrictId("");
+      setSelectedSubCountyId("");
+      setSelectedParishId("");
       setSelectedSchoolId("");
       setPublicOnly(false);
       setIsBuilderOpen(false);
@@ -460,7 +505,11 @@ export function PortalImpactReportsManager({
             </label>
           ) : null}
 
-          {scopeType === "Sub-region" || scopeType === "District" || scopeType === "School" ? (
+          {scopeType === "Sub-region" ||
+          scopeType === "District" ||
+          scopeType === "Sub-county" ||
+          scopeType === "Parish" ||
+          scopeType === "School" ? (
             <label className="portal-filter-field">
               <span className="portal-filter-field-label">Sub-region</span>
               <select
@@ -478,7 +527,10 @@ export function PortalImpactReportsManager({
             </label>
           ) : null}
 
-          {scopeType === "District" || scopeType === "School" ? (
+          {scopeType === "District" ||
+          scopeType === "Sub-county" ||
+          scopeType === "Parish" ||
+          scopeType === "School" ? (
             <label className="portal-filter-field">
               <span className="portal-filter-field-label">District</span>
               <select
@@ -490,6 +542,46 @@ export function PortalImpactReportsManager({
                 {districts.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {scopeType === "Sub-county" || scopeType === "Parish" ? (
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Sub-county</span>
+              <select
+                value={selectedSubCountyId}
+                onChange={(e) => setSelectedSubCountyId(e.target.value)}
+                disabled={!selectedDistrictId}
+              >
+                <option value="">
+                  {selectedDistrictId ? "Select Sub-county..." : "Select District first"}
+                </option>
+                {subcounties.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {scopeType === "Parish" ? (
+            <label className="portal-filter-field">
+              <span className="portal-filter-field-label">Parish</span>
+              <select
+                value={selectedParishId}
+                onChange={(e) => setSelectedParishId(e.target.value)}
+                disabled={!selectedSubCountyId}
+              >
+                <option value="">
+                  {selectedSubCountyId ? "Select Parish..." : "Select Sub-county first"}
+                </option>
+                {parishes.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
                   </option>
                 ))}
               </select>

@@ -20,7 +20,21 @@ function pickBestDistrict(period: string): BestDistrictReadingPerformance | null
 
   for (const district of districts) {
     const aggregate = getPublicImpactAggregate("district", district, period);
-    const performance = getReadingLevelPerformanceSummary(aggregate.readingLevels);
+    const fallback = getReadingLevelPerformanceSummary(aggregate.readingLevels);
+    const averagePercent = aggregate.readingLevelAverages?.scopeAveragePercent ?? null;
+    const performance: ReadingLevelPerformanceSummary | null =
+      averagePercent !== null
+        ? {
+          cycle: "latest",
+          sampleSize:
+            aggregate.readingLevelAverages?.districtAverages[0]?.schoolCount ??
+            fallback?.sampleSize ??
+            0,
+          performancePercent: averagePercent,
+          levelLabels:
+            fallback?.levelLabels ?? ["Developing Reader", "Fluent Reader", "Comprehending Reader"],
+        }
+        : fallback;
     if (!performance) {
       continue;
     }
@@ -72,4 +86,3 @@ export async function GET(request: Request) {
     },
   );
 }
-

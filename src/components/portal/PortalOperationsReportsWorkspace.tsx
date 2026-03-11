@@ -449,6 +449,31 @@ export function PortalOperationsReportsWorkspace({
         </div>
       </header>
 
+      <section className="card">
+        <h3>Report Profile Modules</h3>
+        <p>
+          National reports, school reading performance guidance, training reports, and public
+          dashboard-aligned impact reports are managed from this unified report profile.
+        </p>
+        <div className="action-row">
+          <Link href="/portal/reports?tab=impact-reports" className="button button-ghost">
+            Impact Reports
+          </Link>
+          <Link href="/portal/reports?tab=training-reports" className="button button-ghost">
+            Training Reports
+          </Link>
+          <Link href="/portal/reports?tab=national-reports" className="button button-ghost">
+            National Reports
+          </Link>
+          <Link href="/portal/reports?tab=school-reading-performance" className="button button-ghost">
+            School Reading Performance
+          </Link>
+          <Link href="/impact" className="button button-ghost">
+            Public Live Dashboard
+          </Link>
+        </div>
+      </section>
+
       <div className="portal-report-filter-grid">
         <label>
           <span>Search</span>

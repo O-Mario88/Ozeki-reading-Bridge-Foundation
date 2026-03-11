@@ -327,57 +327,12 @@ const trainingConfig: PortalModuleConfig = {
       title: "Section 5: Actions & Follow-up",
       fields: [
         {
-          key: "how_training_changed_teaching",
-          label: "Participant feedback: How training changed teaching",
-          type: "textarea",
+          key: "trainingFeedbackBundleJson",
+          label: "Participants & Facilitator Feedback",
+          type: "text",
           helperText:
-            "This field feeds the testimonials moderation queue and training report themes.",
+            "Capture participant feedback once and facilitator observations once using the button form.",
         },
-        {
-          key: "what_you_will_do_to_improve_reading_levels",
-          label: "Participant feedback: What you will do to improve reading levels",
-          type: "textarea",
-          helperText:
-            "Capture practical commitments that can be tracked during follow-up.",
-        },
-        {
-          key: "what_went_well_participant",
-          label: "Participant feedback: What went well",
-          type: "textarea",
-        },
-        {
-          key: "what_went_well_trainer",
-          label: "Trainer feedback: What went well",
-          type: "textarea",
-        },
-        {
-          key: "challenges_participant",
-          label: "Participant feedback: Challenges",
-          type: "textarea",
-        },
-        {
-          key: "needsImprovement",
-          label: "Training feedback: Areas needing improvement",
-          type: "textarea",
-        },
-        {
-          key: "challenges_trainer",
-          label: "Trainer feedback: Challenges",
-          type: "textarea",
-        },
-        {
-          key: "recommendations_next_training_participant",
-          label: "Participant feedback: Recommendations for next training",
-          type: "textarea",
-        },
-        {
-          key: "recommendations_next_training_trainer",
-          label: "Trainer feedback: Recommendations for next training",
-          type: "textarea",
-        },
-        { key: "challenges", label: "Challenges / risks", type: "textarea" },
-        { key: "actionPoints", label: "Action points agreed", type: "textarea" },
-        { key: "trainingNotes", label: "Training notes", type: "textarea" },
       ],
     },
     standardizedInsightSection,
@@ -432,17 +387,28 @@ const visitConfig: PortalModuleConfig = {
           type: "multiselect",
           required: true,
           options: [
-            { value: "coaching", label: "Coaching" },
+            { value: "coaching", label: "Coaching Support" },
+            {
+              value: "teacher_reading_lesson_evaluation",
+              label: "Teacher Reading Lesson Evaluation",
+            },
             { value: "monitoring", label: "Monitoring" },
             { value: "demo", label: "Demo" },
             { value: "leadership", label: "Leadership" },
           ],
         },
+        {
+          key: "visitStatus",
+          label: "Visit status",
+          type: "select",
+          required: true,
+          options: [
+            { value: "scheduled", label: "Scheduled" },
+            { value: "completed", label: "Completed" },
+          ],
+        },
         { key: "startTime", label: "Visit start time", type: "time", required: true },
         { key: "endTime", label: "Visit end time", type: "time", required: true },
-        { key: "subCounty", label: "Sub-county", type: "text", required: true },
-        { key: "parish", label: "Parish", type: "text", required: true },
-        { key: "village", label: "Village (optional)", type: "text" },
         ...sponsorshipFields,
       ],
     },
@@ -467,6 +433,9 @@ const visitConfig: PortalModuleConfig = {
           label: "Classes implementing",
           type: "multiselect",
           options: [
+            { value: "Baby Class", label: "Baby Class" },
+            { value: "Middle Class", label: "Middle Class" },
+            { value: "Top Class", label: "Top Class" },
             { value: "P1", label: "P1" },
             { value: "P2", label: "P2" },
             { value: "P3", label: "P3" },
@@ -483,6 +452,9 @@ const visitConfig: PortalModuleConfig = {
           label: "Classes not implementing",
           type: "multiselect",
           options: [
+            { value: "Baby Class", label: "Baby Class" },
+            { value: "Middle Class", label: "Middle Class" },
+            { value: "Top Class", label: "Top Class" },
             { value: "P1", label: "P1" },
             { value: "P2", label: "P2" },
             { value: "P3", label: "P3" },
@@ -842,7 +814,8 @@ const visitConfig: PortalModuleConfig = {
           label: "Attendees",
           type: "multiselect",
           options: [],
-          helperText: "Select from school contacts (Proprietor/HT/DOS/Teacher).",
+          helperText:
+            "Select from school contacts (Proprietor, Head Teacher, DOS, Teacher, Administrator, Deputy Head Teacher, Accountant).",
         },
         {
           key: "leadershipSummary",

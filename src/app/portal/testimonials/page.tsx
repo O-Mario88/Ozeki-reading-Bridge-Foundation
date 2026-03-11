@@ -1,19 +1,55 @@
+import Link from "next/link";
 import { PortalTestimonialsManager } from "@/components/portal/PortalTestimonialsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listPortalTestimonials } from "@/lib/db";
+import { listPortalTestimonials, listSchoolDirectoryRecords } from "@/lib/db";
 import { requirePortalUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Change Stories",
-  description: "Portal form for staff and volunteers to submit measurable change stories.",
+  title: "School Change Stories",
+  description: "Capture school-linked stories of measurable reading-performance change.",
 };
 
-export default async function PortalTestimonialsPage() {
+function parseSchoolId(value: string | string[] | undefined) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) {
+    return null;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export default async function PortalTestimonialsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requirePortalUser();
+  const params = await searchParams;
   const canModerate = user.isSupervisor || user.isME || user.isAdmin || user.isSuperAdmin;
-  const testimonials = listPortalTestimonials(user, 180).map((item) => ({
+
+  const schoolOptions = listSchoolDirectoryRecords(undefined, user)
+    .map((school) => ({
+      id: school.id,
+      name: school.name,
+      district: school.district,
+      region: school.region,
+      subRegion: school.subRegion,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  const requestedSchoolId = parseSchoolId(params.schoolId);
+  const selectedSchool =
+    requestedSchoolId !== null
+      ? schoolOptions.find((item) => item.id === requestedSchoolId) ?? null
+      : null;
+
+  const testimonials = listPortalTestimonials(
+    user,
+    180,
+    selectedSchool ? { schoolId: selectedSchool.id } : undefined,
+  ).map((item) => ({
     ...item,
     videoUrl:
       item.videoSourceType === "youtube"
@@ -25,11 +61,32 @@ export default async function PortalTestimonialsPage() {
   return (
     <PortalShell
       user={user}
-      activeHref="/portal/testimonials"
-      title="Stories of Measurable Change"
-      description="Capture measurable change stories with photo/video evidence in one workflow."
+      activeHref="/portal/schools"
+      title={selectedSchool ? `${selectedSchool.name} Change Stories` : "School Change Stories"}
+      description={
+        selectedSchool
+          ? `General performance in reading at ${selectedSchool.name} (${selectedSchool.district}).`
+          : "Capture measurable, school-linked reading-change stories with photo/video evidence."
+      }
+      actions={
+        selectedSchool ? (
+          <div className="action-row">
+            <Link className="button button-ghost" href={`/portal/schools/${selectedSchool.id}`}>
+              Open School Profile
+            </Link>
+            <Link className="button button-ghost" href="/portal/testimonials">
+              View All Schools
+            </Link>
+          </div>
+        ) : undefined
+      }
     >
-      <PortalTestimonialsManager initialTestimonials={testimonials} canModerate={canModerate} />
+      <PortalTestimonialsManager
+        initialTestimonials={testimonials}
+        canModerate={canModerate}
+        schoolOptions={schoolOptions}
+        defaultSchoolId={selectedSchool?.id ?? null}
+      />
     </PortalShell>
   );
 }

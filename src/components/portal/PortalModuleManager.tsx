@@ -111,6 +111,7 @@ type EgraLearnerRow = {
   learnerUid: string;
   learnerId: string;
   learnerName: string;
+  classGrade: string;
   sex: "" | "M" | "F";
   age: string;
   letterIdentification: string;
@@ -149,6 +150,7 @@ type EgraSummary = {
     learnerUid: string;
     learnerId: string;
     learnerName: string;
+    classGrade: string;
     sex: "M" | "F" | "";
     age: number | null;
     letterIdentification: number | null;
@@ -174,6 +176,45 @@ type TrainingParticipantRow = {
   role: TrainingParticipantRole;
   gender: TrainingParticipantGender;
   phoneContact: string;
+};
+
+type TrainingParticipantFeedbackRow = {
+  id: string;
+  contactId: string;
+  contactUid: string;
+  participantName: string;
+  changedThinking: string;
+  improveReading: string;
+};
+
+type TrainingFacilitatorRow = {
+  id: string;
+  fullName: string;
+  phone: string;
+};
+
+type TrainingFeedbackBundle = {
+  participants: Array<{
+    contactId: number | null;
+    contactUid: string | null;
+    participantName: string;
+    changedThinking: string;
+    improveReading: string;
+  }>;
+  facilitators: Array<{
+    id: string;
+    fullName: string;
+    phone: string;
+  }>;
+  selectedFacilitatorId: string;
+  facilitatorFeedback: {
+    generalObservation: string;
+    whatWentWell: string;
+    challenges: string;
+    actionsRecommendations: string;
+    nextStep: string;
+    photoFileName: string;
+  };
 };
 
 type VisitImplementationStatus = "started" | "not_started" | "partial";
@@ -214,10 +255,9 @@ const defaultRegion = ugandaRegions[0]?.region ?? "";
 const EGRA_ROW_COUNT = 20;
 const ASSESSMENT_IMPORT_TEMPLATE_HEADERS = [
   "no",
-  "learnerUid",
-  "learnerId",
   "learnerName",
-  "sex",
+  "classGrade",
+  "gender",
   "age",
   "phonemicAwareness",
   "graphemePhonemeCorrespondence",
@@ -230,10 +270,9 @@ const ASSESSMENT_IMPORT_TEMPLATE_HEADERS = [
 const ASSESSMENT_IMPORT_TEMPLATE_ROWS: Array<Record<(typeof ASSESSMENT_IMPORT_TEMPLATE_HEADERS)[number], string | number>> = [
   {
     no: 1,
-    learnerUid: "LRN-0001",
-    learnerId: "101",
     learnerName: "Example Learner 1",
-    sex: "F",
+    classGrade: "P1",
+    gender: "Female",
     age: 7,
     phonemicAwareness: 82,
     graphemePhonemeCorrespondence: 78,
@@ -245,10 +284,9 @@ const ASSESSMENT_IMPORT_TEMPLATE_ROWS: Array<Record<(typeof ASSESSMENT_IMPORT_TE
   },
   {
     no: 2,
-    learnerUid: "LRN-0002",
-    learnerId: "102",
     learnerName: "Example Learner 2",
-    sex: "M",
+    classGrade: "P2",
+    gender: "Male",
     age: 8,
     phonemicAwareness: 91,
     graphemePhonemeCorrespondence: 87,
@@ -263,6 +301,7 @@ const ASSESSMENT_IMPORT_HEADER_ALIASES: Record<Exclude<keyof EgraLearnerRow, "no
   learnerUid: ["learneruid", "learner_uid", "uid"],
   learnerId: ["learnerid", "learner_id", "childid", "internalchildid", "id"],
   learnerName: ["learnername", "learner_name", "childname", "fullname", "name"],
+  classGrade: ["classgrade", "class_grade", "class", "grade", "classlevel", "class_level"],
   sex: ["sex", "gender"],
   age: ["age"],
   letterIdentification: [
@@ -497,6 +536,20 @@ const trainingPhysicalFieldKeys = new Set([
   "parish",
 ]);
 
+const trainingScheduleEditableFieldKeys = new Set([
+  "trainingStatus",
+  "trainingName",
+  "deliveryMode",
+  "startTime",
+  "endTime",
+  "trainingVenue",
+  "clusterName",
+  "village",
+  "gpsLocation",
+  "sponsorshipType",
+  "sponsoredBy",
+]);
+
 function applySchoolGeoPayload(
   payload: FormPayloadState,
   school: SchoolDirectoryRecord | null,
@@ -694,6 +747,67 @@ function applySuggestedInsightRecIds(
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function getTodayLocal() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function evaluateVisitCompletionEligibility(dateValue: string, startTimeValue: string) {
+  const visitDate = String(dateValue ?? "").trim();
+  const visitTime = String(startTimeValue ?? "").trim();
+  if (!visitDate) {
+    return {
+      canComplete: false,
+      reason: "Set a visit date first.",
+    };
+  }
+
+  const todayLocal = getTodayLocal();
+  if (visitDate > todayLocal) {
+    return {
+      canComplete: false,
+      reason: "Future visits remain Scheduled until the visit happens.",
+    };
+  }
+  if (visitDate < todayLocal) {
+    return { canComplete: true, reason: "" };
+  }
+
+  if (!visitTime) {
+    return {
+      canComplete: false,
+      reason: "Set visit start time to unlock Completed status.",
+    };
+  }
+
+  const startDateTime = new Date(`${visitDate}T${visitTime}:00`);
+  if (Number.isNaN(startDateTime.getTime())) {
+    return {
+      canComplete: false,
+      reason: "Visit start time is invalid.",
+    };
+  }
+
+  const now = new Date();
+  const hoursSinceStart = (now.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
+  if (hoursSinceStart < 0) {
+    return {
+      canComplete: false,
+      reason: "Visit is still upcoming today, so status must stay Scheduled.",
+    };
+  }
+  if (hoursSinceStart <= 5) {
+    return { canComplete: true, reason: "" };
+  }
+  return {
+    canComplete: false,
+    reason: "Completed is only available within 5 hours after today's visit start time.",
+  };
 }
 
 function addDaysToDate(dateValue: string, days: number) {
@@ -912,6 +1026,122 @@ function parseTrainingParticipants(
   return rows.length > 0 ? rows : fallback;
 }
 
+function createEmptyTrainingParticipantFeedbackRow(): TrainingParticipantFeedbackRow {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    contactId: "",
+    contactUid: "",
+    participantName: "",
+    changedThinking: "",
+    improveReading: "",
+  };
+}
+
+function createEmptyTrainingFacilitatorRow(): TrainingFacilitatorRow {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    fullName: "",
+    phone: "",
+  };
+}
+
+function parseTrainingFeedbackBundle(raw: unknown): TrainingFeedbackBundle | null {
+  if (!raw || typeof raw !== "string") {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<TrainingFeedbackBundle>;
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    const participants = Array.isArray(parsed.participants)
+      ? parsed.participants.map((row) => ({
+          contactId:
+            row && typeof row === "object" && Number.isInteger((row as { contactId?: number }).contactId)
+              ? Number((row as { contactId?: number }).contactId)
+              : null,
+          contactUid:
+            row && typeof row === "object" && typeof (row as { contactUid?: unknown }).contactUid === "string"
+              ? String((row as { contactUid?: unknown }).contactUid).trim() || null
+              : null,
+          participantName:
+            row && typeof row === "object"
+              ? String((row as { participantName?: unknown }).participantName ?? "").trim()
+              : "",
+          changedThinking:
+            row && typeof row === "object"
+              ? String((row as { changedThinking?: unknown }).changedThinking ?? "").trim()
+              : "",
+          improveReading:
+            row && typeof row === "object"
+              ? String((row as { improveReading?: unknown }).improveReading ?? "").trim()
+              : "",
+        }))
+      : [];
+
+    const facilitators = Array.isArray(parsed.facilitators)
+      ? parsed.facilitators.map((row) => ({
+          id:
+            row && typeof row === "object"
+              ? String((row as { id?: unknown }).id ?? "").trim() ||
+                `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+              : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          fullName:
+            row && typeof row === "object"
+              ? String((row as { fullName?: unknown }).fullName ?? "").trim()
+              : "",
+          phone:
+            row && typeof row === "object"
+              ? String((row as { phone?: unknown }).phone ?? "").trim()
+              : "",
+        }))
+      : [];
+
+    const facilitatorFeedback =
+      parsed.facilitatorFeedback && typeof parsed.facilitatorFeedback === "object"
+        ? {
+            generalObservation: String(
+              (parsed.facilitatorFeedback as { generalObservation?: unknown }).generalObservation ?? "",
+            ).trim(),
+            whatWentWell: String(
+              (parsed.facilitatorFeedback as { whatWentWell?: unknown }).whatWentWell ?? "",
+            ).trim(),
+            challenges: String(
+              (parsed.facilitatorFeedback as { challenges?: unknown }).challenges ?? "",
+            ).trim(),
+            actionsRecommendations: String(
+              (parsed.facilitatorFeedback as { actionsRecommendations?: unknown }).actionsRecommendations ??
+                "",
+            ).trim(),
+            nextStep: String(
+              (parsed.facilitatorFeedback as { nextStep?: unknown }).nextStep ?? "",
+            ).trim(),
+            photoFileName: String(
+              (parsed.facilitatorFeedback as { photoFileName?: unknown }).photoFileName ?? "",
+            ).trim(),
+          }
+        : {
+            generalObservation: "",
+            whatWentWell: "",
+            challenges: "",
+            actionsRecommendations: "",
+            nextStep: "",
+            photoFileName: "",
+          };
+
+    return {
+      participants,
+      facilitators,
+      selectedFacilitatorId: String(parsed.selectedFacilitatorId ?? "").trim(),
+      facilitatorFeedback,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function buildDefaultPayload(config: PortalModuleConfig): FormPayloadState {
   const payload: FormPayloadState = {};
   config.sections.forEach((section) => {
@@ -991,6 +1221,7 @@ function createEmptyEgraLearnerRow(no: number): EgraLearnerRow {
     learnerUid: "",
     learnerId: "",
     learnerName: "",
+    classGrade: "",
     sex: "",
     age: "",
     letterIdentification: "",
@@ -1075,7 +1306,12 @@ function formatMasteryProfileCompact(
 }
 
 function rowHasAssessmentData(row: EgraLearnerRow) {
-  if (row.learnerId.trim() || row.learnerName.trim() || row.sex || row.age.trim()) {
+  if (
+    row.learnerId.trim() ||
+    row.learnerName.trim() ||
+    row.sex ||
+    row.age.trim()
+  ) {
     return true;
   }
 
@@ -1150,6 +1386,7 @@ function computeEgraSummary(rows: EgraLearnerRow[]): EgraSummary {
       learnerUid: row.learnerUid.trim(),
       learnerId: row.learnerId.trim(),
       learnerName: row.learnerName.trim(),
+      classGrade: row.classGrade.trim(),
       sex: row.sex,
       age: toNumberOrNull(row.age),
       letterIdentification: toNumberOrNull(row.letterIdentification),
@@ -1212,6 +1449,62 @@ function normalizeAssessmentImportAge(value: unknown) {
     return "";
   }
   return String(Math.round(parsed));
+}
+
+type AssessmentImportRosterLearner = {
+  learnerId: number;
+  learnerUid: string;
+  fullName: string;
+  gender: "Boy" | "Girl" | "Other";
+  age: number;
+  classGrade: string;
+};
+
+function normalizeAssessmentImportName(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function normalizeAssessmentImportClassGrade(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function normalizeAssessmentLookupText(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function toRosterGender(sex: "" | "M" | "F"): "Boy" | "Girl" | "Other" {
+  if (sex === "M") {
+    return "Boy";
+  }
+  if (sex === "F") {
+    return "Girl";
+  }
+  return "Other";
+}
+
+function fromRosterGender(value: string): "" | "M" | "F" {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "boy" || normalized === "male" || normalized === "m") {
+    return "M";
+  }
+  if (normalized === "girl" || normalized === "female" || normalized === "f") {
+    return "F";
+  }
+  return "";
+}
+
+function getAssessmentImportLearnerKey(input: {
+  learnerName: string;
+  classGrade: string;
+  age: string;
+  sex: "" | "M" | "F";
+}) {
+  return [
+    normalizeAssessmentLookupText(input.learnerName),
+    normalizeAssessmentLookupText(input.classGrade),
+    input.age.trim(),
+    input.sex || "-",
+  ].join("|");
 }
 
 function getAssessmentImportValue(
@@ -1309,10 +1602,13 @@ function mapAssessmentImportRows(
         normalizedRow,
         ASSESSMENT_IMPORT_HEADER_ALIASES.learnerId,
       );
-      const learnerName = getAssessmentImportValue(
-        normalizedRow,
-        ASSESSMENT_IMPORT_HEADER_ALIASES.learnerName,
+      const learnerName = normalizeAssessmentImportName(
+        getAssessmentImportValue(normalizedRow, ASSESSMENT_IMPORT_HEADER_ALIASES.learnerName),
       );
+      const rowClassGrade = normalizeAssessmentImportClassGrade(
+        getAssessmentImportValue(normalizedRow, ASSESSMENT_IMPORT_HEADER_ALIASES.classGrade),
+      );
+      const resolvedClassGrade = rowClassGrade || classGrade;
       const sex = normalizeAssessmentImportSex(
         getAssessmentImportValue(normalizedRow, ASSESSMENT_IMPORT_HEADER_ALIASES.sex),
       );
@@ -1379,7 +1675,7 @@ function mapAssessmentImportRows(
       const fluencyLevel = normalizeEgraLevelLabel(
         rawFluencyLevel,
         rowSignals,
-        classGrade,
+        resolvedClassGrade || classGrade,
       );
 
       return {
@@ -1387,6 +1683,7 @@ function mapAssessmentImportRows(
         learnerUid,
         learnerId,
         learnerName,
+        classGrade: resolvedClassGrade,
         sex,
         age,
         letterIdentification,
@@ -1403,15 +1700,6 @@ function mapAssessmentImportRows(
 
   if (mappedRows.length === 0) {
     throw new Error("No learner rows were detected. Use the provided template.");
-  }
-
-  const missingIdentifierRows = mappedRows
-    .filter((row) => !row.learnerUid.trim() && !row.learnerId.trim())
-    .map((row) => row.no);
-  if (missingIdentifierRows.length > 0) {
-    throw new Error(
-      `Each row must include learnerUid or learnerId. Fix row(s): ${missingIdentifierRows.join(", ")}.`,
-    );
   }
 
   ensureAssessmentTemplateRowLimit(mappedRows);
@@ -1458,6 +1746,7 @@ function parseEgraRows(raw: unknown): EgraLearnerRow[] {
       learnerUid: sanitizeForInput(entry.learnerUid),
       learnerId: sanitizeForInput(entry.learnerId),
       learnerName: sanitizeForInput(entry.learnerName),
+      classGrade: sanitizeForInput(entry.classGrade ?? entry.class ?? entry.grade),
       sex: normalizeSex(entry.sex),
       age,
       letterIdentification,
@@ -1540,6 +1829,20 @@ export function PortalModuleManager({
   const [trainingParticipants, setTrainingParticipants] = useState<TrainingParticipantRow[]>(
     () => [createEmptyTrainingParticipant()],
   );
+  const [isTrainingFeedbackFormOpen, setIsTrainingFeedbackFormOpen] = useState(false);
+  const [trainingParticipantFeedbackRows, setTrainingParticipantFeedbackRows] = useState<
+    TrainingParticipantFeedbackRow[]
+  >([]);
+  const [trainingFacilitatorRows, setTrainingFacilitatorRows] = useState<TrainingFacilitatorRow[]>([
+    createEmptyTrainingFacilitatorRow(),
+  ]);
+  const [selectedTrainingFacilitatorId, setSelectedTrainingFacilitatorId] = useState("");
+  const [facilitatorGeneralObservation, setFacilitatorGeneralObservation] = useState("");
+  const [facilitatorWhatWentWell, setFacilitatorWhatWentWell] = useState("");
+  const [facilitatorChallenges, setFacilitatorChallenges] = useState("");
+  const [facilitatorActionsRecommendations, setFacilitatorActionsRecommendations] = useState("");
+  const [facilitatorNextStep, setFacilitatorNextStep] = useState("");
+  const [facilitatorFeedbackPhotoFileName, setFacilitatorFeedbackPhotoFileName] = useState("");
   const [visitStep, setVisitStep] = useState<1 | 2 | 3 | 4>(1);
   const [schoolContacts, setSchoolContacts] = useState<SchoolContactOption[]>([]);
   const [loadingSchoolContacts, setLoadingSchoolContacts] = useState(false);
@@ -1571,6 +1874,26 @@ export function PortalModuleManager({
   }));
 
   const isVisitModule = config.module === "visit";
+  const isTrainingModule = config.module === "training";
+  const trainingStatusValue = String(formState.payload.trainingStatus ?? "")
+    .trim()
+    .toLowerCase();
+  const isTrainingScheduled = isTrainingModule && trainingStatusValue === "scheduled";
+  const visitStatusValue = String(formState.payload.visitStatus ?? "")
+    .trim()
+    .toLowerCase();
+  const visitStatus = visitStatusValue === "completed" ? "completed" : "scheduled";
+  const visitCompletionGate = useMemo(
+    () =>
+      evaluateVisitCompletionEligibility(
+        formState.date,
+        String(formState.payload.startTime ?? ""),
+      ),
+    [formState.date, formState.payload.startTime],
+  );
+  const isVisitCompleted = isVisitModule && visitStatus === "completed";
+  const isVisitFollowUpLocked = isVisitModule && !isVisitCompleted;
+  const visitImplementationUnlocked = !isVisitModule || isVisitCompleted;
   const visitImplementationStatus = useMemo(
     () =>
       normalizeVisitImplementationStatus(
@@ -1766,6 +2089,7 @@ export function PortalModuleManager({
       const defaults = applySchoolGeoPayload(buildDefaultPayload(config), selectedSchool);
       if (config.module === "visit") {
         defaults.coachObserver = currentUser.fullName;
+        defaults.visitStatus = "scheduled";
         defaults.implementationStatus = "";
         defaults.visitPathway = "observation";
         defaults.demoDelivered = "yes";
@@ -1808,6 +2132,17 @@ export function PortalModuleManager({
     setTrainingParticipants([
       createEmptyTrainingParticipant(nextForm.schoolId, nextForm.schoolName),
     ]);
+    setIsTrainingFeedbackFormOpen(false);
+    setTrainingParticipantFeedbackRows([]);
+    const defaultFacilitator = createEmptyTrainingFacilitatorRow();
+    setTrainingFacilitatorRows([defaultFacilitator]);
+    setSelectedTrainingFacilitatorId(defaultFacilitator.id);
+    setFacilitatorGeneralObservation("");
+    setFacilitatorWhatWentWell("");
+    setFacilitatorChallenges("");
+    setFacilitatorActionsRecommendations("");
+    setFacilitatorNextStep("");
+    setFacilitatorFeedbackPhotoFileName("");
     setIsFormOpen(true);
     setVisitStep(1);
     setSelectedFiles([]);
@@ -1884,6 +2219,9 @@ export function PortalModuleManager({
       if (!String(nextPayload.coachObserver ?? "").trim()) {
         nextPayload.coachObserver = record.createdByName;
       }
+      if (!String(nextPayload.visitStatus ?? "").trim()) {
+        nextPayload.visitStatus = "completed";
+      }
       if (!String(nextPayload.implementationStatus ?? "").trim()) {
         nextPayload.implementationStatus = "started";
       }
@@ -1912,6 +2250,59 @@ export function PortalModuleManager({
       reviewNote: record.reviewNote ?? "",
       payload: hydratedPayload,
     });
+    if (config.module === "training") {
+      const parsedBundle = parseTrainingFeedbackBundle(
+        String(hydratedPayload.trainingFeedbackBundleJson ?? "").trim(),
+      );
+      if (parsedBundle) {
+        setTrainingParticipantFeedbackRows(
+          parsedBundle.participants.length > 0
+            ? parsedBundle.participants.map((row) => ({
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                contactId: row.contactId ? String(row.contactId) : "",
+                contactUid: row.contactUid ?? "",
+                participantName: row.participantName,
+                changedThinking: row.changedThinking,
+                improveReading: row.improveReading,
+              }))
+            : [],
+        );
+        const facilitators =
+          parsedBundle.facilitators.length > 0
+            ? parsedBundle.facilitators
+            : [createEmptyTrainingFacilitatorRow()];
+        setTrainingFacilitatorRows(facilitators);
+        setSelectedTrainingFacilitatorId(
+          parsedBundle.selectedFacilitatorId || facilitators[0]?.id || "",
+        );
+        setFacilitatorGeneralObservation(parsedBundle.facilitatorFeedback.generalObservation);
+        setFacilitatorWhatWentWell(parsedBundle.facilitatorFeedback.whatWentWell);
+        setFacilitatorChallenges(parsedBundle.facilitatorFeedback.challenges);
+        setFacilitatorActionsRecommendations(
+          parsedBundle.facilitatorFeedback.actionsRecommendations,
+        );
+        setFacilitatorNextStep(parsedBundle.facilitatorFeedback.nextStep);
+        setFacilitatorFeedbackPhotoFileName(parsedBundle.facilitatorFeedback.photoFileName);
+      } else {
+        setTrainingParticipantFeedbackRows([]);
+        const fallbackFacilitator = createEmptyTrainingFacilitatorRow();
+        setTrainingFacilitatorRows([fallbackFacilitator]);
+        setSelectedTrainingFacilitatorId(fallbackFacilitator.id);
+        setFacilitatorGeneralObservation(
+          String(hydratedPayload.facilitatorGeneralObservation ?? "").trim(),
+        );
+        setFacilitatorWhatWentWell(String(hydratedPayload.what_went_well_trainer ?? "").trim());
+        setFacilitatorChallenges(String(hydratedPayload.challenges_trainer ?? "").trim());
+        setFacilitatorActionsRecommendations(
+          String(hydratedPayload.recommendations_next_training_trainer ?? "").trim(),
+        );
+        setFacilitatorNextStep(String(hydratedPayload.facilitatorNextStep ?? "").trim());
+        setFacilitatorFeedbackPhotoFileName(
+          String(hydratedPayload.feedbackPhotoFileName ?? "").trim(),
+        );
+      }
+    }
+    setIsTrainingFeedbackFormOpen(false);
     setIsFormOpen(true);
     setVisitStep(1);
     setVisitNextActions(parseVisitNextActions(nextPayload.leadershipNextActionsJson));
@@ -2086,6 +2477,15 @@ export function PortalModuleManager({
         ...formState,
         egraLearners,
         trainingParticipants,
+        trainingParticipantFeedbackRows,
+        trainingFacilitatorRows,
+        selectedTrainingFacilitatorId,
+        facilitatorGeneralObservation,
+        facilitatorWhatWentWell,
+        facilitatorChallenges,
+        facilitatorActionsRecommendations,
+        facilitatorNextStep,
+        facilitatorFeedbackPhotoFileName,
         visitNextActions,
         insightRecommendationRows,
         module: config.module,
@@ -2105,6 +2505,15 @@ export function PortalModuleManager({
     egraLearners,
     isFormOpen,
     trainingParticipants,
+    trainingParticipantFeedbackRows,
+    trainingFacilitatorRows,
+    selectedTrainingFacilitatorId,
+    facilitatorGeneralObservation,
+    facilitatorWhatWentWell,
+    facilitatorChallenges,
+    facilitatorActionsRecommendations,
+    facilitatorNextStep,
+    facilitatorFeedbackPhotoFileName,
     visitNextActions,
     insightRecommendationRows,
   ]);
@@ -2135,7 +2544,51 @@ export function PortalModuleManager({
   }, [config.module, formState.schoolId, schoolsById]);
 
   useEffect(() => {
-    if (!isVisitModule) {
+    if (!isTrainingModule || trainingParticipantFeedbackRows.length > 0) {
+      return;
+    }
+    const seededRows = trainingParticipants
+      .filter((row) => row.contactId.trim() || row.contactUid.trim() || row.participantName.trim())
+      .map((row) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        contactId: row.contactId.trim(),
+        contactUid: row.contactUid.trim(),
+        participantName: row.participantName.trim(),
+        changedThinking: "",
+        improveReading: "",
+      }));
+    if (seededRows.length > 0) {
+      setTrainingParticipantFeedbackRows(seededRows);
+    }
+  }, [isTrainingModule, trainingParticipantFeedbackRows.length, trainingParticipants]);
+
+  useEffect(() => {
+    if (!isTrainingModule) {
+      return;
+    }
+    if (trainingFacilitatorRows.length === 0) {
+      const fallback = createEmptyTrainingFacilitatorRow();
+      setTrainingFacilitatorRows([fallback]);
+      setSelectedTrainingFacilitatorId(fallback.id);
+      return;
+    }
+    if (
+      !selectedTrainingFacilitatorId ||
+      !trainingFacilitatorRows.some((entry) => entry.id === selectedTrainingFacilitatorId)
+    ) {
+      setSelectedTrainingFacilitatorId(trainingFacilitatorRows[0].id);
+    }
+  }, [isTrainingModule, selectedTrainingFacilitatorId, trainingFacilitatorRows]);
+
+  useEffect(() => {
+    if (isTrainingScheduled) {
+      setIsTrainingFeedbackFormOpen(false);
+    }
+  }, [isTrainingScheduled]);
+
+  useEffect(() => {
+    const needsSchoolContacts = isVisitModule || isTrainingModule;
+    if (!needsSchoolContacts) {
       return;
     }
     if (!isFormOpen) {
@@ -2191,7 +2644,7 @@ export function PortalModuleManager({
     return () => {
       active = false;
     };
-  }, [formState.schoolId, isFormOpen, isVisitModule]);
+  }, [formState.schoolId, isFormOpen, isTrainingModule, isVisitModule]);
 
   useEffect(() => {
     if (!isVisitModule) {
@@ -2201,6 +2654,36 @@ export function PortalModuleManager({
       setVisitStep(1);
     }
   }, [formState.schoolId, isVisitModule, visitStep]);
+
+  useEffect(() => {
+    if (!isVisitModule || visitCompletionGate.canComplete) {
+      return;
+    }
+    setFormState((prev) => {
+      const currentStatus = String(prev.payload.visitStatus ?? "")
+        .trim()
+        .toLowerCase();
+      if (currentStatus === "scheduled") {
+        return prev;
+      }
+      return {
+        ...prev,
+        payload: {
+          ...prev.payload,
+          visitStatus: "scheduled",
+        },
+      };
+    });
+  }, [isVisitModule, visitCompletionGate.canComplete]);
+
+  useEffect(() => {
+    if (!isVisitModule || visitImplementationUnlocked) {
+      return;
+    }
+    if (visitStep > 1) {
+      setVisitStep(1);
+    }
+  }, [isVisitModule, visitImplementationUnlocked, visitStep]);
 
   useEffect(() => {
     if (!isVisitModule) {
@@ -2303,6 +2786,15 @@ export function PortalModuleManager({
           schoolId?: unknown;
           egraLearners?: unknown;
           trainingParticipants?: unknown;
+          trainingParticipantFeedbackRows?: unknown;
+          trainingFacilitatorRows?: unknown;
+          selectedTrainingFacilitatorId?: unknown;
+          facilitatorGeneralObservation?: unknown;
+          facilitatorWhatWentWell?: unknown;
+          facilitatorChallenges?: unknown;
+          facilitatorActionsRecommendations?: unknown;
+          facilitatorNextStep?: unknown;
+          facilitatorFeedbackPhotoFileName?: unknown;
           visitNextActions?: unknown;
         };
         if (parsed.module === config.module || !parsed.module) {
@@ -2336,14 +2828,18 @@ export function PortalModuleManager({
             ) ??
             null;
           const schoolPrefill = prefillSchoolId ? schoolsById.get(prefillSchoolId) : null;
-          const enforcedSchool = schoolPrefill ?? draftSchool;
-          const resolvedProgramType =
-            prefillProgramType ||
-            parsed.programType ||
-            config.programTypeOptions[0]?.value ||
-            "";
+	          const enforcedSchool = schoolPrefill ?? draftSchool;
+	          const resolvedProgramType =
+	            prefillProgramType ||
+	            parsed.programType ||
+	            config.programTypeOptions[0]?.value ||
+	            "";
+          const mergedPayload = { ...buildDefaultPayload(config), ...(parsed.payload ?? {}) };
+          if (config.module === "visit" && !String(mergedPayload.visitStatus ?? "").trim()) {
+            mergedPayload.visitStatus = parsed.id ? "completed" : "scheduled";
+          }
 
-          setFormState({
+	          setFormState({
             id: parsed.id ?? null,
             date: parsed.date ?? getToday(),
             region:
@@ -2359,14 +2855,14 @@ export function PortalModuleManager({
             programType: resolvedProgramType,
             followUpDate: parsed.followUpDate ?? "",
             followUpType: parsed.followUpType ?? "school_visit",
-            followUpOwnerUserId:
-              parsed.followUpOwnerUserId !== undefined && parsed.followUpOwnerUserId !== null
-                ? String(parsed.followUpOwnerUserId)
-                : defaultFollowUpOwnerId,
-            status: parsed.status ?? "Draft",
-            reviewNote: parsed.reviewNote ?? "",
-            payload: { ...buildDefaultPayload(config), ...(parsed.payload ?? {}) },
-          });
+	            followUpOwnerUserId:
+	              parsed.followUpOwnerUserId !== undefined && parsed.followUpOwnerUserId !== null
+	                ? String(parsed.followUpOwnerUserId)
+	                : defaultFollowUpOwnerId,
+	            status: parsed.status ?? "Draft",
+	            reviewNote: parsed.reviewNote ?? "",
+	            payload: mergedPayload,
+	          });
           setEgraLearners(parseEgraRows(parsed.egraLearners));
           setTrainingParticipants(
             parseTrainingParticipants(
@@ -2379,7 +2875,63 @@ export function PortalModuleManager({
               },
             ),
           );
-          const payload = { ...buildDefaultPayload(config), ...(parsed.payload ?? {}) };
+          if (config.module === "training") {
+            const draftFeedbackRows = Array.isArray(parsed.trainingParticipantFeedbackRows)
+              ? parsed.trainingParticipantFeedbackRows
+                  .filter((row) => row && typeof row === "object")
+                  .map((row) => {
+                    const entry = row as Record<string, unknown>;
+                    return {
+                      id:
+                        String(entry.id ?? "").trim() ||
+                        `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                      contactId: String(entry.contactId ?? "").trim(),
+                      contactUid: String(entry.contactUid ?? "").trim(),
+                      participantName: String(entry.participantName ?? "").trim(),
+                      changedThinking: String(entry.changedThinking ?? "").trim(),
+                      improveReading: String(entry.improveReading ?? "").trim(),
+                    } satisfies TrainingParticipantFeedbackRow;
+                  })
+              : [];
+            setTrainingParticipantFeedbackRows(draftFeedbackRows);
+
+            const draftFacilitators = Array.isArray(parsed.trainingFacilitatorRows)
+              ? parsed.trainingFacilitatorRows
+                  .filter((row) => row && typeof row === "object")
+                  .map((row) => {
+                    const entry = row as Record<string, unknown>;
+                    return {
+                      id:
+                        String(entry.id ?? "").trim() ||
+                        `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                      fullName: String(entry.fullName ?? "").trim(),
+                      phone: String(entry.phone ?? "").trim(),
+                    } satisfies TrainingFacilitatorRow;
+                  })
+              : [];
+            const facilitators =
+              draftFacilitators.length > 0
+                ? draftFacilitators
+                : [createEmptyTrainingFacilitatorRow()];
+            setTrainingFacilitatorRows(facilitators);
+            setSelectedTrainingFacilitatorId(
+              String(parsed.selectedTrainingFacilitatorId ?? "").trim() || facilitators[0].id,
+            );
+            setFacilitatorGeneralObservation(
+              String(parsed.facilitatorGeneralObservation ?? "").trim(),
+            );
+            setFacilitatorWhatWentWell(String(parsed.facilitatorWhatWentWell ?? "").trim());
+            setFacilitatorChallenges(String(parsed.facilitatorChallenges ?? "").trim());
+            setFacilitatorActionsRecommendations(
+              String(parsed.facilitatorActionsRecommendations ?? "").trim(),
+            );
+            setFacilitatorNextStep(String(parsed.facilitatorNextStep ?? "").trim());
+            setFacilitatorFeedbackPhotoFileName(
+              String(parsed.facilitatorFeedbackPhotoFileName ?? "").trim(),
+            );
+            setIsTrainingFeedbackFormOpen(false);
+          }
+	          const payload = mergedPayload;
           const selectedRecIds = Array.isArray(payload.insightsRecommendationsRecIds)
             ? payload.insightsRecommendationsRecIds
             : [];
@@ -2509,20 +3061,19 @@ export function PortalModuleManager({
     });
   }, [formState.schoolId, schoolsById]);
 
+  const nextLearnerShortId = useCallback((learnerNo: number) => {
+    return `LR-${String(learnerNo).padStart(4, "0")}`;
+  }, []);
+
   const handleOpenEgraModal = useCallback(() => {
     const nextIndex = egraLearners.findIndex((row) => !rowHasAssessmentData(row));
     const targetIndex = nextIndex === -1 ? egraLearners.length : nextIndex;
     const nextNo = targetIndex + 1;
 
-    // Generate Learner ID
-    const schoolCode = formState.schoolId ? schoolsById.get(Number(formState.schoolId))?.schoolCode ?? "SCH" : "SCH";
-    const classLevel = (formState.payload.classLevel as string) || "CLS";
-    const nextId = `${schoolCode}-${classLevel}-${String(nextNo).padStart(2, "0")}`;
-
     setModalLearnerNo(nextNo);
-    setModalLearnerId(nextId);
+    setModalLearnerId(nextLearnerShortId(nextNo));
     setIsEgraModalOpen(true);
-  }, [egraLearners, formState.payload.classLevel, formState.schoolId, schoolsById]);
+  }, [egraLearners, nextLearnerShortId]);
 
   const downloadAssessmentTemplate = useCallback(async (format: "csv" | "xlsx") => {
     try {
@@ -2565,6 +3116,141 @@ export function PortalModuleManager({
     assessmentImportInputRef.current?.click();
   }, []);
 
+  const fetchAssessmentSchoolLearners = useCallback(
+    async (schoolId: number): Promise<AssessmentImportRosterLearner[]> => {
+      const response = await fetch(`/api/portal/schools/roster?schoolId=${schoolId}&type=learner`, {
+        cache: "no-store",
+      });
+      const json = (await response.json().catch(() => ({}))) as {
+        roster?: AssessmentImportRosterLearner[];
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(json.error ?? "Could not load school learner roster.");
+      }
+      return Array.isArray(json.roster) ? json.roster : [];
+    },
+    [],
+  );
+
+  const createAssessmentSchoolLearner = useCallback(
+    async (
+      schoolId: number,
+      row: Pick<EgraLearnerRow, "learnerName" | "sex" | "age" | "classGrade">,
+    ): Promise<AssessmentImportRosterLearner> => {
+      const response = await fetch("/api/portal/schools/roster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schoolId,
+          type: "learner",
+          fullName: row.learnerName.trim(),
+          gender: toRosterGender(row.sex),
+          age: Number(row.age),
+          classGrade: row.classGrade.trim(),
+        }),
+      });
+      const json = (await response.json().catch(() => ({}))) as {
+        entry?: AssessmentImportRosterLearner;
+        error?: string;
+      };
+      if (!response.ok || !json.entry) {
+        throw new Error(json.error ?? "Could not create learner from import row.");
+      }
+      return json.entry;
+    },
+    [],
+  );
+
+  const assignImportedLearnerIdentifiers = useCallback(
+    async (rows: EgraLearnerRow[], schoolId: number) => {
+      const roster = await fetchAssessmentSchoolLearners(schoolId);
+      const rosterByKey = new Map<string, AssessmentImportRosterLearner>();
+      roster.forEach((entry) => {
+        const key = getAssessmentImportLearnerKey({
+          learnerName: entry.fullName,
+          classGrade: entry.classGrade,
+          age: String(entry.age),
+          sex: fromRosterGender(entry.gender),
+        });
+        if (!rosterByKey.has(key)) {
+          rosterByKey.set(key, entry);
+        }
+      });
+
+      const missingRows: string[] = [];
+      const resolvedRows: EgraLearnerRow[] = [];
+
+      for (const row of rows) {
+        const normalizedRow: EgraLearnerRow = {
+          ...row,
+          learnerName: row.learnerName.trim(),
+          classGrade: row.classGrade.trim(),
+          age: row.age.trim(),
+        };
+        const hasLearnerUid = normalizedRow.learnerUid.trim().length > 0;
+        const learnerIdAsNumber = Number(normalizedRow.learnerId);
+        const hasNumericLearnerId = Number.isInteger(learnerIdAsNumber) && learnerIdAsNumber > 0;
+        if (hasLearnerUid || hasNumericLearnerId) {
+          if (!normalizedRow.learnerId.trim() && hasLearnerUid) {
+            normalizedRow.learnerId = normalizedRow.learnerUid.trim();
+          }
+          resolvedRows.push(normalizedRow);
+          continue;
+        }
+
+        const missingFields: string[] = [];
+        if (!normalizedRow.learnerName) {
+          missingFields.push("learnerName");
+        }
+        if (!normalizedRow.classGrade) {
+          missingFields.push("classGrade");
+        }
+        if (!normalizedRow.age || !Number.isFinite(Number(normalizedRow.age))) {
+          missingFields.push("age");
+        }
+        if (!normalizedRow.sex) {
+          missingFields.push("gender");
+        }
+        if (missingFields.length > 0) {
+          missingRows.push(`row ${normalizedRow.no}: ${missingFields.join(", ")}`);
+          resolvedRows.push(normalizedRow);
+          continue;
+        }
+
+        const key = getAssessmentImportLearnerKey({
+          learnerName: normalizedRow.learnerName,
+          classGrade: normalizedRow.classGrade,
+          age: normalizedRow.age,
+          sex: normalizedRow.sex,
+        });
+        let matched = rosterByKey.get(key);
+        if (!matched) {
+          matched = await createAssessmentSchoolLearner(schoolId, normalizedRow);
+          rosterByKey.set(key, matched);
+        }
+        resolvedRows.push({
+          ...normalizedRow,
+          learnerUid: matched.learnerUid,
+          learnerId: matched.learnerUid,
+          learnerName: matched.fullName,
+          classGrade: matched.classGrade,
+          sex: fromRosterGender(matched.gender) || normalizedRow.sex,
+          age: String(matched.age),
+        });
+      }
+
+      if (missingRows.length > 0) {
+        throw new Error(
+          `Auto-ID assignment needs learnerName, classGrade, gender, and age. Fix ${missingRows.join("; ")}.`,
+        );
+      }
+
+      return resolvedRows;
+    },
+    [createAssessmentSchoolLearner, fetchAssessmentSchoolLearners],
+  );
+
   const handleAssessmentImportFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFile = event.target.files?.[0];
@@ -2589,10 +3275,12 @@ export function PortalModuleManager({
         const workbookRows = await parseAssessmentImportWorkbookRows(selectedFile);
         const classGrade = String(formState.payload.classLevel ?? "").trim() || "P1";
         const importedRows = mapAssessmentImportRows(workbookRows, classGrade);
-        setEgraLearners(replaceWithImportedLearners(importedRows));
+        const schoolId = Number(formState.schoolId);
+        const resolvedRows = await assignImportedLearnerIdentifiers(importedRows, schoolId);
+        setEgraLearners(replaceWithImportedLearners(resolvedRows));
         setFeedback({
           kind: "success",
-          message: `Imported ${importedRows.length} learner row(s) from ${selectedFile.name}. Previous learner rows were replaced.`,
+          message: `Imported ${resolvedRows.length} learner row(s) from ${selectedFile.name}. Learner IDs were auto-assigned from school roster records.`,
         });
       } catch (error) {
         const message =
@@ -2605,13 +3293,17 @@ export function PortalModuleManager({
         event.target.value = "";
       }
     },
-    [config.module, formState.payload.classLevel, formState.schoolId],
+    [
+      assignImportedLearnerIdentifiers,
+      config.module,
+      formState.payload.classLevel,
+      formState.schoolId,
+    ],
   );
 
-  const handleSaveLearner = useCallback((learner: EgraLearner) => {
+  const upsertEgraLearnerRow = useCallback((learner: EgraLearner) => {
     setEgraLearners((prev) => {
       const newRows = [...prev];
-      // Ensure we have enough rows
       while (newRows.length < learner.no) {
         newRows.push(createEmptyEgraLearnerRow(newRows.length + 1));
       }
@@ -2620,9 +3312,10 @@ export function PortalModuleManager({
       newRows[index] = {
         no: learner.no,
         learnerUid: learner.learnerUid ?? "",
-        learnerId: learner.learnerId,
+        learnerId: learner.learnerId.trim() || learner.learnerUid || "",
         learnerName: learner.learnerName,
-        sex: learner.sex as "M" | "F",
+        classGrade: learner.classGrade,
+        sex: learner.sex === "F" ? "F" : learner.sex === "M" ? "M" : "",
         age: String(learner.age),
         letterIdentification: String(learner.letterIdentification),
         soundIdentification: String(learner.soundIdentification),
@@ -2635,23 +3328,29 @@ export function PortalModuleManager({
       };
       return newRows;
     });
-    // Keep modal open for next learner? No, close it for now as per "popup" flow implies single entry.
-    // User can click "Save & Add Next" in modal if we implement that, 
-    // but the modal component has "Save & Add Next" button.
-    // Let's increment and keep open.
+  }, []);
 
-    const nextNo = learner.no + 1;
-    if (nextNo <= 20) { // Limit to 20
-      const schoolCode = formState.schoolId ? schoolsById.get(Number(formState.schoolId))?.schoolCode ?? "SCH" : "SCH";
-      const classLevel = (formState.payload.classLevel as string) || "CLS";
-      const nextId = `${schoolCode}-${classLevel}-${String(nextNo).padStart(2, "0")}`;
-      setModalLearnerNo(nextNo);
-      setModalLearnerId(nextId);
-      // Don't close, effectively "Add Next"
-    } else {
+  const handleSaveLearner = useCallback(
+    (learner: EgraLearner) => {
+      upsertEgraLearnerRow(learner);
+      const nextNo = learner.no + 1;
+      if (nextNo <= EGRA_ROW_COUNT) {
+        setModalLearnerNo(nextNo);
+        setModalLearnerId(nextLearnerShortId(nextNo));
+        return;
+      }
       setIsEgraModalOpen(false);
-    }
-  }, [formState.payload.classLevel, formState.schoolId, schoolsById]);
+    },
+    [nextLearnerShortId, upsertEgraLearnerRow],
+  );
+
+  const handleSaveLearnerAndClose = useCallback(
+    (learner: EgraLearner) => {
+      upsertEgraLearnerRow(learner);
+      setIsEgraModalOpen(false);
+    },
+    [upsertEgraLearnerRow],
+  );
 
   const validateForm = useCallback((nextStatus: PortalRecordStatus) => {
     const enforceInsights = nextStatus !== "Draft";
@@ -2678,17 +3377,20 @@ export function PortalModuleManager({
     const selectedSchoolId = Number(formState.schoolId);
     const hasSelectedSchool =
       Number.isInteger(selectedSchoolId) && selectedSchoolId > 0 && schoolsById.has(selectedSchoolId);
+    const normalizedVisitStatusForValidation =
+      String(formState.payload.visitStatus ?? "").trim().toLowerCase() === "completed"
+        ? "completed"
+        : "scheduled";
+    const isVisitScheduledDraft =
+      config.module === "visit" &&
+      nextStatus === "Draft" &&
+      normalizedVisitStatusForValidation !== "completed";
 
     if (!hasSelectedSchool) {
       return "Select a valid school account.";
     }
 
     if (config.module === "training") {
-      const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
-      if (activeRows.length === 0) {
-        return "Add at least one participant.";
-      }
-
       const deliveryMode = String(formState.payload.deliveryMode ?? "").trim().toLowerCase();
       if (!onlineTrainingMode && deliveryMode.includes("cluster")) {
         const clusterName = String(formState.payload.clusterName ?? "").trim();
@@ -2697,18 +3399,25 @@ export function PortalModuleManager({
         }
       }
 
-      if (!formState.followUpDate) {
-        return "Next follow-up date is required and must be at least 2 weeks after training.";
-      }
-      if (!formState.followUpType.trim()) {
-        return "Follow-up type is required for training.";
-      }
-      if (!formState.followUpOwnerUserId.trim()) {
-        return "Follow-up owner is required for training.";
+      if (!isTrainingScheduled) {
+        const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
+        if (activeRows.length === 0) {
+          return "Add at least one participant.";
+        }
+
+        if (!formState.followUpDate) {
+          return "Next follow-up date is required and must be at least 2 weeks after training.";
+        }
+        if (!formState.followUpType.trim()) {
+          return "Follow-up type is required for training.";
+        }
+        if (!formState.followUpOwnerUserId.trim()) {
+          return "Follow-up owner is required for training.";
+        }
       }
     }
 
-    if (formState.followUpDate) {
+    if (formState.followUpDate && !isTrainingScheduled) {
       const minimumDate = config.module === "training" ? addDaysToDate(formState.date, 14) : formState.date;
       if (formState.followUpDate < minimumDate) {
         if (config.module === "training") {
@@ -2742,42 +3451,60 @@ export function PortalModuleManager({
     }
 
     if (config.module === "visit") {
-      const implementationStatusRaw = String(formState.payload.implementationStatus ?? "").trim();
-      if (!implementationStatusRaw) {
-        return "Implementation check is required.";
-      }
-
-      const classesImplementing = Array.isArray(formState.payload.classesImplementing)
-        ? formState.payload.classesImplementing
-        : [];
-      const classesNotImplementing = Array.isArray(formState.payload.classesNotImplementing)
-        ? formState.payload.classesNotImplementing
-        : [];
-
-      if (visitImplementationStatus === "partial") {
-        if (classesImplementing.length === 0) {
-          return "Select classes implementing for partial implementation.";
+      if (nextStatus !== "Draft") {
+        if (normalizedVisitStatusForValidation !== "completed") {
+          return "Set visit status to Completed before submitting.";
         }
-        if (classesNotImplementing.length === 0) {
-          return "Select classes not implementing for partial implementation.";
-        }
-        const overlap = classesImplementing.find((entry) => classesNotImplementing.includes(entry));
-        if (overlap) {
-          return `Class ${overlap} cannot be in both implementing and not implementing lists.`;
+        if (!visitCompletionGate.canComplete) {
+          return visitCompletionGate.reason || "Visit cannot be marked Completed yet.";
         }
       }
 
-      if (visitRequiresDemoMeeting) {
-        const validNextActions = visitNextActions.filter(
-          (row) => row.action.trim() && row.ownerContactId.trim() && row.dueDate.trim(),
-        );
-        if (validNextActions.length === 0) {
-          return "Add at least one next action with owner and due date.";
+      if (!isVisitScheduledDraft) {
+        const implementationStatusRaw = String(formState.payload.implementationStatus ?? "").trim();
+        if (!implementationStatusRaw) {
+          return "Implementation check is required.";
+        }
+
+        const classesImplementing = Array.isArray(formState.payload.classesImplementing)
+          ? formState.payload.classesImplementing
+          : [];
+        const classesNotImplementing = Array.isArray(formState.payload.classesNotImplementing)
+          ? formState.payload.classesNotImplementing
+          : [];
+
+        if (visitImplementationStatus === "partial") {
+          if (classesImplementing.length === 0) {
+            return "Select classes implementing for partial implementation.";
+          }
+          if (classesNotImplementing.length === 0) {
+            return "Select classes not implementing for partial implementation.";
+          }
+          const overlap = classesImplementing.find((entry) => classesNotImplementing.includes(entry));
+          if (overlap) {
+            return `Class ${overlap} cannot be in both implementing and not implementing lists.`;
+          }
+        }
+
+        if (visitRequiresDemoMeeting) {
+          const validNextActions = visitNextActions.filter(
+            (row) => row.action.trim() && row.ownerContactId.trim() && row.dueDate.trim(),
+          );
+          if (validNextActions.length === 0) {
+            return "Add at least one next action with owner and due date.";
+          }
         }
       }
     }
 
     for (const section of config.sections) {
+      if (
+        config.module === "visit" &&
+        isVisitScheduledDraft &&
+        !visitStepSectionIds.context.has(section.id)
+      ) {
+        continue;
+      }
       for (const field of section.fields) {
         const isInsightField =
           field.key === "insightsKeyFindings" ||
@@ -2814,6 +3541,13 @@ export function PortalModuleManager({
           config.module === "training" &&
           onlineTrainingMode &&
           trainingPhysicalFieldKeys.has(field.key)
+        ) {
+          continue;
+        }
+        if (
+          config.module === "training" &&
+          isTrainingScheduled &&
+          !trainingScheduleEditableFieldKeys.has(field.key)
         ) {
           continue;
         }
@@ -2914,6 +3648,8 @@ export function PortalModuleManager({
     visitImplementationStatus,
     visitNextActions,
     visitRequiresDemoMeeting,
+    visitCompletionGate,
+    isTrainingScheduled,
   ]);
 
   const buildRequestBody = useCallback(
@@ -2995,6 +3731,7 @@ export function PortalModuleManager({
 
       if (config.module === "visit") {
         payload.coachObserver = currentUser.fullName;
+        payload.visitStatus = visitStatus;
         payload.implementationStatus = String(
           formState.payload.implementationStatus ?? "",
         ).trim();
@@ -3074,10 +3811,69 @@ export function PortalModuleManager({
       }
 
       if (config.module === "training") {
-        payload.followUpType = formState.followUpType.trim();
-        payload.followUpOwnerUserId = formState.followUpOwnerUserId.trim()
-          ? Number(formState.followUpOwnerUserId.trim())
-          : null;
+        payload.followUpType = isTrainingScheduled ? "" : formState.followUpType.trim();
+        payload.followUpOwnerUserId =
+          isTrainingScheduled || !formState.followUpOwnerUserId.trim()
+            ? null
+            : Number(formState.followUpOwnerUserId.trim());
+
+        const participantFeedbackRows = trainingParticipantFeedbackRows
+          .map((row) => ({
+            contactId: row.contactId.trim() ? Number(row.contactId.trim()) : null,
+            contactUid: row.contactUid.trim() || null,
+            participantName: row.participantName.trim(),
+            changedThinking: row.changedThinking.trim(),
+            improveReading: row.improveReading.trim(),
+          }))
+          .filter(
+            (row) =>
+              row.contactId !== null ||
+              row.contactUid ||
+              row.participantName ||
+              row.changedThinking ||
+              row.improveReading,
+          );
+        const facilitatorRows = trainingFacilitatorRows
+          .map((row) => ({
+            id: row.id,
+            fullName: row.fullName.trim(),
+            phone: row.phone.trim(),
+          }))
+          .filter((row) => row.fullName || row.phone);
+        const selectedFacilitator =
+          facilitatorRows.find((row) => row.id === selectedTrainingFacilitatorId) ??
+          facilitatorRows[0] ??
+          null;
+        payload.trainingFeedbackBundleJson = JSON.stringify({
+          participants: participantFeedbackRows,
+          facilitators: facilitatorRows,
+          selectedFacilitatorId: selectedFacilitator?.id ?? "",
+          facilitatorFeedback: {
+            generalObservation: facilitatorGeneralObservation.trim(),
+            whatWentWell: facilitatorWhatWentWell.trim(),
+            challenges: facilitatorChallenges.trim(),
+            actionsRecommendations: facilitatorActionsRecommendations.trim(),
+            nextStep: facilitatorNextStep.trim(),
+            photoFileName: facilitatorFeedbackPhotoFileName.trim(),
+          },
+        } satisfies TrainingFeedbackBundle);
+        payload.how_training_changed_teaching =
+          participantFeedbackRows.find((row) => row.changedThinking)?.changedThinking ?? "";
+        payload.what_you_will_do_to_improve_reading_levels =
+          participantFeedbackRows.find((row) => row.improveReading)?.improveReading ?? "";
+        payload.what_went_well_trainer = facilitatorWhatWentWell.trim();
+        payload.challenges_trainer = facilitatorChallenges.trim();
+        payload.recommendations_next_training_trainer =
+          facilitatorActionsRecommendations.trim();
+        payload.facilitatorGeneralObservation = facilitatorGeneralObservation.trim();
+        payload.facilitatorNextStep = facilitatorNextStep.trim();
+        payload.facilitatorName = selectedFacilitator?.fullName ?? "";
+        payload.facilitatorPhone = selectedFacilitator?.phone ?? "";
+        payload.feedbackPhotoFileName = facilitatorFeedbackPhotoFileName.trim();
+        payload.facilitators = facilitatorRows
+          .map((row) => row.fullName)
+          .filter(Boolean)
+          .join(", ");
       }
 
       if (participantField) {
@@ -3140,10 +3936,24 @@ export function PortalModuleManager({
             (Number.isInteger(selectedSchoolId) ? selectedSchoolId : 0),
           schoolName: resolvedSchoolName,
           programType: formState.programType.trim(),
-          followUpDate: formState.followUpDate.trim() || undefined,
-          followUpType: config.module === "training" ? formState.followUpType.trim() || undefined : undefined,
+          followUpDate:
+            config.module === "training" && isTrainingScheduled
+              ? undefined
+              : config.module === "visit" && !visitImplementationUnlocked
+                ? undefined
+                : formState.followUpDate.trim() || undefined,
+          followUpType:
+            config.module === "training"
+              ? isTrainingScheduled
+                ? undefined
+                : formState.followUpType.trim() || undefined
+              : config.module === "visit" && visitImplementationUnlocked
+                ? (formState.followUpType.trim() as "school_visit" | "virtual_check_in") || undefined
+                : undefined,
           followUpOwnerUserId:
-            config.module === "training" && formState.followUpOwnerUserId.trim()
+            config.module === "training" &&
+              !isTrainingScheduled &&
+              formState.followUpOwnerUserId.trim()
               ? Number(formState.followUpOwnerUserId.trim())
               : undefined,
           status: nextStatus,
@@ -3278,10 +4088,24 @@ export function PortalModuleManager({
         schoolId: selectedSchool?.id ?? (Number.isInteger(selectedSchoolId) ? selectedSchoolId : 0),
         schoolName: resolvedSchoolName,
         programType: formState.programType.trim(),
-        followUpDate: formState.followUpDate.trim() || undefined,
-        followUpType: config.module === "training" ? formState.followUpType.trim() || undefined : undefined,
+        followUpDate:
+          config.module === "training" && isTrainingScheduled
+            ? undefined
+            : config.module === "visit" && !visitImplementationUnlocked
+              ? undefined
+              : formState.followUpDate.trim() || undefined,
+        followUpType:
+          config.module === "training"
+            ? isTrainingScheduled
+              ? undefined
+              : formState.followUpType.trim() || undefined
+            : config.module === "visit" && visitImplementationUnlocked
+              ? (formState.followUpType.trim() as "school_visit" | "virtual_check_in") || undefined
+              : undefined,
         followUpOwnerUserId:
-          config.module === "training" && formState.followUpOwnerUserId.trim()
+          config.module === "training" &&
+            !isTrainingScheduled &&
+            formState.followUpOwnerUserId.trim()
             ? Number(formState.followUpOwnerUserId.trim())
             : undefined,
         status: nextStatus,
@@ -3292,14 +4116,26 @@ export function PortalModuleManager({
       config,
       currentUser.fullName,
       egraSummary,
+      facilitatorActionsRecommendations,
+      facilitatorChallenges,
+      facilitatorFeedbackPhotoFileName,
+      facilitatorGeneralObservation,
+      facilitatorNextStep,
+      facilitatorWhatWentWell,
       formState,
+      isTrainingScheduled,
       participantField,
+      selectedTrainingFacilitatorId,
       schoolsById,
+      trainingFacilitatorRows,
+      trainingParticipantFeedbackRows,
       trainingParticipants,
       visitAllowsObservation,
+      visitImplementationUnlocked,
       visitNextActions,
       visitPathway,
       visitRequiresDemoMeeting,
+      visitStatus,
     ],
   );
 
@@ -3899,6 +4735,7 @@ export function PortalModuleManager({
                           String(formState.payload.implementationStatus ?? "").trim().length > 0;
                         const disabled =
                           (step.id > 1 && !hasSchoolSelected) ||
+                          (step.id > 1 && !visitImplementationUnlocked) ||
                           (step.id > 2 && !hasImplementationChoice);
                         const isActive = visitStep === step.id;
                         return (
@@ -3909,9 +4746,25 @@ export function PortalModuleManager({
                             disabled={disabled}
                             onClick={() => {
                               if (disabled) {
+                                if (!hasSchoolSelected) {
+                                  setFeedback({
+                                    kind: "error",
+                                    message: "Select a school first before continuing to the next step.",
+                                  });
+                                  return;
+                                }
+                                if (!visitImplementationUnlocked) {
+                                  setFeedback({
+                                    kind: "error",
+                                    message:
+                                      visitCompletionGate.reason ||
+                                      "Visit status must be Completed to continue.",
+                                  });
+                                  return;
+                                }
                                 setFeedback({
                                   kind: "error",
-                                  message: "Select a school first before continuing to the next step.",
+                                  message: "Select implementation status before continuing.",
                                 });
                                 return;
                               }
@@ -4182,6 +5035,7 @@ export function PortalModuleManager({
                                       schoolAttachedTo: selectedSchool?.name ?? "",
                                     })),
                                   );
+                                  setTrainingParticipantFeedbackRows([]);
                                 }
                                 if (config.module === "assessment") {
                                   setEgraLearners(createDefaultEgraRows());
@@ -4351,10 +5205,16 @@ export function PortalModuleManager({
                         onChange={(event) =>
                           setFormState((prev) => ({ ...prev, followUpDate: event.target.value }))
                         }
-                        required={config.module === "training"}
+                        required={config.module === "training" && !isTrainingScheduled}
+                        disabled={(config.module === "training" && isTrainingScheduled) || isVisitFollowUpLocked}
                       />
+                      {isVisitFollowUpLocked ? (
+                        <small className="portal-field-help">
+                          Follow-up date unlocks after visit status changes to Completed.
+                        </small>
+                      ) : null}
                     </label>
-                    {config.module === "training" ? (
+                    {config.module === "training" || config.module === "visit" ? (
                       <label>
                         {renderLabel("Follow-up type", true)}
                         <select
@@ -4362,16 +5222,30 @@ export function PortalModuleManager({
                           onChange={(event) =>
                             setFormState((prev) => ({ ...prev, followUpType: event.target.value }))
                           }
-                          disabled={isOnlineTrainingModeActive}
-                          required
+                          disabled={
+                            config.module === "training"
+                              ? isOnlineTrainingModeActive || isTrainingScheduled
+                              : isVisitFollowUpLocked
+                          }
+                          required={config.module === "training" ? !isTrainingScheduled : isVisitCompleted}
                         >
-                          <option value="virtual_check_in">Virtual check-in</option>
                           <option value="school_visit">School visit</option>
-                          <option value="refresher_session">Refresher session</option>
+                          <option value="virtual_check_in">Virtual</option>
+                          {config.module === "training" ? (
+                            <option value="refresher_session">Refresher session</option>
+                          ) : null}
                         </select>
-                        {isOnlineTrainingModeActive ? (
+                        {config.module === "training" && isTrainingScheduled ? (
+                          <small className="portal-field-help">
+                            Follow-up fields are unlocked after training status changes from Scheduled.
+                          </small>
+                        ) : config.module === "training" && isOnlineTrainingModeActive ? (
                           <small className="portal-field-help">
                             Follow-up type is fixed to Virtual check-in for online trainings.
+                          </small>
+                        ) : isVisitFollowUpLocked ? (
+                          <small className="portal-field-help">
+                            Follow-up type unlocks after visit status changes to Completed.
                           </small>
                         ) : null}
                       </label>
@@ -4384,7 +5258,8 @@ export function PortalModuleManager({
                           onChange={(event) =>
                             setFormState((prev) => ({ ...prev, followUpOwnerUserId: event.target.value }))
                           }
-                          required
+                          required={!isTrainingScheduled}
+                          disabled={isTrainingScheduled}
                         >
                           <option value="">Select follow-up owner</option>
                           {followUpOwnerOptions.map((option) => (
@@ -4395,10 +5270,6 @@ export function PortalModuleManager({
                         </select>
                       </label>
                     ) : null}
-                    <label>
-                      {renderLabel("Workflow status")}
-                      <input value={formState.status} readOnly />
-                    </label>
                   </div>
                     </>
                   ) : null}
@@ -4455,6 +5326,12 @@ export function PortalModuleManager({
                               (isVisitObservationFieldForUi && visitAllowsObservation) ||
                               (isVisitDemoMeetingFieldForUi && visitRequiresDemoMeeting) ||
                               (!isVisitObservationFieldForUi && !isVisitDemoMeetingFieldForUi));
+                          const isTrainingScheduledLockedField =
+                            isTrainingModule &&
+                            isTrainingScheduled &&
+                            !trainingScheduleEditableFieldKeys.has(field.key);
+                          const isFieldRequiredForUi =
+                            isFieldRequired && !isTrainingScheduledLockedField;
 
                           if (isVisitModule && !visitAllowsObservation && isVisitObservationFieldForUi) {
                             return null;
@@ -4476,7 +5353,7 @@ export function PortalModuleManager({
                             return (
                               <div key={field.key} className="full-width">
                                 <div className="portal-participants-header">
-                                  {renderLabel(field.label, isFieldRequired)}
+                                  {renderLabel(field.label, isFieldRequiredForUi)}
                                   <div className="action-row" style={{ gap: "0.45rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
                                     <button
                                       className="button button-ghost"
@@ -4531,7 +5408,8 @@ export function PortalModuleManager({
                                         <th>No</th>
                                         <th>Learner ID</th>
                                         <th>Learner Name</th>
-                                        <th>Sex</th>
+                                        <th>Class</th>
+                                        <th>Gender</th>
                                         <th>Age</th>
                                         <th>Reading Stage</th>
                                         <th>Benchmark Grade Level</th>
@@ -4557,7 +5435,8 @@ export function PortalModuleManager({
                                             <td>{row.no}</td>
                                             <td>{row.learnerId}</td>
                                             <td>{row.learnerName || "-"}</td>
-                                            <td>{row.sex}</td>
+                                            <td>{row.classGrade || "-"}</td>
+                                            <td>{row.sex === "M" ? "Male" : row.sex === "F" ? "Female" : "-"}</td>
                                             <td>{row.age}</td>
                                             <td>{readingStage}</td>
                                             <td>{mastery.benchmarkGradeLevel}</td>
@@ -4571,7 +5450,7 @@ export function PortalModuleManager({
                                                 className="button button-small button-ghost"
                                                 onClick={() => {
                                                   setModalLearnerNo(row.no);
-                                                  setModalLearnerId(row.learnerId);
+                                                  setModalLearnerId(row.learnerId || nextLearnerShortId(row.no));
                                                   setIsEgraModalOpen(true);
                                                 }}
                                               >
@@ -4582,7 +5461,7 @@ export function PortalModuleManager({
                                         );
                                       })}
                                       {egraLearners.filter(rowHasAssessmentData).length === 0 && (
-                                        <tr><td colSpan={10} className="text-center p-4 text-slate-500">No learners added yet. Click "+ Add Learner Result" to begin.</td></tr>
+                                        <tr><td colSpan={11} className="text-center p-4 text-slate-500">No learners added yet. Click "+ Add Learner Result" to begin.</td></tr>
                                       )}
                                     </tbody>
                                   </table>
@@ -4661,20 +5540,412 @@ export function PortalModuleManager({
                             );
                           }
 
+                          if (isTrainingModule && field.key === "trainingFeedbackBundleJson") {
+                            const feedbackRowsWithData = trainingParticipantFeedbackRows.filter(
+                              (row) =>
+                                row.contactId.trim() ||
+                                row.contactUid.trim() ||
+                                row.participantName.trim() ||
+                                row.changedThinking.trim() ||
+                                row.improveReading.trim(),
+                            );
+                            const facilitatorRowsWithData = trainingFacilitatorRows.filter(
+                              (row) => row.fullName.trim() || row.phone.trim(),
+                            );
+                            const selectedFacilitator =
+                              trainingFacilitatorRows.find(
+                                (row) => row.id === selectedTrainingFacilitatorId,
+                              ) ?? trainingFacilitatorRows[0];
+                            const hasFacilitatorFeedback = Boolean(
+                              facilitatorGeneralObservation.trim() ||
+                                facilitatorWhatWentWell.trim() ||
+                                facilitatorChallenges.trim() ||
+                                facilitatorActionsRecommendations.trim() ||
+                                facilitatorNextStep.trim() ||
+                                facilitatorFeedbackPhotoFileName.trim(),
+                            );
+
+                            return (
+                              <div key={field.key} className="full-width portal-participants-block">
+                                <div className="portal-participants-header">
+                                  {renderLabel(field.label, isFieldRequiredForUi)}
+                                  <button
+                                    className="button button-ghost"
+                                    type="button"
+                                    disabled={!formState.schoolId.trim() || isTrainingScheduledLockedField}
+                                    onClick={() => {
+                                      if (isTrainingScheduledLockedField) {
+                                        return;
+                                      }
+                                      if (trainingParticipantFeedbackRows.length === 0) {
+                                        const seeded = trainingParticipants
+                                          .filter(
+                                            (row) =>
+                                              row.contactId.trim() ||
+                                              row.contactUid.trim() ||
+                                              row.participantName.trim(),
+                                          )
+                                          .map((row) => ({
+                                            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                                            contactId: row.contactId.trim(),
+                                            contactUid: row.contactUid.trim(),
+                                            participantName: row.participantName.trim(),
+                                            changedThinking: "",
+                                            improveReading: "",
+                                          }));
+                                        setTrainingParticipantFeedbackRows(
+                                          seeded.length > 0
+                                            ? seeded
+                                            : [createEmptyTrainingParticipantFeedbackRow()],
+                                        );
+                                      }
+                                      setIsTrainingFeedbackFormOpen((prev) => !prev);
+                                    }}
+                                  >
+                                    {isTrainingFeedbackFormOpen
+                                      ? "Close feedback form"
+                                      : "+ Participants feedback form"}
+                                  </button>
+                                </div>
+                                {field.helperText ? (
+                                  <small className="portal-field-help">{field.helperText}</small>
+                                ) : null}
+                                <p className="portal-muted" style={{ marginTop: "0.4rem" }}>
+                                  Participant responses captured: {feedbackRowsWithData.length}. Facilitators listed:{" "}
+                                  {facilitatorRowsWithData.length}. Facilitator feedback captured:{" "}
+                                  {hasFacilitatorFeedback ? "Yes" : "No"}.
+                                </p>
+                                {isTrainingScheduledLockedField ? (
+                                  <p className="portal-muted">
+                                    Training is scheduled. Feedback fields unlock after status changes to Completed.
+                                  </p>
+                                ) : null}
+                                {isTrainingFeedbackFormOpen ? (
+                                  <div className="card full-width" style={{ marginTop: "0.75rem" }}>
+                                    <div className="portal-participants-header">
+                                      <strong>Participants Feedback</strong>
+                                      <button
+                                        className="button button-ghost"
+                                        type="button"
+                                        onClick={() =>
+                                          setTrainingParticipantFeedbackRows((prev) => [
+                                            ...prev,
+                                            createEmptyTrainingParticipantFeedbackRow(),
+                                          ])
+                                        }
+                                      >
+                                        + Add participant feedback
+                                      </button>
+                                    </div>
+                                    {loadingSchoolContacts ? (
+                                      <p className="portal-muted">Loading contacts from school profile...</p>
+                                    ) : null}
+                                    <div className="table-wrap">
+                                      <table className="portal-participants-table">
+                                        <thead>
+                                          <tr>
+                                            <th>#</th>
+                                            <th>Contact (from School Profile)</th>
+                                            <th>
+                                              How has the training changed the way you think of Reading?
+                                            </th>
+                                            <th>
+                                              What will you do to improve the reading levels of your school?
+                                            </th>
+                                            <th>Remove</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {(trainingParticipantFeedbackRows.length > 0
+                                            ? trainingParticipantFeedbackRows
+                                            : [createEmptyTrainingParticipantFeedbackRow()]).map((row, index) => {
+                                            const selectedContact =
+                                              schoolContacts.find(
+                                                (contact) =>
+                                                  String(contact.contactId) === row.contactId.trim(),
+                                              ) ??
+                                              schoolContacts.find(
+                                                (contact) => contact.contactUid === row.contactUid.trim(),
+                                              );
+                                            return (
+                                              <tr key={row.id}>
+                                                <td>{index + 1}</td>
+                                                <td style={{ minWidth: 240 }}>
+                                                  <select
+                                                    value={row.contactId}
+                                                    onChange={(event) =>
+                                                      setTrainingParticipantFeedbackRows((prev) =>
+                                                        prev.map((entry, entryIndex) =>
+                                                          entryIndex !== index
+                                                            ? entry
+                                                            : (() => {
+                                                                const nextContact =
+                                                                  schoolContacts.find(
+                                                                    (contact) =>
+                                                                      String(contact.contactId) ===
+                                                                      event.target.value,
+                                                                  ) ?? null;
+                                                                return {
+                                                                  ...entry,
+                                                                  contactId: event.target.value,
+                                                                  contactUid:
+                                                                    nextContact?.contactUid ?? "",
+                                                                  participantName:
+                                                                    nextContact?.fullName ??
+                                                                    entry.participantName,
+                                                                };
+                                                              })(),
+                                                        ),
+                                                      )
+                                                    }
+                                                  >
+                                                    <option value="">Select contact</option>
+                                                    {schoolContacts.map((contact) => (
+                                                      <option
+                                                        key={contact.contactId}
+                                                        value={String(contact.contactId)}
+                                                      >
+                                                        {contact.fullName} ({contact.category})
+                                                      </option>
+                                                    ))}
+                                                  </select>
+                                                  {selectedContact ? (
+                                                    <small className="portal-field-help">
+                                                      {selectedContact.fullName}
+                                                    </small>
+                                                  ) : null}
+                                                </td>
+                                                <td>
+                                                  <textarea
+                                                    rows={3}
+                                                    value={row.changedThinking}
+                                                    onChange={(event) =>
+                                                      setTrainingParticipantFeedbackRows((prev) =>
+                                                        prev.map((entry, entryIndex) =>
+                                                          entryIndex === index
+                                                            ? {
+                                                                ...entry,
+                                                                changedThinking: event.target.value,
+                                                              }
+                                                            : entry,
+                                                        ),
+                                                      )
+                                                    }
+                                                  />
+                                                </td>
+                                                <td>
+                                                  <textarea
+                                                    rows={3}
+                                                    value={row.improveReading}
+                                                    onChange={(event) =>
+                                                      setTrainingParticipantFeedbackRows((prev) =>
+                                                        prev.map((entry, entryIndex) =>
+                                                          entryIndex === index
+                                                            ? {
+                                                                ...entry,
+                                                                improveReading: event.target.value,
+                                                              }
+                                                            : entry,
+                                                        ),
+                                                      )
+                                                    }
+                                                  />
+                                                </td>
+                                                <td>
+                                                  <button
+                                                    className="button button-ghost"
+                                                    type="button"
+                                                    onClick={() =>
+                                                      setTrainingParticipantFeedbackRows((prev) => {
+                                                        if (prev.length <= 1) {
+                                                          return [createEmptyTrainingParticipantFeedbackRow()];
+                                                        }
+                                                        return prev.filter(
+                                                          (_, entryIndex) => entryIndex !== index,
+                                                        );
+                                                      })
+                                                    }
+                                                  >
+                                                    Remove
+                                                  </button>
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+
+                                    <div className="portal-participants-header" style={{ marginTop: "0.9rem" }}>
+                                      <strong>Facilitator Feedback</strong>
+                                      <button
+                                        className="button button-ghost"
+                                        type="button"
+                                        onClick={() =>
+                                          setTrainingFacilitatorRows((prev) => [
+                                            ...prev,
+                                            createEmptyTrainingFacilitatorRow(),
+                                          ])
+                                        }
+                                      >
+                                        + Add facilitator
+                                      </button>
+                                    </div>
+                                    <div className="form-grid">
+                                      <label>
+                                        {renderLabel("Facilitator")}
+                                        <select
+                                          value={selectedFacilitator?.id ?? ""}
+                                          onChange={(event) =>
+                                            setSelectedTrainingFacilitatorId(event.target.value)
+                                          }
+                                        >
+                                          {trainingFacilitatorRows.map((row, index) => (
+                                            <option key={row.id} value={row.id}>
+                                              {row.fullName.trim() || `Facilitator ${index + 1}`}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                      <label>
+                                        {renderLabel("Facilitator Name")}
+                                        <input
+                                          value={selectedFacilitator?.fullName ?? ""}
+                                          onChange={(event) =>
+                                            setTrainingFacilitatorRows((prev) =>
+                                              prev.map((row) =>
+                                                row.id === (selectedFacilitator?.id ?? "")
+                                                  ? { ...row, fullName: event.target.value }
+                                                  : row,
+                                              ),
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                      <label>
+                                        {renderLabel("Facilitator Phone Number")}
+                                        <input
+                                          value={selectedFacilitator?.phone ?? ""}
+                                          inputMode="tel"
+                                          onChange={(event) =>
+                                            setTrainingFacilitatorRows((prev) =>
+                                              prev.map((row) =>
+                                                row.id === (selectedFacilitator?.id ?? "")
+                                                  ? { ...row, phone: event.target.value }
+                                                  : row,
+                                              ),
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                      <label className="full-width">
+                                        {renderLabel(
+                                          "General observation on teachers' ability to teach reading",
+                                        )}
+                                        <textarea
+                                          rows={3}
+                                          value={facilitatorGeneralObservation}
+                                          onChange={(event) =>
+                                            setFacilitatorGeneralObservation(event.target.value)
+                                          }
+                                        />
+                                      </label>
+                                      <label className="full-width">
+                                        {renderLabel("What went well?")}
+                                        <textarea
+                                          rows={3}
+                                          value={facilitatorWhatWentWell}
+                                          onChange={(event) =>
+                                            setFacilitatorWhatWentWell(event.target.value)
+                                          }
+                                        />
+                                      </label>
+                                      <label className="full-width">
+                                        {renderLabel("Challenges")}
+                                        <textarea
+                                          rows={3}
+                                          value={facilitatorChallenges}
+                                          onChange={(event) =>
+                                            setFacilitatorChallenges(event.target.value)
+                                          }
+                                        />
+                                      </label>
+                                      <label className="full-width">
+                                        {renderLabel("Actions/Recommendations")}
+                                        <textarea
+                                          rows={3}
+                                          value={facilitatorActionsRecommendations}
+                                          onChange={(event) =>
+                                            setFacilitatorActionsRecommendations(event.target.value)
+                                          }
+                                        />
+                                      </label>
+                                      <label className="full-width">
+                                        {renderLabel("Next Step")}
+                                        <textarea
+                                          rows={3}
+                                          value={facilitatorNextStep}
+                                          onChange={(event) =>
+                                            setFacilitatorNextStep(event.target.value)
+                                          }
+                                        />
+                                      </label>
+                                      <label className="full-width">
+                                        {renderLabel("Picture Upload")}
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(event) => {
+                                            const file = event.target.files?.[0];
+                                            if (!file) {
+                                              return;
+                                            }
+                                            setSelectedFiles((prev) => {
+                                              const exists = prev.some(
+                                                (item) =>
+                                                  item.name === file.name &&
+                                                  item.size === file.size &&
+                                                  item.lastModified === file.lastModified,
+                                              );
+                                              if (exists) {
+                                                return prev;
+                                              }
+                                              return [...prev, file];
+                                            });
+                                            setFacilitatorFeedbackPhotoFileName(file.name);
+                                          }}
+                                        />
+                                        <small className="portal-field-help">
+                                          Uploaded images are appended to the Evidence Locker.
+                                        </small>
+                                      </label>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          }
+
                           if (field.type === "participants") {
                             const selectedSchoolId = formState.schoolId ? Number(formState.schoolId) : null;
                             return (
                               <div key={field.key} className="full-width portal-participants-block">
                                 <div className="portal-participants-header">
-                                  {renderLabel(field.label, isFieldRequired)}
+                                  {renderLabel(field.label, isFieldRequiredForUi)}
                                   <button
                                     className="button button-ghost"
                                     type="button"
                                     onClick={addTrainingParticipant}
+                                    disabled={isTrainingScheduledLockedField}
                                   >
                                     + Add participant
                                   </button>
                                 </div>
+                                {isTrainingScheduledLockedField ? (
+                                  <p className="portal-muted">
+                                    Training is scheduled. Participant entries unlock when status is set to Completed.
+                                  </p>
+                                ) : null}
                                 {!selectedSchoolId && (
                                   <p style={{ color: "#b45309", fontSize: "0.82rem", fontStyle: "italic", margin: "0.25rem 0 0.5rem" }}>
                                     Select a school first to load participants from the school roster.
@@ -4698,61 +5969,72 @@ export function PortalModuleManager({
                                         <tr key={`participant-${index + 1}`}>
                                           <td>{index + 1}</td>
                                           <td style={{ minWidth: 280 }}>
-                                            <SchoolRosterPicker
-                                              schoolId={selectedSchoolId}
-                                              schoolName={row.schoolAttachedTo || formState.schoolName}
-                                              participantType="teacher"
-                                              selectedUid={row.contactUid}
-                                              label=""
-                                              onSelect={(entry: RosterEntry | null) => {
-                                                if (!entry) {
+                                            <div
+                                              style={
+                                                isTrainingScheduledLockedField
+                                                  ? { pointerEvents: "none", opacity: 0.65 }
+                                                  : undefined
+                                              }
+                                            >
+                                              <SchoolRosterPicker
+                                                schoolId={selectedSchoolId}
+                                                schoolName={row.schoolAttachedTo || formState.schoolName}
+                                                participantType="teacher"
+                                                selectedUid={row.contactUid}
+                                                label=""
+                                                onSelect={(entry: RosterEntry | null) => {
+                                                  if (isTrainingScheduledLockedField) {
+                                                    return;
+                                                  }
+                                                  if (!entry) {
+                                                    setTrainingParticipants((prev) =>
+                                                      prev.map((p, i) =>
+                                                        i !== index
+                                                          ? p
+                                                          : {
+                                                            ...p,
+                                                            contactId: "",
+                                                            contactUid: "",
+                                                            participantName: "",
+                                                            role: "",
+                                                            gender: "",
+                                                            phoneContact: "",
+                                                          },
+                                                      ),
+                                                    );
+                                                    return;
+                                                  }
+                                                  const teacher = entry as {
+                                                    contactId: number;
+                                                    contactUid: string;
+                                                    fullName: string;
+                                                    gender: string;
+                                                    category: string;
+                                                    phone: string | null;
+                                                  };
                                                   setTrainingParticipants((prev) =>
                                                     prev.map((p, i) =>
                                                       i !== index
                                                         ? p
                                                         : {
                                                           ...p,
-                                                          contactId: "",
-                                                          contactUid: "",
-                                                          participantName: "",
-                                                          role: "",
-                                                          gender: "",
-                                                          phoneContact: "",
+                                                          contactId: String(teacher.contactId),
+                                                          contactUid: teacher.contactUid,
+                                                          participantName: teacher.fullName,
+                                                          role: teacher.category === "Teacher" ? "Teacher" : "Leader",
+                                                          gender:
+                                                            teacher.gender === "Male" || teacher.gender === "Female"
+                                                              ? (teacher.gender as TrainingParticipantGender)
+                                                              : "",
+                                                          phoneContact: teacher.phone ?? "",
+                                                          schoolAccountId: String(selectedSchoolId ?? ""),
+                                                          schoolAttachedTo: formState.schoolName,
                                                         },
                                                     ),
                                                   );
-                                                  return;
-                                                }
-                                                const teacher = entry as {
-                                                  contactId: number;
-                                                  contactUid: string;
-                                                  fullName: string;
-                                                  gender: string;
-                                                  category: string;
-                                                  phone: string | null;
-                                                };
-                                                setTrainingParticipants((prev) =>
-                                                  prev.map((p, i) =>
-                                                    i !== index
-                                                      ? p
-                                                      : {
-                                                        ...p,
-                                                        contactId: String(teacher.contactId),
-                                                        contactUid: teacher.contactUid,
-                                                        participantName: teacher.fullName,
-                                                        role: teacher.category === "Teacher" ? "Teacher" : "Leader",
-                                                        gender:
-                                                          teacher.gender === "Male" || teacher.gender === "Female"
-                                                            ? (teacher.gender as TrainingParticipantGender)
-                                                            : "",
-                                                        phoneContact: teacher.phone ?? "",
-                                                        schoolAccountId: String(selectedSchoolId ?? ""),
-                                                        schoolAttachedTo: formState.schoolName,
-                                                      },
-                                                  ),
-                                                );
-                                              }}
-                                            />
+                                                }}
+                                              />
+                                            </div>
                                             {row.participantName && (
                                               <div style={{ fontSize: "0.78rem", color: "#C35D0E", marginTop: 2 }}>
                                                 ✓ {row.participantName}
@@ -4772,6 +6054,7 @@ export function PortalModuleManager({
                                               onChange={(event) =>
                                                 updateTrainingParticipant(index, "role", event.target.value)
                                               }
+                                              disabled={isTrainingScheduledLockedField}
                                             >
                                               <option value="">Role</option>
                                               <option value="Teacher">Teacher</option>
@@ -4784,6 +6067,7 @@ export function PortalModuleManager({
                                               onChange={(event) =>
                                                 updateTrainingParticipant(index, "gender", event.target.value)
                                               }
+                                              disabled={isTrainingScheduledLockedField}
                                             >
                                               <option value="">Gender</option>
                                               <option value="Male">Male</option>
@@ -4802,6 +6086,7 @@ export function PortalModuleManager({
                                                   event.target.value,
                                                 )
                                               }
+                                              readOnly={isTrainingScheduledLockedField}
                                             />
                                           </td>
                                           <td>
@@ -4809,6 +6094,7 @@ export function PortalModuleManager({
                                               className="button button-ghost"
                                               type="button"
                                               onClick={() => removeTrainingParticipant(index)}
+                                              disabled={isTrainingScheduledLockedField}
                                             >
                                               Remove
                                             </button>
@@ -4885,7 +6171,7 @@ export function PortalModuleManager({
                           if (isVisitModule && field.key === "coachObserver") {
                             return (
                               <label key={field.key}>
-                                {renderLabel(field.label, isFieldRequired)}
+                                {renderLabel(field.label, isFieldRequiredForUi)}
                                 <input
                                   value={currentUser.fullName}
                                   readOnly
@@ -4894,6 +6180,36 @@ export function PortalModuleManager({
                                 {field.helperText ? (
                                   <small className="portal-field-help">{field.helperText}</small>
                                 ) : null}
+                              </label>
+                            );
+                          }
+
+                          if (isVisitModule && field.key === "visitStatus") {
+                            const lockToScheduled = !visitCompletionGate.canComplete;
+                            return (
+                              <label key={field.key}>
+                                {renderLabel(field.label, true)}
+                                <select
+                                  value={visitStatus}
+                                  onChange={(event) =>
+                                    updatePayloadField(field.key, event.target.value)
+                                  }
+                                  disabled={lockToScheduled}
+                                  required
+                                >
+                                  <option value="scheduled">Scheduled</option>
+                                  <option value="completed">Completed</option>
+                                </select>
+                                {lockToScheduled ? (
+                                  <small className="portal-field-help">
+                                    {visitCompletionGate.reason}
+                                  </small>
+                                ) : (
+                                  <small className="portal-field-help">
+                                    Status can now be changed to Completed to unlock implementation
+                                    and submission.
+                                  </small>
+                                )}
                               </label>
                             );
                           }
@@ -4913,11 +6229,11 @@ export function PortalModuleManager({
                           if (isVisitModule && field.key === "implementationResponsibleContactId") {
                             return (
                               <label key={field.key}>
-                                {renderLabel(field.label, isFieldRequired)}
+                                {renderLabel(field.label, isFieldRequiredForUi)}
                                 <select
                                   value={sanitizeForInput(value)}
                                   onChange={(event) => updatePayloadField(field.key, event.target.value)}
-                                  required={isFieldRequired}
+                                  required={isFieldRequiredForUi}
                                 >
                                   <option value="">Select contact</option>
                                   {schoolContacts.map((contact) => (
@@ -4946,7 +6262,7 @@ export function PortalModuleManager({
                               <fieldset key={field.key} className="card full-width portal-form-options">
                                 <legend>
                                   {field.label}
-                                  {isFieldRequired ? " *" : ""}
+                                  {isFieldRequiredForUi ? " *" : ""}
                                 </legend>
                                 {loadingSchoolContacts ? (
                                   <p className="portal-muted">Loading school contacts...</p>
@@ -4992,7 +6308,7 @@ export function PortalModuleManager({
                             return (
                               <div key={field.key} className="full-width portal-next-actions-block">
                                 <div className="portal-participants-header">
-                                  {renderLabel(field.label, isFieldRequired)}
+                                  {renderLabel(field.label, isFieldRequiredForUi)}
                                   <button
                                     className="button button-ghost"
                                     type="button"
@@ -5116,13 +6432,14 @@ export function PortalModuleManager({
                           if (field.type === "textarea") {
                             return (
                               <label key={field.key} className="full-width">
-                                {renderLabel(field.label, isFieldRequired)}
+                                {renderLabel(field.label, isFieldRequiredForUi)}
                                 <textarea
                                   rows={4}
                                   value={Array.isArray(value) ? value.join(", ") : sanitizeForInput(value)}
                                   placeholder={inferPlaceholder(field)}
                                   onChange={(event) => updatePayloadField(field.key, event.target.value)}
-                                  required={isFieldRequired}
+                                  required={isFieldRequiredForUi}
+                                  disabled={isTrainingScheduledLockedField}
                                 />
                                 {field.helperText ? (
                                   <small className="portal-field-help">{field.helperText}</small>
@@ -5134,11 +6451,12 @@ export function PortalModuleManager({
                           if (field.type === "select") {
                             return (
                               <label key={field.key}>
-                                {renderLabel(field.label, isFieldRequired)}
+                                {renderLabel(field.label, isFieldRequiredForUi)}
                                 <select
                                   value={Array.isArray(value) ? value[0] ?? "" : sanitizeForInput(value)}
                                   onChange={(event) => updatePayloadField(field.key, event.target.value)}
-                                  required={isFieldRequired}
+                                  required={isFieldRequiredForUi}
+                                  disabled={isTrainingScheduledLockedField}
                                 >
                                   <option value="">Select</option>
                                   {(field.options ?? []).map((option) => (
@@ -5159,13 +6477,14 @@ export function PortalModuleManager({
                               <fieldset key={field.key} className="card full-width portal-form-options">
                                 <legend>
                                   {field.label}
-                                  {isFieldRequired ? " *" : ""}
+                                  {isFieldRequiredForUi ? " *" : ""}
                                 </legend>
                                 {isInsightRecommendationField ? (
                                   <div className="action-row" style={{ marginBottom: "0.5rem" }}>
                                     <button
                                       type="button"
                                       className="button button-ghost"
+                                      disabled={isTrainingScheduledLockedField}
                                       onClick={() => {
                                         const suggested = applySuggestedInsightRecIds(
                                           config.module,
@@ -5193,6 +6512,7 @@ export function PortalModuleManager({
                                         <input
                                           type="checkbox"
                                           checked={checked}
+                                          disabled={isTrainingScheduledLockedField}
                                           onChange={(event) => {
                                             const next = new Set(selected);
                                             if (event.target.checked) {
@@ -5238,6 +6558,7 @@ export function PortalModuleManager({
                                               <td>
                                                 <select
                                                   value={row.priority}
+                                                  disabled={isTrainingScheduledLockedField}
                                                   onChange={(event) => {
                                                     const nextPriority =
                                                       normalizeInsightRecommendationPriority(
@@ -5272,6 +6593,7 @@ export function PortalModuleManager({
                                                 <input
                                                   value={row.notes}
                                                   placeholder="Optional implementation notes"
+                                                  disabled={isTrainingScheduledLockedField}
                                                   onChange={(event) => {
                                                     const nextNotes = event.target.value;
                                                     setInsightRecommendationRows((prev) => {
@@ -5312,7 +6634,7 @@ export function PortalModuleManager({
 
                           return (
                             <label key={field.key}>
-                              {renderLabel(field.label, isFieldRequired)}
+                              {renderLabel(field.label, isFieldRequiredForUi)}
                               {(() => {
                                 const isTrainingAutoAttendanceField =
                                   config.module === "training" &&
@@ -5363,8 +6685,13 @@ export function PortalModuleManager({
                                     onChange={(event) =>
                                       updatePayloadField(field.key, event.target.value)
                                     }
-                                    required={isFieldRequired}
-                                    readOnly={isTrainingAutoAttendanceField || isAutoLinkedGeoField}
+                                    required={isFieldRequiredForUi}
+                                    readOnly={
+                                      isTrainingAutoAttendanceField ||
+                                      isAutoLinkedGeoField ||
+                                      isTrainingScheduledLockedField
+                                    }
+                                    disabled={isTrainingScheduledLockedField}
                                   />
                                 );
                               })()}
@@ -5412,8 +6739,9 @@ export function PortalModuleManager({
                           schoolId={Number(formState.schoolId)}
                           schoolName={formState.schoolName}
                           defaultVisitId={formState.id}
-                          title="Lesson Evaluations"
-                          description="Add Ozeki Phonics Lesson Evaluation Tool entries linked to this school visit."
+                          title="Teacher Observation and Evaluation"
+                          description="Add teacher reading lesson evaluations linked to this visit."
+                          newButtonLabel="New Observation"
                           allowVoid={currentUser.isSuperAdmin}
                         />
                       ) : visitAllowsObservation ? (
@@ -5526,6 +6854,7 @@ export function PortalModuleManager({
                           disabled={
                             visitStep === 4 ||
                             (visitStep === 1 && !formState.schoolId.trim()) ||
+                            (visitStep === 1 && !visitImplementationUnlocked) ||
                             (visitStep === 2 &&
                               !String(formState.payload.implementationStatus ?? "").trim())
                           }
@@ -5540,7 +6869,10 @@ export function PortalModuleManager({
                     <button
                       className="button button-ghost"
                       type="button"
-                      disabled={saving || (isVisitModule && visitStep !== 4)}
+                      disabled={
+                        saving ||
+                        (isVisitModule && (visitStep !== 4 || !visitImplementationUnlocked))
+                      }
                       onClick={() => void submitRecord("Submitted")}
                     >
                       {saving ? "Saving..." : "Submit"}
@@ -5577,6 +6909,7 @@ export function PortalModuleManager({
         isOpen={isEgraModalOpen}
         onClose={() => setIsEgraModalOpen(false)}
         onSave={handleSaveLearner}
+        onSaveAndClose={handleSaveLearnerAndClose}
         nextLearnerId={modalLearnerId}
         nextNo={modalLearnerNo}
         schoolId={formState.schoolId ? Number(formState.schoolId) : null}
