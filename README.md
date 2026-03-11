@@ -174,6 +174,8 @@ Health endpoint:
 ## AWS Deployment
 - AWS guide:
   - `docs/aws-deployment.md`
+- AWS Amplify build config included:
+  - `amplify.yml`
 - For source deployments (Elastic Beanstalk/App Runner source), the included `Procfile` uses:
   - `web: npm run start:standalone`
 - App Runner source deployments can also use the included:

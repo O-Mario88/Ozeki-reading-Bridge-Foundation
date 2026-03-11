@@ -46,3 +46,13 @@ docker push <account-id>.dkr.ecr.<region>.amazonaws.com/ozeki-reading-bridge-fou
 
 `Procfile` is included so Elastic Beanstalk picks the correct web command by default.
 `apprunner.yaml` is included so App Runner source deployments use the same build/run commands.
+
+## AWS Amplify
+
+`amplify.yml` is included and does the following:
+- switches build Node runtime to `22`
+- runs `npm ci`
+- rebuilds `better-sqlite3` in the Amplify build environment
+- runs `npm run build`
+
+If you configure Amplify in the console, keep the same command sequence to avoid native module mismatch errors.
