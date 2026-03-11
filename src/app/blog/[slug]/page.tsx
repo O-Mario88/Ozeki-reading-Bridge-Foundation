@@ -1,16 +1,15 @@
 import { notFound } from "next/navigation";
 import { getMergedPublishedBlogPostBySlug, getMergedPublishedBlogPosts } from "@/lib/blog-data";
 
-type Params = {
-  slug: string;
-};
+type Params = Promise<{ slug: string }>;
 
 export function generateStaticParams() {
   return getMergedPublishedBlogPosts().map((post) => ({ slug: post.slug }));
 }
 
-export function generateMetadata({ params }: { params: Params }) {
-  const post = getMergedPublishedBlogPostBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Params }) {
+  const { slug } = await params;
+  const post = getMergedPublishedBlogPostBySlug(slug);
 
   if (!post) {
     return {
@@ -24,8 +23,9 @@ export function generateMetadata({ params }: { params: Params }) {
   };
 }
 
-export default function BlogPostPage({ params }: { params: Params }) {
-  const post = getMergedPublishedBlogPostBySlug(params.slug);
+export default async function BlogPostPage({ params }: { params: Params }) {
+  const { slug } = await params;
+  const post = getMergedPublishedBlogPostBySlug(slug);
 
   if (!post) {
     notFound();

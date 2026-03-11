@@ -151,10 +151,10 @@ npm run lint
 npm run build
 ```
 
-`npm run build` runs a native-module preflight (`verify:native`) before the Next.js build.
+`npm run build` runs a native-module preflight (`verify:native`) before the Next.js build and uses webpack mode for maximum platform compatibility.
 
 ## Deployment Prep
-1. Use Node.js `22.x` to `24.x` (see `package.json` `engines` field).
+1. Use Node.js `20.x` to `24.x` (see `package.json` `engines` field).
 2. Install dependencies with the deployment Node version (`npm ci` recommended).
 3. If Node version changed after install, rebuild native dependencies:
    ```bash

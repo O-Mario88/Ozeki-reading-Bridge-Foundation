@@ -50,9 +50,9 @@ docker push <account-id>.dkr.ecr.<region>.amazonaws.com/ozeki-reading-bridge-fou
 ## AWS Amplify
 
 `amplify.yml` is included and does the following:
-- switches build Node runtime to `22`
+- switches build Node runtime to `20`
 - runs `npm ci`
 - rebuilds `better-sqlite3` in the Amplify build environment
-- runs `npm run build`
+- runs `npm run build` (webpack mode)
 
 If you configure Amplify in the console, keep the same command sequence to avoid native module mismatch errors.
