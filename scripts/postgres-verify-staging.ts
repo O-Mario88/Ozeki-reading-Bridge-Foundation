@@ -91,6 +91,7 @@ const OPERATIONAL_TABLES = [
   "visit_participants",
   "visit_demo",
   "visit_leadership_meeting",
+  "material_distributions",
   "school_support_status_snapshots",
   "teacher_support_status_snapshots",
   "assessment_item_responses",

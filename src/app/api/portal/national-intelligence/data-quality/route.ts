@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  listDataQualitySummaries,
-  listEducationAuditExceptions,
-  runEducationDataQualitySweep,
-} from "@/lib/national-intelligence";
+  listDataQualitySummariesAsync,
+  listEducationAuditExceptionsAsync,
+  runEducationDataQualitySweepAsync,
+} from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import {
   canAccessNationalIntelligenceInternal,
@@ -53,14 +53,14 @@ export async function GET(request: Request) {
       limit: searchParams.get("limit") ?? undefined,
     });
 
-    const summaries = listDataQualitySummaries({
+    const summaries = await listDataQualitySummariesAsync({
       scopeType: parsed.scopeType,
       scopeId: parsed.scopeId,
       periodKey: parsed.periodKey,
       limit: Math.min(parsed.limit ?? 200, 500),
     });
 
-    const exceptions = listEducationAuditExceptions({
+    const exceptions = await listEducationAuditExceptionsAsync({
       scopeType: parsed.scopeType,
       scopeId: parsed.scopeId,
       status: parsed.status,
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = sweepSchema.parse(await request.json());
-    const result = runEducationDataQualitySweep({
+    const result = await runEducationDataQualitySweepAsync({
       user,
       scopeType: payload.scopeType,
       scopeId: payload.scopeId,

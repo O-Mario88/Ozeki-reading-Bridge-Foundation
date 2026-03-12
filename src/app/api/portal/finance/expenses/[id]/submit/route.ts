@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { submitFinanceExpense } from "@/lib/finance-db";
+import { submitFinanceExpenseAsync } from "@/lib/finance-db";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";
@@ -19,7 +19,7 @@ export async function POST(
   }
 
   try {
-    const expense = submitFinanceExpense(expenseId, auth.actor);
+    const expense = await submitFinanceExpenseAsync(expenseId, auth.actor);
     return NextResponse.json({ expense });
   } catch (error) {
     return NextResponse.json(

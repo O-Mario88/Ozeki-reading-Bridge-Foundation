@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  listBenchmarkRules,
-  upsertBenchmarkRule,
-} from "@/lib/national-intelligence";
+  listBenchmarkRulesAsync,
+  upsertBenchmarkRuleAsync,
+} from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import {
   canAccessNationalIntelligenceInternal,
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "benchmarkId is required." }, { status: 400 });
     }
 
-    return NextResponse.json({ rules: listBenchmarkRules(benchmarkId) });
+    return NextResponse.json({ rules: await listBenchmarkRulesAsync(benchmarkId) });
   } catch (error) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = postSchema.parse(await request.json());
-    const rules = upsertBenchmarkRule({
+    const rules = await upsertBenchmarkRuleAsync({
       user,
       input: payload,
     });

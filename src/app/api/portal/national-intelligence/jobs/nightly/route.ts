@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runNationalNightlyJobs } from "@/lib/national-intelligence";
+import { runNationalNightlyJobsAsync } from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canAccessNationalIntelligenceInternal } from "@/lib/national-intelligence-auth";
 
@@ -15,7 +15,7 @@ export async function POST() {
   }
 
   try {
-    const result = runNationalNightlyJobs({ user });
+    const result = await runNationalNightlyJobsAsync({ user });
     return NextResponse.json({ result });
   } catch (error) {
     if (error instanceof Error) {

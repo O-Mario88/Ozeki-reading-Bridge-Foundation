@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  createFinanceInvoice,
+  createFinanceInvoiceAsync,
   exportFinanceRowsToCsv,
   listFinanceInvoices,
 } from "@/lib/finance-db";
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 
   try {
     const parsed = createSchema.parse(await request.json());
-    const invoice = createFinanceInvoice(
+    const invoice = await createFinanceInvoiceAsync(
       {
         contactId: parsed.contactId,
         category: parsed.category,

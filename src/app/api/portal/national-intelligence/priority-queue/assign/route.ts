@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { assignPriorityQueueItem } from "@/lib/national-intelligence";
+import { assignPriorityQueueItemAsync } from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canAccessNationalIntelligenceInternal } from "@/lib/national-intelligence-auth";
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = postSchema.parse(await request.json());
-    assignPriorityQueueItem({
+    await assignPriorityQueueItemAsync({
       user,
       schoolId: payload.schoolId,
       periodKey: payload.periodKey,

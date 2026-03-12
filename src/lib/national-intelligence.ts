@@ -3493,13 +3493,22 @@ export async function generateNationalReportPack(args: {
 
   const periodStart = normalizeDate(args.periodStart ?? "", `${new Date().getUTCFullYear()}-01-01`);
   const periodEnd = normalizeDate(args.periodEnd ?? "", new Date().toISOString().slice(0, 10));
-  const facts = buildNationalReportFacts({
-    preset: args.preset,
-    scopeType: args.scopeType,
-    scopeId: args.scopeId,
-    periodStart,
-    periodEnd,
-  });
+  const facts = isPostgresConfigured()
+    ? await import("@/lib/national-intelligence-async").then((mod) =>
+      mod.buildNationalReportFactsAsync({
+        preset: args.preset,
+        scopeType: args.scopeType,
+        scopeId: args.scopeId,
+        periodStart,
+        periodEnd,
+      }))
+    : buildNationalReportFacts({
+      preset: args.preset,
+      scopeType: args.scopeType,
+      scopeId: args.scopeId,
+      periodStart,
+      periodEnd,
+    });
 
   const aiNarrative = await aiNarrativeFromFacts(facts);
   const reportCode = generateReportCode();

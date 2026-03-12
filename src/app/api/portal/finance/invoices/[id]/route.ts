@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  deleteFinanceInvoiceDraft,
+  deleteFinanceInvoiceDraftAsync,
   getFinanceInvoiceById,
-  updateFinanceInvoiceDraft,
-  voidFinanceInvoice,
+  updateFinanceInvoiceDraftAsync,
+  voidFinanceInvoiceAsync,
 } from "@/lib/finance-db";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
@@ -68,7 +68,7 @@ export async function PATCH(
 
   try {
     const parsed = patchSchema.parse(await request.json());
-    const invoice = updateFinanceInvoiceDraft(invoiceId, parsed, auth.actor);
+    const invoice = await updateFinanceInvoiceDraftAsync(invoiceId, parsed, auth.actor);
     return NextResponse.json({ invoice });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -102,10 +102,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
     }
     if (current.status === "draft") {
-      const deleted = deleteFinanceInvoiceDraft(invoiceId, parsed.reason, auth.actor);
+      const deleted = await deleteFinanceInvoiceDraftAsync(invoiceId, parsed.reason, auth.actor);
       return NextResponse.json({ deleted });
     }
-    const invoice = voidFinanceInvoice(invoiceId, parsed.reason, auth.actor);
+    const invoice = await voidFinanceInvoiceAsync(invoiceId, parsed.reason, auth.actor);
     return NextResponse.json({ invoice, deleted: null });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -5518,7 +5518,45 @@ export async function getPortalUserByEmail(email: string): Promise<PortalUser | 
       getDisabledLegacyPortalAdminPasswordHash(),
     );
     const row = await findPortalUserByEmailPostgres(normalized);
-    return row ? parsePortalUserRow(row) : null;
+    if (row) {
+      return parsePortalUserRow(row);
+    }
+
+    const sqliteFallback = getDb()
+      .prepare(
+        `
+        SELECT *
+        FROM portal_users
+        WHERE lower(email) = @email
+        LIMIT 1
+      `,
+      )
+      .get({ email: normalized }) as Record<string, unknown> | undefined;
+
+    if (!sqliteFallback) {
+      return null;
+    }
+
+    await upsertSqliteRowToPostgres("portal_users", "id", sqliteFallback);
+
+    return parsePortalUserRow({
+      id: Number(sqliteFallback.id),
+      fullName: String(sqliteFallback.full_name ?? ""),
+      email: String(sqliteFallback.email ?? normalized),
+      phone:
+        sqliteFallback.phone === null || sqliteFallback.phone === undefined
+          ? null
+          : String(sqliteFallback.phone),
+      role: String(sqliteFallback.role ?? "Volunteer") as PortalUserRole,
+      geographyScope:
+        sqliteFallback.geography_scope === null || sqliteFallback.geography_scope === undefined
+          ? null
+          : String(sqliteFallback.geography_scope),
+      isSupervisor: Number(sqliteFallback.is_supervisor ?? 0),
+      isME: Number(sqliteFallback.is_me ?? 0),
+      isAdmin: Number(sqliteFallback.is_admin ?? 0),
+      isSuperAdmin: Number(sqliteFallback.is_superadmin ?? 0),
+    });
   }
 
   const row = getDb()
@@ -7503,7 +7541,7 @@ function sqliteToPostgresValue(table: string, column: string, value: unknown) {
   return value;
 }
 
-async function upsertSqliteRowToPostgres(
+export async function upsertSqliteRowToPostgres(
   table: string,
   primaryKeyColumn: string,
   row: Record<string, unknown>,
@@ -7537,7 +7575,7 @@ async function upsertSqliteRowToPostgres(
   );
 }
 
-async function deletePostgresRowsByColumn(
+export async function deletePostgresRowsByColumn(
   table: string,
   column: string,
   value: unknown,
@@ -7550,7 +7588,7 @@ async function deletePostgresRowsByColumn(
   await queryPostgres(`DELETE FROM ${table} WHERE ${column} = $1`, [value]);
 }
 
-async function replaceSqliteRowsInPostgres(
+export async function replaceSqliteRowsInPostgres(
   table: string,
   primaryKeyColumn: string,
   matchColumn: string,

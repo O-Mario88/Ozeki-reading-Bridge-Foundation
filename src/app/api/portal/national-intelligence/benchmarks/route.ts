@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  createBenchmarkProfile,
-  listBenchmarkProfiles,
-  listBenchmarkRules,
-  updateBenchmarkProfile,
-} from "@/lib/national-intelligence";
+  createBenchmarkProfileAsync,
+  listBenchmarkProfilesAsync,
+  listBenchmarkRulesAsync,
+  updateBenchmarkProfileAsync,
+} from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import {
   canAccessNationalIntelligenceInternal,
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     const benchmarkIdRaw = searchParams.get("benchmarkId");
     const includeRules = String(searchParams.get("includeRules") ?? "false").toLowerCase() === "true";
 
-    const profiles = listBenchmarkProfiles();
+    const profiles = await listBenchmarkProfilesAsync();
     const benchmarkId = benchmarkIdRaw ? Number(benchmarkIdRaw) : null;
 
     if (!includeRules) {
@@ -55,17 +55,14 @@ export async function GET(request: Request) {
     if (benchmarkId && Number.isInteger(benchmarkId) && benchmarkId > 0) {
       return NextResponse.json({
         profiles,
-        rules: listBenchmarkRules(benchmarkId),
+        rules: await listBenchmarkRulesAsync(benchmarkId),
       });
     }
 
-    const rulesByBenchmark = profiles.reduce<Record<string, ReturnType<typeof listBenchmarkRules>>>(
-      (acc, profile) => {
-        acc[String(profile.benchmarkId)] = listBenchmarkRules(profile.benchmarkId);
-        return acc;
-      },
-      {},
+    const rulesByBenchmarkEntries = await Promise.all(
+      profiles.map(async (profile) => [String(profile.benchmarkId), await listBenchmarkRulesAsync(profile.benchmarkId)]),
     );
+    const rulesByBenchmark = Object.fromEntries(rulesByBenchmarkEntries);
 
     return NextResponse.json({
       profiles,
@@ -90,7 +87,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = postSchema.parse(await request.json());
-    const profile = createBenchmarkProfile({
+    const profile = await createBenchmarkProfileAsync({
       user,
       input: {
         name: payload.name,
@@ -127,7 +124,7 @@ export async function PATCH(request: Request) {
 
   try {
     const payload = patchSchema.parse(await request.json());
-    const profile = updateBenchmarkProfile({
+    const profile = await updateBenchmarkProfileAsync({
       user,
       benchmarkId: payload.benchmarkId,
       input: {

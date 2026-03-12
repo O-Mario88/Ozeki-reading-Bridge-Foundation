@@ -2,7 +2,12 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type Database from "better-sqlite3";
-import { getDb, logAuditEvent } from "@/lib/db";
+import type { PoolClient } from "pg";
+import {
+  getDb,
+  logAuditEvent,
+  upsertSqliteRowToPostgres,
+} from "@/lib/db";
 import { generateInvoicePdfFile, generateReceiptPdfFile, generateStatementPdfFile } from "@/lib/finance-documents";
 import {
   buildFinanceCcList,
@@ -12,7 +17,7 @@ import {
 } from "@/lib/finance-email";
 import { officialContact } from "@/lib/contact";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
-import { isPostgresConfigured } from "@/lib/server/postgres/client";
+import { isPostgresConfigured, queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 import {
   getFinanceDashboardSummaryPostgres,
   getFinanceExpenseByIdPostgres,
@@ -3152,6 +3157,19 @@ export async function sendFinanceInvoice(
     throw new Error("Failed to reload invoice.");
   }
 
+  if (isPostgresConfigured()) {
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await syncFinanceInvoiceBundleToPostgres(invoiceId, client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+  }
+
   return {
     invoice: buildInvoiceRecord(db, reloaded),
     email: result,
@@ -3325,6 +3343,23 @@ export async function recordFinancePayment(
     if (refreshedInvoice) {
       updatedInvoiceRow = refreshedInvoice;
     }
+  }
+
+  if (isPostgresConfigured()) {
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await syncFinancePaymentBundleToPostgres(paymentId, client);
+        await syncFinanceInvoiceBundleToPostgres(input.relatedInvoiceId, client);
+        if (autoReceipt) {
+          await syncFinanceReceiptBundleToPostgres(autoReceipt.id, client);
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
   }
 
   return {
@@ -3864,6 +3899,22 @@ export async function issueFinanceReceipt(
     emailResult = sent.email;
   }
 
+  if (isPostgresConfigured()) {
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await syncFinanceReceiptBundleToPostgres(receiptId, client);
+        if (updatedRow.relatedInvoiceId) {
+          await syncFinanceInvoiceBundleToPostgres(updatedRow.relatedInvoiceId, client);
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+  }
+
   return {
     receipt: buildReceiptRecord(updatedRow),
     email: emailResult,
@@ -3968,6 +4019,21 @@ export async function sendFinanceReceipt(
   const refreshed = getReceiptRowById(db, receiptId);
   if (!refreshed) {
     throw new Error("Failed to reload receipt.");
+  }
+  if (isPostgresConfigured()) {
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await syncFinanceReceiptBundleToPostgres(receiptId, client);
+        if (refreshed.relatedInvoiceId) {
+          await syncFinanceInvoiceBundleToPostgres(refreshed.relatedInvoiceId, client);
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
   }
   return { receipt: buildReceiptRecord(refreshed), email: result };
 }
@@ -5746,6 +5812,9 @@ export async function createFinanceFileRecord(
     uploadedBy: actor.userId,
   });
   appendAudit(actor, "upload", "finance_files", record.id, `Uploaded file ${record.fileName} (${record.sourceType})`);
+  if (isPostgresConfigured()) {
+    await syncFinanceFileToPostgres(record.id);
+  }
   return record;
 }
 
@@ -5879,6 +5948,386 @@ function listFinanceFilesBySourceSqlite(sourceType: string, sourceId: number) {
     ...row,
     signedUrl: getSignedFinanceFileUrl(row.id),
   }));
+}
+
+function selectSqliteFinanceRows(sql: string, params: Record<string, unknown> = {}) {
+  return getDb().prepare(sql).all(params) as Array<Record<string, unknown>>;
+}
+
+async function deleteScopedPostgresRows(
+  table: string,
+  whereClause: string,
+  params: unknown[],
+  client?: PoolClient,
+) {
+  const sql = `DELETE FROM ${table} WHERE ${whereClause}`;
+  if (client) {
+    await client.query(sql, params);
+    return;
+  }
+  await queryPostgres(sql, params);
+}
+
+async function replaceScopedFinanceRowsInPostgres(
+  table: string,
+  primaryKeyColumn: string,
+  whereClause: string,
+  deleteParams: unknown[],
+  rows: Array<Record<string, unknown>>,
+  client?: PoolClient,
+) {
+  await deleteScopedPostgresRows(table, whereClause, deleteParams, client);
+  for (const row of rows) {
+    await upsertSqliteRowToPostgres(table, primaryKeyColumn, row, client);
+  }
+}
+
+async function upsertFinanceRowsInPostgres(
+  table: string,
+  primaryKeyColumn: string,
+  rows: Array<Record<string, unknown>>,
+  client?: PoolClient,
+) {
+  for (const row of rows) {
+    await upsertSqliteRowToPostgres(table, primaryKeyColumn, row, client);
+  }
+}
+
+async function syncFinanceContactToPostgres(contactId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  await upsertFinanceRowsInPostgres(
+    "finance_contacts",
+    "id",
+    selectSqliteFinanceRows(`SELECT * FROM finance_contacts WHERE id = @id`, { id: contactId }),
+    client,
+  );
+}
+
+async function syncFinanceSettingsToPostgres(client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  await upsertFinanceRowsInPostgres(
+    "finance_settings",
+    "id",
+    selectSqliteFinanceRows(`SELECT * FROM finance_settings WHERE id = 1`),
+    client,
+  );
+}
+
+async function syncFinanceInvoiceBundleToPostgres(invoiceId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  const invoiceRows = selectSqliteFinanceRows(`SELECT * FROM finance_invoices WHERE id = @invoiceId`, { invoiceId });
+  const contactId = Number(invoiceRows[0]?.contact_id ?? 0);
+  if (contactId > 0) {
+    await syncFinanceContactToPostgres(contactId, client);
+  }
+  await upsertFinanceRowsInPostgres("finance_invoices", "id", invoiceRows, client);
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_invoice_items",
+    "id",
+    "invoice_id = $1",
+    [invoiceId],
+    selectSqliteFinanceRows(`SELECT * FROM finance_invoice_items WHERE invoice_id = @invoiceId`, { invoiceId }),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_email_logs",
+    "id",
+    "record_type = $1 AND record_id = $2",
+    ["invoice", invoiceId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_email_logs WHERE record_type = 'invoice' AND record_id = @invoiceId`,
+      { invoiceId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_audit_exceptions",
+    "id",
+    "entity_type = $1 AND entity_id = $2",
+    ["invoice", invoiceId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_audit_exceptions WHERE entity_type = 'invoice' AND entity_id = @invoiceId`,
+      { invoiceId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_txn_risk_scores",
+    "id",
+    "entity_type = $1 AND entity_id = $2",
+    ["invoice", invoiceId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_txn_risk_scores WHERE entity_type = 'invoice' AND entity_id = @invoiceId`,
+      { invoiceId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_files",
+    "id",
+    "source_type IN ('invoice', 'invoice_pdf') AND source_id = $1",
+    [invoiceId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_files WHERE source_type IN ('invoice', 'invoice_pdf') AND source_id = @invoiceId`,
+      { invoiceId },
+    ),
+    client,
+  );
+}
+
+async function syncFinanceReceiptBundleToPostgres(receiptId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  const receiptRows = selectSqliteFinanceRows(`SELECT * FROM finance_receipts WHERE id = @receiptId`, { receiptId });
+  const contactId = Number(receiptRows[0]?.contact_id ?? 0);
+  if (contactId > 0) {
+    await syncFinanceContactToPostgres(contactId, client);
+  }
+  const relatedInvoiceId = Number(receiptRows[0]?.related_invoice_id ?? 0);
+  if (relatedInvoiceId > 0) {
+    await syncFinanceInvoiceBundleToPostgres(relatedInvoiceId, client);
+  }
+  await upsertFinanceRowsInPostgres("finance_receipts", "id", receiptRows, client);
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_email_logs",
+    "id",
+    "record_type = $1 AND record_id = $2",
+    ["receipt", receiptId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_email_logs WHERE record_type = 'receipt' AND record_id = @receiptId`,
+      { receiptId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_transactions_ledger",
+    "id",
+    "source_type = $1 AND source_id = $2",
+    ["receipt", receiptId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_transactions_ledger WHERE source_type = 'receipt' AND source_id = @receiptId`,
+      { receiptId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_audit_exceptions",
+    "id",
+    "entity_type = $1 AND entity_id = $2",
+    ["receipt", receiptId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_audit_exceptions WHERE entity_type = 'receipt' AND entity_id = @receiptId`,
+      { receiptId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_txn_risk_scores",
+    "id",
+    "entity_type = $1 AND entity_id = $2",
+    ["receipt", receiptId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_txn_risk_scores WHERE entity_type = 'receipt' AND entity_id = @receiptId`,
+      { receiptId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_files",
+    "id",
+    "source_type IN ('receipt', 'receipt_pdf') AND source_id = $1",
+    [receiptId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_files WHERE source_type IN ('receipt', 'receipt_pdf') AND source_id = @receiptId`,
+      { receiptId },
+    ),
+    client,
+  );
+}
+
+async function syncFinancePaymentBundleToPostgres(paymentId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  const paymentRows = selectSqliteFinanceRows(`SELECT * FROM finance_payments WHERE id = @paymentId`, { paymentId });
+  const relatedInvoiceId = Number(paymentRows[0]?.related_invoice_id ?? 0);
+  if (relatedInvoiceId > 0) {
+    await syncFinanceInvoiceBundleToPostgres(relatedInvoiceId, client);
+  }
+  await upsertFinanceRowsInPostgres("finance_payments", "id", paymentRows, client);
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_payment_allocations",
+    "id",
+    "payment_id = $1",
+    [paymentId],
+    selectSqliteFinanceRows(`SELECT * FROM finance_payment_allocations WHERE payment_id = @paymentId`, { paymentId }),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_transactions_ledger",
+    "id",
+    "source_type = $1 AND source_id = $2",
+    ["invoice_payment", paymentId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_transactions_ledger WHERE source_type = 'invoice_payment' AND source_id = @paymentId`,
+      { paymentId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_audit_exceptions",
+    "id",
+    "entity_type = $1 AND entity_id = $2",
+    ["payment", paymentId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_audit_exceptions WHERE entity_type = 'payment' AND entity_id = @paymentId`,
+      { paymentId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_txn_risk_scores",
+    "id",
+    "entity_type = $1 AND entity_id = $2",
+    ["payment", paymentId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_txn_risk_scores WHERE entity_type = 'payment' AND entity_id = @paymentId`,
+      { paymentId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_files",
+    "id",
+    "source_type = $1 AND source_id = $2",
+    ["payment_evidence", paymentId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_files WHERE source_type = 'payment_evidence' AND source_id = @paymentId`,
+      { paymentId },
+    ),
+    client,
+  );
+}
+
+async function syncFinanceExpenseBundleToPostgres(expenseId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  await upsertFinanceRowsInPostgres(
+    "finance_expenses",
+    "id",
+    selectSqliteFinanceRows(`SELECT * FROM finance_expenses WHERE id = @expenseId`, { expenseId }),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_expense_receipts",
+    "id",
+    "expense_id = $1",
+    [expenseId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_expense_receipts WHERE expense_id = @expenseId`,
+      { expenseId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_transactions_ledger",
+    "id",
+    "source_type = $1 AND source_id = $2",
+    ["expense", expenseId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_transactions_ledger WHERE source_type = 'expense' AND source_id = @expenseId`,
+      { expenseId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_audit_exceptions",
+    "id",
+    "entity_type = $1 AND entity_id = $2",
+    ["expense", expenseId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_audit_exceptions WHERE entity_type = 'expense' AND entity_id = @expenseId`,
+      { expenseId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_txn_risk_scores",
+    "id",
+    "entity_type = $1 AND entity_id = $2",
+    ["expense", expenseId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_txn_risk_scores WHERE entity_type = 'expense' AND entity_id = @expenseId`,
+      { expenseId },
+    ),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_files",
+    "id",
+    "source_type = $1 AND source_id = $2",
+    ["expense", expenseId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_files WHERE source_type = 'expense' AND source_id = @expenseId`,
+      { expenseId },
+    ),
+    client,
+  );
+}
+
+async function syncFinanceFileToPostgres(fileId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  await upsertFinanceRowsInPostgres(
+    "finance_files",
+    "id",
+    selectSqliteFinanceRows(`SELECT * FROM finance_files WHERE id = @fileId`, { fileId }),
+    client,
+  );
+}
+
+async function syncFinanceStatementLineToPostgres(statementLineId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  await upsertFinanceRowsInPostgres(
+    "finance_statement_lines",
+    "id",
+    selectSqliteFinanceRows(`SELECT * FROM finance_statement_lines WHERE id = @id`, { id: statementLineId }),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_reconciliation_matches",
+    "id",
+    "statement_line_id = $1",
+    [statementLineId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_reconciliation_matches WHERE statement_line_id = @id`,
+      { id: statementLineId },
+    ),
+    client,
+  );
+}
+
+async function syncFinanceAuditExceptionToPostgres(exceptionId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  await upsertFinanceRowsInPostgres(
+    "finance_audit_exceptions",
+    "id",
+    selectSqliteFinanceRows(`SELECT * FROM finance_audit_exceptions WHERE id = @id`, { id: exceptionId }),
+    client,
+  );
 }
 
 function listFinanceLedgerTransactionsSqlite(filters?: {
@@ -7602,4 +8051,302 @@ export function archiveAuditedStatement(actor: FinanceActor, statementId: number
     WHERE id = ?
   `).run(nowIso(), statementId);
   logFinanceTransparencyAudit(actor, "Archived audited statement", "finance_audited_statements", statementId, "");
+}
+
+export async function createFinanceContactAsync(input: FinanceContactInput, actor: FinanceActor) {
+  const record = createFinanceContact(input, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceContactToPostgres(record.id);
+  }
+  return record;
+}
+
+export async function updateFinanceSettingsAsync(
+  updates: Partial<FinanceSettingsRecord>,
+  actor: FinanceActor,
+) {
+  const settings = updateFinanceSettings(updates, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceSettingsToPostgres();
+  }
+  return settings;
+}
+
+export async function createFinanceInvoiceAsync(input: FinanceInvoiceInput, actor: FinanceActor) {
+  const invoice = createFinanceInvoice(input, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceInvoiceBundleToPostgres(invoice.id);
+  }
+  return invoice;
+}
+
+export async function updateFinanceInvoiceDraftAsync(
+  invoiceId: number,
+  updates: Partial<FinanceInvoiceInput>,
+  actor: FinanceActor,
+) {
+  const invoice = updateFinanceInvoiceDraft(invoiceId, updates, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceInvoiceBundleToPostgres(invoiceId);
+  }
+  return invoice;
+}
+
+export async function deleteFinanceInvoiceDraftAsync(invoiceId: number, reason: string, actor: FinanceActor) {
+  const deleted = deleteFinanceInvoiceDraft(invoiceId, reason, actor);
+  if (isPostgresConfigured()) {
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await deleteScopedPostgresRows("finance_email_logs", "record_type = $1 AND record_id = $2", ["invoice", invoiceId], client);
+        await deleteScopedPostgresRows(
+          "finance_files",
+          "source_type IN ('invoice', 'invoice_pdf') AND source_id = $1",
+          [invoiceId],
+          client,
+        );
+        await deleteScopedPostgresRows("finance_invoice_items", "invoice_id = $1", [invoiceId], client);
+        await deleteScopedPostgresRows(
+          "finance_audit_exceptions",
+          "entity_type = $1 AND entity_id = $2",
+          ["invoice", invoiceId],
+          client,
+        );
+        await deleteScopedPostgresRows(
+          "finance_txn_risk_scores",
+          "entity_type = $1 AND entity_id = $2",
+          ["invoice", invoiceId],
+          client,
+        );
+        await deleteScopedPostgresRows("finance_invoices", "id = $1", [invoiceId], client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+  }
+  return deleted;
+}
+
+export async function voidFinanceInvoiceAsync(invoiceId: number, reason: string, actor: FinanceActor) {
+  const invoice = voidFinanceInvoice(invoiceId, reason, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceInvoiceBundleToPostgres(invoiceId);
+  }
+  return invoice;
+}
+
+export async function createFinanceReceiptAsync(input: FinanceReceiptInput, actor: FinanceActor) {
+  const receipt = createFinanceReceipt(input, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceReceiptBundleToPostgres(receipt.id);
+  }
+  return receipt;
+}
+
+export async function deleteFinanceReceiptDraftAsync(receiptId: number, reason: string, actor: FinanceActor) {
+  const deleted = deleteFinanceReceiptDraft(receiptId, reason, actor);
+  if (isPostgresConfigured()) {
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await deleteScopedPostgresRows("finance_email_logs", "record_type = $1 AND record_id = $2", ["receipt", receiptId], client);
+        await deleteScopedPostgresRows(
+          "finance_transactions_ledger",
+          "source_type = $1 AND source_id = $2",
+          ["receipt", receiptId],
+          client,
+        );
+        await deleteScopedPostgresRows(
+          "finance_files",
+          "source_type IN ('receipt', 'receipt_pdf') AND source_id = $1",
+          [receiptId],
+          client,
+        );
+        await deleteScopedPostgresRows(
+          "finance_audit_exceptions",
+          "entity_type = $1 AND entity_id = $2",
+          ["receipt", receiptId],
+          client,
+        );
+        await deleteScopedPostgresRows(
+          "finance_txn_risk_scores",
+          "entity_type = $1 AND entity_id = $2",
+          ["receipt", receiptId],
+          client,
+        );
+        await deleteScopedPostgresRows("finance_receipts", "id = $1", [receiptId], client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+  }
+  return deleted;
+}
+
+export async function voidFinanceReceiptAsync(receiptId: number, reason: string, actor: FinanceActor) {
+  const receipt = voidFinanceReceipt(receiptId, reason, actor);
+  if (isPostgresConfigured()) {
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await syncFinanceReceiptBundleToPostgres(receiptId, client);
+        if (receipt.relatedInvoiceId) {
+          await syncFinanceInvoiceBundleToPostgres(receipt.relatedInvoiceId, client);
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+  }
+  return receipt;
+}
+
+export async function createFinanceExpenseAsync(input: FinanceExpenseInput, actor: FinanceActor) {
+  const expense = createFinanceExpense(input, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceExpenseBundleToPostgres(expense.id);
+  }
+  return expense;
+}
+
+export async function submitFinanceExpenseAsync(expenseId: number, actor: FinanceActor) {
+  const expense = submitFinanceExpense(expenseId, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceExpenseBundleToPostgres(expenseId);
+  }
+  return expense;
+}
+
+export async function upsertFinanceExpenseReceiptsAsync(
+  expenseId: number,
+  receipts: ExpenseReceiptMetadataInput[],
+  actor: FinanceActor,
+) {
+  const linkedReceipts = upsertFinanceExpenseReceipts(expenseId, receipts, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceExpenseBundleToPostgres(expenseId);
+  }
+  return linkedReceipts;
+}
+
+export async function postFinanceExpenseAsync(
+  expenseId: number,
+  actor: FinanceActor,
+  options?: ExpensePostOptions,
+) {
+  const expense = postFinanceExpense(expenseId, actor, options);
+  if (isPostgresConfigured()) {
+    await syncFinanceExpenseBundleToPostgres(expenseId);
+  }
+  return expense;
+}
+
+export async function deleteFinanceExpenseDraftAsync(expenseId: number, reason: string, actor: FinanceActor) {
+  const deleted = deleteFinanceExpenseDraft(expenseId, reason, actor);
+  if (isPostgresConfigured()) {
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await deleteScopedPostgresRows("finance_expense_receipts", "expense_id = $1", [expenseId], client);
+        await deleteScopedPostgresRows(
+          "finance_transactions_ledger",
+          "source_type = $1 AND source_id = $2",
+          ["expense", expenseId],
+          client,
+        );
+        await deleteScopedPostgresRows(
+          "finance_files",
+          "source_type = $1 AND source_id = $2",
+          ["expense", expenseId],
+          client,
+        );
+        await deleteScopedPostgresRows(
+          "finance_audit_exceptions",
+          "entity_type = $1 AND entity_id = $2",
+          ["expense", expenseId],
+          client,
+        );
+        await deleteScopedPostgresRows(
+          "finance_txn_risk_scores",
+          "entity_type = $1 AND entity_id = $2",
+          ["expense", expenseId],
+          client,
+        );
+        await deleteScopedPostgresRows("finance_expenses", "id = $1", [expenseId], client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+  }
+  return deleted;
+}
+
+export async function voidFinanceExpenseAsync(expenseId: number, reason: string, actor: FinanceActor) {
+  const expense = voidFinanceExpense(expenseId, reason, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceExpenseBundleToPostgres(expenseId);
+  }
+  return expense;
+}
+
+export async function voidFinancePaymentAsync(paymentId: number, reason: string, actor: FinanceActor) {
+  const payment = voidFinancePayment(paymentId, reason, actor);
+  if (isPostgresConfigured()) {
+    const invoiceId = payment?.relatedInvoiceId ?? null;
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await syncFinancePaymentBundleToPostgres(paymentId, client);
+        if (invoiceId) {
+          await syncFinanceInvoiceBundleToPostgres(invoiceId, client);
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+  }
+  return payment;
+}
+
+export async function updateFinanceAuditExceptionStatusAsync(
+  exceptionId: number,
+  input: {
+    status: Extract<FinanceAuditExceptionRecord["status"], "acknowledged" | "resolved" | "overridden">;
+    notes?: string;
+  },
+  actor: FinanceActor,
+) {
+  const exception = updateFinanceAuditExceptionStatus(exceptionId, input, actor);
+  if (isPostgresConfigured()) {
+    await syncFinanceAuditExceptionToPostgres(exceptionId);
+  }
+  return exception;
+}
+
+export async function createStatementLineAsync(
+  actor: FinanceActor,
+  input: {
+    accountType: FinanceStatementAccountType;
+    date: string;
+    amount: number;
+    currency: FinanceCurrency;
+    reference?: string;
+    description?: string;
+  },
+) {
+  const line = createStatementLine(actor, input);
+  if (isPostgresConfigured()) {
+    await syncFinanceStatementLineToPostgres(line.id);
+  }
+  return line;
 }

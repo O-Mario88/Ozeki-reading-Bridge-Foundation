@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { FinanceExpenseReceiptRecord } from "@/lib/types";
 import {
-  createFinanceExpense,
+  createFinanceExpenseAsync,
   createFinanceFileRecord,
   exportFinanceRowsToCsv,
   listFinanceExpenses,
-  postFinanceExpense,
-  submitFinanceExpense,
-  upsertFinanceExpenseReceipts,
+  postFinanceExpenseAsync,
+  submitFinanceExpenseAsync,
+  upsertFinanceExpenseReceiptsAsync,
 } from "@/lib/finance-db";
 import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       parsedReceiptMetadata = payload.receiptMetadata || [];
     }
 
-    const expense = createFinanceExpense(
+    const expense = await createFinanceExpenseAsync(
       {
         vendorName: payload.vendorName,
         date: payload.date,
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
         ? Number(payload.amount || 0) / evidenceMeta.length
         : Number(payload.amount || 0);
 
-      linkedReceipts = upsertFinanceExpenseReceipts(
+      linkedReceipts = await upsertFinanceExpenseReceiptsAsync(
         expense.id,
         evidenceMeta.map((file, index) => {
           const metadata = metadataByIndex.get(index);
@@ -215,14 +215,14 @@ export async function POST(request: NextRequest) {
     let submitted = false;
     let autoPosted = false;
     if (payload.submitNow || payload.autoPost) {
-      finalExpense = submitFinanceExpense(expense.id, auth.actor);
+      finalExpense = await submitFinanceExpenseAsync(expense.id, auth.actor);
       submitted = true;
     }
     if (payload.autoPost) {
       if (linkedReceipts.length === 0) {
         throw new Error("At least one receipt file with metadata is required to post this expense.");
       }
-      finalExpense = postFinanceExpense(expense.id, auth.actor);
+      finalExpense = await postFinanceExpenseAsync(expense.id, auth.actor);
       autoPosted = true;
       submitted = true;
     }

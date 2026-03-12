@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { updateInterventionAction } from "@/lib/national-intelligence";
+import { updateInterventionActionAsync } from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canManageNationalInterventions } from "@/lib/national-intelligence-auth";
 
@@ -42,7 +42,7 @@ export async function PATCH(
     const actionId = toActionId(params.actionId);
     const payload = patchSchema.parse(await request.json());
 
-    updateInterventionAction({
+    await updateInterventionActionAsync({
       user,
       actionId,
       input: {

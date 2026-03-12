@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   assertPartnerScopeAllowed,
-  authenticatePartnerApiKey,
-  getPartnerImpactDataset,
-  logPartnerExport,
+} from "@/lib/national-intelligence";
+import {
+  getPartnerImpactDatasetAsync,
+} from "@/lib/national-intelligence-async";
+import {
+  authenticatePartnerApiKeyAsync,
+  logPartnerExportAsync,
 } from "@/lib/national-intelligence";
 
 export const runtime = "nodejs";
@@ -27,7 +31,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Missing partner API key." }, { status: 401 });
     }
 
-    const client = authenticatePartnerApiKey(apiKey);
+    const client = await authenticatePartnerApiKeyAsync(apiKey);
     if (!client) {
       return NextResponse.json({ error: "Invalid partner API key." }, { status: 401 });
     }
@@ -46,14 +50,14 @@ export async function GET(request: Request) {
       scopeId: parsed.scopeId,
     });
 
-    const impact = getPartnerImpactDataset({
+    const impact = await getPartnerImpactDatasetAsync({
       scopeType: parsed.scopeType,
       scopeId: parsed.scopeId,
       periodStart: parsed.periodStart,
       periodEnd: parsed.periodEnd,
     });
 
-    logPartnerExport({
+    await logPartnerExportAsync({
       clientId: client.clientId,
       partnerName: client.partnerName,
       endpoint: "/api/partner/impact",

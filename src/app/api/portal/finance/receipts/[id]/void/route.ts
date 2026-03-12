@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { voidFinanceReceipt } from "@/lib/finance-db";
+import { voidFinanceReceiptAsync } from "@/lib/finance-db";
 import { requireFinanceReceiptEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";
@@ -25,7 +25,7 @@ export async function POST(
 
   try {
     const parsed = bodySchema.parse(await request.json());
-    const receipt = voidFinanceReceipt(receiptId, parsed.reason, auth.actor);
+    const receipt = await voidFinanceReceiptAsync(receiptId, parsed.reason, auth.actor);
     return NextResponse.json({ receipt });
   } catch (error) {
     if (error instanceof z.ZodError) {

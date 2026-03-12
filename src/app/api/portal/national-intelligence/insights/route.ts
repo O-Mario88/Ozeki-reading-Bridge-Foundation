@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getNationalInsights, listPortalUsersForAssignments } from "@/lib/national-intelligence";
+import {
+  getNationalInsightsAsync,
+  listPortalUsersForAssignmentsAsync,
+} from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canAccessNationalIntelligenceInternal } from "@/lib/national-intelligence-auth";
 
@@ -33,7 +36,7 @@ export async function GET(request: Request) {
       includeAssignableUsers: searchParams.get("includeAssignableUsers") ?? false,
     });
 
-    const insights = getNationalInsights({
+    const insights = await getNationalInsightsAsync({
       scopeType: parsed.scopeType,
       scopeId: parsed.scopeId,
       periodStart: parsed.periodStart,
@@ -42,7 +45,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       insights,
-      assignableUsers: parsed.includeAssignableUsers ? listPortalUsersForAssignments() : undefined,
+      assignableUsers: parsed.includeAssignableUsers ? await listPortalUsersForAssignmentsAsync() : undefined,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

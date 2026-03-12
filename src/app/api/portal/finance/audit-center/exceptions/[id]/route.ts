@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
-import { updateFinanceAuditExceptionStatus } from "@/lib/finance-db";
+import { updateFinanceAuditExceptionStatusAsync } from "@/lib/finance-db";
 
 export const runtime = "nodejs";
 
@@ -26,7 +26,7 @@ export async function PATCH(
 
   try {
     const parsed = bodySchema.parse(await request.json());
-    const exception = updateFinanceAuditExceptionStatus(
+    const exception = await updateFinanceAuditExceptionStatusAsync(
       exceptionId,
       {
         status: parsed.status,

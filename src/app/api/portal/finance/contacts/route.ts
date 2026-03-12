@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createFinanceContact, listFinanceContacts } from "@/lib/finance-db";
+import { createFinanceContactAsync, listFinanceContacts } from "@/lib/finance-db";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
   try {
     const parsed = createSchema.parse(await request.json());
-    const contact = createFinanceContact(
+    const contact = await createFinanceContactAsync(
       {
         name: parsed.name,
         emails: parsed.emails,

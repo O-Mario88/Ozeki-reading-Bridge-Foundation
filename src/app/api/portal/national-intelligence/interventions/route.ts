@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  createInterventionPlan,
-  createInterventionPlanFromPriority,
-  listInterventionPlans,
-} from "@/lib/national-intelligence";
+  createInterventionPlanAsync,
+  createInterventionPlanFromPriorityAsync,
+  listInterventionPlansAsync,
+} from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canManageNationalInterventions } from "@/lib/national-intelligence-auth";
 
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({
-      plans: listInterventionPlans({
+      plans: await listInterventionPlansAsync({
         scopeType: parsed.scopeType,
         scopeId: parsed.scopeId,
         status: parsed.status,
@@ -105,11 +105,11 @@ export async function POST(request: Request) {
     const payload = postSchema.parse(await request.json());
     const plan =
       payload.mode === "from_priority"
-        ? createInterventionPlanFromPriority({
+        ? await createInterventionPlanFromPriorityAsync({
           user,
           item: payload,
         })
-        : createInterventionPlan({
+        : await createInterventionPlanAsync({
           user,
           input: {
             scopeType: payload.scopeType,

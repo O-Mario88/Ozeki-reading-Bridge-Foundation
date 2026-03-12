@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import {
-    createStatementLine,
+    createStatementLineAsync,
     listStatementLines,
     matchStatementLineToLedger,
     unmatchStatementLine,
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     try {
         if (action === "create_line") {
-            const line = createStatementLine(actor, {
+            const line = await createStatementLineAsync(actor, {
                 accountType: body.accountType,
                 date: body.date,
                 amount: Number(body.amount),

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  addInterventionAction,
-  listInterventionActionTypes,
-  listInterventionActions,
-} from "@/lib/national-intelligence";
+  addInterventionActionAsync,
+  listInterventionActionsAsync,
+} from "@/lib/national-intelligence-async";
+import { listInterventionActionTypes } from "@/lib/national-intelligence";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canManageNationalInterventions } from "@/lib/national-intelligence-auth";
 
@@ -57,7 +57,7 @@ export async function GET(
 
     return NextResponse.json({
       actionTypes: listInterventionActionTypes(),
-      actions: listInterventionActions(planId),
+      actions: await listInterventionActionsAsync(planId),
     });
   } catch (error) {
     if (error instanceof Error) {
@@ -84,7 +84,7 @@ export async function POST(
     const planId = toPlanId(params.planId);
     const payload = postSchema.parse(await request.json());
 
-    const actionId = addInterventionAction({
+    const actionId = await addInterventionActionAsync({
       user,
       input: {
         planId,
@@ -103,7 +103,7 @@ export async function POST(
     return NextResponse.json({
       ok: true,
       actionId,
-      actions: listInterventionActions(planId),
+      actions: await listInterventionActionsAsync(planId),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
   images: { unoptimized: true },
+  experimental: {
+    webpackBuildWorker: false,
+  },
   outputFileTracingExcludes: {
     "*": [
       "node_modules/puppeteer-core/lib/esm/puppeteer/node/install.js",

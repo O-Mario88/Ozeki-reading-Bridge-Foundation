@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { postFinanceExpense } from "@/lib/finance-db";
+import { postFinanceExpenseAsync } from "@/lib/finance-db";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";
@@ -25,7 +25,7 @@ export async function POST(
 
   try {
     const parsed = bodySchema.parse(await request.json().catch(() => ({})));
-    const expense = postFinanceExpense(expenseId, auth.actor, {
+    const expense = await postFinanceExpenseAsync(expenseId, auth.actor, {
       overrideReason: parsed.overrideReason,
     });
     return NextResponse.json({ expense });

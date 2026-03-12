@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getFinanceSettings, updateFinanceSettings } from "@/lib/finance-db";
+import { getFinanceSettings, updateFinanceSettingsAsync } from "@/lib/finance-db";
 import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";
@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const parsed = settingsSchema.parse(await request.json());
-    const settings = updateFinanceSettings(parsed, auth.actor);
+    const settings = await updateFinanceSettingsAsync(parsed, auth.actor);
     return NextResponse.json({ settings });
   } catch (error) {
     if (error instanceof z.ZodError) {

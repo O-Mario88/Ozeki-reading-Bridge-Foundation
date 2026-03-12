@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  deleteFinanceExpenseDraft,
+  deleteFinanceExpenseDraftAsync,
   getFinanceExpenseById,
   listFinanceExpenseReceipts,
-  voidFinanceExpense,
+  voidFinanceExpenseAsync,
 } from "@/lib/finance-db";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
@@ -57,11 +57,11 @@ export async function DELETE(
     }
 
     if (current.status === "draft") {
-      const deleted = deleteFinanceExpenseDraft(expenseId, parsed.reason, auth.actor);
+      const deleted = await deleteFinanceExpenseDraftAsync(expenseId, parsed.reason, auth.actor);
       return NextResponse.json({ deleted, expense: null });
     }
 
-    const expense = voidFinanceExpense(expenseId, parsed.reason, auth.actor);
+    const expense = await voidFinanceExpenseAsync(expenseId, parsed.reason, auth.actor);
     return NextResponse.json({ deleted: null, expense });
   } catch (error) {
     if (error instanceof z.ZodError) {
