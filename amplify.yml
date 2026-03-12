@@ -20,7 +20,7 @@ frontend:
         - mkdir -p .next/standalone/.next/static
         - cp -r .next/static .next/standalone/.next/static || true
   artifacts:
-    baseDirectory: .next/standalone
+    baseDirectory: .next
     files:
       - "**/*"
   cache:
