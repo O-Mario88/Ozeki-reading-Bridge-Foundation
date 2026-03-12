@@ -16,8 +16,8 @@ import { buildDataTrustSnapshot, buildPriorityActionsFromPublicAggregate } from 
 import { RECOMMENDATION_CATALOG } from "../lib/recommendations";
 import type { PortalUser } from "../lib/types";
 
-test("trust badge snapshot reflects aggregate last_updated and sample size", () => {
-  const payload = getPublicImpactAggregate("country", "Uganda", "FY");
+test("trust badge snapshot reflects aggregate last_updated and sample size", async () => {
+  const payload = await getPublicImpactAggregate("country", "Uganda", "FY");
   const trust = buildDataTrustSnapshot(payload);
 
   assert.equal(trust.lastUpdated, payload.meta.lastUpdated);
@@ -25,8 +25,8 @@ test("trust badge snapshot reflects aggregate last_updated and sample size", () 
   assert.equal(trust.completenessLabel, payload.meta.dataCompleteness);
 });
 
-test("priority action panel outputs only approved REC catalog IDs", () => {
-  const payload = getPublicImpactAggregate("country", "Uganda", "FY");
+test("priority action panel outputs only approved REC catalog IDs", async () => {
+  const payload = await getPublicImpactAggregate("country", "Uganda", "FY");
   const actions = buildPriorityActionsFromPublicAggregate(payload, 3);
   const catalogIds = new Set(RECOMMENDATION_CATALOG.map((item) => item.id));
 
@@ -43,7 +43,7 @@ test("impact report generation logs audit event and stores report audit metadata
   const user = await getPortalUserByEmail(defaultStaffEmail);
   assert.ok(user, "Missing seeded staff user for impact report generation test.");
 
-  const aggregate = getPublicImpactAggregate("country", "Uganda", "FY");
+  const aggregate = await getPublicImpactAggregate("country", "Uganda", "FY");
   const schoolName = aggregate.navigator.schools[0]?.name ?? "Not specified";
   const report = await createImpactReport(
     {

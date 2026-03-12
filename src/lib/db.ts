@@ -220,6 +220,20 @@ import {
   listSchoolDirectoryRecordsPostgres,
 } from "@/lib/server/postgres/repositories/schools";
 import { getImpactSummaryPostgres } from "@/lib/server/postgres/repositories/metrics";
+import {
+  getTeachingImprovementSettingsPostgres,
+  getTeachingLearningAlignmentBySchoolIdsPostgres,
+  listAssessmentRowsForPublicImpactPostgres,
+  listAssessmentSessionsForPublicImpactPostgres,
+  listLessonEvaluationItemsForPublicImpactPostgres,
+  listLessonEvaluationRecordsForPublicImpactPostgres,
+  listLessonEvaluationRowsForPublicImpactPostgres,
+  listPortalRecordsForPublicImpactPostgres,
+  listPublishedStorySchoolIdsForPublicImpactPostgres,
+  listScopedSchoolsForPublicImpactPostgres,
+  listTeacherSupportRowsForPublicImpactPostgres,
+  listTrainingAttendanceForPublicImpactPostgres,
+} from "@/lib/server/postgres/repositories/public-impact";
 
 const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-salt";
 const PORTAL_SESSION_SECRET = process.env.PORTAL_SESSION_SECRET ?? PASSWORD_SALT;
@@ -26389,7 +26403,974 @@ function averageReadingLevelRows(
     .map(({ label, percent }) => ({ label, percent }));
 }
 
-export function getPublicImpactAggregate(
+function normalizeTeachingImprovementSettingsRow(
+  row: Awaited<ReturnType<typeof getTeachingImprovementSettingsPostgres>>,
+): TeachingImprovementSettings {
+  if (!row) {
+    return DEFAULT_TEACHING_IMPROVEMENT_SETTINGS;
+  }
+
+  return {
+    teacherDeltaThreshold:
+      row.teacherDeltaThreshold !== null && Number.isFinite(Number(row.teacherDeltaThreshold))
+        ? Number(row.teacherDeltaThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.teacherDeltaThreshold,
+    minDomainsImproved:
+      row.minDomainsImproved !== null && Number.isFinite(Number(row.minDomainsImproved))
+        ? Math.max(1, Math.round(Number(row.minDomainsImproved)))
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.minDomainsImproved,
+    schoolDeltaThreshold:
+      row.schoolDeltaThreshold !== null && Number.isFinite(Number(row.schoolDeltaThreshold))
+        ? Number(row.schoolDeltaThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.schoolDeltaThreshold,
+    schoolImprovedTeachersPercentThreshold:
+      row.schoolImprovedTeachersPercentThreshold !== null &&
+      Number.isFinite(Number(row.schoolImprovedTeachersPercentThreshold))
+        ? Number(row.schoolImprovedTeachersPercentThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.schoolImprovedTeachersPercentThreshold,
+  };
+}
+
+async function getPublicImpactAggregatePostgres(
+  scopeLevel: PublicImpactScopeLevel,
+  scopeId: string,
+  periodLabel?: string | null,
+): Promise<PublicImpactAggregate> {
+  const period = periodWindowFromLabel(periodLabel);
+  const scopedSchools = await listScopedSchoolsForPublicImpactPostgres(scopeLevel, scopeId);
+  const schoolIds = scopedSchools.map((school) => school.schoolId);
+
+  const [
+    portalRecords,
+    attendanceRows,
+    teacherRows,
+    assessmentRows,
+    assessmentSessionRows,
+    lessonEvaluationRows,
+    teachingImprovementSettingsRow,
+    scopedLessonEvaluationRecords,
+    teachingLearningAlignment,
+    publishedStorySchoolIds,
+  ] = await Promise.all([
+    listPortalRecordsForPublicImpactPostgres(schoolIds),
+    listTrainingAttendanceForPublicImpactPostgres(schoolIds),
+    listTeacherSupportRowsForPublicImpactPostgres(schoolIds),
+    listAssessmentRowsForPublicImpactPostgres(schoolIds),
+    listAssessmentSessionsForPublicImpactPostgres(schoolIds),
+    listLessonEvaluationRowsForPublicImpactPostgres(schoolIds),
+    getTeachingImprovementSettingsPostgres(),
+    listLessonEvaluationRecordsForPublicImpactPostgres({
+      schoolIds,
+      startDate: period.startDate ?? undefined,
+      endDate: period.endDate ?? undefined,
+      limit: 10000,
+    }),
+    getTeachingLearningAlignmentBySchoolIdsPostgres(
+      schoolIds,
+      period.startDate,
+      period.endDate,
+    ),
+    listPublishedStorySchoolIdsForPublicImpactPostgres(
+      schoolIds,
+      period.startDate ?? "1970-01-01",
+      period.endDate ?? new Date().toISOString().slice(0, 10),
+    ),
+  ]);
+
+  const scopedPortalRecords = portalRecords.filter((row) =>
+    isDateInWindow(row.date, period.startDate, period.endDate),
+  );
+  const supportedPortalRecords = scopedPortalRecords.filter((row) => row.status !== "Returned");
+  const supportedSchools = new Set<number>(supportedPortalRecords.map((row) => row.schoolId));
+
+  const scopedAttendance = attendanceRows.filter((row) =>
+    isDateInWindow(row.recordDate, period.startDate, period.endDate),
+  );
+
+  const teacherKeyByGender = {
+    Male: new Set<string>(),
+    Female: new Set<string>(),
+  };
+  scopedAttendance.forEach((row) => {
+    if (!String(row.participantRole ?? "").toLowerCase().includes("teacher")) {
+      return;
+    }
+    const gender = normalizeTeacherGender(row.gender);
+    if (!gender) {
+      return;
+    }
+    const key = row.teacherUid?.trim()
+      ? row.teacherUid.trim()
+      : `${row.schoolId}:${row.participantName.trim().toLowerCase()}`;
+    teacherKeyByGender[gender].add(key);
+  });
+
+  if (teacherKeyByGender.Male.size === 0 && teacherKeyByGender.Female.size === 0) {
+    teacherRows.forEach((row) => {
+      if (row.gender !== "Male" && row.gender !== "Female") {
+        return;
+      }
+      teacherKeyByGender[row.gender].add(row.teacherUid || `${row.schoolId}:unknown`);
+    });
+  }
+
+  const scopedAssessments = assessmentRows.filter((row) =>
+    isDateInWindow(row.assessmentDate, period.startDate, period.endDate),
+  );
+  const scopedSessions = assessmentSessionRows.filter((row) =>
+    isDateInWindow(row.assessmentDate, period.startDate, period.endDate),
+  );
+  const sessionsForCounts = scopedSessions.length > 0 ? scopedSessions : scopedAssessments;
+
+  const scopedLessonEvaluations = lessonEvaluationRows.filter((row) =>
+    isDateInWindow(row.lessonDate, period.startDate, period.endDate),
+  );
+  const lessonEvaluationIds = scopedLessonEvaluations.map((row) => row.id);
+  const lessonDomainAccumulator = {
+    setup: [] as number[],
+    new_sound: [] as number[],
+    decoding: [] as number[],
+    reading_practice: [] as number[],
+    tricky_words: [] as number[],
+    check_next: [] as number[],
+  };
+
+  if (lessonEvaluationIds.length > 0) {
+    const lessonItemRows = await listLessonEvaluationItemsForPublicImpactPostgres(lessonEvaluationIds);
+    lessonItemRows.forEach((row) => {
+      const domain = row.domainKey;
+      if (!Object.prototype.hasOwnProperty.call(lessonDomainAccumulator, domain)) {
+        return;
+      }
+      const numericScore = Number(row.score);
+      if (!Number.isFinite(numericScore)) {
+        return;
+      }
+      lessonDomainAccumulator[domain].push(numericScore);
+    });
+  }
+
+  const levelCounts = {
+    strong: 0,
+    good: 0,
+    developing: 0,
+    needsSupport: 0,
+  };
+  const gapFrequency = new Map<string, number>();
+  const trendBuckets = new Map<string, { total: number; count: number }>();
+
+  scopedLessonEvaluations.forEach((row) => {
+    if (row.overallLevel === "Strong") levelCounts.strong += 1;
+    if (row.overallLevel === "Good") levelCounts.good += 1;
+    if (row.overallLevel === "Developing") levelCounts.developing += 1;
+    if (row.overallLevel === "Needs Support") levelCounts.needsSupport += 1;
+
+    if (row.topGapDomain) {
+      const key = row.topGapDomain;
+      gapFrequency.set(key, (gapFrequency.get(key) ?? 0) + 1);
+    }
+
+    const periodKey = String(row.lessonDate ?? "").slice(0, 7);
+    if (periodKey.length === 7) {
+      const bucket = trendBuckets.get(periodKey) ?? { total: 0, count: 0 };
+      bucket.total += Number(row.overallScore ?? 0);
+      bucket.count += 1;
+      trendBuckets.set(periodKey, bucket);
+    }
+  });
+
+  const lessonTotal = scopedLessonEvaluations.length;
+  const teachingImprovementSettings =
+    normalizeTeachingImprovementSettingsRow(teachingImprovementSettingsRow);
+  const teacherRecordBuckets = new Map<string, LessonEvaluationRecord[]>();
+  scopedLessonEvaluationRecords.forEach((record) => {
+    const key = `${record.schoolId}:${record.teacherUid}`;
+    const bucket = teacherRecordBuckets.get(key) ?? [];
+    bucket.push(record);
+    teacherRecordBuckets.set(key, bucket);
+  });
+
+  const teacherComparisons = [...teacherRecordBuckets.values()]
+    .map((records) => buildTeacherComparisonFromRecords(records, teachingImprovementSettings))
+    .filter(
+      (entry): entry is TeacherImprovementComparison => Boolean(entry && entry.evaluationsCount >= 2),
+    );
+
+  const teacherImprovedCount = teacherComparisons.filter(
+    (comparison) => comparison.improvementStatus === "improved",
+  ).length;
+  const improvedTeachersPercent =
+    teacherComparisons.length > 0
+      ? Number(((teacherImprovedCount / teacherComparisons.length) * 100).toFixed(1))
+      : null;
+  const deltaOverall =
+    teacherComparisons.length > 0
+      ? Number(
+        (
+          teacherComparisons.reduce((sum, comparison) => sum + comparison.deltaOverall, 0) /
+          teacherComparisons.length
+        ).toFixed(2),
+      )
+      : null;
+  const domainDeltas = averageTeacherDomainDeltas(teacherComparisons);
+
+  const schoolRowsById = new Map(scopedSchools.map((school) => [school.schoolId, school]));
+  const schoolSummaryList = new Map<number, SchoolTeachingQualityImprovementSummary>();
+  const schoolRecordBuckets = new Map<number, LessonEvaluationRecord[]>();
+  scopedLessonEvaluationRecords.forEach((record) => {
+    const bucket = schoolRecordBuckets.get(record.schoolId) ?? [];
+    bucket.push(record);
+    schoolRecordBuckets.set(record.schoolId, bucket);
+  });
+  schoolRecordBuckets.forEach((records, scopedSchoolId) => {
+    const schoolName = schoolRowsById.get(scopedSchoolId)?.schoolName ?? `School ${scopedSchoolId}`;
+    schoolSummaryList.set(
+      scopedSchoolId,
+      buildSchoolTeachingImprovementSummary(
+        scopedSchoolId,
+        schoolName,
+        records,
+        teachingImprovementSettings,
+      ),
+    );
+  });
+  const schoolsWithComparisons = [...schoolSummaryList.values()].filter(
+    (summary) => summary.teachersCompared > 0,
+  );
+  const schoolsImprovedPercent =
+    schoolsWithComparisons.length > 0
+      ? Number(
+        (
+          (schoolsWithComparisons.filter((summary) => summary.schoolImproved).length /
+            schoolsWithComparisons.length) *
+          100
+        ).toFixed(1),
+      )
+      : null;
+
+  const toPercent = (count: number) =>
+    lessonTotal > 0 ? Number(((count / lessonTotal) * 100).toFixed(1)) : 0;
+  const domainAverageValue = (values: number[]) =>
+    values.length > 0
+      ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
+      : null;
+  const teachingQualitySummary: PublicTeachingQualitySummary = {
+    evaluationsCount: lessonTotal,
+    avgOverallScore:
+      lessonTotal > 0
+        ? Number(
+          (
+            scopedLessonEvaluations.reduce((sum, row) => sum + Number(row.overallScore ?? 0), 0) /
+            lessonTotal
+          ).toFixed(2),
+        )
+        : null,
+    deltaOverall,
+    improvedTeachersPercent,
+    schoolsImprovedPercent,
+    levelDistribution: {
+      strong: { count: levelCounts.strong, percent: toPercent(levelCounts.strong) },
+      good: { count: levelCounts.good, percent: toPercent(levelCounts.good) },
+      developing: { count: levelCounts.developing, percent: toPercent(levelCounts.developing) },
+      needsSupport: {
+        count: levelCounts.needsSupport,
+        percent: toPercent(levelCounts.needsSupport),
+      },
+    },
+    domainAverages: {
+      setup: domainAverageValue(lessonDomainAccumulator.setup),
+      newSound: domainAverageValue(lessonDomainAccumulator.new_sound),
+      decoding: domainAverageValue(lessonDomainAccumulator.decoding),
+      readingPractice: domainAverageValue(lessonDomainAccumulator.reading_practice),
+      trickyWords: domainAverageValue(lessonDomainAccumulator.tricky_words),
+      checkNext: domainAverageValue(lessonDomainAccumulator.check_next),
+    },
+    domainDeltas: {
+      setup: domainDeltas.setup,
+      newSound: domainDeltas.newSound,
+      decoding: domainDeltas.decoding,
+      readingPractice: domainDeltas.readingPractice,
+      trickyWords: domainDeltas.trickyWords,
+      checkNext: domainDeltas.checkNext,
+    },
+    trend: [...trendBuckets.entries()]
+      .sort((left, right) => left[0].localeCompare(right[0]))
+      .map(([periodKey, bucket]) => ({
+        period: periodKey,
+        averageScore: bucket.count > 0 ? Number((bucket.total / bucket.count).toFixed(2)) : null,
+        evaluations: bucket.count,
+      })),
+    topCoachingFocusAreas: [...gapFrequency.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 2)
+      .map(([domainKey]) => LESSON_EVALUATION_DOMAIN_LABELS[domainKey as LessonEvaluationDomainKey] ?? domainKey),
+    lastUpdated:
+      scopedLessonEvaluations
+        .map((row) => row.updatedAt)
+        .filter(Boolean)
+        .sort((a, b) => b.localeCompare(a))[0] ?? new Date().toISOString(),
+  };
+
+  const visitsTotal = supportedPortalRecords.filter((row) => row.module === "visit").length;
+  const onlineTrainingPortalRecordIds = new Set<number>();
+  supportedPortalRecords.forEach((row) => {
+    if (row.module !== "training") {
+      return;
+    }
+    try {
+      const payload = JSON.parse(row.payloadJson || "{}") as Record<string, unknown>;
+      const deliveryMode = String(payload.deliveryMode ?? "")
+        .trim()
+        .toLowerCase();
+      if (deliveryMode.includes("online") || deliveryMode.includes("virtual")) {
+        onlineTrainingPortalRecordIds.add(row.id);
+      }
+    } catch {
+      // Ignore malformed payload rows.
+    }
+  });
+  const onlineLiveSessionsCovered = onlineTrainingPortalRecordIds.size;
+  const onlineTeacherSupportKeys = new Set<string>();
+  scopedAttendance.forEach((row) => {
+    if (!onlineTrainingPortalRecordIds.has(row.portalRecordId)) {
+      return;
+    }
+    if (!String(row.participantRole ?? "").toLowerCase().includes("teacher")) {
+      return;
+    }
+    const key = row.teacherUid?.trim()
+      ? row.teacherUid.trim()
+      : `${row.schoolId}:${row.participantName.trim().toLowerCase()}`;
+    if (key) {
+      onlineTeacherSupportKeys.add(key);
+    }
+  });
+  const onlineTeachersSupported = onlineTeacherSupportKeys.size;
+  const assessmentsBaselineCount = sessionsForCounts.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "baseline",
+  ).length;
+  const assessmentsProgressCount = sessionsForCounts.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "progress",
+  ).length;
+  const assessmentsEndlineCount = sessionsForCounts.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "endline",
+  ).length;
+
+  const learnerUnique = new Set(
+    scopedAssessments
+      .map((row) => row.learnerUid?.trim() ?? "")
+      .filter((value) => value),
+  );
+
+  const baselineRows = scopedAssessments.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "baseline",
+  );
+  const endlineRows = scopedAssessments.filter(
+    (row) => normalizeAssessmentType(row.assessmentType) === "endline",
+  );
+  const latestDate = scopedAssessments.reduce((current, candidate) => {
+    if (!current || candidate.assessmentDate > current) {
+      return candidate.assessmentDate;
+    }
+    return current;
+  }, "" as string);
+  const latestRows =
+    endlineRows.length > 0
+      ? endlineRows
+      : scopedAssessments.filter((row) => row.assessmentDate === latestDate);
+
+  const latestMasteryRows = latestRows.map((row) => {
+    const rowStatuses: Partial<Record<MasteryDomainKey, MasteryStatus>> = {
+      phonemic_awareness: normalizeMasteryStatus(row.phonemicAwarenessMasteryStatus) ?? undefined,
+      grapheme_phoneme_correspondence:
+        normalizeMasteryStatus(row.graphemePhonemeCorrespondenceMasteryStatus) ?? undefined,
+      blending_decoding: normalizeMasteryStatus(row.blendingDecodingMasteryStatus) ?? undefined,
+      word_recognition_fluency:
+        normalizeMasteryStatus(row.wordRecognitionFluencyMasteryStatus) ?? undefined,
+      sentence_paragraph_construction:
+        normalizeMasteryStatus(row.sentenceParagraphConstructionMasteryStatus) ?? undefined,
+      comprehension: normalizeMasteryStatus(row.comprehensionMasteryStatus) ?? undefined,
+    };
+    const hasCompleteStatuses = MASTERY_DOMAIN_SEQUENCE.every(
+      (domain) => Boolean(rowStatuses[domain.key]),
+    );
+
+    const computedMastery = !hasCompleteStatuses || !row.readingStageLabel || !row.readingStageOrder
+      ? computeOneTestStyleMasteryAssessment({
+        grade: row.classGrade,
+        age: row.age,
+        legacyScores: {
+          letterIdentificationScore: row.letterIdentificationScore,
+          soundIdentificationScore: row.soundIdentificationScore,
+          decodableWordsScore: row.decodableWordsScore,
+          undecodableWordsScore: row.undecodableWordsScore,
+          madeUpWordsScore: row.madeUpWordsScore,
+          storyReadingScore: row.storyReadingScore,
+          readingComprehensionScore: row.readingComprehensionScore,
+          fluencyAccuracyScore: row.fluencyAccuracyScore,
+        },
+      })
+      : null;
+
+    const finalStatuses = {} as Record<MasteryDomainKey, MasteryStatus>;
+    MASTERY_DOMAIN_SEQUENCE.forEach((domain) => {
+      finalStatuses[domain.key] =
+        rowStatuses[domain.key] ??
+        computedMastery?.domains[domain.key].domainMasteryStatus ??
+        "red";
+    });
+
+    return {
+      modelVersion:
+        String(row.modelVersion ?? "").trim() ||
+        computedMastery?.modelVersion ||
+        ASSESSMENT_LEGACY_MODEL_VERSION,
+      benchmarkVersion:
+        String(row.benchmarkVersion ?? "").trim() || computedMastery?.benchmarkVersion || null,
+      scoringProfileVersion:
+        String(row.scoringProfileVersion ?? "").trim() ||
+        computedMastery?.scoringProfileVersion ||
+        null,
+      readingStageLabel:
+        row.readingStageLabel?.trim() || computedMastery?.readingStageLabel || "Pre-Reader",
+      readingStageOrder: Number(row.readingStageOrder ?? computedMastery?.readingStageOrder ?? 1),
+      expectedVsActualStatus:
+        row.expectedVsActualStatus?.trim() ||
+        computedMastery?.expectedVsActualStatus ||
+        "Data not available",
+      statuses: finalStatuses,
+    };
+  });
+
+  const masteryDistribution = emptyDomainMasteryDistribution();
+  const stageDistributionMap = new Map<string, { order: number; count: number }>();
+  const benchmarkTally = {
+    belowExpected: 0,
+    atExpected: 0,
+    aboveExpected: 0,
+    n: 0,
+  };
+  const masteryModelVersions = new Set<string>();
+  const masteryBenchmarkVersions = new Set<string>();
+  const masteryScoringProfileVersions = new Set<string>();
+
+  latestMasteryRows.forEach((row) => {
+    masteryModelVersions.add(row.modelVersion);
+    if (row.benchmarkVersion) masteryBenchmarkVersions.add(row.benchmarkVersion);
+    if (row.scoringProfileVersion) masteryScoringProfileVersions.add(row.scoringProfileVersion);
+
+    MASTERY_DOMAIN_SEQUENCE.forEach((domain) => {
+      const status = row.statuses[domain.key];
+      masteryDistribution[domain.key].n += 1;
+      if (status === "green") masteryDistribution[domain.key].green += 1;
+      if (status === "amber") masteryDistribution[domain.key].amber += 1;
+      if (status === "red") masteryDistribution[domain.key].red += 1;
+    });
+
+    const stageKey = row.readingStageLabel || "Pre-Reader";
+    const bucket = stageDistributionMap.get(stageKey) ?? { order: row.readingStageOrder || 1, count: 0 };
+    bucket.order = Math.max(1, Number(row.readingStageOrder || bucket.order || 1));
+    bucket.count += 1;
+    stageDistributionMap.set(stageKey, bucket);
+
+    const expectedStatus = row.expectedVsActualStatus.toLowerCase();
+    if (expectedStatus.includes("below expected")) {
+      benchmarkTally.belowExpected += 1;
+      benchmarkTally.n += 1;
+    } else if (expectedStatus.includes("above expected")) {
+      benchmarkTally.aboveExpected += 1;
+      benchmarkTally.n += 1;
+    } else if (expectedStatus.includes("at expected")) {
+      benchmarkTally.atExpected += 1;
+      benchmarkTally.n += 1;
+    }
+  });
+
+  const masteryDomains = MASTERY_DOMAIN_SEQUENCE.reduce((acc, domain) => {
+    const tally = masteryDistribution[domain.key];
+    const total = Math.max(1, tally.n);
+    acc[domain.key] = {
+      green: {
+        count: tally.green,
+        percent: Number(((tally.green / total) * 100).toFixed(1)),
+      },
+      amber: {
+        count: tally.amber,
+        percent: Number(((tally.amber / total) * 100).toFixed(1)),
+      },
+      red: {
+        count: tally.red,
+        percent: Number(((tally.red / total) * 100).toFixed(1)),
+      },
+      n: tally.n,
+    };
+    return acc;
+  }, {} as NonNullable<PublicImpactAggregate["masteryDomains"]>);
+
+  const readingStageDistribution = [...stageDistributionMap.entries()]
+    .map(([label, value]) => ({
+      label,
+      order: value.order,
+      count: value.count,
+      percent:
+        latestMasteryRows.length > 0
+          ? Number(((value.count / latestMasteryRows.length) * 100).toFixed(1))
+          : 0,
+    }))
+    .sort((left, right) => left.order - right.order);
+
+  const benchmarkStatus: NonNullable<PublicImpactAggregate["benchmarkStatus"]> = {
+    belowExpected: {
+      count: benchmarkTally.belowExpected,
+      percent:
+        benchmarkTally.n > 0
+          ? Number(((benchmarkTally.belowExpected / benchmarkTally.n) * 100).toFixed(1))
+          : 0,
+    },
+    atExpected: {
+      count: benchmarkTally.atExpected,
+      percent:
+        benchmarkTally.n > 0
+          ? Number(((benchmarkTally.atExpected / benchmarkTally.n) * 100).toFixed(1))
+          : 0,
+    },
+    aboveExpected: {
+      count: benchmarkTally.aboveExpected,
+      percent:
+        benchmarkTally.n > 0
+          ? Number(((benchmarkTally.aboveExpected / benchmarkTally.n) * 100).toFixed(1))
+          : 0,
+    },
+    n: benchmarkTally.n,
+  };
+
+  const baselineLetterNameValues = baselineRows.map((row) => row.letterIdentificationScore ?? null);
+  const latestLetterNameValues = latestRows.map((row) => row.letterIdentificationScore ?? null);
+  const baselineLetterSoundValues = baselineRows.map((row) => row.soundIdentificationScore ?? null);
+  const latestLetterSoundValues = latestRows.map((row) => row.soundIdentificationScore ?? null);
+  const baselineRealWordValues = baselineRows.map((row) => row.decodableWordsScore ?? null);
+  const latestRealWordValues = latestRows.map((row) => row.decodableWordsScore ?? null);
+  const baselineMadeUpWordValues = baselineRows.map((row) => row.madeUpWordsScore ?? null);
+  const latestMadeUpWordValues = latestRows.map((row) => row.madeUpWordsScore ?? null);
+  const baselineStoryReadingValues = baselineRows.map((row) => row.storyReadingScore ?? null);
+  const latestStoryReadingValues = latestRows.map((row) => row.storyReadingScore ?? null);
+  const baselineComprehensionValues = baselineRows.map((row) => row.readingComprehensionScore ?? null);
+  const latestComprehensionValues = latestRows.map((row) => row.readingComprehensionScore ?? null);
+
+  const trainedSchools = new Set(
+    supportedPortalRecords
+      .filter((row) => row.module === "training")
+      .map((row) => row.schoolId),
+  );
+  const coachedSchools = new Set(
+    supportedPortalRecords
+      .filter((row) => row.module === "visit")
+      .map((row) => row.schoolId),
+  );
+  const baselineSchools = new Set(
+    scopedAssessments
+      .filter((row) => normalizeAssessmentType(row.assessmentType) === "baseline")
+      .map((row) => row.schoolId),
+  );
+  const endlineSchools = new Set(
+    scopedAssessments
+      .filter((row) => normalizeAssessmentType(row.assessmentType) === "endline")
+      .map((row) => row.schoolId),
+  );
+
+  const storySessionSchools = new Set(
+    supportedPortalRecords
+      .filter((row) => row.module === "story" || row.module === "story_activity")
+      .map((row) => row.schoolId),
+  );
+  const publishedStorySchools = new Set(publishedStorySchoolIds);
+  const storyActiveSchools = new Set([...storySessionSchools, ...publishedStorySchools]);
+
+  const enrollmentScopeSchoolIds = supportedSchools.size > 0 ? [...supportedSchools] : schoolIds;
+  const enrollmentTotal = scopedSchools
+    .filter((school) => enrollmentScopeSchoolIds.includes(school.schoolId))
+    .reduce((sum, school) => sum + Number(school.enrollmentTotal ?? 0), 0);
+  const directImpactTotal = scopedSchools
+    .filter((school) => enrollmentScopeSchoolIds.includes(school.schoolId))
+    .reduce((sum, school) => sum + Number(school.directImpactTotal ?? 0), 0);
+
+  const schoolById = new Map(scopedSchools.map((school) => [school.schoolId, school]));
+  const assessmentsBySchool = new Map<number, typeof scopedAssessments>();
+  scopedAssessments.forEach((row) => {
+    const list = assessmentsBySchool.get(row.schoolId) ?? [];
+    list.push(row);
+    assessmentsBySchool.set(row.schoolId, list);
+  });
+
+  const schoolReadingAverages = [...assessmentsBySchool.entries()]
+    .map(([schoolId, rows]) => {
+      const school = schoolById.get(schoolId);
+      if (!school || rows.length === 0) {
+        return null;
+      }
+      const schoolBaselineRows = rows.filter(
+        (row) => normalizeAssessmentType(row.assessmentType) === "baseline",
+      );
+      const schoolEndlineRows = rows.filter(
+        (row) => normalizeAssessmentType(row.assessmentType) === "endline",
+      );
+      const schoolLatestDate = rows.reduce((current, candidate) => {
+        if (!current || candidate.assessmentDate > current) {
+          return candidate.assessmentDate;
+        }
+        return current;
+      }, "" as string);
+      const schoolLatestRows =
+        schoolEndlineRows.length > 0
+          ? schoolEndlineRows
+          : rows.filter((row) => row.assessmentDate === schoolLatestDate);
+      const schoolBlock = buildReadingLevelsBlock(
+        schoolBaselineRows,
+        schoolEndlineRows,
+        schoolLatestRows,
+      );
+      const preferredDistribution = pickPreferredReadingDistribution(schoolBlock);
+      const performancePercent = computeReadingPerformancePercent(preferredDistribution);
+      if (performancePercent === null || !preferredDistribution) {
+        return null;
+      }
+      const levelRows = schoolBlock.levels.map((level) => ({
+        label: level.label,
+        percent: Number(preferredDistribution.percents[level.label] ?? 0),
+      }));
+
+      return {
+        district: school.district,
+        performancePercent,
+        sampleSize: preferredDistribution.n,
+        levels: levelRows,
+      };
+    })
+    .filter(
+      (
+        value,
+      ): value is {
+        district: string;
+        performancePercent: number;
+        sampleSize: number;
+        levels: Array<{ label: string; percent: number }>;
+      } => value !== null,
+    );
+
+  const districtAverageBuckets = new Map<
+    string,
+    {
+      performances: number[];
+      schoolCount: number;
+      sampleSize: number;
+      levelRows: Array<Array<{ label: string; percent: number }>>;
+    }
+  >();
+  schoolReadingAverages.forEach((row) => {
+    const bucket = districtAverageBuckets.get(row.district) ?? {
+      performances: [],
+      schoolCount: 0,
+      sampleSize: 0,
+      levelRows: [],
+    };
+    bucket.performances.push(row.performancePercent);
+    bucket.schoolCount += 1;
+    bucket.sampleSize += row.sampleSize;
+    bucket.levelRows.push(row.levels);
+    districtAverageBuckets.set(row.district, bucket);
+  });
+
+  const districtAverages = [...districtAverageBuckets.entries()]
+    .map(([district, bucket]) => ({
+      district,
+      averagePercent: Number(
+        (
+          bucket.performances.reduce((sum, value) => sum + value, 0) /
+          Math.max(1, bucket.performances.length)
+        ).toFixed(1),
+      ),
+      schoolCount: bucket.schoolCount,
+      sampleSize: bucket.sampleSize,
+      levels: averageReadingLevelRows(bucket.levelRows),
+    }))
+    .sort((left, right) => left.district.localeCompare(right.district));
+
+  let readingLevelAverages: PublicImpactAggregate["readingLevelAverages"] | undefined;
+  if (districtAverages.length > 0 || schoolReadingAverages.length > 0) {
+    let scopeAveragePercent: number | null = null;
+    let scopeLevels: Array<{ label: string; percent: number }> = [];
+
+    if (scopeLevel === "school") {
+      const firstSchool = schoolReadingAverages[0];
+      scopeAveragePercent = firstSchool?.performancePercent ?? null;
+      scopeLevels = firstSchool?.levels ?? [];
+    } else if (scopeLevel === "district") {
+      scopeAveragePercent = districtAverages[0]?.averagePercent ?? null;
+      scopeLevels = districtAverages[0]?.levels ?? [];
+    } else {
+      scopeAveragePercent =
+        average(districtAverages.map((row) => row.averagePercent)) ??
+        average(schoolReadingAverages.map((row) => row.performancePercent));
+      scopeLevels = averageReadingLevelRows(districtAverages.map((row) => row.levels));
+    }
+
+    readingLevelAverages = {
+      method: "school_average",
+      scopeAveragePercent,
+      scopeLevels,
+      districtAverages,
+    };
+  }
+
+  const observationScores = supportedPortalRecords
+    .filter((row) => row.module === "visit")
+    .map((row) => {
+      try {
+        const parsed = JSON.parse(row.payloadJson || "{}") as Record<string, unknown>;
+        return toNumberOrNull(parsed.observationScorePercent);
+      } catch {
+        return null;
+      }
+    })
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+
+  const coachingCoverage =
+    scopedSchools.length > 0 ? (coachedSchools.size / scopedSchools.length) * 100 : 0;
+  const assessmentCoverage =
+    scopedSchools.length > 0 ? (baselineSchools.size / scopedSchools.length) * 100 : 0;
+  const visitQuality = average(observationScores.map((value) => value)) ?? 0;
+  const fidelityScore = Math.round((coachingCoverage + assessmentCoverage + visitQuality) / 3);
+
+  const districtDelta = new Map<
+    string,
+    { baseline: number[]; latest: number[]; activity: number; priority: number }
+  >();
+  scopedSchools.forEach((school) => {
+    districtDelta.set(school.district, { baseline: [], latest: [], activity: 0, priority: 0 });
+  });
+  baselineRows.forEach((row) => {
+    const school = scopedSchools.find((item) => item.schoolId === row.schoolId);
+    if (!school) {
+      return;
+    }
+    const bucket = districtDelta.get(school.district);
+    const value = row.readingComprehensionScore ?? row.storyReadingScore ?? null;
+    if (bucket && value !== null && Number.isFinite(value)) {
+      bucket.baseline.push(value);
+    }
+  });
+  latestRows.forEach((row) => {
+    const school = scopedSchools.find((item) => item.schoolId === row.schoolId);
+    if (!school) {
+      return;
+    }
+    const bucket = districtDelta.get(school.district);
+    const value = row.readingComprehensionScore ?? row.storyReadingScore ?? null;
+    if (bucket && value !== null && Number.isFinite(value)) {
+      bucket.latest.push(value);
+    }
+  });
+  supportedPortalRecords.forEach((row) => {
+    const school = scopedSchools.find((item) => item.schoolId === row.schoolId);
+    if (!school) {
+      return;
+    }
+    const bucket = districtDelta.get(school.district);
+    if (!bucket) {
+      return;
+    }
+    bucket.activity += 1;
+    if (row.module === "visit" || row.module === "assessment") {
+      bucket.priority += 1;
+    }
+  });
+
+  const rankingRows = [...districtDelta.entries()].map(([name, values]) => {
+    const baselineAvg = average(values.baseline.map((value) => value));
+    const latestAvg = average(values.latest.map((value) => value));
+    const improvement =
+      baselineAvg !== null && latestAvg !== null ? Number((latestAvg - baselineAvg).toFixed(1)) : 0;
+    return {
+      name,
+      improvement,
+      activity: values.activity,
+      priority: values.priority,
+    };
+  });
+
+  const allUpdatedAtValues = [
+    ...portalRecords.map((row) => row.updatedAt),
+    ...assessmentRows.map((row) => row.createdAt),
+    ...lessonEvaluationRows.map((row) => row.updatedAt),
+  ]
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a));
+
+  const scopeName =
+    scopeLevel === "country"
+      ? "Uganda"
+      : scopeLevel === "region"
+        ? scopeId
+      : scopeLevel === "school"
+        ? scopedSchools[0]?.schoolName ?? scopeId
+        : scopeId;
+  const scopeParent =
+    scopeLevel === "region"
+      ? "Uganda"
+      : scopeLevel === "subregion"
+        ? scopedSchools[0]?.region ?? undefined
+        : scopeLevel === "district"
+          ? scopedSchools[0]?.subRegion ?? undefined
+          : scopeLevel === "school"
+            ? scopedSchools[0]?.district ?? undefined
+            : undefined;
+  const navigatorRegions = [...new Set(scopedSchools.map((school) => school.region))]
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => left.localeCompare(right));
+  const navigatorSubRegions = [...new Set(scopedSchools.map((school) => school.subRegion))]
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => left.localeCompare(right));
+  const navigatorDistricts = [...new Set(scopedSchools.map((school) => school.district))]
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => left.localeCompare(right));
+  const navigatorSchools = [...scopedSchools]
+    .filter((school) => Number.isInteger(school.schoolId) && school.schoolId > 0)
+    .sort((left, right) => left.schoolName.localeCompare(right.schoolName))
+    .map((school) => ({
+      id: school.schoolId,
+      name: school.schoolName,
+      district: school.district,
+      subRegion: school.subRegion,
+      region: school.region,
+    }));
+
+  const aggregate: PublicImpactAggregate = {
+    scope: {
+      level: scopeLevel,
+      id: scopeId,
+      name: scopeName,
+      parent: scopeParent,
+    },
+    period: {
+      label: period.label,
+      startDate: period.startDate,
+      endDate: period.endDate,
+    },
+    kpis: {
+      schoolsSupported: supportedSchools.size,
+      teachersSupportedMale: teacherKeyByGender.Male.size,
+      teachersSupportedFemale: teacherKeyByGender.Female.size,
+      onlineLiveSessionsCovered,
+      onlineTeachersSupported,
+      learnersDirectlyImpacted: directImpactTotal,
+      enrollmentEstimatedReach: enrollmentTotal,
+      learnersAssessedUnique: learnerUnique.size,
+      learnersReachedEstimated: enrollmentTotal,
+      coachingVisitsCompleted: visitsTotal,
+      assessmentCycleCompletionPct:
+        supportedSchools.size > 0
+          ? Number(((endlineSchools.size / supportedSchools.size) * 100).toFixed(1))
+          : 0,
+      assessmentsBaselineCount,
+      assessmentsProgressCount,
+      assessmentsEndlineCount,
+    },
+    outcomes: {
+      letterNames: toPublicDomainAggregate(baselineLetterNameValues, latestLetterNameValues, 60),
+      letterSounds: toPublicDomainAggregate(baselineLetterSoundValues, latestLetterSoundValues, 60),
+      realWords: toPublicDomainAggregate(baselineRealWordValues, latestRealWordValues, 60),
+      madeUpWords: toPublicDomainAggregate(baselineMadeUpWordValues, latestMadeUpWordValues, 60),
+      storyReading: toPublicDomainAggregate(baselineStoryReadingValues, latestStoryReadingValues, 45),
+      comprehension: toPublicDomainAggregate(
+        baselineComprehensionValues,
+        latestComprehensionValues,
+        50,
+      ),
+    },
+    masteryDomains,
+    readingStageDistribution,
+    benchmarkStatus,
+    publicExplanation: {
+      green: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.green,
+      amber: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.amber,
+      red: PUBLIC_TRAFFIC_LIGHT_EXPLANATIONS.red,
+    },
+    funnel: {
+      trained: trainedSchools.size,
+      coached: coachedSchools.size,
+      baselineAssessed: baselineSchools.size,
+      endlineAssessed: endlineSchools.size,
+      storyActive: storyActiveSchools.size,
+    },
+    fidelity: {
+      score: fidelityScore,
+      band: fidelityBandFromScore(fidelityScore),
+      drivers: [
+        {
+          key: "coaching_coverage",
+          label: "Coaching coverage",
+          score: Number(coachingCoverage.toFixed(1)),
+        },
+        {
+          key: "assessment_coverage",
+          label: "Assessment coverage",
+          score: Number(assessmentCoverage.toFixed(1)),
+        },
+        {
+          key: "visit_quality",
+          label: "Visit quality",
+          score: Number(visitQuality.toFixed(1)),
+        },
+      ],
+    },
+    rankings: {
+      mostImproved: rankingRows
+        .sort((left, right) => right.improvement - left.improvement)
+        .slice(0, 5)
+        .map((row) => ({ name: row.name, score: row.improvement })),
+      prioritySupport: rankingRows
+        .sort((left, right) => right.priority - left.priority)
+        .slice(0, 5)
+        .map((row) => ({ name: row.name, score: row.priority })),
+      mostActive: rankingRows
+        .sort((left, right) => right.activity - left.activity)
+        .slice(0, 5)
+        .map((row) => ({ name: row.name, score: row.activity })),
+    },
+    teachingQuality: teachingQualitySummary,
+    teachingLearningAlignment,
+    readingLevels: buildReadingLevelsBlock(baselineRows, endlineRows, latestRows),
+    readingLevelAverages,
+    meta: {
+      lastUpdated: allUpdatedAtValues[0] ?? new Date().toISOString(),
+      dataCompleteness:
+        supportedSchools.size > 0 && learnerUnique.size > 0 ? "Complete" : "Partial",
+      sampleSize: learnerUnique.size,
+    },
+    navigator: {
+      regions: navigatorRegions,
+      subRegions: navigatorSubRegions,
+      districts: navigatorDistricts,
+      schools: navigatorSchools,
+    },
+  };
+
+  assertPublicAggregateSafe(aggregate);
+  return aggregate;
+}
+
+export async function getPublicImpactAggregate(
+  scopeLevel: PublicImpactScopeLevel,
+  scopeId: string,
+  periodLabel?: string | null,
+): Promise<PublicImpactAggregate> {
+  if (isPostgresConfigured()) {
+    return getPublicImpactAggregatePostgres(scopeLevel, scopeId, periodLabel);
+  }
+  return getPublicImpactAggregateSqlite(scopeLevel, scopeId, periodLabel);
+}
+
+function getPublicImpactAggregateSqlite(
   scopeLevel: PublicImpactScopeLevel,
   scopeId: string,
   periodLabel?: string | null,

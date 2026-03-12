@@ -6,7 +6,7 @@ import { getPostgresPool, isPostgresConfigured } from "@/lib/server/postgres/cli
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const sqlitePath = path.resolve(process.env.SQLITE_DB_PATH?.trim() || path.resolve(__dirname, "../data/app.db"));
-const schemaPath = path.resolve(__dirname, "../database/postgres/0001_foundation.sql");
+const schemaDir = path.resolve(__dirname, "../database/postgres");
 
 const TABLES = [
   "portal_users",
@@ -34,7 +34,23 @@ const TABLES = [
   "contacts",
   "download_leads",
   "newsletter_subscribers",
+  "teaching_improvement_settings",
+  "portal_training_attendance",
+  "lesson_evaluations",
+  "lesson_evaluation_items",
+  "story_activities",
+  "story_anthologies",
+  "story_library",
+  "observation_rubrics",
 ] as const;
+
+function getSchemaPaths() {
+  return fs
+    .readdirSync(schemaDir)
+    .filter((entry) => entry.endsWith(".sql"))
+    .sort((left, right) => left.localeCompare(right))
+    .map((entry) => path.join(schemaDir, entry));
+}
 
 function sqliteValue(value: unknown) {
   if (typeof value === "bigint") {
@@ -53,9 +69,10 @@ async function main() {
 
   const sqlite = new Database(sqlitePath, { readonly: true });
   const pool = getPostgresPool();
-  const schemaSql = fs.readFileSync(schemaPath, "utf8");
-
-  await pool.query(schemaSql);
+  for (const schemaPath of getSchemaPaths()) {
+    const schemaSql = fs.readFileSync(schemaPath, "utf8");
+    await pool.query(schemaSql);
+  }
 
   for (const table of TABLES) {
     const columns = sqlite

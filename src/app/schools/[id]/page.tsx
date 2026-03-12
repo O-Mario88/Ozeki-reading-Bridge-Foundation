@@ -54,7 +54,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const scopeId = decodeSchoolId(id);
-  const aggregate = getPublicImpactAggregate("school", scopeId, "FY");
+  const aggregate = await getPublicImpactAggregate("school", scopeId, "FY");
   const schoolName = aggregate.scope.name;
 
   return {
@@ -71,7 +71,7 @@ export async function generateMetadata({
 export default async function SchoolPage({ params }: { params: Params }) {
   const { id } = await params;
   const scopeId = decodeSchoolId(id);
-  const aggregate = getPublicImpactAggregate("school", scopeId, "FY");
+  const aggregate = await getPublicImpactAggregate("school", scopeId, "FY");
   const kpis = aggregate.kpis;
 
   return (

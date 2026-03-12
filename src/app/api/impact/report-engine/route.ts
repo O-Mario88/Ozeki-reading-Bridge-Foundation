@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
   const format = normalizeFormat(request.nextUrl.searchParams.get("format"));
 
   try {
-    const aggregate = getPublicImpactAggregate(scopeLevel, scopeId, period);
+    const aggregate = await getPublicImpactAggregate(scopeLevel, scopeId, period);
     const narrative = await generatePublicDashboardNarrative(aggregate);
     const report = buildPublicDashboardReportModel(aggregate, narrative);
 

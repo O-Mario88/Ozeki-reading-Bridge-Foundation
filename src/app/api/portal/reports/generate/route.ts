@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     }, recommendations);
 
     // Generate structured report (without external AI — uses template-based approach)
-    const impactAggregate = getPublicImpactAggregate(
+    const impactAggregate = await getPublicImpactAggregate(
         (scopeType === "country" ? "country" : scopeType === "region" ? "region" : scopeType === "district" ? "district" : "school") as "country" | "region" | "subregion" | "district" | "school",
         scopeId,
     );

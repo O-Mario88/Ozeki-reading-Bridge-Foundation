@@ -16,8 +16,8 @@ function formatDate(value: string | null | undefined) {
   return parsed.toLocaleString();
 }
 
-export default function MethodologyPage() {
-  const aggregate = getPublicImpactAggregate("country", "Uganda", "FY");
+export default async function MethodologyPage() {
+  const aggregate = await getPublicImpactAggregate("country", "Uganda", "FY");
   const toolVersion = aggregate.readingLevels?.definition_version || "RLv1.0";
 
   return (

@@ -5,6 +5,6 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const period = parsePeriod(request);
-  const aggregate = getPublicImpactAggregate("country", "Uganda", period);
+  const aggregate = await getPublicImpactAggregate("country", "Uganda", period);
   return cachedImpactJson(aggregate);
 }

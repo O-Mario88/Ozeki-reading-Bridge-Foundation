@@ -44,18 +44,18 @@ function findRestrictedKeyPaths(
   return findings;
 }
 
-test("public impact payloads do not expose restricted keys", () => {
-  const country = getPublicImpactAggregate("country", "Uganda", "FY");
+test("public impact payloads do not expose restricted keys", async () => {
+  const country = await getPublicImpactAggregate("country", "Uganda", "FY");
   const subRegionId = country.navigator.subRegions[0] ?? "Central";
   const districtId = country.navigator.districts[0] ?? "Kampala";
   const schoolId = String(country.navigator.schools[0]?.id ?? "unknown-school");
 
-  const payloads = [
+  const payloads = await Promise.all([
     country,
     getPublicImpactAggregate("subregion", subRegionId, "TERM"),
     getPublicImpactAggregate("district", districtId, "QTR"),
     getPublicImpactAggregate("school", schoolId, "FY"),
-  ];
+  ]);
 
   payloads.forEach((payload) => {
     const rawFindings = findRestrictedKeyPaths(payload);
@@ -74,8 +74,8 @@ test("public impact payloads do not expose restricted keys", () => {
   });
 });
 
-test("public impact response includes aggregate KPI contract aliases", () => {
-  const payload = getPublicImpactAggregate("country", "Uganda", "FY");
+test("public impact response includes aggregate KPI contract aliases", async () => {
+  const payload = await getPublicImpactAggregate("country", "Uganda", "FY");
   const response = toPublicImpactResponse(payload) as Record<string, unknown>;
   const kpis = response.kpis as Record<string, unknown>;
 
@@ -91,8 +91,8 @@ test("public impact response includes aggregate KPI contract aliases", () => {
   assert.ok(kpis.assessments_endline_count !== undefined, "Missing assessments_endline_count");
 });
 
-test("public impact response exposes teaching improvement and alignment aggregates only", () => {
-  const payload = getPublicImpactAggregate("country", "Uganda", "FY");
+test("public impact response exposes teaching improvement and alignment aggregates only", async () => {
+  const payload = await getPublicImpactAggregate("country", "Uganda", "FY");
   const response = toPublicImpactResponse(payload) as Record<string, unknown>;
 
   const teaching = response.teaching_quality as Record<string, unknown> | null;

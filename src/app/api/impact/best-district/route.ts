@@ -13,13 +13,13 @@ type BestDistrictReadingPerformance = {
   performance: ReadingLevelPerformanceSummary;
 };
 
-function pickBestDistrict(period: string): BestDistrictReadingPerformance | null {
-  const country = getPublicImpactAggregate("country", "Uganda", period);
+async function pickBestDistrict(period: string): Promise<BestDistrictReadingPerformance | null> {
+  const country = await getPublicImpactAggregate("country", "Uganda", period);
   const districts = country.navigator.districts ?? [];
   let best: BestDistrictReadingPerformance | null = null;
 
   for (const district of districts) {
-    const aggregate = getPublicImpactAggregate("district", district, period);
+    const aggregate = await getPublicImpactAggregate("district", district, period);
     const fallback = getReadingLevelPerformanceSummary(aggregate.readingLevels);
     const averagePercent = aggregate.readingLevelAverages?.scopeAveragePercent ?? null;
     const performance: ReadingLevelPerformanceSummary | null =
@@ -71,7 +71,7 @@ function pickBestDistrict(period: string): BestDistrictReadingPerformance | null
 
 export async function GET(request: Request) {
   const period = parsePeriod(request);
-  const best = pickBestDistrict(period);
+  const best = await pickBestDistrict(period);
 
   return NextResponse.json(
     {

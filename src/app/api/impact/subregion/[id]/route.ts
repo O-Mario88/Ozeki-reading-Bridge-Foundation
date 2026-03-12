@@ -10,6 +10,6 @@ export async function GET(
   const period = parsePeriod(request);
   const { id } = await context.params;
   const scopeId = decodeURIComponent(id);
-  const aggregate = getPublicImpactAggregate("subregion", scopeId, period);
+  const aggregate = await getPublicImpactAggregate("subregion", scopeId, period);
   return cachedImpactJson(aggregate);
 }

@@ -32,7 +32,7 @@ export default async function RegionPage({ params }: { params: Params }) {
     const drilldown = getImpactDrilldownData("region", name);
     const fidelity = calculateFidelityScore("region", name);
     const gains = getLearningGainsData("region", name);
-    const aggregate = getPublicImpactAggregate("region", name, "FY");
+    const aggregate = await getPublicImpactAggregate("region", name, "FY");
 
     return (
         <>

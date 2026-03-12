@@ -32,7 +32,7 @@ export default async function SubRegionPage({ params }: { params: Params }) {
     const drilldown = getImpactDrilldownData("sub_region", name);
     const fidelity = calculateFidelityScore("region", name); // Fallback to region for now if sub_region not fully supported in calculateFidelityScore
     const gains = getLearningGainsData("region", name);
-    const aggregate = getPublicImpactAggregate("subregion", name, "FY");
+    const aggregate = await getPublicImpactAggregate("subregion", name, "FY");
 
     return (
         <>

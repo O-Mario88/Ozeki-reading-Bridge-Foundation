@@ -32,7 +32,7 @@ export default async function DistrictPage({ params }: { params: Params }) {
     const drilldown = getImpactDrilldownData("district", name);
     const fidelity = calculateFidelityScore("district", name);
     const gains = getLearningGainsData("district", name);
-    const aggregate = getPublicImpactAggregate("district", name, "FY");
+    const aggregate = await getPublicImpactAggregate("district", name, "FY");
 
     return (
         <>

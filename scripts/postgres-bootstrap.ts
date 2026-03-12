@@ -4,17 +4,27 @@ import { fileURLToPath } from "node:url";
 import { getPostgresPool, isPostgresConfigured } from "@/lib/server/postgres/client";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const schemaPath = path.resolve(__dirname, "../database/postgres/0001_foundation.sql");
+const schemaDir = path.resolve(__dirname, "../database/postgres");
+
+function getSchemaPaths() {
+  return fs
+    .readdirSync(schemaDir)
+    .filter((entry) => entry.endsWith(".sql"))
+    .sort((left, right) => left.localeCompare(right))
+    .map((entry) => path.join(schemaDir, entry));
+}
 
 async function main() {
   if (!isPostgresConfigured()) {
     throw new Error("DATABASE_URL is not configured.");
   }
 
-  const sql = fs.readFileSync(schemaPath, "utf8");
   const pool = getPostgresPool();
-  await pool.query(sql);
-  console.log(`Applied PostgreSQL foundation schema from ${schemaPath}`);
+  for (const schemaPath of getSchemaPaths()) {
+    const sql = fs.readFileSync(schemaPath, "utf8");
+    await pool.query(sql);
+    console.log(`Applied PostgreSQL schema from ${schemaPath}`);
+  }
 }
 
 main()
