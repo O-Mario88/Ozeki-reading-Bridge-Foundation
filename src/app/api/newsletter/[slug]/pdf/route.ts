@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { buildBrowserPdfBranding } from "@/lib/browser-pdf-branding";
-import { getNewsletterIssueBySlug } from "@/lib/db";
+import { getNewsletterIssueBySlug } from "@/lib/content-db";
 import { buildNewsletterPageFragment } from "@/lib/newsletter";
 
 export const runtime = "nodejs";
@@ -20,7 +20,7 @@ export async function GET(
   context: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await context.params;
-  const issue = getNewsletterIssueBySlug(slug);
+  const issue = await getNewsletterIssueBySlug(slug);
   if (!issue || issue.status !== "published") {
     return new NextResponse("Newsletter issue not found.", { status: 404 });
   }

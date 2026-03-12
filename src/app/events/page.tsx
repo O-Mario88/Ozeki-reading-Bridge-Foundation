@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
-import { listOnlineTrainingEvents } from "@/lib/db";
+import { listOnlineTrainingEvents } from "@/lib/content-db";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +10,8 @@ export const metadata = {
     "Monthly literacy webinars and live teacher development sessions from Ozeki Reading Bridge Foundation.",
 };
 
-export default function EventsPage() {
-  const allEvents = listOnlineTrainingEvents(60)
+export default async function EventsPage() {
+  const allEvents = (await listOnlineTrainingEvents(60))
     .slice()
     .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
     .map((event) => ({

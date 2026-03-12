@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { saveBooking } from "@/lib/db";
+import { saveBooking } from "@/lib/content-db";
 import { workspaceCalendarRecipients } from "@/lib/contact";
 import {
   buildDateRangeFromDateAndTime,
@@ -27,7 +27,7 @@ const bookingSchema = z.object({
 export async function POST(request: Request) {
   try {
     const payload = bookingSchema.parse(await request.json());
-    saveBooking(payload);
+    await saveBooking(payload);
 
     let calendar:
       | {

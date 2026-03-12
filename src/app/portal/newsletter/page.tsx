@@ -5,7 +5,7 @@ import {
   getNewsletterDispatchSummary,
   listNewsletterIssues,
   listNewsletterSubscribers,
-} from "@/lib/db";
+} from "@/lib/content-db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,8 @@ export const metadata = {
 
 export default async function PortalNewsletterPage() {
   const user = await requirePortalStaffUser();
-  const initialIssues = listNewsletterIssues({ limit: 120 }).map((issue) => ({
+  const issues = await listNewsletterIssues({ limit: 120 });
+  const initialIssues = await Promise.all(issues.map(async (issue) => ({
     id: issue.id,
     slug: issue.slug,
     title: issue.title,
@@ -28,9 +29,9 @@ export default async function PortalNewsletterPage() {
     publishedAt: issue.publishedAt,
     autoSentAt: issue.autoSentAt,
     createdAt: issue.createdAt,
-    dispatchSummary: getNewsletterDispatchSummary(issue.id),
-  }));
-  const subscribersCount = listNewsletterSubscribers(50000).length;
+    dispatchSummary: await getNewsletterDispatchSummary(issue.id),
+  })));
+  const subscribersCount = (await listNewsletterSubscribers(50000)).length;
 
   return (
     <PortalShell

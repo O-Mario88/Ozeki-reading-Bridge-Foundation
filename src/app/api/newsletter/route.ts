@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { saveNewsletterSubscriber } from "@/lib/db";
+import { saveNewsletterSubscriber } from "@/lib/content-db";
 
 export const runtime = "nodejs";
 
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const fallbackName =
       localPart && localPart.length >= 2 ? localPart : "Newsletter Subscriber";
 
-    saveNewsletterSubscriber({
+    await saveNewsletterSubscriber({
       email: payload.email.toLowerCase(),
       name: payload.name?.trim() || fallbackName,
     });

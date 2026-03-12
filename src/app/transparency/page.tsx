@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { officialContactLinks } from "@/lib/contact";
-import { listPublishedPortalResources } from "@/lib/db";
+import { listPublishedPortalResources } from "@/lib/content-db";
 import type { PortalResourceRecord, PortalResourceSection } from "@/lib/types";
 
 const trustBadges = [
@@ -104,8 +104,8 @@ function UploadedSectionLinks({
   );
 }
 
-export default function TransparencyPage() {
-  const uploadedDocs = listPublishedPortalResources(500, {
+export default async function TransparencyPage() {
+  const uploadedDocs = await listPublishedPortalResources(500, {
     sections: [
       "Compliance Documents",
       "Financial Documents",

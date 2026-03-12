@@ -1,7 +1,7 @@
 import { PageHero } from "@/components/PageHero";
 import { ResourceLibrary } from "@/components/ResourceLibrary";
 import { resources } from "@/lib/content";
-import { listPublishedPortalResources } from "@/lib/db";
+import { listPublishedPortalResources } from "@/lib/content-db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +11,10 @@ export const metadata = {
     "Search and download phonics, fluency, comprehension, and assessment resources by grade and skill.",
 };
 
-export default function ResourcesPage() {
-  const portalResources = listPublishedPortalResources(250, {
+export default async function ResourcesPage() {
+  const portalResources = (await listPublishedPortalResources(250, {
     sections: ["Resources Library"],
-  }).map((entry) => ({
+  })).map((entry) => ({
     slug: entry.slug,
     title: entry.title,
     description: entry.description,

@@ -1,6 +1,6 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { getPublishedPortalResourceById } from "@/lib/db";
+import { getPublishedPortalResourceById } from "@/lib/content-db";
 import { createMediaFileResponse, resolveMimeType } from "@/lib/media-response";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
@@ -30,7 +30,7 @@ export async function GET(
   try {
     const params = await context.params;
     const id = toId(params.id);
-    const resource = getPublishedPortalResourceById(id);
+    const resource = await getPublishedPortalResourceById(id);
 
     if (!resource) {
       return NextResponse.json({ error: "Resource not found." }, { status: 404 });

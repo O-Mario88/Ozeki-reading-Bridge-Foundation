@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { listPortalResources, savePortalResource } from "@/lib/db";
+import { listPortalResources, savePortalResource } from "@/lib/content-db";
 import { resolveMimeType } from "@/lib/media-response";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { portalResourceSections } from "@/lib/types";
@@ -117,7 +117,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const resources = listPortalResources(user, 300).map((resource) => ({
+  const resources = (await listPortalResources(user, 300)).map((resource) => ({
     ...resource,
     downloadUrl: buildDownloadUrl(resource.id, resource.externalUrl),
   }));
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
 
     const uploaded = uploadFile ? await persistUpload(uploadFile, resourcesDir) : null;
 
-    const resource = savePortalResource({
+    const resource = await savePortalResource({
       title: parsed.title,
       description: parsed.description,
       grade: parsed.grade,

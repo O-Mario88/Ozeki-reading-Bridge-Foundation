@@ -1,6 +1,6 @@
 import { PortalEventsManager } from "@/components/portal/PortalEventsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listOnlineTrainingEvents } from "@/lib/db";
+import { listOnlineTrainingEvents } from "@/lib/content-db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function PortalEventsPage() {
   const user = await requirePortalStaffUser();
-  const events = listOnlineTrainingEvents(120);
+  const events = await listOnlineTrainingEvents(120);
 
   return (
     <PortalShell

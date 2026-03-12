@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   getOnlineTrainingEventById,
   saveOnlineTrainingAttendance,
-} from "@/lib/db";
+} from "@/lib/content-db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";
@@ -39,7 +39,7 @@ export async function GET(
   try {
     const { id } = await context.params;
     const eventId = parseEventId(id);
-    const event = getOnlineTrainingEventById(eventId);
+    const event = await getOnlineTrainingEventById(eventId);
     if (!event) {
       return NextResponse.json({ error: "Event not found." }, { status: 404 });
     }
@@ -68,7 +68,7 @@ export async function PATCH(
     const { id } = await context.params;
     const eventId = parseEventId(id);
     const payload = updateSchema.parse(await request.json());
-    const event = saveOnlineTrainingAttendance(eventId, {
+    const event = await saveOnlineTrainingAttendance(eventId, {
       onlineTeachersTrained: payload.onlineTeachersTrained,
       onlineSchoolLeadersTrained: payload.onlineSchoolLeadersTrained,
       attendeeCount: payload.attendeeCount,

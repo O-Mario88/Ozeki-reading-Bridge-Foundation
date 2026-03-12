@@ -68,6 +68,24 @@ const FINANCE_TABLES = [
   "finance_audited_statements",
 ] as const;
 
+const CONTENT_TABLES = [
+  "portal_resources",
+  "newsletter_issues",
+  "newsletter_dispatch_logs",
+  "portal_blog_posts",
+  "blog_post_views",
+  "blog_post_likes",
+  "blog_post_comments",
+] as const;
+
+const ONLINE_TRAINING_TABLES = [
+  "online_training_sessions",
+  "online_training_participants",
+  "online_training_resources",
+  "online_training_artifacts",
+  "online_training_notes",
+] as const;
+
 const VIEW_NAMES = [
   "impact_public_school_scope",
   "impact_public_teacher_support",
@@ -106,12 +124,16 @@ function parseScopes(args: string[]) {
     return {
       foundation: true,
       finance: true,
+      content: true,
+      onlineTraining: true,
     };
   }
 
   return {
     foundation: requested.has("foundation"),
     finance: requested.has("finance"),
+    content: requested.has("content"),
+    onlineTraining: requested.has("online-training") || requested.has("online_training"),
   };
 }
 
@@ -261,8 +283,10 @@ async function verifyUniqueKeys(failures: VerificationFailure[]) {
 
 async function main() {
   const scopes = parseScopes(process.argv.slice(2));
-  if (!scopes.foundation && !scopes.finance) {
-    throw new Error("Nothing to verify. Use --scope=foundation, --scope=finance, or --scope=all.");
+  if (!scopes.foundation && !scopes.finance && !scopes.content && !scopes.onlineTraining) {
+    throw new Error(
+      "Nothing to verify. Use --scope=foundation, --scope=finance, --scope=content, --scope=online-training, or --scope=all.",
+    );
   }
   if (!isPostgresConfigured()) {
     throw new Error("DATABASE_URL is not configured.");
@@ -275,7 +299,12 @@ async function main() {
   const failures: VerificationFailure[] = [];
   logInfo(`SQLite source: ${sqlitePath}`);
   logInfo(
-    `Scopes: ${[scopes.foundation ? "foundation" : null, scopes.finance ? "finance" : null]
+    `Scopes: ${[
+      scopes.foundation ? "foundation" : null,
+      scopes.finance ? "finance" : null,
+      scopes.content ? "content" : null,
+      scopes.onlineTraining ? "online-training" : null,
+    ]
       .filter(Boolean)
       .join(", ")}`,
   );
@@ -293,6 +322,16 @@ async function main() {
       await verifyTables(sqlite, FINANCE_TABLES, failures);
       logInfo("Verifying finance business-key uniqueness");
       await verifyUniqueKeys(failures);
+    }
+
+    if (scopes.content) {
+      logInfo("Verifying content/public tables");
+      await verifyTables(sqlite, CONTENT_TABLES, failures);
+    }
+
+    if (scopes.onlineTraining) {
+      logInfo("Verifying online training tables");
+      await verifyTables(sqlite, ONLINE_TRAINING_TABLES, failures);
     }
   } finally {
     sqlite.close();

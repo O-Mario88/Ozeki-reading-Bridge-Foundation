@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { saveDownloadLead } from "@/lib/db";
+import { saveDownloadLead } from "@/lib/content-db";
 
 export const runtime = "nodejs";
 
@@ -14,7 +14,7 @@ const downloadSchema = z.object({
 export async function POST(request: Request) {
   try {
     const payload = downloadSchema.parse(await request.json());
-    saveDownloadLead(payload);
+    await saveDownloadLead(payload);
 
     return NextResponse.json({ ok: true, message: "Lead captured." });
   } catch (error) {

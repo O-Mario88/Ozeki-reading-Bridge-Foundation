@@ -1,6 +1,6 @@
 import { PortalResourcesManager } from "@/components/portal/PortalResourcesManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listPortalResources } from "@/lib/db";
+import { listPortalResources } from "@/lib/content-db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 import Link from "next/link";
 
@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function PortalResourcesPage() {
   const user = await requirePortalStaffUser();
-  const resources = listPortalResources(user, 260).map((resource) => ({
+  const resources = (await listPortalResources(user, 260)).map((resource) => ({
     ...resource,
     downloadUrl: resource.externalUrl || `/api/resources/${resource.id}/download`,
   }));

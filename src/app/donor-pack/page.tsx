@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listPublishedPortalResources } from "@/lib/db";
+import { listPublishedPortalResources } from "@/lib/content-db";
 
 export const metadata = {
   title: "Donor Pack",
@@ -21,10 +21,10 @@ const donorPackContents = [
   "Contact + partnership process",
 ];
 
-export default function DonorPackPage() {
-  const donorPackUploads = listPublishedPortalResources(40, {
+export default async function DonorPackPage() {
+  const donorPackUploads = (await listPublishedPortalResources(40, {
     sections: ["Donor Pack Documents", "Compliance Documents", "Legal & Governance Documents"],
-  }).slice(0, 8);
+  })).slice(0, 8);
 
   return (
     <>

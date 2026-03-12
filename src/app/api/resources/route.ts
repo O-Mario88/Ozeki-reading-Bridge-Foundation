@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { resources } from "@/lib/content";
-import { listPublishedPortalResources } from "@/lib/db";
+import { listPublishedPortalResources } from "@/lib/content-db";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const portalResources = listPublishedPortalResources(250, {
+  const portalResources = (await listPublishedPortalResources(250, {
     sections: ["Resources Library"],
-  }).map((entry) => ({
+  })).map((entry) => ({
     slug: entry.slug,
     title: entry.title,
     description: entry.description,

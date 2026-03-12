@@ -9,7 +9,7 @@ import {
   listNewsletterSubscribers,
   markNewsletterIssueAutoSent,
   saveNewsletterDispatchLogs,
-} from "@/lib/db";
+} from "@/lib/content-db";
 import {
   buildNewsletterEditorialTemplateHtml,
   buildNewsletterEditorialTemplatePlainText,
@@ -114,17 +114,18 @@ export async function GET(request: Request) {
       status: searchParams.get("status") ?? undefined,
     });
 
-    const issues = listNewsletterIssues({
+    const issues = await listNewsletterIssues({
       limit: parsed.limit ?? 120,
       status: parsed.status,
-    }).map((issue) => ({
+    });
+    const issuesWithSummary = await Promise.all(issues.map(async (issue) => ({
       ...issue,
-      dispatchSummary: getNewsletterDispatchSummary(issue.id),
-    }));
+      dispatchSummary: await getNewsletterDispatchSummary(issue.id),
+    })));
 
     return NextResponse.json({
-      issues,
-      subscribersCount: listNewsletterSubscribers(50000).length,
+      issues: issuesWithSummary,
+      subscribersCount: (await listNewsletterSubscribers(50000)).length,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -183,7 +184,7 @@ export async function POST(request: Request) {
       ? buildNewsletterEditorialTemplatePlainText(normalizedTemplate)
       : parsed.plainText;
 
-    const issue = createNewsletterIssue({
+    const issue = await createNewsletterIssue({
       title: parsed.title,
       preheader: parsed.preheader,
       htmlContent: generatedHtml,
@@ -201,19 +202,19 @@ export async function POST(request: Request) {
       | null = null;
 
     if (shouldAutoSend) {
-      const recipients = listNewsletterSubscriberEmails();
+      const recipients = await listNewsletterSubscriberEmails();
       sendResult = await sendNewsletterIssueInGroups({
         issue,
         recipients,
         origin: new URL(request.url).origin,
       });
-      saveNewsletterDispatchLogs(issue.id, sendResult.logs);
+      await saveNewsletterDispatchLogs(issue.id, sendResult.logs);
       if (sendResult.sent > 0 || sendResult.totalRecipients === 0) {
-        markNewsletterIssueAutoSent(issue.id);
+        await markNewsletterIssueAutoSent(issue.id);
       }
     }
 
-    const refreshedIssue = getNewsletterIssueById(issue.id);
+    const refreshedIssue = await getNewsletterIssueById(issue.id);
     return NextResponse.json({
       ok: true,
       issue: refreshedIssue ?? issue,

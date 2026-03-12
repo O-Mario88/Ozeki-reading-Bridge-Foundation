@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { saveContact } from "@/lib/db";
+import { saveContact } from "@/lib/content-db";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,7 @@ const contactSchema = z.object({
 export async function POST(request: Request) {
   try {
     const payload = contactSchema.parse(await request.json());
-    saveContact(payload);
+    await saveContact(payload);
 
     return NextResponse.json({ ok: true, message: "Inquiry submitted." });
   } catch (error) {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getNewsletterIssueBySlug } from "@/lib/db";
+import { getNewsletterIssueBySlug } from "@/lib/content-db";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ type NewsletterIssuePageProps = {
 
 export async function generateMetadata({ params }: NewsletterIssuePageProps) {
   const { slug } = await params;
-  const issue = getNewsletterIssueBySlug(slug);
+  const issue = await getNewsletterIssueBySlug(slug);
   if (!issue || issue.status !== "published") {
     return {
       title: "Newsletter issue",
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: NewsletterIssuePageProps) {
 
 export default async function NewsletterIssuePage({ params }: NewsletterIssuePageProps) {
   const { slug } = await params;
-  const issue = getNewsletterIssueBySlug(slug);
+  const issue = await getNewsletterIssueBySlug(slug);
   if (!issue || issue.status !== "published") {
     notFound();
   }

@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import {
-  listOnlineTrainingEvents,
-  getPortalUserFromSession,
-  saveOnlineTrainingEvent,
-} from "@/lib/db";
+import { getPortalUserFromSession } from "@/lib/db";
+import { listOnlineTrainingEvents, saveOnlineTrainingEvent } from "@/lib/content-db";
 import { workspaceCalendarRecipients } from "@/lib/contact";
 import {
   buildDateRangeFromDateAndTime,
@@ -47,7 +44,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return NextResponse.json({ events: listOnlineTrainingEvents(20) });
+  return NextResponse.json({ events: await listOnlineTrainingEvents(20) });
 }
 
 export async function POST(request: Request) {
@@ -114,7 +111,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const event = saveOnlineTrainingEvent(
+    const event = await saveOnlineTrainingEvent(
       {
         ...payload,
         attendeeEmails,

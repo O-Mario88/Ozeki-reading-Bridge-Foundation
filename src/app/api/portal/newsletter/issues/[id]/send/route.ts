@@ -6,7 +6,7 @@ import {
   markNewsletterIssueAutoSent,
   markNewsletterIssuePublished,
   saveNewsletterDispatchLogs,
-} from "@/lib/db";
+} from "@/lib/content-db";
 import { sendNewsletterIssueInGroups } from "@/lib/newsletter";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 
@@ -37,7 +37,7 @@ export async function POST(
 
     const parsed = schema.parse(await request.json().catch(() => ({})));
 
-    let issue = getNewsletterIssueById(issueId);
+    let issue = await getNewsletterIssueById(issueId);
     if (!issue) {
       return NextResponse.json({ error: "Newsletter issue not found." }, { status: 404 });
     }
@@ -49,19 +49,19 @@ export async function POST(
           { status: 400 },
         );
       }
-      issue = markNewsletterIssuePublished(issue.id) ?? issue;
+      issue = (await markNewsletterIssuePublished(issue.id)) ?? issue;
     }
 
-    const recipients = listNewsletterSubscriberEmails();
+    const recipients = await listNewsletterSubscriberEmails();
     const sendResult = await sendNewsletterIssueInGroups({
       issue,
       recipients,
       origin: new URL(request.url).origin,
     });
 
-    saveNewsletterDispatchLogs(issue.id, sendResult.logs);
+    await saveNewsletterDispatchLogs(issue.id, sendResult.logs);
     if (sendResult.sent > 0 || sendResult.totalRecipients === 0) {
-      markNewsletterIssueAutoSent(issue.id);
+      await markNewsletterIssueAutoSent(issue.id);
     }
 
     return NextResponse.json({

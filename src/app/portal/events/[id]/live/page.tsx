@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getOnlineTrainingEventById } from "@/lib/db";
+import { getOnlineTrainingEventById } from "@/lib/content-db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export default async function PortalEventLivePage({
     notFound();
   }
 
-  const event = getOnlineTrainingEventById(eventId);
+  const event = await getOnlineTrainingEventById(eventId);
   if (!event) {
     notFound();
   }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getLatestPublishedNewsletterIssue, listNewsletterIssues } from "@/lib/db";
+import { getLatestPublishedNewsletterIssue, listNewsletterIssues } from "@/lib/content-db";
 
 export const metadata = {
   title: "Newsletter",
@@ -9,9 +9,11 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function NewsletterIndexPage() {
-  const latest = getLatestPublishedNewsletterIssue();
-  const issues = listNewsletterIssues({ status: "published", limit: 30 });
+export default async function NewsletterIndexPage() {
+  const [latest, issues] = await Promise.all([
+    getLatestPublishedNewsletterIssue(),
+    listNewsletterIssues({ status: "published", limit: 30 }),
+  ]);
 
   return (
     <>

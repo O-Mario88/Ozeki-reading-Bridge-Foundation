@@ -3,7 +3,7 @@ import type {
   NewsletterDispatchStatus,
   NewsletterDispatchWriteInput,
   NewsletterIssueRecord,
-} from "@/lib/db";
+} from "@/lib/content-db";
 
 function escapeHtml(value: string) {
   return value

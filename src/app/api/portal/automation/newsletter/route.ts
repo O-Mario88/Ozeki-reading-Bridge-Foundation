@@ -5,7 +5,7 @@ import {
   listPendingNewsletterAutoSendIssues,
   markNewsletterIssueAutoSent,
   saveNewsletterDispatchLogs,
-} from "@/lib/db";
+} from "@/lib/content-db";
 import { sendNewsletterIssueInGroups } from "@/lib/newsletter";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 
@@ -26,8 +26,8 @@ export async function POST(request: Request) {
 
   try {
     const parsed = schema.parse(await request.json().catch(() => ({})));
-    const issues = listPendingNewsletterAutoSendIssues(parsed.limit);
-    const recipients = listNewsletterSubscriberEmails();
+    const issues = await listPendingNewsletterAutoSendIssues(parsed.limit);
+    const recipients = await listNewsletterSubscriberEmails();
 
     const results: Array<{
       issueId: number;
@@ -42,9 +42,9 @@ export async function POST(request: Request) {
         recipients,
         origin: new URL(request.url).origin,
       });
-      saveNewsletterDispatchLogs(issue.id, sendResult.logs);
+      await saveNewsletterDispatchLogs(issue.id, sendResult.logs);
       if (sendResult.sent > 0 || sendResult.totalRecipients === 0) {
-        markNewsletterIssueAutoSent(issue.id);
+        await markNewsletterIssueAutoSent(issue.id);
       }
       results.push({
         issueId: issue.id,
