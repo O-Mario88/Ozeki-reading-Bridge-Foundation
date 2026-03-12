@@ -3,16 +3,27 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd frontend
+        - npm run clean:next
         - nvm use 20 || nvm install 20
+        - node -v
+        - npm -v
         - npm ci
+        - npm rebuild better-sqlite3
     build:
       commands:
+        - export NODE_OPTIONS="--max-old-space-size=8192"
+        - export NEXT_TELEMETRY_DISABLED=1
         - npm run build
+        - mkdir -p .next/standalone/data
+        - cp -r data/* .next/standalone/data/ || true
+        - cp -r public .next/standalone/public || true
+        - mkdir -p .next/standalone/.next/static
+        - cp -r .next/static .next/standalone/.next/static || true
   artifacts:
-    baseDirectory: frontend/.next
+    baseDirectory: .next
     files:
       - "**/*"
   cache:
     paths:
-      - frontend/node_modules/**/*
+      - node_modules/**/*
+      - .npm/**/*

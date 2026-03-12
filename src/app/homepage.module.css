@@ -1,0 +1,657 @@
+.hero {
+  background:
+    radial-gradient(circle at 92% 12%, color-mix(in oklab, var(--color-brand-orange), transparent 76%), transparent 44%),
+    linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--color-brand-blue), white 92%) 0%,
+      color-mix(in oklab, var(--color-brand-blue), white 97%) 62%,
+      #ffffff 100%
+    );
+  border-bottom: 1px solid color-mix(in oklab, var(--color-brand-blue), white 76%);
+}
+
+.heroInner {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: center;
+  margin-inline: auto;
+  max-width: min(1080px, 100%);
+  text-align: center;
+}
+
+.heroKicker {
+  align-items: center;
+  color: var(--color-brand-orange-dark);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  justify-content: center;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.heroSubhead {
+  color: var(--color-text);
+  font-size: clamp(1rem, 1.3vw, 1.2rem);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 84ch;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.microline {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin: 0;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.ctaRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.primaryCta {
+  background: var(--color-brand-blue) !important;
+  border-color: var(--color-brand-blue) !important;
+  color: #ffffff !important;
+}
+
+.primaryCta:hover,
+.primaryCta:focus-visible {
+  background: var(--color-brand-blue-dark) !important;
+  border-color: var(--color-brand-blue-dark) !important;
+}
+
+.outlineCta {
+  background: #ffffff !important;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 58%) !important;
+  color: var(--color-brand-blue) !important;
+  box-shadow: none !important;
+}
+
+.outlineCta:hover,
+.outlineCta:focus-visible {
+  background: color-mix(in oklab, var(--color-brand-blue), white 94%) !important;
+  border-color: var(--color-brand-blue) !important;
+  color: var(--color-brand-blue-dark) !important;
+}
+
+.sectionHeading {
+  margin-bottom: var(--space-6);
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  max-width: 32ch;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.trustStrip {
+  background: #ffffff;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  border-top: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  padding: var(--space-4) 0;
+}
+
+.trustLinks {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.trustLinks a {
+  background: color-mix(in oklab, var(--color-brand-blue), white 94%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 74%);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-blue);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: var(--space-2) var(--space-3);
+  text-decoration: none;
+}
+
+.trustLinks a:hover,
+.trustLinks a:focus-visible {
+  border-color: var(--color-brand-blue);
+  color: var(--color-brand-blue-dark);
+}
+
+.problemSection {
+  background: color-mix(in oklab, var(--color-brand-blue), white 96%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 82%);
+}
+
+.problemSection .sectionHeading h2 {
+  max-width: none;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  white-space: normal;
+  width: 100%;
+}
+
+.problemSectionTitle {
+  font-size: clamp(0.95rem, 2.2vw, 2.2rem) !important;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  min-width: 0;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  text-wrap: nowrap !important;
+  width: 100%;
+}
+
+.loopSectionHeading h2 {
+  max-width: none;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  white-space: normal;
+  width: 100%;
+}
+
+.problemPhotoWrap {
+  margin-bottom: var(--space-4);
+}
+
+.problemPhotoCard {
+  background: var(--color-brand-blue);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 64%);
+  border-radius: var(--radius-lg);
+  min-height: 440px;
+  overflow: hidden;
+  position: relative;
+}
+
+.problemPhotoImage {
+  object-fit: cover;
+}
+
+.problemNarrative {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.problemLead {
+  color: var(--color-brand-blue-dark);
+  font-weight: 600;
+}
+
+.problemNarrative p {
+  color: var(--color-text);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.loopGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.loopCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.loopGrid .loopCard:last-child {
+  grid-column: 1 / -1;
+}
+
+.loopCard h3 {
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.loopCard p {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.loopIcon {
+  align-items: center;
+  background: color-mix(in oklab, var(--color-brand-orange), white 82%);
+  border-radius: 999px;
+  color: var(--color-brand-orange-dark);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.loopCtaWrap {
+  margin: var(--space-4) 0 0;
+}
+
+.inlineLink {
+  color: var(--color-brand-blue);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-brand-blue), white 48%);
+  text-underline-offset: 4px;
+}
+
+.inlineLink:hover,
+.inlineLink:focus-visible {
+  color: var(--color-brand-orange-dark);
+}
+
+.insightSection {
+  background:
+    radial-gradient(circle at 2% 90%, color-mix(in oklab, var(--color-brand-orange), transparent 82%), transparent 36%),
+    linear-gradient(180deg, color-mix(in oklab, var(--color-brand-blue), white 95%), #ffffff 56%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+}
+
+.insightLead {
+  color: var(--color-text);
+  margin: 0 0 var(--space-4);
+}
+
+.insightGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.insightTile {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  min-height: 108px;
+  padding: var(--space-4);
+}
+
+.insightTile h3 {
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+  word-break: break-word;
+}
+
+.centeredCta {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-5);
+}
+
+.partnerGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.partnerCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.partnerCardFullRow {
+  grid-column: 1 / -1;
+}
+
+.partnerCard h3 {
+  color: var(--color-brand-blue);
+  font-size: 1rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.partnerCard p {
+  color: var(--color-text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.partnerCard strong {
+  color: var(--color-text);
+}
+
+.testimonialSection {
+  background: color-mix(in oklab, var(--color-brand-blue), white 96%);
+  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+}
+
+.testimonialGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.testimonialCard {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.quote {
+  color: var(--color-text);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.metaRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.roleChip {
+  background: color-mix(in oklab, var(--color-brand-blue), white 90%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 74%);
+  border-radius: 999px;
+  color: var(--color-brand-blue);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
+}
+
+.geoMeta {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.supportSection {
+  padding-top: var(--space-7);
+}
+
+.supportCard {
+  align-items: start;
+  background:
+    radial-gradient(circle at 90% 16%, color-mix(in oklab, var(--color-brand-orange), transparent 66%), transparent 36%),
+    linear-gradient(132deg, var(--color-brand-blue), color-mix(in oklab, var(--color-brand-blue), black 18%));
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 48%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  color: #ffffff;
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-5);
+}
+
+.supportCard h2 {
+  color: #ffffff;
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.supportCard p {
+  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  max-width: 72ch;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.liveSessionCard {
+  background: color-mix(in oklab, var(--color-brand-blue), black 12%);
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 30%);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3);
+}
+
+.liveSessionCard h3 {
+  color: #ffffff;
+  font-size: 1rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.liveSessionCard p {
+  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  max-width: none;
+}
+
+.supportCard .primaryCta {
+  background: var(--color-brand-orange) !important;
+  border-color: var(--color-brand-orange) !important;
+}
+
+.supportCard .primaryCta:hover,
+.supportCard .primaryCta:focus-visible {
+  background: var(--color-brand-orange-dark) !important;
+  border-color: var(--color-brand-orange-dark) !important;
+}
+
+.supportActionRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.supportCompactButton {
+  font-size: 0.85rem !important;
+  min-height: 36px !important;
+  padding: 0.48rem 0.9rem !important;
+}
+
+.supportSecondaryButton {
+  background: color-mix(in oklab, var(--color-brand-blue), black 8%) !important;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 34%) !important;
+  color: #ffffff !important;
+}
+
+.supportSecondaryButton:hover,
+.supportSecondaryButton:focus-visible {
+  background: color-mix(in oklab, var(--color-brand-blue), black 20%) !important;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 24%) !important;
+  color: #ffffff !important;
+}
+
+.partnerLogoStrip {
+  background: #efefef;
+  border-top: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  padding: clamp(1.4rem, 2.3vw, 2rem) 0;
+}
+
+.partnerLogoContainer {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.partnerLogoList {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 2.2vw, 2.5rem);
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.partnerLogoItem {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.partnerLogoLink {
+  align-items: center;
+  background: #f8f8f8;
+  border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 78%);
+  border-radius: 10px;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 86px;
+  min-width: 250px;
+  padding: 0.5rem 0.8rem;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.partnerLogoImage {
+  display: block;
+  filter: grayscale(1) contrast(1.08) brightness(0.72);
+  height: auto;
+  max-height: 74px;
+  transition:
+    filter 0.22s ease,
+    transform 0.22s ease;
+  width: min(220px, 100%);
+}
+
+.partnerLogoLink:hover,
+.partnerLogoLink:focus-visible,
+.partnerLogoLink:active {
+  background: #ffffff;
+  border-color: color-mix(in oklab, var(--color-brand-blue), white 62%);
+}
+
+.partnerLogoLink:hover .partnerLogoImage,
+.partnerLogoLink:focus-visible .partnerLogoImage,
+.partnerLogoLink:active .partnerLogoImage {
+  filter: none;
+  transform: translateY(-1px);
+}
+
+.partnerLogoLink:focus-visible {
+  outline: 2px solid var(--color-brand-blue);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1120px) {
+  .problemPhotoCard {
+    min-height: 360px;
+  }
+
+  .loopGrid,
+  .insightGrid,
+  .partnerGrid,
+  .testimonialGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .sectionHeading {
+    margin-bottom: var(--space-5);
+  }
+
+  .problemSection .sectionHeading h2 {
+    white-space: normal;
+  }
+
+  .loopSectionHeading h2 {
+    white-space: normal;
+  }
+
+  .problemPhotoCard {
+    min-height: 300px;
+  }
+
+  .ctaRow {
+    gap: var(--space-2);
+  }
+}
+
+@media (max-width: 640px) {
+  .heroInner {
+    gap: var(--space-3);
+  }
+
+  .trustLinks {
+    justify-content: flex-start;
+  }
+
+  .trustLinks a {
+    width: 100%;
+  }
+
+  .loopGrid,
+  .insightGrid,
+  .partnerGrid,
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .supportCard {
+    padding: var(--space-4);
+  }
+
+  .supportActionRow {
+    width: 100%;
+  }
+
+  .supportActionRow :global(.button),
+  .supportActionRow :global(button.button) {
+    width: 100%;
+  }
+
+  .partnerLogoImage {
+    max-height: 62px;
+  }
+
+  .partnerLogoLink {
+    min-height: 74px;
+    min-width: 220px;
+    padding: 0.4rem 0.7rem;
+  }
+
+  .centeredCta {
+    justify-content: flex-start;
+  }
+
+  .ctaRow :global(.button),
+  .ctaRow :global(button.button) {
+    width: 100%;
+  }
+}
