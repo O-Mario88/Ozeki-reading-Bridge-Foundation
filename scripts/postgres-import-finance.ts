@@ -5,43 +5,32 @@ import Database from "better-sqlite3";
 import { getPostgresPool, isPostgresConfigured } from "@/lib/server/postgres/client";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const sqlitePath = path.resolve(process.env.SQLITE_DB_PATH?.trim() || path.resolve(__dirname, "../data/app.db"));
+const sqlitePath = path.resolve(
+  process.env.SQLITE_DB_PATH?.trim() || path.resolve(__dirname, "../data/app.db"),
+);
 const schemaDir = path.resolve(__dirname, "../database/postgres");
 
 const TABLES = [
-  "portal_users",
-  "portal_sessions",
-  "audit_logs",
-  "geo_regions",
-  "geo_subregions",
-  "geo_districts",
-  "geo_subcounties",
-  "geo_parishes",
-  "schools_directory",
-  "school_contacts",
-  "school_learners",
-  "teacher_roster",
-  "learner_roster",
-  "training_sessions",
-  "training_participants",
-  "online_training_events",
-  "legacy_assessment_records",
-  "assessment_sessions",
-  "assessment_session_results",
-  "assessment_records",
-  "portal_records",
-  "bookings",
-  "contacts",
-  "download_leads",
-  "newsletter_subscribers",
-  "teaching_improvement_settings",
-  "portal_training_attendance",
-  "lesson_evaluations",
-  "lesson_evaluation_items",
-  "story_activities",
-  "story_anthologies",
-  "story_library",
-  "observation_rubrics",
+  "finance_contacts",
+  "finance_files",
+  "finance_settings",
+  "finance_invoices",
+  "finance_invoice_items",
+  "finance_receipts",
+  "finance_payments",
+  "finance_payment_allocations",
+  "finance_expenses",
+  "finance_transactions_ledger",
+  "finance_expense_receipts",
+  "finance_audit_exceptions",
+  "finance_txn_risk_scores",
+  "finance_statement_lines",
+  "finance_reconciliation_matches",
+  "finance_monthly_statements",
+  "finance_email_logs",
+  "finance_public_snapshots",
+  "finance_budgets_monthly",
+  "finance_audited_statements",
 ] as const;
 
 function getSchemaPaths() {
@@ -92,15 +81,14 @@ async function main() {
 
   const sqlite = new Database(sqlitePath, { readonly: true });
   const pool = getPostgresPool();
+
   for (const schemaPath of getSchemaPaths()) {
     const schemaSql = fs.readFileSync(schemaPath, "utf8");
     await pool.query(schemaSql);
   }
 
   for (const table of TABLES) {
-    const columns = sqlite
-      .prepare(`PRAGMA table_info(${table})`)
-      .all() as Array<{ name: string }>;
+    const columns = sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
     if (columns.length === 0) {
       console.warn(`Skipping ${table}: not found in SQLite source.`);
       continue;
@@ -130,7 +118,7 @@ async function main() {
   }
 
   sqlite.close();
-  console.log(`Imported foundation tables from ${sqlitePath}`);
+  console.log(`Imported finance tables from ${sqlitePath}`);
 }
 
 main()
