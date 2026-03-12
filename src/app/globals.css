@@ -8347,8 +8347,8 @@ nav[aria-label="Staff navigation"] {
   gap: clamp(0.45rem, 0.9vw, 0.8rem);
   padding: clamp(0.9rem, 1.8vw, 1.25rem) clamp(0.55rem, 1.15vw, 0.95rem);
   display: grid;
-  justify-items: stretch;
-  text-align: left;
+  justify-items: center;
+  text-align: center;
   width: min(100% - 0.2rem, 2200px);
   max-width: 2200px;
 }
@@ -8361,7 +8361,9 @@ nav[aria-label="Staff navigation"] {
 .impact-live-compact-zone .impact-page-hero-container > :is(.kicker, h1, p) {
   margin: 0;
   width: 100%;
-  text-align: left;
+  max-width: min(72rem, 100%);
+  margin-inline: auto;
+  text-align: center;
 }
 
 .impact-live-compact-zone .impact-page-hero-container > p {
@@ -8498,8 +8500,8 @@ nav[aria-label="Staff navigation"] {
   padding: clamp(0.9rem, 1.8vw, 1.25rem) clamp(0.55rem, 1.15vw, 0.95rem);
   min-height: 0;
   display: grid;
-  justify-items: stretch;
-  text-align: left;
+  justify-items: center;
+  text-align: center;
   width: min(100% - 0.2rem, 2200px);
   max-width: 2200px;
 }
@@ -8514,7 +8516,9 @@ nav[aria-label="Staff navigation"] {
   background: transparent;
   padding: 0;
   width: 100%;
-  text-align: left;
+  max-width: min(72rem, 100%);
+  margin-inline: auto;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -8527,9 +8531,10 @@ nav[aria-label="Staff navigation"] {
 
 .page-hero.impact-page-hero .impact-page-hero-container > h1 {
   margin: 0;
-  max-width: none;
+  max-width: min(72rem, 100%);
   width: 100%;
-  text-align: left;
+  margin-inline: auto;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -8544,8 +8549,9 @@ nav[aria-label="Staff navigation"] {
   margin: 0;
   font-size: clamp(0.88rem, 1.02vw, 1.05rem);
   width: 100%;
-  max-width: none;
-  text-align: left;
+  max-width: min(72rem, 100%);
+  margin-inline: auto;
+  text-align: center;
   color: #243646;
   white-space: nowrap;
   overflow: hidden;
