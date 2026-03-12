@@ -3389,16 +3389,26 @@ export interface OnlineTrainingSessionRecord {
   title: string;
   agenda: string;
   objectives: string | null;
+  description: string | null;
+  audience: string | null;
   programTags: string; // JSON array of strings
+  attendeeEmails: string; // JSON array of emails
   scopeType: "country" | "region" | "subregion" | "district" | "school";
   scopeId: string | null;
   startTime: string; // ISO string
   endTime: string; // ISO string
   timezone: string;
   hostUserId: number;
+  attendeeCount: number;
+  onlineTeachersTrained: number;
+  onlineSchoolLeadersTrained: number;
   calendarEventId: string | null;
+  calendarLink: string | null;
   meetJoinUrl: string | null;
   conferenceRecordId: string | null;
+  recordingUrl: string | null;
+  chatSummary: string | null;
+  attendanceCapturedAt: string | null;
   status: TrainingSessionStatus;
   visibility: string;
   createdByUserId: number;

@@ -158,6 +158,15 @@ function getSqliteRowCount(sqlite: Database.Database, table: string) {
   return Number(row.count || 0);
 }
 
+function sqliteTableColumns(sqlite: Database.Database, table: string) {
+  return sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+}
+
+function sqliteHasColumns(sqlite: Database.Database, table: string, required: string[]) {
+  const columns = sqliteTableColumns(sqlite, table).map((column) => column.name);
+  return required.every((column) => columns.includes(column));
+}
+
 async function postgresRelationExists(name: string) {
   const pool = getPostgresPool();
   const result = await pool.query<{ exists: boolean }>(
@@ -181,6 +190,10 @@ async function verifyTables(
   failures: VerificationFailure[],
 ) {
   for (const table of tables) {
+    if (sqliteTableColumns(sqlite, table).length === 0) {
+      logInfo(`Skipping ${table}: not found in SQLite source`);
+      continue;
+    }
     const sqliteCount = getSqliteRowCount(sqlite, table);
     const exists = await postgresRelationExists(table);
     if (!exists) {
@@ -206,6 +219,49 @@ async function verifyTables(
 
     logPass(`table ${table}: ${postgresCount} rows`);
   }
+}
+
+async function verifyOnlineTrainingTables(sqlite: Database.Database, failures: VerificationFailure[]) {
+  const sessionSource = sqliteHasColumns(
+    sqlite,
+    "online_training_sessions",
+    ["id", "title", "agenda", "start_time", "end_time", "host_user_id", "created_by_user_id"],
+  )
+    ? "online_training_sessions"
+    : sqliteHasColumns(
+          sqlite,
+          "online_training_events",
+          ["id", "title", "audience", "start_datetime", "end_datetime", "created_by_user_id"],
+        )
+      ? "online_training_events"
+      : null;
+
+  if (!sessionSource) {
+    failures.push({
+      scope: "table",
+      name: "online_training_sessions",
+      message: "no compatible SQLite source table found",
+    });
+    logFail("table online_training_sessions: no compatible SQLite source table found");
+    return;
+  }
+
+  const sqliteSessionCount = getSqliteRowCount(sqlite, sessionSource);
+  const postgresSessionCount = await getPostgresRowCount("online_training_sessions");
+  if (sqliteSessionCount !== postgresSessionCount) {
+    failures.push({
+      scope: "table",
+      name: "online_training_sessions",
+      message: `row count mismatch sqlite(${sessionSource})=${sqliteSessionCount} postgres=${postgresSessionCount}`,
+    });
+    logFail(
+      `table online_training_sessions: sqlite(${sessionSource})=${sqliteSessionCount} postgres=${postgresSessionCount}`,
+    );
+  } else {
+    logPass(`table online_training_sessions: ${postgresSessionCount} rows from ${sessionSource}`);
+  }
+
+  await verifyTables(sqlite, ONLINE_TRAINING_TABLES.slice(1), failures);
 }
 
 async function verifyViews(failures: VerificationFailure[]) {
@@ -331,7 +387,7 @@ async function main() {
 
     if (scopes.onlineTraining) {
       logInfo("Verifying online training tables");
-      await verifyTables(sqlite, ONLINE_TRAINING_TABLES, failures);
+      await verifyOnlineTrainingTables(sqlite, failures);
     }
   } finally {
     sqlite.close();

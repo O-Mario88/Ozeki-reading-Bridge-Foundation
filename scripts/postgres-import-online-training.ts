@@ -25,21 +25,6 @@ function sqliteHasColumns(sqlite: Database.Database, table: string, required: st
   return required.every((column) => columns.includes(column));
 }
 
-function resolveSourceTable(
-  sqlite: Database.Database,
-  preferredTable: string,
-  fallbackTable: string,
-  requiredColumns: string[],
-) {
-  if (sqliteHasColumns(sqlite, preferredTable, requiredColumns)) {
-    return preferredTable;
-  }
-  if (sqliteHasColumns(sqlite, fallbackTable, requiredColumns)) {
-    return fallbackTable;
-  }
-  return null;
-}
-
 async function resetIdentitySequence(table: string) {
   const pool = getPostgresPool();
   const sequenceResult = await pool.query<{ sequence_name: string | null }>(
@@ -63,6 +48,29 @@ async function resetIdentitySequence(table: string) {
   ]);
 }
 
+function normalizeEmailArray(raw: unknown) {
+  if (!raw) {
+    return JSON.stringify([]);
+  }
+  const values = String(raw)
+    .split(/[\n,;]/)
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((value, index, list) => list.indexOf(value) === index);
+  return JSON.stringify(values);
+}
+
+function inferLegacyEventStatus(row: Record<string, unknown>) {
+  const endTime = row.end_datetime ? new Date(String(row.end_datetime)).getTime() : NaN;
+  const hasOutcome = Boolean(
+    row.attendance_captured_at || row.recording_url || row.chat_summary || Number(row.attendee_count ?? 0) > 0,
+  );
+  if (hasOutcome || (Number.isFinite(endTime) && endTime < Date.now())) {
+    return "completed";
+  }
+  return "scheduled";
+}
+
 async function main() {
   if (!isPostgresConfigured()) {
     throw new Error("DATABASE_URL is not configured.");
@@ -77,42 +85,48 @@ async function main() {
     await pool.query(fs.readFileSync(schemaPath, "utf8"));
   }
 
-  const sessionSource = resolveSourceTable(
+  const hasSessionSource = sqliteHasColumns(
     sqlite,
     "online_training_sessions",
-    "training_sessions",
     ["id", "title", "agenda", "start_time", "end_time", "host_user_id", "created_by_user_id"],
   );
-  const participantSource = resolveSourceTable(
+  const hasLegacyEventSource = sqliteHasColumns(
+    sqlite,
+    "online_training_events",
+    ["id", "title", "audience", "start_datetime", "end_datetime", "created_by_user_id"],
+  );
+  const participantSource = sqliteHasColumns(
     sqlite,
     "online_training_participants",
-    "training_participants",
     ["id", "session_id", "role", "attendance_status"],
-  );
-  const resourceSource = resolveSourceTable(
-    sqlite,
-    "online_training_resources",
-    "training_resources",
-    ["id", "session_id", "title"],
-  );
-  const artifactSource = resolveSourceTable(
+  )
+    ? "online_training_participants"
+    : null;
+  const resourceSource = sqliteHasColumns(sqlite, "online_training_resources", ["id", "session_id", "title"])
+    ? "online_training_resources"
+    : null;
+  const artifactSource = sqliteHasColumns(
     sqlite,
     "online_training_artifacts",
-    "training_artifacts",
     ["session_id", "type", "source", "status"],
-  );
-  const notesSource = resolveSourceTable(
+  )
+    ? "online_training_artifacts"
+    : null;
+  const notesSource = sqliteHasColumns(
     sqlite,
     "online_training_notes",
-    "training_notes",
     ["session_id", "facts_json", "narrative_html"],
+  )
+    ? "online_training_notes"
+    : null;
+
+  await pool.query(
+    "TRUNCATE TABLE online_training_notes, online_training_artifacts, online_training_resources, online_training_participants, online_training_sessions RESTART IDENTITY CASCADE",
   );
 
-  await pool.query("TRUNCATE TABLE online_training_notes, online_training_artifacts, online_training_resources, online_training_participants, online_training_sessions RESTART IDENTITY CASCADE");
-
-  if (sessionSource) {
-    const rows = sqlite.prepare(`SELECT * FROM ${sessionSource}`).all() as Array<Record<string, unknown>>;
-    console.log(`Importing ${rows.length} online training sessions from ${sessionSource}`);
+  if (hasSessionSource) {
+    const rows = sqlite.prepare("SELECT * FROM online_training_sessions").all() as Array<Record<string, unknown>>;
+    console.log(`Importing ${rows.length} online training sessions from online_training_sessions`);
     for (const row of rows) {
       await pool.query(
         `
@@ -122,45 +136,142 @@ async function main() {
             title,
             agenda,
             objectives,
+            description,
+            audience,
             program_tags_json,
+            attendee_emails_json,
             scope_type,
             scope_id,
             start_time,
             end_time,
             timezone,
             host_user_id,
+            attendee_count,
+            online_teachers_trained,
+            online_school_leaders_trained,
             calendar_event_id,
+            calendar_link,
             meet_join_url,
             conference_record_id,
+            recording_url,
+            chat_summary,
+            attendance_captured_at,
             status,
             visibility,
             created_by_user_id,
             created_at,
             updated_at
           ) VALUES (
-            $1, $1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9::timestamptz, $10, $11, $12, $13, $14, $15, $16, $17, $18::timestamptz, $19::timestamptz
+            $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12::timestamptz, $13,
+            $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::timestamptz, $25, $26, $27,
+            $28::timestamptz, $29::timestamptz
           )
         `,
         [
           Number(row.id),
           String(row.title ?? ""),
-          String(row.agenda ?? ""),
+          String(row.agenda ?? row.description ?? row.title ?? ""),
           row.objectives ? String(row.objectives) : null,
+          row.description ? String(row.description) : null,
+          row.audience ? String(row.audience) : null,
           String(row.program_tags_json ?? row.program_tags ?? "[]"),
+          String(row.attendee_emails_json ?? normalizeEmailArray(row.attendee_emails)),
           String(row.scope_type ?? "country"),
           row.scope_id ? String(row.scope_id) : null,
           String(row.start_time ?? ""),
           String(row.end_time ?? ""),
           String(row.timezone ?? "Africa/Kampala"),
-          Number(row.host_user_id ?? 0),
+          Number(row.host_user_id ?? row.created_by_user_id ?? 0),
+          Number(row.attendee_count ?? 0),
+          Number(row.online_teachers_trained ?? 0),
+          Number(row.online_school_leaders_trained ?? 0),
           row.calendar_event_id ? String(row.calendar_event_id) : null,
-          row.meet_join_url ? String(row.meet_join_url) : null,
+          row.calendar_link ? String(row.calendar_link) : null,
+          row.meet_join_url ? String(row.meet_join_url) : row.meet_link ? String(row.meet_link) : null,
           row.conference_record_id ? String(row.conference_record_id) : null,
+          row.recording_url ? String(row.recording_url) : null,
+          row.chat_summary ? String(row.chat_summary) : null,
+          row.attendance_captured_at ? String(row.attendance_captured_at) : null,
           String(row.status ?? "draft"),
           String(row.visibility ?? "private"),
           Number(row.created_by_user_id ?? 0),
           String(row.created_at ?? new Date().toISOString()),
           String(row.updated_at ?? row.created_at ?? new Date().toISOString()),
+        ],
+      );
+    }
+    await resetIdentitySequence("online_training_sessions");
+  } else if (hasLegacyEventSource) {
+    const rows = sqlite.prepare("SELECT * FROM online_training_events").all() as Array<Record<string, unknown>>;
+    console.log(`Importing ${rows.length} online training sessions from legacy online_training_events`);
+    for (const row of rows) {
+      await pool.query(
+        `
+          INSERT INTO online_training_sessions (
+            id,
+            legacy_id,
+            title,
+            agenda,
+            objectives,
+            description,
+            audience,
+            program_tags_json,
+            attendee_emails_json,
+            scope_type,
+            scope_id,
+            start_time,
+            end_time,
+            timezone,
+            host_user_id,
+            attendee_count,
+            online_teachers_trained,
+            online_school_leaders_trained,
+            calendar_event_id,
+            calendar_link,
+            meet_join_url,
+            recording_url,
+            chat_summary,
+            attendance_captured_at,
+            status,
+            visibility,
+            created_by_user_id,
+            created_at,
+            updated_at
+          ) VALUES (
+            $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12::timestamptz, $13,
+            $14, $15, $16, $17, $18, $19, $20, $21, $22, $23::timestamptz, $24, $25, $26,
+            $27::timestamptz, $28::timestamptz
+          )
+        `,
+        [
+          Number(row.id),
+          String(row.title ?? ""),
+          String(row.description ?? row.title ?? ""),
+          null,
+          row.description ? String(row.description) : null,
+          String(row.audience ?? "Teachers and school leaders"),
+          JSON.stringify(["online-training"]),
+          normalizeEmailArray(row.attendee_emails),
+          "country",
+          null,
+          String(row.start_datetime ?? ""),
+          String(row.end_datetime ?? ""),
+          String(row.timezone ?? "Africa/Kampala"),
+          Number(row.created_by_user_id ?? 0),
+          Number(row.attendee_count ?? 0),
+          Number(row.online_teachers_trained ?? 0),
+          Number(row.online_school_leaders_trained ?? 0),
+          row.calendar_event_id ? String(row.calendar_event_id) : null,
+          row.calendar_link ? String(row.calendar_link) : null,
+          row.meet_link ? String(row.meet_link) : null,
+          row.recording_url ? String(row.recording_url) : null,
+          row.chat_summary ? String(row.chat_summary) : null,
+          row.attendance_captured_at ? String(row.attendance_captured_at) : null,
+          inferLegacyEventStatus(row),
+          "public",
+          Number(row.created_by_user_id ?? 0),
+          String(row.created_at ?? new Date().toISOString()),
+          String(row.attendance_captured_at ?? row.created_at ?? new Date().toISOString()),
         ],
       );
     }
@@ -283,7 +394,6 @@ async function main() {
       await pool.query(
         `
           INSERT INTO online_training_notes (
-            id,
             session_id,
             facts_json,
             narrative_html,
@@ -292,10 +402,9 @@ async function main() {
             guardrail_version,
             created_at,
             updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9::timestamptz)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz)
         `,
         [
-          Number(row.id),
           Number(row.session_id ?? 0),
           String(row.facts_json ?? "{}"),
           String(row.narrative_html ?? ""),
@@ -307,7 +416,6 @@ async function main() {
         ],
       );
     }
-    await resetIdentitySequence("online_training_notes");
   }
 
   sqlite.close();

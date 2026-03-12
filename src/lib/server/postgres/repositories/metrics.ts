@@ -22,7 +22,13 @@ export async function getImpactSummaryPostgres() {
   ] = await Promise.all([
     queryPostgres(`SELECT COUNT(*)::int AS total FROM training_participants WHERE participant_role = 'Classroom teacher'`),
     queryPostgres(`SELECT COUNT(*)::int AS total FROM training_sessions`),
-    queryPostgres(`SELECT COUNT(*)::int AS total, COALESCE(SUM(online_teachers_trained), 0)::int AS teachers FROM online_training_events`),
+    queryPostgres(`
+      SELECT
+        COUNT(*)::int AS total,
+        COALESCE(SUM(online_teachers_trained), 0)::int AS teachers
+      FROM online_training_sessions
+      WHERE status IN ('scheduled', 'live', 'completed')
+    `),
     queryPostgres(`SELECT COALESCE(SUM(learners_assessed), 0)::int AS total FROM legacy_assessment_records`),
     queryPostgres(`SELECT COUNT(*)::int AS total FROM assessment_records`),
     queryPostgres(`SELECT COALESCE(SUM(stories_published), 0)::int AS total FROM legacy_assessment_records`),

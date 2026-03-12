@@ -1,6 +1,12 @@
 import { getDb } from "@/lib/db";
 import { isPostgresConfigured, queryPostgres } from "@/lib/server/postgres/client";
 import {
+  getOnlineTrainingEventViewById,
+  listOnlineTrainingEventViews,
+  scheduleOnlineTrainingSessionFromEvent,
+  updateTrainingSessionAttendance,
+} from "@/lib/training-db";
+import {
   portalResourceSections,
 } from "@/lib/types";
 import type {
@@ -148,28 +154,6 @@ function parseNewsletterDispatchLogRow(row: Record<string, unknown>): Newsletter
         : "failed",
     providerMessage: row.providerMessage ? String(row.providerMessage) : null,
     sentAt: String(row.sentAt ?? ""),
-    createdAt: String(row.createdAt ?? ""),
-  };
-}
-
-function parseOnlineTrainingEventRow(row: Record<string, unknown>): OnlineTrainingEventRecord {
-  return {
-    id: Number(row.id),
-    title: String(row.title ?? ""),
-    description: row.description ? String(row.description) : null,
-    audience: String(row.audience ?? ""),
-    startDateTime: String(row.startDateTime ?? ""),
-    endDateTime: String(row.endDateTime ?? ""),
-    durationMinutes: Number(row.durationMinutes ?? 0),
-    attendeeCount: Number(row.attendeeCount ?? 0),
-    onlineTeachersTrained: Number(row.onlineTeachersTrained ?? 0),
-    onlineSchoolLeadersTrained: Number(row.onlineSchoolLeadersTrained ?? 0),
-    calendarEventId: row.calendarEventId ? String(row.calendarEventId) : null,
-    calendarLink: row.calendarLink ? String(row.calendarLink) : null,
-    meetLink: row.meetLink ? String(row.meetLink) : null,
-    recordingUrl: row.recordingUrl ? String(row.recordingUrl) : null,
-    chatSummary: row.chatSummary ? String(row.chatSummary) : null,
-    attendanceCapturedAt: row.attendanceCapturedAt ? String(row.attendanceCapturedAt) : null,
     createdAt: String(row.createdAt ?? ""),
   };
 }
@@ -1217,177 +1201,15 @@ export async function saveOnlineTrainingEvent(
   },
   createdByUserId: number,
 ): Promise<OnlineTrainingEventRecord> {
-  if (isPostgresConfigured()) {
-    const result = await queryPostgres(
-      `
-      INSERT INTO online_training_events (
-        title, description, audience, start_datetime, end_datetime, duration_minutes, attendee_emails,
-        attendee_count, online_teachers_trained, online_school_leaders_trained, calendar_event_id,
-        calendar_link, meet_link, created_by_user_id
-      ) VALUES (
-        $1,$2,$3,$4::timestamptz,$5::timestamptz,$6,$7,$8,0,0,$9,$10,$11,$12
-      )
-      RETURNING id
-      `,
-      [
-        payload.title,
-        payload.description?.trim() ? payload.description : null,
-        payload.audience,
-        payload.startDateTime,
-        payload.endDateTime,
-        payload.durationMinutes,
-        payload.attendeeEmails.join(","),
-        payload.attendeeEmails.length,
-        payload.calendarEventId ?? null,
-        payload.calendarLink ?? null,
-        payload.meetLink ?? null,
-        createdByUserId,
-      ],
-    );
-    return (await getOnlineTrainingEventById(Number(result.rows[0]?.id ?? 0))) as OnlineTrainingEventRecord;
-  }
-
-  const db = getDb();
-  const insertResult = db
-    .prepare(
-      `
-      INSERT INTO online_training_events (
-        title, description, audience, start_datetime, end_datetime, duration_minutes, attendee_emails,
-        attendee_count, online_teachers_trained, online_school_leaders_trained, calendar_event_id,
-        calendar_link, meet_link, created_by_user_id
-      ) VALUES (
-        @title, @description, @audience, @startDateTime, @endDateTime, @durationMinutes, @attendeeEmails,
-        @attendeeCount, @onlineTeachersTrained, @onlineSchoolLeadersTrained, @calendarEventId,
-        @calendarLink, @meetLink, @createdByUserId
-      )
-      `,
-    )
-    .run({
-      title: payload.title,
-      description: payload.description?.trim() ? payload.description : null,
-      audience: payload.audience,
-      startDateTime: payload.startDateTime,
-      endDateTime: payload.endDateTime,
-      durationMinutes: payload.durationMinutes,
-      attendeeEmails: payload.attendeeEmails.join(","),
-      attendeeCount: payload.attendeeEmails.length,
-      onlineTeachersTrained: 0,
-      onlineSchoolLeadersTrained: 0,
-      calendarEventId: payload.calendarEventId ?? null,
-      calendarLink: payload.calendarLink ?? null,
-      meetLink: payload.meetLink ?? null,
-      createdByUserId,
-    });
-  return (await getOnlineTrainingEventById(Number(insertResult.lastInsertRowid))) as OnlineTrainingEventRecord;
+  return scheduleOnlineTrainingSessionFromEvent(payload, createdByUserId);
 }
 
 export async function listOnlineTrainingEvents(limit = 20): Promise<OnlineTrainingEventRecord[]> {
-  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 500);
-  if (isPostgresConfigured()) {
-    const result = await queryPostgres(
-      `
-      SELECT
-        id, title, description, audience,
-        start_datetime::text AS "startDateTime",
-        end_datetime::text AS "endDateTime",
-        duration_minutes AS "durationMinutes",
-        attendee_count AS "attendeeCount",
-        online_teachers_trained AS "onlineTeachersTrained",
-        online_school_leaders_trained AS "onlineSchoolLeadersTrained",
-        calendar_event_id AS "calendarEventId",
-        calendar_link AS "calendarLink",
-        meet_link AS "meetLink",
-        recording_url AS "recordingUrl",
-        chat_summary AS "chatSummary",
-        attendance_captured_at::text AS "attendanceCapturedAt",
-        created_at::text AS "createdAt"
-      FROM online_training_events
-      ORDER BY start_datetime DESC, id DESC
-      LIMIT $1
-      `,
-      [safeLimit],
-    );
-    return result.rows.map((row) => parseOnlineTrainingEventRow(row));
-  }
-  const rows = getDb()
-    .prepare(
-      `
-      SELECT
-        id, title, description, audience,
-        start_datetime AS startDateTime,
-        end_datetime AS endDateTime,
-        duration_minutes AS durationMinutes,
-        attendee_count AS attendeeCount,
-        online_teachers_trained AS onlineTeachersTrained,
-        online_school_leaders_trained AS onlineSchoolLeadersTrained,
-        calendar_event_id AS calendarEventId,
-        calendar_link AS calendarLink,
-        meet_link AS meetLink,
-        recording_url AS recordingUrl,
-        chat_summary AS chatSummary,
-        attendance_captured_at AS attendanceCapturedAt,
-        created_at AS createdAt
-      FROM online_training_events
-      ORDER BY start_datetime DESC, id DESC
-      LIMIT @limit
-      `,
-    )
-    .all({ limit: safeLimit }) as Array<Record<string, unknown>>;
-  return rows.map((row) => parseOnlineTrainingEventRow(row));
+  return listOnlineTrainingEventViews(limit);
 }
 
 export async function getOnlineTrainingEventById(eventId: number): Promise<OnlineTrainingEventRecord | null> {
-  if (isPostgresConfigured()) {
-    const result = await queryPostgres(
-      `
-      SELECT
-        id, title, description, audience,
-        start_datetime::text AS "startDateTime",
-        end_datetime::text AS "endDateTime",
-        duration_minutes AS "durationMinutes",
-        attendee_count AS "attendeeCount",
-        online_teachers_trained AS "onlineTeachersTrained",
-        online_school_leaders_trained AS "onlineSchoolLeadersTrained",
-        calendar_event_id AS "calendarEventId",
-        calendar_link AS "calendarLink",
-        meet_link AS "meetLink",
-        recording_url AS "recordingUrl",
-        chat_summary AS "chatSummary",
-        attendance_captured_at::text AS "attendanceCapturedAt",
-        created_at::text AS "createdAt"
-      FROM online_training_events
-      WHERE id = $1
-      LIMIT 1
-      `,
-      [eventId],
-    );
-    return result.rows[0] ? parseOnlineTrainingEventRow(result.rows[0]) : null;
-  }
-  const row = getDb()
-    .prepare(
-      `
-      SELECT
-        id, title, description, audience,
-        start_datetime AS startDateTime,
-        end_datetime AS endDateTime,
-        duration_minutes AS durationMinutes,
-        attendee_count AS attendeeCount,
-        online_teachers_trained AS onlineTeachersTrained,
-        online_school_leaders_trained AS onlineSchoolLeadersTrained,
-        calendar_event_id AS calendarEventId,
-        calendar_link AS calendarLink,
-        meet_link AS meetLink,
-        recording_url AS recordingUrl,
-        chat_summary AS chatSummary,
-        attendance_captured_at AS attendanceCapturedAt,
-        created_at AS createdAt
-      FROM online_training_events
-      WHERE id = @eventId
-      LIMIT 1
-      `,
-    )
-    .get({ eventId }) as Record<string, unknown> | undefined;
-  return row ? parseOnlineTrainingEventRow(row) : null;
+  return getOnlineTrainingEventViewById(eventId);
 }
 
 export async function saveOnlineTrainingAttendance(
@@ -1400,63 +1222,5 @@ export async function saveOnlineTrainingAttendance(
     chatSummary?: string | null;
   },
 ) {
-  const attendeeCount =
-    input.attendeeCount !== undefined
-      ? Math.max(0, Math.floor(input.attendeeCount))
-      : Math.max(
-          0,
-          Math.floor(input.onlineTeachersTrained) + Math.floor(input.onlineSchoolLeadersTrained),
-        );
-  const capturedAt = new Date().toISOString();
-
-  if (isPostgresConfigured()) {
-    await queryPostgres(
-      `
-      UPDATE online_training_events
-      SET
-        online_teachers_trained = $2,
-        online_school_leaders_trained = $3,
-        attendee_count = $4,
-        recording_url = $5,
-        chat_summary = $6,
-        attendance_captured_at = $7::timestamptz
-      WHERE id = $1
-      `,
-      [
-        eventId,
-        Math.max(0, Math.floor(input.onlineTeachersTrained)),
-        Math.max(0, Math.floor(input.onlineSchoolLeadersTrained)),
-        attendeeCount,
-        input.recordingUrl?.trim() ? input.recordingUrl.trim() : null,
-        input.chatSummary?.trim() ? input.chatSummary.trim() : null,
-        capturedAt,
-      ],
-    );
-    return getOnlineTrainingEventById(eventId);
-  }
-
-  getDb()
-    .prepare(
-      `
-      UPDATE online_training_events
-      SET
-        online_teachers_trained = @onlineTeachersTrained,
-        online_school_leaders_trained = @onlineSchoolLeadersTrained,
-        attendee_count = @attendeeCount,
-        recording_url = @recordingUrl,
-        chat_summary = @chatSummary,
-        attendance_captured_at = @attendanceCapturedAt
-      WHERE id = @eventId
-      `,
-    )
-    .run({
-      eventId,
-      onlineTeachersTrained: Math.max(0, Math.floor(input.onlineTeachersTrained)),
-      onlineSchoolLeadersTrained: Math.max(0, Math.floor(input.onlineSchoolLeadersTrained)),
-      attendeeCount,
-      recordingUrl: input.recordingUrl?.trim() ? input.recordingUrl.trim() : null,
-      chatSummary: input.chatSummary?.trim() ? input.chatSummary.trim() : null,
-      attendanceCapturedAt: capturedAt,
-    });
-  return getOnlineTrainingEventById(eventId);
+  return updateTrainingSessionAttendance(eventId, input);
 }

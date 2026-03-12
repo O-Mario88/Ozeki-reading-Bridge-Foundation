@@ -42,22 +42,65 @@ type ListOnlineTrainingSessionsOptions = {
   limit?: number;
 };
 
+const SESSION_SELECT = `
+  SELECT
+    id,
+    title,
+    agenda,
+    objectives,
+    description,
+    audience,
+    program_tags_json AS "programTagsJson",
+    attendee_emails_json AS "attendeeEmailsJson",
+    scope_type AS "scopeType",
+    scope_id AS "scopeId",
+    start_time::text AS "startTime",
+    end_time::text AS "endTime",
+    timezone,
+    host_user_id AS "hostUserId",
+    attendee_count AS "attendeeCount",
+    online_teachers_trained AS "onlineTeachersTrained",
+    online_school_leaders_trained AS "onlineSchoolLeadersTrained",
+    calendar_event_id AS "calendarEventId",
+    calendar_link AS "calendarLink",
+    meet_join_url AS "meetJoinUrl",
+    conference_record_id AS "conferenceRecordId",
+    recording_url AS "recordingUrl",
+    chat_summary AS "chatSummary",
+    attendance_captured_at::text AS "attendanceCapturedAt",
+    status,
+    visibility,
+    created_by_user_id AS "createdByUserId",
+    created_at::text AS "createdAt",
+    updated_at::text AS "updatedAt"
+`;
+
 function mapSession(row: Record<string, unknown>): OnlineTrainingSessionRecord {
   return {
     id: Number(row.id),
     title: String(row.title ?? ""),
     agenda: String(row.agenda ?? ""),
     objectives: row.objectives ? String(row.objectives) : null,
+    description: row.description ? String(row.description) : null,
+    audience: row.audience ? String(row.audience) : null,
     programTags: String(row.programTagsJson ?? "[]"),
+    attendeeEmails: String(row.attendeeEmailsJson ?? "[]"),
     scopeType: String(row.scopeType ?? "country") as OnlineTrainingSessionRecord["scopeType"],
     scopeId: row.scopeId ? String(row.scopeId) : null,
     startTime: String(row.startTime ?? ""),
     endTime: String(row.endTime ?? ""),
     timezone: String(row.timezone ?? "Africa/Kampala"),
     hostUserId: Number(row.hostUserId ?? 0),
+    attendeeCount: Number(row.attendeeCount ?? 0),
+    onlineTeachersTrained: Number(row.onlineTeachersTrained ?? 0),
+    onlineSchoolLeadersTrained: Number(row.onlineSchoolLeadersTrained ?? 0),
     calendarEventId: row.calendarEventId ? String(row.calendarEventId) : null,
+    calendarLink: row.calendarLink ? String(row.calendarLink) : null,
     meetJoinUrl: row.meetJoinUrl ? String(row.meetJoinUrl) : null,
     conferenceRecordId: row.conferenceRecordId ? String(row.conferenceRecordId) : null,
+    recordingUrl: row.recordingUrl ? String(row.recordingUrl) : null,
+    chatSummary: row.chatSummary ? String(row.chatSummary) : null,
+    attendanceCapturedAt: row.attendanceCapturedAt ? String(row.attendanceCapturedAt) : null,
     status: String(row.status ?? "draft") as TrainingSessionStatus,
     visibility: String(row.visibility ?? "private"),
     createdByUserId: Number(row.createdByUserId ?? 0),
@@ -106,26 +149,7 @@ export async function listOnlineTrainingSessionsPostgres(
   const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
   const result = await queryPostgres(
     `
-      SELECT
-        id,
-        title,
-        agenda,
-        objectives,
-        program_tags_json AS "programTagsJson",
-        scope_type AS "scopeType",
-        scope_id AS "scopeId",
-        start_time::text AS "startTime",
-        end_time::text AS "endTime",
-        timezone,
-        host_user_id AS "hostUserId",
-        calendar_event_id AS "calendarEventId",
-        meet_join_url AS "meetJoinUrl",
-        conference_record_id AS "conferenceRecordId",
-        status,
-        visibility,
-        created_by_user_id AS "createdByUserId",
-        created_at::text AS "createdAt",
-        updated_at::text AS "updatedAt"
+      ${SESSION_SELECT}
       FROM online_training_sessions
       ${whereClause}
       ORDER BY start_time DESC, id DESC
@@ -139,26 +163,7 @@ export async function listOnlineTrainingSessionsPostgres(
 export async function getOnlineTrainingSessionPostgres(sessionId: number) {
   const result = await queryPostgres(
     `
-      SELECT
-        id,
-        title,
-        agenda,
-        objectives,
-        program_tags_json AS "programTagsJson",
-        scope_type AS "scopeType",
-        scope_id AS "scopeId",
-        start_time::text AS "startTime",
-        end_time::text AS "endTime",
-        timezone,
-        host_user_id AS "hostUserId",
-        calendar_event_id AS "calendarEventId",
-        meet_join_url AS "meetJoinUrl",
-        conference_record_id AS "conferenceRecordId",
-        status,
-        visibility,
-        created_by_user_id AS "createdByUserId",
-        created_at::text AS "createdAt",
-        updated_at::text AS "updatedAt"
+      ${SESSION_SELECT}
       FROM online_training_sessions
       WHERE id = $1
       LIMIT 1
@@ -172,15 +177,29 @@ export async function createOnlineTrainingSessionPostgres(input: {
   title: string;
   agenda: string;
   objectives?: string | null;
+  description?: string | null;
+  audience?: string | null;
   programTags?: string[];
+  attendeeEmails?: string[];
   scopeType?: string;
   scopeId?: string | null;
   startTime: string;
   endTime: string;
   timezone?: string;
   hostUserId: number;
+  attendeeCount?: number;
+  onlineTeachersTrained?: number;
+  onlineSchoolLeadersTrained?: number;
+  calendarEventId?: string | null;
+  calendarLink?: string | null;
+  meetJoinUrl?: string | null;
+  conferenceRecordId?: string | null;
+  recordingUrl?: string | null;
+  chatSummary?: string | null;
+  attendanceCapturedAt?: string | null;
   createdByUserId: number;
   status: TrainingSessionStatus;
+  visibility?: string;
 }) {
   const result = await queryPostgres(
     `
@@ -188,15 +207,29 @@ export async function createOnlineTrainingSessionPostgres(input: {
         title,
         agenda,
         objectives,
+        description,
+        audience,
         program_tags_json,
+        attendee_emails_json,
         scope_type,
         scope_id,
         start_time,
         end_time,
         timezone,
         host_user_id,
+        attendee_count,
+        online_teachers_trained,
+        online_school_leaders_trained,
+        calendar_event_id,
+        calendar_link,
+        meet_join_url,
+        conference_record_id,
+        recording_url,
+        chat_summary,
+        attendance_captured_at,
         created_by_user_id,
-        status
+        status,
+        visibility
       ) VALUES (
         $1,
         $2,
@@ -204,12 +237,24 @@ export async function createOnlineTrainingSessionPostgres(input: {
         $4,
         $5,
         $6,
-        $7::timestamptz,
-        $8::timestamptz,
+        $7,
+        $8,
         $9,
-        $10,
-        $11,
-        $12
+        $10::timestamptz,
+        $11::timestamptz,
+        $12,
+        $13,
+        $14,
+        $15,
+        $16,
+        $17,
+        $18,
+        $19,
+        $20,
+        $21::timestamptz,
+        $22,
+        $23,
+        $24
       )
       RETURNING id
     `,
@@ -217,15 +262,29 @@ export async function createOnlineTrainingSessionPostgres(input: {
       input.title.trim(),
       input.agenda.trim(),
       input.objectives?.trim() || null,
+      input.description?.trim() || null,
+      input.audience?.trim() || null,
       JSON.stringify(input.programTags ?? []),
+      JSON.stringify((input.attendeeEmails ?? []).map((email) => email.trim().toLowerCase()).filter(Boolean)),
       input.scopeType ?? "country",
       input.scopeId?.trim() || null,
       input.startTime,
       input.endTime,
       input.timezone ?? "Africa/Kampala",
       input.hostUserId,
+      Math.max(0, Math.trunc(input.attendeeCount ?? 0)),
+      Math.max(0, Math.trunc(input.onlineTeachersTrained ?? 0)),
+      Math.max(0, Math.trunc(input.onlineSchoolLeadersTrained ?? 0)),
+      input.calendarEventId?.trim() || null,
+      input.calendarLink?.trim() || null,
+      input.meetJoinUrl?.trim() || null,
+      input.conferenceRecordId?.trim() || null,
+      input.recordingUrl?.trim() || null,
+      input.chatSummary?.trim() || null,
+      input.attendanceCapturedAt ?? null,
       input.createdByUserId,
       input.status,
+      input.visibility ?? "private",
     ],
   );
   return Number(result.rows[0]?.id ?? 0);
@@ -236,17 +295,54 @@ export async function updateOnlineTrainingSessionGoogleLinksPostgres(
   calendarEventId: string | null,
   meetJoinUrl: string | null,
   conferenceRecordId: string | null,
+  calendarLink?: string | null,
 ) {
   await queryPostgres(
     `
       UPDATE online_training_sessions
       SET calendar_event_id = $2,
-          meet_join_url = $3,
-          conference_record_id = $4,
+          calendar_link = COALESCE($3, calendar_link),
+          meet_join_url = $4,
+          conference_record_id = $5,
           updated_at = NOW()
       WHERE id = $1
     `,
-    [sessionId, calendarEventId, meetJoinUrl, conferenceRecordId],
+    [sessionId, calendarEventId, calendarLink ?? null, meetJoinUrl, conferenceRecordId],
+  );
+}
+
+export async function updateOnlineTrainingSessionOutcomesPostgres(
+  sessionId: number,
+  input: {
+    attendeeCount: number;
+    onlineTeachersTrained: number;
+    onlineSchoolLeadersTrained: number;
+    recordingUrl?: string | null;
+    chatSummary?: string | null;
+    attendanceCapturedAt: string;
+  },
+) {
+  await queryPostgres(
+    `
+      UPDATE online_training_sessions
+      SET attendee_count = $2,
+          online_teachers_trained = $3,
+          online_school_leaders_trained = $4,
+          recording_url = $5,
+          chat_summary = $6,
+          attendance_captured_at = $7::timestamptz,
+          updated_at = NOW()
+      WHERE id = $1
+    `,
+    [
+      sessionId,
+      Math.max(0, Math.trunc(input.attendeeCount)),
+      Math.max(0, Math.trunc(input.onlineTeachersTrained)),
+      Math.max(0, Math.trunc(input.onlineSchoolLeadersTrained)),
+      input.recordingUrl?.trim() || null,
+      input.chatSummary?.trim() || null,
+      input.attendanceCapturedAt,
+    ],
   );
 }
 
