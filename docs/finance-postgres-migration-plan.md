@@ -151,6 +151,12 @@ First repository surface should cover the highest-volume functions from [src/lib
 Add:
 - `scripts/postgres-import-finance.ts`
 
+After import, verify counts and finance business-key uniqueness with:
+
+```bash
+npx tsx scripts/postgres-verify-staging.ts --scope=finance
+```
+
 Import order should be:
 1. `finance_contacts`
 2. `finance_settings`

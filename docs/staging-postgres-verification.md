@@ -45,6 +45,12 @@ Import the current foundation + public-impact source tables from SQLite:
 npm run postgres:import:foundation
 ```
 
+Automated verification for the imported foundation/public-impact scope:
+
+```bash
+npx tsx scripts/postgres-verify-staging.ts --scope=foundation
+```
+
 ## Import Integrity Checks
 Run these checks directly in PostgreSQL after import.
 
