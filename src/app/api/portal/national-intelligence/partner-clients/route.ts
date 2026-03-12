@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  createPartnerApiClient,
-  listPartnerApiClients,
-  setPartnerApiClientActive,
+  createPartnerApiClientAsync,
+  listPartnerApiClientsAsync,
+  setPartnerApiClientActiveAsync,
 } from "@/lib/national-intelligence";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canManagePartnerApiClients } from "@/lib/national-intelligence-auth";
@@ -31,7 +31,7 @@ export async function GET() {
   }
 
   try {
-    return NextResponse.json({ clients: listPartnerApiClients() });
+    return NextResponse.json({ clients: await listPartnerApiClientsAsync() });
   } catch (error) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = postSchema.parse(await request.json());
-    const created = createPartnerApiClient({
+    const created = await createPartnerApiClientAsync({
       user,
       input: payload,
     });
@@ -86,7 +86,7 @@ export async function PATCH(request: Request) {
 
   try {
     const payload = patchSchema.parse(await request.json());
-    setPartnerApiClientActive({
+    await setPartnerApiClientActiveAsync({
       user,
       clientId: payload.clientId,
       active: payload.active,

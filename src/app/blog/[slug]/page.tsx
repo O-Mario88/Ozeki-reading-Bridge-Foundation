@@ -1,14 +1,17 @@
 import { notFound } from "next/navigation";
 import { EditorialArticleLayout } from "@/components/blog/EditorialArticleLayout";
 import { blogPoppins } from "@/components/blog/blog-font";
-import { getMergedPublishedBlogPostBySlug, getMergedPublishedBlogPosts } from "@/lib/blog-data";
+import {
+  getMergedPublishedBlogPostBySlugAsync,
+  getMergedPublishedBlogPostsAsync,
+} from "@/lib/blog-data";
 
 type Params = Promise<{ slug: string }>;
 export const revalidate = 300;
 
 export async function generateStaticParams() {
   try {
-    const posts = getMergedPublishedBlogPosts();
+    const posts = await getMergedPublishedBlogPostsAsync();
     return posts.map((post) => ({ slug: post.slug }));
   } catch (err) {
     console.error("[blog] Failed to generate static params:", err);
@@ -18,7 +21,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { slug } = await params;
-  const post = getMergedPublishedBlogPostBySlug(slug);
+  const post = await getMergedPublishedBlogPostBySlugAsync(slug);
 
   if (!post) {
     return {
@@ -56,8 +59,8 @@ export async function generateMetadata({ params }: { params: Params }) {
 
 export default async function BlogPostPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const post = getMergedPublishedBlogPostBySlug(slug);
-  const allPosts = getMergedPublishedBlogPosts();
+  const post = await getMergedPublishedBlogPostBySlugAsync(slug);
+  const allPosts = await getMergedPublishedBlogPostsAsync();
 
   if (!post) {
     notFound();

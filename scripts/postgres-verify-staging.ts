@@ -96,6 +96,20 @@ const OPERATIONAL_TABLES = [
   "assessment_item_responses",
 ] as const;
 
+const INTELLIGENCE_TABLES = [
+  "training_report_artifacts",
+  "benchmark_profiles",
+  "benchmark_rules",
+  "edu_audit_exceptions",
+  "edu_data_quality_summary",
+  "edu_priority_queue_assignments",
+  "intervention_plan",
+  "intervention_actions",
+  "national_report_packs",
+  "partner_api_clients",
+  "partner_export_audit_logs",
+] as const;
+
 const VIEW_NAMES = [
   "impact_public_school_scope",
   "impact_public_teacher_support",
@@ -137,6 +151,7 @@ function parseScopes(args: string[]) {
       content: true,
       onlineTraining: true,
       operational: true,
+      intelligence: true,
     };
   }
 
@@ -146,6 +161,7 @@ function parseScopes(args: string[]) {
     content: requested.has("content"),
     onlineTraining: requested.has("online-training") || requested.has("online_training"),
     operational: requested.has("operational"),
+    intelligence: requested.has("intelligence") || requested.has("reporting"),
   };
 }
 
@@ -351,9 +367,9 @@ async function verifyUniqueKeys(failures: VerificationFailure[]) {
 
 async function main() {
   const scopes = parseScopes(process.argv.slice(2));
-  if (!scopes.foundation && !scopes.finance && !scopes.content && !scopes.onlineTraining) {
+  if (!scopes.foundation && !scopes.finance && !scopes.content && !scopes.onlineTraining && !scopes.operational && !scopes.intelligence) {
     throw new Error(
-      "Nothing to verify. Use --scope=foundation, --scope=finance, --scope=content, --scope=online-training, or --scope=all.",
+      "Nothing to verify. Use --scope=foundation, --scope=finance, --scope=content, --scope=online-training, --scope=operational, --scope=intelligence, or --scope=all.",
     );
   }
   if (!isPostgresConfigured()) {
@@ -372,6 +388,8 @@ async function main() {
       scopes.finance ? "finance" : null,
       scopes.content ? "content" : null,
       scopes.onlineTraining ? "online-training" : null,
+      scopes.operational ? "operational" : null,
+      scopes.intelligence ? "intelligence" : null,
     ]
       .filter(Boolean)
       .join(", ")}`,
@@ -397,15 +415,20 @@ async function main() {
       await verifyTables(sqlite, CONTENT_TABLES, failures);
     }
 
-  if (scopes.onlineTraining) {
-    logInfo("Verifying online training tables");
-    await verifyOnlineTrainingTables(sqlite, failures);
-  }
+    if (scopes.onlineTraining) {
+      logInfo("Verifying online training tables");
+      await verifyOnlineTrainingTables(sqlite, failures);
+    }
 
-  if (scopes.operational) {
-    logInfo("Verifying operational delivery tables");
-    await verifyTables(sqlite, OPERATIONAL_TABLES, failures);
-  }
+    if (scopes.operational) {
+      logInfo("Verifying operational delivery tables");
+      await verifyTables(sqlite, OPERATIONAL_TABLES, failures);
+    }
+
+    if (scopes.intelligence) {
+      logInfo("Verifying intelligence/reporting tables");
+      await verifyTables(sqlite, INTELLIGENCE_TABLES, failures);
+    }
   } finally {
     sqlite.close();
   }

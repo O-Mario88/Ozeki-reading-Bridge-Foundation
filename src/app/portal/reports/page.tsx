@@ -9,7 +9,7 @@ import { requirePortalUser, getPortalHomePath } from "@/lib/portal-auth";
 import { redirect } from "next/navigation";
 import { PortalOperationsReportsWorkspace } from "@/components/portal/PortalOperationsReportsWorkspace";
 import { PortalTrainingReportsManager } from "@/components/portal/PortalTrainingReportsManager";
-import { listTrainingReportArtifacts } from "@/lib/training-report-automation";
+import { listTrainingReportArtifactsAsync } from "@/lib/training-report-automation";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +84,7 @@ export default async function PortalReportsPage({
       : [];
   const trainingReports =
     activeTab === "training-reports" && canAccessTrainingReports
-      ? listTrainingReportArtifacts({ limit: 40 })
+      ? await listTrainingReportArtifactsAsync({ limit: 40 })
       : [];
 
   return (

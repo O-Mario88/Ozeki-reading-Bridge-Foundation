@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   generateTrainingReportArtifact,
-  listTrainingReportArtifacts,
+  listTrainingReportArtifactsAsync,
 } from "@/lib/training-report-automation";
 import type { TrainingReportScopeType } from "@/lib/types";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
@@ -47,7 +47,9 @@ function canAccessInternalTrainingReports(user: {
   );
 }
 
-function toResponseRecord(artifact: ReturnType<typeof listTrainingReportArtifacts>[number]) {
+function toResponseRecord(
+  artifact: Awaited<ReturnType<typeof listTrainingReportArtifactsAsync>>[number],
+) {
   return {
     id: artifact.id,
     reportCode: artifact.reportCode,
@@ -85,7 +87,7 @@ export async function GET(request: Request) {
       limit: searchParams.get("limit") ?? undefined,
     });
 
-    const records = listTrainingReportArtifacts({
+    const records = await listTrainingReportArtifactsAsync({
       scopeType: parsed.scopeType as TrainingReportScopeType | undefined,
       scopeValue: parsed.scopeValue,
       limit: parsed.limit,
@@ -146,4 +148,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
-

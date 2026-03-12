@@ -1,6 +1,6 @@
 import { EditorialBlogIndex } from "@/components/blog/EditorialBlogIndex";
 import { blogPoppins } from "@/components/blog/blog-font";
-import { getMergedBlogCategories, getMergedPublishedBlogPosts } from "@/lib/blog-data";
+import { getMergedBlogCategoriesAsync, getMergedPublishedBlogPostsAsync } from "@/lib/blog-data";
 
 export const revalidate = 300;
 
@@ -10,9 +10,9 @@ export const metadata = {
     "Practical literacy guidance for phonics, fluency, comprehension, assessments, remedial strategies, and school systems.",
 };
 
-export default function BlogPage() {
-  const posts = getMergedPublishedBlogPosts();
-  const categories = getMergedBlogCategories();
+export default async function BlogPage() {
+  const posts = await getMergedPublishedBlogPostsAsync();
+  const categories = await getMergedBlogCategoriesAsync();
 
   return (
     <div className={`${blogPoppins.className} ${blogPoppins.variable}`}>

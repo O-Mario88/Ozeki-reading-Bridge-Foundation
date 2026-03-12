@@ -1,6 +1,7 @@
 import { getDb, logAuditEvent } from "@/lib/db";
 import { blogPosts as staticBlogPosts } from "@/lib/content";
 import { sanitizeInlineRichText, stripHtmlTags } from "@/lib/rich-text";
+import { isPostgresConfigured, queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 import type {
   BlogArticleType,
   BlogBodyBlock,
@@ -91,25 +92,25 @@ type PortalBlogPostRow = {
   featuredImageCredit: string | null;
   overlayStrength: BlogOverlayStrength | null;
   heroTextAlignment: BlogHeroTextAlignment | null;
-  showOverlayMetadata: number | null;
-  showOverlayShareIcons: number | null;
+  showOverlayMetadata: number | boolean | null;
+  showOverlayShareIcons: number | boolean | null;
   primaryCategory: string | null;
   secondaryCategoriesJson: string;
   authorAvatarUrl: string | null;
   authorBio: string | null;
-  tocEnabled: number | null;
+  tocEnabled: number | boolean | null;
   spotlightMode: BlogSpotlightMode | null;
   spotlightArticleSlugsJson: string;
-  showSpotlightSidebar: number | null;
-  showCategoryExplorer: number | null;
-  showNewsletterBlock: number | null;
+  showSpotlightSidebar: number | boolean | null;
+  showCategoryExplorer: number | boolean | null;
+  showNewsletterBlock: number | boolean | null;
   ctaCardJson: string;
   seoTitle: string | null;
   metaDescription: string | null;
   socialImageUrl: string | null;
   canonicalUrl: string | null;
-  featuredFlag: number | null;
-  allowComments: number | null;
+  featuredFlag: number | boolean | null;
+  allowComments: number | boolean | null;
   publishStatus: PortalBlogPublishStatus;
   createdByUserId: number;
   createdByUserName: string;
@@ -178,6 +179,57 @@ const SELECT_PORTAL_BLOG_COLUMNS = `
   created_by_user_name AS createdByUserName,
   created_at AS createdAt,
   updated_at AS updatedAt
+`;
+
+const SELECT_PORTAL_BLOG_COLUMNS_POSTGRES = `
+  id,
+  slug,
+  title,
+  subtitle,
+  excerpt,
+  category,
+  author_name AS "authorName",
+  author_role AS "authorRole",
+  published_at::text AS "publishedAt",
+  read_time AS "readTime",
+  read_time_minutes AS "readTimeMinutes",
+  tags_json AS "tagsJson",
+  sections_json AS "sectionsJson",
+  body_blocks_json AS "bodyBlocksJson",
+  media_image_url AS "mediaImageUrl",
+  media_video_url AS "mediaVideoUrl",
+  article_type AS "articleType",
+  header_layout_type AS "headerLayoutType",
+  featured_image_url AS "featuredImageUrl",
+  featured_image_alt AS "featuredImageAlt",
+  featured_image_caption AS "featuredImageCaption",
+  featured_image_credit AS "featuredImageCredit",
+  overlay_strength AS "overlayStrength",
+  hero_text_alignment AS "heroTextAlignment",
+  show_overlay_metadata AS "showOverlayMetadata",
+  show_overlay_share_icons AS "showOverlayShareIcons",
+  primary_category AS "primaryCategory",
+  secondary_categories_json AS "secondaryCategoriesJson",
+  author_avatar_url AS "authorAvatarUrl",
+  author_bio AS "authorBio",
+  toc_enabled AS "tocEnabled",
+  spotlight_mode AS "spotlightMode",
+  spotlight_article_slugs_json AS "spotlightArticleSlugsJson",
+  show_spotlight_sidebar AS "showSpotlightSidebar",
+  show_category_explorer AS "showCategoryExplorer",
+  show_newsletter_block AS "showNewsletterBlock",
+  cta_card_json AS "ctaCardJson",
+  seo_title AS "seoTitle",
+  meta_description AS "metaDescription",
+  social_image_url AS "socialImageUrl",
+  canonical_url AS "canonicalUrl",
+  featured_flag AS "featuredFlag",
+  allow_comments AS "allowComments",
+  publish_status AS "publishStatus",
+  created_by_user_id AS "createdByUserId",
+  created_by_user_name AS "createdByUserName",
+  created_at::text AS "createdAt",
+  updated_at::text AS "updatedAt"
 `;
 
 function hasColumn(table: string, column: string) {
@@ -725,6 +777,41 @@ function resolveUniqueSlug(rawSlug: string | undefined, title: string, excludeId
   }
 }
 
+async function resolveUniqueSlugAsync(rawSlug: string | undefined, title: string, excludeId?: number) {
+  if (!isPostgresConfigured()) {
+    return resolveUniqueSlug(rawSlug, title, excludeId);
+  }
+
+  const candidate = slugifySegment(rawSlug?.trim() || title);
+  if (!candidate) {
+    throw new Error("A valid slug could not be generated from the title.");
+  }
+
+  let slug = candidate;
+  let suffix = 2;
+  while (true) {
+    if (STATIC_BLOG_SLUGS.has(slug)) {
+      slug = `${candidate}-${suffix++}`;
+      continue;
+    }
+
+    const result = await queryPostgres<{ id: number }>(
+      `
+        SELECT id
+        FROM portal_blog_posts
+        WHERE slug = $1
+        LIMIT 1
+      `,
+      [slug],
+    );
+    const existingId = result.rows[0]?.id ? Number(result.rows[0].id) : null;
+    if (!existingId || (excludeId && existingId === excludeId)) {
+      return slug;
+    }
+    slug = `${candidate}-${suffix++}`;
+  }
+}
+
 function normalizeBlogSlugInput(slug: string) {
   const normalized = slug.trim().toLowerCase().slice(0, 140);
   if (!normalized) {
@@ -904,6 +991,23 @@ function getPortalBlogPostById(id: number) {
   return row ? mapPortalBlogPostRow(row) : null;
 }
 
+async function getPortalBlogPostByIdAsync(id: number) {
+  if (!isPostgresConfigured()) {
+    return getPortalBlogPostById(id);
+  }
+
+  const result = await queryPostgres<PortalBlogPostRow>(
+    `
+      SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES}
+      FROM portal_blog_posts
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [id],
+  );
+  return result.rows[0] ? mapPortalBlogPostRow(result.rows[0]) : null;
+}
+
 function canDeletePost(user: PortalUser, post: PortalBlogPostRecord) {
   return user.isSuperAdmin || user.isAdmin || post.createdByUserId === user.id;
 }
@@ -920,6 +1024,22 @@ export function listPortalBlogPosts(includeDrafts = true): PortalBlogPostRecord[
     )
     .all() as PortalBlogPostRow[];
   return rows.map(mapPortalBlogPostRow);
+}
+
+export async function listPortalBlogPostsAsync(includeDrafts = true): Promise<PortalBlogPostRecord[]> {
+  if (!isPostgresConfigured()) {
+    return listPortalBlogPosts(includeDrafts);
+  }
+
+  const result = await queryPostgres<PortalBlogPostRow>(
+    `
+      SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES}
+      FROM portal_blog_posts
+      ${includeDrafts ? "" : "WHERE publish_status = 'published'"}
+      ORDER BY published_at DESC, id DESC
+    `,
+  );
+  return result.rows.map(mapPortalBlogPostRow);
 }
 
 export function getPublishedPortalBlogPostBySlug(slug: string): BlogPost | null {
@@ -941,8 +1061,32 @@ export function getPublishedPortalBlogPostBySlug(slug: string): BlogPost | null 
   return toPublishedBlogPost(mapPortalBlogPostRow(row));
 }
 
+export async function getPublishedPortalBlogPostBySlugAsync(slug: string): Promise<BlogPost | null> {
+  if (!isPostgresConfigured()) {
+    return getPublishedPortalBlogPostBySlug(slug);
+  }
+
+  const result = await queryPostgres<PortalBlogPostRow>(
+    `
+      SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES}
+      FROM portal_blog_posts
+      WHERE slug = $1
+        AND publish_status = 'published'
+      LIMIT 1
+    `,
+    [slug],
+  );
+
+  return result.rows[0] ? toPublishedBlogPost(mapPortalBlogPostRow(result.rows[0])) : null;
+}
+
 export function listPublishedPortalBlogPosts(): BlogPost[] {
   return listPortalBlogPosts(false).map(toPublishedBlogPost);
+}
+
+export async function listPublishedPortalBlogPostsAsync(): Promise<BlogPost[]> {
+  const posts = await listPortalBlogPostsAsync(false);
+  return posts.map(toPublishedBlogPost);
 }
 
 export function recordBlogPostView(postSlugRaw: string, sessionIdRaw: string) {
@@ -962,6 +1106,38 @@ export function recordBlogPostView(postSlugRaw: string, sessionIdRaw: string) {
   return {
     postSlug,
     viewCount: getBlogPostViewCount(postSlug),
+  };
+}
+
+export async function recordBlogPostViewAsync(postSlugRaw: string, sessionIdRaw: string) {
+  if (!isPostgresConfigured()) {
+    return recordBlogPostView(postSlugRaw, sessionIdRaw);
+  }
+
+  const postSlug = normalizeBlogSlugInput(postSlugRaw);
+  const sessionId = normalizeSessionId(sessionIdRaw);
+
+  await queryPostgres(
+    `
+      INSERT INTO blog_post_views (post_slug, session_id)
+      VALUES ($1, $2)
+      ON CONFLICT (post_slug, session_id) DO NOTHING
+    `,
+    [postSlug, sessionId],
+  );
+
+  const countResult = await queryPostgres<{ count: string }>(
+    `
+      SELECT COUNT(*)::text AS count
+      FROM blog_post_views
+      WHERE post_slug = $1
+    `,
+    [postSlug],
+  );
+
+  return {
+    postSlug,
+    viewCount: Number(countResult.rows[0]?.count ?? 0),
   };
 }
 
@@ -998,6 +1174,64 @@ export function toggleBlogPostLike(postSlugRaw: string, sessionIdRaw: string) {
   };
 }
 
+export async function toggleBlogPostLikeAsync(postSlugRaw: string, sessionIdRaw: string) {
+  if (!isPostgresConfigured()) {
+    return toggleBlogPostLike(postSlugRaw, sessionIdRaw);
+  }
+
+  const postSlug = normalizeBlogSlugInput(postSlugRaw);
+  const sessionId = normalizeSessionId(sessionIdRaw);
+  let likedByViewer = false;
+
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const existing = await client.query<{ id: number }>(
+        `
+          SELECT id
+          FROM blog_post_likes
+          WHERE post_slug = $1
+            AND session_id = $2
+          LIMIT 1
+        `,
+        [postSlug, sessionId],
+      );
+
+      if (existing.rows[0]?.id) {
+        await client.query(`DELETE FROM blog_post_likes WHERE id = $1`, [existing.rows[0].id]);
+      } else {
+        await client.query(
+          `
+            INSERT INTO blog_post_likes (post_slug, session_id)
+            VALUES ($1, $2)
+          `,
+          [postSlug, sessionId],
+        );
+        likedByViewer = true;
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+
+  const countResult = await queryPostgres<{ count: string }>(
+    `
+      SELECT COUNT(*)::text AS count
+      FROM blog_post_likes
+      WHERE post_slug = $1
+    `,
+    [postSlug],
+  );
+
+  return {
+    postSlug,
+    likedByViewer,
+    likeCount: Number(countResult.rows[0]?.count ?? 0),
+  };
+}
+
 export function addBlogPostComment(input: {
   postSlug: string;
   commentText: string;
@@ -1028,6 +1262,38 @@ export function addBlogPostComment(input: {
   return row ? mapBlogCommentRow(row) : null;
 }
 
+export async function addBlogPostCommentAsync(input: {
+  postSlug: string;
+  commentText: string;
+  displayName?: string | null;
+  sessionId?: string | null;
+}) {
+  if (!isPostgresConfigured()) {
+    return addBlogPostComment(input);
+  }
+
+  const postSlug = normalizeBlogSlugInput(input.postSlug);
+  const commentText = normalizeCommentText(input.commentText);
+  const displayName = normalizeCommentDisplayName(input.displayName);
+  const sessionId = input.sessionId ? normalizeSessionId(input.sessionId) : null;
+
+  const result = await queryPostgres<Record<string, unknown>>(
+    `
+      INSERT INTO blog_post_comments (post_slug, session_id, display_name, comment_text)
+      VALUES ($1, $2, $3, $4)
+      RETURNING
+        id,
+        post_slug,
+        display_name,
+        comment_text,
+        created_at::text AS created_at
+    `,
+    [postSlug, sessionId, displayName, commentText],
+  );
+
+  return result.rows[0] ? mapBlogCommentRow(result.rows[0]) : null;
+}
+
 export function listBlogPostComments(postSlugRaw: string, limit = 50): BlogComment[] {
   ensurePortalBlogSchema();
   const db = getDb();
@@ -1045,6 +1311,34 @@ export function listBlogPostComments(postSlugRaw: string, limit = 50): BlogComme
     .all({ postSlug, limit: normalizedLimit }) as Record<string, unknown>[];
 
   return rows.map(mapBlogCommentRow);
+}
+
+export async function listBlogPostCommentsAsync(postSlugRaw: string, limit = 50): Promise<BlogComment[]> {
+  if (!isPostgresConfigured()) {
+    return listBlogPostComments(postSlugRaw, limit);
+  }
+
+  const postSlug = normalizeBlogSlugInput(postSlugRaw);
+  const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, Math.round(limit))) : 50;
+
+  const result = await queryPostgres<Record<string, unknown>>(
+    `
+      SELECT
+        id,
+        post_slug,
+        display_name,
+        comment_text,
+        created_at::text AS created_at
+      FROM blog_post_comments
+      WHERE post_slug = $1
+        AND status = 'visible'
+      ORDER BY created_at DESC, id DESC
+      LIMIT $2
+    `,
+    [postSlug, normalizedLimit],
+  );
+
+  return result.rows.map(mapBlogCommentRow);
 }
 
 export function getBlogPostEngagement(postSlugRaw: string, sessionIdRaw?: string | null): BlogEngagement {
@@ -1074,6 +1368,55 @@ export function getBlogPostEngagement(postSlugRaw: string, sessionIdRaw?: string
     likeCount: getBlogPostLikeCount(postSlug),
     commentCount: getBlogPostCommentCount(postSlug),
     likedByViewer,
+    comments,
+  };
+}
+
+export async function getBlogPostEngagementAsync(
+  postSlugRaw: string,
+  sessionIdRaw?: string | null,
+): Promise<BlogEngagement> {
+  if (!isPostgresConfigured()) {
+    return getBlogPostEngagement(postSlugRaw, sessionIdRaw);
+  }
+
+  const postSlug = normalizeBlogSlugInput(postSlugRaw);
+  const sessionId = sessionIdRaw ? normalizeSessionId(sessionIdRaw) : null;
+
+  const [viewResult, likeResult, commentResult, likedResult, comments] = await Promise.all([
+    queryPostgres<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM blog_post_views WHERE post_slug = $1`,
+      [postSlug],
+    ),
+    queryPostgres<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM blog_post_likes WHERE post_slug = $1`,
+      [postSlug],
+    ),
+    queryPostgres<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM blog_post_comments WHERE post_slug = $1 AND status = 'visible'`,
+      [postSlug],
+    ),
+    sessionId
+      ? queryPostgres<{ liked: boolean }>(
+        `
+          SELECT TRUE AS liked
+          FROM blog_post_likes
+          WHERE post_slug = $1
+            AND session_id = $2
+          LIMIT 1
+        `,
+        [postSlug, sessionId],
+      )
+      : Promise.resolve({ rows: [] } as Awaited<ReturnType<typeof queryPostgres<{ liked: boolean }>>>),
+    listBlogPostCommentsAsync(postSlug, 120),
+  ]);
+
+  return {
+    postSlug,
+    viewCount: Number(viewResult.rows[0]?.count ?? 0),
+    likeCount: Number(likeResult.rows[0]?.count ?? 0),
+    commentCount: Number(commentResult.rows[0]?.count ?? 0),
+    likedByViewer: Boolean(likedResult.rows[0]?.liked),
     comments,
   };
 }
@@ -1378,6 +1721,375 @@ export function savePortalBlogPost(input: SavePortalBlogPostInput, user: PortalU
   return getPortalBlogPostById(createdId);
 }
 
+export async function savePortalBlogPostAsync(input: SavePortalBlogPostInput, user: PortalUser) {
+  if (!isPostgresConfigured()) {
+    return savePortalBlogPost(input, user);
+  }
+
+  const now = new Date().toISOString();
+  const title = input.title.trim().slice(0, 220);
+  const subtitle = (input.subtitle ?? "").trim().slice(0, 280);
+  const excerpt = input.excerpt.trim().slice(0, 1500);
+  const category = input.category.trim().slice(0, 80);
+  const author = input.author.trim().slice(0, 120);
+  const role = input.role.trim().slice(0, 120);
+  const publishStatus: PortalBlogPublishStatus = input.publishStatus === "published" ? "published" : "draft";
+
+  const bodyBlocks = normalizeBodyBlocksForSave(input.bodyBlocks, input.sections ?? []);
+  const sections = normalizeSectionsForSave(input.sections, bodyBlocks);
+  const inferredReadTime = inferReadTimeFromBodyBlocks(bodyBlocks);
+  const readTimeMinutes = Number.isFinite(input.readTimeMinutes ?? Number.NaN)
+    ? Math.max(1, Math.round(Number(input.readTimeMinutes)))
+    : inferredReadTime.readTimeMinutes;
+  const readTime = (input.readTime ?? "").trim() || `${readTimeMinutes} min read`;
+  const tags = normalizeTags(input.tags);
+  const secondaryCategories = normalizeTags(input.secondaryCategories);
+  const spotlightArticleSlugs = normalizeTags(input.spotlightArticleSlugs);
+  const ctaCard = normalizeCtaCard(input.ctaCard ?? DEFAULT_CTA_CARD);
+
+  if (title.length < 3) {
+    throw new Error("Blog title must be at least 3 characters.");
+  }
+  if (excerpt.length < 10) {
+    throw new Error("Blog excerpt must be at least 10 characters.");
+  }
+  if (category.length < 2) {
+    throw new Error("Blog category is required.");
+  }
+  if (author.length < 2) {
+    throw new Error("Author name is required.");
+  }
+  if (role.length < 2) {
+    throw new Error("Author role is required.");
+  }
+
+  const values = {
+    title,
+    subtitle: subtitle || null,
+    excerpt,
+    category,
+    authorName: author,
+    authorRole: role,
+    readTime,
+    readTimeMinutes,
+    tagsJson: JSON.stringify(tags),
+    sectionsJson: JSON.stringify(sections),
+    bodyBlocksJson: JSON.stringify(bodyBlocks),
+    mediaImageUrl: (input.mediaImageUrl ?? "").trim() || null,
+    mediaVideoUrl: (input.mediaVideoUrl ?? "").trim() || null,
+    articleType: input.articleType ?? "Blog Post",
+    headerLayoutType: input.headerLayoutType ?? "standard",
+    featuredImageUrl: (input.featuredImageUrl ?? "").trim() || null,
+    featuredImageAlt: (input.featuredImageAlt ?? "").trim() || null,
+    featuredImageCaption: (input.featuredImageCaption ?? "").trim() || null,
+    featuredImageCredit: (input.featuredImageCredit ?? "").trim() || null,
+    overlayStrength: input.overlayStrength ?? "medium",
+    heroTextAlignment: input.heroTextAlignment ?? "left",
+    showOverlayMetadata: input.showOverlayMetadata !== false,
+    showOverlayShareIcons: input.showOverlayShareIcons !== false,
+    primaryCategory: (input.primaryCategory ?? "").trim() || category,
+    secondaryCategoriesJson: JSON.stringify(secondaryCategories),
+    authorAvatarUrl: (input.authorAvatarUrl ?? "").trim() || null,
+    authorBio: (input.authorBio ?? "").trim() || null,
+    tocEnabled: input.tocEnabled !== false,
+    spotlightMode: input.spotlightMode ?? "auto",
+    spotlightArticleSlugsJson: JSON.stringify(spotlightArticleSlugs),
+    showSpotlightSidebar: input.showSpotlightSidebar !== false,
+    showCategoryExplorer: input.showCategoryExplorer !== false,
+    showNewsletterBlock: input.showNewsletterBlock === true,
+    ctaCardJson: JSON.stringify(ctaCard),
+    seoTitle: (input.seoTitle ?? "").trim() || null,
+    metaDescription: (input.metaDescription ?? "").trim() || null,
+    socialImageUrl: (input.socialImageUrl ?? "").trim() || null,
+    canonicalUrl: (input.canonicalUrl ?? "").trim() || null,
+    featuredFlag: input.featuredFlag === true,
+    allowComments: input.allowComments === true,
+    publishStatus,
+  };
+
+  if (input.id) {
+    const existing = await getPortalBlogPostByIdAsync(input.id);
+    if (!existing) {
+      throw new Error("Blog post not found.");
+    }
+    const canEdit = user.isSuperAdmin || user.isAdmin || existing.createdByUserId === user.id;
+    if (!canEdit) {
+      throw new Error("You do not have permission to edit this blog post.");
+    }
+
+    const slug = await resolveUniqueSlugAsync(input.slug, title, existing.id);
+    const publishedAt = normalizeIsoDate(
+      input.publishedAt,
+      publishStatus === "published" ? now : existing.publishedAt,
+    );
+
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          `
+            UPDATE portal_blog_posts
+            SET
+              slug = $2,
+              title = $3,
+              subtitle = $4,
+              excerpt = $5,
+              category = $6,
+              author_name = $7,
+              author_role = $8,
+              published_at = $9::timestamptz,
+              read_time = $10,
+              read_time_minutes = $11,
+              tags_json = $12,
+              sections_json = $13,
+              body_blocks_json = $14,
+              media_image_url = $15,
+              media_video_url = $16,
+              article_type = $17,
+              header_layout_type = $18,
+              featured_image_url = $19,
+              featured_image_alt = $20,
+              featured_image_caption = $21,
+              featured_image_credit = $22,
+              overlay_strength = $23,
+              hero_text_alignment = $24,
+              show_overlay_metadata = $25,
+              show_overlay_share_icons = $26,
+              primary_category = $27,
+              secondary_categories_json = $28,
+              author_avatar_url = $29,
+              author_bio = $30,
+              toc_enabled = $31,
+              spotlight_mode = $32,
+              spotlight_article_slugs_json = $33,
+              show_spotlight_sidebar = $34,
+              show_category_explorer = $35,
+              show_newsletter_block = $36,
+              cta_card_json = $37,
+              seo_title = $38,
+              meta_description = $39,
+              social_image_url = $40,
+              canonical_url = $41,
+              featured_flag = $42,
+              allow_comments = $43,
+              publish_status = $44,
+              updated_at = $45::timestamptz
+            WHERE id = $1
+          `,
+          [
+            existing.id,
+            slug,
+            values.title,
+            values.subtitle,
+            values.excerpt,
+            values.category,
+            values.authorName,
+            values.authorRole,
+            publishedAt,
+            values.readTime,
+            values.readTimeMinutes,
+            values.tagsJson,
+            values.sectionsJson,
+            values.bodyBlocksJson,
+            values.mediaImageUrl,
+            values.mediaVideoUrl,
+            values.articleType,
+            values.headerLayoutType,
+            values.featuredImageUrl,
+            values.featuredImageAlt,
+            values.featuredImageCaption,
+            values.featuredImageCredit,
+            values.overlayStrength,
+            values.heroTextAlignment,
+            values.showOverlayMetadata,
+            values.showOverlayShareIcons,
+            values.primaryCategory,
+            values.secondaryCategoriesJson,
+            values.authorAvatarUrl,
+            values.authorBio,
+            values.tocEnabled,
+            values.spotlightMode,
+            values.spotlightArticleSlugsJson,
+            values.showSpotlightSidebar,
+            values.showCategoryExplorer,
+            values.showNewsletterBlock,
+            values.ctaCardJson,
+            values.seoTitle,
+            values.metaDescription,
+            values.socialImageUrl,
+            values.canonicalUrl,
+            values.featuredFlag,
+            values.allowComments,
+            values.publishStatus,
+            now,
+          ],
+        );
+        await client.query(
+          `
+            INSERT INTO audit_logs (
+              user_id, user_name, action, target_table, target_id, payload_before, payload_after, detail
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `,
+          [
+            user.id,
+            user.fullName,
+            "update",
+            "portal_blog_posts",
+            String(existing.id),
+            JSON.stringify(existing),
+            JSON.stringify({ slug, title, publishStatus }),
+            `Updated blog post ${slug}`,
+          ],
+        );
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+
+    return await getPortalBlogPostByIdAsync(existing.id);
+  }
+
+  const slug = await resolveUniqueSlugAsync(input.slug, title);
+  const publishedAt = normalizeIsoDate(input.publishedAt, now);
+
+  const createdId = await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const insertResult = await client.query<{ id: number }>(
+        `
+          INSERT INTO portal_blog_posts (
+            slug,
+            title,
+            subtitle,
+            excerpt,
+            category,
+            author_name,
+            author_role,
+            published_at,
+            read_time,
+            read_time_minutes,
+            tags_json,
+            sections_json,
+            body_blocks_json,
+            media_image_url,
+            media_video_url,
+            article_type,
+            header_layout_type,
+            featured_image_url,
+            featured_image_alt,
+            featured_image_caption,
+            featured_image_credit,
+            overlay_strength,
+            hero_text_alignment,
+            show_overlay_metadata,
+            show_overlay_share_icons,
+            primary_category,
+            secondary_categories_json,
+            author_avatar_url,
+            author_bio,
+            toc_enabled,
+            spotlight_mode,
+            spotlight_article_slugs_json,
+            show_spotlight_sidebar,
+            show_category_explorer,
+            show_newsletter_block,
+            cta_card_json,
+            seo_title,
+            meta_description,
+            social_image_url,
+            canonical_url,
+            featured_flag,
+            allow_comments,
+            publish_status,
+            created_by_user_id,
+            created_by_user_name,
+            created_at,
+            updated_at
+          ) VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45,$46::timestamptz,$47::timestamptz
+          )
+          RETURNING id
+        `,
+        [
+          slug,
+          values.title,
+          values.subtitle,
+          values.excerpt,
+          values.category,
+          values.authorName,
+          values.authorRole,
+          publishedAt,
+          values.readTime,
+          values.readTimeMinutes,
+          values.tagsJson,
+          values.sectionsJson,
+          values.bodyBlocksJson,
+          values.mediaImageUrl,
+          values.mediaVideoUrl,
+          values.articleType,
+          values.headerLayoutType,
+          values.featuredImageUrl,
+          values.featuredImageAlt,
+          values.featuredImageCaption,
+          values.featuredImageCredit,
+          values.overlayStrength,
+          values.heroTextAlignment,
+          values.showOverlayMetadata,
+          values.showOverlayShareIcons,
+          values.primaryCategory,
+          values.secondaryCategoriesJson,
+          values.authorAvatarUrl,
+          values.authorBio,
+          values.tocEnabled,
+          values.spotlightMode,
+          values.spotlightArticleSlugsJson,
+          values.showSpotlightSidebar,
+          values.showCategoryExplorer,
+          values.showNewsletterBlock,
+          values.ctaCardJson,
+          values.seoTitle,
+          values.metaDescription,
+          values.socialImageUrl,
+          values.canonicalUrl,
+          values.featuredFlag,
+          values.allowComments,
+          values.publishStatus,
+          user.id,
+          user.fullName,
+          now,
+          now,
+        ],
+      );
+      const createdId = Number(insertResult.rows[0]?.id ?? 0);
+      await client.query(
+        `
+          INSERT INTO audit_logs (
+            user_id, user_name, action, target_table, target_id, payload_after, detail
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [
+          user.id,
+          user.fullName,
+          "create",
+          "portal_blog_posts",
+          String(createdId),
+          JSON.stringify({ slug, title, publishStatus }),
+          `Created blog post ${slug}`,
+        ],
+      );
+      await client.query("COMMIT");
+      return createdId;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+
+  return await getPortalBlogPostByIdAsync(createdId);
+}
+
 export function setPortalBlogPublishStatus(
   postId: number,
   publishStatus: PortalBlogPublishStatus,
@@ -1422,6 +2134,66 @@ export function setPortalBlogPublishStatus(
   return getPortalBlogPostById(postId);
 }
 
+export async function setPortalBlogPublishStatusAsync(
+  postId: number,
+  publishStatus: PortalBlogPublishStatus,
+  user: PortalUser,
+) {
+  if (!isPostgresConfigured()) {
+    return setPortalBlogPublishStatus(postId, publishStatus, user);
+  }
+
+  const post = await getPortalBlogPostByIdAsync(postId);
+  if (!post) {
+    throw new Error("Blog post not found.");
+  }
+
+  const canUpdate = user.isSuperAdmin || user.isAdmin || post.createdByUserId === user.id;
+  if (!canUpdate) {
+    throw new Error("You do not have permission to change this blog post status.");
+  }
+
+  const now = new Date().toISOString();
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await client.query(
+        `
+          UPDATE portal_blog_posts
+          SET publish_status = $2,
+              published_at = CASE WHEN $2 = 'published' THEN $3::timestamptz ELSE published_at END,
+              updated_at = $3::timestamptz
+          WHERE id = $1
+        `,
+        [postId, publishStatus, now],
+      );
+      await client.query(
+        `
+          INSERT INTO audit_logs (
+            user_id, user_name, action, target_table, target_id, payload_before, payload_after, detail
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `,
+        [
+          user.id,
+          user.fullName,
+          "update",
+          "portal_blog_posts",
+          String(postId),
+          JSON.stringify({ publishStatus: post.publishStatus }),
+          JSON.stringify({ publishStatus }),
+          `${publishStatus === "published" ? "Published" : "Unpublished"} blog post ${post.slug}`,
+        ],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+
+  return await getPortalBlogPostByIdAsync(postId);
+}
+
 export function deletePortalBlogPost(postId: number, user: PortalUser) {
   ensurePortalBlogSchema();
   const db = getDb();
@@ -1448,4 +2220,49 @@ export function deletePortalBlogPost(postId: number, user: PortalUser) {
     null,
     `Deleted blog post ${post.slug}`,
   );
+}
+
+export async function deletePortalBlogPostAsync(postId: number, user: PortalUser) {
+  if (!isPostgresConfigured()) {
+    deletePortalBlogPost(postId, user);
+    return;
+  }
+
+  const post = await getPortalBlogPostByIdAsync(postId);
+  if (!post) {
+    throw new Error("Blog post not found.");
+  }
+  if (!canDeletePost(user, post)) {
+    throw new Error("You do not have permission to delete this blog post.");
+  }
+
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await client.query(`DELETE FROM blog_post_views WHERE post_slug = $1`, [post.slug]);
+      await client.query(`DELETE FROM blog_post_likes WHERE post_slug = $1`, [post.slug]);
+      await client.query(`DELETE FROM blog_post_comments WHERE post_slug = $1`, [post.slug]);
+      await client.query(`DELETE FROM portal_blog_posts WHERE id = $1`, [postId]);
+      await client.query(
+        `
+          INSERT INTO audit_logs (
+            user_id, user_name, action, target_table, target_id, payload_before, detail
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [
+          user.id,
+          user.fullName,
+          "delete",
+          "portal_blog_posts",
+          String(postId),
+          JSON.stringify(post),
+          `Deleted blog post ${post.slug}`,
+        ],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
 }

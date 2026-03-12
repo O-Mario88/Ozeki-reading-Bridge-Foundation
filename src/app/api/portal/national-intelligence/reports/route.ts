@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   generateNationalReportPack,
-  listNationalReportPacks,
+  listNationalReportPacksAsync,
   listNationalReportPresets,
 } from "@/lib/national-intelligence";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       limit: searchParams.get("limit") ?? undefined,
     });
 
-    const reports = listNationalReportPacks({
+    const reports = await listNationalReportPacksAsync({
       preset: parsed.preset,
       scopeType: parsed.scopeType,
       scopeId: parsed.scopeId,

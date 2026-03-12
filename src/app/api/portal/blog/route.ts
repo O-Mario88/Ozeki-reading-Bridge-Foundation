@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  deletePortalBlogPost,
-  listPortalBlogPosts,
-  savePortalBlogPost,
-  setPortalBlogPublishStatus,
+  deletePortalBlogPostAsync,
+  listPortalBlogPostsAsync,
+  savePortalBlogPostAsync,
+  setPortalBlogPublishStatusAsync,
 } from "@/lib/blog-db";
 import { getCurrentPortalUser } from "@/lib/portal-auth";
 
@@ -157,7 +157,7 @@ export async function GET() {
   if (!canManageBlog(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  return NextResponse.json({ posts: listPortalBlogPosts(true) });
+  return NextResponse.json({ posts: await listPortalBlogPostsAsync(true) });
 }
 
 export async function POST(request: NextRequest) {
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "save") {
       const payload = saveActionSchema.parse(body);
-      const post = savePortalBlogPost(
+      const post = await savePortalBlogPostAsync(
         {
           id: payload.id,
           slug: payload.slug,
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "publish" || action === "unpublish") {
       const payload = statusActionSchema.parse(body);
-      const post = setPortalBlogPublishStatus(
+      const post = await setPortalBlogPublishStatusAsync(
         payload.postId,
         payload.action === "publish" ? "published" : "draft",
         user,
@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "delete") {
       const payload = deleteActionSchema.parse(body);
-      deletePortalBlogPost(payload.postId, user);
+      await deletePortalBlogPostAsync(payload.postId, user);
       return NextResponse.json({ ok: true });
     }
 

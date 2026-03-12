@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getMergedPublishedBlogPosts } from "@/lib/blog-data";
+import { getMergedPublishedBlogPostsAsync } from "@/lib/blog-data";
 
 export async function GET() {
-  const posts = getMergedPublishedBlogPosts();
+  const posts = await getMergedPublishedBlogPostsAsync();
 
   return NextResponse.json({
     posts: posts.map((post) => ({

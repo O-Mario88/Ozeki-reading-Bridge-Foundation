@@ -13,6 +13,7 @@ import {
 } from "@/lib/pdf-branding";
 import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import { isPostgresConfigured, queryPostgres } from "@/lib/server/postgres/client";
 import type {
   PortalUser,
   TrainingReportArtifactRecord,
@@ -1773,8 +1774,73 @@ export async function generateTrainingReportArtifact(input: {
   const pdfBytes = await generatePdfBytes(facts, narrative, reportCode, evidencePhotos);
   const pdfStoredPath = await savePdfToDisk(reportCode, pdfBytes);
 
-  const db = getDb();
   const now = new Date().toISOString();
+  if (isPostgresConfigured()) {
+    const insertResult = await queryPostgres<{ id: number }>(
+      `
+        INSERT INTO training_report_artifacts (
+          report_code,
+          scope_type,
+          scope_value,
+          period_start,
+          period_end,
+          facts_json,
+          narrative_json,
+          html_report,
+          pdf_stored_path,
+          generated_by_user_id,
+          generated_at,
+          updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12::timestamptz
+        )
+        RETURNING id
+      `,
+      [
+        reportCode,
+        facts.scopeType,
+        facts.scopeValue,
+        facts.periodStart,
+        facts.periodEnd,
+        JSON.stringify(facts),
+        JSON.stringify(narrative),
+        htmlReport,
+        pdfStoredPath,
+        input.user.id,
+        now,
+        now,
+      ],
+    );
+
+    const artifactId = Number(insertResult.rows[0]?.id ?? 0);
+    await queryPostgres(
+      `
+        INSERT INTO audit_logs (
+          user_id, user_name, action, target_table, target_id, payload_after, detail
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `,
+      [
+        input.user.id,
+        input.user.fullName,
+        "generate_training_report",
+        "training_report_artifacts",
+        String(artifactId),
+        JSON.stringify({
+          reportCode,
+          scopeType: facts.scopeType,
+          scopeValue: facts.scopeValue,
+          periodStart: facts.periodStart,
+          periodEnd: facts.periodEnd,
+          generatedWithAi: narrative.generatedWithAi,
+        }),
+        "Generated training report artifact.",
+      ],
+    );
+
+    return await getTrainingReportArtifactByCodeAsync(reportCode);
+  }
+
+  const db = getDb();
   const insertResult = db
     .prepare(
       `
@@ -1906,6 +1972,71 @@ export function listTrainingReportArtifacts(filters?: {
   return rows.map((row) => parseArtifactRow(row));
 }
 
+export async function listTrainingReportArtifactsAsync(filters?: {
+  scopeType?: TrainingReportScopeType;
+  scopeValue?: string;
+  limit?: number;
+}) {
+  if (!isPostgresConfigured()) {
+    return listTrainingReportArtifacts(filters);
+  }
+
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (filters?.scopeType) {
+    params.push(filters.scopeType);
+    clauses.push(`tra.scope_type = $${params.length}`);
+  }
+  if (filters?.scopeValue?.trim()) {
+    params.push(filters.scopeValue.trim());
+    clauses.push(`lower(trim(tra.scope_value)) = lower(trim($${params.length}))`);
+  }
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const limit = Math.max(1, Math.min(filters?.limit ?? 60, 500));
+  const result = await queryPostgres<{
+    id: number;
+    reportCode: string;
+    scopeType: TrainingReportScopeType;
+    scopeValue: string;
+    periodStart: string;
+    periodEnd: string;
+    factsJson: string;
+    narrativeJson: string;
+    htmlReport: string;
+    pdfStoredPath: string | null;
+    generatedByUserId: number;
+    generatedByName: string;
+    generatedAt: string;
+    updatedAt: string;
+  }>(
+    `
+      SELECT
+        tra.id,
+        tra.report_code AS "reportCode",
+        tra.scope_type AS "scopeType",
+        tra.scope_value AS "scopeValue",
+        tra.period_start AS "periodStart",
+        tra.period_end AS "periodEnd",
+        tra.facts_json AS "factsJson",
+        tra.narrative_json AS "narrativeJson",
+        tra.html_report AS "htmlReport",
+        tra.pdf_stored_path AS "pdfStoredPath",
+        tra.generated_by_user_id AS "generatedByUserId",
+        pu.full_name AS "generatedByName",
+        tra.generated_at::text AS "generatedAt",
+        tra.updated_at::text AS "updatedAt"
+      FROM training_report_artifacts tra
+      JOIN portal_users pu ON pu.id = tra.generated_by_user_id
+      ${whereClause}
+      ORDER BY tra.generated_at DESC, tra.id DESC
+      LIMIT ${limit}
+    `,
+    params,
+  );
+
+  return result.rows.map((row) => parseArtifactRow(row));
+}
+
 export function getTrainingReportArtifactByCode(reportCode: string) {
   const row = getDb()
     .prepare(
@@ -1956,8 +2087,56 @@ export function getTrainingReportArtifactByCode(reportCode: string) {
   return parseArtifactRow(row);
 }
 
+export async function getTrainingReportArtifactByCodeAsync(reportCode: string) {
+  if (!isPostgresConfigured()) {
+    return getTrainingReportArtifactByCode(reportCode);
+  }
+
+  const result = await queryPostgres<{
+    id: number;
+    reportCode: string;
+    scopeType: TrainingReportScopeType;
+    scopeValue: string;
+    periodStart: string;
+    periodEnd: string;
+    factsJson: string;
+    narrativeJson: string;
+    htmlReport: string;
+    pdfStoredPath: string | null;
+    generatedByUserId: number;
+    generatedByName: string;
+    generatedAt: string;
+    updatedAt: string;
+  }>(
+    `
+      SELECT
+        tra.id,
+        tra.report_code AS "reportCode",
+        tra.scope_type AS "scopeType",
+        tra.scope_value AS "scopeValue",
+        tra.period_start AS "periodStart",
+        tra.period_end AS "periodEnd",
+        tra.facts_json AS "factsJson",
+        tra.narrative_json AS "narrativeJson",
+        tra.html_report AS "htmlReport",
+        tra.pdf_stored_path AS "pdfStoredPath",
+        tra.generated_by_user_id AS "generatedByUserId",
+        pu.full_name AS "generatedByName",
+        tra.generated_at::text AS "generatedAt",
+        tra.updated_at::text AS "updatedAt"
+      FROM training_report_artifacts tra
+      JOIN portal_users pu ON pu.id = tra.generated_by_user_id
+      WHERE tra.report_code = $1
+      LIMIT 1
+    `,
+    [reportCode.trim()],
+  );
+
+  return result.rows[0] ? parseArtifactRow(result.rows[0]) : null;
+}
+
 export async function readTrainingReportPdf(reportCode: string) {
-  const artifact = getTrainingReportArtifactByCode(reportCode);
+  const artifact = await getTrainingReportArtifactByCodeAsync(reportCode);
   if (!artifact) {
     return null;
   }
@@ -1982,18 +2161,30 @@ export async function readTrainingReportPdf(reportCode: string) {
   );
   const regeneratedPath = await savePdfToDisk(reportCode, regeneratedBytes);
   const updatedAt = new Date().toISOString();
-  getDb().prepare(
-    `
-      UPDATE training_report_artifacts
-      SET pdf_stored_path = @pdfStoredPath,
-          updated_at = @updatedAt
-      WHERE report_code = @reportCode
-    `,
-  ).run({
-    reportCode,
-    pdfStoredPath: regeneratedPath,
-    updatedAt,
-  });
+  if (isPostgresConfigured()) {
+    await queryPostgres(
+      `
+        UPDATE training_report_artifacts
+        SET pdf_stored_path = $2,
+            updated_at = $3::timestamptz
+        WHERE report_code = $1
+      `,
+      [reportCode, regeneratedPath, updatedAt],
+    );
+  } else {
+    getDb().prepare(
+      `
+        UPDATE training_report_artifacts
+        SET pdf_stored_path = @pdfStoredPath,
+            updated_at = @updatedAt
+        WHERE report_code = @reportCode
+      `,
+    ).run({
+      reportCode,
+      pdfStoredPath: regeneratedPath,
+      updatedAt,
+    });
+  }
 
   return {
     artifact: {

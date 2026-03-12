@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   assertPartnerScopeAllowed,
-  authenticatePartnerApiKey,
-  getPartnerReportsDataset,
-  logPartnerExport,
+  authenticatePartnerApiKeyAsync,
+  listNationalReportPacksAsync,
+  logPartnerExportAsync,
 } from "@/lib/national-intelligence";
 
 export const runtime = "nodejs";
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Missing partner API key." }, { status: 401 });
     }
 
-    const client = authenticatePartnerApiKey(apiKey);
+    const client = await authenticatePartnerApiKeyAsync(apiKey);
     if (!client) {
       return NextResponse.json({ error: "Invalid partner API key." }, { status: 401 });
     }
@@ -42,12 +42,25 @@ export async function GET(request: Request) {
       scopeId: parsed.scopeId,
     });
 
-    const reports = getPartnerReportsDataset({
+    const reports = (await listNationalReportPacksAsync({
       scopeType: parsed.scopeType,
       scopeId: parsed.scopeId,
-    });
+      limit: 50,
+    })).map((report) => ({
+      reportCode: report.reportCode,
+      preset: report.preset,
+      scopeType: report.scopeType,
+      scopeId: report.scopeId,
+      periodStart: report.periodStart,
+      periodEnd: report.periodEnd,
+      generatedAt: report.generatedAt,
+      generatedByName: report.generatedByName,
+      pdfUrl: report.pdfPath
+        ? `/api/portal/national-intelligence/reports/${encodeURIComponent(report.reportCode)}/pdf`
+        : null,
+    }));
 
-    logPartnerExport({
+    await logPartnerExportAsync({
       clientId: client.clientId,
       partnerName: client.partnerName,
       endpoint: "/api/partner/reports",

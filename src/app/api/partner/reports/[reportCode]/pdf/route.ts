@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import {
   assertPartnerScopeAllowed,
-  authenticatePartnerApiKey,
+  authenticatePartnerApiKeyAsync,
   getNationalReportPdf,
-  listNationalReportPacks,
-  logPartnerExport,
+  listNationalReportPacksAsync,
+  logPartnerExportAsync,
 } from "@/lib/national-intelligence";
 
 export const runtime = "nodejs";
@@ -32,7 +32,7 @@ export async function GET(
       return NextResponse.json({ error: "Missing partner API key." }, { status: 401 });
     }
 
-    const client = authenticatePartnerApiKey(apiKey);
+    const client = await authenticatePartnerApiKeyAsync(apiKey);
     if (!client) {
       return NextResponse.json({ error: "Invalid partner API key." }, { status: 401 });
     }
@@ -40,7 +40,9 @@ export async function GET(
     const params = await context.params;
     const reportCode = params.reportCode;
 
-    const report = listNationalReportPacks({ limit: 500 }).find((item) => item.reportCode === reportCode);
+    const report = (await listNationalReportPacksAsync({ limit: 500 })).find(
+      (item) => item.reportCode === reportCode,
+    );
     if (!report) {
       return NextResponse.json({ error: "Report not found." }, { status: 404 });
     }
@@ -56,7 +58,7 @@ export async function GET(
       return NextResponse.json({ error: "Report PDF not found." }, { status: 404 });
     }
 
-    logPartnerExport({
+    await logPartnerExportAsync({
       clientId: client.clientId,
       partnerName: client.partnerName,
       endpoint: "/api/partner/reports/[reportCode]/pdf",

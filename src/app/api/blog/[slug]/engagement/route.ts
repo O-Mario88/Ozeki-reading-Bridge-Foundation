@@ -2,12 +2,12 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  addBlogPostComment,
-  getBlogPostEngagement,
-  recordBlogPostView,
-  toggleBlogPostLike,
+  addBlogPostCommentAsync,
+  getBlogPostEngagementAsync,
+  recordBlogPostViewAsync,
+  toggleBlogPostLikeAsync,
 } from "@/lib/blog-db";
-import { getMergedPublishedBlogPostBySlug } from "@/lib/blog-data";
+import { getMergedPublishedBlogPostBySlugAsync } from "@/lib/blog-data";
 
 export const dynamic = "force-dynamic";
 
@@ -63,8 +63,8 @@ function withVisitorCookie(
   return response;
 }
 
-function ensurePublishedPost(slug: string) {
-  const post = getMergedPublishedBlogPostBySlug(slug);
+async function ensurePublishedPost(slug: string) {
+  const post = await getMergedPublishedBlogPostBySlugAsync(slug);
   if (!post) {
     return null;
   }
@@ -77,12 +77,12 @@ export async function GET(
 ) {
   const { slug: rawSlug } = await context.params;
   const slug = resolveSlug(rawSlug);
-  if (!ensurePublishedPost(slug)) {
+  if (!(await ensurePublishedPost(slug))) {
     return NextResponse.json({ error: "Article not found." }, { status: 404 });
   }
 
   const { visitorId, setCookie } = await getOrCreateVisitorId();
-  const engagement = getBlogPostEngagement(slug, visitorId);
+  const engagement = await getBlogPostEngagementAsync(slug, visitorId);
 
   return withVisitorCookie(
     NextResponse.json({
@@ -99,7 +99,7 @@ export async function POST(
 ) {
   const { slug: rawSlug } = await context.params;
   const slug = resolveSlug(rawSlug);
-  if (!ensurePublishedPost(slug)) {
+  if (!(await ensurePublishedPost(slug))) {
     return NextResponse.json({ error: "Article not found." }, { status: 404 });
   }
 
@@ -109,11 +109,11 @@ export async function POST(
     const payload = engagementActionSchema.parse(await request.json());
 
     if (payload.action === "view") {
-      recordBlogPostView(slug, visitorId);
+      await recordBlogPostViewAsync(slug, visitorId);
     } else if (payload.action === "like") {
-      toggleBlogPostLike(slug, visitorId);
+      await toggleBlogPostLikeAsync(slug, visitorId);
     } else if (payload.action === "comment") {
-      addBlogPostComment({
+      await addBlogPostCommentAsync({
         postSlug: slug,
         displayName: payload.displayName,
         commentText: payload.commentText,
@@ -121,7 +121,7 @@ export async function POST(
       });
     }
 
-    const engagement = getBlogPostEngagement(slug, visitorId);
+    const engagement = await getBlogPostEngagementAsync(slug, visitorId);
     return withVisitorCookie(
       NextResponse.json({
         engagement,

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PortalBlogManager } from "@/components/portal/PortalBlogManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listPortalBlogPosts } from "@/lib/blog-db";
+import { listPortalBlogPostsAsync } from "@/lib/blog-db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ type SearchParams = Promise<{
 export default async function PortalBlogPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requirePortalStaffUser();
   const query = await searchParams;
-  const posts = listPortalBlogPosts(true);
+  const posts = await listPortalBlogPostsAsync(true);
   const initialCompose = query.new === "1";
 
   return (

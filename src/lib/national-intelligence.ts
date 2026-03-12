@@ -13,6 +13,7 @@ import {
 } from "@/lib/pdf-branding";
 import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import { isPostgresConfigured, queryPostgres } from "@/lib/server/postgres/client";
 import type { PortalUser } from "@/lib/types";
 
 export type NlisGeoScopeType =
@@ -3489,7 +3490,6 @@ export async function generateNationalReportPack(args: {
   periodEnd?: string;
 }) {
   ensureNationalIntelligenceSchema();
-  const db = getDb();
 
   const periodStart = normalizeDate(args.periodStart ?? "", `${new Date().getUTCFullYear()}-01-01`);
   const periodEnd = normalizeDate(args.periodEnd ?? "", new Date().toISOString().slice(0, 10));
@@ -3536,6 +3536,71 @@ export async function generateNationalReportPack(args: {
   });
   const pdfPath = await saveNationalReportPdf(reportCode, pdfBytes);
 
+  if (isPostgresConfigured()) {
+    const now = new Date().toISOString();
+    const insert = await queryPostgres<{ reportId: number }>(
+      `
+        INSERT INTO national_report_packs (
+          report_code,
+          preset,
+          scope_type,
+          scope_id,
+          period_start,
+          period_end,
+          facts_json,
+          narrative_json,
+          html_report,
+          pdf_stored_path,
+          generated_by_user_id,
+          generated_at,
+          updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::timestamptz, $13::timestamptz
+        )
+        RETURNING report_id AS "reportId"
+      `,
+      [
+        reportCode,
+        args.preset,
+        args.scopeType,
+        args.scopeId,
+        periodStart,
+        periodEnd,
+        JSON.stringify(facts),
+        JSON.stringify(narrative),
+        htmlReport,
+        pdfPath,
+        args.user.id,
+        now,
+        now,
+      ],
+    );
+    const reportId = Number(insert.rows[0]?.reportId ?? 0);
+
+    await queryPostgres(
+      `
+        INSERT INTO audit_logs (
+          user_id, user_name, action, target_table, target_id, detail
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+      `,
+      [
+        args.user.id,
+        args.user.fullName,
+        "generate_national_report_pack",
+        "national_report_packs",
+        String(reportId),
+        `Generated ${args.preset} for ${args.scopeType}/${args.scopeId}.`,
+      ],
+    );
+
+    const report = await getNationalReportPackByIdAsync(reportId);
+    if (!report) {
+      throw new Error("Generated report pack could not be reloaded.");
+    }
+    return report;
+  }
+
+  const db = getDb();
   const insert = db
     .prepare(
       `
@@ -3674,9 +3739,131 @@ export function listNationalReportPacks(filters?: {
   return rows.map((row) => toReportRecord(row));
 }
 
+async function getNationalReportPackByIdAsync(reportId: number) {
+  if (!isPostgresConfigured()) {
+    return listNationalReportPacks({ limit: 1 }).find((item) => item.reportId === reportId) ?? null;
+  }
+
+  const result = await queryPostgres<{
+    reportId: number;
+    reportCode: string;
+    preset: string;
+    scopeType: string;
+    scopeId: string;
+    periodStart: string;
+    periodEnd: string;
+    factsJson: string;
+    narrativeJson: string;
+    htmlReport: string;
+    pdfPath: string | null;
+    generatedByUserId: number;
+    generatedByName: string;
+    generatedAt: string;
+    updatedAt: string;
+  }>(
+    `
+      SELECT
+        n.report_id AS "reportId",
+        n.report_code AS "reportCode",
+        n.preset,
+        n.scope_type AS "scopeType",
+        n.scope_id AS "scopeId",
+        n.period_start AS "periodStart",
+        n.period_end AS "periodEnd",
+        n.facts_json AS "factsJson",
+        n.narrative_json AS "narrativeJson",
+        n.html_report AS "htmlReport",
+        n.pdf_stored_path AS "pdfPath",
+        n.generated_by_user_id AS "generatedByUserId",
+        COALESCE(pu.full_name, 'Unknown') AS "generatedByName",
+        n.generated_at::text AS "generatedAt",
+        n.updated_at::text AS "updatedAt"
+      FROM national_report_packs n
+      LEFT JOIN portal_users pu ON pu.id = n.generated_by_user_id
+      WHERE n.report_id = $1
+      LIMIT 1
+    `,
+    [reportId],
+  );
+  return result.rows[0] ? toReportRecord(result.rows[0]) : null;
+}
+
+export async function listNationalReportPacksAsync(filters?: {
+  preset?: NationalReportPreset;
+  scopeType?: NlisGeoScopeType;
+  scopeId?: string;
+  limit?: number;
+}) {
+  if (!isPostgresConfigured()) {
+    return listNationalReportPacks(filters);
+  }
+
+  const clauses: string[] = ["1=1"];
+  const params: unknown[] = [];
+
+  if (filters?.preset) {
+    params.push(filters.preset);
+    clauses.push(`n.preset = $${params.length}`);
+  }
+  if (filters?.scopeType) {
+    params.push(filters.scopeType);
+    clauses.push(`n.scope_type = $${params.length}`);
+  }
+  if (filters?.scopeId?.trim()) {
+    params.push(filters.scopeId.trim());
+    clauses.push(`n.scope_id = $${params.length}`);
+  }
+
+  const limit = Math.max(1, Math.min(filters?.limit ?? 120, 500));
+  const result = await queryPostgres<{
+    reportId: number;
+    reportCode: string;
+    preset: string;
+    scopeType: string;
+    scopeId: string;
+    periodStart: string;
+    periodEnd: string;
+    factsJson: string;
+    narrativeJson: string;
+    htmlReport: string;
+    pdfPath: string | null;
+    generatedByUserId: number;
+    generatedByName: string;
+    generatedAt: string;
+    updatedAt: string;
+  }>(
+    `
+      SELECT
+        n.report_id AS "reportId",
+        n.report_code AS "reportCode",
+        n.preset,
+        n.scope_type AS "scopeType",
+        n.scope_id AS "scopeId",
+        n.period_start AS "periodStart",
+        n.period_end AS "periodEnd",
+        n.facts_json AS "factsJson",
+        n.narrative_json AS "narrativeJson",
+        n.html_report AS "htmlReport",
+        n.pdf_stored_path AS "pdfPath",
+        n.generated_by_user_id AS "generatedByUserId",
+        COALESCE(pu.full_name, 'Unknown') AS "generatedByName",
+        n.generated_at::text AS "generatedAt",
+        n.updated_at::text AS "updatedAt"
+      FROM national_report_packs n
+      LEFT JOIN portal_users pu ON pu.id = n.generated_by_user_id
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY n.generated_at DESC, n.report_id DESC
+      LIMIT ${limit}
+    `,
+    params,
+  );
+
+  return result.rows.map((row) => toReportRecord(row));
+}
+
 export async function getNationalReportPdf(reportCode: string) {
   ensureNationalIntelligenceSchema();
-  const report = listNationalReportPacks({ limit: 500 }).find(
+  const report = (await listNationalReportPacksAsync({ limit: 500 })).find(
     (item) => item.reportCode === reportCode,
   );
   if (!report) {
@@ -3703,18 +3890,30 @@ export async function getNationalReportPdf(reportCode: string) {
     narrative: report.narrative.narrativePass,
   });
   const regeneratedPath = await saveNationalReportPdf(reportCode, regeneratedBytes);
-  getDb().prepare(
-    `
-      UPDATE national_report_packs
-      SET pdf_stored_path = @pdfPath,
-          updated_at = @updatedAt
-      WHERE report_code = @reportCode
-    `,
-  ).run({
-    reportCode,
-    pdfPath: regeneratedPath,
-    updatedAt: new Date().toISOString(),
-  });
+  if (isPostgresConfigured()) {
+    await queryPostgres(
+      `
+        UPDATE national_report_packs
+        SET pdf_stored_path = $2,
+            updated_at = $3::timestamptz
+        WHERE report_code = $1
+      `,
+      [reportCode, regeneratedPath, new Date().toISOString()],
+    );
+  } else {
+    getDb().prepare(
+      `
+        UPDATE national_report_packs
+        SET pdf_stored_path = @pdfPath,
+            updated_at = @updatedAt
+        WHERE report_code = @reportCode
+      `,
+    ).run({
+      reportCode,
+      pdfPath: regeneratedPath,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 
   return {
     bytes: Buffer.from(regeneratedBytes),
@@ -3795,6 +3994,72 @@ export function createPartnerApiClient(args: {
   };
 }
 
+export async function createPartnerApiClientAsync(args: {
+  user: Pick<PortalUser, "id" | "fullName">;
+  input: {
+    partnerName: string;
+    allowedScopeType: NlisGeoScopeType;
+    allowedScopeIds: string[];
+  };
+}) {
+  if (!isPostgresConfigured()) {
+    return createPartnerApiClient(args);
+  }
+
+  const partnerName = stripText(args.input.partnerName);
+  if (!partnerName) {
+    throw new Error("Partner name is required.");
+  }
+
+  const scopeIds = args.input.allowedScopeIds.map((scopeId) => stripText(scopeId)).filter(Boolean);
+  if (scopeIds.length === 0) {
+    throw new Error("At least one allowed scope id is required.");
+  }
+
+  const rawApiKey = `ozk_${crypto.randomBytes(24).toString("hex")}`;
+  const apiKeyHash = hashPartnerApiKey(rawApiKey);
+
+  const insert = await queryPostgres<{ clientId: number }>(
+    `
+      INSERT INTO partner_api_clients (
+        partner_name,
+        api_key_hash,
+        allowed_scope_type,
+        allowed_scope_ids_json,
+        active,
+        created_by,
+        created_at
+      ) VALUES (
+        $1, $2, $3, $4, TRUE, $5, NOW()
+      )
+      RETURNING client_id AS "clientId"
+    `,
+    [partnerName, apiKeyHash, args.input.allowedScopeType, JSON.stringify(scopeIds), args.user.id],
+  );
+
+  const clientId = Number(insert.rows[0]?.clientId ?? 0);
+  await queryPostgres(
+    `
+      INSERT INTO audit_logs (
+        user_id, user_name, action, target_table, target_id, detail
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+    `,
+    [
+      args.user.id,
+      args.user.fullName,
+      "create",
+      "partner_api_clients",
+      String(clientId),
+      `Created partner API client for ${partnerName}.`,
+    ],
+  );
+
+  return {
+    clientId,
+    apiKey: rawApiKey,
+  };
+}
+
 export function listPartnerApiClients() {
   ensureNationalIntelligenceSchema();
   const db = getDb();
@@ -3837,6 +4102,48 @@ export function listPartnerApiClients() {
   })) as PartnerApiClientRecord[];
 }
 
+export async function listPartnerApiClientsAsync() {
+  if (!isPostgresConfigured()) {
+    return listPartnerApiClients();
+  }
+
+  const result = await queryPostgres<{
+    clientId: number;
+    partnerName: string;
+    allowedScopeType: NlisGeoScopeType;
+    allowedScopeIdsJson: string;
+    active: boolean;
+    createdBy: number;
+    createdAt: string;
+    lastUsedAt: string | null;
+  }>(
+    `
+      SELECT
+        client_id AS "clientId",
+        partner_name AS "partnerName",
+        allowed_scope_type AS "allowedScopeType",
+        allowed_scope_ids_json AS "allowedScopeIdsJson",
+        active,
+        created_by AS "createdBy",
+        created_at::text AS "createdAt",
+        last_used_at::text AS "lastUsedAt"
+      FROM partner_api_clients
+      ORDER BY created_at DESC, client_id DESC
+    `,
+  );
+
+  return result.rows.map((row) => ({
+    clientId: Number(row.clientId),
+    partnerName: row.partnerName,
+    allowedScopeType: row.allowedScopeType,
+    allowedScopeIds: parseJsonObject<string[]>(row.allowedScopeIdsJson, []),
+    active: Boolean(row.active),
+    createdBy: Number(row.createdBy),
+    createdAt: row.createdAt,
+    lastUsedAt: row.lastUsedAt,
+  })) as PartnerApiClientRecord[];
+}
+
 export function setPartnerApiClientActive(args: {
   user: Pick<PortalUser, "id" | "fullName">;
   clientId: number;
@@ -3862,6 +4169,47 @@ export function setPartnerApiClientActive(args: {
     "partner_api_clients",
     args.clientId,
     `Set partner API client active=${args.active ? "true" : "false"}.`,
+  );
+}
+
+export async function setPartnerApiClientActiveAsync(args: {
+  user: Pick<PortalUser, "id" | "fullName">;
+  clientId: number;
+  active: boolean;
+}) {
+  if (!isPostgresConfigured()) {
+    setPartnerApiClientActive(args);
+    return;
+  }
+
+  const result = await queryPostgres<{ clientId: number }>(
+    `
+      UPDATE partner_api_clients
+      SET active = $2
+      WHERE client_id = $1
+      RETURNING client_id AS "clientId"
+    `,
+    [args.clientId, args.active],
+  );
+
+  if (!result.rows[0]?.clientId) {
+    throw new Error("Partner API client not found.");
+  }
+
+  await queryPostgres(
+    `
+      INSERT INTO audit_logs (
+        user_id, user_name, action, target_table, target_id, detail
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+    `,
+    [
+      args.user.id,
+      args.user.fullName,
+      args.active ? "enable" : "disable",
+      "partner_api_clients",
+      String(args.clientId),
+      `Set partner API client active=${args.active ? "true" : "false"}.`,
+    ],
   );
 }
 
@@ -3905,6 +4253,57 @@ export function authenticatePartnerApiKey(rawKey: string) {
   db.prepare("UPDATE partner_api_clients SET last_used_at = datetime('now') WHERE client_id = @clientId").run({
     clientId: row.clientId,
   });
+
+  return {
+    clientId: Number(row.clientId),
+    partnerName: row.partnerName,
+    allowedScopeType: row.allowedScopeType,
+    allowedScopeIds: parseJsonObject<string[]>(row.allowedScopeIdsJson, []),
+  };
+}
+
+export async function authenticatePartnerApiKeyAsync(rawKey: string) {
+  if (!isPostgresConfigured()) {
+    return authenticatePartnerApiKey(rawKey);
+  }
+
+  const apiKeyHash = hashPartnerApiKey(stripText(rawKey));
+  const result = await queryPostgres<{
+    clientId: number;
+    partnerName: string;
+    allowedScopeType: NlisGeoScopeType;
+    allowedScopeIdsJson: string;
+    active: boolean;
+    createdBy: number;
+    createdAt: string;
+    lastUsedAt: string | null;
+  }>(
+    `
+      SELECT
+        client_id AS "clientId",
+        partner_name AS "partnerName",
+        allowed_scope_type AS "allowedScopeType",
+        allowed_scope_ids_json AS "allowedScopeIdsJson",
+        active,
+        created_by AS "createdBy",
+        created_at::text AS "createdAt",
+        last_used_at::text AS "lastUsedAt"
+      FROM partner_api_clients
+      WHERE api_key_hash = $1
+      LIMIT 1
+    `,
+    [apiKeyHash],
+  );
+
+  const row = result.rows[0];
+  if (!row || !row.active) {
+    return null;
+  }
+
+  await queryPostgres(
+    `UPDATE partner_api_clients SET last_used_at = NOW() WHERE client_id = $1`,
+    [row.clientId],
+  );
 
   return {
     clientId: Number(row.clientId),
@@ -3974,6 +4373,47 @@ export function logPartnerExport(args: {
     format: args.format,
     actorUserId: args.actorUserId ?? null,
   });
+}
+
+export async function logPartnerExportAsync(args: {
+  clientId: number | null;
+  partnerName: string;
+  endpoint: string;
+  scopeType: NlisGeoScopeType;
+  scopeId: string;
+  format: "json" | "csv" | "pdf";
+  actorUserId?: number | null;
+}) {
+  if (!isPostgresConfigured()) {
+    logPartnerExport(args);
+    return;
+  }
+
+  await queryPostgres(
+    `
+      INSERT INTO partner_export_audit_logs (
+        client_id,
+        partner_name,
+        endpoint,
+        scope_type,
+        scope_id,
+        format,
+        actor_user_id,
+        created_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, NOW()
+      )
+    `,
+    [
+      args.clientId,
+      stripText(args.partnerName),
+      stripText(args.endpoint),
+      args.scopeType,
+      stripText(args.scopeId),
+      args.format,
+      args.actorUserId ?? null,
+    ],
+  );
 }
 
 export function getPartnerImpactDataset(args: {
