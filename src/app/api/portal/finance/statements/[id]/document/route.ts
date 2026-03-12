@@ -39,7 +39,7 @@ export async function GET(
   }
   const docType: StatementDocumentType = parsedType.data;
 
-  const statement = listFinanceMonthlyStatements().find((item) => item.id === statementId);
+  const statement = (await listFinanceMonthlyStatements()).find((item) => item.id === statementId);
   if (!statement) {
     return NextResponse.json({ error: "Statement not found." }, { status: 404 });
   }
@@ -52,7 +52,7 @@ export async function GET(
   };
 
   if (docType === "balance_sheet" && statement.balanceSheetPdfFileId) {
-    const typedFile = getFinanceFileById(statement.balanceSheetPdfFileId);
+    const typedFile = await getFinanceFileById(statement.balanceSheetPdfFileId);
     const typedBytes = await fs.readFile(typedFile.storedPath);
     return new NextResponse(Buffer.from(typedBytes), {
       headers: {
@@ -63,7 +63,7 @@ export async function GET(
     });
   }
   if (docType === "statement_of_financial_position" && statement.statementOfFinancialPositionPdfFileId) {
-    const typedFile = getFinanceFileById(statement.statementOfFinancialPositionPdfFileId);
+    const typedFile = await getFinanceFileById(statement.statementOfFinancialPositionPdfFileId);
     const typedBytes = await fs.readFile(typedFile.storedPath);
     return new NextResponse(Buffer.from(typedBytes), {
       headers: {
@@ -74,7 +74,7 @@ export async function GET(
     });
   }
   if (docType === "income_statement" && statement.incomeStatementPdfFileId) {
-    const typedFile = getFinanceFileById(statement.incomeStatementPdfFileId);
+    const typedFile = await getFinanceFileById(statement.incomeStatementPdfFileId);
     const typedBytes = await fs.readFile(typedFile.storedPath);
     return new NextResponse(Buffer.from(typedBytes), {
       headers: {
@@ -93,7 +93,7 @@ export async function GET(
   if (!fallbackFileId) {
     return NextResponse.json({ error: "Statement PDF not available." }, { status: 404 });
   }
-  const file = getFinanceFileById(fallbackFileId);
+  const file = await getFinanceFileById(fallbackFileId);
   const rawBytes = await fs.readFile(file.storedPath);
 
   // Legacy fallback for statements generated before independent document artifacts existed.

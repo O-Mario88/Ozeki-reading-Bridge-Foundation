@@ -12,8 +12,8 @@ export const metadata = {
 
 export default async function PortalFinanceReconciliationPage() {
     const user = await requirePortalFinanceReceiptEditorUser();
-    const lines = listStatementLines();
-    const ledger = listFinanceLedgerTransactions({});
+    const lines = await listStatementLines();
+    const ledger = await listFinanceLedgerTransactions({});
 
     return (
         <FinanceShell user={user} activeHref="/portal/finance/reconciliation" title="Reconciliation">

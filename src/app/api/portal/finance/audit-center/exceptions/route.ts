@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const currency = request.nextUrl.searchParams.get("currency") || undefined;
   const createdBy = request.nextUrl.searchParams.get("createdBy");
 
-  const exceptions = listFinanceAuditExceptions({
+  const exceptions = await listFinanceAuditExceptions({
     month,
     entityType: entityType as never,
     severity: severity as never,

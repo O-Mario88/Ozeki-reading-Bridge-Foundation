@@ -45,8 +45,8 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const publishedOnly = searchParams.get("publishedOnly") === "true";
 
-        const snapshots = listFinancePublicSnapshots({ publishedOnly });
-        const audited = listFinanceAuditedStatements({ publishedOnly });
+        const snapshots = await listFinancePublicSnapshots({ publishedOnly });
+        const audited = await listFinanceAuditedStatements({ publishedOnly });
 
         return NextResponse.json({ snapshots, audited });
     } catch (error: unknown) {

@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
   const currencyRaw = request.nextUrl.searchParams.get("currency");
   const currency = currencyRaw?.toUpperCase() === "USD" ? "USD" : "UGX";
 
-  const summary = getFinanceDashboardSummary(month, currency);
-  const recentEmails = listFinanceEmailLogs(20);
+  const summary = await getFinanceDashboardSummary(month, currency);
+  const recentEmails = await listFinanceEmailLogs(20);
   return NextResponse.json({ summary, recentEmails });
 }
-

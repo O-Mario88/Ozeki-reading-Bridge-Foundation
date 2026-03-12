@@ -10,6 +10,6 @@ export async function GET() {
     return auth.error;
   }
 
-  const checks = listFinanceAuditComplianceChecks();
+  const checks = await listFinanceAuditComplianceChecks();
   return NextResponse.json({ checks });
 }

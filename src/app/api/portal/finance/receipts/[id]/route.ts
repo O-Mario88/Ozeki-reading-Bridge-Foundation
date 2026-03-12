@@ -26,7 +26,7 @@ export async function GET(
   if (!Number.isFinite(receiptId)) {
     return NextResponse.json({ error: "Invalid receipt id." }, { status: 400 });
   }
-  const receipt = getFinanceReceiptById(receiptId);
+  const receipt = await getFinanceReceiptById(receiptId);
   if (!receipt) {
     return NextResponse.json({ error: "Receipt not found." }, { status: 404 });
   }
@@ -49,7 +49,7 @@ export async function DELETE(
 
   try {
     const parsed = deleteSchema.parse(await request.json());
-    const current = getFinanceReceiptById(receiptId);
+    const current = await getFinanceReceiptById(receiptId);
     if (!current) {
       return NextResponse.json({ error: "Receipt not found." }, { status: 404 });
     }

@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function PortalFinanceMoneyInPage() {
   const user = await requirePortalFinanceReceiptEditorUser();
-  const transactions = listFinanceLedgerTransactions({ txnType: "money_in" });
+  const transactions = await listFinanceLedgerTransactions({ txnType: "money_in" });
 
   return (
     <FinanceShell user={user} activeHref="/portal/finance/money-in" title="Money In">

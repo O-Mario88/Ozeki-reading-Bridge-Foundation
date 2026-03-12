@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   const amount = amountRaw ? Number(amountRaw) : undefined;
   const currency = request.nextUrl.searchParams.get("currency") || undefined;
 
-  const receipts = listFinanceReceiptRegistry({
+  const receipts = await listFinanceReceiptRegistry({
     vendor,
     reference,
     fromDate,

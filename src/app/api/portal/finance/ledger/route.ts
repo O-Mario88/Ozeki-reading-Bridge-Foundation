@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const toDate = request.nextUrl.searchParams.get("to") || undefined;
   const format = request.nextUrl.searchParams.get("format");
 
-  const transactions = listFinanceLedgerTransactions({
+  const transactions = await listFinanceLedgerTransactions({
     txnType: txnType as never,
     category: category as never,
     postedStatus: postedStatus as never,
@@ -61,4 +61,3 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ transactions });
 }
-

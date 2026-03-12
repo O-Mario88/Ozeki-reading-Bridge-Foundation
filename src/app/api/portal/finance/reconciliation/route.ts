@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     const month = url.searchParams.get("month") || undefined;
     const currency = (url.searchParams.get("currency") || "UGX") as FinanceCurrency;
 
-    const lines = listStatementLines({ accountType, matchStatus, month });
-    const unmatchedLedger = listFinanceLedgerTransactions({}).filter((t) => t.postedStatus === "posted");
+    const lines = await listStatementLines({ accountType, matchStatus, month });
+    const unmatchedLedger = (await listFinanceLedgerTransactions({})).filter((t) => t.postedStatus === "posted");
     const summary = month ? getReconciliationSummary(month, currency) : null;
 
     return NextResponse.json({ lines, unmatchedLedger, summary });

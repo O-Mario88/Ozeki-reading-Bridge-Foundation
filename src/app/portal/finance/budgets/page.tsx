@@ -13,7 +13,7 @@ export const metadata = {
 export default async function PortalFinanceBudgetsPage() {
     const user = await requirePortalFinanceReceiptEditorUser();
     const month = new Date().toISOString().slice(0, 7);
-    const budgets = listMonthlyBudgets(month, "UGX");
+    const budgets = await listMonthlyBudgets(month, "UGX");
 
     return (
         <FinanceShell user={user} activeHref="/portal/finance/budgets" title="Budgets">

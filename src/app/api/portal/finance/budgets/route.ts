@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ month, currency, lines });
     }
 
-    const budgets = listMonthlyBudgets(month, currency);
+    const budgets = await listMonthlyBudgets(month, currency);
     return NextResponse.json({ month, currency, budgets });
 }
 

@@ -79,7 +79,7 @@ test("issuing receipt auto-creates posted money_in ledger entry", async () => {
 
   await issueFinanceReceipt(receipt.id, actor, { sendEmail: false });
 
-  const ledger = listFinanceLedgerTransactions({
+  const ledger = await listFinanceLedgerTransactions({
     txnType: "money_in",
     category: "Donation",
     postedStatus: "posted",
@@ -174,7 +174,7 @@ test("expense posting requires evidence and creates money_out ledger", async () 
   const posted = postFinanceExpense(draft.id, actor);
   assert.equal(posted.status, "posted");
 
-  const ledger = listFinanceLedgerTransactions({
+  const ledger = await listFinanceLedgerTransactions({
     txnType: "money_out",
     category: "Expense",
     postedStatus: "posted",

@@ -3,7 +3,9 @@ import { createFinanceIncomeBreakdownZero, FINANCE_INCOME_CATEGORIES, normalizeF
 import { getDefaultFinanceFromEmail, resolveFinanceFromEmail } from "@/lib/finance-email";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import type {
+  FinanceAuditComplianceCheckRecord,
   FinanceAuditExceptionRecord,
+  FinanceBudgetMonthlyRecord,
   FinanceCategory,
   FinanceContactRecord,
   FinanceCurrency,
@@ -18,7 +20,11 @@ import type {
   FinanceMonthlyStatementRecord,
   FinancePostedStatus,
   FinanceReceiptRecord,
+  FinanceReceiptRegistryRecord,
+  FinanceRestrictedBalanceLine,
   FinanceSettingsRecord,
+  FinanceStatementAccountType,
+  FinanceStatementLineRecord,
   FinanceTransactionSourceType,
   FinanceLedgerTransactionRecord,
   FinanceTxnRiskScoreRecord,
@@ -218,7 +224,7 @@ function mapFinanceFileRecord(row: Record<string, unknown>): FinanceFileRecord {
   };
 }
 
-async function getFinanceFileByIdPostgres(fileId: number): Promise<FinanceFileRecord> {
+export async function getFinanceFileByIdPostgres(fileId: number): Promise<FinanceFileRecord> {
   const result = await queryPostgres(
     `
       SELECT
@@ -244,7 +250,7 @@ async function getFinanceFileByIdPostgres(fileId: number): Promise<FinanceFileRe
   return mapFinanceFileRecord(row);
 }
 
-async function listFinanceFilesBySourcePostgres(
+export async function listFinanceFilesBySourcePostgres(
   sourceType: string,
   sourceId: number,
 ): Promise<FinanceFileRecord[]> {
@@ -1355,4 +1361,425 @@ export async function listFinanceEmailLogsPostgres(limit = 200): Promise<Finance
     createdBy: Number((row as Record<string, unknown>).createdBy ?? 0),
     createdAt: String((row as Record<string, unknown>).createdAt ?? new Date(0).toISOString()),
   }));
+}
+
+export async function listFinanceReceiptRegistryPostgres(filters: {
+  vendor?: string;
+  reference?: string;
+  fromDate?: string;
+  toDate?: string;
+  amount?: number;
+  currency?: FinanceCurrency;
+} = {}): Promise<FinanceReceiptRegistryRecord[]> {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (filters.vendor) {
+    params.push(`%${filters.vendor.trim()}%`);
+    clauses.push(`er.vendor_name ILIKE $${params.length}`);
+  }
+  if (filters.reference) {
+    params.push(`%${filters.reference.trim()}%`);
+    clauses.push(`COALESCE(er.reference_no, '') ILIKE $${params.length}`);
+  }
+  if (filters.fromDate) {
+    params.push(filters.fromDate);
+    clauses.push(`er.receipt_date >= $${params.length}`);
+  }
+  if (filters.toDate) {
+    params.push(filters.toDate);
+    clauses.push(`er.receipt_date <= $${params.length}`);
+  }
+  if (Number.isFinite(filters.amount)) {
+    params.push(normalizeNumber(filters.amount));
+    clauses.push(`ABS(er.receipt_amount - $${params.length}) < 0.01`);
+  }
+  if (filters.currency) {
+    params.push(normalizeCurrency(filters.currency));
+    clauses.push(`er.currency = $${params.length}`);
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const [registryResult, hashResult] = await Promise.all([
+    queryPostgres(
+      `
+        SELECT
+          er.id,
+          er.expense_id AS "expenseId",
+          e.expense_number AS "expenseNumber",
+          e.status AS "expenseStatus",
+          er.file_id AS "fileId",
+          er.file_hash_sha256 AS "fileHashSha256",
+          er.vendor_name AS "vendorName",
+          er.receipt_date AS "receiptDate",
+          er.receipt_amount AS "receiptAmount",
+          er.currency,
+          er.reference_no AS "referenceNo",
+          er.uploaded_by_user_id AS "uploadedBy",
+          u.full_name AS "uploadedByName",
+          er.uploaded_at AS "uploadedAt",
+          f.file_name AS "fileName"
+        FROM finance_expense_receipts er
+        JOIN finance_expenses e ON e.id = er.expense_id
+        JOIN portal_users u ON u.id = er.uploaded_by_user_id
+        LEFT JOIN finance_files f ON f.id = er.file_id
+        ${whereClause}
+        ORDER BY er.uploaded_at DESC, er.id DESC
+      `,
+      params,
+    ),
+    queryPostgres(
+      `
+        SELECT
+          er.file_hash_sha256 AS "fileHashSha256",
+          SUM(CASE WHEN e.status = 'posted' THEN 1 ELSE 0 END)::int AS "postedCount"
+        FROM finance_expense_receipts er
+        JOIN finance_expenses e ON e.id = er.expense_id
+        GROUP BY er.file_hash_sha256
+      `,
+    ),
+  ]);
+
+  const postedUsage = new Map(
+    hashResult.rows.map((row) => [
+      String((row as Record<string, unknown>).fileHashSha256 ?? ""),
+      Number((row as Record<string, unknown>).postedCount ?? 0),
+    ]),
+  );
+
+  return registryResult.rows.map((row) => {
+    const record = row as Record<string, unknown>;
+    const flags: string[] = [];
+    if (
+      !String(record.vendorName ?? "").trim() ||
+      !String(record.receiptDate ?? "").trim() ||
+      !Number.isFinite(Number(record.receiptAmount ?? 0)) ||
+      Number(record.receiptAmount ?? 0) <= 0
+    ) {
+      flags.push("missing_metadata");
+    }
+    if (Number(postedUsage.get(String(record.fileHashSha256 ?? "")) ?? 0) > 1) {
+      flags.push("reused_receipt");
+    }
+
+    const fileId = Number(record.fileId ?? 0);
+    return {
+      id: Number(record.id ?? 0),
+      expenseId: Number(record.expenseId ?? 0),
+      expenseNumber: record.expenseNumber ? String(record.expenseNumber) : undefined,
+      expenseStatus: record.expenseStatus ? String(record.expenseStatus) as FinanceReceiptRegistryRecord["expenseStatus"] : undefined,
+      fileId,
+      fileUrl: getSignedFinanceFileUrl(fileId),
+      fileName: record.fileName ? String(record.fileName) : undefined,
+      fileHashSha256: String(record.fileHashSha256 ?? ""),
+      vendorName: String(record.vendorName ?? ""),
+      receiptDate: String(record.receiptDate ?? ""),
+      receiptAmount: normalizeNumber(record.receiptAmount),
+      currency: normalizeCurrency(String(record.currency ?? "UGX")),
+      referenceNo: record.referenceNo ? String(record.referenceNo) : undefined,
+      uploadedBy: Number(record.uploadedBy ?? 0),
+      uploadedByName: record.uploadedByName ? String(record.uploadedByName) : undefined,
+      uploadedAt: String(record.uploadedAt ?? new Date(0).toISOString()),
+      flags,
+    } satisfies FinanceReceiptRegistryRecord;
+  });
+}
+
+export async function listFinanceAuditComplianceChecksPostgres(): Promise<FinanceAuditComplianceCheckRecord[]> {
+  const result = await queryPostgres(
+    `
+      SELECT
+        rule_code AS "ruleCode",
+        severity,
+        COUNT(*)::int AS "openCount"
+      FROM finance_audit_exceptions
+      WHERE status IN ('open', 'acknowledged')
+      GROUP BY rule_code, severity
+      ORDER BY
+        CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+        rule_code ASC
+    `,
+  );
+  const titleByRule: Record<string, string> = {
+    "EXP-001": "Posted expense has no receipt",
+    "EXP-002": "Receipt metadata missing",
+    "EXP-003": "Receipt amount mismatch",
+    "EXP-004": "Receipt file reused",
+    "EXP-010": "Duplicate vendor+amount+date",
+    "EXP-011": "Outlier expense amount",
+    "EXP-012": "Cash over threshold",
+    "EXP-013": "Backdated entry",
+    "LED-001": "Posted expense missing ledger money_out",
+    "LED-002": "Voided expense missing void/reversal ledger",
+    "INC-001": "Issued receipt missing money_in ledger",
+    "INV-001": "Paid invoice allocation mismatch",
+  };
+  return result.rows.map((row) => ({
+    ruleCode: String((row as Record<string, unknown>).ruleCode ?? ""),
+    title: titleByRule[String((row as Record<string, unknown>).ruleCode ?? "")] || String((row as Record<string, unknown>).ruleCode ?? ""),
+    severity: String((row as Record<string, unknown>).severity ?? "low") as FinanceAuditComplianceCheckRecord["severity"],
+    openCount: Number((row as Record<string, unknown>).openCount ?? 0),
+  }));
+}
+
+export async function listStatementLinesPostgres(filters: {
+  accountType?: FinanceStatementAccountType;
+  matchStatus?: FinanceStatementLineRecord["matchStatus"];
+  month?: string;
+} = {}): Promise<FinanceStatementLineRecord[]> {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (filters.accountType) {
+    params.push(filters.accountType);
+    clauses.push(`account_type = $${params.length}`);
+  }
+  if (filters.matchStatus) {
+    params.push(filters.matchStatus);
+    clauses.push(`match_status = $${params.length}`);
+  }
+  if (filters.month) {
+    params.push(`${filters.month}%`);
+    clauses.push(`date::text LIKE $${params.length}`);
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const result = await queryPostgres(
+    `
+      SELECT
+        id,
+        account_type AS "accountType",
+        date::text AS date,
+        amount,
+        currency,
+        reference,
+        description,
+        match_status AS "matchStatus",
+        matched_amount AS "matchedAmount",
+        created_by_user_id AS "createdBy",
+        created_at AS "createdAt"
+      FROM finance_statement_lines
+      ${whereClause}
+      ORDER BY date DESC, id DESC
+    `,
+    params,
+  );
+
+  return result.rows.map((row) => ({
+    id: Number((row as Record<string, unknown>).id ?? 0),
+    accountType: String((row as Record<string, unknown>).accountType ?? "bank") as FinanceStatementAccountType,
+    date: String((row as Record<string, unknown>).date ?? ""),
+    amount: normalizeNumber((row as Record<string, unknown>).amount),
+    currency: normalizeCurrency(String((row as Record<string, unknown>).currency ?? "UGX")),
+    reference: (row as Record<string, unknown>).reference ? String((row as Record<string, unknown>).reference) : undefined,
+    description: (row as Record<string, unknown>).description ? String((row as Record<string, unknown>).description) : undefined,
+    matchStatus: String((row as Record<string, unknown>).matchStatus ?? "unmatched") as FinanceStatementLineRecord["matchStatus"],
+    matchedAmount: normalizeNumber((row as Record<string, unknown>).matchedAmount),
+    createdBy: Number((row as Record<string, unknown>).createdBy ?? 0),
+    createdAt: String((row as Record<string, unknown>).createdAt ?? new Date(0).toISOString()),
+  }));
+}
+
+export async function listMonthlyBudgetsPostgres(
+  month: string,
+  currency?: FinanceCurrency,
+): Promise<FinanceBudgetMonthlyRecord[]> {
+  const clauses = ["month = $1"];
+  const params: unknown[] = [month];
+  if (currency) {
+    params.push(currency);
+    clauses.push(`currency = $${params.length}`);
+  }
+  const result = await queryPostgres(
+    `
+      SELECT
+        id,
+        month,
+        currency,
+        subcategory,
+        budget_amount AS "budgetAmount",
+        created_by_user_id AS "createdBy",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+      FROM finance_budgets_monthly
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY subcategory ASC
+    `,
+    params,
+  );
+  return result.rows.map((row) => ({
+    id: Number((row as Record<string, unknown>).id ?? 0),
+    month: String((row as Record<string, unknown>).month ?? ""),
+    currency: normalizeCurrency(String((row as Record<string, unknown>).currency ?? "UGX")),
+    subcategory: String((row as Record<string, unknown>).subcategory ?? ""),
+    budgetAmount: normalizeNumber((row as Record<string, unknown>).budgetAmount),
+    createdBy: Number((row as Record<string, unknown>).createdBy ?? 0),
+    createdAt: String((row as Record<string, unknown>).createdAt ?? new Date(0).toISOString()),
+    updatedAt: String((row as Record<string, unknown>).updatedAt ?? new Date(0).toISOString()),
+  }));
+}
+
+export async function getRestrictedFundsSummaryPostgres(
+  currency?: FinanceCurrency,
+): Promise<FinanceRestrictedBalanceLine[]> {
+  const clauses = ["restricted_flag = 1"];
+  const params: unknown[] = [];
+  if (currency) {
+    params.push(currency);
+    clauses.push(`currency = $${params.length}`);
+  }
+  const whereClause = `WHERE ${clauses.join(" AND ")}`;
+  const [inResult, outResult] = await Promise.all([
+    queryPostgres(
+      `
+        SELECT
+          restricted_program AS program,
+          restricted_geo_scope AS "geoScope",
+          restricted_geo_id AS "geoId",
+          currency,
+          SUM(amount) AS total
+        FROM finance_transactions_ledger
+        ${whereClause}
+          AND txn_type = 'money_in'
+          AND posted_status = 'posted'
+        GROUP BY restricted_program, restricted_geo_scope, restricted_geo_id, currency
+      `,
+      params,
+    ),
+    queryPostgres(
+      `
+        SELECT
+          restricted_program AS program,
+          restricted_geo_scope AS "geoScope",
+          restricted_geo_id AS "geoId",
+          currency,
+          SUM(amount) AS total
+        FROM finance_transactions_ledger
+        ${whereClause}
+          AND txn_type = 'money_out'
+          AND posted_status = 'posted'
+        GROUP BY restricted_program, restricted_geo_scope, restricted_geo_id, currency
+      `,
+      params,
+    ),
+  ]);
+
+  const lines = new Map<string, FinanceRestrictedBalanceLine>();
+  const key = (program: string, geoScope: unknown, geoId: unknown, rowCurrency: unknown) =>
+    `${program}|${String(geoScope ?? "")}|${String(geoId ?? "")}|${String(rowCurrency ?? "")}`;
+
+  for (const row of inResult.rows as Array<Record<string, unknown>>) {
+    const mapKey = key(String(row.program ?? "general"), row.geoScope, row.geoId, row.currency);
+    lines.set(mapKey, {
+      program: String(row.program ?? "general") as FinanceRestrictedBalanceLine["program"],
+      geoScope: row.geoScope ? String(row.geoScope) : undefined,
+      geoId: row.geoId === null || row.geoId === undefined ? undefined : Number(row.geoId),
+      totalIn: normalizeNumber(row.total),
+      totalOut: 0,
+      remaining: normalizeNumber(row.total),
+      currency: normalizeCurrency(String(row.currency ?? "UGX")),
+    });
+  }
+
+  for (const row of outResult.rows as Array<Record<string, unknown>>) {
+    const mapKey = key(String(row.program ?? "general"), row.geoScope, row.geoId, row.currency);
+    const existing = lines.get(mapKey);
+    if (existing) {
+      existing.totalOut = normalizeNumber(row.total);
+      existing.remaining = normalizeNumber(existing.totalIn - existing.totalOut);
+      continue;
+    }
+    lines.set(mapKey, {
+      program: String(row.program ?? "general") as FinanceRestrictedBalanceLine["program"],
+      geoScope: row.geoScope ? String(row.geoScope) : undefined,
+      geoId: row.geoId === null || row.geoId === undefined ? undefined : Number(row.geoId),
+      totalIn: 0,
+      totalOut: normalizeNumber(row.total),
+      remaining: normalizeNumber(-Number(row.total ?? 0)),
+      currency: normalizeCurrency(String(row.currency ?? "UGX")),
+    });
+  }
+
+  return Array.from(lines.values()).sort((left, right) => left.program.localeCompare(right.program));
+}
+
+export async function listFinancePublicSnapshotsPostgres(filters?: { publishedOnly?: boolean }) {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (filters?.publishedOnly) {
+    params.push("published");
+    clauses.push(`status = $${params.length}`);
+  }
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const result = await queryPostgres(
+    `
+      SELECT *
+      FROM finance_public_snapshots
+      ${whereClause}
+      ORDER BY fy DESC, quarter DESC, generated_at DESC
+    `,
+    params,
+  );
+  return result.rows.map((row) => {
+    const record = row as Record<string, unknown>;
+    return {
+      id: Number(record.id ?? 0),
+      fy: Number(record.fy ?? 0),
+      quarter: record.quarter ? String(record.quarter) : null,
+      currency: normalizeCurrency(String(record.currency ?? "UGX")),
+      snapshotType: String(record.snapshot_type ?? "fy"),
+      status: String(record.status ?? "draft"),
+      totalIncome: normalizeNumber(record.total_income),
+      totalExpenditure: normalizeNumber(record.total_expenditure),
+      net: normalizeNumber(record.net),
+      programPct: record.program_pct === null || record.program_pct === undefined ? null : Number(record.program_pct),
+      adminPct: record.admin_pct === null || record.admin_pct === undefined ? null : Number(record.admin_pct),
+      categoryBreakdownJson: String(record.category_breakdown_json ?? "[]"),
+      restrictedSummaryJson: String(record.restricted_summary_json ?? "[]"),
+      pdfFileId: record.pdf_file_id === null || record.pdf_file_id === undefined ? null : Number(record.pdf_file_id),
+      storedPath: record.stored_path ? String(record.stored_path) : null,
+      publishConfirmation: record.publish_confirmation ? String(record.publish_confirmation) : null,
+      publishedAt: record.published_at ? String(record.published_at) : null,
+      publishedByUserId: record.published_by_user_id === null || record.published_by_user_id === undefined ? null : Number(record.published_by_user_id),
+      archivedAt: record.archived_at ? String(record.archived_at) : null,
+      generatedByUserId: Number(record.generated_by_user_id ?? 0),
+      generatedAt: String(record.generated_at ?? new Date(0).toISOString()),
+    };
+  });
+}
+
+export async function listFinanceAuditedStatementsPostgres(filters?: { publishedOnly?: boolean }) {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (filters?.publishedOnly) {
+    params.push("published");
+    clauses.push(`status = $${params.length}`);
+  }
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const result = await queryPostgres(
+    `
+      SELECT *
+      FROM finance_audited_statements
+      ${whereClause}
+      ORDER BY fy DESC, uploaded_at DESC
+    `,
+    params,
+  );
+  return result.rows.map((row) => {
+    const record = row as Record<string, unknown>;
+    return {
+      id: Number(record.id ?? 0),
+      fy: Number(record.fy ?? 0),
+      auditorName: record.auditor_name ? String(record.auditor_name) : null,
+      auditCompletedDate: record.audit_completed_date ? String(record.audit_completed_date) : null,
+      status: String(record.status ?? "private_uploaded"),
+      storedPath: String(record.stored_path ?? ""),
+      originalFilename: String(record.original_filename ?? ""),
+      notes: record.notes ? String(record.notes) : null,
+      publishConfirmation: record.publish_confirmation ? String(record.publish_confirmation) : null,
+      publishedAt: record.published_at ? String(record.published_at) : null,
+      publishedByUserId: record.published_by_user_id === null || record.published_by_user_id === undefined ? null : Number(record.published_by_user_id),
+      archivedAt: record.archived_at ? String(record.archived_at) : null,
+      uploadedByUserId: Number(record.uploaded_by_user_id ?? 0),
+      uploadedAt: String(record.uploaded_at ?? new Date(0).toISOString()),
+    };
+  });
 }

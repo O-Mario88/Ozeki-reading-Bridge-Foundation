@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     return auth.error;
   }
   const format = request.nextUrl.searchParams.get("format");
-  const statements = listFinanceMonthlyStatements();
+  const statements = await listFinanceMonthlyStatements();
 
   if (format === "csv") {
     const rows = statements.map((item) => ({

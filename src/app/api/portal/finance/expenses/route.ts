@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     ? status
     : undefined;
 
-  const expenses = listFinanceExpenses({
+  const expenses = await listFinanceExpenses({
     status: safeStatus as never,
     fromDate,
     toDate,

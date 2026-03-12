@@ -9,8 +9,8 @@ function errorMessage(error: unknown, fallback: string) {
 
 export async function GET() {
     try {
-        const snapshots = listFinancePublicSnapshots({ publishedOnly: true });
-        const audited = listFinanceAuditedStatements({ publishedOnly: true });
+        const snapshots = await listFinancePublicSnapshots({ publishedOnly: true });
+        const audited = await listFinanceAuditedStatements({ publishedOnly: true });
 
         const safeSnapshots = snapshots.map(s => ({
             id: s.id,

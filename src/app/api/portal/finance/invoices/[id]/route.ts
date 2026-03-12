@@ -45,7 +45,7 @@ export async function GET(
   if (!Number.isFinite(invoiceId)) {
     return NextResponse.json({ error: "Invalid invoice id." }, { status: 400 });
   }
-  const invoice = getFinanceInvoiceById(invoiceId);
+  const invoice = await getFinanceInvoiceById(invoiceId);
   if (!invoice) {
     return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
   }
@@ -97,7 +97,7 @@ export async function DELETE(
 
   try {
     const parsed = voidSchema.parse(await request.json());
-    const current = getFinanceInvoiceById(invoiceId);
+    const current = await getFinanceInvoiceById(invoiceId);
     if (!current) {
       return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
     }

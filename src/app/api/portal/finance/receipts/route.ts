@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   const toDate = request.nextUrl.searchParams.get("to") || undefined;
   const format = request.nextUrl.searchParams.get("format");
 
-  const receipts = listFinanceReceipts({
+  const receipts = await listFinanceReceipts({
     status: status as never,
     category: category as never,
     fromDate,

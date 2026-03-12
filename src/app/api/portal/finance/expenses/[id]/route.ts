@@ -27,11 +27,11 @@ export async function GET(
   if (!Number.isFinite(expenseId)) {
     return NextResponse.json({ error: "Invalid expense id." }, { status: 400 });
   }
-  const expense = getFinanceExpenseById(expenseId);
+  const expense = await getFinanceExpenseById(expenseId);
   if (!expense) {
     return NextResponse.json({ error: "Expense not found." }, { status: 404 });
   }
-  const receipts = listFinanceExpenseReceipts(expenseId);
+  const receipts = await listFinanceExpenseReceipts(expenseId);
   return NextResponse.json({ expense, receipts });
 }
 
@@ -51,7 +51,7 @@ export async function DELETE(
 
   try {
     const parsed = deleteSchema.parse(await request.json());
-    const current = getFinanceExpenseById(expenseId);
+    const current = await getFinanceExpenseById(expenseId);
     if (!current) {
       return NextResponse.json({ error: "Expense not found." }, { status: 404 });
     }

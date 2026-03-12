@@ -18,7 +18,7 @@ export async function GET() {
   if (auth.error) {
     return auth.error;
   }
-  return NextResponse.json({ contacts: listFinanceContacts() });
+  return NextResponse.json({ contacts: await listFinanceContacts() });
 }
 
 export async function POST(request: Request) {
@@ -50,4 +50,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

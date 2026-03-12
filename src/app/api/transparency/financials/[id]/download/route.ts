@@ -33,7 +33,7 @@ export async function GET(
         let filename = "document.pdf";
 
         if (type === "snapshot") {
-            const allDrafts = listFinancePublicSnapshots();
+            const allDrafts = await listFinancePublicSnapshots();
             const target = allDrafts.find(s => s.id === id);
             if (!target || target.status !== "published") {
                 return new NextResponse("Not found or not published", { status: 404 });
@@ -43,7 +43,7 @@ export async function GET(
                 ? `Ledger_Snapshot_FY${target.fy}_${target.quarter}.pdf`
                 : `Ledger_Snapshot_FY${target.fy}_Annual.pdf`;
         } else if (type === "audited") {
-            const allAudits = listFinanceAuditedStatements();
+            const allAudits = await listFinanceAuditedStatements();
             const target = allAudits.find(a => a.id === id);
             if (!target || target.status !== "published") {
                 return new NextResponse("Not found or not published", { status: 404 });

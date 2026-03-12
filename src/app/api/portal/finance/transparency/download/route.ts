@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     let filename = "document.pdf";
 
     if (type === "snapshot") {
-      const allDrafts = listFinancePublicSnapshots();
+      const allDrafts = await listFinancePublicSnapshots();
       const target = allDrafts.find(s => s.id === id);
       if (!target) {
         return new NextResponse("Not found", { status: 404 });
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
         ? `Ledger_Snapshot_FY${target.fy}_${target.quarter}.pdf`
         : `Ledger_Snapshot_FY${target.fy}_Annual.pdf`;
     } else if (type === "audited") {
-      const allAudits = listFinanceAuditedStatements();
+      const allAudits = await listFinanceAuditedStatements();
       const target = allAudits.find(a => a.id === id);
       if (!target) {
         return new NextResponse("Not found", { status: 404 });

@@ -12,6 +12,33 @@ import {
 } from "@/lib/finance-email";
 import { officialContact } from "@/lib/contact";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import { isPostgresConfigured } from "@/lib/server/postgres/client";
+import {
+  getFinanceDashboardSummaryPostgres,
+  getFinanceExpenseByIdPostgres,
+  getFinanceFileByIdPostgres,
+  getFinanceInvoiceByIdPostgres,
+  getFinanceReceiptByIdPostgres,
+  getFinanceSettingsPostgres,
+  getRestrictedFundsSummaryPostgres,
+  listFinanceAuditExceptionsPostgres,
+  listFinanceAuditComplianceChecksPostgres,
+  listFinanceAuditedStatementsPostgres,
+  listFinanceContactsPostgres,
+  listFinanceEmailLogsPostgres,
+  listFinanceExpenseReceiptsPostgres,
+  listFinanceExpensesPostgres,
+  listFinanceFilesBySourcePostgres,
+  listFinanceHighRiskTransactionsPostgres,
+  listFinanceInvoicesPostgres,
+  listFinanceLedgerTransactionsPostgres,
+  listFinanceMonthlyStatementsPostgres,
+  listFinancePublicSnapshotsPostgres,
+  listFinanceReceiptRegistryPostgres,
+  listFinanceReceiptsPostgres,
+  listMonthlyBudgetsPostgres,
+  listStatementLinesPostgres,
+} from "@/lib/server/postgres/repositories/finance";
 import {
   createFinanceIncomeBreakdownZero,
   FINANCE_INCOME_CATEGORIES,
@@ -2396,7 +2423,7 @@ export function verifyFinanceFileSignature(fileId: number, expiresRaw: string | 
   }
 }
 
-export function listFinanceContacts() {
+function listFinanceContactsSqlite() {
   ensureFinanceSchema();
   const rows = getDb().prepare(
     `
@@ -2493,7 +2520,7 @@ export function createFinanceContact(input: FinanceContactInput, actor: FinanceA
   return parseContactRow(row);
 }
 
-export function getFinanceSettings(): FinanceSettingsRecord {
+function getFinanceSettingsSqlite(): FinanceSettingsRecord {
   ensureFinanceSchema();
   return getFinanceSettingsRow(getDb());
 }
@@ -2807,7 +2834,7 @@ export function updateFinanceInvoiceDraft(
   return buildInvoiceRecord(db, row);
 }
 
-export function listFinanceInvoices(filters?: {
+function listFinanceInvoicesSqlite(filters?: {
   status?: FinanceInvoiceRecord["status"];
   category?: Exclude<FinanceCategory, "Expense">;
   fromDate?: string;
@@ -2905,7 +2932,7 @@ export function listFinanceInvoices(filters?: {
   return rows.map((row) => buildInvoiceRecord(db, row));
 }
 
-export function getFinanceInvoiceById(invoiceId: number) {
+function getFinanceInvoiceByIdSqlite(invoiceId: number) {
   ensureFinanceSchema();
   const db = getDb();
   markOverdueInvoices(db);
@@ -3544,7 +3571,7 @@ export function createFinanceReceipt(input: FinanceReceiptInput, actor: FinanceA
   return buildReceiptRecord(row);
 }
 
-export function listFinanceReceipts(filters?: {
+function listFinanceReceiptsSqlite(filters?: {
   status?: FinanceReceiptRecord["status"];
   category?: Exclude<FinanceCategory, "Expense">;
   fromDate?: string;
@@ -3632,7 +3659,7 @@ export function listFinanceReceipts(filters?: {
   return rows.map(buildReceiptRecord);
 }
 
-export function getFinanceReceiptById(receiptId: number): FinanceReceiptRecord | null {
+function getFinanceReceiptByIdSqlite(receiptId: number): FinanceReceiptRecord | null {
   ensureFinanceSchema();
   const row = getReceiptRowById(getDb(), receiptId);
   if (!row) {
@@ -3936,7 +3963,7 @@ export async function sendFinanceReceipt(
 
 export async function loadFinanceFileForDownload(fileId: number) {
   const db = getDb();
-  const file = getFinanceFileById(fileId);
+  const file = getFinanceFileByIdSqlite(fileId);
 
   try {
     return {
@@ -4634,7 +4661,7 @@ export function createFinanceExpense(input: FinanceExpenseInput, actor: FinanceA
   });
   const expenseId = Number(result.lastInsertRowid);
   appendAudit(actor, "create", "finance_expenses", expenseId, `Created expense ${expenseNumber}`);
-  const row = getFinanceExpenseById(expenseId);
+  const row = getFinanceExpenseByIdSqlite(expenseId);
   if (!row) {
     throw new Error("Failed to load expense.");
   }
@@ -4768,7 +4795,7 @@ export function upsertFinanceExpenseReceipts(
   return listExpenseReceiptRows(db, expenseId).map(mapExpenseReceiptRow);
 }
 
-export function listFinanceExpenseReceipts(expenseId?: number) {
+function listFinanceExpenseReceiptsSqlite(expenseId?: number) {
   ensureFinanceSchema();
   const db = getDb();
   if (Number.isFinite(expenseId)) {
@@ -4939,7 +4966,7 @@ export function postFinanceExpense(expenseId: number, actor: FinanceActor, optio
   });
   tx();
 
-  const updated = getFinanceExpenseById(expenseId);
+  const updated = getFinanceExpenseByIdSqlite(expenseId);
   if (!updated) {
     throw new Error("Failed to reload expense.");
   }
@@ -4950,7 +4977,7 @@ export function deleteFinanceExpenseDraft(expenseId: number, reason: string, act
   ensureFinanceSchema();
   const cleanReason = requireDestructiveReason(reason, "delete");
   const db = getDb();
-  const current = getFinanceExpenseById(expenseId);
+  const current = getFinanceExpenseByIdSqlite(expenseId);
   if (!current) {
     throw new Error("Expense not found.");
   }
@@ -4997,7 +5024,7 @@ export function voidFinanceExpense(expenseId: number, reason: string, actor: Fin
   ensureFinanceSchema();
   const cleanReason = requireDestructiveReason(reason, "void");
   const db = getDb();
-  const current = getFinanceExpenseById(expenseId);
+  const current = getFinanceExpenseByIdSqlite(expenseId);
   if (!current) {
     throw new Error("Expense not found.");
   }
@@ -5020,14 +5047,14 @@ export function voidFinanceExpense(expenseId: number, reason: string, actor: Fin
   });
   tx();
 
-  const updated = getFinanceExpenseById(expenseId);
+  const updated = getFinanceExpenseByIdSqlite(expenseId);
   if (!updated) {
     throw new Error("Failed to reload expense.");
   }
   return updated;
 }
 
-export function getFinanceExpenseById(expenseId: number): FinanceExpenseRecord | null {
+function getFinanceExpenseByIdSqlite(expenseId: number): FinanceExpenseRecord | null {
   ensureFinanceSchema();
   const row = getExpenseRowById(getDb(), expenseId);
   if (!row) {
@@ -5036,7 +5063,7 @@ export function getFinanceExpenseById(expenseId: number): FinanceExpenseRecord |
   return buildExpenseRecord(row);
 }
 
-export function listFinanceExpenses(filters?: {
+function listFinanceExpensesSqlite(filters?: {
   status?: FinanceExpenseStatus;
   fromDate?: string;
   toDate?: string;
@@ -5071,7 +5098,7 @@ export function listFinanceExpenses(filters?: {
   return rows.map(buildExpenseRecord);
 }
 
-export function listFinanceAuditExceptions(filters?: {
+function listFinanceAuditExceptionsSqlite(filters?: {
   month?: string;
   entityType?: FinanceAuditExceptionRecord["entityType"];
   severity?: FinanceAuditExceptionRecord["severity"];
@@ -5288,14 +5315,14 @@ export function updateFinanceAuditExceptionStatus(
     exceptionId,
     `${input.status} exception ${current.ruleCode} (${current.entityType}#${current.entityId})`,
   );
-  const updated = listFinanceAuditExceptions().find((exception) => exception.id === exceptionId);
+  const updated = listFinanceAuditExceptionsSqlite().find((exception) => exception.id === exceptionId);
   if (!updated) {
     throw new Error("Failed to reload audit exception.");
   }
   return updated;
 }
 
-export function listFinanceReceiptRegistry(filters?: {
+function listFinanceReceiptRegistrySqlite(filters?: {
   vendor?: string;
   reference?: string;
   fromDate?: string;
@@ -5416,7 +5443,7 @@ export function listFinanceReceiptRegistry(filters?: {
   });
 }
 
-export function listFinanceHighRiskTransactions(limit = 25) {
+function listFinanceHighRiskTransactionsSqlite(limit = 25) {
   ensureFinanceSchema();
   const safeLimit = Math.min(200, Math.max(1, Math.trunc(limit || 25)));
   const rows = getDb().prepare(
@@ -5578,7 +5605,7 @@ function runLedgerAndIncomeIntegrityChecks(db: Database.Database, actor: Finance
   return created;
 }
 
-export function listFinanceAuditComplianceChecks(): FinanceAuditComplianceCheckRecord[] {
+function listFinanceAuditComplianceChecksSqlite(): FinanceAuditComplianceCheckRecord[] {
   ensureFinanceSchema();
   const rows = getDb().prepare(
     `
@@ -5673,8 +5700,8 @@ export function runFinanceAuditSweep(actor: FinanceActor): FinanceAuditRunSummar
   return {
     checkedAt,
     checkedExpenses: expenses.length,
-    checkedLedgerEntries: listFinanceLedgerTransactions().length,
-    checkedIncomeRecords: listFinanceReceipts().length + listFinanceInvoices().length,
+    checkedLedgerEntries: listFinanceLedgerTransactionsSqlite().length,
+    checkedIncomeRecords: listFinanceReceiptsSqlite().length + listFinanceInvoicesSqlite().length,
     exceptionsCreated,
     riskScoresUpdated,
   };
@@ -5755,10 +5782,10 @@ function createFinanceFileRecordInternal(
     uploadedBy: input.uploadedBy,
     createdAt: nowIso(),
   });
-  return getFinanceFileById(Number(result.lastInsertRowid));
+  return getFinanceFileByIdSqlite(Number(result.lastInsertRowid));
 }
 
-export function getFinanceFileById(fileId: number): FinanceFileRecord {
+function getFinanceFileByIdSqlite(fileId: number): FinanceFileRecord {
   ensureFinanceSchema();
   const row = getDb().prepare(
     `
@@ -5807,7 +5834,7 @@ export function getFinanceFileById(fileId: number): FinanceFileRecord {
   };
 }
 
-export function listFinanceFilesBySource(sourceType: string, sourceId: number) {
+function listFinanceFilesBySourceSqlite(sourceType: string, sourceId: number) {
   ensureFinanceSchema();
   const rows = getDb().prepare(
     `
@@ -5843,7 +5870,7 @@ export function listFinanceFilesBySource(sourceType: string, sourceId: number) {
   }));
 }
 
-export function listFinanceLedgerTransactions(filters?: {
+function listFinanceLedgerTransactionsSqlite(filters?: {
   txnType?: "money_in" | "money_out";
   category?: FinanceCategory;
   postedStatus?: FinancePostedStatus;
@@ -5928,7 +5955,7 @@ export function listFinanceLedgerTransactions(filters?: {
     let evidenceFiles = ids
       .map((id) => {
         try {
-          return getFinanceFileById(id);
+          return getFinanceFileByIdSqlite(id);
         } catch {
           return null;
         }
@@ -5937,9 +5964,9 @@ export function listFinanceLedgerTransactions(filters?: {
 
     if (evidenceFiles.length === 0) {
       if (row.sourceType === "invoice_payment") {
-        evidenceFiles = listFinanceFilesBySource("payment_evidence", row.sourceId);
+        evidenceFiles = listFinanceFilesBySourceSqlite("payment_evidence", row.sourceId);
       } else if (row.sourceType === "expense") {
-        evidenceFiles = listFinanceFilesBySource("expense", row.sourceId);
+        evidenceFiles = listFinanceFilesBySourceSqlite("expense", row.sourceId);
       }
     }
 
@@ -5967,7 +5994,7 @@ export function listFinanceLedgerTransactions(filters?: {
   });
 }
 
-export function getFinanceDashboardSummary(month = todayIsoDate().slice(0, 7), currency: FinanceCurrency = "UGX"): FinanceDashboardSummary {
+function getFinanceDashboardSummarySqlite(month = todayIsoDate().slice(0, 7), currency: FinanceCurrency = "UGX"): FinanceDashboardSummary {
   ensureFinanceSchema();
   const db = getDb();
   markOverdueInvoices(db);
@@ -6043,7 +6070,7 @@ export function getFinanceDashboardSummary(month = todayIsoDate().slice(0, 7), c
   };
 }
 
-export function listFinanceMonthlyStatements() {
+function listFinanceMonthlyStatementsSqlite() {
   ensureFinanceSchema();
   const rows = getDb().prepare(
     `
@@ -6399,7 +6426,7 @@ export async function generateFinanceMonthlyStatement(
   } as FinanceMonthlyStatementRecord;
 }
 
-export function listFinanceEmailLogs(limit = 200): FinanceEmailLogEntry[] {
+function listFinanceEmailLogsSqlite(limit = 200): FinanceEmailLogEntry[] {
   ensureFinanceSchema();
   const rows = getDb().prepare(
     `
@@ -6431,6 +6458,225 @@ export function listFinanceEmailLogs(limit = 200): FinanceEmailLogEntry[] {
     createdAt: string;
   }>;
   return rows;
+}
+
+export async function listFinanceContacts() {
+  if (isPostgresConfigured()) {
+    return listFinanceContactsPostgres();
+  }
+  return listFinanceContactsSqlite();
+}
+
+export async function getFinanceSettings(): Promise<FinanceSettingsRecord> {
+  if (isPostgresConfigured()) {
+    return getFinanceSettingsPostgres();
+  }
+  return getFinanceSettingsSqlite();
+}
+
+export async function listFinanceInvoices(filters?: {
+  status?: FinanceInvoiceRecord["status"];
+  category?: Exclude<FinanceCategory, "Expense">;
+  fromDate?: string;
+  toDate?: string;
+}) {
+  if (isPostgresConfigured()) {
+    return listFinanceInvoicesPostgres(filters);
+  }
+  return listFinanceInvoicesSqlite(filters);
+}
+
+export async function getFinanceInvoiceById(invoiceId: number) {
+  if (isPostgresConfigured()) {
+    return getFinanceInvoiceByIdPostgres(invoiceId);
+  }
+  return getFinanceInvoiceByIdSqlite(invoiceId);
+}
+
+export async function listFinanceReceipts(filters?: {
+  status?: FinanceReceiptRecord["status"];
+  category?: Exclude<FinanceCategory, "Expense">;
+  fromDate?: string;
+  toDate?: string;
+}) {
+  if (isPostgresConfigured()) {
+    return listFinanceReceiptsPostgres(filters);
+  }
+  return listFinanceReceiptsSqlite(filters);
+}
+
+export async function getFinanceReceiptById(receiptId: number): Promise<FinanceReceiptRecord | null> {
+  if (isPostgresConfigured()) {
+    return getFinanceReceiptByIdPostgres(receiptId);
+  }
+  return getFinanceReceiptByIdSqlite(receiptId);
+}
+
+export async function listFinanceExpenseReceipts(expenseId?: number) {
+  if (isPostgresConfigured()) {
+    return listFinanceExpenseReceiptsPostgres(expenseId);
+  }
+  return listFinanceExpenseReceiptsSqlite(expenseId);
+}
+
+export async function getFinanceExpenseById(expenseId: number): Promise<FinanceExpenseRecord | null> {
+  if (isPostgresConfigured()) {
+    return getFinanceExpenseByIdPostgres(expenseId);
+  }
+  return getFinanceExpenseByIdSqlite(expenseId);
+}
+
+export async function listFinanceExpenses(filters?: {
+  status?: FinanceExpenseStatus;
+  fromDate?: string;
+  toDate?: string;
+  subcategory?: string;
+}) {
+  if (isPostgresConfigured()) {
+    return listFinanceExpensesPostgres(filters);
+  }
+  return listFinanceExpensesSqlite(filters);
+}
+
+export async function listFinanceAuditExceptions(filters?: {
+  month?: string;
+  entityType?: FinanceAuditExceptionRecord["entityType"];
+  severity?: FinanceAuditExceptionRecord["severity"];
+  status?: FinanceAuditExceptionRecord["status"];
+  ruleCode?: string;
+  category?: FinanceCategory;
+  subcategory?: string;
+  paymentMethod?: FinanceExpenseRecord["paymentMethod"];
+  currency?: FinanceCurrency;
+  createdBy?: number;
+}) {
+  if (isPostgresConfigured()) {
+    return listFinanceAuditExceptionsPostgres(filters);
+  }
+  return listFinanceAuditExceptionsSqlite(filters);
+}
+
+export async function listFinanceHighRiskTransactions(limit = 25) {
+  if (isPostgresConfigured()) {
+    return listFinanceHighRiskTransactionsPostgres(limit);
+  }
+  return listFinanceHighRiskTransactionsSqlite(limit);
+}
+
+export async function getFinanceFileById(fileId: number): Promise<FinanceFileRecord> {
+  if (isPostgresConfigured()) {
+    return getFinanceFileByIdPostgres(fileId);
+  }
+  return getFinanceFileByIdSqlite(fileId);
+}
+
+export async function listFinanceFilesBySource(sourceType: string, sourceId: number) {
+  if (isPostgresConfigured()) {
+    return listFinanceFilesBySourcePostgres(sourceType, sourceId);
+  }
+  return listFinanceFilesBySourceSqlite(sourceType, sourceId);
+}
+
+export async function listFinanceLedgerTransactions(filters?: {
+  txnType?: "money_in" | "money_out";
+  category?: FinanceCategory;
+  postedStatus?: FinancePostedStatus;
+  fromDate?: string;
+  toDate?: string;
+}) {
+  if (isPostgresConfigured()) {
+    return listFinanceLedgerTransactionsPostgres(filters);
+  }
+  return listFinanceLedgerTransactionsSqlite(filters);
+}
+
+export async function getFinanceDashboardSummary(
+  month = todayIsoDate().slice(0, 7),
+  currency: FinanceCurrency = "UGX",
+): Promise<FinanceDashboardSummary> {
+  if (isPostgresConfigured()) {
+    return getFinanceDashboardSummaryPostgres(month, currency);
+  }
+  return getFinanceDashboardSummarySqlite(month, currency);
+}
+
+export async function listFinanceMonthlyStatements() {
+  if (isPostgresConfigured()) {
+    return listFinanceMonthlyStatementsPostgres();
+  }
+  return listFinanceMonthlyStatementsSqlite();
+}
+
+export async function listFinanceEmailLogs(limit = 200): Promise<FinanceEmailLogEntry[]> {
+  if (isPostgresConfigured()) {
+    return listFinanceEmailLogsPostgres(limit);
+  }
+  return listFinanceEmailLogsSqlite(limit);
+}
+
+export async function listFinanceReceiptRegistry(filters?: {
+  vendor?: string;
+  reference?: string;
+  fromDate?: string;
+  toDate?: string;
+  amount?: number;
+  currency?: FinanceCurrency;
+}) {
+  if (isPostgresConfigured()) {
+    return listFinanceReceiptRegistryPostgres(filters);
+  }
+  return listFinanceReceiptRegistrySqlite(filters);
+}
+
+export async function listFinanceAuditComplianceChecks(): Promise<FinanceAuditComplianceCheckRecord[]> {
+  if (isPostgresConfigured()) {
+    return listFinanceAuditComplianceChecksPostgres();
+  }
+  return listFinanceAuditComplianceChecksSqlite();
+}
+
+export async function listStatementLines(filters?: {
+  accountType?: FinanceStatementAccountType;
+  matchStatus?: FinanceMatchStatus;
+  month?: string;
+}): Promise<FinanceStatementLineRecord[]> {
+  if (isPostgresConfigured()) {
+    return listStatementLinesPostgres(filters);
+  }
+  return listStatementLinesSqlite(filters);
+}
+
+export async function listMonthlyBudgets(
+  month: string,
+  currency?: FinanceCurrency,
+): Promise<FinanceBudgetMonthlyRecord[]> {
+  if (isPostgresConfigured()) {
+    return listMonthlyBudgetsPostgres(month, currency);
+  }
+  return listMonthlyBudgetsSqlite(month, currency);
+}
+
+export async function getRestrictedFundsSummary(
+  currency?: FinanceCurrency,
+): Promise<FinanceRestrictedBalanceLine[]> {
+  if (isPostgresConfigured()) {
+    return getRestrictedFundsSummaryPostgres(currency);
+  }
+  return getRestrictedFundsSummarySqlite(currency);
+}
+
+export async function listFinancePublicSnapshots(filters?: { publishedOnly?: boolean }) {
+  if (isPostgresConfigured()) {
+    return listFinancePublicSnapshotsPostgres(filters);
+  }
+  return listFinancePublicSnapshotsSqlite(filters);
+}
+
+export async function listFinanceAuditedStatements(filters?: { publishedOnly?: boolean }) {
+  if (isPostgresConfigured()) {
+    return listFinanceAuditedStatementsPostgres(filters);
+  }
+  return listFinanceAuditedStatementsSqlite(filters);
 }
 
 export function exportFinanceRowsToCsv(rows: Array<Record<string, unknown>>, columns: string[]) {
@@ -6511,7 +6757,7 @@ function getStatementLineById(id: number): FinanceStatementLineRecord | null {
   };
 }
 
-export function listStatementLines(filters?: {
+function listStatementLinesSqlite(filters?: {
   accountType?: FinanceStatementAccountType;
   matchStatus?: FinanceMatchStatus;
   month?: string;
@@ -6876,7 +7122,7 @@ export function upsertMonthlyBudget(
   return row;
 }
 
-export function listMonthlyBudgets(month: string, currency?: FinanceCurrency): FinanceBudgetMonthlyRecord[] {
+function listMonthlyBudgetsSqlite(month: string, currency?: FinanceCurrency): FinanceBudgetMonthlyRecord[] {
   ensureFinanceSchema();
   const db = getDb();
   let sql = `SELECT id, month, currency, subcategory, budget_amount AS budgetAmount,
@@ -6894,7 +7140,7 @@ export function listMonthlyBudgets(month: string, currency?: FinanceCurrency): F
 export function getBudgetVsActual(month: string, currency: FinanceCurrency): FinanceBudgetVsActualLine[] {
   ensureFinanceSchema();
   const db = getDb();
-  const budgets = listMonthlyBudgets(month, currency);
+  const budgets = listMonthlyBudgetsSqlite(month, currency);
 
   /* Actual spend from ledger for this month/currency */
   const actuals = db.prepare(
@@ -6942,7 +7188,7 @@ export function getBudgetVsActual(month: string, currency: FinanceCurrency): Fin
    V2 FEATURE 4 — RESTRICTED / EARMARKED FUNDS
    ════════════════════════════════════════════════════════════════════════════ */
 
-export function getRestrictedFundsSummary(currency?: FinanceCurrency): FinanceRestrictedBalanceLine[] {
+function getRestrictedFundsSummarySqlite(currency?: FinanceCurrency): FinanceRestrictedBalanceLine[] {
   ensureFinanceSchema();
   const db = getDb();
   let currFilter = "";
@@ -7028,7 +7274,7 @@ function logFinanceTransparencyAudit(actor: FinanceActor, action: string, table:
   logAuditEvent(actor.userId, actor.userName, action, table, id, null, null, details, null);
 }
 
-export function listFinancePublicSnapshots(filters?: { publishedOnly?: boolean }) {
+function listFinancePublicSnapshotsSqlite(filters?: { publishedOnly?: boolean }) {
   ensureFinanceSchema();
   const where: string[] = [];
   if (filters?.publishedOnly) {
@@ -7067,9 +7313,9 @@ export function listFinancePublicSnapshots(filters?: { publishedOnly?: boolean }
 }
 
 function getAggregatedLedgerData(fromDate: string, toDate: string, currency: string) {
-  const incomes = listFinanceLedgerTransactions({ txnType: "money_in", fromDate, toDate })
+  const incomes = listFinanceLedgerTransactionsSqlite({ txnType: "money_in", fromDate, toDate })
     .filter(t => t.postedStatus === "posted" && t.currency === currency);
-  const expenses = listFinanceLedgerTransactions({ txnType: "money_out", fromDate, toDate })
+  const expenses = listFinanceLedgerTransactionsSqlite({ txnType: "money_out", fromDate, toDate })
     .filter(t => t.postedStatus === "posted" && t.currency === currency && t.category === "Expense");
 
   let totalIncome = 0;
@@ -7136,7 +7382,7 @@ export function generatePublicSnapshot(
   }
 
   const agg = getAggregatedLedgerData(fromDate, toDate, opts.currency);
-  const restrictedSummaryJson = JSON.stringify(getRestrictedFundsSummary(opts.currency));
+  const restrictedSummaryJson = JSON.stringify(getRestrictedFundsSummarySqlite(opts.currency));
 
   let existingId: number | null = null;
   try {
@@ -7232,7 +7478,7 @@ export function updatePublicSnapshotStorage(snapshotId: number, storedPath: stri
 }
 
 // Audited Statements
-export function listFinanceAuditedStatements(filters?: { publishedOnly?: boolean }) {
+function listFinanceAuditedStatementsSqlite(filters?: { publishedOnly?: boolean }) {
   ensureFinanceSchema();
   const where: string[] = [];
   if (filters?.publishedOnly) {

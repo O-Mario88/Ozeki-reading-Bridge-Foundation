@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function PortalFinanceStatementsPage() {
   const user = await requirePortalFinanceReceiptEditorUser();
-  const statements = listFinanceMonthlyStatements();
+  const statements = await listFinanceMonthlyStatements();
 
   return (
     <FinanceShell user={user} activeHref="/portal/finance/statements" title="Financial Statements">

@@ -17,10 +17,10 @@ export const metadata = {
 
 export default async function PortalFinanceAuditCenterPage() {
   const user = await requirePortalFinanceReceiptEditorUser();
-  const exceptions = listFinanceAuditExceptions({ status: "open" });
-  const receiptRegistry = listFinanceReceiptRegistry();
-  const riskItems = listFinanceHighRiskTransactions(30);
-  const complianceChecks = listFinanceAuditComplianceChecks();
+  const exceptions = await listFinanceAuditExceptions({ status: "open" });
+  const receiptRegistry = await listFinanceReceiptRegistry();
+  const riskItems = await listFinanceHighRiskTransactions(30);
+  const complianceChecks = await listFinanceAuditComplianceChecks();
 
   return (
     <FinanceShell user={user} activeHref="/portal/finance/audit-center" title="Audit Center">

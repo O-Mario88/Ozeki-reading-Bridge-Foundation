@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   const toDate = request.nextUrl.searchParams.get("to") || undefined;
   const format = request.nextUrl.searchParams.get("format");
 
-  const invoices = listFinanceInvoices({
+  const invoices = await listFinanceInvoices({
     status: status as never,
     category: category as never,
     fromDate,

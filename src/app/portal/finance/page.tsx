@@ -17,10 +17,10 @@ export const metadata = {
 
 export default async function PortalFinanceDashboardPage() {
   const user = await requirePortalFinanceReceiptEditorUser();
-  const summary = getFinanceDashboardSummary();
-  const recentInvoices = listFinanceInvoices().slice(0, 8);
-  const recentReceipts = listFinanceReceipts().slice(0, 8);
-  const recentExpenses = listFinanceExpenses().slice(0, 8);
+  const summary = await getFinanceDashboardSummary();
+  const recentInvoices = (await listFinanceInvoices()).slice(0, 8);
+  const recentReceipts = (await listFinanceReceipts()).slice(0, 8);
+  const recentExpenses = (await listFinanceExpenses()).slice(0, 8);
 
   return (
     <FinanceShell user={user} activeHref="/portal/finance" title="Dashboard">

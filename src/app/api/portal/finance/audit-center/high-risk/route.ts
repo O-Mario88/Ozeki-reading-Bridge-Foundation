@@ -12,6 +12,6 @@ export async function GET(request: NextRequest) {
 
   const limitRaw = request.nextUrl.searchParams.get("limit");
   const limit = Number(limitRaw || 25);
-  const items = listFinanceHighRiskTransactions(Number.isFinite(limit) ? limit : 25);
+  const items = await listFinanceHighRiskTransactions(Number.isFinite(limit) ? limit : 25);
   return NextResponse.json({ items });
 }

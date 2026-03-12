@@ -28,7 +28,7 @@ export async function GET() {
   if (auth.error) {
     return auth.error;
   }
-  return NextResponse.json({ settings: getFinanceSettings() });
+  return NextResponse.json({ settings: await getFinanceSettings() });
 }
 
 export async function PUT(request: NextRequest) {

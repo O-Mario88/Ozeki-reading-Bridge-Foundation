@@ -11,6 +11,6 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const currency = (url.searchParams.get("currency") || undefined) as FinanceCurrency | undefined;
 
-    const summary = getRestrictedFundsSummary(currency);
+    const summary = await getRestrictedFundsSummary(currency);
     return NextResponse.json({ summary });
 }
