@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { createMediaFileResponse, resolveMimeType } from "@/lib/media-response";
@@ -39,6 +40,20 @@ export async function GET(
 
     const mediaKind = params.category === "photos" ? "image" : "video";
     const contentType = resolveMimeType(filePath, null, mediaKind);
+
+    // AWS Optimization: If it's a video and missing locally, redirect to S3
+    if (mediaKind === "video") {
+      try {
+        await fs.access(filePath);
+      } catch {
+        const s3Bucket = process.env.NEXT_PUBLIC_S3_MEDIA_BUCKET;
+        if (s3Bucket) {
+          const s3Url = `${s3Bucket.replace(/\/$/, "")}/videos/${params.file}`;
+          return NextResponse.redirect(s3Url);
+        }
+        // Fallback or 404
+      }
+    }
 
     return createMediaFileResponse({
       request,

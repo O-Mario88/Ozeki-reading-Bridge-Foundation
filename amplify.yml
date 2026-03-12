@@ -3,6 +3,7 @@ frontend:
   phases:
     preBuild:
       commands:
+        - npm run clean:next
         - nvm use 20 || nvm install 20
         - node -v
         - npm -v
@@ -19,6 +20,5 @@ frontend:
       - "**/*"
   cache:
     paths:
-      - .next/cache/**/*
       - node_modules/**/*
       - .npm/**/*

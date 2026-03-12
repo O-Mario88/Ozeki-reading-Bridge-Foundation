@@ -269,8 +269,12 @@ export async function getMediaShowcase(): Promise<MediaShowcaseData> {
 
   const assetPhotos = buildUniqueItems("photo", uniqueAssetPhotoFiles, "photos");
 
+  const videoDirectory = path.join(process.cwd(), "assets", "videos");
+  const videoFiles = await readMediaFiles(videoDirectory, new Set([".mp4", ".mov", ".webm", ".m4v"]));
+  const assetVideos = buildUniqueItems("video", videoFiles, "videos");
+
   const uniquePhotos = [...submitted.photoItems, ...assetPhotos];
-  const uniqueVideos = [...submitted.videoItems];
+  const uniqueVideos = [...submitted.videoItems, ...assetVideos];
 
   return {
     uniquePhotos,

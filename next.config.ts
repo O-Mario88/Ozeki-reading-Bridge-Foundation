@@ -6,6 +6,14 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3"],
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
+  images: { unoptimized: true },
+  outputFileTracingExcludes: {
+    "*": [
+      "node_modules/puppeteer-core/lib/esm/puppeteer/node/install.js",
+      "assets/videos/**/*",
+      "data/finance/**/*",
+    ],
+  },
   async headers() {
     return [
       {
