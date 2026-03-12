@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import type { PoolClient } from "pg";
 import {
   AssessmentRecord,
   AssessmentRecordInput,
@@ -204,7 +205,7 @@ import {
   LEARNING_DOMAIN_DICTIONARY,
 } from "@/lib/domain-dictionary";
 import { getRuntimeDataDir, getRuntimeDbFilePath } from "@/lib/runtime-paths";
-import { isPostgresConfigured } from "@/lib/server/postgres/client";
+import { isPostgresConfigured, queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 import {
   deleteExpiredPortalSessionsPostgres,
   deletePortalSessionPostgres,
@@ -7032,6 +7033,144 @@ export function listAssessmentRecords(limit = 20): AssessmentRecord[] {
   return rows;
 }
 
+async function getAssessmentRecordByIdPostgres(assessmentId: number): Promise<AssessmentRecord | null> {
+  const result = await queryPostgres(
+    `
+      SELECT
+        id,
+        learner_uid AS "learnerUid",
+        child_name AS "childName",
+        child_id AS "childId",
+        gender,
+        age,
+        school_id AS "schoolId",
+        class_grade AS "classGrade",
+        assessment_date::text AS "assessmentDate",
+        assessment_type AS "assessmentType",
+        letter_identification_score AS "letterIdentificationScore",
+        sound_identification_score AS "soundIdentificationScore",
+        decodable_words_score AS "decodableWordsScore",
+        undecodable_words_score AS "undecodableWordsScore",
+        made_up_words_score AS "madeUpWordsScore",
+        story_reading_score AS "storyReadingScore",
+        fluency_accuracy_score AS "fluencyAccuracyScore",
+        reading_comprehension_score AS "readingComprehensionScore",
+        computed_reading_level AS "computedReadingLevel",
+        computed_level_band AS "computedLevelBand",
+        reading_rules_version AS "readingRulesVersion",
+        model_version AS "assessmentModelVersion",
+        reading_stage_label AS "readingStageLabel",
+        reading_stage_order AS "readingStageOrder",
+        benchmark_grade_level AS "benchmarkGradeLevel",
+        expected_vs_actual_status AS "expectedVsActualStatus",
+        stage_reason_code AS "stageReasonCode",
+        stage_reason_summary AS "stageReasonSummary",
+        mastery_profile_summary_json AS "masteryProfileSummaryJson",
+        notes,
+        created_by_user_id AS "createdByUserId",
+        created_at::text AS "createdAt"
+      FROM assessment_records
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [assessmentId],
+  );
+  return (result.rows[0] as AssessmentRecord | undefined) ?? null;
+}
+
+async function mirrorAssessmentRecordToPostgres(assessmentId: number, learnerUid?: string | null) {
+  const db = getDb();
+  const assessmentRow = db
+    .prepare(`SELECT * FROM assessment_records WHERE id = @assessmentId LIMIT 1`)
+    .get({ assessmentId }) as Record<string, unknown> | undefined;
+  if (!assessmentRow) {
+    return;
+  }
+
+  const learnerRow =
+    learnerUid && learnerUid.trim()
+      ? (db
+        .prepare(`SELECT * FROM learner_roster WHERE learner_uid = @learnerUid LIMIT 1`)
+        .get({ learnerUid: learnerUid.trim() }) as Record<string, unknown> | undefined)
+      : undefined;
+
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      if (learnerRow) {
+        await upsertSqliteRowToPostgres("learner_roster", "id", learnerRow, client);
+      }
+      await upsertSqliteRowToPostgres("assessment_records", "id", assessmentRow, client);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
+export async function listAssessmentRecordsAsync(limit = 20): Promise<AssessmentRecord[]> {
+  if (!isPostgresConfigured()) {
+    return listAssessmentRecords(limit);
+  }
+
+  const result = await queryPostgres(
+    `
+      SELECT
+        id,
+        learner_uid AS "learnerUid",
+        child_name AS "childName",
+        child_id AS "childId",
+        gender,
+        age,
+        school_id AS "schoolId",
+        class_grade AS "classGrade",
+        assessment_date::text AS "assessmentDate",
+        assessment_type AS "assessmentType",
+        letter_identification_score AS "letterIdentificationScore",
+        sound_identification_score AS "soundIdentificationScore",
+        decodable_words_score AS "decodableWordsScore",
+        undecodable_words_score AS "undecodableWordsScore",
+        made_up_words_score AS "madeUpWordsScore",
+        story_reading_score AS "storyReadingScore",
+        fluency_accuracy_score AS "fluencyAccuracyScore",
+        reading_comprehension_score AS "readingComprehensionScore",
+        computed_reading_level AS "computedReadingLevel",
+        computed_level_band AS "computedLevelBand",
+        reading_rules_version AS "readingRulesVersion",
+        model_version AS "assessmentModelVersion",
+        reading_stage_label AS "readingStageLabel",
+        reading_stage_order AS "readingStageOrder",
+        benchmark_grade_level AS "benchmarkGradeLevel",
+        expected_vs_actual_status AS "expectedVsActualStatus",
+        stage_reason_code AS "stageReasonCode",
+        stage_reason_summary AS "stageReasonSummary",
+        mastery_profile_summary_json AS "masteryProfileSummaryJson",
+        notes,
+        created_by_user_id AS "createdByUserId",
+        created_at::text AS "createdAt"
+      FROM assessment_records
+      ORDER BY assessment_date DESC, id DESC
+      LIMIT $1
+    `,
+    [Math.max(1, Math.min(limit, 500))],
+  );
+  return result.rows as AssessmentRecord[];
+}
+
+export async function saveAssessmentRecordAsync(
+  payload: AssessmentRecordInput,
+  createdByUserId: number,
+): Promise<AssessmentRecord> {
+  const saved = saveAssessmentRecord(payload, createdByUserId);
+  if (!isPostgresConfigured()) {
+    return saved;
+  }
+
+  await mirrorAssessmentRecordToPostgres(saved.id, saved.learnerUid ?? null);
+  return (await getAssessmentRecordByIdPostgres(saved.id)) ?? saved;
+}
+
 export function saveOnlineTrainingEvent(
   payload: OnlineTrainingEventInput & {
     startDateTime: string;
@@ -7332,6 +7471,97 @@ function parsePortalRecord(
     deletedByUserId: row.deletedByUserId ?? null,
     deleteReason: row.deleteReason ?? null,
   };
+}
+
+function sqliteToPostgresValue(table: string, column: string, value: unknown) {
+  if (typeof value === "bigint") {
+    return Number(value);
+  }
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const booleanColumnsByTable: Record<string, Set<string>> = {
+    portal_training_attendance: new Set(["attended"]),
+    visit_participants: new Set(["attended"]),
+    visit_demo: new Set(["demo_delivered"]),
+    visit_leadership_meeting: new Set(["meeting_held"]),
+    assessment_item_responses: new Set(["accuracy", "hint_used", "correction_used"]),
+  };
+
+  if (booleanColumnsByTable[table]?.has(column)) {
+    if (typeof value === "boolean") {
+      return value;
+    }
+    if (typeof value === "number") {
+      return value === 1;
+    }
+    const normalized = String(value).trim().toLowerCase();
+    return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  }
+
+  return value;
+}
+
+async function upsertSqliteRowToPostgres(
+  table: string,
+  primaryKeyColumn: string,
+  row: Record<string, unknown>,
+  client?: PoolClient,
+) {
+  const columns = Object.keys(row);
+  if (columns.length === 0) {
+    return;
+  }
+  const placeholders = columns.map((_, index) => `$${index + 1}`).join(", ");
+  const updates = columns
+    .filter((column) => column !== primaryKeyColumn)
+    .map((column) => `${column} = EXCLUDED.${column}`)
+    .join(", ");
+  const values = columns.map((column) => sqliteToPostgresValue(table, column, row[column]));
+  const sql = `
+      INSERT INTO ${table} (${columns.join(", ")})
+      VALUES (${placeholders})
+      ON CONFLICT (${primaryKeyColumn})
+      DO ${updates ? `UPDATE SET ${updates}` : "NOTHING"}
+    `;
+  if (client) {
+    await client.query(sql, values);
+    return;
+  }
+  await queryPostgres(
+    `
+      ${sql}
+    `,
+    values,
+  );
+}
+
+async function deletePostgresRowsByColumn(
+  table: string,
+  column: string,
+  value: unknown,
+  client?: PoolClient,
+) {
+  if (client) {
+    await client.query(`DELETE FROM ${table} WHERE ${column} = $1`, [value]);
+    return;
+  }
+  await queryPostgres(`DELETE FROM ${table} WHERE ${column} = $1`, [value]);
+}
+
+async function replaceSqliteRowsInPostgres(
+  table: string,
+  primaryKeyColumn: string,
+  matchColumn: string,
+  matchValue: unknown,
+  rows: Array<Record<string, unknown>>,
+  client?: PoolClient,
+) {
+  await deletePostgresRowsByColumn(table, matchColumn, matchValue, client);
+  for (const row of rows) {
+    await upsertSqliteRowToPostgres(table, primaryKeyColumn, row, client);
+  }
 }
 
 function asRecordArray(value: unknown) {
@@ -11820,6 +12050,404 @@ export function listPortalRecords(filters: PortalRecordFilters, user: PortalUser
     }>;
 
   return rows.map((row) => parsePortalRecord(row));
+}
+
+async function getPortalRecordRowPostgres(id: number) {
+  const result = await queryPostgres(
+    `
+      SELECT
+        pr.id,
+        pr.record_code AS "recordCode",
+        pr.module,
+        pr.date::text AS date,
+        pr.district,
+        pr.school_id AS "schoolId",
+        pr.school_name AS "schoolName",
+        pr.program_type AS "programType",
+        pr.status,
+        pr.follow_up_date::text AS "followUpDate",
+        pr.follow_up_type AS "followUpType",
+        pr.follow_up_owner_user_id AS "followUpOwnerUserId",
+        pfu.full_name AS "followUpOwnerName",
+        pr.payload_json AS "payloadJson",
+        pr.review_note AS "reviewNote",
+        pr.created_by_user_id AS "createdByUserId",
+        pu.full_name AS "createdByName",
+        pr.created_at::text AS "createdAt",
+        pr.updated_at::text AS "updatedAt",
+        pr.deleted_at::text AS "deletedAt",
+        pr.deleted_by_user_id AS "deletedByUserId",
+        pr.delete_reason AS "deleteReason"
+      FROM portal_records pr
+      JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      LEFT JOIN portal_users pfu ON pfu.id = pr.follow_up_owner_user_id
+      WHERE pr.id = $1
+      LIMIT 1
+    `,
+    [id],
+  );
+  return result.rows[0] as
+    | {
+      id: number;
+      recordCode: string;
+      module: PortalRecordModule;
+      date: string;
+      district: string;
+      schoolId: number | null;
+      schoolName: string;
+      programType: string | null;
+      status: PortalRecordStatus;
+      followUpDate: string | null;
+      followUpType: string | null;
+      followUpOwnerUserId: number | null;
+      followUpOwnerName: string | null;
+      payloadJson: string;
+      reviewNote: string | null;
+      createdByUserId: number;
+      createdByName: string;
+      createdAt: string;
+      updatedAt: string;
+      deletedAt: string | null;
+      deletedByUserId: number | null;
+      deleteReason: string | null;
+    }
+    | undefined;
+}
+
+async function mirrorPortalRecordToPostgres(recordId: number) {
+  const db = getDb();
+  const portalRow = db
+    .prepare(`SELECT * FROM portal_records WHERE id = @recordId LIMIT 1`)
+    .get({ recordId }) as Record<string, unknown> | undefined;
+  if (!portalRow) {
+    return;
+  }
+
+  const schoolId =
+    portalRow.school_id === null || portalRow.school_id === undefined
+      ? null
+      : Number(portalRow.school_id);
+  const recordModule = String(portalRow.module ?? "").trim() as PortalRecordModule;
+  const trainingAttendanceRows =
+    recordModule === "training"
+      ? (db
+        .prepare(`SELECT * FROM portal_training_attendance WHERE portal_record_id = @recordId ORDER BY id ASC`)
+        .all({ recordId }) as Array<Record<string, unknown>>)
+      : [];
+  const coachingVisitRow =
+    recordModule === "visit"
+      ? (db
+        .prepare(`SELECT * FROM coaching_visits WHERE portal_record_id = @recordId LIMIT 1`)
+        .get({ recordId }) as Record<string, unknown> | undefined)
+      : undefined;
+  const visitId =
+    coachingVisitRow?.id === null || coachingVisitRow?.id === undefined ? null : Number(coachingVisitRow.id);
+  const visitParticipantRows =
+    visitId && recordModule === "visit"
+      ? (db
+        .prepare(`SELECT * FROM visit_participants WHERE visit_id = @visitId ORDER BY id ASC`)
+        .all({ visitId }) as Array<Record<string, unknown>>)
+      : [];
+  const visitDemoRow =
+    visitId && recordModule === "visit"
+      ? (db
+        .prepare(`SELECT * FROM visit_demo WHERE visit_id = @visitId LIMIT 1`)
+        .get({ visitId }) as Record<string, unknown> | undefined)
+      : undefined;
+  const visitMeetingRow =
+    visitId && recordModule === "visit"
+      ? (db
+        .prepare(`SELECT * FROM visit_leadership_meeting WHERE visit_id = @visitId LIMIT 1`)
+        .get({ visitId }) as Record<string, unknown> | undefined)
+      : undefined;
+  const assessmentSessionRow =
+    recordModule === "assessment"
+      ? (db
+        .prepare(`SELECT * FROM assessment_sessions WHERE portal_record_id = @recordId LIMIT 1`)
+        .get({ recordId }) as Record<string, unknown> | undefined)
+      : undefined;
+  const assessmentSessionId =
+    assessmentSessionRow?.id === null || assessmentSessionRow?.id === undefined
+      ? null
+      : Number(assessmentSessionRow.id);
+  const assessmentSessionResultRows =
+    assessmentSessionId && recordModule === "assessment"
+      ? (db
+        .prepare(
+          `SELECT * FROM assessment_session_results WHERE assessment_session_id = @assessmentSessionId ORDER BY id ASC`,
+        )
+        .all({ assessmentSessionId }) as Array<Record<string, unknown>>)
+      : [];
+  const assessmentRecordRows =
+    recordModule === "assessment"
+      ? (db
+        .prepare(
+          `SELECT * FROM assessment_records WHERE source_portal_record_id = @recordId ORDER BY id ASC`,
+        )
+        .all({ recordId }) as Array<Record<string, unknown>>)
+      : [];
+  const assessmentItemResponseRows =
+    assessmentSessionId && recordModule === "assessment"
+      ? (db
+        .prepare(
+          `SELECT * FROM assessment_item_responses WHERE assessment_session_id = @assessmentSessionId ORDER BY item_response_id ASC`,
+        )
+        .all({ assessmentSessionId }) as Array<Record<string, unknown>>)
+      : [];
+  const schoolSupportRows =
+    schoolId && recordModule === "assessment"
+      ? (db
+        .prepare(`SELECT * FROM school_support_status_snapshots WHERE school_id = @schoolId ORDER BY id ASC`)
+        .all({ schoolId }) as Array<Record<string, unknown>>)
+      : [];
+
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await upsertSqliteRowToPostgres("portal_records", "id", portalRow, client);
+
+      if (recordModule === "training") {
+        await replaceSqliteRowsInPostgres(
+          "portal_training_attendance",
+          "id",
+          "portal_record_id",
+          recordId,
+          trainingAttendanceRows,
+          client,
+        );
+      }
+
+      if (recordModule === "visit") {
+        if (coachingVisitRow) {
+          await upsertSqliteRowToPostgres("coaching_visits", "id", coachingVisitRow, client);
+          await replaceSqliteRowsInPostgres(
+            "visit_participants",
+            "id",
+            "visit_id",
+            visitId,
+            visitParticipantRows,
+            client,
+          );
+          if (visitDemoRow) {
+            await upsertSqliteRowToPostgres("visit_demo", "id", visitDemoRow, client);
+          } else if (visitId) {
+            await deletePostgresRowsByColumn("visit_demo", "visit_id", visitId, client);
+          }
+          if (visitMeetingRow) {
+            await upsertSqliteRowToPostgres("visit_leadership_meeting", "id", visitMeetingRow, client);
+          } else if (visitId) {
+            await deletePostgresRowsByColumn("visit_leadership_meeting", "visit_id", visitId, client);
+          }
+        } else {
+          await deletePostgresRowsByColumn("coaching_visits", "portal_record_id", recordId, client);
+        }
+      }
+
+      if (recordModule === "assessment") {
+        if (assessmentSessionRow) {
+          await upsertSqliteRowToPostgres("assessment_sessions", "id", assessmentSessionRow, client);
+          await replaceSqliteRowsInPostgres(
+            "assessment_session_results",
+            "id",
+            "session_id",
+            assessmentSessionId,
+            assessmentSessionResultRows.map((row) => ({
+              id: row.id,
+              session_id: row.assessment_session_id,
+              learner_uid: row.learner_uid ?? null,
+              learner_name: row.learner_uid ? null : null,
+              gender: null,
+              age: null,
+              result_json: JSON.stringify(row),
+              created_at: row.created_at,
+            })),
+            client,
+          );
+          await replaceSqliteRowsInPostgres(
+            "assessment_records",
+            "id",
+            "source_portal_record_id",
+            recordId,
+            assessmentRecordRows,
+            client,
+          );
+          await replaceSqliteRowsInPostgres(
+            "assessment_item_responses",
+            "item_response_id",
+            "assessment_session_id",
+            assessmentSessionId,
+            assessmentItemResponseRows,
+            client,
+          );
+          if (schoolId) {
+            await replaceSqliteRowsInPostgres(
+              "school_support_status_snapshots",
+              "id",
+              "school_id",
+              schoolId,
+              schoolSupportRows,
+              client,
+            );
+          }
+        } else {
+          await deletePostgresRowsByColumn("assessment_sessions", "portal_record_id", recordId, client);
+          await deletePostgresRowsByColumn("assessment_records", "source_portal_record_id", recordId, client);
+        }
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
+export async function getPortalRecordByIdAsync(id: number, user: PortalUser): Promise<PortalRecord | null> {
+  if (!isPostgresConfigured()) {
+    return getPortalRecordById(id, user);
+  }
+
+  const row = await getPortalRecordRowPostgres(id);
+  if (!row || row.deletedAt) {
+    return null;
+  }
+  if (!canViewAllRecords(user) && row.createdByUserId !== user.id) {
+    return null;
+  }
+  return parsePortalRecord(row);
+}
+
+export async function listPortalRecordsAsync(
+  filters: PortalRecordFilters,
+  user: PortalUser,
+): Promise<PortalRecord[]> {
+  if (!isPostgresConfigured()) {
+    return listPortalRecords(filters, user);
+  }
+
+  const clauses = ["pr.module = $1", "pr.deleted_at IS NULL"];
+  const params: unknown[] = [filters.module];
+
+  if (!canViewAllRecords(user)) {
+    params.push(user.id);
+    clauses.push(`pr.created_by_user_id = $${params.length}`);
+  } else if (user.role === "Staff" && user.geographyScope) {
+    const [scopeType, scopeValue] = user.geographyScope.split(":");
+    if (scopeType === "district" && scopeValue) {
+      params.push(scopeValue);
+      clauses.push(`lower(pr.district) = lower($${params.length})`);
+    }
+  }
+
+  if (filters.dateFrom) {
+    params.push(filters.dateFrom);
+    clauses.push(`pr.date >= $${params.length}::date`);
+  }
+  if (filters.dateTo) {
+    params.push(filters.dateTo);
+    clauses.push(`pr.date <= $${params.length}::date`);
+  }
+  if (filters.district?.trim()) {
+    params.push(`%${filters.district.trim()}%`);
+    clauses.push(`pr.district ILIKE $${params.length}`);
+  }
+  if (filters.school?.trim()) {
+    params.push(`%${filters.school.trim()}%`);
+    clauses.push(`pr.school_name ILIKE $${params.length}`);
+  }
+  if (filters.status) {
+    params.push(filters.status);
+    clauses.push(`pr.status = $${params.length}`);
+  }
+  if (filters.createdBy && canViewAllRecords(user)) {
+    params.push(filters.createdBy);
+    clauses.push(`pr.created_by_user_id = $${params.length}`);
+  }
+  if (filters.programType?.trim()) {
+    params.push(`%${filters.programType.trim()}%`);
+    clauses.push(`COALESCE(pr.program_type, '') ILIKE $${params.length}`);
+  }
+
+  const result = await queryPostgres(
+    `
+      SELECT
+        pr.id,
+        pr.record_code AS "recordCode",
+        pr.module,
+        pr.date::text AS date,
+        pr.district,
+        pr.school_id AS "schoolId",
+        pr.school_name AS "schoolName",
+        pr.program_type AS "programType",
+        pr.status,
+        pr.follow_up_date::text AS "followUpDate",
+        pr.follow_up_type AS "followUpType",
+        pr.follow_up_owner_user_id AS "followUpOwnerUserId",
+        pfu.full_name AS "followUpOwnerName",
+        pr.payload_json AS "payloadJson",
+        pr.review_note AS "reviewNote",
+        pr.created_by_user_id AS "createdByUserId",
+        pu.full_name AS "createdByName",
+        pr.created_at::text AS "createdAt",
+        pr.updated_at::text AS "updatedAt",
+        pr.deleted_at::text AS "deletedAt",
+        pr.deleted_by_user_id AS "deletedByUserId",
+        pr.delete_reason AS "deleteReason"
+      FROM portal_records pr
+      JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      LEFT JOIN portal_users pfu ON pfu.id = pr.follow_up_owner_user_id
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY pr.date DESC, pr.updated_at DESC
+      LIMIT 300
+    `,
+    params,
+  );
+
+  return result.rows.map((row) =>
+    parsePortalRecord(
+      row as Parameters<typeof parsePortalRecord>[0],
+    ),
+  );
+}
+
+export async function createPortalRecordAsync(
+  input: PortalRecordInput,
+  user: PortalUser,
+): Promise<PortalRecord> {
+  const record = createPortalRecord(input, user);
+  if (!isPostgresConfigured()) {
+    return record;
+  }
+  await mirrorPortalRecordToPostgres(record.id);
+  return (await getPortalRecordByIdAsync(record.id, user)) ?? record;
+}
+
+export async function updatePortalRecordAsync(
+  id: number,
+  input: PortalRecordInput,
+  user: PortalUser,
+): Promise<PortalRecord> {
+  const record = updatePortalRecord(id, input, user);
+  if (!isPostgresConfigured()) {
+    return record;
+  }
+  await mirrorPortalRecordToPostgres(id);
+  return (await getPortalRecordByIdAsync(id, user)) ?? record;
+}
+
+export async function setPortalRecordStatusAsync(
+  id: number,
+  status: PortalRecordStatus,
+  user: PortalUser,
+  reviewNote?: string,
+): Promise<PortalRecord | null> {
+  const record = setPortalRecordStatus(id, status, user, reviewNote);
+  if (!isPostgresConfigured() || !record) {
+    return record;
+  }
+  await mirrorPortalRecordToPostgres(id);
+  return await getPortalRecordByIdAsync(id, user);
 }
 
 function getWeekBounds() {
@@ -30144,6 +30772,438 @@ export function voidLessonEvaluation(
     upsertTeacherSupportStatusSnapshot(db, updated.schoolId, updated.teacherUid);
   }
   return updated;
+}
+
+async function loadLessonEvaluationItemsByEvaluationIdsPostgres(
+  evaluationIds: number[],
+): Promise<Map<number, LessonEvaluationItemInput[]>> {
+  const itemMap = new Map<number, LessonEvaluationItemInput[]>();
+  if (evaluationIds.length === 0) {
+    return itemMap;
+  }
+
+  const result = await queryPostgres(
+    `
+      SELECT
+        evaluation_id AS "evaluationId",
+        domain_key AS "domainKey",
+        item_key AS "itemKey",
+        score,
+        note
+      FROM lesson_evaluation_items
+      WHERE evaluation_id = ANY($1::int[])
+      ORDER BY evaluation_id ASC, id ASC
+    `,
+    [evaluationIds],
+  );
+
+  result.rows.forEach((row) => {
+    const evaluationId = Number(row.evaluationId);
+    const bucket = itemMap.get(evaluationId) ?? [];
+    bucket.push({
+      domainKey: String(row.domainKey ?? "setup") as LessonEvaluationDomainKey,
+      itemKey: String(row.itemKey ?? "A1") as LessonEvaluationItemInput["itemKey"],
+      score: Math.max(1, Math.min(4, Number(row.score ?? 1))) as 1 | 2 | 3 | 4,
+      note: row.note ? String(row.note) : null,
+    });
+    itemMap.set(evaluationId, bucket);
+  });
+
+  return itemMap;
+}
+
+async function mirrorLessonEvaluationToPostgres(evaluationId: number) {
+  const db = getDb();
+  const evaluationRow = db
+    .prepare(`SELECT * FROM lesson_evaluations WHERE id = @evaluationId LIMIT 1`)
+    .get({ evaluationId }) as Record<string, unknown> | undefined;
+  if (!evaluationRow) {
+    return;
+  }
+
+  const itemRows = db
+    .prepare(`SELECT * FROM lesson_evaluation_items WHERE evaluation_id = @evaluationId ORDER BY id ASC`)
+    .all({ evaluationId }) as Array<Record<string, unknown>>;
+  const schoolId = Number(evaluationRow.school_id ?? 0);
+  const teacherUid = String(evaluationRow.teacher_uid ?? "").trim();
+  const schoolSupportRows =
+    schoolId > 0
+      ? (db
+        .prepare(`SELECT * FROM school_support_status_snapshots WHERE school_id = @schoolId ORDER BY id ASC`)
+        .all({ schoolId }) as Array<Record<string, unknown>>)
+      : [];
+  const teacherSupportRows =
+    schoolId > 0 && teacherUid
+      ? (db
+        .prepare(
+          `
+            SELECT *
+            FROM teacher_support_status_snapshots
+            WHERE school_id = @schoolId
+              AND teacher_uid = @teacherUid
+            ORDER BY id ASC
+          `,
+        )
+        .all({ schoolId, teacherUid }) as Array<Record<string, unknown>>)
+      : [];
+
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await upsertSqliteRowToPostgres("lesson_evaluations", "id", evaluationRow, client);
+      await replaceSqliteRowsInPostgres(
+        "lesson_evaluation_items",
+        "id",
+        "evaluation_id",
+        evaluationId,
+        itemRows,
+        client,
+      );
+      for (const row of schoolSupportRows) {
+        await upsertSqliteRowToPostgres("school_support_status_snapshots", "id", row, client);
+      }
+      for (const row of teacherSupportRows) {
+        await upsertSqliteRowToPostgres("teacher_support_status_snapshots", "id", row, client);
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
+export async function getLessonEvaluationByIdAsync(
+  evaluationId: number,
+): Promise<LessonEvaluationRecord | null> {
+  const records = await listLessonEvaluationsAsync({ limit: 1, evaluationId });
+  return records[0] ?? null;
+}
+
+export async function listLessonEvaluationsAsync(filters?: {
+  schoolId?: number;
+  visitId?: number;
+  teacherUid?: string;
+  observerId?: number;
+  status?: "active" | "void";
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  evaluationId?: number;
+}): Promise<LessonEvaluationRecord[]> {
+  if (!isPostgresConfigured()) {
+    return listLessonEvaluations(filters);
+  }
+
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (filters?.evaluationId && Number.isInteger(filters.evaluationId) && filters.evaluationId > 0) {
+    params.push(filters.evaluationId);
+    clauses.push(`le.id = $${params.length}`);
+  }
+  if (filters?.schoolId && Number.isInteger(filters.schoolId) && filters.schoolId > 0) {
+    params.push(filters.schoolId);
+    clauses.push(`le.school_id = $${params.length}`);
+  }
+  if (filters?.visitId && Number.isInteger(filters.visitId) && filters.visitId > 0) {
+    params.push(filters.visitId);
+    clauses.push(
+      `(le.visit_id = $${params.length} OR le.visit_id = (SELECT id FROM coaching_visits WHERE portal_record_id = $${params.length} LIMIT 1))`,
+    );
+  }
+  if (filters?.teacherUid?.trim()) {
+    params.push(filters.teacherUid.trim());
+    clauses.push(`le.teacher_uid = $${params.length}`);
+  }
+  if (filters?.observerId && Number.isInteger(filters.observerId) && filters.observerId > 0) {
+    params.push(filters.observerId);
+    clauses.push(`le.observer_id = $${params.length}`);
+  }
+  if (filters?.status) {
+    params.push(filters.status);
+    clauses.push(`le.status = $${params.length}`);
+  }
+  if (filters?.startDate?.trim()) {
+    params.push(filters.startDate.trim());
+    clauses.push(`le.lesson_date >= $${params.length}::date`);
+  }
+  if (filters?.endDate?.trim()) {
+    params.push(filters.endDate.trim());
+    clauses.push(`le.lesson_date <= $${params.length}::date`);
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const limit = Math.min(filters?.limit ?? 200, 1000);
+  const result = await queryPostgres(
+    `
+      SELECT
+        le.id,
+        le.school_id AS "schoolId",
+        sd.name AS "schoolName",
+        sd.district AS district,
+        le.teacher_uid AS "teacherUid",
+        tr.full_name AS "teacherName",
+        le.grade,
+        le.stream,
+        le.class_size AS "classSize",
+        le.lesson_date::text AS "lessonDate",
+        le.lesson_focus_json AS "lessonFocusJson",
+        le.observer_id AS "observerId",
+        pu.full_name AS "observerName",
+        le.visit_id AS "visitId",
+        le.overall_score AS "overallScore",
+        le.overall_level AS "overallLevel",
+        le.domain_scores_json AS "domainScoresJson",
+        le.top_gap_domain AS "topGapDomain",
+        le.top_strength_domain AS "topStrengthDomain",
+        le.strengths_text AS "strengthsText",
+        le.priority_gap_text AS "priorityGapText",
+        le.next_coaching_action AS "nextCoachingAction",
+        le.teacher_commitment AS "teacherCommitment",
+        le.catchup_estimate_count AS "catchupEstimateCount",
+        le.catchup_estimate_percent AS "catchupEstimatePercent",
+        le.next_visit_date::text AS "nextVisitDate",
+        le.status,
+        le.created_at::text AS "createdAt",
+        le.updated_at::text AS "updatedAt"
+      FROM lesson_evaluations le
+      JOIN schools_directory sd ON sd.id = le.school_id
+      LEFT JOIN teacher_roster tr ON tr.teacher_uid = le.teacher_uid
+      LEFT JOIN portal_users pu ON pu.id = le.observer_id
+      ${whereClause}
+      ORDER BY le.lesson_date DESC, le.updated_at DESC
+      LIMIT ${limit}
+    `,
+    params,
+  );
+
+  const evaluationIds = result.rows.map((row) => Number(row.id));
+  const itemMap = await loadLessonEvaluationItemsByEvaluationIdsPostgres(evaluationIds);
+  return result.rows.map((row) =>
+    parseLessonEvaluationRow(
+      row as Parameters<typeof parseLessonEvaluationRow>[0],
+      itemMap.get(Number(row.id)) ?? [],
+    ),
+  );
+}
+
+export async function createLessonEvaluationAsync(
+  input: LessonEvaluationInput,
+  userId: number,
+): Promise<LessonEvaluationRecord> {
+  const saved = createLessonEvaluation(input, userId);
+  if (!isPostgresConfigured()) {
+    return saved;
+  }
+
+  await mirrorLessonEvaluationToPostgres(saved.id);
+  return (await getLessonEvaluationByIdAsync(saved.id)) ?? saved;
+}
+
+export async function updateLessonEvaluationAsync(
+  evaluationId: number,
+  input: LessonEvaluationInput,
+  userId: number,
+): Promise<LessonEvaluationRecord> {
+  const saved = updateLessonEvaluation(evaluationId, input, userId);
+  if (!isPostgresConfigured()) {
+    return saved;
+  }
+
+  await mirrorLessonEvaluationToPostgres(evaluationId);
+  return (await getLessonEvaluationByIdAsync(evaluationId)) ?? saved;
+}
+
+export async function voidLessonEvaluationAsync(
+  evaluationId: number,
+  userId: number,
+  reason: string,
+): Promise<LessonEvaluationRecord | null> {
+  const updated = voidLessonEvaluation(evaluationId, userId, reason);
+  if (!isPostgresConfigured() || !updated) {
+    return updated;
+  }
+
+  await mirrorLessonEvaluationToPostgres(evaluationId);
+  return await getLessonEvaluationByIdAsync(evaluationId);
+}
+
+export async function getTeachingImprovementSettingsAsync(): Promise<TeachingImprovementSettings> {
+  if (!isPostgresConfigured()) {
+    return getTeachingImprovementSettings();
+  }
+
+  const row = await getTeachingImprovementSettingsPostgres();
+  if (!row) {
+    return DEFAULT_TEACHING_IMPROVEMENT_SETTINGS;
+  }
+
+  return {
+    teacherDeltaThreshold:
+      row.teacherDeltaThreshold !== null && Number.isFinite(Number(row.teacherDeltaThreshold))
+        ? Number(row.teacherDeltaThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.teacherDeltaThreshold,
+    minDomainsImproved:
+      row.minDomainsImproved !== null && Number.isFinite(Number(row.minDomainsImproved))
+        ? Math.max(1, Math.round(Number(row.minDomainsImproved)))
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.minDomainsImproved,
+    schoolDeltaThreshold:
+      row.schoolDeltaThreshold !== null && Number.isFinite(Number(row.schoolDeltaThreshold))
+        ? Number(row.schoolDeltaThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.schoolDeltaThreshold,
+    schoolImprovedTeachersPercentThreshold:
+      row.schoolImprovedTeachersPercentThreshold !== null &&
+      Number.isFinite(Number(row.schoolImprovedTeachersPercentThreshold))
+        ? Number(row.schoolImprovedTeachersPercentThreshold)
+        : DEFAULT_TEACHING_IMPROVEMENT_SETTINGS.schoolImprovedTeachersPercentThreshold,
+  };
+}
+
+async function getTeacherSupportSnapshotPostgres(schoolId: number, teacherUid: string) {
+  const result = await queryPostgres(
+    `
+      SELECT
+        status,
+        recommended_action AS "recommendedAction"
+      FROM teacher_support_status_snapshots
+      WHERE school_id = $1
+        AND teacher_uid = $2
+      ORDER BY period_key DESC, computed_at DESC
+      LIMIT 1
+    `,
+    [schoolId, teacherUid],
+  );
+  return result.rows[0] as
+    | {
+      status: "Needs Catch-up Training" | "Needs Coaching & Follow-up" | "On Track";
+      recommendedAction: string | null;
+    }
+    | undefined;
+}
+
+export async function listTeacherImprovementComparisonsAsync(filters: {
+  schoolId: number;
+  teacherUid?: string;
+  grade?: string;
+  startDate?: string;
+  endDate?: string;
+  comparisonEvaluationId?: number;
+}): Promise<TeacherImprovementComparison[]> {
+  const settings = await getTeachingImprovementSettingsAsync();
+  const evaluations = await listLessonEvaluationsAsync({
+    schoolId: filters.schoolId,
+    teacherUid: filters.teacherUid?.trim() || undefined,
+    status: "active",
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    limit: 4000,
+  });
+
+  const grouped = new Map<string, LessonEvaluationRecord[]>();
+  evaluations.forEach((record) => {
+    const bucket = grouped.get(record.teacherUid) ?? [];
+    bucket.push(record);
+    grouped.set(record.teacherUid, bucket);
+  });
+
+  const comparisons: TeacherImprovementComparison[] = [];
+  grouped.forEach((records) => {
+    const comparison = buildTeacherComparisonFromRecords(records, settings, {
+      gradeFilter: filters.grade ?? null,
+      comparisonEvaluationId: filters.comparisonEvaluationId ?? null,
+    });
+    if (comparison && comparison.evaluationsCount >= 2) {
+      comparisons.push(comparison);
+    }
+  });
+
+  return comparisons.sort((left, right) => left.teacherName.localeCompare(right.teacherName));
+}
+
+export async function getSchoolTeachingQualityImprovementSummaryAsync(input: {
+  schoolId: number;
+  grade?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<SchoolTeachingQualityImprovementSummary> {
+  const settings = await getTeachingImprovementSettingsAsync();
+  const evaluations = await listLessonEvaluationsAsync({
+    schoolId: input.schoolId,
+    status: "active",
+    startDate: input.startDate,
+    endDate: input.endDate,
+    limit: 5000,
+  });
+  const schoolName = evaluations[0]?.schoolName ?? `School ${input.schoolId}`;
+  return buildSchoolTeachingImprovementSummary(
+    input.schoolId,
+    schoolName,
+    evaluations,
+    settings,
+    {
+      gradeFilter: input.grade ?? null,
+    },
+  );
+}
+
+export async function getTeacherImprovementProfileAsync(input: {
+  schoolId: number;
+  teacherUid: string;
+  grade?: string;
+  comparisonEvaluationId?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<TeacherImprovementProfile> {
+  const settings = await getTeachingImprovementSettingsAsync();
+  const allSchoolEvaluations = await listLessonEvaluationsAsync({
+    schoolId: input.schoolId,
+    status: "active",
+    startDate: input.startDate,
+    endDate: input.endDate,
+    limit: 5000,
+  });
+  const schoolName = allSchoolEvaluations[0]?.schoolName ?? `School ${input.schoolId}`;
+  const schoolSummary = buildSchoolTeachingImprovementSummary(
+    input.schoolId,
+    schoolName,
+    allSchoolEvaluations,
+    settings,
+    {
+      gradeFilter: input.grade ?? null,
+    },
+  );
+
+  const teacherRecords = allSchoolEvaluations.filter(
+    (record) => record.teacherUid === input.teacherUid,
+  );
+  const teacherComparison = buildTeacherComparisonFromRecords(teacherRecords, settings, {
+    gradeFilter: input.grade ?? null,
+    comparisonEvaluationId: input.comparisonEvaluationId ?? null,
+  });
+
+  const alignment = isPostgresConfigured()
+    ? await getTeachingLearningAlignmentBySchoolIdsPostgres(
+      [input.schoolId],
+      input.startDate ?? null,
+      input.endDate ?? null,
+    )
+    : buildTeachingLearningAlignmentBySchoolIds(
+      [input.schoolId],
+      input.startDate ?? null,
+      input.endDate ?? null,
+    );
+  const supportRow = isPostgresConfigured()
+    ? await getTeacherSupportSnapshotPostgres(input.schoolId, input.teacherUid)
+    : null;
+
+  return {
+    teacherComparison,
+    schoolSummary,
+    alignment,
+    teacherSupportStatus: supportRow?.status ?? null,
+    teacherSupportAction: supportRow?.recommendedAction ?? null,
+  };
 }
 
 /* ═══════════════════════════════════════════════════════

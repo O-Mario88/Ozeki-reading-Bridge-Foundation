@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { listPortalRecords, logAuditEvent } from "@/lib/db";
+import { listPortalRecordsAsync, logAuditEvent } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { PortalRecordFilters } from "@/lib/types";
 
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
 
   try {
     const filters = parseFilters(request);
-    const rows = listPortalRecords(filters, user);
+    const rows = await listPortalRecordsAsync(filters, user);
     logAuditEvent(
       user.id,
       user.fullName,

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  getPortalRecordById,
-  updatePortalRecord,
+  getPortalRecordByIdAsync,
+  updatePortalRecordAsync,
 } from "@/lib/db";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { PortalRecordPayload } from "@/lib/types";
@@ -85,7 +85,7 @@ export async function GET(
   try {
     const params = await context.params;
     const id = toId(params.id);
-    const record = getPortalRecordById(id, user);
+    const record = await getPortalRecordByIdAsync(id, user);
 
     if (!record) {
       return NextResponse.json({ error: "Record not found." }, { status: 404 });
@@ -122,7 +122,7 @@ export async function PUT(
       );
     }
 
-    const record = updatePortalRecord(
+    const record = await updatePortalRecordAsync(
       id,
       {
         ...payload,

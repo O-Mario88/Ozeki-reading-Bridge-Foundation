@@ -1,7 +1,7 @@
 import { PortalModuleManager } from "@/components/portal/PortalModuleManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
-  listPortalRecords,
+  listPortalRecordsAsync,
   listPortalUsersForFilters,
   listSchoolDirectoryRecords,
 } from "@/lib/db";
@@ -19,7 +19,7 @@ export const metadata = {
 export default async function PortalStoryPage() {
   const user = await requirePortalUser();
   const config = portalModuleConfigByModule.story;
-  const records = listPortalRecords({ module: "story" }, user);
+  const records = await listPortalRecordsAsync({ module: "story" }, user);
   const schools = await listSchoolDirectoryRecords();
   const users = listPortalUsersForFilters(user);
 

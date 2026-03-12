@@ -7,10 +7,10 @@ import {
   LESSON_FOCUS_OPTIONS,
 } from "@/lib/lesson-evaluation";
 import {
-  getLessonEvaluationById,
+  getLessonEvaluationByIdAsync,
   logAuditEvent,
-  updateLessonEvaluation,
-  voidLessonEvaluation,
+  updateLessonEvaluationAsync,
+  voidLessonEvaluationAsync,
 } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
@@ -84,7 +84,7 @@ export async function GET(
   try {
     const { id: rawId } = await context.params;
     const evaluationId = toId(rawId);
-    const evaluation = getLessonEvaluationById(evaluationId);
+    const evaluation = await getLessonEvaluationByIdAsync(evaluationId);
     if (!evaluation) {
       return NextResponse.json({ error: "Lesson evaluation not found." }, { status: 404 });
     }
@@ -113,11 +113,11 @@ export async function PATCH(
     const { id: rawId } = await context.params;
     const evaluationId = toId(rawId);
     const parsed = updateSchema.parse(await request.json());
-    const before = getLessonEvaluationById(evaluationId);
+    const before = await getLessonEvaluationByIdAsync(evaluationId);
     if (!before) {
       return NextResponse.json({ error: "Lesson evaluation not found." }, { status: 404 });
     }
-    const evaluation = updateLessonEvaluation(
+    const evaluation = await updateLessonEvaluationAsync(
       evaluationId,
       {
         ...parsed,
@@ -182,12 +182,12 @@ export async function DELETE(
     const { id: rawId } = await context.params;
     const evaluationId = toId(rawId);
     const parsed = voidSchema.parse(await request.json().catch(() => ({})));
-    const before = getLessonEvaluationById(evaluationId);
+    const before = await getLessonEvaluationByIdAsync(evaluationId);
     if (!before) {
       return NextResponse.json({ error: "Lesson evaluation not found." }, { status: 404 });
     }
 
-    const evaluation = voidLessonEvaluation(evaluationId, user.id, parsed.reason);
+    const evaluation = await voidLessonEvaluationAsync(evaluationId, user.id, parsed.reason);
     if (!evaluation) {
       return NextResponse.json({ error: "Lesson evaluation not found." }, { status: 404 });
     }

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  getSchoolTeachingQualityImprovementSummary,
-  getTeacherImprovementProfile,
-  getTeachingImprovementSettings,
-  listTeacherImprovementComparisons,
+  getSchoolTeachingQualityImprovementSummaryAsync,
+  getTeacherImprovementProfileAsync,
+  getTeachingImprovementSettingsAsync,
+  listTeacherImprovementComparisonsAsync,
 } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
@@ -53,10 +53,10 @@ export async function GET(request: Request) {
       endDate: searchParams.get("endDate") ?? undefined,
     });
 
-    const settings = getTeachingImprovementSettings();
+    const settings = await getTeachingImprovementSettingsAsync();
 
     if (parsed.teacherUid) {
-      const profile = getTeacherImprovementProfile({
+      const profile = await getTeacherImprovementProfileAsync({
         schoolId: parsed.schoolId,
         teacherUid: parsed.teacherUid,
         grade: parsed.grade,
@@ -67,13 +67,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ profile, settings });
     }
 
-    const schoolSummary = getSchoolTeachingQualityImprovementSummary({
+    const schoolSummary = await getSchoolTeachingQualityImprovementSummaryAsync({
       schoolId: parsed.schoolId,
       grade: parsed.grade,
       startDate: parsed.startDate,
       endDate: parsed.endDate,
     });
-    const comparisons = listTeacherImprovementComparisons({
+    const comparisons = await listTeacherImprovementComparisonsAsync({
       schoolId: parsed.schoolId,
       grade: parsed.grade,
       startDate: parsed.startDate,
@@ -96,4 +96,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
-

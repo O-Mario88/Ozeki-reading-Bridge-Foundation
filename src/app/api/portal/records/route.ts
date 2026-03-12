@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createPortalRecord, listPortalRecords } from "@/lib/db";
+import { createPortalRecordAsync, listPortalRecordsAsync } from "@/lib/db";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { PortalRecordFilters, PortalRecordPayload } from "@/lib/types";
 
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
 
   try {
     const filters = parseFilters(request);
-    const records = listPortalRecords(filters, user);
+    const records = await listPortalRecordsAsync(filters, user);
     return NextResponse.json({ records });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const record = createPortalRecord(
+    const record = await createPortalRecordAsync(
       {
         ...payload,
         programType: payload.programType?.trim() || undefined,

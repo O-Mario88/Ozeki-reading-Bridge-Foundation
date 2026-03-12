@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { setPortalRecordStatus } from "@/lib/db";
+import { setPortalRecordStatusAsync } from "@/lib/db";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";
@@ -39,7 +39,7 @@ export async function POST(
     const id = toId(params.id);
     const payload = statusSchema.parse(await request.json());
 
-    const record = setPortalRecordStatus(id, payload.status, user, payload.reviewNote);
+    const record = await setPortalRecordStatusAsync(id, payload.status, user, payload.reviewNote);
     return NextResponse.json({ ok: true, record });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
   getSchoolDirectoryRecord,
-  getTeacherImprovementProfile,
+  getTeacherImprovementProfileAsync,
 } from "@/lib/db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
@@ -30,7 +30,7 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
   }
 
   const teacherUid = decodeURIComponent(teacherUidRaw);
-  const profile = getTeacherImprovementProfile({
+  const profile = await getTeacherImprovementProfileAsync({
     schoolId,
     teacherUid,
   });

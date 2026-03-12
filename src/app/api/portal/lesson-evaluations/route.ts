@@ -7,8 +7,8 @@ import {
   LESSON_FOCUS_OPTIONS,
 } from "@/lib/lesson-evaluation";
 import {
-  createLessonEvaluation,
-  listLessonEvaluations,
+  createLessonEvaluationAsync,
+  listLessonEvaluationsAsync,
   logAuditEvent,
 } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       limit: searchParams.get("limit") ?? undefined,
     });
 
-    const evaluations = listLessonEvaluations(parsed);
+    const evaluations = await listLessonEvaluationsAsync(parsed);
     return NextResponse.json({ evaluations });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
 
   try {
     const parsed = createSchema.parse(await request.json());
-    const evaluation = createLessonEvaluation(
+    const evaluation = await createLessonEvaluationAsync(
       {
         ...parsed,
         observerId: user.id,

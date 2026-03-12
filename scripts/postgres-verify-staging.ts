@@ -86,6 +86,16 @@ const ONLINE_TRAINING_TABLES = [
   "online_training_notes",
 ] as const;
 
+const OPERATIONAL_TABLES = [
+  "coaching_visits",
+  "visit_participants",
+  "visit_demo",
+  "visit_leadership_meeting",
+  "school_support_status_snapshots",
+  "teacher_support_status_snapshots",
+  "assessment_item_responses",
+] as const;
+
 const VIEW_NAMES = [
   "impact_public_school_scope",
   "impact_public_teacher_support",
@@ -126,6 +136,7 @@ function parseScopes(args: string[]) {
       finance: true,
       content: true,
       onlineTraining: true,
+      operational: true,
     };
   }
 
@@ -134,6 +145,7 @@ function parseScopes(args: string[]) {
     finance: requested.has("finance"),
     content: requested.has("content"),
     onlineTraining: requested.has("online-training") || requested.has("online_training"),
+    operational: requested.has("operational"),
   };
 }
 
@@ -385,10 +397,15 @@ async function main() {
       await verifyTables(sqlite, CONTENT_TABLES, failures);
     }
 
-    if (scopes.onlineTraining) {
-      logInfo("Verifying online training tables");
-      await verifyOnlineTrainingTables(sqlite, failures);
-    }
+  if (scopes.onlineTraining) {
+    logInfo("Verifying online training tables");
+    await verifyOnlineTrainingTables(sqlite, failures);
+  }
+
+  if (scopes.operational) {
+    logInfo("Verifying operational delivery tables");
+    await verifyTables(sqlite, OPERATIONAL_TABLES, failures);
+  }
   } finally {
     sqlite.close();
   }

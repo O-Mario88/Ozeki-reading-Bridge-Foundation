@@ -3,9 +3,9 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import {
   getPortalUserFromSession,
-  listAssessmentRecords,
+  listAssessmentRecordsAsync,
   logAuditEvent,
-  saveAssessmentRecord,
+  saveAssessmentRecordAsync,
   validateParticipantBelongsToSchool,
 } from "@/lib/db";
 import { ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1 } from "@/lib/mastery-assessment";
@@ -81,7 +81,7 @@ export async function GET() {
     "Viewed learner-level assessment records.",
   );
 
-  return NextResponse.json({ assessments: listAssessmentRecords(20) });
+  return NextResponse.json({ assessments: await listAssessmentRecordsAsync(20) });
 }
 
 export async function POST(request: Request) {
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
       notes: payload.notes,
     };
 
-    const assessment = saveAssessmentRecord(normalizedPayload, user.id);
+    const assessment = await saveAssessmentRecordAsync(normalizedPayload, user.id);
 
     return NextResponse.json({ ok: true, assessment });
   } catch (error) {
