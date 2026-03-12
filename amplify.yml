@@ -23,8 +23,6 @@ frontend:
     baseDirectory: .next/standalone
     files:
       - "**/*"
-      - ".next/static/**/*"
-      - "public/**/*"
   cache:
     paths:
       - node_modules/**/*

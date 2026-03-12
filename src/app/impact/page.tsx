@@ -102,6 +102,24 @@ function resolveReportYear(rawYear: string, availableYears: string[]) {
   return "2025";
 }
 
+function buildFallbackReportFacets() {
+  return {
+    reportTypes: [] as string[],
+    reportCategories: [] as string[],
+    periodTypes: ["FY", "Term", "Quarter", "Custom"] as string[],
+    audiences: ["Public-safe", "Staff-only"] as string[],
+    outputs: ["PDF", "HTML preview"] as string[],
+    scopeTypes: [] as string[],
+    years: Array.from({ length: 2050 - 2025 + 1 }, (_, index) => String(2025 + index)),
+    dataYears: [] as string[],
+    scopeValues: [] as string[],
+    regions: [] as string[],
+    subRegions: [] as string[],
+    districts: [] as string[],
+    schools: [] as Array<{ id: number; name: string; district: string }>,
+  };
+}
+
 export default async function ImpactDashboardPage({
   searchParams,
 }: {
@@ -122,23 +140,34 @@ export default async function ImpactDashboardPage({
   const selectedDistrict = firstValue(params.district);
   const selectedSchoolId = firstValue(params.schoolId) || firstValue(params.school);
 
-  const facets = getImpactReportFilterFacets();
+  let reportDataWarning = false;
+  let facets = buildFallbackReportFacets();
+  let reports: ReturnType<typeof listPublicImpactReports> = [];
+
+  try {
+    facets = getImpactReportFilterFacets();
+    const selectedYear = resolveReportYear(selectedYearParam, facets.years);
+    reports = listPublicImpactReports({
+      year: selectedYear,
+      reportType: parseReportType(selectedType),
+      reportCategory: parseReportCategory(selectedCategory),
+      periodType: parsePeriodType(selectedPeriodType),
+      audience: "Public-safe",
+      output: parseOutput(selectedOutput),
+      scopeType: parseScopeType(selectedScopeType),
+      scopeValue: selectedScopeValue || undefined,
+      region: selectedRegion || undefined,
+      subRegion: selectedSubRegion || undefined,
+      district: selectedDistrict || undefined,
+      schoolId: selectedSchoolId ? parseInt(selectedSchoolId, 10) : undefined,
+      limit: 200,
+    });
+  } catch (error) {
+    reportDataWarning = true;
+    console.error("[impact] Failed to load report facets/list:", error);
+  }
+
   const selectedYear = resolveReportYear(selectedYearParam, facets.years);
-  const reports = listPublicImpactReports({
-    year: selectedYear,
-    reportType: parseReportType(selectedType),
-    reportCategory: parseReportCategory(selectedCategory),
-    periodType: parsePeriodType(selectedPeriodType),
-    audience: "Public-safe",
-    output: parseOutput(selectedOutput),
-    scopeType: parseScopeType(selectedScopeType),
-    scopeValue: selectedScopeValue || undefined,
-    region: selectedRegion || undefined,
-    subRegion: selectedSubRegion || undefined,
-    district: selectedDistrict || undefined,
-    schoolId: selectedSchoolId ? parseInt(selectedSchoolId, 10) : undefined,
-    limit: 200,
-  });
 
   const topFilteredReport = reports[0] ?? null;
   const hasMultipleFilteredReports = reports.length > 1;
@@ -190,6 +219,14 @@ export default async function ImpactDashboardPage({
               FY reports follow Uganda school-calendar sessions (Term I-III): 01 February to 30 November.
             </p>
           </div>
+
+          {reportDataWarning ? (
+            <div className="card" style={{ marginBottom: "1rem" }}>
+              <p className="meta-line">
+                Report data is temporarily unavailable in this deployment environment. Dashboard visualization remains available.
+              </p>
+            </div>
+          ) : null}
 
           <div className="card impact-filter-card" style={{ marginBottom: "2rem" }}>
             <h2>Filter Reports</h2>

@@ -205,10 +205,8 @@ import {
 } from "@/lib/domain-dictionary";
 import { getRuntimeDataDir, getRuntimeDbFilePath } from "@/lib/runtime-paths";
 
-const dataDir = getRuntimeDataDir();
-const dbFile = getRuntimeDbFilePath();
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-salt";
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const ASSESSMENT_READING_RULE_VERSION = "UG-RLv1";
 const SCHOOL_SUPPORT_RULE_VERSION = "UG-Support-v1";
 const TEACHER_SUPPORT_RULE_VERSION = "UG-TeacherSupport-v1";
@@ -235,10 +233,7 @@ const MASTERY_DOMAIN_COLUMNS: Array<{
   { key: "comprehension", prefix: "comprehension" },
 ];
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
+// Initialized lazily in getDb()
 let dbInstance: Database.Database | null = null;
 
 function hashPassword(password: string) {
@@ -253,6 +248,21 @@ function hasColumn(db: Database.Database, table: string, column: string) {
     name: string;
   }>;
   return rows.some((row) => row.name === column);
+}
+
+function hasTable(db: Database.Database, table: string) {
+  const row = db
+    .prepare(
+      `
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name = @table
+      LIMIT 1
+      `,
+    )
+    .get({ table }) as { name: string } | undefined;
+  return Boolean(row?.name);
 }
 
 function ensureColumn(
@@ -3139,18 +3149,42 @@ function shouldAutoSeedPortalUsers() {
   return process.env.NODE_ENV !== "production";
 }
 
+function isSqliteReadonlyError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  const message =
+    "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+  return code === "SQLITE_READONLY" || /readonly/i.test(message);
+}
+
 export function getDb() {
   if (dbInstance) {
     return dbInstance;
   }
 
+  const dbFile = getRuntimeDbFilePath();
+  const dataDir = getRuntimeDataDir();
+
+  // Ensure data dir exists only if we can actually write to it or if it doesn't exist
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+  } catch (_e) {
+    // Ignore folder creation errors (likely read-only bundle)
+  }
+
   let db: Database.Database;
+  let isReadonly = false;
   try {
     db = new Database(dbFile, { timeout: 5000 });
   } catch (err) {
     // If RW open fails, try readonly mode as fallback for production/standalone
     try {
       db = new Database(dbFile, { timeout: 5000, readonly: true });
+      isReadonly = true;
       db.pragma("busy_timeout = 5000");
       db.pragma("foreign_keys = ON");
       dbInstance = db;
@@ -3163,7 +3197,11 @@ export function getDb() {
   db.pragma("busy_timeout = 5000");
   db.pragma("foreign_keys = ON");
 
-  db.exec(`
+  // Only run migrations if NOT read-only
+  if (!isReadonly) {
+
+  try {
+    db.exec(`
   CREATE TABLE IF NOT EXISTS bookings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     service TEXT NOT NULL,
@@ -3785,9 +3823,25 @@ export function getDb() {
   ensurePublicImpactViews(db);
   ensureSupportRequestTables(db);
   ensureSchoolContactForeignKeyReferences(db);
-  if (shouldAutoSeedPortalUsers()) {
-    seedPortalUsers(db);
+    if (shouldAutoSeedPortalUsers()) {
+      seedPortalUsers(db);
+    }
+  } catch (error) {
+    if (!isSqliteReadonlyError(error)) {
+      throw error;
+    }
+    try {
+      db.close();
+    } catch {
+      // noop
+    }
+    const readonlyDb = new Database(dbFile, { timeout: 5000, readonly: true });
+    readonlyDb.pragma("busy_timeout = 5000");
+    readonlyDb.pragma("foreign_keys = ON");
+    dbInstance = readonlyDb;
+    return readonlyDb;
   }
+  } // Matches if (!isReadonly)
 
   dbInstance = db;
   return db;
@@ -20601,101 +20655,106 @@ export function listPublicImpactReports(filters?: {
   schoolId?: number;
   limit?: number;
 }) {
-  const db = getDb();
-  const hasReportCategory = hasColumn(db, "impact_reports", "report_category");
-  const hasPeriodType = hasColumn(db, "impact_reports", "period_type");
-  const hasAudience = hasColumn(db, "impact_reports", "audience");
-  const hasOutput = hasColumn(db, "impact_reports", "output");
-  const clauses = ["ir.is_public = 1"];
-  const params: Record<string, string | number> = {};
+  try {
+    const db = getDb();
+    const hasReportCategory = hasColumn(db, "impact_reports", "report_category");
+    const hasPeriodType = hasColumn(db, "impact_reports", "period_type");
+    const hasAudience = hasColumn(db, "impact_reports", "audience");
+    const hasOutput = hasColumn(db, "impact_reports", "output");
+    const clauses = ["ir.is_public = 1"];
+    const params: Record<string, string | number> = {};
 
-  if (filters?.year && /^\d{4}$/.test(filters.year)) {
-    clauses.push("substr(ir.generated_at, 1, 4) = @year");
-    params.year = filters.year;
-  }
-  if (filters?.scopeType) {
-    clauses.push("ir.scope_type = @scopeType");
-    params.scopeType = filters.scopeType;
-  }
-  if (filters?.scopeValue && filters.scopeValue.trim()) {
-    clauses.push("lower(ir.scope_value) = lower(@scopeValue)");
-    params.scopeValue = filters.scopeValue.trim();
-  }
-  if (filters?.reportType) {
-    clauses.push("ir.report_type = @reportType");
-    params.reportType = filters.reportType;
-  }
-  if (filters?.reportCategory && hasReportCategory && isReportCategory(filters.reportCategory)) {
-    clauses.push("ir.report_category = @reportCategory");
-    params.reportCategory = filters.reportCategory;
-  }
-  if (filters?.periodType && hasPeriodType) {
-    clauses.push("ir.period_type = @periodType");
-    params.periodType = filters.periodType;
-  }
-  if (filters?.audience && hasAudience) {
-    clauses.push("ir.audience = @audience");
-    params.audience = filters.audience;
-  }
-  if (filters?.output && hasOutput) {
-    clauses.push("ir.output = @output");
-    params.output = filters.output;
-  }
-
-  const rows = listImpactReportRows(clauses.join(" AND "), params, Math.min(filters?.limit ?? 60, 200));
-  const reports = rows.map(parseImpactReportRow).map(redactImpactReportTeacherDetails);
-
-  const hasGeoFilters = Boolean(
-    filters?.region?.trim()
-    || filters?.subRegion?.trim()
-    || filters?.district?.trim()
-    || filters?.schoolId,
-  );
-  if (!hasGeoFilters) {
-    return reports;
-  }
-
-  const lookups = buildImpactReportGeoLookups(db);
-  const requestedRegion = resolveScopeValueFromLookup(
-    filters?.region,
-    lookups.regionsById,
-    lookups.regionsByName,
-  );
-  const requestedSubRegion = resolveScopeValueFromLookup(
-    filters?.subRegion,
-    new Map([...lookups.subRegionsById.entries()].map(([key, value]) => [key, value.name])),
-    new Map([...lookups.subRegionsByName.entries()].map(([key, value]) => [key, value.name])),
-  );
-  const requestedDistrict = resolveScopeValueFromLookup(
-    filters?.district,
-    new Map([...lookups.districtsById.entries()].map(([key, value]) => [key, value.name])),
-    new Map([...lookups.districtsByName.entries()].map(([key, value]) => [key, value.name])),
-  );
-  const requestedSchoolId = filters?.schoolId && Number.isFinite(filters.schoolId)
-    ? Number(filters.schoolId)
-    : null;
-
-  return reports.filter((report) => {
-    const context = resolveImpactReportGeoContext(report, lookups);
-
-    if (requestedSchoolId !== null) {
-      return context.schoolId === requestedSchoolId;
+    if (filters?.year && /^\d{4}$/.test(filters.year)) {
+      clauses.push("substr(ir.generated_at, 1, 4) = @year");
+      params.year = filters.year;
+    }
+    if (filters?.scopeType) {
+      clauses.push("ir.scope_type = @scopeType");
+      params.scopeType = filters.scopeType;
+    }
+    if (filters?.scopeValue && filters.scopeValue.trim()) {
+      clauses.push("lower(ir.scope_value) = lower(@scopeValue)");
+      params.scopeValue = filters.scopeValue.trim();
+    }
+    if (filters?.reportType) {
+      clauses.push("ir.report_type = @reportType");
+      params.reportType = filters.reportType;
+    }
+    if (filters?.reportCategory && hasReportCategory && isReportCategory(filters.reportCategory)) {
+      clauses.push("ir.report_category = @reportCategory");
+      params.reportCategory = filters.reportCategory;
+    }
+    if (filters?.periodType && hasPeriodType) {
+      clauses.push("ir.period_type = @periodType");
+      params.periodType = filters.periodType;
+    }
+    if (filters?.audience && hasAudience) {
+      clauses.push("ir.audience = @audience");
+      params.audience = filters.audience;
+    }
+    if (filters?.output && hasOutput) {
+      clauses.push("ir.output = @output");
+      params.output = filters.output;
     }
 
-    if (requestedDistrict) {
-      return normalizeGeoValue(context.district) === normalizeGeoValue(requestedDistrict);
+    const rows = listImpactReportRows(clauses.join(" AND "), params, Math.min(filters?.limit ?? 60, 200));
+    const reports = rows.map(parseImpactReportRow).map(redactImpactReportTeacherDetails);
+
+    const hasGeoFilters = Boolean(
+      filters?.region?.trim()
+      || filters?.subRegion?.trim()
+      || filters?.district?.trim()
+      || filters?.schoolId,
+    );
+    if (!hasGeoFilters) {
+      return reports;
     }
 
-    if (requestedSubRegion) {
-      return normalizeGeoValue(context.subRegion) === normalizeGeoValue(requestedSubRegion);
-    }
+    const lookups = buildImpactReportGeoLookups(db);
+    const requestedRegion = resolveScopeValueFromLookup(
+      filters?.region,
+      lookups.regionsById,
+      lookups.regionsByName,
+    );
+    const requestedSubRegion = resolveScopeValueFromLookup(
+      filters?.subRegion,
+      new Map([...lookups.subRegionsById.entries()].map(([key, value]) => [key, value.name])),
+      new Map([...lookups.subRegionsByName.entries()].map(([key, value]) => [key, value.name])),
+    );
+    const requestedDistrict = resolveScopeValueFromLookup(
+      filters?.district,
+      new Map([...lookups.districtsById.entries()].map(([key, value]) => [key, value.name])),
+      new Map([...lookups.districtsByName.entries()].map(([key, value]) => [key, value.name])),
+    );
+    const requestedSchoolId = filters?.schoolId && Number.isFinite(filters.schoolId)
+      ? Number(filters.schoolId)
+      : null;
 
-    if (requestedRegion) {
-      return normalizeGeoValue(context.region) === normalizeGeoValue(requestedRegion);
-    }
+    return reports.filter((report) => {
+      const context = resolveImpactReportGeoContext(report, lookups);
 
-    return true;
-  });
+      if (requestedSchoolId !== null) {
+        return context.schoolId === requestedSchoolId;
+      }
+
+      if (requestedDistrict) {
+        return normalizeGeoValue(context.district) === normalizeGeoValue(requestedDistrict);
+      }
+
+      if (requestedSubRegion) {
+        return normalizeGeoValue(context.subRegion) === normalizeGeoValue(requestedSubRegion);
+      }
+
+      if (requestedRegion) {
+        return normalizeGeoValue(context.region) === normalizeGeoValue(requestedRegion);
+      }
+
+      return true;
+    });
+  } catch (error) {
+    console.error("[impact] listPublicImpactReports failed:", error);
+    return [];
+  }
 }
 
 export function getImpactReportByCode(
@@ -20834,6 +20893,10 @@ export function incrementImpactReportDownloadCount(reportCode: string) {
 
 export function getImpactReportFilterFacets() {
   const db = getDb();
+  const hasSchoolsDirectory = hasTable(db, "schools_directory");
+  const hasRegionColumn = hasSchoolsDirectory && hasColumn(db, "schools_directory", "region");
+  const hasSubRegionColumn = hasSchoolsDirectory && hasColumn(db, "schools_directory", "sub_region");
+  const hasDistrictColumn = hasSchoolsDirectory && hasColumn(db, "schools_directory", "district");
   const hasReportCategory = hasColumn(db, "impact_reports", "report_category");
   const hasPeriodType = hasColumn(db, "impact_reports", "period_type");
   const hasAudience = hasColumn(db, "impact_reports", "audience");
@@ -20926,18 +20989,23 @@ export function getImpactReportFilterFacets() {
     });
   });
 
-  const schoolGeoRows = db
-    .prepare(
-      `
-      SELECT DISTINCT region, sub_region AS subRegion, district
-      FROM schools_directory
-    `,
-    )
-    .all() as Array<{
-      region: string | null;
-      subRegion: string | null;
-      district: string | null;
-    }>;
+  const schoolGeoRows = hasSchoolsDirectory
+    ? (db
+      .prepare(
+        `
+        SELECT DISTINCT
+          ${hasRegionColumn ? "region" : "NULL"} AS region,
+          ${hasSubRegionColumn ? "sub_region" : "NULL"} AS subRegion,
+          ${hasDistrictColumn ? "district" : "NULL"} AS district
+        FROM schools_directory
+      `,
+      )
+      .all() as Array<{
+        region: string | null;
+        subRegion: string | null;
+        district: string | null;
+      }>)
+    : [];
   schoolGeoRows.forEach((row) => {
     pushIfPresent(regionSet, row.region);
     pushIfPresent(subRegionSet, row.subRegion);
@@ -20959,7 +21027,11 @@ export function getImpactReportFilterFacets() {
   const regions = [...regionSet].sort((a, b) => a.localeCompare(b));
   const subRegions = [...subRegionSet].sort((a, b) => a.localeCompare(b));
   const districts = [...districtSet].sort((a, b) => a.localeCompare(b));
-  const schools = db.prepare(`SELECT id, name, district FROM schools_directory WHERE name IS NOT NULL ORDER BY name`).all() as Array<{ id: number; name: string; district: string }>;
+  const schools = hasSchoolsDirectory && hasDistrictColumn
+    ? (db
+      .prepare(`SELECT id, name, district FROM schools_directory WHERE name IS NOT NULL ORDER BY name`)
+      .all() as Array<{ id: number; name: string; district: string }>)
+    : [];
 
   return {
     reportTypes,
@@ -29467,7 +29539,7 @@ export interface TableRowCount {
 function purgeRuntimeArtifactFiles() {
   const runtimeDirs = ["about", "blog", "evidence", "finance", "gallery", "testimonials"];
   runtimeDirs.forEach((dirName) => {
-    const fullPath = path.join(dataDir, dirName);
+    const fullPath = path.join(getRuntimeDataDir(), dirName);
     try {
       fs.rmSync(fullPath, { recursive: true, force: true });
     } catch {
@@ -29503,7 +29575,7 @@ function purgeRuntimeArtifactFilesForTables(tableNames: string[]) {
   });
 
   runtimeDirs.forEach((dirName) => {
-    const fullPath = path.join(dataDir, dirName);
+    const fullPath = path.join(getRuntimeDataDir(), dirName);
     try {
       fs.rmSync(fullPath, { recursive: true, force: true });
     } catch {
@@ -30969,99 +31041,134 @@ function normalizeGeoYear(year?: number | string | null) {
 
 export function listGeoRegions(year?: number | string | null): { id: string, name: string }[] {
   const db = getDb();
-  const normalizedYear = normalizeGeoYear(year);
-  if (normalizedYear === null) {
-    return db.prepare("SELECT id, name FROM geo_regions ORDER BY name ASC").all() as { id: string, name: string }[];
+  if (!hasTable(db, "geo_regions")) {
+    return [];
   }
-  return db.prepare(
-    `
-      SELECT id, name
-      FROM geo_regions
-      WHERE valid_from_year <= @year
-        AND (valid_to_year IS NULL OR valid_to_year >= @year)
-      ORDER BY name ASC
-    `,
-  ).all({ year: normalizedYear }) as { id: string, name: string }[];
+  const normalizedYear = normalizeGeoYear(year);
+  try {
+    if (normalizedYear === null) {
+      return db.prepare("SELECT id, name FROM geo_regions ORDER BY name ASC").all() as { id: string, name: string }[];
+    }
+    return db.prepare(
+      `
+        SELECT id, name
+        FROM geo_regions
+        WHERE valid_from_year <= @year
+          AND (valid_to_year IS NULL OR valid_to_year >= @year)
+        ORDER BY name ASC
+      `,
+    ).all({ year: normalizedYear }) as { id: string, name: string }[];
+  } catch {
+    return [];
+  }
 }
 
 export function listGeoSubregions(regionId?: string, year?: number | string | null): { id: string, name: string }[] {
   const db = getDb();
+  if (!hasTable(db, "geo_subregions")) {
+    return [];
+  }
   const normalizedYear = normalizeGeoYear(year);
-  if (regionId) {
+  try {
+    if (regionId) {
+      if (normalizedYear === null) {
+        return db.prepare("SELECT id, name FROM geo_subregions WHERE region_id = ? ORDER BY name ASC").all(regionId) as { id: string, name: string }[];
+      }
+      return db.prepare(
+        `
+          SELECT id, name
+          FROM geo_subregions
+          WHERE region_id = @regionId
+            AND valid_from_year <= @year
+            AND (valid_to_year IS NULL OR valid_to_year >= @year)
+          ORDER BY name ASC
+        `,
+      ).all({ regionId, year: normalizedYear }) as { id: string, name: string }[];
+    }
     if (normalizedYear === null) {
-      return db.prepare("SELECT id, name FROM geo_subregions WHERE region_id = ? ORDER BY name ASC").all(regionId) as { id: string, name: string }[];
+      return db.prepare("SELECT id, name FROM geo_subregions ORDER BY name ASC").all() as { id: string, name: string }[];
     }
     return db.prepare(
       `
         SELECT id, name
         FROM geo_subregions
-        WHERE region_id = @regionId
-          AND valid_from_year <= @year
+        WHERE valid_from_year <= @year
           AND (valid_to_year IS NULL OR valid_to_year >= @year)
         ORDER BY name ASC
       `,
-    ).all({ regionId, year: normalizedYear }) as { id: string, name: string }[];
+    ).all({ year: normalizedYear }) as { id: string, name: string }[];
+  } catch {
+    return [];
   }
-  if (normalizedYear === null) {
-    return db.prepare("SELECT id, name FROM geo_subregions ORDER BY name ASC").all() as { id: string, name: string }[];
-  }
-  return db.prepare(
-    `
-      SELECT id, name
-      FROM geo_subregions
-      WHERE valid_from_year <= @year
-        AND (valid_to_year IS NULL OR valid_to_year >= @year)
-      ORDER BY name ASC
-    `,
-  ).all({ year: normalizedYear }) as { id: string, name: string }[];
 }
 
 export function listGeoDistricts(subregionId?: string, year?: number | string | null): { id: string, name: string }[] {
   const db = getDb();
+  if (!hasTable(db, "geo_districts")) {
+    return [];
+  }
   const normalizedYear = normalizeGeoYear(year);
-  if (subregionId) {
+  try {
+    if (subregionId) {
+      if (normalizedYear === null) {
+        return db.prepare("SELECT id, name FROM geo_districts WHERE subregion_id = ? ORDER BY name ASC").all(subregionId) as { id: string, name: string }[];
+      }
+      return db.prepare(
+        `
+          SELECT id, name
+          FROM geo_districts
+          WHERE subregion_id = @subregionId
+            AND valid_from_year <= @year
+            AND (valid_to_year IS NULL OR valid_to_year >= @year)
+          ORDER BY name ASC
+        `,
+      ).all({ subregionId, year: normalizedYear }) as { id: string, name: string }[];
+    }
     if (normalizedYear === null) {
-      return db.prepare("SELECT id, name FROM geo_districts WHERE subregion_id = ? ORDER BY name ASC").all(subregionId) as { id: string, name: string }[];
+      return db.prepare("SELECT id, name FROM geo_districts ORDER BY name ASC").all() as { id: string, name: string }[];
     }
     return db.prepare(
       `
         SELECT id, name
         FROM geo_districts
-        WHERE subregion_id = @subregionId
-          AND valid_from_year <= @year
+        WHERE valid_from_year <= @year
           AND (valid_to_year IS NULL OR valid_to_year >= @year)
         ORDER BY name ASC
       `,
-    ).all({ subregionId, year: normalizedYear }) as { id: string, name: string }[];
+    ).all({ year: normalizedYear }) as { id: string, name: string }[];
+  } catch {
+    return [];
   }
-  if (normalizedYear === null) {
-    return db.prepare("SELECT id, name FROM geo_districts ORDER BY name ASC").all() as { id: string, name: string }[];
-  }
-  return db.prepare(
-    `
-      SELECT id, name
-      FROM geo_districts
-      WHERE valid_from_year <= @year
-        AND (valid_to_year IS NULL OR valid_to_year >= @year)
-      ORDER BY name ASC
-    `,
-  ).all({ year: normalizedYear }) as { id: string, name: string }[];
 }
 
 export function listGeoSubcounties(districtId?: string): { id: string, name: string, type?: string }[] {
   const db = getDb();
-  if (districtId) {
-    return db.prepare("SELECT id, name, type FROM geo_subcounties WHERE district_id = ? ORDER BY name ASC").all(districtId) as { id: string, name: string, type?: string }[];
+  if (!hasTable(db, "geo_subcounties")) {
+    return [];
   }
-  return db.prepare("SELECT id, name, type FROM geo_subcounties ORDER BY name ASC").all() as { id: string, name: string, type?: string }[];
+  try {
+    if (districtId) {
+      return db.prepare("SELECT id, name, type FROM geo_subcounties WHERE district_id = ? ORDER BY name ASC").all(districtId) as { id: string, name: string, type?: string }[];
+    }
+    return db.prepare("SELECT id, name, type FROM geo_subcounties ORDER BY name ASC").all() as { id: string, name: string, type?: string }[];
+  } catch {
+    return [];
+  }
 }
 
 export function listGeoParishes(subcountyId?: string): { id: string, name: string }[] {
   const db = getDb();
-  if (subcountyId) {
-    return db.prepare("SELECT id, name FROM geo_parishes WHERE subcounty_id = ? ORDER BY name ASC").all(subcountyId) as { id: string, name: string }[];
+  if (!hasTable(db, "geo_parishes")) {
+    return [];
   }
-  return db.prepare("SELECT id, name FROM geo_parishes ORDER BY name ASC").all() as { id: string, name: string }[];
+  try {
+    if (subcountyId) {
+      return db.prepare("SELECT id, name FROM geo_parishes WHERE subcounty_id = ? ORDER BY name ASC").all(subcountyId) as { id: string, name: string }[];
+    }
+    return db.prepare("SELECT id, name FROM geo_parishes ORDER BY name ASC").all() as { id: string, name: string }[];
+  } catch {
+    return [];
+  }
 }
 
 export function listGeoSchools(districtId?: string, _year?: number | string | null): Array<{
@@ -31070,31 +31177,60 @@ export function listGeoSchools(districtId?: string, _year?: number | string | nu
   district: string;
 }> {
   const db = getDb();
+  if (!hasTable(db, "schools_directory")) {
+    return [];
+  }
+  const hasDistrictColumn = hasColumn(db, "schools_directory", "district");
+  const districtSelect = hasDistrictColumn ? "COALESCE(district, '')" : "''";
   if (!districtId) {
-    return db.prepare(
-      `
-        SELECT id, name, COALESCE(district, '') AS district
-        FROM schools_directory
-        WHERE name IS NOT NULL AND trim(name) != ''
-        ORDER BY name ASC
-      `,
-    ).all() as Array<{ id: number; name: string; district: string }>;
+    try {
+      return db.prepare(
+        `
+          SELECT id, name, ${districtSelect} AS district
+          FROM schools_directory
+          WHERE name IS NOT NULL AND trim(name) != ''
+          ORDER BY name ASC
+        `,
+      ).all() as Array<{ id: number; name: string; district: string }>;
+    } catch {
+      return [];
+    }
   }
 
-  return db.prepare(
-    `
-      SELECT id, name, COALESCE(district, '') AS district
-      FROM schools_directory
-      WHERE name IS NOT NULL
-        AND trim(name) != ''
-        AND (
-          COALESCE(geo_district_id, '') = @districtId
-          OR COALESCE(district_id, '') = @districtId
-          OR lower(trim(district)) = lower(trim((SELECT name FROM geo_districts WHERE id = @districtId)))
-        )
-      ORDER BY name ASC
-    `,
-  ).all({ districtId }) as Array<{ id: number; name: string; district: string }>;
+  try {
+    if (hasTable(db, "geo_districts")) {
+      return db.prepare(
+        `
+          SELECT id, name, ${districtSelect} AS district
+          FROM schools_directory
+          WHERE name IS NOT NULL
+            AND trim(name) != ''
+            AND (
+              COALESCE(geo_district_id, '') = @districtId
+              OR COALESCE(district_id, '') = @districtId
+              ${hasDistrictColumn ? "OR lower(trim(district)) = lower(trim((SELECT name FROM geo_districts WHERE id = @districtId)))" : ""}
+            )
+          ORDER BY name ASC
+        `,
+      ).all({ districtId }) as Array<{ id: number; name: string; district: string }>;
+    }
+    return db.prepare(
+      `
+        SELECT id, name, ${districtSelect} AS district
+        FROM schools_directory
+        WHERE name IS NOT NULL
+          AND trim(name) != ''
+          AND (
+            COALESCE(geo_district_id, '') = @districtId
+            OR COALESCE(district_id, '') = @districtId
+            ${hasDistrictColumn ? "OR lower(trim(district)) = lower(trim(@districtId))" : ""}
+          )
+        ORDER BY name ASC
+      `,
+    ).all({ districtId }) as Array<{ id: number; name: string; district: string }>;
+  } catch {
+    return [];
+  }
 }
 
 export function searchGeoDistricts(q: string): { id: string, name: string, subregionName: string, regionName: string, regionId: string, subregionId: string }[] {

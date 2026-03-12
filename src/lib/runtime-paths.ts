@@ -107,15 +107,20 @@ export function getRuntimeDataDir() {
   const selectedDir = candidates.find((candidate) => {
     if (!candidate) return false;
     // Prefer writable, but accept read-only if DB is already there (the DB layer has RW fallback)
-    return canUseDirectory(candidate) || hasExistingDb(candidate);
+    const writable = canUseDirectory(candidate);
+    const existing = hasExistingDb(candidate);
+    return writable || existing;
   });
+
   if (!selectedDir) {
+    console.error(`[runtime-paths] FAILED to find writable data directory. Candidates: ${candidates.join(", ")}`);
     throw new Error(
       "[runtime-paths] Could not find a writable directory for runtime data. Set APP_DATA_DIR or SQLITE_DB_PATH to a writable path.",
     );
   }
 
   cachedDataDir = selectedDir;
+  console.log(`[runtime-paths] Data directory: ${cachedDataDir} (${requestedDir === cachedDataDir ? "requested" : "fallback"})`);
   warnDataFallback(selectedDir, requestedDir);
   return cachedDataDir;
 }
@@ -128,7 +133,7 @@ export function getRuntimeDbFilePath() {
   const envDbPath = resolveEnvDbPath();
   if (envDbPath) {
     const envDbDir = path.dirname(envDbPath);
-    if (canUseDirectory(envDbDir)) {
+    if (canUseDirectory(envDbDir) || hasExistingDb(envDbDir)) {
       cachedDbFilePath = envDbPath;
       return cachedDbFilePath;
     }
@@ -139,5 +144,6 @@ export function getRuntimeDbFilePath() {
     warnDbFallback(fallbackPath, envDbPath);
   }
   cachedDbFilePath = fallbackPath;
+  console.log(`[runtime-paths] Database path: ${cachedDbFilePath}`);
   return cachedDbFilePath;
 }
