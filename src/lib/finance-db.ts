@@ -207,6 +207,17 @@ const REQUIRED_INVOICE_CC: string[] = [];
 
 let financeSchemaReady = false;
 
+function mergeFinanceRecordsById<T extends { id: number }>(primary: T[], fallback: T[]) {
+  const merged = new Map<number, T>();
+  primary.forEach((record) => {
+    merged.set(record.id, record);
+  });
+  fallback.forEach((record) => {
+    merged.set(record.id, record);
+  });
+  return [...merged.values()].sort((left, right) => Number(right.id) - Number(left.id));
+}
+
 function hasTableColumn(db: Database.Database, table: string, column: string) {
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
   return rows.some((row) => row.name === column);
@@ -6462,7 +6473,7 @@ function listFinanceEmailLogsSqlite(limit = 200): FinanceEmailLogEntry[] {
 
 export async function listFinanceContacts() {
   if (isPostgresConfigured()) {
-    return listFinanceContactsPostgres();
+    return mergeFinanceRecordsById(await listFinanceContactsPostgres(), listFinanceContactsSqlite());
   }
   return listFinanceContactsSqlite();
 }
@@ -6481,14 +6492,17 @@ export async function listFinanceInvoices(filters?: {
   toDate?: string;
 }) {
   if (isPostgresConfigured()) {
-    return listFinanceInvoicesPostgres(filters);
+    return mergeFinanceRecordsById(
+      await listFinanceInvoicesPostgres(filters),
+      listFinanceInvoicesSqlite(filters),
+    );
   }
   return listFinanceInvoicesSqlite(filters);
 }
 
 export async function getFinanceInvoiceById(invoiceId: number) {
   if (isPostgresConfigured()) {
-    return getFinanceInvoiceByIdPostgres(invoiceId);
+    return getFinanceInvoiceByIdSqlite(invoiceId) ?? await getFinanceInvoiceByIdPostgres(invoiceId);
   }
   return getFinanceInvoiceByIdSqlite(invoiceId);
 }
@@ -6500,28 +6514,34 @@ export async function listFinanceReceipts(filters?: {
   toDate?: string;
 }) {
   if (isPostgresConfigured()) {
-    return listFinanceReceiptsPostgres(filters);
+    return mergeFinanceRecordsById(
+      await listFinanceReceiptsPostgres(filters),
+      listFinanceReceiptsSqlite(filters),
+    );
   }
   return listFinanceReceiptsSqlite(filters);
 }
 
 export async function getFinanceReceiptById(receiptId: number): Promise<FinanceReceiptRecord | null> {
   if (isPostgresConfigured()) {
-    return getFinanceReceiptByIdPostgres(receiptId);
+    return getFinanceReceiptByIdSqlite(receiptId) ?? await getFinanceReceiptByIdPostgres(receiptId);
   }
   return getFinanceReceiptByIdSqlite(receiptId);
 }
 
 export async function listFinanceExpenseReceipts(expenseId?: number) {
   if (isPostgresConfigured()) {
-    return listFinanceExpenseReceiptsPostgres(expenseId);
+    return mergeFinanceRecordsById(
+      await listFinanceExpenseReceiptsPostgres(expenseId),
+      listFinanceExpenseReceiptsSqlite(expenseId),
+    );
   }
   return listFinanceExpenseReceiptsSqlite(expenseId);
 }
 
 export async function getFinanceExpenseById(expenseId: number): Promise<FinanceExpenseRecord | null> {
   if (isPostgresConfigured()) {
-    return getFinanceExpenseByIdPostgres(expenseId);
+    return getFinanceExpenseByIdSqlite(expenseId) ?? await getFinanceExpenseByIdPostgres(expenseId);
   }
   return getFinanceExpenseByIdSqlite(expenseId);
 }
@@ -6533,7 +6553,10 @@ export async function listFinanceExpenses(filters?: {
   subcategory?: string;
 }) {
   if (isPostgresConfigured()) {
-    return listFinanceExpensesPostgres(filters);
+    return mergeFinanceRecordsById(
+      await listFinanceExpensesPostgres(filters),
+      listFinanceExpensesSqlite(filters),
+    );
   }
   return listFinanceExpensesSqlite(filters);
 }
@@ -6565,14 +6588,21 @@ export async function listFinanceHighRiskTransactions(limit = 25) {
 
 export async function getFinanceFileById(fileId: number): Promise<FinanceFileRecord> {
   if (isPostgresConfigured()) {
-    return getFinanceFileByIdPostgres(fileId);
+    try {
+      return getFinanceFileByIdSqlite(fileId);
+    } catch {
+      return await getFinanceFileByIdPostgres(fileId);
+    }
   }
   return getFinanceFileByIdSqlite(fileId);
 }
 
 export async function listFinanceFilesBySource(sourceType: string, sourceId: number) {
   if (isPostgresConfigured()) {
-    return listFinanceFilesBySourcePostgres(sourceType, sourceId);
+    return mergeFinanceRecordsById(
+      await listFinanceFilesBySourcePostgres(sourceType, sourceId),
+      listFinanceFilesBySourceSqlite(sourceType, sourceId),
+    );
   }
   return listFinanceFilesBySourceSqlite(sourceType, sourceId);
 }
@@ -6585,7 +6615,10 @@ export async function listFinanceLedgerTransactions(filters?: {
   toDate?: string;
 }) {
   if (isPostgresConfigured()) {
-    return listFinanceLedgerTransactionsPostgres(filters);
+    return mergeFinanceRecordsById(
+      await listFinanceLedgerTransactionsPostgres(filters),
+      listFinanceLedgerTransactionsSqlite(filters),
+    );
   }
   return listFinanceLedgerTransactionsSqlite(filters);
 }
