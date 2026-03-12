@@ -11,7 +11,6 @@ const nextConfig: NextConfig = {
     "*": [
       "node_modules/puppeteer-core/lib/esm/puppeteer/node/install.js",
       "assets/videos/**/*",
-      "data/finance/**/*",
     ],
   },
   async headers() {
