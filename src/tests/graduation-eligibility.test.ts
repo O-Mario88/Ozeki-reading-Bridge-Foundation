@@ -20,18 +20,18 @@ import {
 import { LESSON_EVALUATION_ITEMS } from "../lib/lesson-evaluation";
 import type { PortalUser } from "../lib/types";
 
-function toPortalActor(): PortalUser {
+async function toPortalActor(): Promise<PortalUser> {
   const configured =
     process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
   const actor =
-    getPortalUserByEmail(configured) ??
-    getPortalUserByEmail("edwin@ozekiread.org") ??
-    getPortalUserByEmail("admin@ozekiread.org");
+    (await getPortalUserByEmail(configured)) ??
+    (await getPortalUserByEmail("edwin@ozekiread.org")) ??
+    (await getPortalUserByEmail("admin@ozekiread.org"));
   assert.ok(actor, "Missing seeded super admin/admin user for graduation test.");
   return actor as PortalUser;
 }
 
-test("seeded super admin credentials authenticate successfully even after credential drift", () => {
+test("seeded super admin credentials authenticate successfully even after credential drift", async () => {
   const db = getDb();
   const email = process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
   const password = process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079";
@@ -44,32 +44,32 @@ test("seeded super admin credentials authenticate successfully even after creden
     `,
   ).run({ email });
 
-  const actor = authenticatePortalUser(email, password);
+  const actor = await authenticatePortalUser(email, password);
 
   assert.ok(actor, "Expected seeded super admin credentials to authenticate.");
   assert.equal(actor.email, email);
   assert.equal(actor.isSuperAdmin, true);
 });
 
-test("portal session token remains valid even if the sqlite session row is unavailable", () => {
+test("portal session token remains valid even if the sqlite session row is unavailable", async () => {
   const email = process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
   const password = process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079";
-  const actor = authenticatePortalUser(email, password);
+  const actor = await authenticatePortalUser(email, password);
   assert.ok(actor, "Expected seeded super admin credentials to authenticate.");
 
   const db = getDb();
-  const session = createPortalSession(actor.id);
+  const session = await createPortalSession(actor.id);
   db.prepare("DELETE FROM portal_sessions WHERE token = @token").run({ token: session.token });
 
-  const recoveredActor = getPortalUserFromSession(session.token);
+  const recoveredActor = await getPortalUserFromSession(session.token);
   assert.ok(recoveredActor, "Expected stateless portal session fallback to authenticate.");
   assert.equal(recoveredActor.email, email);
   assert.equal(recoveredActor.isSuperAdmin, true);
 });
 
-test("school graduation eligibility is computed from live records and confirmation is audited", () => {
+test("school graduation eligibility is computed from live records and confirmation is audited", async () => {
   const db = getDb();
-  const actor = toPortalActor();
+  const actor = await toPortalActor();
   const originalSettings = db
     .prepare("SELECT * FROM graduation_settings WHERE id = 1")
     .get() as Record<string, unknown> | undefined;

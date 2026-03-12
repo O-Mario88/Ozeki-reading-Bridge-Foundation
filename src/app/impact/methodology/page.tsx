@@ -10,9 +10,9 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function ImpactMethodologyPage() {
+export default async function ImpactMethodologyPage() {
   const latestReport = listPublicImpactReports({ limit: 1 })[0] ?? null;
-  const summary = getImpactSummary();
+  const summary = await getImpactSummary();
 
   const learnersAssessed =
     summary.metrics.find((item) => item.label === "Learners assessed")?.value ?? 0;

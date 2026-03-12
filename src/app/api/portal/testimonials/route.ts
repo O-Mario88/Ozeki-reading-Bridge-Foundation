@@ -350,7 +350,7 @@ export async function POST(request: Request) {
       youtubeVideoTitle: formData.get("youtubeVideoTitle") ?? undefined,
       youtubeChannelId: formData.get("youtubeChannelId") ?? undefined,
     });
-    const school = getSchoolDirectoryRecord(parsedText.schoolId);
+    const school = await getSchoolDirectoryRecord(parsedText.schoolId);
     if (!school) {
       return NextResponse.json(
         { error: "Selected school profile was not found. Select a valid school before publishing." },

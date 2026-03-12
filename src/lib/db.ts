@@ -204,6 +204,22 @@ import {
   LEARNING_DOMAIN_DICTIONARY,
 } from "@/lib/domain-dictionary";
 import { getRuntimeDataDir, getRuntimeDbFilePath } from "@/lib/runtime-paths";
+import { isPostgresConfigured } from "@/lib/server/postgres/client";
+import {
+  deleteExpiredPortalSessionsPostgres,
+  deletePortalSessionPostgres,
+  findPortalUserAuthByIdPostgres,
+  findPortalUserAuthByIdentifierPostgres,
+  findPortalUserByEmailPostgres,
+  findPortalUserBySessionTokenPostgres,
+  insertPortalSessionPostgres,
+  syncPrivilegedPortalUsersPostgres,
+} from "@/lib/server/postgres/repositories/auth";
+import {
+  getSchoolDirectoryRecordPostgres,
+  listSchoolDirectoryRecordsPostgres,
+} from "@/lib/server/postgres/repositories/schools";
+import { getImpactSummaryPostgres } from "@/lib/server/postgres/repositories/metrics";
 
 const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-salt";
 const PORTAL_SESSION_SECRET = process.env.PORTAL_SESSION_SECRET ?? PASSWORD_SALT;
@@ -3161,6 +3177,28 @@ function getSeedPortalAccounts() {
   ];
 }
 
+function getPrivilegedPortalAccountSeeds() {
+  return getSeedPortalAccounts()
+    .filter((account) => account.isAdmin === 1 || account.isSuperAdmin === 1)
+    .map((account) => ({
+      fullName: account.fullName,
+      email: account.email,
+      phone: account.phone,
+      role: account.role,
+      passwordHash: hashPassword(account.password),
+      isSupervisor: account.isSupervisor,
+      isME: account.isME,
+      isAdmin: account.isAdmin,
+      isSuperAdmin: account.isSuperAdmin,
+    }));
+}
+
+function getDisabledLegacyPortalAdminPasswordHash() {
+  const seededSuperAdminEmail =
+    process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
+  return hashPassword(`${seededSuperAdminEmail}:disabled`);
+}
+
 function syncPortalAccounts(
   db: Database.Database,
   accounts: ReturnType<typeof getSeedPortalAccounts>,
@@ -5453,10 +5491,19 @@ function getPortalUserAuthRowById(db: Database.Database, userId: number) {
     | undefined;
 }
 
-export function getPortalUserByEmail(email: string): PortalUser | null {
+export async function getPortalUserByEmail(email: string): Promise<PortalUser | null> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) {
     return null;
+  }
+
+  if (isPostgresConfigured()) {
+    await syncPrivilegedPortalUsersPostgres(
+      getPrivilegedPortalAccountSeeds(),
+      getDisabledLegacyPortalAdminPasswordHash(),
+    );
+    const row = await findPortalUserByEmailPostgres(normalized);
+    return row ? parsePortalUserRow(row) : null;
   }
 
   const row = getDb()
@@ -5853,9 +5900,28 @@ export function deletePortalUserAccount(userId: number, currentUser: PortalUser)
   transaction();
 }
 
-export function authenticatePortalUser(identifier: string, password: string): PortalUser | null {
+export async function authenticatePortalUser(
+  identifier: string,
+  password: string,
+): Promise<PortalUser | null> {
   const normalizedIdentifier = identifier.trim();
   const normalizedEmail = normalizedIdentifier.toLowerCase();
+
+  if (isPostgresConfigured()) {
+    await syncPrivilegedPortalUsersPostgres(
+      getPrivilegedPortalAccountSeeds(),
+      getDisabledLegacyPortalAdminPasswordHash(),
+    );
+    const row = await findPortalUserAuthByIdentifierPostgres(normalizedIdentifier);
+    if (!row) {
+      return null;
+    }
+    if (row.passwordHash !== hashPassword(password)) {
+      return null;
+    }
+    return parsePortalUserRow(row);
+  }
+
   const db = getDb();
   ensurePrivilegedPortalUsers(db);
   const row = db
@@ -5906,9 +5972,11 @@ export function authenticatePortalUser(identifier: string, password: string): Po
   return parsePortalUserRow(row);
 }
 
-export function createPortalSession(userId: number) {
-  const db = getDb();
-  const user = getPortalUserAuthRowById(db, userId);
+export async function createPortalSession(userId: number) {
+  const db = isPostgresConfigured() ? null : getDb();
+  const user = isPostgresConfigured()
+    ? await findPortalUserAuthByIdPostgres(userId)
+    : getPortalUserAuthRowById(db!, userId);
   if (!user) {
     throw new Error("Cannot create portal session for unknown user.");
   }
@@ -5922,23 +5990,27 @@ export function createPortalSession(userId: number) {
     fp: getPortalSessionFingerprint(user.passwordHash),
   });
 
-  try {
-    db.prepare(
-      `
-      INSERT INTO portal_sessions (
-        user_id,
-        token,
-        expires_at
-      ) VALUES (
-        @userId,
-        @token,
-        @expiresAt
-      )
-    `,
-    ).run({ userId, token, expiresAt });
-  } catch {
-    // Stateless session token remains valid even if the local SQLite session table
-    // cannot be written in the current runtime.
+  if (isPostgresConfigured()) {
+    await insertPortalSessionPostgres(userId, token, expiresAt);
+  } else {
+    try {
+      db!.prepare(
+        `
+        INSERT INTO portal_sessions (
+          user_id,
+          token,
+          expires_at
+        ) VALUES (
+          @userId,
+          @token,
+          @expiresAt
+        )
+      `,
+      ).run({ userId, token, expiresAt });
+    } catch {
+      // Stateless session token remains valid even if the local SQLite session table
+      // cannot be written in the current runtime.
+    }
   }
 
   return {
@@ -5948,53 +6020,61 @@ export function createPortalSession(userId: number) {
   };
 }
 
-export function getPortalUserFromSession(token: string): PortalUser | null {
-  const db = getDb();
+export async function getPortalUserFromSession(token: string): Promise<PortalUser | null> {
+  const db = isPostgresConfigured() ? null : getDb();
 
-  try {
-    db.prepare("DELETE FROM portal_sessions WHERE datetime(expires_at) <= datetime('now')").run();
-  } catch {
-    // Read-only runtimes can still authenticate stateless sessions below.
-  }
-
-  const row = db
-    .prepare(
-      `
-      SELECT
-        u.id,
-        u.full_name AS fullName,
-        u.email,
-        u.phone,
-        u.role,
-        u.geography_scope AS geographyScope,
-        u.is_supervisor AS isSupervisor,
-        u.is_me AS isME,
-        u.is_admin AS isAdmin,
-        u.is_superadmin AS isSuperAdmin
-      FROM portal_sessions s
-      JOIN portal_users u ON u.id = s.user_id
-      WHERE s.token = @token
-        AND datetime(s.expires_at) > datetime('now')
-      LIMIT 1
-    `,
-    )
-    .get({ token }) as
-    | {
-      id: number;
-      fullName: string;
-      email: string;
-      phone: string | null;
-      role: PortalUserRole;
-      geographyScope: string | null;
-      isSupervisor: number;
-      isME: number;
-      isAdmin: number;
-      isSuperAdmin: number;
+  if (isPostgresConfigured()) {
+    await deleteExpiredPortalSessionsPostgres();
+    const row = await findPortalUserBySessionTokenPostgres(token);
+    if (row) {
+      return parsePortalUserRow(row);
     }
-    | undefined;
+  } else {
+    try {
+      db!.prepare("DELETE FROM portal_sessions WHERE datetime(expires_at) <= datetime('now')").run();
+    } catch {
+      // Read-only runtimes can still authenticate stateless sessions below.
+    }
 
-  if (row) {
-    return parsePortalUserRow(row);
+    const row = db!
+      .prepare(
+        `
+        SELECT
+          u.id,
+          u.full_name AS fullName,
+          u.email,
+          u.phone,
+          u.role,
+          u.geography_scope AS geographyScope,
+          u.is_supervisor AS isSupervisor,
+          u.is_me AS isME,
+          u.is_admin AS isAdmin,
+          u.is_superadmin AS isSuperAdmin
+        FROM portal_sessions s
+        JOIN portal_users u ON u.id = s.user_id
+        WHERE s.token = @token
+          AND datetime(s.expires_at) > datetime('now')
+        LIMIT 1
+      `,
+      )
+      .get({ token }) as
+      | {
+        id: number;
+        fullName: string;
+        email: string;
+        phone: string | null;
+        role: PortalUserRole;
+        geographyScope: string | null;
+        isSupervisor: number;
+        isME: number;
+        isAdmin: number;
+        isSuperAdmin: number;
+      }
+      | undefined;
+
+    if (row) {
+      return parsePortalUserRow(row);
+    }
   }
 
   const payload = parsePortalSessionToken(token);
@@ -6002,7 +6082,9 @@ export function getPortalUserFromSession(token: string): PortalUser | null {
     return null;
   }
 
-  const userRow = getPortalUserAuthRowById(db, payload.uid);
+  const userRow = isPostgresConfigured()
+    ? await findPortalUserAuthByIdPostgres(payload.uid)
+    : getPortalUserAuthRowById(db!, payload.uid);
   if (!userRow) {
     return null;
   }
@@ -6014,7 +6096,11 @@ export function getPortalUserFromSession(token: string): PortalUser | null {
   return parsePortalUserRow(userRow);
 }
 
-export function deletePortalSession(token: string) {
+export async function deletePortalSession(token: string) {
+  if (isPostgresConfigured()) {
+    await deletePortalSessionPostgres(token);
+    return;
+  }
   getDb().prepare("DELETE FROM portal_sessions WHERE token = @token").run({ token });
 }
 
@@ -12493,22 +12579,32 @@ export function updateSchoolDirectoryRecord(
   return updated;
 }
 
-export function listSchoolDirectoryRecords(
+export async function listSchoolDirectoryRecords(
   filters?: {
     district?: string;
     query?: string;
   },
   user?: PortalUser,
-): SchoolDirectoryRecord[] {
+): Promise<SchoolDirectoryRecord[]> {
   const where: string[] = ["1=1"];
   const params: Record<string, string | number> = {};
+  let scopedDistrict: string | undefined;
 
   if (user && user.role === "Staff" && user.geographyScope && !canViewAllRecords(user)) {
     const [scopeType, scopeValue] = user.geographyScope.split(":");
     if (scopeType === "district") {
+      scopedDistrict = scopeValue;
       where.push("lower(district) = lower(@scopedDistrict)");
       params.scopedDistrict = scopeValue;
     }
+  }
+
+  if (isPostgresConfigured()) {
+    return listSchoolDirectoryRecordsPostgres({
+      district: filters?.district,
+      query: filters?.query,
+      scopedDistrict,
+    });
   }
 
   if (filters?.district) {
@@ -14183,7 +14279,11 @@ function countTotal(db: Database.Database, query: string) {
   return Number(row.total ?? 0);
 }
 
-export function getImpactSummary() {
+export async function getImpactSummary() {
+  if (isPostgresConfigured()) {
+    return getImpactSummaryPostgres();
+  }
+
   const db = getDb();
 
   const teachersTrained = countTotal(
@@ -22412,7 +22512,11 @@ export function validateParticipantBelongsToSchool(
   return legacyRow?.schoolId === schoolId;
 }
 
-export function getSchoolDirectoryRecord(id: number): SchoolDirectoryRecord | null {
+export async function getSchoolDirectoryRecord(id: number): Promise<SchoolDirectoryRecord | null> {
+  if (isPostgresConfigured()) {
+    return getSchoolDirectoryRecordPostgres(id);
+  }
+
   const db = getDb();
   const row = db
     .prepare(

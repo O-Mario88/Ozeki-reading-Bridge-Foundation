@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = authenticatePortalUser(payload.identifier, payload.password);
+    const user = await authenticatePortalUser(payload.identifier, payload.password);
 
     if (!user) {
       return NextResponse.json(
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const session = createPortalSession(user.id);
+    const session = await createPortalSession(user.id);
     clearRateLimit(rateLimitKey);
     const response = NextResponse.json({
       ok: true,

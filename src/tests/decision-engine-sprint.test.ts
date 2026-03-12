@@ -40,7 +40,7 @@ test("priority action panel outputs only approved REC catalog IDs", () => {
 test("impact report generation logs audit event and stores report audit metadata", async () => {
   const defaultStaffEmail =
     process.env.PORTAL_STAFF_EMAIL?.toLowerCase() ?? "staff@ozekireadingbridge.org";
-  const user = getPortalUserByEmail(defaultStaffEmail);
+  const user = await getPortalUserByEmail(defaultStaffEmail);
   assert.ok(user, "Missing seeded staff user for impact report generation test.");
 
   const aggregate = getPublicImpactAggregate("country", "Uganda", "FY");
@@ -77,7 +77,7 @@ test("impact report generation logs audit event and stores report audit metadata
   );
 });
 
-test("support requests auto-route and can be converted into activity records", () => {
+test("support requests auto-route and can be converted into activity records", async () => {
   const db = getDb();
   const schoolWithTeacher = db
     .prepare(
@@ -140,6 +140,7 @@ test("support requests auto-route and can be converted into activity records", (
       fullName: `Routing Test Staff ${now}`,
       email: tempEmail,
       passwordHash: `hash-${now}`,
+      geographyScope: `district:${school!.district}`,
     });
 
   const created = createSupportRequest(
@@ -174,7 +175,7 @@ test("support requests auto-route and can be converted into activity records", (
     "Expected assigned user geography scope to match request district.",
   );
 
-  const assignedUser = getPortalUserByEmail(tempEmail);
+  const assignedUser = await getPortalUserByEmail(tempEmail);
   assert.ok(assignedUser, "Expected to reload inserted staff user.");
 
   const teachers = listTeachersBySchool(school!.id);
@@ -201,7 +202,14 @@ test("support requests auto-route and can be converted into activity records", (
         teacherObserved: teacher.fullName,
         visitType: "Coaching visit",
         coachingCycleNumber: 1,
+        implementationStatus: "started",
+        classLevel: "P3",
+        sponsorshipType: "district",
+        sponsoredBy: "District Education Office",
         notes: `Converted from Support Request #${created.id}`,
+        insightsKeyFindings: "Teacher needs targeted coaching support on reading routines.",
+        insightsConclusionsNextSteps: "Schedule a follow-up coaching cycle and monitor implementation.",
+        insightsRecommendationsRecIds: ["REC-01"],
       },
     },
     assignedUser as PortalUser,

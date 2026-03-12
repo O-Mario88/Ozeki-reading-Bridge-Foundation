@@ -77,7 +77,7 @@ export async function GET(request: Request) {
   const query = searchParams.get("query") || undefined;
 
   return NextResponse.json({
-    schools: listSchoolDirectoryRecords({ district, query }),
+    schools: await listSchoolDirectoryRecords({ district, query }),
   });
 }
 

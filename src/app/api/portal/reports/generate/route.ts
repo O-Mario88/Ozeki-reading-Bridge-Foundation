@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const gains = getLearningGainsData(scopeType, scopeId);
     const cost = getCostEffectivenessData(scopeType, scopeId);
     const quality = getDataQualitySummary(scopeType, scopeId);
-    const summary = getImpactSummary();
+    const summary = await getImpactSummary();
     const summaryMap = new Map(summary.metrics.map((m) => [m.label, Number(m.value) || 0]));
 
     // Get recommendations

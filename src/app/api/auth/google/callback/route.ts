@@ -92,7 +92,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const user = getPortalUserByEmail(email);
+  const user = await getPortalUserByEmail(email);
   if (!user) {
     return redirectWithError(
       request.url,
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const session = createPortalSession(user.id);
+  const session = await createPortalSession(user.id);
   const response = NextResponse.redirect(new URL(getPortalHomePath(user), request.url));
   response.cookies.set({
     name: PORTAL_SESSION_COOKIE,

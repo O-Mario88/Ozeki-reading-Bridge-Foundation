@@ -37,7 +37,7 @@ async function requireAuth() {
     return null;
   }
 
-  return getPortalUserFromSession(token);
+  return await getPortalUserFromSession(token);
 }
 
 export async function GET() {

@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function PortalSchoolsPage() {
   const user = await requirePortalStaffUser();
-  const schools = listSchoolDirectoryRecords();
+  const schools = await listSchoolDirectoryRecords();
 
   return (
     <PortalShell

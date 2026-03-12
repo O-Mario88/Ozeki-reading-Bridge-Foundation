@@ -21,7 +21,7 @@ const headlineMetricLabels = [
 ];
 
 export default async function ProgramsPage() {
-  const summary = getImpactSummary();
+  const summary = await getImpactSummary();
   const headlineMetrics = headlineMetricLabels
     .map((label) => summary.metrics.find((metric) => metric.label === label))
     .filter((metric): metric is { label: string; value: number } => Boolean(metric));

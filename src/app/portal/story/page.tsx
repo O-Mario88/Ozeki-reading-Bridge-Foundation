@@ -20,7 +20,7 @@ export default async function PortalStoryPage() {
   const user = await requirePortalUser();
   const config = portalModuleConfigByModule.story;
   const records = listPortalRecords({ module: "story" }, user);
-  const schools = listSchoolDirectoryRecords();
+  const schools = await listSchoolDirectoryRecords();
   const users = listPortalUsersForFilters(user);
 
   return (

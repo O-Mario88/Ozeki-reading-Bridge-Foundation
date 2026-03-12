@@ -87,6 +87,5 @@ export async function GET(request: Request) {
     return cachedJson(data);
   }
 
-  return cachedJson(getImpactSummary());
+  return cachedJson(await getImpactSummary());
 }
-

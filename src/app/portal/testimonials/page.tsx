@@ -29,7 +29,7 @@ export default async function PortalTestimonialsPage({
   const params = await searchParams;
   const canModerate = user.isSupervisor || user.isME || user.isAdmin || user.isSuperAdmin;
 
-  const schoolOptions = listSchoolDirectoryRecords(undefined, user)
+  const schoolOptions = (await listSchoolDirectoryRecords(undefined, user))
     .map((school) => ({
       id: school.id,
       name: school.name,

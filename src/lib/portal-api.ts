@@ -10,7 +10,7 @@ export async function getAuthenticatedPortalUser() {
     return null;
   }
 
-  return getPortalUserFromSession(token);
+  return await getPortalUserFromSession(token);
 }
 
 export function canReview(user: {

@@ -13,7 +13,7 @@ export async function getCurrentPortalUser() {
     return null;
   }
 
-  return getPortalUserFromSession(token);
+  return await getPortalUserFromSession(token);
 }
 
 export async function requirePortalUser() {

@@ -10,7 +10,7 @@ export async function POST() {
   const token = cookieStore.get(PORTAL_SESSION_COOKIE)?.value;
 
   if (token) {
-    deletePortalSession(token);
+    await deletePortalSession(token);
   }
 
   const response = NextResponse.json({ ok: true });

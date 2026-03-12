@@ -20,7 +20,7 @@ export default async function PortalAssessmentsPage() {
   const user = await requirePortalUser();
   const config = portalModuleConfigByModule.assessment;
   const records = listPortalRecords({ module: "assessment" }, user);
-  const schools = listSchoolDirectoryRecords();
+  const schools = await listSchoolDirectoryRecords();
   const users = listPortalUsersForFilters(user);
 
   return (

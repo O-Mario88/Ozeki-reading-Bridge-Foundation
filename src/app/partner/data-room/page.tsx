@@ -9,9 +9,9 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function PartnerDataRoomPage() {
+export default async function PartnerDataRoomPage() {
     const reports = listPublicImpactReports({ limit: 20 });
-    const summary = getImpactSummary();
+    const summary = await getImpactSummary();
     const metrics = new Map(summary.metrics.map((m) => [m.label, m.value]));
 
     return (

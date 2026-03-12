@@ -24,7 +24,7 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
     notFound();
   }
 
-  const school = getSchoolDirectoryRecord(schoolId);
+  const school = await getSchoolDirectoryRecord(schoolId);
   if (!school) {
     notFound();
   }

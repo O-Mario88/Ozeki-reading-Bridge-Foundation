@@ -18,7 +18,7 @@ export default async function PortalStoriesPage() {
     const user = await requirePortalStaffUser();
     const stories = listStoryEntries();
     const anthologies = listStoryAnthologies();
-    const schools = listSchoolDirectoryRecords();
+    const schools = await listSchoolDirectoryRecords();
 
     return (
         <PortalShell
