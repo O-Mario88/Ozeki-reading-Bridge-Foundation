@@ -1,47 +1,62 @@
-# AWS Deployment Guide (Rebuilt Architecture)
+# AWS Deployment Guide
 
-## Target Architecture
-- Frontend: Next.js app in `frontend/` deployed with AWS Amplify SSR.
-- Backend: Django app in `backend/` deployed on Elastic Beanstalk or App Runner Python runtime.
-- Database: Amazon RDS PostgreSQL.
-- Media/static: S3-backed storage for production (optional local filesystem in development only).
+This project is prepared for AWS deployment with:
+- standalone Next.js server startup (`npm run start:standalone`)
+- writable runtime storage fallback (`APP_DATA_DIR`, `SQLITE_DB_PATH`)
+- health endpoint (`GET /api/health`)
+- Docker healthcheck + native dependency hardening
 
-## Frontend (Amplify)
-- App root: `frontend/`.
-- Build config: `frontend/amplify.yml` (or root `amplify.yml` with `cd frontend`).
-- Required env vars:
-  - `NEXT_PUBLIC_API_BASE_URL=https://<backend-domain>`
+## Recommended Path (ECS Fargate + ECR)
 
-## Backend (Elastic Beanstalk / App Runner)
-- Runtime: Python 3.12.
-- Entrypoint: `gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000}`.
-- Files:
-  - `backend/Procfile`
-  - `backend/apprunner.yaml`
+1. Build and push image:
+```bash
+npm run deploy:check:strict
+aws ecr get-login-password --region <region> \
+  | docker login --username AWS --password-stdin <account-id>.dkr.ecr.<region>.amazonaws.com
 
-### Required environment variables
-- `DJANGO_SECRET_KEY`
-- `DATABASE_URL=postgresql://...`
-- `DJANGO_ALLOWED_HOSTS`
-- `CORS_ALLOWED_ORIGINS`
-- `CSRF_TRUSTED_ORIGINS`
-- `DB_SSL_REQUIRE=true`
-- Optional S3 storage keys
+docker build -t ozeki-reading-bridge-foundation:latest .
+docker tag ozeki-reading-bridge-foundation:latest <account-id>.dkr.ecr.<region>.amazonaws.com/ozeki-reading-bridge-foundation:latest
+docker push <account-id>.dkr.ecr.<region>.amazonaws.com/ozeki-reading-bridge-foundation:latest
+```
 
-## Database
-- Use RDS PostgreSQL only.
-- Run migrations during deploy:
-  - `python manage.py migrate`
-- Never run production with SQLite.
+2. ECS task/container settings:
+- Container port: `3000`
+- Health check path: `/api/health`
+- Health check grace period: at least `45s`
+- Persistent storage: mount EFS to `/app/data` (recommended if you need durable SQLite/files)
 
-## Static and Media
-- Run collectstatic:
-  - `python manage.py collectstatic --noinput`
-- Configure S3 env vars for persistent media/static.
+3. Required environment variables:
+- `NODE_ENV=production`
+- `APP_ORIGIN=https://<your-domain>`
+- `NEXT_PUBLIC_APP_URL=https://<your-domain>`
+- `PUBLIC_SITE_HOST=<your-domain-without-protocol>`
+- `ADMIN_PORTAL_HOST=admin.<your-domain-without-protocol>`
+- `PORTAL_AUTO_SEED_USERS=false`
+- `PORTAL_PASSWORD_SALT=<strong-random-secret>`
+- Portal/admin credential variables from `.env.example`
+- Optional Google/OpenAI/SMTP/Supabase variables as needed by enabled features
 
-## Release Workflow
-1. Deploy backend and confirm `/health` responds `{"status":"ok"}`.
-2. Run backend migrations.
-3. Deploy frontend with backend URL env.
-4. Smoke-check public pages and staff workflows.
-5. Run data migration in controlled window if cutover is pending.
+4. Runtime storage options:
+- Durable: `APP_DATA_DIR=/app/data` (with EFS mount at `/app/data`)
+- Ephemeral: `APP_DATA_DIR=/tmp/ozeki-data` (data resets on restart)
+- Explicit DB path: `SQLITE_DB_PATH=/app/data/app.db` (or `DATABASE_PATH`)
+
+## AWS Source Deployments (Elastic Beanstalk/App Runner source)
+
+- Start command: `npm run start:standalone`
+- Build command: `npm ci && npm run build`
+- Health check path: `/api/health`
+- Runtime storage env (recommended): `APP_DATA_DIR=/tmp/ozeki-data` unless persistent volume is configured
+
+`Procfile` is included so Elastic Beanstalk picks the correct web command by default.
+`apprunner.yaml` is included so App Runner source deployments use the same build/run commands.
+
+## AWS Amplify
+
+`amplify.yml` is included and does the following:
+- switches build Node runtime to `20`
+- runs `npm ci`
+- rebuilds `better-sqlite3` in the Amplify build environment
+- runs `npm run build` (webpack mode)
+
+If you configure Amplify in the console, keep the same command sequence to avoid native module mismatch errors.
