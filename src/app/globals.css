@@ -3670,6 +3670,20 @@ main {
   flex-wrap: wrap;
 }
 
+.portal-login-note {
+  margin: -0.1rem 0 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.8rem;
+  background: color-mix(in oklab, var(--md-sys-color-primary), white 92%);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-primary), white 76%);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.9rem;
+}
+
+.portal-login-note strong {
+  color: var(--md-sys-color-primary);
+}
+
 .portal-login-links a {
   color: var(--md-sys-color-primary);
   text-decoration: underline;

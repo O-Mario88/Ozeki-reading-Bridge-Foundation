@@ -7,9 +7,11 @@ export const runtime = "nodejs";
 
 import {
   GOOGLE_OAUTH_STATE_COOKIE,
+  getAllowedGoogleWorkspaceDomains,
   getOAuthClientId,
   getOAuthClientSecret,
   getOAuthRedirectUri,
+  isAllowedGoogleWorkspaceEmail,
   redirectWithError,
 } from "@/app/api/auth/_shared/google-oauth";
 
@@ -80,11 +82,21 @@ export async function GET(request: Request) {
     return redirectWithError(request.url, "Google account email is not verified.");
   }
 
+  if (!isAllowedGoogleWorkspaceEmail(email)) {
+    const allowedDomains = getAllowedGoogleWorkspaceDomains()
+      .map((domain) => `@${domain}`)
+      .join(", ");
+    return redirectWithError(
+      request.url,
+      `Use an approved Google Workspace account (${allowedDomains}).`,
+    );
+  }
+
   const user = getPortalUserByEmail(email);
   if (!user) {
     return redirectWithError(
       request.url,
-      "No portal access for this Google account. Contact super admin.",
+      "This Google account is not provisioned for portal access. Contact super admin.",
     );
   }
 

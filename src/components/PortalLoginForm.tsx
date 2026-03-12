@@ -10,6 +10,7 @@ type SubmitState = {
 };
 
 const initialState: SubmitState = { status: "idle", message: "" };
+const approvedGoogleDomain = "ozekiread.org";
 
 export function PortalLoginForm() {
   const [state, setState] = useState<SubmitState>(initialState);
@@ -81,6 +82,11 @@ export function PortalLoginForm() {
       <a className="button button-ghost" href="/api/auth/google">
         Continue with Google
       </a>
+
+      <p className="portal-login-note">
+        Google sign-in is limited to approved <strong>@{approvedGoogleDomain}</strong> staff accounts.
+        Use <strong>edwin@ozekiread.org</strong> or contact admin if your access has not been provisioned.
+      </p>
 
       <div className="portal-login-links">
         <a href={officialContactLinks.mailto}>Forgot password?</a>

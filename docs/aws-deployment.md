@@ -11,6 +11,18 @@
 - Build config: `frontend/amplify.yml` (or root `amplify.yml` with `cd frontend`).
 - Required env vars:
   - `NEXT_PUBLIC_API_BASE_URL=https://<backend-domain>`
+  - `GOOGLE_OAUTH_CLIENT_ID=<google oauth client id>`
+  - `GOOGLE_OAUTH_CLIENT_SECRET=<google oauth client secret>`
+  - `GOOGLE_OAUTH_ALLOWED_DOMAIN=ozekiread.org`
+
+### Google Workspace sign-in
+- The portal Google OAuth callback is `/api/auth/google/callback`.
+- For the live admin host, configure the Google OAuth redirect URI:
+  - `https://admin.ozekiread.org/api/auth/google/callback`
+- If the portal can also be served from the main public host, add:
+  - `https://ozekiread.org/api/auth/google/callback`
+- The portal now enforces approved Google Workspace email domains. By default this is `ozekiread.org`.
+- Edwin must sign in with `edwin@ozekiread.org`, and that email must also exist in `portal_users`.
 
 ## Backend (Elastic Beanstalk / App Runner)
 - Runtime: Python 3.12.

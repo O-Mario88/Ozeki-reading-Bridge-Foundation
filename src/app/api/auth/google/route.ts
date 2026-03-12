@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
+import { getPrimaryAllowedGoogleWorkspaceDomain } from "@/app/api/auth/_shared/google-oauth";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
   authUrl.searchParams.set("scope", "openid email profile");
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("prompt", "select_account");
+  authUrl.searchParams.set("hd", getPrimaryAllowedGoogleWorkspaceDomain());
   const response = NextResponse.redirect(authUrl);
   response.cookies.set({
     name: GOOGLE_OAUTH_STATE_COOKIE,
