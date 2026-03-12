@@ -1,22 +1,35 @@
-node_modules
-.next
-out
+.DS_Store
+
+# Env files
 .env*
 !.env.example
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.DS_Store
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.sqlite3
+backend/staticfiles/
+backend/media/
+
+# Build artifacts
+.next/
+.next*/
+*.tsbuildinfo
+
+# Local data snapshots
 data/*
 !data/.gitkeep
+!data/backups/.gitkeep
 
-# Ignore large media files
-assets/videos/*.mp4
-
-# Ignore all next build artifacts
-.next*
-public/videos/*.mp4
-
-# TypeScript build cache
-*.tsbuildinfo
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
