@@ -3144,7 +3144,22 @@ export function getDb() {
     return dbInstance;
   }
 
-  const db = new Database(dbFile, { timeout: 5000 });
+  let db: Database.Database;
+  try {
+    db = new Database(dbFile, { timeout: 5000 });
+  } catch (err) {
+    // If RW open fails, try readonly mode as fallback for production/standalone
+    try {
+      db = new Database(dbFile, { timeout: 5000, readonly: true });
+      db.pragma("busy_timeout = 5000");
+      db.pragma("foreign_keys = ON");
+      dbInstance = db;
+      return db;
+    } catch (_e) {
+      throw err; // Rethrow original error if both fail
+    }
+  }
+
   db.pragma("busy_timeout = 5000");
   db.pragma("foreign_keys = ON");
 
