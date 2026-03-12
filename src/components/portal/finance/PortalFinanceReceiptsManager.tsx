@@ -176,7 +176,10 @@ export function PortalFinanceReceiptsManager({
     if (toInput === null) {
       return;
     }
-    const ccInput = window.prompt("Optional CC emails (comma-separated). Leave blank for default CC only:", "");
+    const ccInput = window.prompt(
+      "Optional extra CC emails (comma-separated). Edwin and Amos are copied automatically:",
+      "",
+    );
     if (ccInput === null) {
       return;
     }
@@ -215,7 +218,10 @@ export function PortalFinanceReceiptsManager({
     if (toInput === null) {
       return;
     }
-    const ccInput = window.prompt("Optional CC emails (comma-separated). Leave blank for default CC only:", "");
+    const ccInput = window.prompt(
+      "Optional extra CC emails (comma-separated). Edwin and Amos are copied automatically:",
+      "",
+    );
     if (ccInput === null) {
       return;
     }

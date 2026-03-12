@@ -1,5 +1,8 @@
 import nodemailer from "nodemailer";
 
+const DEFAULT_FINANCE_FROM_EMAIL = "accounts@ozekiread.org";
+const DEFAULT_FINANCE_ALWAYS_CC = ["edwin@ozekiread.org", "amos@ozekiread.org"] as const;
+
 export type FinanceEmailAttachment = {
   filename: string;
   path: string;
@@ -7,6 +10,7 @@ export type FinanceEmailAttachment = {
 };
 
 export type FinanceEmailSendInput = {
+  from?: string;
   to: string[];
   cc?: string[];
   subject: string;
@@ -20,13 +24,71 @@ export type FinanceEmailSendResult = {
   providerMessage: string;
 };
 
+function splitCsvEnv(value: string | undefined) {
+  if (!value) {
+    return [];
+  }
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function normalizeEmailList(items: string[]) {
+  return Array.from(
+    new Set(
+      items
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item)),
+    ),
+  );
+}
+
+export function getDefaultFinanceFromEmail(config?: {
+  financeEmailFrom?: string;
+  financeAccountantEmail?: string;
+  smtpFrom?: string;
+}) {
+  return (
+    config?.financeEmailFrom?.trim() ||
+    process.env.FINANCE_EMAIL_FROM?.trim() ||
+    config?.financeAccountantEmail?.trim() ||
+    process.env.FINANCE_ACCOUNTANT_EMAIL?.trim() ||
+    config?.smtpFrom?.trim() ||
+    process.env.SMTP_FROM?.trim() ||
+    DEFAULT_FINANCE_FROM_EMAIL
+  );
+}
+
+export function resolveFinanceFromEmail(candidate?: string | null, fallback = getDefaultFinanceFromEmail()) {
+  const normalized = normalizeEmailList([candidate ?? ""])[0];
+  return normalized || fallback;
+}
+
+export function getRequiredFinanceCcEmails(configuredCsv = process.env.FINANCE_EMAIL_ALWAYS_CC) {
+  const configured = splitCsvEnv(configuredCsv);
+  const fallback = configured.length > 0 ? configured : [...DEFAULT_FINANCE_ALWAYS_CC];
+  return normalizeEmailList(fallback);
+}
+
+export function buildFinanceCcListFromGroups(
+  groups: Array<string[] | undefined>,
+  requiredEmails = getRequiredFinanceCcEmails(),
+) {
+  return normalizeEmailList([...groups.flatMap((group) => group || []), ...requiredEmails]);
+}
+
+export function buildFinanceCcList(...groups: Array<string[] | undefined>) {
+  return buildFinanceCcListFromGroups(groups);
+}
+
 function getMailerConfig() {
   const host = process.env.SMTP_HOST?.trim() ?? "";
   const user = process.env.SMTP_USER?.trim() ?? "";
   const pass = process.env.SMTP_PASS?.trim() ?? "";
   const port = Number(process.env.SMTP_PORT ?? "587");
   const secure = String(process.env.SMTP_SECURE ?? "false").toLowerCase() === "true";
-  const from = process.env.FINANCE_EMAIL_FROM?.trim() || process.env.SMTP_FROM?.trim() || user;
+  const from = getDefaultFinanceFromEmail() || user;
 
   return {
     host,
@@ -56,7 +118,7 @@ export async function sendFinanceMail(input: FinanceEmailSendInput): Promise<Fin
     });
 
     const result = await transporter.sendMail({
-      from: config.from,
+      from: resolveFinanceFromEmail(input.from || config.from),
       to: input.to.join(", "),
       cc: input.cc && input.cc.length > 0 ? input.cc.join(", ") : undefined,
       subject: input.subject,
@@ -76,4 +138,3 @@ export async function sendFinanceMail(input: FinanceEmailSendInput): Promise<Fin
     };
   }
 }
-

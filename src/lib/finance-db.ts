@@ -4,7 +4,12 @@ import path from "node:path";
 import type Database from "better-sqlite3";
 import { getDb, logAuditEvent } from "@/lib/db";
 import { generateInvoicePdfFile, generateReceiptPdfFile, generateStatementPdfFile } from "@/lib/finance-documents";
-import { sendFinanceMail } from "@/lib/finance-email";
+import {
+  buildFinanceCcList,
+  getDefaultFinanceFromEmail,
+  resolveFinanceFromEmail,
+  sendFinanceMail,
+} from "@/lib/finance-email";
 import { officialContact } from "@/lib/contact";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import {
@@ -171,7 +176,7 @@ const FINANCE_FILE_SECRET =
   process.env.FINANCE_FILE_SIGNING_SECRET ||
   process.env.PORTAL_PASSWORD_SALT ||
   "orbf-finance-files-secret";
-const REQUIRED_INVOICE_CC = ["amos@ozekiread.org", "support@ozekiread.org"];
+const REQUIRED_INVOICE_CC: string[] = [];
 
 let financeSchemaReady = false;
 
@@ -406,6 +411,10 @@ function sanitizeEmailList(items: string[]): string[] {
         .filter((item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item)),
     ),
   );
+}
+
+function getFinanceDefaultSender() {
+  return resolveFinanceFromEmail(getDefaultFinanceFromEmail());
 }
 
 function ensureFinanceSchema() {
@@ -822,8 +831,8 @@ function ensureFinanceSchema() {
       )
     `,
     ).run({
-      fromEmail: process.env.FINANCE_EMAIL_FROM?.trim() || officialContact.email,
-      ccFinanceEmail: officialContact.email,
+      fromEmail: getFinanceDefaultSender(),
+      ccFinanceEmail: null,
       subcategoriesJson: JSON.stringify(DEFAULT_CATEGORY_SUBCATEGORIES),
       invoiceEmailTemplate: DEFAULT_INVOICE_TEMPLATE,
       receiptEmailTemplate: DEFAULT_RECEIPT_TEMPLATE,
@@ -837,6 +846,24 @@ function ensureFinanceSchema() {
       updatedAt: nowIso(),
     });
   }
+
+  db.prepare(
+    `
+      UPDATE finance_settings
+      SET from_email = @fromEmail,
+          updated_at = @updatedAt
+      WHERE id = 1
+        AND (
+          from_email IS NULL
+          OR TRIM(from_email) = ''
+          OR LOWER(TRIM(from_email)) = @legacyFromEmail
+        )
+    `,
+  ).run({
+    fromEmail: getFinanceDefaultSender(),
+    legacyFromEmail: officialContact.email.trim().toLowerCase(),
+    updatedAt: nowIso(),
+  });
 
   db.prepare(
     `
@@ -1080,8 +1107,8 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
 
   if (!row) {
     return {
-      fromEmail: officialContact.email,
-      ccFinanceEmail: officialContact.email,
+      fromEmail: getFinanceDefaultSender(),
+      ccFinanceEmail: null,
       invoicePrefix: "INV",
       receiptPrefix: "RCT",
       expensePrefix: "EXP",
@@ -1117,7 +1144,10 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
 
   return {
     fromEmail: row.fromEmail,
-    ccFinanceEmail: row.ccFinanceEmail,
+    ccFinanceEmail:
+      row.ccFinanceEmail && row.ccFinanceEmail.trim().toLowerCase() !== officialContact.email.trim().toLowerCase()
+        ? row.ccFinanceEmail
+        : null,
     invoicePrefix: row.invoicePrefix || "INV",
     receiptPrefix: row.receiptPrefix || "RCT",
     expensePrefix: row.expensePrefix || "EXP",
@@ -3004,11 +3034,12 @@ export async function sendFinanceInvoice(
   if (to.length === 0 && explicitTo.length === 0) {
     to = sanitizeEmailList(contact.emails);
   }
-  const cc = sanitizeEmailList([
-    ...(options?.cc || []),
-    ...(settings.ccFinanceEmail ? [settings.ccFinanceEmail] : []),
-    ...REQUIRED_INVOICE_CC,
-  ]);
+  const cc = buildFinanceCcList(
+    options?.cc,
+    settings.ccFinanceEmail ? [settings.ccFinanceEmail] : undefined,
+    REQUIRED_INVOICE_CC,
+  );
+  const from = resolveFinanceFromEmail(settings.fromEmail);
 
   if (to.length === 0) {
     throw new Error("Invoice contact has no valid email address.");
@@ -3027,6 +3058,7 @@ export async function sendFinanceInvoice(
 
   const subject = `Invoice ${invoice.invoiceNumber} • Ozeki Reading Bridge Foundation`;
   const result = await sendFinanceMail({
+    from,
     to,
     cc,
     subject,
@@ -3771,10 +3803,11 @@ export async function sendFinanceReceipt(
   if (to.length === 0) {
     throw new Error("Receipt contact has no valid email address.");
   }
-  const cc = sanitizeEmailList([
-    ...(options?.cc || []),
-    ...(settings.ccFinanceEmail ? [settings.ccFinanceEmail] : []),
-  ]);
+  const cc = buildFinanceCcList(
+    options?.cc,
+    settings.ccFinanceEmail ? [settings.ccFinanceEmail] : undefined,
+  );
+  const from = resolveFinanceFromEmail(settings.fromEmail);
 
   const artifact = await ensureReceiptPdfArtifact(db, row, actor.userId);
 
@@ -3797,6 +3830,7 @@ export async function sendFinanceReceipt(
     `<br/><br/>${officialContact.address}<br/>${officialContact.postalAddress}<br/>Email: ${officialContact.email}<br/>Phone: ${officialContact.phoneDisplay}`;
 
   const result = await sendFinanceMail({
+    from,
     to,
     cc,
     subject,
