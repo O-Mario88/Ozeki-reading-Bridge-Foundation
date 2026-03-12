@@ -20,9 +20,11 @@ frontend:
         - mkdir -p .next/standalone/.next/static
         - cp -r .next/static .next/standalone/.next/static || true
   artifacts:
-    baseDirectory: .next
+    baseDirectory: .next/standalone
     files:
       - "**/*"
+      - ".next/static/**/*"
+      - "public/**/*"
   cache:
     paths:
       - node_modules/**/*

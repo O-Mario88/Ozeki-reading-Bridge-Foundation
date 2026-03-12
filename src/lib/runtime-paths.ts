@@ -18,9 +18,28 @@ function resolveEnvDbPath() {
   return path.resolve(explicit);
 }
 
+function directoryExists(dir: string) {
+  try {
+    const stats = fs.statSync(dir);
+    return stats.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function hasExistingDb(dir: string) {
+  try {
+    return fs.existsSync(path.join(dir, DEFAULT_DB_FILE_NAME));
+  } catch {
+    return false;
+  }
+}
+
 function canUseDirectory(dir: string) {
   try {
-    fs.mkdirSync(dir, { recursive: true });
+    if (!directoryExists(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.accessSync(dir, fs.constants.W_OK);
     return true;
   } catch {
@@ -85,7 +104,11 @@ export function getRuntimeDataDir() {
     TMP_FALLBACK_DATA_DIR,
   ]);
 
-  const selectedDir = candidates.find((candidate) => canUseDirectory(candidate));
+  const selectedDir = candidates.find((candidate) => {
+    if (!candidate) return false;
+    // Prefer writable, but accept read-only if DB is already there (the DB layer has RW fallback)
+    return canUseDirectory(candidate) || hasExistingDb(candidate);
+  });
   if (!selectedDir) {
     throw new Error(
       "[runtime-paths] Could not find a writable directory for runtime data. Set APP_DATA_DIR or SQLITE_DB_PATH to a writable path.",
