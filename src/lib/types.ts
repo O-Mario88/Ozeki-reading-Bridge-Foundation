@@ -3376,7 +3376,12 @@ export type FinanceAuditedStatementRecord = {
 export type TrainingSessionStatus = "draft" | "scheduled" | "live" | "completed" | "canceled";
 export type TrainingArtifactType = "recording" | "transcript" | "meet_notes" | "ai_notes";
 export type TrainingArtifactSource = "google_meet" | "google_docs" | "ozeki_ai";
-export type TrainingArtifactStatus = "pending" | "available" | "not_available" | "failed";
+export type TrainingArtifactStatus =
+  | "pending"
+  | "processing"
+  | "available"
+  | "not_available"
+  | "failed";
 export type TrainingResourceVisibility = "internal" | "schools" | "public";
 
 export interface OnlineTrainingSessionRecord {

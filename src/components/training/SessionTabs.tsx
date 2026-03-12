@@ -7,6 +7,7 @@ type SessionViewModel = {
     agenda?: string | null;
     objectives?: string | null;
     program_tags?: string | null;
+    programTags?: string | null;
 };
 
 type SessionResourceViewModel = {
@@ -45,7 +46,16 @@ function normalizeResource(value: unknown): SessionResourceViewModel {
     const record = value as Record<string, unknown>;
     return {
         title: typeof record.title === "string" ? record.title : null,
-        fileUrl: typeof record.fileUrl === "string" ? record.fileUrl : null,
+        fileUrl:
+            typeof record.fileUrl === "string"
+                ? record.fileUrl
+                : typeof record.externalUrl === "string"
+                    ? record.externalUrl
+                    : typeof record.storedPath === "string"
+                        ? record.storedPath
+                        : typeof record.stored_path === "string"
+                            ? record.stored_path
+                            : null,
     };
 }
 
@@ -131,7 +141,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                     <div className="flex flex-col">
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Tags</span>
                         <div className="flex space-x-2">
-                            {parseProgramTags(session.program_tags).map((tag) => (
+                            {parseProgramTags(session.program_tags ?? session.programTags).map((tag) => (
                                 <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
                                     {tag}
                                 </span>

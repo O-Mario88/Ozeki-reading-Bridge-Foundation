@@ -6,8 +6,11 @@ import { SessionTabs } from "@/components/training/SessionTabs";
 import { UpNextPanel } from "@/components/training/UpNextPanel";
 import { DiscussionPanel } from "@/components/training/DiscussionPanel";
 import { requirePortalUser } from "@/lib/portal-auth";
-import { getDb } from "@/lib/db";
-import { getTrainingSession, ensureTrainingSchema } from "@/lib/training-db";
+import {
+  getTrainingSession,
+  listTrainingArtifacts,
+  listTrainingResources,
+} from "@/lib/training-db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +23,7 @@ export default async function AdminSessionRoomPage({ params }: { params: Promise
   const { id } = await params;
   const sessionId = parseInt(id, 10);
 
-  const session = getTrainingSession(sessionId);
+  const session = await getTrainingSession(sessionId);
   if (!session) return notFound();
 
   // Admin access check
@@ -28,10 +31,10 @@ export default async function AdminSessionRoomPage({ params }: { params: Promise
     return <div className="p-8">Forbidden</div>;
   }
 
-  ensureTrainingSchema();
-  const db = getDb();
-  const resources = db.prepare(`SELECT * FROM training_resources WHERE session_id=?`).all(sessionId);
-  const artifacts = db.prepare(`SELECT type, status FROM training_artifacts WHERE session_id=?`).all(sessionId);
+  const [resources, artifacts] = await Promise.all([
+    listTrainingResources(sessionId),
+    listTrainingArtifacts(sessionId),
+  ]);
 
   return (
     <div className="h-screen flex overflow-hidden bg-white font-sans text-gray-900">

@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         const { id } = await params;
         const sessionId = parseInt(id, 10);
-        const session = getTrainingSession(sessionId);
+        const session = await getTrainingSession(sessionId);
 
         if (!session) {
             return new NextResponse("Not Found", { status: 404 });

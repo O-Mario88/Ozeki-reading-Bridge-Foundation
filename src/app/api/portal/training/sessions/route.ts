@@ -1,31 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
 import { requirePortalUser } from "@/lib/portal-auth";
-import { ensureTrainingSchema, createTrainingSession, updateTrainingSessionGoogleLinks } from "@/lib/training-db";
+import {
+  createTrainingSession,
+  listOnlineTrainingSessions,
+  updateTrainingSessionGoogleLinks,
+} from "@/lib/training-db";
 import { createMeetEvent } from "@/lib/google-meet-sync";
-
-type TrainingSessionRow = Record<string, unknown> & {
-  host_user_id: number | null;
-};
 
 export async function GET() {
   try {
     const user = await requirePortalUser();
-    ensureTrainingSchema();
-    const db = getDb();
 
     const isAdmin = user.isAdmin || user.isSuperAdmin;
-
-    const sessions = db.prepare(`
-          SELECT s.*, u.full_name as host_name 
-          FROM training_sessions s
-          LEFT JOIN portal_users u ON s.host_user_id = u.id
-          ORDER BY s.start_time DESC
-        `).all() as TrainingSessionRow[];
+    const sessions = await listOnlineTrainingSessions({
+      includeDrafts: true,
+      limit: 200,
+    });
 
     const filtered = isAdmin
       ? sessions
-      : sessions.filter((s) => Number(s.host_user_id) === user.id);
+      : sessions.filter((session) => Number(session.hostUserId) === user.id);
 
     return NextResponse.json({ sessions: filtered });
   } catch (error) {
@@ -60,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Create DB Record
-    const sessionId = createTrainingSession({
+    const sessionId = await createTrainingSession({
       title,
       agenda,
       objectives,
@@ -77,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     // Update newly created record with Google links
     if (calendarEventId) {
-      updateTrainingSessionGoogleLinks(sessionId, calendarEventId, meetJoinUrl, null);
+      await updateTrainingSessionGoogleLinks(sessionId, calendarEventId, meetJoinUrl, null);
     }
 
     return NextResponse.json({ id: sessionId, calendarEventId, meetJoinUrl });
