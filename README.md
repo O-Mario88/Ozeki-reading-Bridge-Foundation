@@ -134,6 +134,7 @@ Set custom credentials in `.env.local` (or copy from `.env.example`):
 - `NEXT_PUBLIC_APP_URL`
 - `ADMIN_PORTAL_HOST` (default: `admin.ozekiread.org`)
 - `PUBLIC_SITE_HOST` (default: `ozekiread.org`)
+- `ENFORCE_HOST_SPLIT` (`true` to force public/admin subdomain split)
 - `BOOKING_CALENDAR_DURATION_MINUTES`
 - `NEWSLETTER_BATCH_SIZE`
 - `NEWSLETTER_EMAIL_FROM`
@@ -199,13 +200,14 @@ npm run deploy:ready
 ### Public vs Admin Domain Split
 - Public website should run on your visitor domain (for example: `ozekiread.org`).
 - Staff/Admin portal should run on a private admin subdomain (for example: `admin.ozekiread.org`).
-- Middleware enforces this split:
+- Set `ENFORCE_HOST_SPLIT=true` to enforce this split via middleware:
   - Public host access to `/portal` routes is redirected to the admin host.
   - Public host access to `/api/portal/*` returns not found.
   - Admin host defaults `/` to `/portal/login`.
 - Set these env vars in production:
   - `ADMIN_PORTAL_HOST=admin.ozekiread.org`
   - `PUBLIC_SITE_HOST=ozekiread.org`
+  - `ENFORCE_HOST_SPLIT=true`
 
 This project now uses Next.js `output: "standalone"` for deployment-friendly server bundles.
 

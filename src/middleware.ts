@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 const adminPortalHost = (process.env.ADMIN_PORTAL_HOST ?? "admin.ozekiread.org").toLowerCase();
 const publicSiteHost = (process.env.PUBLIC_SITE_HOST ?? "ozekiread.org").toLowerCase();
+const enforceHostSplit = (() => {
+  const raw = (process.env.ENFORCE_HOST_SPLIT ?? process.env.ENFORCE_ADMIN_HOST_SPLIT ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+})();
 
 const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -63,6 +67,11 @@ export function middleware(request: NextRequest) {
   const isPublicHost = hostname === publicSiteHost || hostname === `www.${publicSiteHost}`;
 
   if (localHosts.has(hostname) || hostname.endsWith(".local")) {
+    return NextResponse.next();
+  }
+
+  // Host split is opt-in. Keep portal available on the same host unless explicitly enforced.
+  if (!enforceHostSplit) {
     return NextResponse.next();
   }
 

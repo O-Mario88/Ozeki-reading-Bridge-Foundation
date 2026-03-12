@@ -343,152 +343,162 @@ function ensureImpactReportColumns(db: Database.Database) {
     schemaSql.includes("scope_type") && !schemaSql.includes("'Sub-region'");
 
   if (scopeCheckNeedsMigration || !hasAllExpectedColumns) {
-    db.exec(`
-      DROP VIEW IF EXISTS training_participation_summary_by_geo_period;
-      DROP VIEW IF EXISTS training_feedback_themes_by_training_period;
-    `);
+    const wasForeignKeysOn = Number(db.pragma("foreign_keys", { simple: true }) ?? 1) === 1;
+    if (wasForeignKeysOn) {
+      db.pragma("foreign_keys = OFF");
+    }
+    try {
+      db.exec(`
+        DROP VIEW IF EXISTS training_participation_summary_by_geo_period;
+        DROP VIEW IF EXISTS training_feedback_themes_by_training_period;
+      `);
 
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS impact_reports_next (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        report_code TEXT NOT NULL UNIQUE,
-        title TEXT NOT NULL,
-        partner_name TEXT,
-        report_type TEXT NOT NULL,
-        report_category TEXT,
-        scope_type TEXT NOT NULL CHECK(scope_type IN ('National', 'Region', 'Sub-region', 'District', 'Sub-county', 'Parish', 'School')),
-        scope_value TEXT NOT NULL DEFAULT 'All',
-        region_id TEXT,
-        sub_region_id TEXT,
-        district_id TEXT,
-        school_id INTEGER,
-        period_type TEXT NOT NULL DEFAULT 'FY' CHECK(period_type IN ('FY', 'Term', 'Quarter', 'Custom')),
-        period_start TEXT NOT NULL,
-        period_end TEXT NOT NULL,
-        programs_json TEXT NOT NULL,
-        fact_pack_json TEXT NOT NULL,
-        narrative_json TEXT NOT NULL,
-        audience TEXT NOT NULL DEFAULT 'Public-safe' CHECK(audience IN ('Public-safe', 'Staff-only')),
-        output TEXT NOT NULL DEFAULT 'PDF' CHECK(output IN ('PDF', 'HTML preview')),
-        status TEXT NOT NULL DEFAULT 'Generated',
-        is_public INTEGER NOT NULL DEFAULT 0,
-        version TEXT NOT NULL DEFAULT 'v1.0',
-        generated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        view_count INTEGER NOT NULL DEFAULT 0,
-        download_count INTEGER NOT NULL DEFAULT 0,
-        created_by_user_id INTEGER NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
-        FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL
-      );
-    `);
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS impact_reports_next (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          report_code TEXT NOT NULL UNIQUE,
+          title TEXT NOT NULL,
+          partner_name TEXT,
+          report_type TEXT NOT NULL,
+          report_category TEXT,
+          scope_type TEXT NOT NULL CHECK(scope_type IN ('National', 'Region', 'Sub-region', 'District', 'Sub-county', 'Parish', 'School')),
+          scope_value TEXT NOT NULL DEFAULT 'All',
+          region_id TEXT,
+          sub_region_id TEXT,
+          district_id TEXT,
+          school_id INTEGER,
+          period_type TEXT NOT NULL DEFAULT 'FY' CHECK(period_type IN ('FY', 'Term', 'Quarter', 'Custom')),
+          period_start TEXT NOT NULL,
+          period_end TEXT NOT NULL,
+          programs_json TEXT NOT NULL,
+          fact_pack_json TEXT NOT NULL,
+          narrative_json TEXT NOT NULL,
+          audience TEXT NOT NULL DEFAULT 'Public-safe' CHECK(audience IN ('Public-safe', 'Staff-only')),
+          output TEXT NOT NULL DEFAULT 'PDF' CHECK(output IN ('PDF', 'HTML preview')),
+          status TEXT NOT NULL DEFAULT 'Generated',
+          is_public INTEGER NOT NULL DEFAULT 0,
+          version TEXT NOT NULL DEFAULT 'v1.0',
+          generated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          view_count INTEGER NOT NULL DEFAULT 0,
+          download_count INTEGER NOT NULL DEFAULT 0,
+          created_by_user_id INTEGER NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
+          FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL
+        );
+      `);
 
-    const hasPartnerName = hasColumn(db, "impact_reports", "partner_name");
-    const hasReportCategory = hasColumn(db, "impact_reports", "report_category");
-    const hasPeriodType = hasColumn(db, "impact_reports", "period_type");
-    const hasAudience = hasColumn(db, "impact_reports", "audience");
-    const hasOutput = hasColumn(db, "impact_reports", "output");
-    const hasRegionId = hasColumn(db, "impact_reports", "region_id");
-    const hasSubRegionId = hasColumn(db, "impact_reports", "sub_region_id");
-    const hasDistrictId = hasColumn(db, "impact_reports", "district_id");
-    const hasSchoolId = hasColumn(db, "impact_reports", "school_id");
+      const hasPartnerName = hasColumn(db, "impact_reports", "partner_name");
+      const hasReportCategory = hasColumn(db, "impact_reports", "report_category");
+      const hasPeriodType = hasColumn(db, "impact_reports", "period_type");
+      const hasAudience = hasColumn(db, "impact_reports", "audience");
+      const hasOutput = hasColumn(db, "impact_reports", "output");
+      const hasRegionId = hasColumn(db, "impact_reports", "region_id");
+      const hasSubRegionId = hasColumn(db, "impact_reports", "sub_region_id");
+      const hasDistrictId = hasColumn(db, "impact_reports", "district_id");
+      const hasSchoolId = hasColumn(db, "impact_reports", "school_id");
 
-    db.prepare(
-      `
-      INSERT INTO impact_reports_next (
-        id,
-        report_code,
-        title,
-        partner_name,
-        report_type,
-        report_category,
-        scope_type,
-        scope_value,
-        region_id,
-        sub_region_id,
-        district_id,
-        school_id,
-        period_type,
-        period_start,
-        period_end,
-        programs_json,
-        fact_pack_json,
-        narrative_json,
-        audience,
-        output,
-        status,
-        is_public,
-        version,
-        generated_at,
-        view_count,
-        download_count,
-        created_by_user_id,
-        created_at,
-        updated_at
-      )
-      SELECT
-        id,
-        report_code,
-        title,
-        ${hasPartnerName ? "partner_name" : "NULL"} AS partner_name,
-        report_type,
-        ${hasReportCategory
-          ? "report_category"
-          : `
-            CASE report_type
-              WHEN 'School Coaching Pack' THEN 'School Coaching Visit Report'
-              WHEN 'Headteacher Summary' THEN 'School Profile Report (Headteacher Pack)'
-              WHEN 'School Report' THEN 'School Profile Report (Headteacher Pack)'
-              WHEN 'Partner Snapshot Report' THEN 'Partner/Donor Report (Scoped)'
-              ELSE 'Implementation Fidelity & Coverage Report'
-            END`
-        } AS report_category,
-        scope_type,
-        scope_value,
-        ${hasRegionId ? "region_id" : "NULL"} AS region_id,
-        ${hasSubRegionId ? "sub_region_id" : "NULL"} AS sub_region_id,
-        ${hasDistrictId ? "district_id" : "NULL"} AS district_id,
-        ${hasSchoolId ? "school_id" : "NULL"} AS school_id,
-        ${hasPeriodType ? "period_type" : "'FY'"} AS period_type,
-        period_start,
-        period_end,
-        programs_json,
-        fact_pack_json,
-        narrative_json,
-        ${hasAudience ? "audience" : "CASE WHEN is_public = 1 THEN 'Public-safe' ELSE 'Staff-only' END"} AS audience,
-        ${hasOutput ? "output" : "'PDF'"} AS output,
-        status,
-        is_public,
-        version,
-        generated_at,
-        view_count,
-        download_count,
-        created_by_user_id,
-        created_at,
-        updated_at
-      FROM impact_reports
-      `,
-    ).run();
+      db.prepare(
+        `
+        INSERT INTO impact_reports_next (
+          id,
+          report_code,
+          title,
+          partner_name,
+          report_type,
+          report_category,
+          scope_type,
+          scope_value,
+          region_id,
+          sub_region_id,
+          district_id,
+          school_id,
+          period_type,
+          period_start,
+          period_end,
+          programs_json,
+          fact_pack_json,
+          narrative_json,
+          audience,
+          output,
+          status,
+          is_public,
+          version,
+          generated_at,
+          view_count,
+          download_count,
+          created_by_user_id,
+          created_at,
+          updated_at
+        )
+        SELECT
+          id,
+          report_code,
+          title,
+          ${hasPartnerName ? "partner_name" : "NULL"} AS partner_name,
+          report_type,
+          ${hasReportCategory
+            ? "report_category"
+            : `
+              CASE report_type
+                WHEN 'School Coaching Pack' THEN 'School Coaching Visit Report'
+                WHEN 'Headteacher Summary' THEN 'School Profile Report (Headteacher Pack)'
+                WHEN 'School Report' THEN 'School Profile Report (Headteacher Pack)'
+                WHEN 'Partner Snapshot Report' THEN 'Partner/Donor Report (Scoped)'
+                ELSE 'Implementation Fidelity & Coverage Report'
+              END`
+          } AS report_category,
+          scope_type,
+          scope_value,
+          ${hasRegionId ? "region_id" : "NULL"} AS region_id,
+          ${hasSubRegionId ? "sub_region_id" : "NULL"} AS sub_region_id,
+          ${hasDistrictId ? "district_id" : "NULL"} AS district_id,
+          ${hasSchoolId ? "school_id" : "NULL"} AS school_id,
+          ${hasPeriodType ? "period_type" : "'FY'"} AS period_type,
+          period_start,
+          period_end,
+          programs_json,
+          fact_pack_json,
+          narrative_json,
+          ${hasAudience ? "audience" : "CASE WHEN is_public = 1 THEN 'Public-safe' ELSE 'Staff-only' END"} AS audience,
+          ${hasOutput ? "output" : "'PDF'"} AS output,
+          status,
+          is_public,
+          version,
+          generated_at,
+          view_count,
+          download_count,
+          created_by_user_id,
+          created_at,
+          updated_at
+        FROM impact_reports
+        `,
+      ).run();
 
-    db.exec(`
-      DROP TABLE impact_reports;
-      ALTER TABLE impact_reports_next RENAME TO impact_reports;
-      CREATE INDEX IF NOT EXISTS idx_impact_reports_generated_at
-        ON impact_reports(generated_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_impact_reports_public
-        ON impact_reports(is_public, generated_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_impact_reports_scope
-        ON impact_reports(scope_type, scope_value);
-      CREATE INDEX IF NOT EXISTS idx_impact_reports_category
-        ON impact_reports(report_category, generated_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_impact_reports_period_type
-        ON impact_reports(period_type);
-      CREATE INDEX IF NOT EXISTS idx_impact_reports_audience
-        ON impact_reports(audience);
-      CREATE INDEX IF NOT EXISTS idx_impact_reports_output
-        ON impact_reports(output);
-    `);
+      db.exec(`
+        DROP TABLE impact_reports;
+        ALTER TABLE impact_reports_next RENAME TO impact_reports;
+        CREATE INDEX IF NOT EXISTS idx_impact_reports_generated_at
+          ON impact_reports(generated_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_impact_reports_public
+          ON impact_reports(is_public, generated_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_impact_reports_scope
+          ON impact_reports(scope_type, scope_value);
+        CREATE INDEX IF NOT EXISTS idx_impact_reports_category
+          ON impact_reports(report_category, generated_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_impact_reports_period_type
+          ON impact_reports(period_type);
+        CREATE INDEX IF NOT EXISTS idx_impact_reports_audience
+          ON impact_reports(audience);
+        CREATE INDEX IF NOT EXISTS idx_impact_reports_output
+          ON impact_reports(output);
+      `);
+    } finally {
+      if (wasForeignKeysOn) {
+        db.pragma("foreign_keys = ON");
+      }
+    }
   }
 
   ensureColumn(db, "impact_reports", "partner_name", "TEXT");
@@ -609,6 +619,14 @@ function ensurePortalResourceColumns(db: Database.Database) {
 }
 
 function ensureSchoolDirectoryColumns(db: Database.Database) {
+  ensureColumn(db, "schools_directory", "name", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, "schools_directory", "district", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, "schools_directory", "sub_county", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, "schools_directory", "parish", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, "schools_directory", "village", "TEXT");
+  ensureColumn(db, "schools_directory", "school_code", "TEXT");
+  ensureColumn(db, "schools_directory", "contact_name", "TEXT");
+  ensureColumn(db, "schools_directory", "contact_phone", "TEXT");
   ensureColumn(db, "schools_directory", "enrolled_learners", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrollment_total", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrollment_by_grade", "TEXT");
@@ -3159,6 +3177,63 @@ function isSqliteReadonlyError(error: unknown) {
   return code === "SQLITE_READONLY" || /readonly/i.test(message);
 }
 
+function uniquePathCandidates(values: string[]) {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  values.forEach((value) => {
+    const normalized = path.resolve(value);
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    candidates.push(normalized);
+  });
+  return candidates;
+}
+
+function tryOpenWritableRecoveryDb(primaryDbPath: string) {
+  const runtimeDir = getRuntimeDataDir();
+  const primaryPath = path.resolve(primaryDbPath);
+  const baseName = path.basename(primaryPath) || "app.db";
+  const candidates = uniquePathCandidates([
+    path.join(runtimeDir, baseName),
+    path.join(runtimeDir, "app-runtime.db"),
+    path.join("/tmp/ozeki-data", baseName),
+    path.join("/tmp/ozeki-data", "app-runtime.db"),
+  ]);
+
+  for (const candidatePath of candidates) {
+    if (candidatePath === primaryPath) {
+      continue;
+    }
+
+    let candidateDb: Database.Database | null = null;
+    try {
+      fs.mkdirSync(path.dirname(candidatePath), { recursive: true });
+      if (!fs.existsSync(candidatePath) && fs.existsSync(primaryPath)) {
+        fs.copyFileSync(primaryPath, candidatePath);
+      }
+      try {
+        fs.chmodSync(candidatePath, 0o600);
+      } catch {
+        // noop
+      }
+      candidateDb = new Database(candidatePath, { timeout: 5000 });
+      candidateDb.pragma("busy_timeout = 5000");
+      candidateDb.pragma("foreign_keys = ON");
+      return { db: candidateDb, path: candidatePath };
+    } catch {
+      try {
+        candidateDb?.close();
+      } catch {
+        // noop
+      }
+    }
+  }
+
+  return null;
+}
+
 export function getDb() {
   if (dbInstance) {
     return dbInstance;
@@ -3199,8 +3274,9 @@ export function getDb() {
 
   // Only run migrations if NOT read-only
   if (!isReadonly) {
-
-  try {
+  const attemptedRecoveryPaths = new Set<string>();
+  while (true) {
+    try {
     db.exec(`
   CREATE TABLE IF NOT EXISTS bookings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3807,8 +3883,8 @@ export function getDb() {
   ensurePortalTestimonialSchoolColumns(db);
   ensureGeographyColumns(db);
   ensureDistrictMasterData(db);
-  ensureSchoolRosterTables(db);
   ensureTeacherLearnerRosterTables(db);
+  ensureSchoolRosterTables(db);
   ensureProgramLinkageTables(db);
   ensureActivityInsightsTables(db);
   ensureLessonEvaluationTables(db);
@@ -3826,20 +3902,41 @@ export function getDb() {
     if (shouldAutoSeedPortalUsers()) {
       seedPortalUsers(db);
     }
-  } catch (error) {
-    if (!isSqliteReadonlyError(error)) {
-      throw error;
+      break;
+    } catch (error) {
+      if (!isSqliteReadonlyError(error)) {
+        throw error;
+      }
+
+      const recovery = tryOpenWritableRecoveryDb(dbFile);
+      if (recovery && !attemptedRecoveryPaths.has(path.resolve(recovery.path))) {
+        attemptedRecoveryPaths.add(path.resolve(recovery.path));
+        try {
+          db.close();
+        } catch {
+          // noop
+        }
+        db = recovery.db;
+        db.pragma("busy_timeout = 5000");
+        db.pragma("foreign_keys = ON");
+        console.warn(
+          `[db] Switched to writable recovery database at "${recovery.path}" after readonly failure on "${dbFile}".`,
+        );
+        continue;
+      }
+
+      try {
+        db.close();
+      } catch {
+        // noop
+      }
+
+      const readonlyDb = new Database(dbFile, { timeout: 5000, readonly: true });
+      readonlyDb.pragma("busy_timeout = 5000");
+      readonlyDb.pragma("foreign_keys = ON");
+      dbInstance = readonlyDb;
+      return readonlyDb;
     }
-    try {
-      db.close();
-    } catch {
-      // noop
-    }
-    const readonlyDb = new Database(dbFile, { timeout: 5000, readonly: true });
-    readonlyDb.pragma("busy_timeout = 5000");
-    readonlyDb.pragma("foreign_keys = ON");
-    dbInstance = readonlyDb;
-    return readonlyDb;
   }
   } // Matches if (!isReadonly)
 
