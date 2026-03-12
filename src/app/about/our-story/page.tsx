@@ -202,7 +202,7 @@ export default function OurStoryPage() {
           </article>
 
           <article className={`card ${styles.ctaBand}`}>
-            <div>
+            <div className={styles.ctaCopy}>
               <h3>From evidence to national literacy progress</h3>
               <p>
                 Explore verified outcomes, implementation trends, and program pathways across

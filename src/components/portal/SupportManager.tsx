@@ -125,7 +125,7 @@ export default function SupportManager({ initialRequests, staffMembers }: Props)
                             {filteredRequests.map(req => (
                                 <tr key={req.id} className="hover:bg-gray-50/30 transition-colors group">
                                     <td className="px-6 py-4 text-gray-400 text-xs">
-                                        {new Date(req.createdAt).toLocaleDateString()}
+                                        {new Date(req.createdAt).toLocaleDateString("en-GB")}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="font-bold text-gray-900">{req.contactName}</div>

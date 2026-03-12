@@ -91,12 +91,14 @@
 .valuesContent {
   display: grid;
   gap: var(--space-4);
+  width: 100%;
 }
 
 .valueCard {
   border-top: 2px solid color-mix(in oklab, var(--color-brand-blue), white 72%);
   display: grid;
   gap: var(--space-3);
+  width: 100%;
 }
 
 .valueCard:not(:last-child) {
@@ -135,6 +137,8 @@
   color: var(--color-brand-blue);
   font-size: clamp(1.14rem, 1.7vw, 1.35rem);
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .valueBody {

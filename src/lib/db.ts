@@ -39,8 +39,10 @@ import {
   PortalAnalyticsMonthlyPoint,
   PortalAnalyticsRecentRecord,
   PortalAnalyticsUserStat,
+  PortalCoreValueRecord,
   PortalDistrictReportSummary,
   PortalDashboardData,
+  PortalLeadershipTeamMemberRecord,
   PortalRecord,
   PortalRecordFilters,
   PortalRecordInput,
@@ -54,6 +56,10 @@ import {
   PortalEvidenceRecord,
   PortalOperationalReportsData,
   PortalSchoolReportRow,
+  PortalTrainingActivityReportRow,
+  PortalVisitActivityReportRow,
+  PortalEvaluationActivityReportRow,
+  PortalAssessmentActivityReportRow,
   ImpactReportBuildInput,
   ImpactReportCoverageBlock,
   ImpactReportSponsorshipBlock,
@@ -109,6 +115,7 @@ import {
   StoryRecord,
   PublishedStory,
   AnthologyRecord,
+  AboutTeamSection,
   StoryLibraryFilters,
   SupportRequestRecord,
   SupportRequestInput,
@@ -3454,6 +3461,53 @@ export function getDb() {
     ON portal_testimonials(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_portal_testimonials_published
     ON portal_testimonials(is_published);
+
+  CREATE TABLE IF NOT EXISTS portal_leadership_team_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    section TEXT NOT NULL CHECK(section IN ('board', 'staff', 'volunteer')),
+    name TEXT NOT NULL,
+    role TEXT NOT NULL,
+    biography TEXT NOT NULL,
+    background TEXT NOT NULL,
+    career TEXT NOT NULL,
+    photo_file_name TEXT,
+    photo_stored_path TEXT,
+    photo_mime_type TEXT,
+    photo_size_bytes INTEGER,
+    photo_alt TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_published INTEGER NOT NULL DEFAULT 1,
+    created_by_user_id INTEGER NOT NULL,
+    updated_by_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
+    FOREIGN KEY(updated_by_user_id) REFERENCES portal_users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_portal_leadership_team_members_section
+    ON portal_leadership_team_members(section, sort_order ASC, updated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_portal_leadership_team_members_published
+    ON portal_leadership_team_members(is_published, section, sort_order ASC, updated_at DESC);
+
+  CREATE TABLE IF NOT EXISTS portal_core_values (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_published INTEGER NOT NULL DEFAULT 1,
+    created_by_user_id INTEGER NOT NULL,
+    updated_by_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
+    FOREIGN KEY(updated_by_user_id) REFERENCES portal_users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_portal_core_values_sort
+    ON portal_core_values(sort_order ASC, updated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_portal_core_values_published
+    ON portal_core_values(is_published, sort_order ASC, updated_at DESC);
 
   CREATE TABLE IF NOT EXISTS impact_reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -13077,6 +13131,636 @@ export function setPortalTestimonialModerationStatus(
   );
 }
 
+function parsePortalLeadershipTeamMemberRow(row: {
+  id: number;
+  section: string;
+  name: string;
+  role: string;
+  biography: string;
+  background: string;
+  career: string;
+  photoFileName: string | null;
+  photoStoredPath: string | null;
+  photoMimeType: string | null;
+  photoSizeBytes: number | null;
+  photoAlt: string | null;
+  sortOrder: number;
+  isPublished: number;
+  createdByUserId: number;
+  createdByName: string | null;
+  updatedByUserId: number;
+  updatedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}): PortalLeadershipTeamMemberRecord {
+  return {
+    id: Number(row.id),
+    section:
+      row.section === "board" || row.section === "staff" || row.section === "volunteer"
+        ? row.section
+        : "staff",
+    name: row.name,
+    role: row.role,
+    biography: row.biography,
+    background: row.background,
+    career: row.career,
+    photoFileName: row.photoFileName ?? null,
+    photoStoredPath: row.photoStoredPath ?? null,
+    photoMimeType: row.photoMimeType ?? null,
+    photoSizeBytes: row.photoSizeBytes !== null ? Number(row.photoSizeBytes) : null,
+    photoAlt: row.photoAlt ?? null,
+    sortOrder: Number(row.sortOrder ?? 0),
+    isPublished: Boolean(row.isPublished),
+    createdByUserId: Number(row.createdByUserId),
+    createdByName: row.createdByName?.trim() || "Portal Staff",
+    updatedByUserId: Number(row.updatedByUserId),
+    updatedByName: row.updatedByName?.trim() || "Portal Staff",
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function parsePortalCoreValueRow(row: {
+  id: number;
+  title: string;
+  description: string;
+  sortOrder: number;
+  isPublished: number;
+  createdByUserId: number;
+  createdByName: string | null;
+  updatedByUserId: number;
+  updatedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}): PortalCoreValueRecord {
+  return {
+    id: Number(row.id),
+    title: row.title,
+    description: row.description,
+    sortOrder: Number(row.sortOrder ?? 0),
+    isPublished: Boolean(row.isPublished),
+    createdByUserId: Number(row.createdByUserId),
+    createdByName: row.createdByName?.trim() || "Portal Staff",
+    updatedByUserId: Number(row.updatedByUserId),
+    updatedByName: row.updatedByName?.trim() || "Portal Staff",
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function getPortalLeadershipTeamMemberQuery(whereClause = "") {
+  return `
+    SELECT
+      tm.id,
+      tm.section,
+      tm.name,
+      tm.role,
+      tm.biography,
+      tm.background,
+      tm.career,
+      tm.photo_file_name AS photoFileName,
+      tm.photo_stored_path AS photoStoredPath,
+      tm.photo_mime_type AS photoMimeType,
+      tm.photo_size_bytes AS photoSizeBytes,
+      tm.photo_alt AS photoAlt,
+      tm.sort_order AS sortOrder,
+      tm.is_published AS isPublished,
+      tm.created_by_user_id AS createdByUserId,
+      creator.full_name AS createdByName,
+      tm.updated_by_user_id AS updatedByUserId,
+      updater.full_name AS updatedByName,
+      tm.created_at AS createdAt,
+      tm.updated_at AS updatedAt
+    FROM portal_leadership_team_members tm
+    LEFT JOIN portal_users creator ON creator.id = tm.created_by_user_id
+    LEFT JOIN portal_users updater ON updater.id = tm.updated_by_user_id
+    ${whereClause}
+    ORDER BY
+      CASE tm.section
+        WHEN 'board' THEN 1
+        WHEN 'staff' THEN 2
+        WHEN 'volunteer' THEN 3
+        ELSE 4
+      END,
+      tm.sort_order ASC,
+      tm.updated_at DESC
+  `;
+}
+
+function getPortalCoreValueQuery(whereClause = "") {
+  return `
+    SELECT
+      cv.id,
+      cv.title,
+      cv.description,
+      cv.sort_order AS sortOrder,
+      cv.is_published AS isPublished,
+      cv.created_by_user_id AS createdByUserId,
+      creator.full_name AS createdByName,
+      cv.updated_by_user_id AS updatedByUserId,
+      updater.full_name AS updatedByName,
+      cv.created_at AS createdAt,
+      cv.updated_at AS updatedAt
+    FROM portal_core_values cv
+    LEFT JOIN portal_users creator ON creator.id = cv.created_by_user_id
+    LEFT JOIN portal_users updater ON updater.id = cv.updated_by_user_id
+    ${whereClause}
+    ORDER BY cv.sort_order ASC, cv.updated_at DESC
+  `;
+}
+
+export function listPortalLeadershipTeamMembers(options?: {
+  includeUnpublished?: boolean;
+}): PortalLeadershipTeamMemberRecord[] {
+  const whereClause = options?.includeUnpublished ? "" : "WHERE tm.is_published = 1";
+  const rows = getDb()
+    .prepare(getPortalLeadershipTeamMemberQuery(whereClause))
+    .all() as Array<{
+      id: number;
+      section: string;
+      name: string;
+      role: string;
+      biography: string;
+      background: string;
+      career: string;
+      photoFileName: string | null;
+      photoStoredPath: string | null;
+      photoMimeType: string | null;
+      photoSizeBytes: number | null;
+      photoAlt: string | null;
+      sortOrder: number;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string | null;
+      updatedByUserId: number;
+      updatedByName: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  return rows.map((row) => parsePortalLeadershipTeamMemberRow(row));
+}
+
+export function getPortalLeadershipTeamMemberById(
+  id: number,
+): PortalLeadershipTeamMemberRecord | null {
+  const row = getDb()
+    .prepare(getPortalLeadershipTeamMemberQuery("WHERE tm.id = @id LIMIT 1"))
+    .get({ id }) as
+    | {
+      id: number;
+      section: string;
+      name: string;
+      role: string;
+      biography: string;
+      background: string;
+      career: string;
+      photoFileName: string | null;
+      photoStoredPath: string | null;
+      photoMimeType: string | null;
+      photoSizeBytes: number | null;
+      photoAlt: string | null;
+      sortOrder: number;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string | null;
+      updatedByUserId: number;
+      updatedByName: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+  return row ? parsePortalLeadershipTeamMemberRow(row) : null;
+}
+
+export function getPublishedPortalLeadershipTeamMemberById(
+  id: number,
+): PortalLeadershipTeamMemberRecord | null {
+  const row = getDb()
+    .prepare(getPortalLeadershipTeamMemberQuery("WHERE tm.id = @id AND tm.is_published = 1 LIMIT 1"))
+    .get({ id }) as
+    | {
+      id: number;
+      section: string;
+      name: string;
+      role: string;
+      biography: string;
+      background: string;
+      career: string;
+      photoFileName: string | null;
+      photoStoredPath: string | null;
+      photoMimeType: string | null;
+      photoSizeBytes: number | null;
+      photoAlt: string | null;
+      sortOrder: number;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string | null;
+      updatedByUserId: number;
+      updatedByName: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+  return row ? parsePortalLeadershipTeamMemberRow(row) : null;
+}
+
+export function savePortalLeadershipTeamMember(input: {
+  section: AboutTeamSection;
+  name: string;
+  role: string;
+  biography: string;
+  background: string;
+  career: string;
+  photoFileName?: string | null;
+  photoStoredPath?: string | null;
+  photoMimeType?: string | null;
+  photoSizeBytes?: number | null;
+  photoAlt?: string | null;
+  sortOrder?: number;
+  isPublished?: boolean;
+  userId: number;
+  userName: string;
+}): PortalLeadershipTeamMemberRecord {
+  const db = getDb();
+  const section = input.section;
+  const name = input.name.trim();
+  const role = input.role.trim();
+  const biography = input.biography.trim();
+  const background = input.background.trim();
+  const career = input.career.trim();
+  if (!name || !role || !biography || !background || !career) {
+    throw new Error("Complete all leadership member fields before saving.");
+  }
+
+  const result = db
+    .prepare(
+      `
+      INSERT INTO portal_leadership_team_members (
+        section,
+        name,
+        role,
+        biography,
+        background,
+        career,
+        photo_file_name,
+        photo_stored_path,
+        photo_mime_type,
+        photo_size_bytes,
+        photo_alt,
+        sort_order,
+        is_published,
+        created_by_user_id,
+        updated_by_user_id
+      ) VALUES (
+        @section,
+        @name,
+        @role,
+        @biography,
+        @background,
+        @career,
+        @photoFileName,
+        @photoStoredPath,
+        @photoMimeType,
+        @photoSizeBytes,
+        @photoAlt,
+        @sortOrder,
+        @isPublished,
+        @userId,
+        @userId
+      )
+      `,
+    )
+    .run({
+      section,
+      name,
+      role,
+      biography,
+      background,
+      career,
+      photoFileName: input.photoFileName ?? null,
+      photoStoredPath: input.photoStoredPath ?? null,
+      photoMimeType: input.photoMimeType ?? null,
+      photoSizeBytes: input.photoSizeBytes ?? null,
+      photoAlt: input.photoAlt?.trim() || null,
+      sortOrder: Math.max(0, Math.trunc(input.sortOrder ?? 0)),
+      isPublished: input.isPublished === false ? 0 : 1,
+      userId: input.userId,
+    });
+
+  const record = getPortalLeadershipTeamMemberById(Number(result.lastInsertRowid));
+  if (!record) {
+    throw new Error("Could not load saved leadership team member.");
+  }
+  logAuditEvent(
+    input.userId,
+    input.userName,
+    "create_leadership_team_member",
+    "portal_leadership_team_members",
+    record.id,
+    null,
+    JSON.stringify(record),
+    `Created leadership team member ${record.name}.`,
+  );
+  return record;
+}
+
+export function updatePortalLeadershipTeamMember(input: {
+  id: number;
+  section: AboutTeamSection;
+  name: string;
+  role: string;
+  biography: string;
+  background: string;
+  career: string;
+  photoFileName?: string | null;
+  photoStoredPath?: string | null;
+  photoMimeType?: string | null;
+  photoSizeBytes?: number | null;
+  photoAlt?: string | null;
+  sortOrder?: number;
+  isPublished?: boolean;
+  userId: number;
+  userName: string;
+}): PortalLeadershipTeamMemberRecord {
+  const before = getPortalLeadershipTeamMemberById(input.id);
+  if (!before) {
+    throw new Error("Leadership team member not found.");
+  }
+  const db = getDb();
+  const name = input.name.trim();
+  const role = input.role.trim();
+  const biography = input.biography.trim();
+  const background = input.background.trim();
+  const career = input.career.trim();
+  if (!name || !role || !biography || !background || !career) {
+    throw new Error("Complete all leadership member fields before saving.");
+  }
+
+  db.prepare(
+    `
+    UPDATE portal_leadership_team_members
+    SET
+      section = @section,
+      name = @name,
+      role = @role,
+      biography = @biography,
+      background = @background,
+      career = @career,
+      photo_file_name = @photoFileName,
+      photo_stored_path = @photoStoredPath,
+      photo_mime_type = @photoMimeType,
+      photo_size_bytes = @photoSizeBytes,
+      photo_alt = @photoAlt,
+      sort_order = @sortOrder,
+      is_published = @isPublished,
+      updated_by_user_id = @userId,
+      updated_at = datetime('now')
+    WHERE id = @id
+    `,
+  ).run({
+    id: input.id,
+    section: input.section,
+    name,
+    role,
+    biography,
+    background,
+    career,
+    photoFileName: input.photoFileName ?? null,
+    photoStoredPath: input.photoStoredPath ?? null,
+    photoMimeType: input.photoMimeType ?? null,
+    photoSizeBytes: input.photoSizeBytes ?? null,
+    photoAlt: input.photoAlt?.trim() || null,
+    sortOrder: Math.max(0, Math.trunc(input.sortOrder ?? 0)),
+    isPublished: input.isPublished === false ? 0 : 1,
+    userId: input.userId,
+  });
+
+  const record = getPortalLeadershipTeamMemberById(input.id);
+  if (!record) {
+    throw new Error("Could not load updated leadership team member.");
+  }
+  logAuditEvent(
+    input.userId,
+    input.userName,
+    "update_leadership_team_member",
+    "portal_leadership_team_members",
+    record.id,
+    JSON.stringify(before),
+    JSON.stringify(record),
+    `Updated leadership team member ${record.name}.`,
+  );
+  return record;
+}
+
+export function deletePortalLeadershipTeamMember(input: {
+  id: number;
+  userId: number;
+  userName: string;
+}) {
+  const before = getPortalLeadershipTeamMemberById(input.id);
+  if (!before) {
+    throw new Error("Leadership team member not found.");
+  }
+  getDb()
+    .prepare("DELETE FROM portal_leadership_team_members WHERE id = @id")
+    .run({ id: input.id });
+  logAuditEvent(
+    input.userId,
+    input.userName,
+    "delete_leadership_team_member",
+    "portal_leadership_team_members",
+    input.id,
+    JSON.stringify(before),
+    null,
+    `Deleted leadership team member ${before.name}.`,
+  );
+}
+
+export function listPortalCoreValues(options?: {
+  includeUnpublished?: boolean;
+}): PortalCoreValueRecord[] {
+  const whereClause = options?.includeUnpublished ? "" : "WHERE cv.is_published = 1";
+  const rows = getDb()
+    .prepare(getPortalCoreValueQuery(whereClause))
+    .all() as Array<{
+      id: number;
+      title: string;
+      description: string;
+      sortOrder: number;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string | null;
+      updatedByUserId: number;
+      updatedByName: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  return rows.map((row) => parsePortalCoreValueRow(row));
+}
+
+export function getPortalCoreValueById(id: number): PortalCoreValueRecord | null {
+  const row = getDb()
+    .prepare(getPortalCoreValueQuery("WHERE cv.id = @id LIMIT 1"))
+    .get({ id }) as
+    | {
+      id: number;
+      title: string;
+      description: string;
+      sortOrder: number;
+      isPublished: number;
+      createdByUserId: number;
+      createdByName: string | null;
+      updatedByUserId: number;
+      updatedByName: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }
+    | undefined;
+  return row ? parsePortalCoreValueRow(row) : null;
+}
+
+export function savePortalCoreValue(input: {
+  title: string;
+  description: string;
+  sortOrder?: number;
+  isPublished?: boolean;
+  userId: number;
+  userName: string;
+}): PortalCoreValueRecord {
+  const db = getDb();
+  const title = input.title.trim();
+  const description = input.description.trim();
+  if (!title || !description) {
+    throw new Error("Core value title and description are required.");
+  }
+
+  const result = db
+    .prepare(
+      `
+      INSERT INTO portal_core_values (
+        title,
+        description,
+        sort_order,
+        is_published,
+        created_by_user_id,
+        updated_by_user_id
+      ) VALUES (
+        @title,
+        @description,
+        @sortOrder,
+        @isPublished,
+        @userId,
+        @userId
+      )
+      `,
+    )
+    .run({
+      title,
+      description,
+      sortOrder: Math.max(0, Math.trunc(input.sortOrder ?? 0)),
+      isPublished: input.isPublished === false ? 0 : 1,
+      userId: input.userId,
+    });
+
+  const record = getPortalCoreValueById(Number(result.lastInsertRowid));
+  if (!record) {
+    throw new Error("Could not load saved core value.");
+  }
+  logAuditEvent(
+    input.userId,
+    input.userName,
+    "create_core_value",
+    "portal_core_values",
+    record.id,
+    null,
+    JSON.stringify(record),
+    `Created core value ${record.title}.`,
+  );
+  return record;
+}
+
+export function updatePortalCoreValue(input: {
+  id: number;
+  title: string;
+  description: string;
+  sortOrder?: number;
+  isPublished?: boolean;
+  userId: number;
+  userName: string;
+}): PortalCoreValueRecord {
+  const before = getPortalCoreValueById(input.id);
+  if (!before) {
+    throw new Error("Core value not found.");
+  }
+
+  const title = input.title.trim();
+  const description = input.description.trim();
+  if (!title || !description) {
+    throw new Error("Core value title and description are required.");
+  }
+
+  getDb()
+    .prepare(
+      `
+      UPDATE portal_core_values
+      SET
+        title = @title,
+        description = @description,
+        sort_order = @sortOrder,
+        is_published = @isPublished,
+        updated_by_user_id = @userId,
+        updated_at = datetime('now')
+      WHERE id = @id
+      `,
+    )
+    .run({
+      id: input.id,
+      title,
+      description,
+      sortOrder: Math.max(0, Math.trunc(input.sortOrder ?? 0)),
+      isPublished: input.isPublished === false ? 0 : 1,
+      userId: input.userId,
+    });
+
+  const record = getPortalCoreValueById(input.id);
+  if (!record) {
+    throw new Error("Could not load updated core value.");
+  }
+  logAuditEvent(
+    input.userId,
+    input.userName,
+    "update_core_value",
+    "portal_core_values",
+    record.id,
+    JSON.stringify(before),
+    JSON.stringify(record),
+    `Updated core value ${record.title}.`,
+  );
+  return record;
+}
+
+export function deletePortalCoreValue(input: {
+  id: number;
+  userId: number;
+  userName: string;
+}) {
+  const before = getPortalCoreValueById(input.id);
+  if (!before) {
+    throw new Error("Core value not found.");
+  }
+  getDb().prepare("DELETE FROM portal_core_values WHERE id = @id").run({ id: input.id });
+  logAuditEvent(
+    input.userId,
+    input.userName,
+    "delete_core_value",
+    "portal_core_values",
+    input.id,
+    JSON.stringify(before),
+    null,
+    `Deleted core value ${before.title}.`,
+  );
+}
+
 export function listTrainingFeedbackRecords(filters?: {
   trainingRecordId?: number;
   schoolId?: number;
@@ -13935,7 +14619,6 @@ export function getImpactExplorerProfiles(): ImpactExplorerProfiles {
   const keyBySchoolId = new Map<number, string>();
   const keyByComposite = new Map<string, string>();
   const keyByName = new Map<string, string>();
-  let syntheticCounter = 1;
 
   schoolRows.forEach((row) => {
     const region = inferRegionFromDistrict(row.district) ?? "Unknown Region";
@@ -13994,53 +14677,18 @@ export function getImpactExplorerProfiles(): ImpactExplorerProfiles {
       payloadJson: string;
     }>;
 
-  const ensureSyntheticSchoolProfile = (schoolName: string, district: string) => {
-    const schoolNameKey = normalizeLookupValue(schoolName);
-    const districtKey = normalizeLookupValue(district);
-    const composite = `${schoolNameKey}| ${districtKey} `;
-    const existing = keyByComposite.get(composite);
-    if (existing) {
-      return existing;
-    }
-
-    const key = `synthetic:${syntheticCounter} `;
-    syntheticCounter += 1;
-    const resolvedDistrict = district.trim() || "Unknown District";
-    const region = inferRegionFromDistrict(resolvedDistrict) ?? "Unknown Region";
-    const profile = createSchoolProfile({
-      id: null,
-      schoolCode: `UNLISTED - ${syntheticCounter} `,
-      name: schoolName.trim() || "Unmapped School",
-      district: resolvedDistrict,
-      region,
-      subCounty: "",
-      parish: "",
-      village: null,
-      enrolledBoys: 0,
-      enrolledGirls: 0,
-      enrolledLearners: 0,
-    });
-
-    schoolProfilesByKey.set(key, profile);
-    if (schoolNameKey) {
-      keyByName.set(schoolNameKey, key);
-      keyByComposite.set(composite, key);
-    }
-    return key;
-  };
-
   const resolveSchoolKey = (row: {
     schoolId: number | null;
     schoolName: string;
     district: string;
-  }) => {
+  }): string | null => {
     if (row.schoolId && keyBySchoolId.has(row.schoolId)) {
       return keyBySchoolId.get(row.schoolId) as string;
     }
     const schoolNameKey = normalizeLookupValue(row.schoolName);
     const districtKey = normalizeLookupValue(row.district);
     if (!schoolNameKey) {
-      return ensureSyntheticSchoolProfile("Unmapped School", row.district);
+      return null;
     }
     const composite = keyByComposite.get(`${schoolNameKey}| ${districtKey} `);
     if (composite) {
@@ -14050,11 +14698,14 @@ export function getImpactExplorerProfiles(): ImpactExplorerProfiles {
     if (byName) {
       return byName;
     }
-    return ensureSyntheticSchoolProfile(row.schoolName, row.district);
+    return null;
   };
 
   portalRows.forEach((row) => {
     const schoolKey = resolveSchoolKey(row);
+    if (!schoolKey) {
+      return;
+    }
     const profile = schoolProfilesByKey.get(schoolKey);
     if (!profile) {
       return;
@@ -21637,6 +22288,7 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
   const legacyTrainingScope = canViewAll ? "" : " AND ts.created_by_user_id = @userId";
   const legacyAssessmentScope = canViewAll ? "" : " AND la.created_by_user_id = @userId";
   const materialScope = canViewAll ? "" : " AND md.created_by_user_id = @userId";
+  const lessonEvaluationScope = canViewAll ? "" : " AND le.observer_id = @userId";
 
   const rows = db
     .prepare(
@@ -21713,6 +22365,14 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
 
         COALESCE((
           SELECT COUNT(*)
+          FROM lesson_evaluations le
+          WHERE le.school_id = sd.id
+            AND le.status = 'active'
+            ${lessonEvaluationScope}
+        ), 0) AS lessonEvaluations,
+
+        COALESCE((
+          SELECT COUNT(*)
           FROM observation_rubrics ob
           WHERE ob.school_id = sd.id
             ${rubricScope}
@@ -21783,6 +22443,12 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
             FROM material_distributions md
             WHERE md.school_id = sd.id
               ${materialScope}
+            UNION ALL
+            SELECT le.lesson_date AS activityDate
+            FROM lesson_evaluations le
+            WHERE le.school_id = sd.id
+              AND le.status = 'active'
+              ${lessonEvaluationScope}
           )
         ) AS lastActivityDate,
 
@@ -21821,6 +22487,7 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
       schoolVisits: number;
       storyActivities: number;
       resourcesDistributed: number;
+      lessonEvaluations: number;
       teacherAssessments: number;
       teacherObservationAverage: number | null;
       teacherObservationCount: number;
@@ -21836,6 +22503,7 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
         Number(row.schoolVisits ?? 0) +
         Number(row.storyActivities ?? 0) +
         Number(row.resourcesDistributed ?? 0) +
+        Number(row.lessonEvaluations ?? 0) +
         Number(row.teacherAssessments ?? 0) +
         Number(row.learnerAssessments ?? 0);
 
@@ -21862,6 +22530,7 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
         schoolVisits: Number(row.schoolVisits ?? 0),
         storyActivities: Number(row.storyActivities ?? 0),
         resourcesDistributed: Number(row.resourcesDistributed ?? 0),
+        lessonEvaluations: Number(row.lessonEvaluations ?? 0),
         teacherAssessments: Number(row.teacherAssessments ?? 0),
         teacherObservationAverage:
           row.teacherObservationAverage === null || row.teacherObservationAverage === undefined
@@ -22002,6 +22671,7 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
         schoolVisits: 0,
         storyActivities: 0,
         resourcesDistributed: 0,
+        lessonEvaluations: 0,
         teacherAssessments: 0,
         teacherObservationCount: 0,
         learnerAssessments: 0,
@@ -22015,6 +22685,7 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
     current.schoolVisits += school.schoolVisits;
     current.storyActivities += school.storyActivities;
     current.resourcesDistributed += school.resourcesDistributed;
+    current.lessonEvaluations += school.lessonEvaluations;
     current.teacherAssessments += school.teacherAssessments;
     current.teacherObservationCount += school.teacherObservationCount;
     current.learnerAssessments += school.learnerAssessments;
@@ -22108,6 +22779,428 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
   );
   const demoVisitsConducted = schools.reduce((sum, school) => sum + school.demoVisits, 0);
 
+  const trainingActivityRows = db
+    .prepare(
+      `
+      SELECT
+        pr.id AS recordId,
+        pr.record_code AS recordCode,
+        pr.date AS date,
+        pr.district AS district,
+        pr.school_id AS schoolId,
+        pr.school_name AS schoolName,
+        pr.status AS recordStatus,
+        pr.payload_json AS payloadJson,
+        pu.full_name AS createdByName,
+        sd.sub_county AS linkedSubCounty,
+        sd.parish AS linkedParish,
+        sd.village AS linkedVillage,
+        COALESCE(SUM(CASE WHEN pta.attended = 1 THEN 1 ELSE 0 END), 0) AS participantsTotal,
+        COUNT(DISTINCT CASE WHEN pta.attended = 1 AND pta.school_id IS NOT NULL THEN pta.school_id END) AS schoolsAttended,
+        COALESCE(SUM(CASE WHEN pta.attended = 1 AND pta.participant_role = 'Classroom teacher' AND lower(COALESCE(pta.gender, '')) = 'female' THEN 1 ELSE 0 END), 0) AS teachersFemale,
+        COALESCE(SUM(CASE WHEN pta.attended = 1 AND pta.participant_role = 'Classroom teacher' AND lower(COALESCE(pta.gender, '')) = 'male' THEN 1 ELSE 0 END), 0) AS teachersMale,
+        COALESCE(SUM(CASE WHEN pta.attended = 1 AND pta.participant_role = 'School Leader' AND lower(COALESCE(pta.gender, '')) = 'female' THEN 1 ELSE 0 END), 0) AS leadersFemale,
+        COALESCE(SUM(CASE WHEN pta.attended = 1 AND pta.participant_role = 'School Leader' AND lower(COALESCE(pta.gender, '')) = 'male' THEN 1 ELSE 0 END), 0) AS leadersMale
+      FROM portal_records pr
+      LEFT JOIN portal_training_attendance pta ON pta.portal_record_id = pr.id
+      LEFT JOIN portal_users pu ON pu.id = pr.created_by_user_id
+      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
+      WHERE pr.module = 'training'
+        AND pr.deleted_at IS NULL
+        ${portalRecordScope}
+      GROUP BY pr.id, pu.full_name
+      ORDER BY pr.date DESC, pr.id DESC
+      `,
+    )
+    .all(params) as Array<{
+      recordId: number;
+      recordCode: string;
+      date: string;
+      district: string;
+      schoolId: number | null;
+      schoolName: string;
+      recordStatus: string;
+      payloadJson: string;
+      createdByName: string | null;
+      linkedSubCounty: string | null;
+      linkedParish: string | null;
+      linkedVillage: string | null;
+      participantsTotal: number;
+      schoolsAttended: number;
+      teachersFemale: number;
+      teachersMale: number;
+      leadersFemale: number;
+      leadersMale: number;
+    }>;
+
+  const trainingActivities: PortalTrainingActivityReportRow[] = trainingActivityRows.map((row) => {
+    const payload = safeParseObject(row.payloadJson);
+    const sponsor = extractSponsorAttribution(payload);
+    const participantRows = Array.isArray(payload.participants)
+      ? payload.participants.filter(
+        (entry): entry is Record<string, unknown> =>
+          Boolean(entry) && typeof entry === "object" && !Array.isArray(entry),
+      )
+      : [];
+    const participantSchoolIds = new Set<number>();
+    participantRows.forEach((participant) => {
+      const schoolId = asNumber(participant.schoolId);
+      if (schoolId !== null && schoolId > 0) {
+        participantSchoolIds.add(schoolId);
+      }
+    });
+
+    const facilitatorsText =
+      readString(payload, ["facilitators", "trainerName", "trainer", "trainerNames"]) ??
+      parseStringList(payload.facilitators).join(", ");
+    const venue =
+      readString(payload, ["trainingVenue", "venue", "location", "trainingLocation"]) ??
+      row.schoolName;
+    const subCounty =
+      readString(payload, ["subCounty", "sub_county"]) ?? row.linkedSubCounty ?? null;
+    const parish = readString(payload, ["parish"]) ?? row.linkedParish ?? null;
+    const village = readString(payload, ["village"]) ?? row.linkedVillage ?? null;
+    const participantsTotal =
+      Number(row.participantsTotal ?? 0) ||
+      Number(readNumeric(payload, ["numberAttended", "participantsTotal", "attendedTotal"]) ?? 0);
+    const teachersFemale =
+      Number(row.teachersFemale ?? 0) ||
+      Number(readNumeric(payload, ["teachersFemale"]) ?? 0);
+    const teachersMale =
+      Number(row.teachersMale ?? 0) ||
+      Number(readNumeric(payload, ["teachersMale"]) ?? 0);
+    const leadersFemale =
+      Number(row.leadersFemale ?? 0) ||
+      Number(readNumeric(payload, ["schoolLeadersFemale"]) ?? 0);
+    const leadersMale =
+      Number(row.leadersMale ?? 0) ||
+      Number(readNumeric(payload, ["schoolLeadersMale"]) ?? 0);
+
+    return {
+      recordId: row.recordId,
+      recordCode: row.recordCode,
+      date: row.date,
+      country: "Uganda",
+      region: inferRegionFromDistrict(row.district),
+      subRegion: inferSubRegionFromDistrict(row.district),
+      district: row.district,
+      subCounty,
+      parish,
+      village,
+      location: [venue, subCounty, parish, village, row.district].filter(Boolean).join(", "),
+      trainingName: readString(payload, ["trainingName"]) ?? row.recordCode,
+      trainingStatus: readString(payload, ["trainingStatus"]) ?? row.recordStatus,
+      trainingType: readString(payload, ["deliveryMode", "trainingType"]),
+      audience: readString(payload, ["audience"]),
+      schoolsAttended:
+        Number(row.schoolsAttended ?? 0) > 0
+          ? Number(row.schoolsAttended ?? 0)
+          : participantSchoolIds.size > 0
+            ? participantSchoolIds.size
+            : row.schoolId
+              ? 1
+              : 0,
+      participantsTotal,
+      teachersFemale,
+      teachersMale,
+      leadersFemale,
+      leadersMale,
+      trainerName: facilitatorsText || row.createdByName || "Ozeki Team",
+      fundedBy: sponsor?.sponsoredBy ?? null,
+    };
+  });
+
+  const visitActivityRows = db
+    .prepare(
+      `
+      SELECT
+        cv.id AS visitId,
+        COALESCE(pr.record_code, cv.visit_uid) AS recordCode,
+        cv.visit_date AS date,
+        sd.id AS schoolId,
+        sd.school_code AS schoolCode,
+        sd.name AS schoolName,
+        sd.district AS district,
+        sd.sub_county AS subCounty,
+        sd.parish AS parish,
+        sd.village AS village,
+        cv.visit_type AS visitType,
+        cv.implementation_status AS implementationStatus,
+        cv.visit_pathway AS visitPathway,
+        cv.focus_areas_json AS focusAreasJson,
+        pu.full_name AS coachName,
+        pr.follow_up_date AS followUpDate,
+        pr.payload_json AS payloadJson
+      FROM coaching_visits cv
+      JOIN schools_directory sd ON sd.id = cv.school_id
+      LEFT JOIN portal_users pu ON pu.id = cv.coach_user_id
+      LEFT JOIN portal_records pr ON pr.id = cv.portal_record_id
+      WHERE 1 = 1
+        ${canViewAll ? "" : "AND cv.coach_user_id = @userId"}
+      ORDER BY cv.visit_date DESC, cv.id DESC
+      `,
+    )
+    .all(params) as Array<{
+      visitId: number;
+      recordCode: string;
+      date: string;
+      schoolId: number;
+      schoolCode: string;
+      schoolName: string;
+      district: string;
+      subCounty: string | null;
+      parish: string | null;
+      village: string | null;
+      visitType: string;
+      implementationStatus: string;
+      visitPathway: string;
+      focusAreasJson: string | null;
+      coachName: string | null;
+      followUpDate: string | null;
+      payloadJson: string | null;
+    }>;
+
+  const visitActivities: PortalVisitActivityReportRow[] = visitActivityRows.map((row) => {
+    const payload = row.payloadJson ? safeParseObject(row.payloadJson) : {};
+    const sponsor = extractSponsorAttribution(payload);
+    let focusAreas = "";
+    try {
+      const parsed = JSON.parse(row.focusAreasJson || "[]");
+      if (Array.isArray(parsed)) {
+        focusAreas = parsed
+          .map((entry) => String(entry ?? "").trim())
+          .filter(Boolean)
+          .join(", ");
+      }
+    } catch {
+      focusAreas = "";
+    }
+
+    return {
+      visitId: row.visitId,
+      recordCode: row.recordCode,
+      date: row.date,
+      country: "Uganda",
+      region: inferRegionFromDistrict(row.district),
+      subRegion: inferSubRegionFromDistrict(row.district),
+      district: row.district,
+      subCounty: row.subCounty,
+      parish: row.parish,
+      village: row.village,
+      schoolId: row.schoolId,
+      schoolCode: row.schoolCode,
+      schoolName: row.schoolName,
+      location: [row.subCounty, row.parish, row.village].filter(Boolean).join(", "),
+      visitType: row.visitType,
+      implementationStatus: normalizeVisitImplementationStatus(row.implementationStatus),
+      visitPathway: normalizeVisitPathway(
+        normalizeVisitImplementationStatus(row.implementationStatus),
+        row.visitPathway,
+      ),
+      focusAreas:
+        focusAreas ||
+        readString(payload, ["focusAreas", "focusArea", "visitFocus"]) ||
+        "N/A",
+      coachName: row.coachName || "Ozeki Team",
+      followUpDate: row.followUpDate,
+      fundedBy: sponsor?.sponsoredBy ?? null,
+    };
+  });
+
+  const evaluationActivityRows = db
+    .prepare(
+      `
+      SELECT
+        le.id AS evaluationId,
+        le.lesson_date AS date,
+        le.school_id AS schoolId,
+        sd.school_code AS schoolCode,
+        sd.name AS schoolName,
+        sd.district AS district,
+        sd.sub_county AS subCounty,
+        sd.parish AS parish,
+        sd.village AS village,
+        le.teacher_uid AS teacherUid,
+        tr.full_name AS teacherName,
+        le.grade AS grade,
+        le.stream AS stream,
+        le.class_size AS classSize,
+        le.overall_score AS overallScore,
+        le.overall_level AS overallLevel,
+        le.top_strength_domain AS topStrengthDomain,
+        le.top_gap_domain AS topGapDomain,
+        le.next_coaching_action AS nextCoachingAction,
+        ou.full_name AS observerName,
+        le.next_visit_date AS nextVisitDate,
+        pr.payload_json AS payloadJson
+      FROM lesson_evaluations le
+      JOIN schools_directory sd ON sd.id = le.school_id
+      LEFT JOIN teacher_roster tr ON tr.teacher_uid = le.teacher_uid
+      LEFT JOIN portal_users ou ON ou.id = le.observer_id
+      LEFT JOIN coaching_visits cv ON cv.id = le.visit_id
+      LEFT JOIN portal_records pr ON pr.id = cv.portal_record_id
+      WHERE le.status = 'active'
+        ${lessonEvaluationScope}
+      ORDER BY le.lesson_date DESC, le.id DESC
+      `,
+    )
+    .all(params) as Array<{
+      evaluationId: number;
+      date: string;
+      schoolId: number;
+      schoolCode: string;
+      schoolName: string;
+      district: string;
+      subCounty: string | null;
+      parish: string | null;
+      village: string | null;
+      teacherUid: string;
+      teacherName: string | null;
+      grade: string;
+      stream: string | null;
+      classSize: number | null;
+      overallScore: number;
+      overallLevel: string;
+      topStrengthDomain: string | null;
+      topGapDomain: string | null;
+      nextCoachingAction: string;
+      observerName: string | null;
+      nextVisitDate: string | null;
+      payloadJson: string | null;
+    }>;
+
+  const evaluationActivities: PortalEvaluationActivityReportRow[] = evaluationActivityRows.map((row) => {
+    const payload = row.payloadJson ? safeParseObject(row.payloadJson) : {};
+    const sponsor = extractSponsorAttribution(payload);
+    return {
+      evaluationId: row.evaluationId,
+      date: row.date,
+      country: "Uganda",
+      region: inferRegionFromDistrict(row.district),
+      subRegion: inferSubRegionFromDistrict(row.district),
+      district: row.district,
+      subCounty: row.subCounty,
+      parish: row.parish,
+      village: row.village,
+      schoolId: row.schoolId,
+      schoolCode: row.schoolCode,
+      schoolName: row.schoolName,
+      teacherName: row.teacherName || row.teacherUid,
+      grade: row.grade,
+      stream: row.stream,
+      classSize: row.classSize,
+      overallScore: Number(row.overallScore ?? 0),
+      overallLevel: row.overallLevel,
+      topStrengthDomain: row.topStrengthDomain,
+      topGapDomain: row.topGapDomain,
+      nextCoachingAction: row.nextCoachingAction,
+      observerName: row.observerName || "Ozeki Team",
+      nextVisitDate: row.nextVisitDate,
+      fundedBy: sponsor?.sponsoredBy ?? null,
+    };
+  });
+
+  const assessmentActivityRows = db
+    .prepare(
+      `
+      SELECT
+        sess.id AS sessionId,
+        COALESCE(pr.record_code, sess.session_uid) AS recordCode,
+        sess.assessment_date AS date,
+        sess.school_id AS schoolId,
+        sd.school_code AS schoolCode,
+        sd.name AS schoolName,
+        sd.district AS district,
+        sd.sub_county AS subCounty,
+        sd.parish AS parish,
+        sd.village AS village,
+        sess.assessment_type AS assessmentType,
+        sess.class_grade AS classGrade,
+        pu.full_name AS assessorName,
+        pr.payload_json AS payloadJson,
+        COUNT(res.id) AS learnersAssessed,
+        AVG(res.letter_sounds_score) AS averageLetterSounds,
+        AVG(res.decoding_score) AS averageDecoding,
+        AVG(res.fluency_score) AS averageFluency,
+        AVG(res.comprehension_score) AS averageComprehension
+      FROM assessment_sessions sess
+      JOIN schools_directory sd ON sd.id = sess.school_id
+      LEFT JOIN portal_users pu ON pu.id = sess.assessor_user_id
+      LEFT JOIN portal_records pr ON pr.id = sess.portal_record_id
+      LEFT JOIN assessment_session_results res ON res.assessment_session_id = sess.id
+      WHERE 1 = 1
+        ${canViewAll ? "" : "AND sess.assessor_user_id = @userId"}
+      GROUP BY
+        sess.id,
+        pr.record_code,
+        pr.payload_json,
+        pu.full_name,
+        sd.school_code,
+        sd.name,
+        sd.district,
+        sess.assessment_type,
+        sess.class_grade,
+        sess.assessment_date
+      ORDER BY sess.assessment_date DESC, sess.id DESC
+      `,
+    )
+    .all(params) as Array<{
+      sessionId: number;
+      recordCode: string;
+      date: string;
+      schoolId: number;
+      schoolCode: string;
+      schoolName: string;
+      district: string;
+      subCounty: string | null;
+      parish: string | null;
+      village: string | null;
+      assessmentType: string;
+      classGrade: string;
+      assessorName: string | null;
+      payloadJson: string | null;
+      learnersAssessed: number;
+      averageLetterSounds: number | null;
+      averageDecoding: number | null;
+      averageFluency: number | null;
+      averageComprehension: number | null;
+    }>;
+
+  const assessmentActivities: PortalAssessmentActivityReportRow[] = assessmentActivityRows.map((row) => {
+    const payload = row.payloadJson ? safeParseObject(row.payloadJson) : {};
+    const sponsor = extractSponsorAttribution(payload);
+    return {
+      sessionId: row.sessionId,
+      recordCode: row.recordCode,
+      date: row.date,
+      country: "Uganda",
+      region: inferRegionFromDistrict(row.district),
+      subRegion: inferSubRegionFromDistrict(row.district),
+      district: row.district,
+      subCounty: row.subCounty,
+      parish: row.parish,
+      village: row.village,
+      schoolId: row.schoolId,
+      schoolCode: row.schoolCode,
+      schoolName: row.schoolName,
+      assessmentType: row.assessmentType,
+      classGrade: row.classGrade,
+      learnersAssessed:
+        Number(row.learnersAssessed ?? 0) ||
+        Number(readNumeric(payload, ["learnersAssessed", "totalLearnersAssessed"]) ?? 0),
+      averageLetterSounds:
+        row.averageLetterSounds === null ? null : Number(Number(row.averageLetterSounds).toFixed(1)),
+      averageDecoding:
+        row.averageDecoding === null ? null : Number(Number(row.averageDecoding).toFixed(1)),
+      averageFluency:
+        row.averageFluency === null ? null : Number(Number(row.averageFluency).toFixed(1)),
+      averageComprehension:
+        row.averageComprehension === null ? null : Number(Number(row.averageComprehension).toFixed(1)),
+      assessorName: row.assessorName || "Ozeki Team",
+      fundedBy: sponsor?.sponsoredBy ?? null,
+    };
+  });
+
   return {
     generatedAt: new Date().toISOString(),
     totals: {
@@ -22119,6 +23212,7 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
       schoolVisits: schools.reduce((sum, item) => sum + item.schoolVisits, 0),
       storyActivities: schools.reduce((sum, item) => sum + item.storyActivities, 0),
       resourcesDistributed: schools.reduce((sum, item) => sum + item.resourcesDistributed, 0),
+      lessonEvaluations: schools.reduce((sum, item) => sum + item.lessonEvaluations, 0),
       teacherAssessments: schools.reduce((sum, item) => sum + item.teacherAssessments, 0),
       learnerAssessments: schools.reduce((sum, item) => sum + item.learnerAssessments, 0),
       schoolsWithContacts: schools.reduce((sum, item) => sum + item.contactsCount, 0),
@@ -22134,6 +23228,10 @@ export function getPortalOperationalReportsData(user: PortalUser): PortalOperati
     districts,
     schools,
     observationEvents,
+    trainingActivities,
+    visitActivities,
+    evaluationActivities,
+    assessmentActivities,
   };
 }
 
@@ -28352,7 +29450,43 @@ export interface TableRowCount {
 }
 
 function purgeRuntimeArtifactFiles() {
-  const runtimeDirs = ["blog", "evidence", "finance", "testimonials"];
+  const runtimeDirs = ["about", "blog", "evidence", "finance", "gallery", "testimonials"];
+  runtimeDirs.forEach((dirName) => {
+    const fullPath = path.join(dataDir, dirName);
+    try {
+      fs.rmSync(fullPath, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup only.
+    }
+  });
+}
+
+const PURGEABLE_RUNTIME_DIRS_BY_TABLE: Record<string, string[]> = {
+  finance_email_logs: ["finance"],
+  finance_files: ["finance"],
+  finance_transactions_ledger: ["finance"],
+  finance_payments: ["finance"],
+  finance_invoice_items: ["finance"],
+  finance_receipts: ["finance"],
+  finance_expenses: ["finance"],
+  finance_monthly_statements: ["finance"],
+  finance_invoices: ["finance"],
+  finance_contacts: ["finance"],
+  finance_settings: ["finance"],
+  portal_evidence: ["evidence"],
+  portal_testimonials: ["testimonials"],
+  portal_leadership_team_members: ["about"],
+  portal_core_values: ["about"],
+  portal_blog_posts: ["blog"],
+};
+
+function purgeRuntimeArtifactFilesForTables(tableNames: string[]) {
+  const runtimeDirs = new Set<string>();
+  tableNames.forEach((tableName) => {
+    const mappedDirs = PURGEABLE_RUNTIME_DIRS_BY_TABLE[tableName] ?? [];
+    mappedDirs.forEach((dirName) => runtimeDirs.add(dirName));
+  });
+
   runtimeDirs.forEach((dirName) => {
     const fullPath = path.join(dataDir, dirName);
     try {
@@ -28394,6 +29528,9 @@ const PURGEABLE_TABLES: { table: string; label: string }[] = [
   { table: "portal_evidence", label: "Portal Evidence Files" },
   { table: "portal_records", label: "Portal Records" },
   { table: "portal_testimonials", label: "Testimonials" },
+  { table: "portal_leadership_team_members", label: "Leadership Team Members" },
+  { table: "portal_core_values", label: "Core Values" },
+  { table: "portal_blog_posts", label: "Blog Posts" },
   { table: "portal_resources", label: "Portal Resources" },
   { table: "impact_reports", label: "Impact Reports" },
   { table: "training_participants", label: "Training Participants" },
@@ -28467,6 +29604,48 @@ export function purgeAllData(): TableRowCount[] {
   }
 
   purgeRuntimeArtifactFiles();
+
+  return getTableRowCounts();
+}
+
+export function purgeSelectedDataTables(selectedTables: string[]): TableRowCount[] {
+  const db = getDb();
+  const allowedTables = new Set(PURGEABLE_TABLES.map(({ table }) => table));
+  const tablesToDelete = [...new Set(selectedTables)]
+    .map((table) => String(table ?? "").trim())
+    .filter((table) => allowedTables.has(table));
+
+  if (tablesToDelete.length === 0) {
+    return getTableRowCounts();
+  }
+
+  db.exec(`
+    DROP VIEW IF EXISTS impact_public_school_feed;
+    DROP VIEW IF EXISTS impact_public_visit_events;
+    DROP VIEW IF EXISTS impact_public_assessment_events;
+    DROP VIEW IF EXISTS impact_public_teacher_support;
+    DROP VIEW IF EXISTS impact_public_lesson_evaluation_events;
+    DROP VIEW IF EXISTS teacher_improvement_by_teacher;
+    DROP VIEW IF EXISTS teaching_quality_by_school_period;
+    DROP VIEW IF EXISTS story_participation_by_school_period;
+    DROP VIEW IF EXISTS teaching_learning_alignment_by_school_period;
+  `);
+
+  const purge = db.transaction(() => {
+    for (const table of tablesToDelete) {
+      db.exec(`DELETE FROM ${table}`);
+    }
+  });
+  purge();
+
+  ensurePublicImpactViews(db);
+  ensureGraduationTables(db);
+
+  if (shouldAutoSeedPortalUsers()) {
+    seedPortalUsers(db);
+  }
+
+  purgeRuntimeArtifactFilesForTables(tablesToDelete);
 
   return getTableRowCounts();
 }

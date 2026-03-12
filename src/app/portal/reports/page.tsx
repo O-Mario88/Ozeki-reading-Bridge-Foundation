@@ -129,8 +129,17 @@ export default async function PortalReportsPage({
           >
             National Reports
           </Link>
+          <Link href="/portal/reports?tab=operations&module=training" className="button button-ghost">
+            Training Activity Reports
+          </Link>
           <Link href="/portal/reports?tab=operations&module=visit" className="button button-ghost">
             Visit Reports
+          </Link>
+          <Link
+            href="/portal/reports?tab=operations&module=evaluation"
+            className="button button-ghost"
+          >
+            Evaluation Reports
           </Link>
           <Link
             href="/portal/reports?tab=operations&module=learner-assessment"

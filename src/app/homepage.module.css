@@ -223,6 +223,8 @@
   color: var(--color-brand-blue);
   font-size: 1rem;
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .loopCard p {
@@ -332,6 +334,8 @@
   color: var(--color-brand-blue);
   font-size: 1rem;
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .partnerCard p {
@@ -444,6 +448,8 @@
   color: #ffffff;
   font-size: 1rem;
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .liveSessionCard p {

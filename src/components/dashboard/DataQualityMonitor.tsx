@@ -119,7 +119,7 @@ export default function DataQualityMonitor({ defaultScope }: { defaultScope?: st
 
             {data && (
                 <div style={{ marginTop: "1rem", fontSize: "0.75rem", color: "#999", textAlign: "right" }}>
-                    Last checked: {new Date(data.lastChecked).toLocaleString()}
+                    Last checked: {new Date(data.lastChecked).toLocaleString("en-GB")}
                 </div>
             )}
         </section>

@@ -1,6 +1,8 @@
-import { BlogIndex } from "@/components/BlogIndex";
-import { PageHero } from "@/components/PageHero";
-import { blogCategories, getMergedPublishedBlogPosts } from "@/lib/blog-data";
+import { EditorialBlogIndex } from "@/components/blog/EditorialBlogIndex";
+import { blogPoppins } from "@/components/blog/blog-font";
+import { getMergedBlogCategories, getMergedPublishedBlogPosts } from "@/lib/blog-data";
+
+export const revalidate = 300;
 
 export const metadata = {
   title: "Blog",
@@ -10,20 +12,11 @@ export const metadata = {
 
 export default function BlogPage() {
   const posts = getMergedPublishedBlogPosts();
+  const categories = getMergedBlogCategories();
 
   return (
-    <>
-      <PageHero
-        kicker="Knowledge hub"
-        title="Blog"
-        description="Practical content for teachers and school leaders: phonics, fluency, assessments, coaching, and implementation tips."
-      />
-
-      <section className="section">
-        <div className="container">
-          <BlogIndex posts={posts} categories={blogCategories} />
-        </div>
-      </section>
-    </>
+    <div className={`${blogPoppins.className} ${blogPoppins.variable}`}>
+      <EditorialBlogIndex posts={posts} categories={categories} />
+    </div>
   );
 }

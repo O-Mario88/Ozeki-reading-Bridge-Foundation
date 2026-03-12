@@ -20,8 +20,3 @@ export const workspaceCalendarRecipients = [
   "amos@ozekiread.org",
   "support@ozekiread.org",
 ] as const;
-
-export const donateLinks = {
-  paypal:
-    "https://www.paypal.com/donate/?business=omario.edwin%40gmail.com&currency_code=USD",
-} as const;

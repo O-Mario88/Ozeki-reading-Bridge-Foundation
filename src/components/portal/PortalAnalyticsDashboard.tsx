@@ -129,7 +129,7 @@ function compactNumber(value: number) {
 }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString(undefined, {
+  return new Date(value).toLocaleString("en-GB", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -139,7 +139,7 @@ function formatDateTime(value: string) {
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
+  return new Date(value).toLocaleDateString("en-GB", {
     year: "numeric",
     month: "short",
     day: "numeric",

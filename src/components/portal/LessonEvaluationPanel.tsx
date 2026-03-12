@@ -570,7 +570,7 @@ export function LessonEvaluationPanel({
             ) : (
               evaluations.map((evaluation) => (
                 <tr key={evaluation.id}>
-                  <td>{new Date(evaluation.lessonDate).toLocaleDateString()}</td>
+                  <td>{new Date(evaluation.lessonDate).toLocaleDateString("en-GB")}</td>
                   <td>{evaluation.teacherName}</td>
                   <td>{evaluation.grade}{evaluation.stream ? ` ${evaluation.stream}` : ""}</td>
                   <td>{evaluation.overallScore.toFixed(2)}/4</td>
@@ -659,7 +659,7 @@ export function LessonEvaluationPanel({
                   .filter((point) => point.evaluationId !== selectedTeacherComparison.firstEvaluationId)
                   .map((point) => (
                     <option key={point.evaluationId} value={String(point.evaluationId)}>
-                      {new Date(point.lessonDate).toLocaleDateString()} • {point.grade}
+                      {new Date(point.lessonDate).toLocaleDateString("en-GB")} • {point.grade}
                       {point.stream ? ` ${point.stream}` : ""}
                     </option>
                   ))}
@@ -739,9 +739,9 @@ export function LessonEvaluationPanel({
               </span>
             </div>
             <p className="portal-muted">
-              Baseline: {new Date(selectedTeacherComparison.firstEvaluationDate).toLocaleDateString()} •
-              Comparison: {new Date(selectedTeacherComparison.comparisonEvaluationDate).toLocaleDateString()} •
-              Latest: {new Date(selectedTeacherComparison.latestEvaluationDate).toLocaleDateString()}
+              Baseline: {new Date(selectedTeacherComparison.firstEvaluationDate).toLocaleDateString("en-GB")} •
+              Comparison: {new Date(selectedTeacherComparison.comparisonEvaluationDate).toLocaleDateString("en-GB")} •
+              Latest: {new Date(selectedTeacherComparison.latestEvaluationDate).toLocaleDateString("en-GB")}
             </p>
             <div className="lesson-improvement-score-grid">
               <article>
@@ -813,7 +813,7 @@ export function LessonEvaluationPanel({
               <ul>
                 {selectedTeacherComparison.timeline.map((point) => (
                   <li key={point.evaluationId}>
-                    {new Date(point.lessonDate).toLocaleDateString()} • {point.grade}
+                    {new Date(point.lessonDate).toLocaleDateString("en-GB")} • {point.grade}
                     {point.stream ? ` ${point.stream}` : ""} • {point.overallScore.toFixed(2)}/4
                   </li>
                 ))}

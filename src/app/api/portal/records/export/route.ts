@@ -40,12 +40,12 @@ function readSponsorship(payload: unknown) {
 
 function parseFilters(request: Request): PortalRecordFilters {
   const { searchParams } = new URL(request.url);
-  const module = moduleSchema.parse(searchParams.get("module"));
+  const moduleFilter = moduleSchema.parse(searchParams.get("module"));
   const createdByParam = searchParams.get("createdBy");
   const createdBy = createdByParam ? Number(createdByParam) : undefined;
 
   return {
-    module,
+    module: moduleFilter,
     dateFrom: searchParams.get("dateFrom") || undefined,
     dateTo: searchParams.get("dateTo") || undefined,
     district: searchParams.get("district") || undefined,

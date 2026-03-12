@@ -37,7 +37,7 @@ export function TeacherEvaluationPerformanceCards({
                 : "Data not available"}
             </p>
             <p className="impact-domain-mini-meta">
-              Updated: {new Date(teachingQuality.lastUpdated).toLocaleDateString()}
+              Updated: {new Date(teachingQuality.lastUpdated).toLocaleDateString("en-GB")}
             </p>
           </article>
 

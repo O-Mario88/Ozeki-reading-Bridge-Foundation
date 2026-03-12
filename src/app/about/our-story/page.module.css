@@ -106,31 +106,53 @@
 }
 
 .ctaBand {
-  align-items: center;
+  align-items: flex-start;
   background: linear-gradient(
     180deg,
     color-mix(in oklab, var(--color-brand-blue), white 94%),
     color-mix(in oklab, var(--color-brand-blue), white 88%)
   );
   border-color: color-mix(in oklab, var(--color-brand-blue), white 64%);
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: var(--space-3);
-  justify-content: space-between;
+  justify-content: stretch;
   margin-top: var(--space-4);
+}
+
+.ctaCopy {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  text-align: left;
+  width: 100%;
 }
 
 .ctaBand h3 {
   color: var(--color-brand-blue);
-  margin: 0 0 0.35rem;
+  font-size: clamp(0.96rem, 1.55vw, 1.45rem);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .ctaBand p {
   margin: 0;
+  max-width: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .ctaRow {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
+  width: 100%;
 }
 
 @media (max-width: 860px) {
@@ -141,5 +163,12 @@
   .problemSurface p,
   .solutionSurface p {
     font-size: 0.98rem;
+  }
+
+  .ctaBand h3,
+  .ctaBand p {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
 }

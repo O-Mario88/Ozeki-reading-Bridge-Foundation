@@ -3,7 +3,7 @@
 Full-stack Next.js web application for Ozeki Reading Bridge Foundation.
 
 ## Stack
-- Next.js 16 (App Router, TypeScript)
+- Next.js 15.5.12 (App Router, TypeScript)
 - SQLite (`better-sqlite3`) for backend persistence
 - Google Calendar API integration (`googleapis`) for invites and Google Meet links
 - Cookie session auth for staff/volunteer portal access
@@ -98,25 +98,51 @@ User auto-seeding is controlled by `PORTAL_AUTO_SEED_USERS`:
 Set custom credentials in `.env.local` (or copy from `.env.example`):
 - `PORTAL_STAFF_EMAIL`
 - `PORTAL_STAFF_PASSWORD`
+- `PORTAL_STAFF_PHONE`
 - `PORTAL_VOLUNTEER_EMAIL`
 - `PORTAL_VOLUNTEER_PASSWORD`
+- `PORTAL_VOLUNTEER_PHONE`
+- `PORTAL_SUPERVISOR_EMAIL`
+- `PORTAL_SUPERVISOR_PASSWORD`
+- `PORTAL_SUPERVISOR_PHONE`
+- `PORTAL_ME_EMAIL`
+- `PORTAL_ME_PASSWORD`
+- `PORTAL_ME_PHONE`
 - `PORTAL_ADMIN_EMAIL`
 - `PORTAL_ADMIN_PASSWORD`
+- `PORTAL_ADMIN_PHONE`
 - `PORTAL_SUPERADMIN_EMAIL`
 - `PORTAL_SUPERADMIN_PASSWORD`
+- `PORTAL_SUPERADMIN_PHONE`
 - `PORTAL_AUTO_SEED_USERS`
 - `PORTAL_PASSWORD_SALT`
+- `NODE_ENV`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REFRESH_TOKEN`
 - `GOOGLE_CALENDAR_ID`
 - `GOOGLE_CALENDAR_TIMEZONE`
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
+- `GOOGLE_OAUTH_REDIRECT_URI`
 - `GOOGLE_WORKSPACE_OAUTH_REDIRECT_URI`
+- `YOUTUBE_API_KEY`
+- `YOUTUBE_CHANNEL_ID`
+- `OPENAI_API_KEY`
+- `OPENAI_REPORT_MODEL`
 - `APP_ORIGIN`
+- `NEXT_PUBLIC_APP_URL`
+- `ADMIN_PORTAL_HOST` (default: `admin.ozekiread.org`)
+- `PUBLIC_SITE_HOST` (default: `ozekiread.org`)
 - `BOOKING_CALENDAR_DURATION_MINUTES`
+- `NEWSLETTER_BATCH_SIZE`
+- `NEWSLETTER_EMAIL_FROM`
+- `NEWSLETTER_SUBJECT_PREFIX`
 - `APP_DATA_DIR`
 - `SQLITE_DB_PATH`
 - `DATABASE_PATH`
+- `SKIP_NATIVE_CHECK`
+- `NATIVE_CHECK_SKIP_REBUILD`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -149,9 +175,13 @@ http://localhost:3000
 ```bash
 npm run lint
 npm run build
+npm run deploy:check
+npm run deploy:check:strict
+npm run deploy:ready
 ```
 
 `npm run build` runs a native-module preflight (`verify:native`) before the Next.js build and uses webpack mode for maximum platform compatibility.
+`npm run deploy:check:strict` validates production-critical environment and host split settings before deployment.
 
 ## Deployment Prep
 1. Use Node.js `20.x` to `24.x` (see `package.json` `engines` field).
@@ -165,6 +195,17 @@ npm run build
 6. Purge test/dummy records from Super Admin > Data Management.
 7. Start from a clean runtime data volume (`APP_DATA_DIR`, defaults to `./data`).
 8. Use `npm start` (runs `node .next/standalone/server.js`).
+
+### Public vs Admin Domain Split
+- Public website should run on your visitor domain (for example: `ozekiread.org`).
+- Staff/Admin portal should run on a private admin subdomain (for example: `admin.ozekiread.org`).
+- Middleware enforces this split:
+  - Public host access to `/portal` routes is redirected to the admin host.
+  - Public host access to `/api/portal/*` returns not found.
+  - Admin host defaults `/` to `/portal/login`.
+- Set these env vars in production:
+  - `ADMIN_PORTAL_HOST=admin.ozekiread.org`
+  - `PUBLIC_SITE_HOST=ozekiread.org`
 
 This project now uses Next.js `output: "standalone"` for deployment-friendly server bundles.
 

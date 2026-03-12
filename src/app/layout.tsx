@@ -43,10 +43,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className="bg-brand-background text-brand-text antialiased">
         <ServiceWorkerRegister />
         <SiteHeader />
-        <main>{children}</main>
+        <main className="dashboard-inspired-main min-h-[calc(100vh-var(--header-height))]">{children}</main>
         <SiteFooter />
       </body>
     </html>

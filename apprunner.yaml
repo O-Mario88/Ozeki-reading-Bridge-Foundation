@@ -5,6 +5,7 @@ build:
   commands:
     build:
       - npm ci
+      - npm rebuild better-sqlite3
       - npm run build
 
 run:

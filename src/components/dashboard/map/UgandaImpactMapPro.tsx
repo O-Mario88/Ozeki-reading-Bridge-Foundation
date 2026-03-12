@@ -91,7 +91,7 @@ function toFriendlyTime(value?: string) {
   if (Number.isNaN(date.getTime())) {
     return "Data not available";
   }
-  return date.toLocaleString();
+  return date.toLocaleString("en-GB");
 }
 
 function cycleLabel(cycle: string) {
@@ -625,9 +625,9 @@ export function UgandaImpactMapPro({
   }, [computePathsBbox, fitBounds, resetView, selection.district, selection.subRegion]);
 
   return (
-    <article className={`impact-map-card ${compact ? "impact-map-card--compact" : ""} ${className ?? ""}`.trim()}>
+      <article className={`impact-map-card ${compact ? "impact-map-card--compact" : ""} ${className ?? ""}`.trim()}>
       <header className="impact-map-card-header">
-        <div>
+        <div className="impact-map-card-heading">
           <h3>Where We Work (Live)</h3>
           <p>Map credit: UBOS</p>
         </div>

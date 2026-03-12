@@ -1,4 +1,4 @@
-const CACHE_NAME = "ozeki-nlis-v1";
+const CACHE_NAME = "ozeki-nlis-v2";
 const STATIC_CACHE = [
   "/",
   "/portal/dashboard",
@@ -34,6 +34,8 @@ function shouldCache(request) {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return false;
   if (url.pathname.startsWith("/api/")) return false;
+  if (url.pathname.startsWith("/_next/")) return false;
+  if (url.pathname === "/sw.js") return false;
   return true;
 }
 

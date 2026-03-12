@@ -114,7 +114,7 @@ export default function LearningGainsSection({ data }: { data: LearningGainsData
             )}
 
             <div style={{ fontSize: "0.75rem", color: "#999", textAlign: "right", marginTop: "1rem" }}>
-                Period: {data.period} · Last updated: {new Date(data.lastUpdated).toLocaleDateString()}
+                Period: {data.period} · Last updated: {new Date(data.lastUpdated).toLocaleDateString("en-GB")}
             </div>
         </section>
     );

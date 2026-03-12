@@ -10,6 +10,7 @@ This project is prepared for AWS deployment with:
 
 1. Build and push image:
 ```bash
+npm run deploy:check:strict
 aws ecr get-login-password --region <region> \
   | docker login --username AWS --password-stdin <account-id>.dkr.ecr.<region>.amazonaws.com
 
@@ -27,6 +28,9 @@ docker push <account-id>.dkr.ecr.<region>.amazonaws.com/ozeki-reading-bridge-fou
 3. Required environment variables:
 - `NODE_ENV=production`
 - `APP_ORIGIN=https://<your-domain>`
+- `NEXT_PUBLIC_APP_URL=https://<your-domain>`
+- `PUBLIC_SITE_HOST=<your-domain-without-protocol>`
+- `ADMIN_PORTAL_HOST=admin.<your-domain-without-protocol>`
 - `PORTAL_AUTO_SEED_USERS=false`
 - `PORTAL_PASSWORD_SALT=<strong-random-secret>`
 - Portal/admin credential variables from `.env.example`

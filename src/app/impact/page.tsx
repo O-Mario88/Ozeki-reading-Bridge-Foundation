@@ -176,9 +176,13 @@ export default async function ImpactDashboardPage({
       </div>
 
       {/* ═══ Report Filters & Downloads ═══ */}
-      <section id="reports" className="section" style={{ background: "var(--md-sys-color-surface-container, #f5f5f5)" }}>
+      <section
+        id="reports"
+        className="section impact-reports-section"
+        style={{ background: "var(--md-sys-color-surface-container, #f5f5f5)" }}
+      >
         <div className="container">
-          <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <div className="impact-report-heading">
             <p className="kicker">REPORTS</p>
             <h2 className="tpd-page-title">Download Impact Reports</h2>
             <p>

@@ -605,6 +605,7 @@ export default async function PortalProfilesPage({
       href: "/portal/testimonials",
       icon: "EV",
     },
+    { label: "Blog Manager", count: 1, href: "/portal/blog", icon: "BG", staffOnly: true },
     { label: "Data Dashboard", count: 1, href: "/portal/analytics", icon: "DB" },
     { label: "Super Admin", count: 1, href: "/portal/superadmin", icon: "SA", adminOnly: true },
   ];

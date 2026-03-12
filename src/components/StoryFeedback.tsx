@@ -146,7 +146,7 @@ export function StoryFeedback({ slug, initialStats, initialComments }: Props) {
                             <div key={c.id} style={{ padding: "1rem", backgroundColor: "var(--md-sys-color-surface-variant)", borderRadius: "8px" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                                     <strong>{c.displayName || "Anonymous Reader"}</strong>
-                                    <small style={{ opacity: 0.7 }}>{new Date(c.createdAt).toLocaleDateString()}</small>
+                                    <small style={{ opacity: 0.7 }}>{new Date(c.createdAt).toLocaleDateString("en-GB")}</small>
                                 </div>
                                 <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{c.commentText}</p>
                             </div>

@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { PortalOperationalReportsData, PortalSchoolReportRow, PortalUser } from "@/lib/types";
+import {
+  PortalAssessmentActivityReportRow,
+  PortalEvaluationActivityReportRow,
+  PortalOperationalReportsData,
+  PortalSchoolReportRow,
+  PortalTrainingActivityReportRow,
+  PortalUser,
+  PortalVisitActivityReportRow,
+} from "@/lib/types";
 
 type ReportModuleFilter =
   | "all"
@@ -11,8 +19,11 @@ type ReportModuleFilter =
   | "visit"
   | "story"
   | "resource"
+  | "evaluation"
   | "teacher-assessment"
   | "learner-assessment";
+
+type DetailReportType = "training" | "visit" | "evaluation" | "assessment";
 
 interface PortalOperationsReportsWorkspaceProps {
   data: PortalOperationalReportsData;
@@ -23,7 +34,7 @@ function formatDate(value: string | null) {
   if (!value) return "N/A";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "N/A";
-  return date.toLocaleDateString();
+  return date.toLocaleDateString("en-GB");
 }
 
 function sanitizeQueryValue(value: string | null) {
@@ -32,11 +43,22 @@ function sanitizeQueryValue(value: string | null) {
   return trimmed.length > 0 ? trimmed : "all";
 }
 
+function formatLabel(value: string | null | undefined) {
+  const text = String(value ?? "").trim();
+  if (!text) return "N/A";
+  return text
+    .replaceAll("_", " ")
+    .split(" ")
+    .map((part) => (part ? `${part.slice(0, 1).toUpperCase()}${part.slice(1).toLowerCase()}` : ""))
+    .join(" ");
+}
+
 function getModuleCount(row: PortalSchoolReportRow, module: ReportModuleFilter) {
   if (module === "training") return row.trainings;
   if (module === "visit") return row.schoolVisits;
   if (module === "story") return row.storyActivities;
   if (module === "resource") return row.resourcesDistributed;
+  if (module === "evaluation") return row.lessonEvaluations;
   if (module === "teacher-assessment") return row.teacherAssessments;
   if (module === "learner-assessment") return row.learnerAssessments;
   return (
@@ -44,12 +66,16 @@ function getModuleCount(row: PortalSchoolReportRow, module: ReportModuleFilter) 
     row.schoolVisits +
     row.storyActivities +
     row.resourcesDistributed +
+    row.lessonEvaluations +
     row.teacherAssessments +
     row.learnerAssessments
   );
 }
 
-function uniqueValues(rows: PortalSchoolReportRow[], getter: (row: PortalSchoolReportRow) => string | null | undefined) {
+function uniqueValues(
+  rows: PortalSchoolReportRow[],
+  getter: (row: PortalSchoolReportRow) => string | null | undefined,
+) {
   return [...new Set(rows.map(getter).map((value) => (value ?? "").trim()).filter(Boolean))].sort(
     (a, b) => a.localeCompare(b),
   );
@@ -60,14 +86,89 @@ function matchesFilter(value: string | null | undefined, selected: string) {
   return (value ?? "").trim().toLowerCase() === selected.toLowerCase();
 }
 
+function normalizeModuleFilter(value: string | null): ReportModuleFilter {
+  const normalized = String(value ?? "all").trim().toLowerCase();
+  if (normalized === "training") return "training";
+  if (normalized === "visit") return "visit";
+  if (normalized === "story") return "story";
+  if (normalized === "resource") return "resource";
+  if (normalized === "evaluation") return "evaluation";
+  if (normalized === "teacher-assessment") return "teacher-assessment";
+  if (normalized === "assessment" || normalized === "learner-assessment") return "learner-assessment";
+  return "all";
+}
+
+function normalizeDetailReportType(value: string | null): DetailReportType {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "visit") return "visit";
+  if (normalized === "evaluation" || normalized === "teacher-assessment") return "evaluation";
+  if (normalized === "assessment" || normalized === "learner-assessment") return "assessment";
+  return "training";
+}
+
+function detailTypeToModuleFilter(detailType: DetailReportType): ReportModuleFilter {
+  if (detailType === "training") return "training";
+  if (detailType === "visit") return "visit";
+  if (detailType === "evaluation") return "evaluation";
+  return "learner-assessment";
+}
+
+function numberOrDash(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
+  return Number(value).toFixed(digits);
+}
+
+function TableCell({
+  value,
+  className,
+}: {
+  value: string | number | null | undefined;
+  className?: string;
+}) {
+  const text = String(value ?? "N/A");
+  return (
+    <span className={`portal-table-cell-ellipsis ${className ?? ""}`.trim()} title={text}>
+      {text}
+    </span>
+  );
+}
+
 const moduleOptions: Array<{ value: ReportModuleFilter; label: string }> = [
   { value: "all", label: "All tracked items" },
   { value: "training", label: "Trainings" },
   { value: "visit", label: "School visits" },
   { value: "story", label: "1001 story activities" },
   { value: "resource", label: "Resources" },
+  { value: "evaluation", label: "Lesson evaluations" },
   { value: "teacher-assessment", label: "Teacher assessments" },
   { value: "learner-assessment", label: "Learner assessments" },
+];
+
+const detailReportOptions: Array<{ value: DetailReportType; label: string; description: string }> = [
+  {
+    value: "training",
+    label: "Training report",
+    description:
+      "Date, training name, location, schools reached, participants by role and gender, trainer, and funding source.",
+  },
+  {
+    value: "visit",
+    label: "Visit report",
+    description:
+      "Date, school, visit type, implementation status, pathway, focus areas, coach, follow-up date, and funding source.",
+  },
+  {
+    value: "evaluation",
+    label: "Evaluation report",
+    description:
+      "Date, school, teacher, grade, class size, evaluation score and level, coaching actions, observer, and funding source.",
+  },
+  {
+    value: "assessment",
+    label: "Assessment report",
+    description:
+      "Date, school, assessment type, class, learners assessed, average domain scores, assessor, and funding source.",
+  },
 ];
 
 export function PortalOperationsReportsWorkspace({
@@ -75,11 +176,14 @@ export function PortalOperationsReportsWorkspace({
   user,
 }: PortalOperationsReportsWorkspaceProps) {
   const searchParams = useSearchParams();
+  const rawModuleQuery = searchParams.get("module");
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
-  const [moduleFilter, setModuleFilter] = useState<ReportModuleFilter>(() => {
-    const raw = (searchParams.get("module") ?? "all") as ReportModuleFilter;
-    return moduleOptions.some((item) => item.value === raw) ? raw : "all";
-  });
+  const [moduleFilter, setModuleFilter] = useState<ReportModuleFilter>(() =>
+    normalizeModuleFilter(rawModuleQuery),
+  );
+  const [detailReportType, setDetailReportType] = useState<DetailReportType>(() =>
+    normalizeDetailReportType(rawModuleQuery),
+  );
   const [country, setCountry] = useState(() => sanitizeQueryValue(searchParams.get("country")));
   const [region, setRegion] = useState(() => sanitizeQueryValue(searchParams.get("region")));
   const [subRegion, setSubRegion] = useState(() => sanitizeQueryValue(searchParams.get("subRegion")));
@@ -167,74 +271,146 @@ export function PortalOperationsReportsWorkspace({
   );
 
   useEffect(() => {
-    if (country !== "all" && !countries.includes(country)) {
-      setCountry("all");
-    }
+    if (country !== "all" && !countries.includes(country)) setCountry("all");
   }, [countries, country]);
 
   useEffect(() => {
-    if (region !== "all" && !regions.includes(region)) {
-      setRegion("all");
-    }
+    if (region !== "all" && !regions.includes(region)) setRegion("all");
   }, [region, regions]);
 
   useEffect(() => {
-    if (subRegion !== "all" && !subRegions.includes(subRegion)) {
-      setSubRegion("all");
-    }
+    if (subRegion !== "all" && !subRegions.includes(subRegion)) setSubRegion("all");
   }, [subRegion, subRegions]);
 
   useEffect(() => {
-    if (district !== "all" && !districts.includes(district)) {
-      setDistrict("all");
-    }
+    if (district !== "all" && !districts.includes(district)) setDistrict("all");
   }, [district, districts]);
 
   useEffect(() => {
-    if (subCounty !== "all" && !subCounties.includes(subCounty)) {
-      setSubCounty("all");
-    }
+    if (subCounty !== "all" && !subCounties.includes(subCounty)) setSubCounty("all");
   }, [subCounties, subCounty]);
 
   useEffect(() => {
-    if (parish !== "all" && !parishes.includes(parish)) {
-      setParish("all");
-    }
+    if (parish !== "all" && !parishes.includes(parish)) setParish("all");
   }, [parish, parishes]);
 
   useEffect(() => {
-    if (village !== "all" && !villages.includes(village)) {
-      setVillage("all");
-    }
+    if (village !== "all" && !villages.includes(village)) setVillage("all");
   }, [village, villages]);
 
-  const filteredSchools = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return data.schools.filter((row) => {
-      const geoMatch =
-        matchesFilter(row.country, country) &&
-        matchesFilter(row.region, region) &&
-        matchesFilter(row.subRegion, subRegion) &&
-        matchesFilter(row.district, district) &&
-        matchesFilter(row.subCounty, subCounty) &&
-        matchesFilter(row.parish, parish) &&
-        matchesFilter(row.village, village);
+  const normalizedSearch = search.trim().toLowerCase();
 
+  const matchesGeoScope = (row: {
+    country?: string | null;
+    region?: string | null;
+    subRegion?: string | null;
+    district: string;
+    subCounty?: string | null;
+    parish?: string | null;
+    village?: string | null;
+  }) =>
+    matchesFilter(row.country, country) &&
+    matchesFilter(row.region, region) &&
+    matchesFilter(row.subRegion, subRegion) &&
+    matchesFilter(row.district, district) &&
+    matchesFilter(row.subCounty, subCounty) &&
+    matchesFilter(row.parish, parish) &&
+    matchesFilter(row.village, village);
+
+  const filteredSchools = useMemo(() => {
+    return data.schools.filter((row) => {
       const moduleMatch = getModuleCount(row, moduleFilter) > 0 || moduleFilter === "all";
-      const matchesSearch =
-        query.length === 0 ||
-        row.schoolName.toLowerCase().includes(query) ||
-        row.schoolCode.toLowerCase().includes(query) ||
-        row.accountOwner.toLowerCase().includes(query) ||
-        row.district.toLowerCase().includes(query) ||
-        (row.subCounty ?? "").toLowerCase().includes(query) ||
-        (row.parish ?? "").toLowerCase().includes(query) ||
-        (row.village ?? "").toLowerCase().includes(query) ||
-        (row.primaryContact ?? "").toLowerCase().includes(query) ||
-        (row.phone ?? "").toLowerCase().includes(query);
-      return geoMatch && moduleMatch && matchesSearch;
+      const searchMatch =
+        normalizedSearch.length === 0 ||
+        row.schoolName.toLowerCase().includes(normalizedSearch) ||
+        row.schoolCode.toLowerCase().includes(normalizedSearch) ||
+        row.accountOwner.toLowerCase().includes(normalizedSearch) ||
+        row.district.toLowerCase().includes(normalizedSearch) ||
+        (row.subCounty ?? "").toLowerCase().includes(normalizedSearch) ||
+        (row.parish ?? "").toLowerCase().includes(normalizedSearch) ||
+        (row.village ?? "").toLowerCase().includes(normalizedSearch) ||
+        (row.primaryContact ?? "").toLowerCase().includes(normalizedSearch) ||
+        (row.phone ?? "").toLowerCase().includes(normalizedSearch);
+      return matchesGeoScope(row) && moduleMatch && searchMatch;
     });
-  }, [country, data.schools, district, moduleFilter, parish, region, search, subCounty, subRegion, village]);
+  }, [
+    data.schools,
+    district,
+    moduleFilter,
+    normalizedSearch,
+    parish,
+    region,
+    country,
+    subCounty,
+    subRegion,
+    village,
+  ]);
+
+  const filteredTrainingActivities = useMemo(
+    () =>
+      data.trainingActivities.filter((row) => {
+        const searchMatch =
+          normalizedSearch.length === 0 ||
+          row.trainingName.toLowerCase().includes(normalizedSearch) ||
+          row.trainerName.toLowerCase().includes(normalizedSearch) ||
+          row.location.toLowerCase().includes(normalizedSearch) ||
+          row.district.toLowerCase().includes(normalizedSearch) ||
+          (row.fundedBy ?? "").toLowerCase().includes(normalizedSearch);
+        return matchesGeoScope(row) && searchMatch;
+      }),
+    [data.trainingActivities, district, normalizedSearch, parish, region, country, subCounty, subRegion, village],
+  );
+
+  const filteredVisitActivities = useMemo(
+    () =>
+      data.visitActivities.filter((row) => {
+        const searchMatch =
+          normalizedSearch.length === 0 ||
+          row.schoolName.toLowerCase().includes(normalizedSearch) ||
+          row.schoolCode.toLowerCase().includes(normalizedSearch) ||
+          row.visitType.toLowerCase().includes(normalizedSearch) ||
+          row.focusAreas.toLowerCase().includes(normalizedSearch) ||
+          row.coachName.toLowerCase().includes(normalizedSearch) ||
+          row.district.toLowerCase().includes(normalizedSearch) ||
+          (row.fundedBy ?? "").toLowerCase().includes(normalizedSearch);
+        return matchesGeoScope(row) && searchMatch;
+      }),
+    [data.visitActivities, district, normalizedSearch, parish, region, country, subCounty, subRegion, village],
+  );
+
+  const filteredEvaluationActivities = useMemo(
+    () =>
+      data.evaluationActivities.filter((row) => {
+        const searchMatch =
+          normalizedSearch.length === 0 ||
+          row.schoolName.toLowerCase().includes(normalizedSearch) ||
+          row.schoolCode.toLowerCase().includes(normalizedSearch) ||
+          row.teacherName.toLowerCase().includes(normalizedSearch) ||
+          row.grade.toLowerCase().includes(normalizedSearch) ||
+          row.observerName.toLowerCase().includes(normalizedSearch) ||
+          row.district.toLowerCase().includes(normalizedSearch) ||
+          (row.fundedBy ?? "").toLowerCase().includes(normalizedSearch);
+        return matchesGeoScope(row) && searchMatch;
+      }),
+    [data.evaluationActivities, district, normalizedSearch, parish, region, country, subCounty, subRegion, village],
+  );
+
+  const filteredAssessmentActivities = useMemo(
+    () =>
+      data.assessmentActivities.filter((row) => {
+        const searchMatch =
+          normalizedSearch.length === 0 ||
+          row.schoolName.toLowerCase().includes(normalizedSearch) ||
+          row.schoolCode.toLowerCase().includes(normalizedSearch) ||
+          row.assessmentType.toLowerCase().includes(normalizedSearch) ||
+          row.classGrade.toLowerCase().includes(normalizedSearch) ||
+          row.assessorName.toLowerCase().includes(normalizedSearch) ||
+          row.district.toLowerCase().includes(normalizedSearch) ||
+          (row.fundedBy ?? "").toLowerCase().includes(normalizedSearch);
+        return matchesGeoScope(row) && searchMatch;
+      }),
+    [data.assessmentActivities, district, normalizedSearch, parish, region, country, subCounty, subRegion, village],
+  );
 
   const districtBars = useMemo(() => {
     const grouped = new Map<string, number>();
@@ -250,10 +426,7 @@ export function PortalOperationsReportsWorkspace({
   }, [filteredSchools, moduleFilter]);
 
   const summary = useMemo(() => {
-    const totalRecords = filteredSchools.reduce(
-      (sum, row) => sum + getModuleCount(row, moduleFilter),
-      0,
-    );
+    const totalRecords = filteredSchools.reduce((sum, row) => sum + getModuleCount(row, moduleFilter), 0);
     const schoolsWithContacts = filteredSchools.filter((row) => row.contactsCount > 0).length;
     const teacherObservationCount = filteredSchools.reduce(
       (sum, row) => sum + row.teacherObservationCount,
@@ -291,6 +464,7 @@ export function PortalOperationsReportsWorkspace({
       schoolsWithImplementationData > 0
         ? Number(((schoolsNotImplementing / schoolsWithImplementationData) * 100).toFixed(1))
         : 0;
+
     return {
       totalRecords,
       enrollment: filteredSchools.reduce((sum, row) => sum + row.currentEnrollment, 0),
@@ -298,6 +472,7 @@ export function PortalOperationsReportsWorkspace({
       schoolVisits: filteredSchools.reduce((sum, row) => sum + row.schoolVisits, 0),
       storyActivities: filteredSchools.reduce((sum, row) => sum + row.storyActivities, 0),
       resourcesDistributed: filteredSchools.reduce((sum, row) => sum + row.resourcesDistributed, 0),
+      lessonEvaluations: filteredSchools.reduce((sum, row) => sum + row.lessonEvaluations, 0),
       teacherAssessments: filteredSchools.reduce((sum, row) => sum + row.teacherAssessments, 0),
       learnerAssessments: filteredSchools.reduce((sum, row) => sum + row.learnerAssessments, 0),
       schoolsWithContacts,
@@ -312,10 +487,7 @@ export function PortalOperationsReportsWorkspace({
     };
   }, [filteredSchools, moduleFilter]);
 
-  const schoolIds = useMemo(
-    () => new Set(filteredSchools.map((row) => row.schoolId)),
-    [filteredSchools],
-  );
+  const schoolIds = useMemo(() => new Set(filteredSchools.map((row) => row.schoolId)), [filteredSchools]);
 
   const observationSummary = useMemo(() => {
     const scopedEvents = data.observationEvents.filter((event) => schoolIds.has(event.schoolId));
@@ -364,7 +536,7 @@ export function PortalOperationsReportsWorkspace({
     const totalSchools = filteredSchools.length;
     const trained = filteredSchools.filter((row) => row.trainings > 0).length;
     const visited = filteredSchools.filter((row) => row.schoolVisits > 0).length;
-    const observed = filteredSchools.filter((row) => row.teacherAssessments > 0).length;
+    const evaluated = filteredSchools.filter((row) => row.lessonEvaluations > 0).length;
     const assessed = filteredSchools.filter((row) => row.learnerAssessments > 0).length;
     const denominator = totalSchools > 0 ? totalSchools : 1;
 
@@ -373,9 +545,9 @@ export function PortalOperationsReportsWorkspace({
       { label: "Schools trained", value: trained, pct: Math.round((trained / denominator) * 100) },
       { label: "Schools visited", value: visited, pct: Math.round((visited / denominator) * 100) },
       {
-        label: "Teacher observations",
-        value: observed,
-        pct: Math.round((observed / denominator) * 100),
+        label: "Lesson evaluations",
+        value: evaluated,
+        pct: Math.round((evaluated / denominator) * 100),
       },
       {
         label: "Learner assessments",
@@ -410,6 +582,7 @@ export function PortalOperationsReportsWorkspace({
   const resetFilters = () => {
     setSearch("");
     setModuleFilter("all");
+    setDetailReportType("training");
     setCountry("all");
     setRegion("all");
     setSubRegion("all");
@@ -419,6 +592,15 @@ export function PortalOperationsReportsWorkspace({
     setVillage("all");
   };
 
+  const detailRowsCount =
+    detailReportType === "training"
+      ? filteredTrainingActivities.length
+      : detailReportType === "visit"
+        ? filteredVisitActivities.length
+        : detailReportType === "evaluation"
+          ? filteredEvaluationActivities.length
+          : filteredAssessmentActivities.length;
+
   return (
     <section className="card portal-report-workspace">
       <header className="portal-report-toolbar">
@@ -426,8 +608,8 @@ export function PortalOperationsReportsWorkspace({
           <p className="portal-overline">Report: Schools and District</p>
           <h2>School Operations Report Workspace</h2>
           <p>
-            Schools, contacts, trainings, visits, assessments, 1001 story, and resources in one
-            live report.
+            Real backend records for schools, contacts, trainings, visits, evaluations, assessments,
+            1001 story, and resources in one reporting workspace.
           </p>
         </div>
         <div className="portal-report-actions">
@@ -443,7 +625,7 @@ export function PortalOperationsReportsWorkspace({
           </button>
           {canExport ? (
             <a className="button" href={exportHref}>
-              Export CSV
+              Export school summary
             </a>
           ) : null}
         </div>
@@ -478,14 +660,17 @@ export function PortalOperationsReportsWorkspace({
         <label>
           <span>Search</span>
           <input
-            placeholder="Search school, contact, district, sub-county, parish"
+            placeholder="Search school, trainer, assessor, coach, district"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
         <label>
           <span>Tracked item</span>
-          <select value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value as ReportModuleFilter)}>
+          <select
+            value={moduleFilter}
+            onChange={(event) => setModuleFilter(event.target.value as ReportModuleFilter)}
+          >
             {moduleOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -578,6 +763,9 @@ export function PortalOperationsReportsWorkspace({
             Showing <strong>{filteredSchools.length.toLocaleString()}</strong> of{" "}
             <strong>{data.totals.totalSchools.toLocaleString()}</strong> schools
           </p>
+          <p>
+            Detail rows: <strong>{detailRowsCount.toLocaleString()}</strong>
+          </p>
         </div>
       </div>
 
@@ -597,6 +785,10 @@ export function PortalOperationsReportsWorkspace({
         <article>
           <span>School visits</span>
           <strong>{summary.schoolVisits.toLocaleString()}</strong>
+        </article>
+        <article>
+          <span>Lesson evaluations</span>
+          <strong>{summary.lessonEvaluations.toLocaleString()}</strong>
         </article>
         <article>
           <span>Teacher assessments</span>
@@ -654,8 +846,7 @@ export function PortalOperationsReportsWorkspace({
             Observations: <strong>{observationSummary.events.toLocaleString()}</strong>{" "}
             {observationSummary.overallAverage !== null ? (
               <>
-                • Average score:{" "}
-                <strong>{observationSummary.overallAverage.toFixed(1)}</strong>
+                • Average score: <strong>{observationSummary.overallAverage.toFixed(1)}</strong>
               </>
             ) : null}
           </p>
@@ -698,88 +889,335 @@ export function PortalOperationsReportsWorkspace({
         )}
       </section>
 
-      <div className="table-wrap portal-report-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Country</th>
-              <th>Region</th>
-              <th>Sub-region</th>
-              <th>District</th>
-              <th>Sub-county</th>
-              <th>Parish</th>
-              <th>Village</th>
-              <th>School ID</th>
-              <th>School Code</th>
-              <th>Account Owner</th>
-              <th>School Name</th>
-              <th>Last Activity</th>
-              <th>Enrollment</th>
-              <th>Status</th>
-              <th>Phone</th>
-              <th>Primary Contact</th>
-              <th>Trainings</th>
-              <th>Visits</th>
-              <th>1001 Story</th>
-              <th>Resources</th>
-              <th>Teacher Assessments</th>
-              <th>Learner Assessments</th>
-              <th>Impl Started</th>
-              <th>Impl Not Started</th>
-              <th>Impl Partial</th>
-              <th>Demo Visits</th>
-              <th>Latest Impl Status</th>
-              <th>Latest Visit Pathway</th>
-              <th>Total Records</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSchools.length === 0 ? (
-              <tr>
-                <td colSpan={29}>No schools match the selected filters.</td>
-              </tr>
-            ) : (
-              filteredSchools.map((row) => (
-                <tr key={row.schoolId}>
-                  <td>{row.country ?? "Uganda"}</td>
-                  <td>{row.region ?? "N/A"}</td>
-                  <td>{row.subRegion ?? "N/A"}</td>
-                  <td>{row.district}</td>
-                  <td>{row.subCounty ?? "N/A"}</td>
-                  <td>{row.parish ?? "N/A"}</td>
-                  <td>{row.village ?? "N/A"}</td>
-                  <td>{row.schoolId}</td>
-                  <td>{row.schoolCode}</td>
-                  <td>{row.accountOwner}</td>
-                  <td>
-                    <Link href={`/portal/schools/${row.schoolId}`}>{row.schoolName}</Link>
-                  </td>
-                  <td>{formatDate(row.lastActivityDate)}</td>
-                  <td>{row.currentEnrollment.toLocaleString()}</td>
-                  <td>{row.schoolStatus}</td>
-                  <td>{row.phone ?? "N/A"}</td>
-                  <td>{row.primaryContact ?? "N/A"}</td>
-                  <td>{row.trainings.toLocaleString()}</td>
-                  <td>{row.schoolVisits.toLocaleString()}</td>
-                  <td>{row.storyActivities.toLocaleString()}</td>
-                  <td>{row.resourcesDistributed.toLocaleString()}</td>
-                  <td>{row.teacherAssessments.toLocaleString()}</td>
-                  <td>{row.learnerAssessments.toLocaleString()}</td>
-                  <td>{row.implementationStartedVisits.toLocaleString()}</td>
-                  <td>{row.implementationNotStartedVisits.toLocaleString()}</td>
-                  <td>{row.implementationPartialVisits.toLocaleString()}</td>
-                  <td>{row.demoVisits.toLocaleString()}</td>
-                  <td>{row.latestImplementationStatus ?? "N/A"}</td>
-                  <td>{row.latestVisitPathway ?? "N/A"}</td>
-                  <td>
-                    <strong>{getModuleCount(row, moduleFilter).toLocaleString()}</strong>
-                  </td>
+      <section className="portal-report-detail-panel">
+        <div className="portal-report-detail-header">
+          <div>
+            <p className="portal-overline">Detailed activity reports</p>
+            <h3>Operational report tables</h3>
+            <p>
+              These tables read directly from the backend records entered by the team. No demo or
+              generated rows are used here.
+            </p>
+          </div>
+          <div className="portal-report-detail-switches">
+            {detailReportOptions.map((option) => {
+              const active = detailReportType === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={active ? "button" : "button button-ghost"}
+                  onClick={() => {
+                    setDetailReportType(option.value);
+                    setModuleFilter(detailTypeToModuleFilter(option.value));
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <p className="portal-report-detail-description">
+          {detailReportOptions.find((option) => option.value === detailReportType)?.description}
+        </p>
+
+        {detailReportType === "training" ? (
+          <div className="table-wrap portal-report-table portal-table-compact">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Training name</th>
+                  <th>Location</th>
+                  <th>District</th>
+                  <th>Schools attended</th>
+                  <th>Total participants</th>
+                  <th>Teachers F</th>
+                  <th>Teachers M</th>
+                  <th>Leaders F</th>
+                  <th>Leaders M</th>
+                  <th>Trainer</th>
+                  <th>Funded by</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {filteredTrainingActivities.length === 0 ? (
+                  <tr>
+                    <td colSpan={12}>No training records match the current filters.</td>
+                  </tr>
+                ) : (
+                  filteredTrainingActivities.map((row: PortalTrainingActivityReportRow) => (
+                    <tr key={row.recordId}>
+                      <td>{formatDate(row.date)}</td>
+                      <td><TableCell value={row.trainingName} className="is-wide" /></td>
+                      <td><TableCell value={row.location} className="is-wide" /></td>
+                      <td><TableCell value={row.district} /></td>
+                      <td>{row.schoolsAttended.toLocaleString()}</td>
+                      <td>{row.participantsTotal.toLocaleString()}</td>
+                      <td>{row.teachersFemale.toLocaleString()}</td>
+                      <td>{row.teachersMale.toLocaleString()}</td>
+                      <td>{row.leadersFemale.toLocaleString()}</td>
+                      <td>{row.leadersMale.toLocaleString()}</td>
+                      <td><TableCell value={row.trainerName} /></td>
+                      <td><TableCell value={row.fundedBy ?? "N/A"} /></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        {detailReportType === "visit" ? (
+          <div className="table-wrap portal-report-table portal-table-compact">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>School</th>
+                  <th>District</th>
+                  <th>Visit type</th>
+                  <th>Implementation</th>
+                  <th>Pathway</th>
+                  <th>Focus areas</th>
+                  <th>Coach</th>
+                  <th>Follow-up</th>
+                  <th>Funded by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredVisitActivities.length === 0 ? (
+                  <tr>
+                    <td colSpan={10}>No visit records match the current filters.</td>
+                  </tr>
+                ) : (
+                  filteredVisitActivities.map((row: PortalVisitActivityReportRow) => (
+                    <tr key={row.visitId}>
+                      <td>{formatDate(row.date)}</td>
+                      <td>
+                        <Link href={`/portal/schools/${row.schoolId}`}>
+                          <TableCell value={row.schoolName} className="is-wide" />
+                        </Link>
+                      </td>
+                      <td><TableCell value={row.district} /></td>
+                      <td><TableCell value={row.visitType} /></td>
+                      <td>{formatLabel(row.implementationStatus)}</td>
+                      <td>{formatLabel(row.visitPathway)}</td>
+                      <td><TableCell value={row.focusAreas} className="is-wide" /></td>
+                      <td><TableCell value={row.coachName} /></td>
+                      <td>{formatDate(row.followUpDate)}</td>
+                      <td><TableCell value={row.fundedBy ?? "N/A"} /></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        {detailReportType === "evaluation" ? (
+          <div className="table-wrap portal-report-table portal-table-compact">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>School</th>
+                  <th>Teacher</th>
+                  <th>Grade</th>
+                  <th>Class size</th>
+                  <th>Score</th>
+                  <th>Level</th>
+                  <th>Top strength</th>
+                  <th>Priority gap</th>
+                  <th>Observer</th>
+                  <th>Next coaching action</th>
+                  <th>Funded by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEvaluationActivities.length === 0 ? (
+                  <tr>
+                    <td colSpan={12}>No evaluation records match the current filters.</td>
+                  </tr>
+                ) : (
+                  filteredEvaluationActivities.map((row: PortalEvaluationActivityReportRow) => (
+                    <tr key={row.evaluationId}>
+                      <td>{formatDate(row.date)}</td>
+                      <td>
+                        <Link href={`/portal/schools/${row.schoolId}`}>
+                          <TableCell value={row.schoolName} className="is-wide" />
+                        </Link>
+                      </td>
+                      <td><TableCell value={row.teacherName} /></td>
+                      <td>{row.grade}</td>
+                      <td>{row.classSize?.toLocaleString() ?? "N/A"}</td>
+                      <td>{numberOrDash(row.overallScore)}</td>
+                      <td>{row.overallLevel}</td>
+                      <td><TableCell value={row.topStrengthDomain ?? "N/A"} /></td>
+                      <td><TableCell value={row.topGapDomain ?? "N/A"} /></td>
+                      <td><TableCell value={row.observerName} /></td>
+                      <td><TableCell value={row.nextCoachingAction} className="is-wide" /></td>
+                      <td><TableCell value={row.fundedBy ?? "N/A"} /></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        {detailReportType === "assessment" ? (
+          <div className="table-wrap portal-report-table portal-table-compact">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>School</th>
+                  <th>District</th>
+                  <th>Assessment type</th>
+                  <th>Class</th>
+                  <th>Learners assessed</th>
+                  <th>Letter sounds</th>
+                  <th>Decoding</th>
+                  <th>Fluency</th>
+                  <th>Comprehension</th>
+                  <th>Assessor</th>
+                  <th>Funded by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAssessmentActivities.length === 0 ? (
+                  <tr>
+                    <td colSpan={12}>No assessment records match the current filters.</td>
+                  </tr>
+                ) : (
+                  filteredAssessmentActivities.map((row: PortalAssessmentActivityReportRow) => (
+                    <tr key={row.sessionId}>
+                      <td>{formatDate(row.date)}</td>
+                      <td>
+                        <Link href={`/portal/schools/${row.schoolId}`}>
+                          <TableCell value={row.schoolName} className="is-wide" />
+                        </Link>
+                      </td>
+                      <td><TableCell value={row.district} /></td>
+                      <td>{formatLabel(row.assessmentType)}</td>
+                      <td>{row.classGrade}</td>
+                      <td>{row.learnersAssessed.toLocaleString()}</td>
+                      <td>{numberOrDash(row.averageLetterSounds)}</td>
+                      <td>{numberOrDash(row.averageDecoding)}</td>
+                      <td>{numberOrDash(row.averageFluency)}</td>
+                      <td>{numberOrDash(row.averageComprehension)}</td>
+                      <td><TableCell value={row.assessorName} /></td>
+                      <td><TableCell value={row.fundedBy ?? "N/A"} /></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="portal-report-school-table-section">
+        <div className="portal-report-detail-header">
+          <div>
+            <p className="portal-overline">School directory summary</p>
+            <h3>School-level operations table</h3>
+            <p>
+              Clean one-row school records with enrollment, contacts, activity totals, implementation
+              status, and latest activity markers.
+            </p>
+          </div>
+        </div>
+
+        <div className="table-wrap portal-report-table portal-table-compact">
+          <table>
+            <thead>
+              <tr>
+                <th>Country</th>
+                <th>Region</th>
+                <th>Sub-region</th>
+                <th>District</th>
+                <th>Sub-county</th>
+                <th>Parish</th>
+                <th>Village</th>
+                <th>School ID</th>
+                <th>School Code</th>
+                <th>Account owner</th>
+                <th>School name</th>
+                <th>Last activity</th>
+                <th>Enrollment</th>
+                <th>Status</th>
+                <th>Phone</th>
+                <th>Primary contact</th>
+                <th>Trainings</th>
+                <th>Visits</th>
+                <th>1001 story</th>
+                <th>Resources</th>
+                <th>Lesson evaluations</th>
+                <th>Teacher assessments</th>
+                <th>Learner assessments</th>
+                <th>Impl started</th>
+                <th>Impl not started</th>
+                <th>Impl partial</th>
+                <th>Demo visits</th>
+                <th>Latest impl status</th>
+                <th>Latest visit pathway</th>
+                <th>Total records</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSchools.length === 0 ? (
+                <tr>
+                  <td colSpan={30}>No schools match the selected filters.</td>
+                </tr>
+              ) : (
+                filteredSchools.map((row) => (
+                  <tr key={row.schoolId}>
+                    <td>{row.country ?? "Uganda"}</td>
+                    <td>{row.region ?? "N/A"}</td>
+                    <td>{row.subRegion ?? "N/A"}</td>
+                    <td><TableCell value={row.district} /></td>
+                    <td><TableCell value={row.subCounty ?? "N/A"} /></td>
+                    <td><TableCell value={row.parish ?? "N/A"} /></td>
+                    <td><TableCell value={row.village ?? "N/A"} /></td>
+                    <td>{row.schoolId}</td>
+                    <td><TableCell value={row.schoolCode} className="is-code" /></td>
+                    <td><TableCell value={row.accountOwner} /></td>
+                    <td>
+                      <Link href={`/portal/schools/${row.schoolId}`}>
+                        <TableCell value={row.schoolName} className="is-school-name" />
+                      </Link>
+                    </td>
+                    <td>{formatDate(row.lastActivityDate)}</td>
+                    <td>{row.currentEnrollment.toLocaleString()}</td>
+                    <td>{row.schoolStatus}</td>
+                    <td><TableCell value={row.phone ?? "N/A"} /></td>
+                    <td><TableCell value={row.primaryContact ?? "N/A"} className="is-contact" /></td>
+                    <td>{row.trainings.toLocaleString()}</td>
+                    <td>{row.schoolVisits.toLocaleString()}</td>
+                    <td>{row.storyActivities.toLocaleString()}</td>
+                    <td>{row.resourcesDistributed.toLocaleString()}</td>
+                    <td>{row.lessonEvaluations.toLocaleString()}</td>
+                    <td>{row.teacherAssessments.toLocaleString()}</td>
+                    <td>{row.learnerAssessments.toLocaleString()}</td>
+                    <td>{row.implementationStartedVisits.toLocaleString()}</td>
+                    <td>{row.implementationNotStartedVisits.toLocaleString()}</td>
+                    <td>{row.implementationPartialVisits.toLocaleString()}</td>
+                    <td>{row.demoVisits.toLocaleString()}</td>
+                    <td>{row.latestImplementationStatus ? formatLabel(row.latestImplementationStatus) : "N/A"}</td>
+                    <td>{row.latestVisitPathway ? formatLabel(row.latestVisitPathway) : "N/A"}</td>
+                    <td>
+                      <strong>{getModuleCount(row, moduleFilter).toLocaleString()}</strong>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
   );
 }

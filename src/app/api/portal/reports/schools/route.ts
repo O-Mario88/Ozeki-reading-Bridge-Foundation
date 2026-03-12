@@ -11,6 +11,7 @@ type ReportModuleFilter =
   | "visit"
   | "story"
   | "resource"
+  | "evaluation"
   | "teacher-assessment"
   | "learner-assessment";
 
@@ -54,16 +55,17 @@ function filterSchools(
   const normalizedParish = filters.parish?.trim().toLowerCase() || "";
   const normalizedVillage = filters.village?.trim().toLowerCase() || "";
   const normalizedSearch = search?.trim().toLowerCase() || "";
-  const module = filters.module;
+  const moduleFilter = filters.module;
 
   const matchesModule = (row: PortalSchoolReportRow) => {
-    if (module === "all") return true;
-    if (module === "training") return row.trainings > 0;
-    if (module === "visit") return row.schoolVisits > 0;
-    if (module === "story") return row.storyActivities > 0;
-    if (module === "resource") return row.resourcesDistributed > 0;
-    if (module === "teacher-assessment") return row.teacherAssessments > 0;
-    if (module === "learner-assessment") return row.learnerAssessments > 0;
+    if (moduleFilter === "all") return true;
+    if (moduleFilter === "training") return row.trainings > 0;
+    if (moduleFilter === "visit") return row.schoolVisits > 0;
+    if (moduleFilter === "story") return row.storyActivities > 0;
+    if (moduleFilter === "resource") return row.resourcesDistributed > 0;
+    if (moduleFilter === "evaluation") return row.lessonEvaluations > 0;
+    if (moduleFilter === "teacher-assessment") return row.teacherAssessments > 0;
+    if (moduleFilter === "learner-assessment") return row.learnerAssessments > 0;
     return true;
   };
 
@@ -119,12 +121,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const format = searchParams.get("format")?.toLowerCase() ?? "json";
   const moduleParam = (searchParams.get("module")?.toLowerCase() ?? "all") as ReportModuleFilter;
-  const module: ReportModuleFilter = [
+  const moduleFilter: ReportModuleFilter = [
     "all",
     "training",
     "visit",
     "story",
     "resource",
+    "evaluation",
     "teacher-assessment",
     "learner-assessment",
   ].includes(moduleParam)
@@ -142,7 +145,7 @@ export async function GET(request: Request) {
   const payload = getPortalOperationalReportsData(user);
   const schools = filterSchools(
     payload.schools,
-    { country, region, subRegion, district, subCounty, parish, village, module },
+    { country, region, subRegion, district, subCounty, parish, village, module: moduleFilter },
     search,
   );
 
@@ -159,7 +162,7 @@ export async function GET(request: Request) {
         subCounty: subCounty ?? "",
         parish: parish ?? "",
         village: village ?? "",
-        module,
+        module: moduleFilter,
       },
       schools,
     });
@@ -186,6 +189,7 @@ export async function GET(request: Request) {
     "School Visits",
     "1001 Story Activities",
     "Resources Distributed",
+    "Lesson Evaluations",
     "Teacher Assessments",
     "Teacher Observation Average",
     "Teacher Observation Count",
@@ -221,6 +225,7 @@ export async function GET(request: Request) {
       row.schoolVisits,
       row.storyActivities,
       row.resourcesDistributed,
+      row.lessonEvaluations,
       row.teacherAssessments,
       row.teacherObservationAverage ?? "",
       row.teacherObservationCount,

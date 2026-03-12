@@ -71,25 +71,15 @@ const programsGroup: NavGroup = {
   ],
 };
 
-const resourcesGroup: NavGroup = {
-  title: "Resources",
-  href: "/resources",
-  description: "Practical downloads, webinars, and knowledge content for literacy implementation.",
-  links: [
-    { href: "/resources", label: "Resource Library" },
-    { href: "/stories", label: "1001 Story Library" },
-    { href: "/events", label: "Events & Webinars" },
-    { href: "/media", label: "Media & Press" },
-  ],
-};
-
 const impactGroup: NavGroup = {
   title: "Impact",
   href: "/impact",
-  description: "Public impact evidence, dashboards, reports, case studies, and methodology.",
+  description: "Public impact evidence, dashboards, reports, stories, resources, and galleries.",
   links: [
-    { href: "/impact", label: "Live Dashboard" },
     { href: "/impact#reports", label: "Reports Library" },
+    { href: "/resources", label: "Resources" },
+    { href: "/stories", label: "Stories" },
+    { href: "/gallery", label: "Gallery" },
     { href: "/impact/case-studies", label: "Case Studies" },
     { href: "/impact/gallery", label: "Evidence Gallery" },
   ],
@@ -112,11 +102,11 @@ const aboutGroup: NavGroup = {
 
 const navItems: NavItem[] = [
   { type: "link", label: "Home", href: "/" },
+  { type: "link", label: "Live Dashboard", href: "/impact" },
   { type: "group", key: "programs", group: programsGroup },
-  { type: "group", key: "resources", group: resourcesGroup },
+  { type: "link", label: "Online Training", href: "/events" },
   { type: "group", key: "impact", group: impactGroup },
-  { type: "link", label: "Stories", href: "/stories" },
-  { type: "link", label: "Partner With Us", href: "/partner" },
+  { type: "link", label: "Blog", href: "/blog" },
   { type: "group", key: "about", group: aboutGroup },
 ];
 
@@ -279,7 +269,7 @@ export function SiteHeader() {
             </ul >
 
             <div className="header__sticky-actions">
-              <Link className="button header__sticky-button" href="/donate">
+              <Link className="button header__sticky-button" href="/partner-with-us">
                 Donate
               </Link>
             </div>
@@ -376,7 +366,7 @@ export function SiteHeader() {
           </ul>
 
           <div className="header__mobile-actions">
-            <Link href="/donate" className="button">
+            <Link href="/partner-with-us" className="button">
               <span>Donate</span>
             </Link>
           </div>

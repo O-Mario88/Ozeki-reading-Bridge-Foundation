@@ -604,7 +604,7 @@ export function PublicImpactMapExplorer({
       ) : null}
 
       <div className="impact-explorer-breadcrumbs">
-        <div className="flex items-center gap-2">
+        <div className="impact-explorer-status">
           <p>{breadcrumb.join(" > ")}</p>
           {payload?.meta?.dataCompleteness === "Complete" ? (
             <span className="badge badge-success" title="All schools in this scope have submitted reports for this period">
@@ -708,7 +708,7 @@ export function PublicImpactMapExplorer({
                   {loading
                     ? "Loading..."
                     : payload?.meta?.lastUpdated
-                      ? new Date(payload.meta.lastUpdated).toLocaleString()
+                      ? new Date(payload.meta.lastUpdated).toLocaleString("en-GB")
                       : "Data not available"}
                 </strong>
               </p>
@@ -1121,7 +1121,7 @@ export function PublicImpactMapExplorer({
                   <p className="impact-domain-mini-meta">
                     Last updated:{" "}
                     {teachingQuality.lastUpdated
-                      ? new Date(teachingQuality.lastUpdated).toLocaleDateString()
+                      ? new Date(teachingQuality.lastUpdated).toLocaleDateString("en-GB")
                       : "Data not available"}
                   </p>
                 </article>
@@ -1392,7 +1392,7 @@ export function PublicImpactMapExplorer({
                   )}
                 </div>
                 <p className="text-gray-600 mt-2">
-                  Last updated: {new Date(payload?.meta?.lastUpdated ?? "").toLocaleDateString()}
+                  Last updated: {new Date(payload?.meta?.lastUpdated ?? "").toLocaleDateString("en-GB")}
                 </p>
               </div>
             </div>

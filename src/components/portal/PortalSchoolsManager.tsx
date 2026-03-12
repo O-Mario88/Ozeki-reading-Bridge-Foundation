@@ -1321,7 +1321,7 @@ export function PortalSchoolsManager({
           </p>
         ) : null}
 
-        <div className="table-wrap">
+        <div className="table-wrap portal-table-compact portal-schools-directory-table">
           <table>
             <thead>
               <tr>
@@ -1348,12 +1348,24 @@ export function PortalSchoolsManager({
               ) : (
                 schools.map((school) => (
                   <tr key={school.id}>
-                    <td>{school.schoolCode}</td>
-                    <td>{school.name}</td>
-                    <td>{school.district}</td>
-                    <td>{school.subCounty}</td>
-                    <td>{school.parish}</td>
-                    <td>{school.village ?? "-"}</td>
+                    <td title={school.schoolCode}>
+                      <span className="portal-table-cell-ellipsis is-code">{school.schoolCode}</span>
+                    </td>
+                    <td title={school.name}>
+                      <span className="portal-table-cell-ellipsis is-school-name">{school.name}</span>
+                    </td>
+                    <td title={school.district}>
+                      <span className="portal-table-cell-ellipsis">{school.district}</span>
+                    </td>
+                    <td title={school.subCounty}>
+                      <span className="portal-table-cell-ellipsis">{school.subCounty}</span>
+                    </td>
+                    <td title={school.parish}>
+                      <span className="portal-table-cell-ellipsis">{school.parish}</span>
+                    </td>
+                    <td title={school.village ?? "-"}>
+                      <span className="portal-table-cell-ellipsis">{school.village ?? "-"}</span>
+                    </td>
                     <td>{Number(school.enrolledBoys ?? 0).toLocaleString()}</td>
                     <td>{Number(school.enrolledGirls ?? 0).toLocaleString()}</td>
                     <td>{Number(school.enrolledLearners ?? 0).toLocaleString()}</td>
@@ -1365,11 +1377,21 @@ export function PortalSchoolsManager({
                       )}
                     </td>
                     <td>
-                      {school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"}
+                      <span
+                        className="portal-table-cell-ellipsis"
+                        title={school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"}
+                      >
+                        {school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"}
+                      </span>
                     </td>
                     <td>
-                      {school.contactName ?? "-"}
-                      {school.contactPhone ? ` (${school.contactPhone})` : ""}
+                      <span
+                        className="portal-table-cell-ellipsis is-contact"
+                        title={`${school.contactName ?? "-"}${school.contactPhone ? ` (${school.contactPhone})` : ""}`}
+                      >
+                        {school.contactName ?? "-"}
+                        {school.contactPhone ? ` (${school.contactPhone})` : ""}
+                      </span>
                     </td>
                     <td>
                       <Link

@@ -4656,7 +4656,7 @@ export function PortalModuleManager({
                   .map((record) => (
                     <tr key={record.id}>
                       <td>{record.recordCode}</td>
-                      <td>{new Date(record.date).toLocaleDateString()}</td>
+                      <td>{new Date(record.date).toLocaleDateString("en-GB")}</td>
                       <td>{record.district}</td>
                       <td>{record.schoolName}</td>
                       <td>{record.programType ?? "-"}</td>

@@ -105,6 +105,82 @@ export interface BlogPostSection {
   paragraphs: string[];
 }
 
+export type BlogHeaderLayoutType = "standard" | "overlay" | "minimal";
+export type BlogOverlayStrength = "light" | "medium" | "dark";
+export type BlogHeroTextAlignment = "left" | "center" | "bottom-left";
+export type BlogSpotlightMode = "auto" | "manual" | "hidden";
+export type BlogArticleType =
+  | "Blog Post"
+  | "Resource Article"
+  | "Thought Leadership"
+  | "Methodology Explainer"
+  | "Story Editorial"
+  | "Report Summary";
+
+export type BlogBodyBlockType =
+  | "paragraph"
+  | "heading2"
+  | "heading3"
+  | "bullet_list"
+  | "numbered_list"
+  | "quote"
+  | "image"
+  | "callout"
+  | "stat"
+  | "divider"
+  | "cta_inline";
+
+export type BlogImageWidthStyle = "full" | "contained" | "small";
+
+export interface BlogBodyBlock {
+  id: string;
+  type: BlogBodyBlockType;
+  text?: string | null;
+  heading?: string | null;
+  items?: string[] | null;
+  quoteAttribution?: string | null;
+  imageUrl?: string | null;
+  imageAlt?: string | null;
+  imageCaption?: string | null;
+  imageCredit?: string | null;
+  imageWidthStyle?: BlogImageWidthStyle | null;
+  calloutTitle?: string | null;
+  calloutTone?: "neutral" | "info" | "success" | "warning" | "critical" | null;
+  statLabel?: string | null;
+  statValue?: string | null;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  tocLabel?: string | null;
+  hideFromToc?: boolean | null;
+}
+
+export interface BlogGradientCtaCard {
+  enabled: boolean;
+  pillLabel?: string | null;
+  headline?: string | null;
+  text?: string | null;
+  buttonLabel?: string | null;
+  buttonLink?: string | null;
+  gradientPreset?: "preset-1" | "preset-2" | "preset-3" | null;
+}
+
+export interface BlogComment {
+  id: number;
+  postSlug: string;
+  displayName: string;
+  commentText: string;
+  createdAt: string;
+}
+
+export interface BlogEngagement {
+  postSlug: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  likedByViewer: boolean;
+  comments: BlogComment[];
+}
+
 export interface BlogPost {
   slug: string;
   title: string;
@@ -119,8 +195,91 @@ export interface BlogPost {
   sections: BlogPostSection[];
   mediaImageUrl?: string | null;
   mediaVideoUrl?: string | null;
+  articleType?: BlogArticleType | null;
+  headerLayoutType?: BlogHeaderLayoutType | null;
+  featuredImageUrl?: string | null;
+  featuredImageAlt?: string | null;
+  featuredImageCaption?: string | null;
+  featuredImageCredit?: string | null;
+  overlayStrength?: BlogOverlayStrength | null;
+  heroTextAlignment?: BlogHeroTextAlignment | null;
+  showOverlayMetadata?: boolean;
+  showOverlayShareIcons?: boolean;
+  primaryCategory?: string | null;
+  secondaryCategories?: string[];
+  authorAvatarUrl?: string | null;
+  authorBio?: string | null;
+  bodyBlocks?: BlogBodyBlock[];
+  tocEnabled?: boolean;
+  spotlightMode?: BlogSpotlightMode | null;
+  spotlightArticleSlugs?: string[];
+  showSpotlightSidebar?: boolean;
+  showCategoryExplorer?: boolean;
+  showNewsletterBlock?: boolean;
+  ctaCard?: BlogGradientCtaCard | null;
+  seoTitle?: string | null;
+  metaDescription?: string | null;
+  socialImageUrl?: string | null;
+  canonicalUrl?: string | null;
+  featuredFlag?: boolean;
+  allowComments?: boolean;
   source?: "static" | "portal";
   views?: number;
+  likes?: number;
+  commentCount?: number;
+}
+
+export type PortalBlogPublishStatus = "draft" | "published";
+
+export interface PortalBlogPostRecord {
+  id: number;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  excerpt: string;
+  category: string;
+  author: string;
+  role: string;
+  publishedAt: string;
+  readTime: string;
+  readTimeMinutes?: number | null;
+  tags: string[];
+  sections: BlogPostSection[];
+  bodyBlocks?: BlogBodyBlock[];
+  mediaImageUrl: string | null;
+  mediaVideoUrl: string | null;
+  articleType?: BlogArticleType | null;
+  headerLayoutType?: BlogHeaderLayoutType | null;
+  featuredImageUrl?: string | null;
+  featuredImageAlt?: string | null;
+  featuredImageCaption?: string | null;
+  featuredImageCredit?: string | null;
+  overlayStrength?: BlogOverlayStrength | null;
+  heroTextAlignment?: BlogHeroTextAlignment | null;
+  showOverlayMetadata?: boolean;
+  showOverlayShareIcons?: boolean;
+  primaryCategory?: string | null;
+  secondaryCategories?: string[];
+  authorAvatarUrl?: string | null;
+  authorBio?: string | null;
+  tocEnabled?: boolean;
+  spotlightMode?: BlogSpotlightMode | null;
+  spotlightArticleSlugs?: string[];
+  showSpotlightSidebar?: boolean;
+  showCategoryExplorer?: boolean;
+  showNewsletterBlock?: boolean;
+  ctaCard?: BlogGradientCtaCard | null;
+  seoTitle?: string | null;
+  metaDescription?: string | null;
+  socialImageUrl?: string | null;
+  canonicalUrl?: string | null;
+  featuredFlag?: boolean;
+  allowComments?: boolean;
+  publishStatus: PortalBlogPublishStatus;
+  createdByUserId: number;
+  createdByUserName: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type PortalUserRole =
@@ -2102,6 +2261,7 @@ export interface PortalSchoolReportRow {
   schoolVisits: number;
   storyActivities: number;
   resourcesDistributed: number;
+  lessonEvaluations: number;
   teacherAssessments: number;
   teacherObservationAverage: number | null;
   teacherObservationCount: number;
@@ -2127,6 +2287,7 @@ export interface PortalDistrictReportSummary {
   schoolVisits: number;
   storyActivities: number;
   resourcesDistributed: number;
+  lessonEvaluations: number;
   teacherAssessments: number;
   teacherObservationCount: number;
   learnerAssessments: number;
@@ -2141,6 +2302,108 @@ export interface PortalObservationEvent {
   indicators: RubricIndicator[];
 }
 
+export interface PortalTrainingActivityReportRow {
+  recordId: number;
+  recordCode: string;
+  date: string;
+  country: string;
+  region: string | null;
+  subRegion: string | null;
+  district: string;
+  subCounty?: string | null;
+  parish?: string | null;
+  village?: string | null;
+  location: string;
+  trainingName: string;
+  trainingStatus: string;
+  trainingType: string | null;
+  audience: string | null;
+  schoolsAttended: number;
+  participantsTotal: number;
+  teachersFemale: number;
+  teachersMale: number;
+  leadersFemale: number;
+  leadersMale: number;
+  trainerName: string;
+  fundedBy: string | null;
+}
+
+export interface PortalVisitActivityReportRow {
+  visitId: number;
+  recordCode: string;
+  date: string;
+  country: string;
+  region: string | null;
+  subRegion: string | null;
+  district: string;
+  subCounty?: string | null;
+  parish?: string | null;
+  village?: string | null;
+  schoolId: number;
+  schoolCode: string;
+  schoolName: string;
+  location: string;
+  visitType: string;
+  implementationStatus: "started" | "not_started" | "partial";
+  visitPathway: "observation" | "demo_and_meeting" | "mixed";
+  focusAreas: string;
+  coachName: string;
+  followUpDate: string | null;
+  fundedBy: string | null;
+}
+
+export interface PortalEvaluationActivityReportRow {
+  evaluationId: number;
+  date: string;
+  country: string;
+  region: string | null;
+  subRegion: string | null;
+  district: string;
+  subCounty?: string | null;
+  parish?: string | null;
+  village?: string | null;
+  schoolId: number;
+  schoolCode: string;
+  schoolName: string;
+  teacherName: string;
+  grade: string;
+  stream: string | null;
+  classSize: number | null;
+  overallScore: number;
+  overallLevel: string;
+  topStrengthDomain: string | null;
+  topGapDomain: string | null;
+  nextCoachingAction: string;
+  observerName: string;
+  nextVisitDate: string | null;
+  fundedBy: string | null;
+}
+
+export interface PortalAssessmentActivityReportRow {
+  sessionId: number;
+  recordCode: string;
+  date: string;
+  country: string;
+  region: string | null;
+  subRegion: string | null;
+  district: string;
+  subCounty?: string | null;
+  parish?: string | null;
+  village?: string | null;
+  schoolId: number;
+  schoolCode: string;
+  schoolName: string;
+  assessmentType: string;
+  classGrade: string;
+  learnersAssessed: number;
+  averageLetterSounds: number | null;
+  averageDecoding: number | null;
+  averageFluency: number | null;
+  averageComprehension: number | null;
+  assessorName: string;
+  fundedBy: string | null;
+}
+
 export interface PortalOperationalReportsData {
   generatedAt: string;
   totals: {
@@ -2152,6 +2415,7 @@ export interface PortalOperationalReportsData {
     schoolVisits: number;
     storyActivities: number;
     resourcesDistributed: number;
+    lessonEvaluations: number;
     teacherAssessments: number;
     learnerAssessments: number;
     schoolsWithContacts: number;
@@ -2167,6 +2431,10 @@ export interface PortalOperationalReportsData {
   districts: PortalDistrictReportSummary[];
   schools: PortalSchoolReportRow[];
   observationEvents: PortalObservationEvent[];
+  trainingActivities: PortalTrainingActivityReportRow[];
+  visitActivities: PortalVisitActivityReportRow[];
+  evaluationActivities: PortalEvaluationActivityReportRow[];
+  assessmentActivities: PortalAssessmentActivityReportRow[];
 }
 
 export interface SchoolDirectoryInput {
@@ -2408,6 +2676,45 @@ export interface PortalTestimonialRecord {
   createdByUserId: number;
   createdByName: string;
   createdAt: string;
+}
+
+export type AboutTeamSection = "board" | "staff" | "volunteer";
+
+export interface PortalLeadershipTeamMemberRecord {
+  id: number;
+  section: AboutTeamSection;
+  name: string;
+  role: string;
+  biography: string;
+  background: string;
+  career: string;
+  photoFileName: string | null;
+  photoStoredPath: string | null;
+  photoMimeType: string | null;
+  photoSizeBytes: number | null;
+  photoAlt: string | null;
+  sortOrder: number;
+  isPublished: boolean;
+  createdByUserId: number;
+  createdByName: string;
+  updatedByUserId: number;
+  updatedByName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PortalCoreValueRecord {
+  id: number;
+  title: string;
+  description: string;
+  sortOrder: number;
+  isPublished: boolean;
+  createdByUserId: number;
+  createdByName: string;
+  updatedByUserId: number;
+  updatedByName: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type ImpactReportType =

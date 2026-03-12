@@ -15,6 +15,7 @@ const quickActions = [
   { href: "/portal/visits?new=1", label: "+ New School Visit" },
   { href: "/portal/assessments?new=1", label: "+ New Assessment" },
   { href: "/portal/story?new=1", label: "+ New 1001 Story" },
+  { href: "/portal/blog?new=1", label: "+ New Blog Post" },
   { href: "/portal/resources", label: "+ Upload Resource" },
   { href: "/portal/reports", label: "Open Reports Workspace" },
 ];

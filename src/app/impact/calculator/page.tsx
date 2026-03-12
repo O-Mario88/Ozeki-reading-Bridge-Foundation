@@ -504,7 +504,7 @@ export default function ImpactCalculatorPage() {
               {formatUsdAmount(costPerSchoolUsd.total)}.
             </p>
             <div className="action-row">
-              <Link className="button" href="/donate">
+              <Link className="button" href="/partner-with-us">
                 Fund this package
               </Link>
               <Link className="button button-ghost" href="/partner">
@@ -545,7 +545,7 @@ export default function ImpactCalculatorPage() {
           <div className="action-row cost-cta-row">
             <Link
               className="button"
-              href="/donate?package=fund-a-school"
+              href="/partner-with-us"
               onClick={() =>
                 trackEvent("fund_school_click", {
                   source: "impact-calculator-cost-section",
@@ -556,7 +556,7 @@ export default function ImpactCalculatorPage() {
             </Link>
             <Link
               className="button button-ghost"
-              href="/donate?package=reading-materials"
+              href="/partner-with-us"
             >
               Fund Reading Materials ({formatUsdAmount(costPerSchoolUsd.trainingMaterials)})
             </Link>
@@ -765,10 +765,10 @@ export default function ImpactCalculatorPage() {
               plan and reporting package for that geography.
             </p>
             <div className="action-row cost-cta-row">
-              <Link className="button" href="/donate?package=fund-a-region">
+              <Link className="button" href="/partner-with-us">
                 Fund a Region
               </Link>
-              <Link className="button button-ghost" href="/donate?package=fund-a-district">
+              <Link className="button button-ghost" href="/partner-with-us">
                 Fund a District
               </Link>
               <Link

@@ -610,7 +610,7 @@ export function TrainingPortalManager({
                   ) : (
                     sessions.map((session) => (
                       <tr key={session.id}>
-                        <td>{new Date(session.sessionDate).toLocaleDateString()}</td>
+                        <td>{new Date(session.sessionDate).toLocaleDateString("en-GB")}</td>
                         <td>{session.schoolName}</td>
                         <td>
                           {session.district}, {session.subCounty}, {session.parish}
@@ -648,7 +648,7 @@ export function TrainingPortalManager({
                   ) : (
                     assessments.map((assessment) => (
                       <tr key={assessment.id}>
-                        <td>{new Date(assessment.assessmentDate).toLocaleDateString()}</td>
+                        <td>{new Date(assessment.assessmentDate).toLocaleDateString("en-GB")}</td>
                         <td>{assessment.childId}</td>
                         <td style={{ textTransform: 'capitalize' }}>{assessment.assessmentType}</td>
                         <td>{assessment.classGrade}</td>
@@ -687,7 +687,7 @@ export function TrainingPortalManager({
                 ) : (
                   onlineEvents.map((event) => (
                     <tr key={event.id}>
-                      <td>{new Date(event.startDateTime).toLocaleString()}</td>
+                      <td>{new Date(event.startDateTime).toLocaleString("en-GB")}</td>
                       <td>{event.title}</td>
                       <td>{event.audience}</td>
                       <td>{event.attendeeCount}</td>
