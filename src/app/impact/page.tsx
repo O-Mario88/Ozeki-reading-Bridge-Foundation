@@ -178,12 +178,14 @@ export default async function ImpactDashboardPage({
         {/* ═══ Hero ═══ */}
         <section className="page-hero impact-page-hero">
           <div className="container impact-page-hero-container">
-            <p className="kicker">National Literacy Intelligence Platform</p>
-            <h1>Ozeki National Literacy Intelligence Dashboard</h1>
-            <p>
-              Practical Literacy. Strong Teachers. Confident Readers, measured and improved
-              with real classroom data across Uganda.
-            </p>
+            <div className="impact-page-hero-copy">
+              <p className="kicker">National Literacy Intelligence Platform</p>
+              <h1>Ozeki National Literacy Intelligence Dashboard</h1>
+              <p>
+                Practical Literacy. Strong Teachers. Confident Readers, measured and improved
+                with real classroom data across Uganda.
+              </p>
+            </div>
           </div>
         </section>
 

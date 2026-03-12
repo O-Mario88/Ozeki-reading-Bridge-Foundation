@@ -3024,8 +3024,8 @@ function ensureAutomationTables(db: Database.Database) {
 }
 
 
-function seedPortalUsers(db: Database.Database) {
-  const accounts = [
+function getSeedPortalAccounts() {
+  return [
     {
       fullName: "ORB Foundation Staff",
       email: process.env.PORTAL_STAFF_EMAIL?.toLowerCase() ?? "staff@ozekireadingbridge.org",
@@ -3095,7 +3095,12 @@ function seedPortalUsers(db: Database.Database) {
       isSuperAdmin: 1,
     },
   ];
+}
 
+function syncPortalAccounts(
+  db: Database.Database,
+  accounts: ReturnType<typeof getSeedPortalAccounts>,
+) {
   const upsertUser = db.prepare(`
     INSERT INTO portal_users (
       full_name,
@@ -3118,7 +3123,15 @@ function seedPortalUsers(db: Database.Database) {
       @isAdmin,
       @isSuperAdmin
     )
-    ON CONFLICT(email) DO NOTHING
+    ON CONFLICT(email) DO UPDATE SET
+      full_name = excluded.full_name,
+      role = excluded.role,
+      password_hash = excluded.password_hash,
+      phone = excluded.phone,
+      is_supervisor = excluded.is_supervisor,
+      is_me = excluded.is_me,
+      is_admin = excluded.is_admin,
+      is_superadmin = excluded.is_superadmin
   `);
 
   accounts.forEach((account) => {
@@ -3134,39 +3147,9 @@ function seedPortalUsers(db: Database.Database) {
       passwordHash: hashPassword(account.password),
     });
   });
+}
 
-  // Keep the explicitly seeded privileged accounts in sync even on existing
-  // databases so login credentials do not drift after defaults/env change.
-  const syncPrivilegedUser = db.prepare(`
-    UPDATE portal_users
-    SET
-      full_name = @fullName,
-      role = @role,
-      password_hash = @passwordHash,
-      phone = @phone,
-      is_supervisor = @isSupervisor,
-      is_me = @isME,
-      is_admin = @isAdmin,
-      is_superadmin = @isSuperAdmin
-    WHERE lower(email) = @email
-  `);
-
-  accounts
-    .filter((account) => account.isAdmin === 1 || account.isSuperAdmin === 1)
-    .forEach((account) => {
-      syncPrivilegedUser.run({
-        fullName: account.fullName,
-        email: account.email,
-        role: account.role,
-        phone: account.phone,
-        isSupervisor: account.isSupervisor,
-        isME: account.isME,
-        isAdmin: account.isAdmin,
-        isSuperAdmin: account.isSuperAdmin,
-        passwordHash: hashPassword(account.password),
-      });
-    });
-
+function disableLegacyPortalAdmin(db: Database.Database) {
   const legacyAdminEmail = "admin@ozekireadingbridge.org";
   const seededSuperAdminEmail =
     process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
@@ -3188,6 +3171,19 @@ function seedPortalUsers(db: Database.Database) {
       passwordHash: hashPassword(`${seededSuperAdminEmail}:disabled`),
     });
   }
+}
+
+function ensurePrivilegedPortalUsers(db: Database.Database) {
+  const privilegedAccounts = getSeedPortalAccounts().filter(
+    (account) => account.isAdmin === 1 || account.isSuperAdmin === 1,
+  );
+  syncPortalAccounts(db, privilegedAccounts);
+  disableLegacyPortalAdmin(db);
+}
+
+function seedPortalUsers(db: Database.Database) {
+  syncPortalAccounts(db, getSeedPortalAccounts());
+  disableLegacyPortalAdmin(db);
 }
 
 function shouldAutoSeedPortalUsers() {
@@ -3931,6 +3927,7 @@ export function getDb() {
   ensurePublicImpactViews(db);
   ensureSupportRequestTables(db);
   ensureSchoolContactForeignKeyReferences(db);
+  ensurePrivilegedPortalUsers(db);
     if (shouldAutoSeedPortalUsers()) {
       seedPortalUsers(db);
     }
@@ -5757,7 +5754,9 @@ export function deletePortalUserAccount(userId: number, currentUser: PortalUser)
 export function authenticatePortalUser(identifier: string, password: string): PortalUser | null {
   const normalizedIdentifier = identifier.trim();
   const normalizedEmail = normalizedIdentifier.toLowerCase();
-  const row = getDb()
+  const db = getDb();
+  ensurePrivilegedPortalUsers(db);
+  const row = db
     .prepare(
       `
       SELECT

@@ -53,7 +53,7 @@ export function PortalLoginForm() {
         <input
           name="identifier"
           required
-          placeholder="staff@ozekireadingbridge.org or +2567xxxxxxx"
+          placeholder="edwin@ozekiread.org or +2567xxxxxxx"
         />
       </label>
       <label className="full-width">
@@ -86,6 +86,10 @@ export function PortalLoginForm() {
       <p className="portal-login-note">
         Google sign-in is limited to approved <strong>@{approvedGoogleDomain}</strong> staff accounts.
         Use <strong>edwin@ozekiread.org</strong> or contact admin if your access has not been provisioned.
+      </p>
+
+      <p className="portal-login-note">
+        Email/password sign-in remains available for the superadmin account if Google Workspace OAuth is unavailable.
       </p>
 
       <div className="portal-login-links">

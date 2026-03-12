@@ -29,10 +29,19 @@ function toPortalActor(): PortalUser {
   return actor as PortalUser;
 }
 
-test("seeded super admin credentials authenticate successfully", () => {
-  getDb();
+test("seeded super admin credentials authenticate successfully even after credential drift", () => {
+  const db = getDb();
   const email = process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
   const password = process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079";
+
+  db.prepare(
+    `
+      UPDATE portal_users
+      SET password_hash = 'stale-hash'
+      WHERE lower(email) = @email
+    `,
+  ).run({ email });
+
   const actor = authenticatePortalUser(email, password);
 
   assert.ok(actor, "Expected seeded super admin credentials to authenticate.");

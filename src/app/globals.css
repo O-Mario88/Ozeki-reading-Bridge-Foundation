@@ -8350,6 +8350,8 @@ nav[aria-label="Staff navigation"] {
 .impact-live-compact-zone .page-hero.impact-page-hero {
   margin-top: 0;
   padding: clamp(0.22rem, 0.8vw, 0.55rem) 0 clamp(0.1rem, 0.45vw, 0.28rem);
+  display: flex;
+  justify-content: center;
 }
 
 .impact-live-compact-zone .page-hero.impact-page-hero > .container.impact-page-hero-container {
@@ -8362,9 +8364,11 @@ nav[aria-label="Staff navigation"] {
   padding: clamp(0.9rem, 1.8vw, 1.25rem) clamp(0.55rem, 1.15vw, 0.95rem);
   display: grid;
   justify-items: center;
+  align-items: center;
   text-align: center;
-  width: min(100% - 0.2rem, 2200px);
-  max-width: 2200px;
+  width: min(100% - 0.2rem, 1320px);
+  max-width: 1320px;
+  margin-inline: auto;
 }
 
 .impact-live-compact-zone .page-hero.impact-page-hero > .container.impact-page-hero-container::before {
@@ -8372,21 +8376,32 @@ nav[aria-label="Staff navigation"] {
   display: none;
 }
 
-.impact-live-compact-zone .impact-page-hero-container > :is(.kicker, h1, p) {
-  margin: 0;
-  width: 100%;
-  max-width: min(72rem, 100%);
+.impact-live-compact-zone .impact-page-hero-container > .impact-page-hero-copy {
+  width: min(100%, 72rem);
+  display: grid;
+  justify-items: center;
+  gap: clamp(0.45rem, 0.9vw, 0.8rem);
   margin-inline: auto;
-  text-align: center;
 }
 
-.impact-live-compact-zone .impact-page-hero-container > p {
+.impact-live-compact-zone .impact-page-hero-copy > :is(.kicker, h1, p) {
+  margin: 0;
+  width: 100%;
+  max-width: min(68rem, 100%);
+  margin-inline: auto;
+  text-align: center;
+  justify-self: center;
+}
+
+.impact-live-compact-zone .impact-page-hero-copy > .kicker {
+  justify-content: center;
+}
+
+.impact-live-compact-zone .impact-page-hero-copy > p {
   line-height: 1.34;
-  max-width: none;
+  max-width: 64rem;
   color: #233343;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
 }
 
 .impact-live-compact-zone .section.impact-dashboard-section {
