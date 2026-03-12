@@ -4,8 +4,10 @@ import {
   addLearnerToSchool,
   addTeacherToSchool,
   authenticatePortalUser,
+  createPortalSession,
   createLessonEvaluation,
   getDb,
+  getPortalUserFromSession,
   getPortalUserByEmail,
   getGraduationSettings,
   getSchoolGraduationEligibility,
@@ -47,6 +49,22 @@ test("seeded super admin credentials authenticate successfully even after creden
   assert.ok(actor, "Expected seeded super admin credentials to authenticate.");
   assert.equal(actor.email, email);
   assert.equal(actor.isSuperAdmin, true);
+});
+
+test("portal session token remains valid even if the sqlite session row is unavailable", () => {
+  const email = process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
+  const password = process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079";
+  const actor = authenticatePortalUser(email, password);
+  assert.ok(actor, "Expected seeded super admin credentials to authenticate.");
+
+  const db = getDb();
+  const session = createPortalSession(actor.id);
+  db.prepare("DELETE FROM portal_sessions WHERE token = @token").run({ token: session.token });
+
+  const recoveredActor = getPortalUserFromSession(session.token);
+  assert.ok(recoveredActor, "Expected stateless portal session fallback to authenticate.");
+  assert.equal(recoveredActor.email, email);
+  assert.equal(recoveredActor.isSuperAdmin, true);
 });
 
 test("school graduation eligibility is computed from live records and confirmation is audited", () => {

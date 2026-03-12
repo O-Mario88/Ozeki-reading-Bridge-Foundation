@@ -206,6 +206,7 @@ import {
 import { getRuntimeDataDir, getRuntimeDbFilePath } from "@/lib/runtime-paths";
 
 const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-salt";
+const PORTAL_SESSION_SECRET = process.env.PORTAL_SESSION_SECRET ?? PASSWORD_SALT;
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const ASSESSMENT_READING_RULE_VERSION = "UG-RLv1";
 const SCHOOL_SUPPORT_RULE_VERSION = "UG-Support-v1";
@@ -241,6 +242,69 @@ function hashPassword(password: string) {
     .createHash("sha256")
     .update(`${PASSWORD_SALT}:${password}`)
     .digest("hex");
+}
+
+type PortalSessionTokenPayload = {
+  v: 1;
+  uid: number;
+  exp: number;
+  fp: string;
+};
+
+function getPortalSessionFingerprint(passwordHash: string) {
+  return crypto
+    .createHmac("sha256", PORTAL_SESSION_SECRET)
+    .update(passwordHash)
+    .digest("hex")
+    .slice(0, 24);
+}
+
+function signPortalSessionPayload(encodedPayload: string) {
+  return crypto
+    .createHmac("sha256", PORTAL_SESSION_SECRET)
+    .update(encodedPayload)
+    .digest("base64url");
+}
+
+function createPortalSessionToken(payload: PortalSessionTokenPayload) {
+  const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const signature = signPortalSessionPayload(encodedPayload);
+  return `${encodedPayload}.${signature}`;
+}
+
+function parsePortalSessionToken(token: string): PortalSessionTokenPayload | null {
+  const [encodedPayload, signature] = token.split(".");
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = signPortalSessionPayload(encodedPayload);
+  const signatureBuffer = Buffer.from(signature, "utf8");
+  const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+  if (
+    signatureBuffer.length !== expectedBuffer.length
+    || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+  ) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as Partial<PortalSessionTokenPayload>;
+    if (
+      payload.v !== 1
+      || !Number.isInteger(payload.uid)
+      || !Number.isInteger(payload.exp)
+      || typeof payload.fp !== "string"
+      || payload.fp.length < 8
+    ) {
+      return null;
+    }
+    return payload as PortalSessionTokenPayload;
+  } catch {
+    return null;
+  }
 }
 
 function hasColumn(db: Database.Database, table: string, column: string) {
@@ -5351,6 +5415,44 @@ function parsePortalUserRow(row: {
   };
 }
 
+function getPortalUserAuthRowById(db: Database.Database, userId: number) {
+  return db
+    .prepare(
+      `
+      SELECT
+        id,
+        full_name AS fullName,
+        email,
+        phone,
+        role,
+        geography_scope AS geographyScope,
+        is_supervisor AS isSupervisor,
+        is_me AS isME,
+        is_admin AS isAdmin,
+        is_superadmin AS isSuperAdmin,
+        password_hash AS passwordHash
+      FROM portal_users
+      WHERE id = @userId
+      LIMIT 1
+    `,
+    )
+    .get({ userId }) as
+    | {
+      id: number;
+      fullName: string;
+      email: string;
+      phone: string | null;
+      role: PortalUserRole;
+      geographyScope: string | null;
+      isSupervisor: number;
+      isME: number;
+      isAdmin: number;
+      isSuperAdmin: number;
+      passwordHash: string;
+    }
+    | undefined;
+}
+
 export function getPortalUserByEmail(email: string): PortalUser | null {
   const normalized = email.trim().toLowerCase();
   if (!normalized) {
@@ -5805,11 +5907,23 @@ export function authenticatePortalUser(identifier: string, password: string): Po
 }
 
 export function createPortalSession(userId: number) {
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
+  const db = getDb();
+  const user = getPortalUserAuthRowById(db, userId);
+  if (!user) {
+    throw new Error("Cannot create portal session for unknown user.");
+  }
 
-  getDb()
-    .prepare(
+  const expiresAtDate = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
+  const expiresAt = expiresAtDate.toISOString();
+  const token = createPortalSessionToken({
+    v: 1,
+    uid: userId,
+    exp: Math.floor(expiresAtDate.getTime() / 1000),
+    fp: getPortalSessionFingerprint(user.passwordHash),
+  });
+
+  try {
+    db.prepare(
       `
       INSERT INTO portal_sessions (
         user_id,
@@ -5821,8 +5935,11 @@ export function createPortalSession(userId: number) {
         @expiresAt
       )
     `,
-    )
-    .run({ userId, token, expiresAt });
+    ).run({ userId, token, expiresAt });
+  } catch {
+    // Stateless session token remains valid even if the local SQLite session table
+    // cannot be written in the current runtime.
+  }
 
   return {
     token,
@@ -5834,7 +5951,11 @@ export function createPortalSession(userId: number) {
 export function getPortalUserFromSession(token: string): PortalUser | null {
   const db = getDb();
 
-  db.prepare("DELETE FROM portal_sessions WHERE datetime(expires_at) <= datetime('now')").run();
+  try {
+    db.prepare("DELETE FROM portal_sessions WHERE datetime(expires_at) <= datetime('now')").run();
+  } catch {
+    // Read-only runtimes can still authenticate stateless sessions below.
+  }
 
   const row = db
     .prepare(
@@ -5872,11 +5993,25 @@ export function getPortalUserFromSession(token: string): PortalUser | null {
     }
     | undefined;
 
-  if (!row) {
+  if (row) {
+    return parsePortalUserRow(row);
+  }
+
+  const payload = parsePortalSessionToken(token);
+  if (!payload || payload.exp <= Math.floor(Date.now() / 1000)) {
     return null;
   }
 
-  return parsePortalUserRow(row);
+  const userRow = getPortalUserAuthRowById(db, payload.uid);
+  if (!userRow) {
+    return null;
+  }
+
+  if (getPortalSessionFingerprint(userRow.passwordHash) !== payload.fp) {
+    return null;
+  }
+
+  return parsePortalUserRow(userRow);
 }
 
 export function deletePortalSession(token: string) {
