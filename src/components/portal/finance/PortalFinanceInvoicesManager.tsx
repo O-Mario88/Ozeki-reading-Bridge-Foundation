@@ -275,7 +275,12 @@ export function PortalFinanceInvoicesManager({
       setInvoices((prev) =>
         prev.map((item) => (item.id === invoiceId ? (data.invoice as FinanceInvoiceRecord) : item)),
       );
-      setStatusMessage(`Invoice email ${data.email?.status || "processed"}.`);
+      const emailStatus = data.email?.status || "processed";
+      setStatusMessage(
+        data.email?.providerMessage
+          ? `Invoice email ${emailStatus}: ${data.email.providerMessage}`
+          : `Invoice email ${emailStatus}.`,
+      );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Failed to send invoice.");
     } finally {
@@ -325,7 +330,12 @@ export function PortalFinanceInvoicesManager({
           );
         }
       }
-      setStatusMessage(`Receipt email ${data.email?.status || "processed"}.`);
+      const emailStatus = data.email?.status || "processed";
+      setStatusMessage(
+        data.email?.providerMessage
+          ? `Receipt email ${emailStatus}: ${data.email.providerMessage}`
+          : `Receipt email ${emailStatus}.`,
+      );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Failed to send receipt.");
     } finally {

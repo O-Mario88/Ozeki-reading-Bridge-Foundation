@@ -9,6 +9,7 @@ import {
   createFinanceReceipt,
   generateFinanceMonthlyStatement,
   issueFinanceReceipt,
+  sendFinanceInvoice,
   listFinanceLedgerTransactions,
   postFinanceExpense,
   recordFinancePayment,
@@ -87,6 +88,38 @@ test("issuing receipt auto-creates posted money_in ledger entry", async () => {
   assert.ok(linked, "Expected posted money_in ledger entry for issued receipt.");
   assert.equal(linked?.amount, 500000);
   assert.equal(linked?.category, "Donation");
+});
+
+test("invoice email is not marked as sent when SMTP is unavailable", async () => {
+  const actor = getTestActor();
+  const stamp = Date.now();
+  const contact = createFinanceContact(
+    {
+      name: `Invoice Send Contact ${stamp}`,
+      emails: [`invoice-send-${stamp}@example.org`],
+      contactType: "partner",
+    },
+    actor,
+  );
+
+  const invoice = createFinanceInvoice(
+    {
+      contactId: contact.id,
+      category: "Contracts",
+      issueDate: "2026-03-05",
+      dueDate: "2026-03-31",
+      currency: "UGX",
+      lineItems: [{ description: "Implementation support", qty: 1, unitPrice: 125000 }],
+      notes: "SMTP unavailable test invoice",
+    },
+    actor,
+  );
+
+  const result = await sendFinanceInvoice(invoice.id, actor);
+  assert.equal(result.email.status, "skipped");
+  assert.equal(result.invoice.status, "draft");
+  assert.equal(result.invoice.emailedAt, undefined);
+  assert.equal(result.invoice.lastSentTo, undefined);
 });
 
 test("expense posting requires evidence and creates money_out ledger", async () => {

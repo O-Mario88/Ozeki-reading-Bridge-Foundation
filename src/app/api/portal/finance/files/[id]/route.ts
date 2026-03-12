@@ -1,7 +1,6 @@
-import fs from "node:fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
-import { getFinanceFileById, verifyFinanceFileSignature } from "@/lib/finance-db";
+import { loadFinanceFileForDownload, verifyFinanceFileSignature } from "@/lib/finance-db";
 
 export const runtime = "nodejs";
 
@@ -28,9 +27,8 @@ export async function GET(
   }
 
   try {
-    const file = getFinanceFileById(fileId);
-    const bytes = await fs.readFile(file.storedPath);
-    return new NextResponse(bytes, {
+    const file = await loadFinanceFileForDownload(fileId);
+    return new NextResponse(file.bytes, {
       headers: {
         "Content-Type": file.mimeType || "application/octet-stream",
         "Content-Disposition": `inline; filename="${file.fileName}"`,
@@ -44,4 +42,3 @@ export async function GET(
     );
   }
 }
-

@@ -1958,12 +1958,49 @@ export function getTrainingReportArtifactByCode(reportCode: string) {
 
 export async function readTrainingReportPdf(reportCode: string) {
   const artifact = getTrainingReportArtifactByCode(reportCode);
-  if (!artifact?.pdfStoredPath) {
+  if (!artifact) {
     return null;
   }
-  const bytes = await fs.readFile(artifact.pdfStoredPath);
+
+  if (artifact.pdfStoredPath) {
+    try {
+      const bytes = await fs.readFile(artifact.pdfStoredPath);
+      return {
+        artifact,
+        bytes,
+      };
+    } catch {
+      // Fall through to regenerate from stored facts/narrative below.
+    }
+  }
+
+  const regeneratedBytes = await generatePdfBytes(
+    artifact.facts,
+    artifact.narrative,
+    reportCode,
+    [],
+  );
+  const regeneratedPath = await savePdfToDisk(reportCode, regeneratedBytes);
+  const updatedAt = new Date().toISOString();
+  getDb().prepare(
+    `
+      UPDATE training_report_artifacts
+      SET pdf_stored_path = @pdfStoredPath,
+          updated_at = @updatedAt
+      WHERE report_code = @reportCode
+    `,
+  ).run({
+    reportCode,
+    pdfStoredPath: regeneratedPath,
+    updatedAt,
+  });
+
   return {
-    artifact,
-    bytes,
+    artifact: {
+      ...artifact,
+      pdfStoredPath: regeneratedPath,
+      updatedAt,
+    },
+    bytes: Buffer.from(regeneratedBytes),
   };
 }

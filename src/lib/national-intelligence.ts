@@ -3679,12 +3679,45 @@ export async function getNationalReportPdf(reportCode: string) {
   const report = listNationalReportPacks({ limit: 500 }).find(
     (item) => item.reportCode === reportCode,
   );
-  if (!report?.pdfPath) {
+  if (!report) {
     return null;
   }
-  const bytes = await fs.readFile(report.pdfPath);
+
+  if (report.pdfPath) {
+    try {
+      const bytes = await fs.readFile(report.pdfPath);
+      return {
+        bytes,
+        fileName: `${reportCode}.pdf`,
+      };
+    } catch {
+      // Fall through to regenerate from stored report data below.
+    }
+  }
+
+  const regeneratedBytes = await generateNationalReportPdf({
+    reportCode,
+    title: `${report.preset} — ${report.scopeType}:${report.scopeId}`,
+    periodStart: report.periodStart,
+    periodEnd: report.periodEnd,
+    narrative: report.narrative.narrativePass,
+  });
+  const regeneratedPath = await saveNationalReportPdf(reportCode, regeneratedBytes);
+  getDb().prepare(
+    `
+      UPDATE national_report_packs
+      SET pdf_stored_path = @pdfPath,
+          updated_at = @updatedAt
+      WHERE report_code = @reportCode
+    `,
+  ).run({
+    reportCode,
+    pdfPath: regeneratedPath,
+    updatedAt: new Date().toISOString(),
+  });
+
   return {
-    bytes,
+    bytes: Buffer.from(regeneratedBytes),
     fileName: `${reportCode}.pdf`,
   };
 }

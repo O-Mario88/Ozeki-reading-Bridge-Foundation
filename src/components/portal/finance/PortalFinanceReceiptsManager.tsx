@@ -135,7 +135,7 @@ export function PortalFinanceReceiptsManager({
       const result = await submitJsonWithOfflineQueue<{
         error?: string;
         receipt?: FinanceReceiptRecord;
-        email?: { status?: string };
+        email?: { status?: string; providerMessage?: string };
         issuedNow?: boolean;
       }>("/api/portal/finance/receipts", {
         payload,
@@ -161,7 +161,13 @@ export function PortalFinanceReceiptsManager({
       setOpen(false);
       setStatusMessage(
         data.issuedNow
-          ? (data.email ? `Receipt issued and emailed (${data.email.status || "processed"}).` : "Receipt issued and income recorded.")
+          ? (
+            data.email
+              ? data.email.providerMessage
+                ? `Receipt issued. Email ${data.email.status || "processed"}: ${data.email.providerMessage}`
+                : `Receipt issued and emailed (${data.email.status || "processed"}).`
+              : "Receipt issued and income recorded."
+          )
           : "Receipt draft created.",
       );
     } catch (error) {
@@ -205,7 +211,12 @@ export function PortalFinanceReceiptsManager({
       setReceipts((prev) =>
         prev.map((item) => (item.id === receiptId ? (data.receipt as FinanceReceiptRecord) : item)),
       );
-      setStatusMessage("Receipt issued.");
+      const emailStatus = data.email?.status;
+      setStatusMessage(
+        data.email?.providerMessage
+          ? `Receipt issued. Email ${emailStatus || "processed"}: ${data.email.providerMessage}`
+          : "Receipt issued.",
+      );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Failed to issue receipt.");
     } finally {
@@ -246,7 +257,12 @@ export function PortalFinanceReceiptsManager({
       setReceipts((prev) =>
         prev.map((item) => (item.id === receiptId ? (data.receipt as FinanceReceiptRecord) : item)),
       );
-      setStatusMessage(`Receipt email ${data.email?.status || "processed"}.`);
+      const emailStatus = data.email?.status || "processed";
+      setStatusMessage(
+        data.email?.providerMessage
+          ? `Receipt email ${emailStatus}: ${data.email.providerMessage}`
+          : `Receipt email ${emailStatus}.`,
+      );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Failed to send receipt.");
     } finally {

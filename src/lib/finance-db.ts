@@ -3045,7 +3045,7 @@ export async function sendFinanceInvoice(
     throw new Error("Invoice contact has no valid email address.");
   }
 
-  const pdf = await awaitInvoicePdf(db, invoice, contact.name, contact.emails, settings.paymentInstructions);
+  const pdf = await ensureInvoicePdfArtifact(db, row);
   const htmlBodyRaw = renderTemplate(settings.invoiceEmailTemplate, {
     contactName: contact.name,
     invoiceNumber: invoice.invoiceNumber,
@@ -3064,15 +3064,24 @@ export async function sendFinanceInvoice(
     subject,
     html: htmlBodyRaw,
     text: htmlBodyRaw.replace(/<br\s*\/?>/g, "\n"),
-    attachments: [{ filename: pdf.fileName, path: pdf.storedPath, contentType: "application/pdf" }],
+    attachments: [{ filename: pdf.pdf.fileName, path: pdf.pdf.storedPath, contentType: "application/pdf" }],
   });
 
   db.prepare(
     `
       UPDATE finance_invoices
-      SET status = CASE WHEN status = 'draft' THEN 'sent' ELSE status END,
-          emailed_at = @emailedAt,
-          last_sent_to = @lastSentTo,
+      SET status = CASE
+            WHEN @emailSent = 1 AND status = 'draft' THEN 'sent'
+            ELSE status
+          END,
+          emailed_at = CASE
+            WHEN @emailSent = 1 THEN @emailedAt
+            ELSE emailed_at
+          END,
+          last_sent_to = CASE
+            WHEN @emailSent = 1 THEN @lastSentTo
+            ELSE last_sent_to
+          END,
           pdf_stored_path = @pdfPath,
           pdf_file_id = @pdfFileId,
           updated_at = @updatedAt
@@ -3080,10 +3089,11 @@ export async function sendFinanceInvoice(
     `,
   ).run({
     invoiceId,
+    emailSent: result.status === "sent" ? 1 : 0,
     emailedAt: nowIso(),
     lastSentTo: to.join(", "),
-    pdfPath: pdf.storedPath,
-    pdfFileId: pdf.fileId,
+    pdfPath: pdf.pdf.storedPath,
+    pdfFileId: pdf.pdf.fileId,
     updatedAt: nowIso(),
   });
 
@@ -3110,27 +3120,38 @@ export async function sendFinanceInvoice(
   };
 }
 
-async function awaitInvoicePdf(
+async function ensureInvoicePdfArtifact(
   db: Database.Database,
-  invoice: FinanceInvoiceRecord,
-  contactName: string,
-  contactEmails: string[],
-  paymentInstructions: string,
+  invoiceRow: InvoiceRow,
 ) {
+  if (invoiceRow.pdfFileId && invoiceRow.pdfStoredPath) {
+    return {
+      row: invoiceRow,
+      pdf: {
+        fileId: invoiceRow.pdfFileId,
+        storedPath: invoiceRow.pdfStoredPath,
+        fileName: path.basename(invoiceRow.pdfStoredPath),
+      },
+    };
+  }
+
+  const settings = getFinanceSettingsRow(db);
+  const invoice = buildInvoiceRecord(db, invoiceRow);
+  const contact = getInvoiceContact(db, invoice.contactId);
   const pdf = await generateInvoicePdfFile({
     invoiceNumber: invoice.invoiceNumber,
     issueDate: invoice.issueDate,
     dueDate: invoice.dueDate,
     currency: invoice.currency,
     category: invoice.category,
-    contactName,
-    contactEmails,
+    contactName: contact.name,
+    contactEmails: contact.emails,
     lineItems: invoice.lineItems,
     subtotal: invoice.subtotal,
     tax: invoice.tax || 0,
     total: invoice.total,
     notes: invoice.notes,
-    paymentInstructions,
+    paymentInstructions: settings.paymentInstructions,
   });
   const file = createFinanceFileRecordInternal(db, {
     sourceType: "invoice_pdf",
@@ -3141,7 +3162,35 @@ async function awaitInvoicePdf(
     sizeBytes: 0,
     uploadedBy: invoice.createdBy,
   });
-  return { ...pdf, fileId: file.id };
+
+  db.prepare(
+    `
+      UPDATE finance_invoices
+      SET pdf_stored_path = @pdfPath,
+          pdf_file_id = @pdfFileId,
+          updated_at = @updatedAt
+      WHERE id = @invoiceId
+    `,
+  ).run({
+    invoiceId: invoice.id,
+    pdfPath: pdf.storedPath,
+    pdfFileId: file.id,
+    updatedAt: nowIso(),
+  });
+
+  const refreshed = getInvoiceRowById(db, invoice.id);
+  if (!refreshed) {
+    throw new Error("Failed to reload invoice PDF.");
+  }
+
+  return {
+    row: refreshed,
+    pdf: {
+      fileId: file.id,
+      storedPath: pdf.storedPath,
+      fileName: pdf.fileName,
+    },
+  };
 }
 
 export async function recordFinancePayment(
@@ -3846,14 +3895,21 @@ export async function sendFinanceReceipt(
   db.prepare(
     `
       UPDATE finance_receipts
-      SET emailed_at = @emailedAt,
-          last_sent_to = @lastSentTo,
+      SET emailed_at = CASE
+            WHEN @emailSent = 1 THEN @emailedAt
+            ELSE emailed_at
+          END,
+          last_sent_to = CASE
+            WHEN @emailSent = 1 THEN @lastSentTo
+            ELSE last_sent_to
+          END,
           pdf_stored_path = @pdfPath,
           pdf_file_id = @pdfFileId
       WHERE id = @receiptId
     `,
   ).run({
     receiptId,
+    emailSent: result.status === "sent" ? 1 : 0,
     emailedAt: nowIso(),
     lastSentTo: to.join(", "),
     pdfPath: artifact.pdf.storedPath,
@@ -3876,6 +3932,47 @@ export async function sendFinanceReceipt(
     throw new Error("Failed to reload receipt.");
   }
   return { receipt: buildReceiptRecord(refreshed), email: result };
+}
+
+export async function loadFinanceFileForDownload(fileId: number) {
+  const db = getDb();
+  const file = getFinanceFileById(fileId);
+
+  try {
+    return {
+      fileName: file.fileName,
+      mimeType: file.mimeType || "application/octet-stream",
+      bytes: await fs.readFile(file.storedPath),
+    };
+  } catch (error) {
+    if (file.sourceType === "invoice_pdf") {
+      const invoiceRow = getInvoiceRowById(db, file.sourceId);
+      if (!invoiceRow) {
+        throw error;
+      }
+      const rebuilt = await ensureInvoicePdfArtifact(db, invoiceRow);
+      return {
+        fileName: rebuilt.pdf.fileName,
+        mimeType: "application/pdf",
+        bytes: await fs.readFile(rebuilt.pdf.storedPath),
+      };
+    }
+
+    if (file.sourceType === "receipt_pdf") {
+      const receiptRow = getReceiptRowById(db, file.sourceId);
+      if (!receiptRow) {
+        throw error;
+      }
+      const rebuilt = await ensureReceiptPdfArtifact(db, receiptRow, receiptRow.createdBy);
+      return {
+        fileName: rebuilt.pdf.fileName,
+        mimeType: "application/pdf",
+        bytes: await fs.readFile(rebuilt.pdf.storedPath),
+      };
+    }
+
+    throw error;
+  }
 }
 
 export function deleteFinanceReceiptDraft(receiptId: number, reason: string, actor: FinanceActor) {
