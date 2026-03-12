@@ -3088,7 +3088,7 @@ function seedPortalUsers(db: Database.Database) {
       email: process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org",
       phone: process.env.PORTAL_SUPERADMIN_PHONE ?? "+256773397375",
       role: "Staff" as PortalUserRole,
-      password: process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Admin@16079",
+      password: process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079",
       isSupervisor: 0,
       isME: 0,
       isAdmin: 1,
@@ -3134,6 +3134,38 @@ function seedPortalUsers(db: Database.Database) {
       passwordHash: hashPassword(account.password),
     });
   });
+
+  // Keep the explicitly seeded privileged accounts in sync even on existing
+  // databases so login credentials do not drift after defaults/env change.
+  const syncPrivilegedUser = db.prepare(`
+    UPDATE portal_users
+    SET
+      full_name = @fullName,
+      role = @role,
+      password_hash = @passwordHash,
+      phone = @phone,
+      is_supervisor = @isSupervisor,
+      is_me = @isME,
+      is_admin = @isAdmin,
+      is_superadmin = @isSuperAdmin
+    WHERE lower(email) = @email
+  `);
+
+  accounts
+    .filter((account) => account.isAdmin === 1 || account.isSuperAdmin === 1)
+    .forEach((account) => {
+      syncPrivilegedUser.run({
+        fullName: account.fullName,
+        email: account.email,
+        role: account.role,
+        phone: account.phone,
+        isSupervisor: account.isSupervisor,
+        isME: account.isME,
+        isAdmin: account.isAdmin,
+        isSuperAdmin: account.isSuperAdmin,
+        passwordHash: hashPassword(account.password),
+      });
+    });
 
   const legacyAdminEmail = "admin@ozekireadingbridge.org";
   const seededSuperAdminEmail =

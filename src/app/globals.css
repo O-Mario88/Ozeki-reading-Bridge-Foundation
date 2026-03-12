@@ -9230,16 +9230,15 @@ nav[aria-label="Staff navigation"] {
   max-width: calc(100% - 1.2rem);
   max-height: calc(100% - 1rem);
   overflow-y: auto;
-  background:
-    linear-gradient(160deg, rgba(16, 24, 40, 0.98) 0%, rgba(14, 90, 117, 0.97) 54%, rgba(0, 107, 97, 0.96) 100%);
-  background-color: #101828;
-  border: 1px solid rgba(254, 139, 92, 0.36);
-  color: #f8fafc;
+  background: linear-gradient(160deg, rgba(0, 107, 97, 0.98) 0%, rgba(0, 122, 111, 0.97) 54%, rgba(0, 92, 82, 0.96) 100%);
+  background-color: #006b61;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 18px 42px rgba(16, 24, 40, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  box-shadow: 0 18px 42px rgba(0, 70, 63, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
   padding: 0.65rem 0.75rem;
   backdrop-filter: blur(12px);
-  font-family: var(--orbf-font-family);
+  font-family: Calibri, Carlito, "Segoe UI", sans-serif;
 
   /* Smooth animation */
   opacity: 0;
@@ -9278,14 +9277,15 @@ nav[aria-label="Staff navigation"] {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   opacity: 0.92;
-  color: rgba(248, 250, 252, 0.84);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .impact-map-floating-card-pinned {
   font-size: 0.58rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: rgba(254, 139, 92, 0.18);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   padding: 0.16rem 0.45rem;
   color: #ffffff;
@@ -9294,7 +9294,7 @@ nav[aria-label="Staff navigation"] {
 .impact-map-floating-card-partial,
 .impact-map-sheet-partial {
   margin: 0.35rem 0 0;
-  color: #fed7aa;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.66rem;
 }
 
@@ -9314,7 +9314,7 @@ nav[aria-label="Staff navigation"] {
   gap: 0.5rem;
   align-items: baseline;
   padding-bottom: 0.25rem;
-  border-bottom: 1px solid rgba(248, 250, 252, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .impact-map-floating-card-list li:last-child,
@@ -9327,14 +9327,14 @@ nav[aria-label="Staff navigation"] {
 .impact-map-sheet-list span {
   font-size: 0.64rem;
   opacity: 1;
-  color: rgba(248, 250, 252, 0.92);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .impact-map-floating-card-list span small {
   display: block;
   font-size: 0.56rem;
   opacity: 1;
-  color: rgba(226, 232, 240, 0.78);
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .impact-map-sheet-list span small {
@@ -9354,28 +9354,37 @@ nav[aria-label="Staff navigation"] {
 .impact-map-sheet-meta {
   font-size: 0.6rem;
   opacity: 1;
-  color: rgba(226, 232, 240, 0.86);
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .impact-map-floating-card-footer p {
   margin: 0.15rem 0;
-  color: rgba(226, 232, 240, 0.86);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.impact-map-floating-card .inline-download-link {
+  color: #ffffff;
+  font-family: inherit;
+}
+
+.impact-map-floating-card .inline-download-link::after {
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .impact-map-clear-btn {
   margin-top: 0.3rem;
-  border: 1px solid rgba(254, 139, 92, 0.42);
-  background: rgba(254, 139, 92, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   border-radius: 999px;
   padding: 0.24rem 0.6rem;
   font-size: 0.6rem;
   cursor: pointer;
-  font-family: var(--orbf-font-family);
+  font-family: inherit;
 }
 
 .impact-map-clear-btn:hover {
-  background: rgba(254, 139, 92, 0.24);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .impact-map-sheet-backdrop {

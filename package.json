@@ -16,7 +16,7 @@
     "build": "next build",
     "prestart": "npm run verify:native",
     "start": "npm run start:standalone",
-    "start:standalone": "node .next/standalone/server.js",
+    "start:standalone": "node scripts/start-standalone.mjs",
     "start:next": "next start",
     "lint": "eslint .",
     "deploy:check": "node scripts/deploy-readiness-check.mjs",

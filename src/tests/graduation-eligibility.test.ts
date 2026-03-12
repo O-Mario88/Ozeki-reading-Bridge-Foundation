@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   addLearnerToSchool,
   addTeacherToSchool,
+  authenticatePortalUser,
   createLessonEvaluation,
   getDb,
   getPortalUserByEmail,
@@ -27,6 +28,17 @@ function toPortalActor(): PortalUser {
   assert.ok(actor, "Missing seeded super admin/admin user for graduation test.");
   return actor as PortalUser;
 }
+
+test("seeded super admin credentials authenticate successfully", () => {
+  getDb();
+  const email = process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
+  const password = process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079";
+  const actor = authenticatePortalUser(email, password);
+
+  assert.ok(actor, "Expected seeded super admin credentials to authenticate.");
+  assert.equal(actor.email, email);
+  assert.equal(actor.isSuperAdmin, true);
+});
 
 test("school graduation eligibility is computed from live records and confirmation is audited", () => {
   const db = getDb();
