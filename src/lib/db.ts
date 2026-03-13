@@ -12115,6 +12115,8 @@ async function checkPortalDuplicatePostgres(
 function syncPortalRecordShadowSqlite(record: PortalRecord, user: PortalUser) {
   const db = getDb();
   const payload = JSON.parse(JSON.stringify(record.payload ?? {})) as Record<string, unknown>;
+  const normalizedModule =
+    record.module === "story_activity" ? "story" : record.module;
 
   db.transaction(() => {
     db.prepare(
@@ -12189,7 +12191,7 @@ function syncPortalRecordShadowSqlite(record: PortalRecord, user: PortalUser) {
     ).run({
       id: record.id,
       recordCode: record.recordCode,
-      module: record.module === "story_activity" ? "story" : record.module,
+      module: normalizedModule,
       date: record.date,
       district: record.district,
       schoolId: record.schoolId,
@@ -12210,26 +12212,26 @@ function syncPortalRecordShadowSqlite(record: PortalRecord, user: PortalUser) {
       deleteReason: record.deleteReason ?? null,
     });
 
-    clearPortalRecordLinkages(db, record.id);
-    if (record.schoolId && record.schoolId > 0 && !record.deletedAt) {
-      syncPortalRecordLinkages(db, {
-        recordId: record.id,
-        module: record.module,
-        payload,
-        schoolId: record.schoolId,
-        date: record.date,
-        programType: record.programType,
-        followUpType: record.followUpType,
+      clearPortalRecordLinkages(db, record.id);
+      if (record.schoolId && record.schoolId > 0 && !record.deletedAt) {
+        syncPortalRecordLinkages(db, {
+          recordId: record.id,
+          module: normalizedModule,
+          payload,
+          schoolId: record.schoolId,
+          date: record.date,
+          programType: record.programType,
+          followUpType: record.followUpType,
         followUpOwnerUserId: record.followUpOwnerUserId,
         userId: user.id,
       });
-      syncPortalRecordInsights(db, {
-        recordId: record.id,
-        module: record.module,
-        payload,
-        schoolId: record.schoolId,
-        userId: user.id,
-        status: record.status,
+        syncPortalRecordInsights(db, {
+          recordId: record.id,
+          module: normalizedModule,
+          payload,
+          schoolId: record.schoolId,
+          userId: user.id,
+          status: record.status,
       });
     }
   })();
@@ -13004,6 +13006,90 @@ async function mirrorPortalRecordToPostgres(recordId: number) {
         )
         .all({ assessmentSessionId }) as Array<Record<string, unknown>>)
       : [];
+  const trainingFeedbackRows =
+    recordModule === "training"
+      ? (db
+        .prepare(
+          `SELECT * FROM training_feedback_entries WHERE training_record_id = @recordId ORDER BY id ASC`,
+        )
+        .all({ recordId }) as Array<Record<string, unknown>>)
+      : [];
+  const portalTestimonialRows =
+    recordModule === "training"
+      ? (db
+        .prepare(
+          `
+            SELECT *
+            FROM portal_testimonials
+            WHERE source_training_record_id = @recordId
+            ORDER BY id ASC
+          `,
+        )
+        .all({ recordId }) as Array<Record<string, unknown>>)
+      : [];
+  const storyActivityRow =
+    recordModule === "story"
+      ? (db
+        .prepare(`SELECT * FROM story_activities WHERE portal_record_id = @recordId LIMIT 1`)
+        .get({ recordId }) as Record<string, unknown> | undefined)
+      : undefined;
+  const storyActivityId =
+    storyActivityRow?.id === null || storyActivityRow?.id === undefined
+      ? null
+      : Number(storyActivityRow.id);
+  const storyActivityParticipantRows =
+    storyActivityId && recordModule === "story"
+      ? (db
+        .prepare(
+          `SELECT * FROM story_activity_participants WHERE story_activity_id = @storyActivityId ORDER BY id ASC`,
+        )
+        .all({ storyActivityId }) as Array<Record<string, unknown>>)
+      : [];
+  const storyActivityLearnerRows =
+    storyActivityId && recordModule === "story"
+      ? (db
+        .prepare(
+          `SELECT * FROM story_activity_learners WHERE story_activity_id = @storyActivityId ORDER BY id ASC`,
+        )
+        .all({ storyActivityId }) as Array<Record<string, unknown>>)
+      : [];
+  const insightActivityType =
+    recordModule === "training" ||
+    recordModule === "visit" ||
+    recordModule === "assessment" ||
+    recordModule === "story"
+      ? mapModuleToInsightActivityType(recordModule)
+      : null;
+  const activityInsightRows =
+    insightActivityType
+      ? (db
+        .prepare(
+          `
+            SELECT *
+            FROM activity_insights
+            WHERE activity_type = @activityType
+              AND activity_id = @recordId
+            ORDER BY insights_id ASC
+          `,
+        )
+        .all({ activityType: insightActivityType, recordId }) as Array<Record<string, unknown>>)
+      : [];
+  const activityInsightIds = activityInsightRows
+    .map((row) => Number(row.insights_id ?? 0))
+    .filter((value) => Number.isInteger(value) && value > 0);
+  const activityRecommendationRows =
+    activityInsightIds.length > 0
+      ? (db
+        .prepare(
+          `
+            SELECT *
+            FROM activity_recommendations
+            WHERE insights_id IN (${activityInsightIds.map(() => "?").join(", ")})
+            ORDER BY rec_link_id ASC
+          `,
+        )
+        .all(...activityInsightIds) as Array<Record<string, unknown>>)
+      : [];
   const schoolSupportRows =
     schoolId && recordModule === "assessment"
       ? (db
@@ -13023,6 +13109,22 @@ async function mirrorPortalRecordToPostgres(recordId: number) {
           "portal_record_id",
           recordId,
           trainingAttendanceRows,
+          client,
+        );
+        await replaceSqliteRowsInPostgres(
+          "training_feedback_entries",
+          "id",
+          "training_record_id",
+          recordId,
+          trainingFeedbackRows,
+          client,
+        );
+        await replaceSqliteRowsInPostgres(
+          "portal_testimonials",
+          "id",
+          "source_training_record_id",
+          recordId,
+          portalTestimonialRows,
           client,
         );
       }
@@ -13102,6 +13204,60 @@ async function mirrorPortalRecordToPostgres(recordId: number) {
         } else {
           await deletePostgresRowsByColumn("assessment_sessions", "portal_record_id", recordId, client);
           await deletePostgresRowsByColumn("assessment_records", "source_portal_record_id", recordId, client);
+        }
+      }
+
+      if (recordModule === "story") {
+        if (storyActivityRow) {
+          await deletePostgresRowsByColumn("story_activities", "portal_record_id", recordId, client);
+          await upsertSqliteRowToPostgres("story_activities", "id", storyActivityRow, client);
+          await replaceSqliteRowsInPostgres(
+            "story_activity_participants",
+            "id",
+            "story_activity_id",
+            storyActivityId,
+            storyActivityParticipantRows,
+            client,
+          );
+          await replaceSqliteRowsInPostgres(
+            "story_activity_learners",
+            "id",
+            "story_activity_id",
+            storyActivityId,
+            storyActivityLearnerRows,
+            client,
+          );
+        } else {
+          await deletePostgresRowsByColumn("story_activities", "portal_record_id", recordId, client);
+        }
+      }
+
+      if (insightActivityType) {
+        await client.query(
+          `
+            DELETE FROM activity_recommendations
+            WHERE insights_id IN (
+              SELECT insights_id
+              FROM activity_insights
+              WHERE activity_type = $1
+                AND activity_id = $2
+            )
+          `,
+          [insightActivityType, recordId],
+        );
+        await client.query(
+          `
+            DELETE FROM activity_insights
+            WHERE activity_type = $1
+              AND activity_id = $2
+          `,
+          [insightActivityType, recordId],
+        );
+        for (const row of activityInsightRows) {
+          await upsertSqliteRowToPostgres("activity_insights", "insights_id", row, client);
+        }
+        for (const row of activityRecommendationRows) {
+          await upsertSqliteRowToPostgres("activity_recommendations", "rec_link_id", row, client);
         }
       }
 
@@ -13885,6 +14041,348 @@ async function setVisitPortalRecordStatusPostgres(
   return record;
 }
 
+async function createGenericPortalRecordPostgres(
+  input: PortalRecordInput,
+  user: PortalUser,
+): Promise<PortalRecord> {
+  if (!input.schoolId || input.schoolId <= 0) {
+    throw new Error("School selection is required.");
+  }
+  const trainingStatus = String(
+    (input.payload as Record<string, unknown> | undefined)?.trainingStatus ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  const isTrainingScheduled = input.module === "training" && trainingStatus === "scheduled";
+  if (input.module === "training" && !isTrainingScheduled) {
+    if (!input.followUpDate?.trim()) {
+      throw new Error("Training follow-up date is required.");
+    }
+    if (!input.followUpType?.trim()) {
+      throw new Error("Training follow-up type is required.");
+    }
+    if (!Number.isInteger(input.followUpOwnerUserId) || Number(input.followUpOwnerUserId) <= 0) {
+      throw new Error("Training follow-up owner is required.");
+    }
+  }
+  assertStandardizedInsightsPayload(input);
+  assertSponsorshipPayload(input);
+  assertVisitImplementationPayload(input);
+
+  const school = await getSchoolDirectoryRecord(input.schoolId);
+  if (!school) {
+    throw new Error("Selected school account was not found.");
+  }
+  ensureSchoolHasPrimaryContact(school.id);
+
+  if (await checkPortalDuplicatePostgres(input.module, input.date, school.id, school.name)) {
+    throw new Error(
+      `Duplicate prevention: a ${input.module} entry already exists for this school and date.`,
+    );
+  }
+
+  const payloadJson = normalizePayload(input);
+  const recordId = await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const insertResult = await client.query<{ id: number }>(
+        `
+          INSERT INTO portal_records (
+            record_code,
+            module,
+            date,
+            district,
+            school_id,
+            school_name,
+            program_type,
+            status,
+            follow_up_date,
+            follow_up_type,
+            follow_up_owner_user_id,
+            payload_json,
+            created_by_user_id,
+            updated_by_user_id
+          ) VALUES (
+            $1,
+            $2,
+            $3::date,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9::date,
+            $10,
+            $11,
+            $12,
+            $13,
+            $13
+          )
+          RETURNING id
+        `,
+        [
+          `${recordCodePrefix[input.module]}-PENDING`,
+          input.module,
+          input.date,
+          school.district,
+          school.id,
+          school.name,
+          input.programType ?? null,
+          input.status,
+          input.followUpDate ?? null,
+          input.followUpType ?? null,
+          Number.isInteger(input.followUpOwnerUserId) && Number(input.followUpOwnerUserId) > 0
+            ? Number(input.followUpOwnerUserId)
+            : null,
+          payloadJson,
+          user.id,
+        ],
+      );
+      const createdId = Number(insertResult.rows[0]?.id ?? 0);
+      if (!createdId) {
+        throw new Error("Could not load newly created record.");
+      }
+
+      await client.query(`UPDATE portal_records SET record_code = $1 WHERE id = $2`, [
+        formatRecordCode(input.module, createdId),
+        createdId,
+      ]);
+      await client.query("COMMIT");
+      return createdId;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+
+  let record = await getPortalRecordByIdAsync(recordId, user);
+  if (!record) {
+    throw new Error("Could not load newly created record.");
+  }
+
+  syncPortalRecordShadowSqlite(record, user);
+  await mirrorPortalRecordToPostgres(recordId);
+  record = (await getPortalRecordByIdAsync(recordId, user)) ?? record;
+
+  logAuditEvent(
+    user.id,
+    user.fullName,
+    "create",
+    "portal_records",
+    record.id,
+    null,
+    JSON.stringify(input),
+    `Created ${input.module} record: ${record.recordCode} `,
+  );
+
+  if (input.module === "assessment" || input.module === "story" || input.module === "story_activity") {
+    refreshSchoolGraduationEligibilityCache(school.id);
+  }
+
+  return record;
+}
+
+async function updateGenericPortalRecordPostgres(
+  id: number,
+  input: PortalRecordInput,
+  user: PortalUser,
+): Promise<PortalRecord> {
+  if (!input.schoolId || input.schoolId <= 0) {
+    throw new Error("School selection is required.");
+  }
+  const trainingStatus = String(
+    (input.payload as Record<string, unknown> | undefined)?.trainingStatus ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  const isTrainingScheduled = input.module === "training" && trainingStatus === "scheduled";
+  if (input.module === "training" && !isTrainingScheduled) {
+    if (!input.followUpDate?.trim()) {
+      throw new Error("Training follow-up date is required.");
+    }
+    if (!input.followUpType?.trim()) {
+      throw new Error("Training follow-up type is required.");
+    }
+    if (!Number.isInteger(input.followUpOwnerUserId) || Number(input.followUpOwnerUserId) <= 0) {
+      throw new Error("Training follow-up owner is required.");
+    }
+  }
+  assertStandardizedInsightsPayload(input);
+  assertSponsorshipPayload(input);
+  assertVisitImplementationPayload(input);
+
+  const school = await getSchoolDirectoryRecord(input.schoolId);
+  if (!school) {
+    throw new Error("Selected school account was not found.");
+  }
+  ensureSchoolHasPrimaryContact(school.id);
+
+  const current = await getPortalRecordRowPostgres(id);
+  if (!current || current.deletedAt) {
+    throw new Error("Record not found.");
+  }
+
+  const canEditOwn = current.createdByUserId === user.id && current.status !== "Approved";
+  if (!(canEditOwn || canReviewRecords(user))) {
+    throw new Error("You do not have permission to edit this record.");
+  }
+
+  if (await checkPortalDuplicatePostgres(input.module, input.date, school.id, school.name, id)) {
+    throw new Error(
+      `Duplicate prevention: a ${input.module} entry already exists for this school and date.`,
+    );
+  }
+
+  const payloadJson = normalizePayload(input);
+
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await client.query(
+        `
+          UPDATE portal_records
+          SET
+            module = $1,
+            date = $2::date,
+            district = $3,
+            school_id = $4,
+            school_name = $5,
+            program_type = $6,
+            status = $7,
+            follow_up_date = $8::date,
+            follow_up_type = $9,
+            follow_up_owner_user_id = $10,
+            payload_json = $11,
+            updated_by_user_id = $12,
+            updated_at = NOW()
+          WHERE id = $13
+        `,
+        [
+          input.module,
+          input.date,
+          school.district,
+          school.id,
+          school.name,
+          input.programType ?? null,
+          input.status,
+          input.followUpDate ?? null,
+          input.followUpType ?? null,
+          Number.isInteger(input.followUpOwnerUserId) && Number(input.followUpOwnerUserId) > 0
+            ? Number(input.followUpOwnerUserId)
+            : null,
+          payloadJson,
+          user.id,
+          id,
+        ],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+
+  let record = await getPortalRecordByIdAsync(id, user);
+  if (!record) {
+    throw new Error("Could not load updated record.");
+  }
+
+  syncPortalRecordShadowSqlite(record, user);
+  await mirrorPortalRecordToPostgres(id);
+  record = (await getPortalRecordByIdAsync(id, user)) ?? record;
+
+  logAuditEvent(
+    user.id,
+    user.fullName,
+    "update",
+    "portal_records",
+    id,
+    JSON.stringify(current),
+    JSON.stringify(input),
+    `Updated ${input.module} record: ${id} `,
+  );
+
+  if (input.module === "assessment" || input.module === "story" || input.module === "story_activity") {
+    refreshSchoolGraduationEligibilityCache(school.id);
+    if (current.schoolId && Number(current.schoolId) !== school.id) {
+      refreshSchoolGraduationEligibilityCache(Number(current.schoolId));
+    }
+  }
+
+  return record;
+}
+
+async function setGenericPortalRecordStatusPostgres(
+  id: number,
+  status: PortalRecordStatus,
+  user: PortalUser,
+  reviewNote?: string,
+): Promise<PortalRecord | null> {
+  if (!canReviewRecords(user)) {
+    throw new Error("Only supervisors, M&E, or admins can approve/return records.");
+  }
+
+  const current = await getPortalRecordRowPostgres(id);
+  if (!current || current.deletedAt) {
+    throw new Error("Record not found.");
+  }
+
+  const payload = safeParseObject(current.payloadJson);
+  if (status !== "Draft") {
+    assertStandardizedInsightsPayload({
+      module: current.module,
+      date: current.date,
+      district: current.district,
+      schoolId: current.schoolId,
+      schoolName: current.schoolName,
+      status,
+      payload: payload as PortalRecordPayload,
+    });
+  }
+
+  await queryPostgres(
+    `
+      UPDATE portal_records
+      SET
+        status = $1,
+        review_note = $2,
+        updated_by_user_id = $3,
+        updated_at = NOW()
+      WHERE id = $4
+    `,
+    [status, reviewNote?.trim() ? reviewNote : null, user.id, id],
+  );
+
+  let record = await getPortalRecordByIdAsync(id, user);
+  if (!record) {
+    throw new Error("Could not load updated record.");
+  }
+
+  syncPortalRecordShadowSqlite(record, user);
+  await mirrorPortalRecordToPostgres(id);
+  record = (await getPortalRecordByIdAsync(id, user)) ?? record;
+
+  logAuditEvent(
+    user.id,
+    user.fullName,
+    "set_status",
+    "portal_records",
+    id,
+    null,
+    JSON.stringify({ status, reviewNote }),
+    `Set status to ${status} for record ${id}`,
+  );
+
+  if (
+    current.schoolId &&
+    (current.module === "assessment" || current.module === "story" || current.module === "story_activity")
+  ) {
+    refreshSchoolGraduationEligibilityCache(Number(current.schoolId));
+  }
+
+  return record;
+}
+
 export async function createPortalRecordAsync(
   input: PortalRecordInput,
   user: PortalUser,
@@ -13895,9 +14393,7 @@ export async function createPortalRecordAsync(
   if (input.module === "visit") {
     return await createVisitPortalRecordPostgres(input, user);
   }
-  const record = createPortalRecord(input, user);
-  await mirrorPortalRecordToPostgres(record.id);
-  return (await getPortalRecordByIdAsync(record.id, user)) ?? record;
+  return await createGenericPortalRecordPostgres(input, user);
 }
 
 export async function updatePortalRecordAsync(
@@ -13911,9 +14407,7 @@ export async function updatePortalRecordAsync(
   if (input.module === "visit") {
     return await updateVisitPortalRecordPostgres(id, input, user);
   }
-  const record = updatePortalRecord(id, input, user);
-  await mirrorPortalRecordToPostgres(id);
-  return (await getPortalRecordByIdAsync(id, user)) ?? record;
+  return await updateGenericPortalRecordPostgres(id, input, user);
 }
 
 export async function setPortalRecordStatusAsync(
@@ -13929,12 +14423,7 @@ export async function setPortalRecordStatusAsync(
   if (current?.module === "visit") {
     return await setVisitPortalRecordStatusPostgres(id, status, user, reviewNote);
   }
-  const record = setPortalRecordStatus(id, status, user, reviewNote);
-  if (!record) {
-    return record;
-  }
-  await mirrorPortalRecordToPostgres(id);
-  return await getPortalRecordByIdAsync(id, user);
+  return await setGenericPortalRecordStatusPostgres(id, status, user, reviewNote);
 }
 
 function getWeekBounds() {

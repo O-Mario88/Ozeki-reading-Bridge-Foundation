@@ -19,6 +19,12 @@ const TABLES = [
   "school_support_status_snapshots",
   "teacher_support_status_snapshots",
   "assessment_item_responses",
+  "training_feedback_entries",
+  "portal_testimonials",
+  "story_activity_participants",
+  "story_activity_learners",
+  "activity_insights",
+  "activity_recommendations",
 ] as const;
 
 function getSchemaPaths() {

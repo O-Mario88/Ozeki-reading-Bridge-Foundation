@@ -33,17 +33,17 @@ function getSuperAdminActor(): PortalUser {
     )
     .get() as
     | {
-      id: number;
-      fullName: string;
-      email: string;
-      phone: string | null;
-      role: PortalUser["role"];
-      geographyScope: string | null;
-      isSupervisor: number;
-      isME: number;
-      isAdmin: number;
-      isSuperAdmin: number;
-    }
+        id: number;
+        fullName: string;
+        email: string;
+        phone: string | null;
+        role: PortalUser["role"];
+        geographyScope: string | null;
+        isSupervisor: number;
+        isME: number;
+        isAdmin: number;
+        isSuperAdmin: number;
+      }
     | undefined;
 
   assert.ok(row, "Expected a superadmin actor.");
@@ -62,7 +62,7 @@ function getSuperAdminActor(): PortalUser {
 }
 
 async function findAvailableRecordDate(
-  module: "visit",
+  module: "training",
   schoolId: number,
   baseDate: string,
 ) {
@@ -81,15 +81,15 @@ async function findAvailableRecordDate(
     if (Number(existing.rows[0]?.c ?? 0) === 0) {
       return candidate;
     }
-    candidate = new Date(`${candidate}T00:00:00.000Z`);
-    candidate.setUTCDate(candidate.getUTCDate() + 1);
-    candidate = candidate.toISOString().slice(0, 10);
+    const nextDate = new Date(`${candidate}T00:00:00.000Z`);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    candidate = nextDate.toISOString().slice(0, 10);
   }
   throw new Error(`Could not find an available date for ${module}.`);
 }
 
 test(
-  "visit portal records write directly to postgres when configured",
+  "training portal records write through postgres-first path when configured",
   { skip: isPostgresConfigured() ? false : "DATABASE_URL is not configured." },
   async (t) => {
     try {
@@ -118,51 +118,36 @@ test(
       )
       .get() as
       | {
-        schoolId: number;
-        schoolName: string;
-        district: string;
-        contactId: number;
-      }
+          schoolId: number;
+          schoolName: string;
+          district: string;
+          contactId: number;
+        }
       | undefined;
     assert.ok(seed, "Expected a seeded school contact.");
 
     const stamp = Date.now();
-    const baseDate = `2027-12-${String((stamp % 28) + 1).padStart(2, "0")}`;
-    const date = await findAvailableRecordDate("visit", seed.schoolId, baseDate);
+    const baseDate = `2027-11-${String((stamp % 28) + 1).padStart(2, "0")}`;
+    const date = await findAvailableRecordDate("training", seed.schoolId, baseDate);
     const basePayload = {
+      trainingStatus: "scheduled",
       sponsorshipType: "Partner-funded",
-      sponsoredBy: "Portal visit postgres test",
-      implementationStatus: "not_started",
-      demoClass: "P3",
-      demoFocus: "New sound routines",
-      demoMinutes: 40,
-      demoTeachersPresentContactIds: [seed.contactId],
-      demoTakeawaysText: `Demo takeaways ${stamp}`,
-      implementationStartDate: "2028-01-08",
-      dailyReadingTimeMinutes: 30,
-      classesToStartFirst: ["P3"],
-      implementationResponsibleContactId: seed.contactId,
-      supportNeededFromOzeki: ["Coaching follow-up"],
-      leadershipAttendeesContactIds: [seed.contactId],
-      leadershipSummary: `Leadership summary ${stamp}`,
-      leadershipAgreements: `Leadership agreements ${stamp}`,
-      leadershipRisks: `Leadership risks ${stamp}`,
-      leadershipNextActionsJson: JSON.stringify([
+      sponsoredBy: "Portal training postgres test",
+      participants: [
         {
-          action: `Launch reading block ${stamp}`,
-          ownerContactId: seed.contactId,
-          dueDate: "2028-01-10",
+          contactId: seed.contactId,
+          participantName: `Teacher ${stamp}`,
+          role: "Classroom teacher",
         },
-      ]),
-      leadershipNextVisitDate: "2028-01-20",
-      insightsKeyFindings: `Visit insight ${stamp}`,
-      insightsConclusionsNextSteps: `Visit next step ${stamp}`,
+      ],
+      insightsKeyFindings: `Training insight ${stamp}`,
+      insightsConclusionsNextSteps: `Training next step ${stamp}`,
       insightsRecommendationsRecIds: ["REC-01"],
     };
 
     const created = await createPortalRecordAsync(
       {
-        module: "visit",
+        module: "training",
         date,
         district: seed.district,
         schoolId: seed.schoolId,
@@ -172,13 +157,13 @@ test(
       },
       actor,
     );
-    assert.ok(created.id > 0, "Expected a visit record id.");
-    assert.equal(created.module, "visit");
+    assert.ok(created.id > 0, "Expected a training record id.");
+    assert.equal(created.module, "training");
 
     const updated = await updatePortalRecordAsync(
       created.id,
       {
-        module: "visit",
+        module: "training",
         date,
         district: seed.district,
         schoolId: seed.schoolId,
@@ -186,9 +171,8 @@ test(
         status: "Submitted",
         payload: {
           ...basePayload,
-          leadershipSummary: `Updated leadership summary ${stamp}`,
-          insightsKeyFindings: `Updated visit insight ${stamp}`,
-          insightsConclusionsNextSteps: `Updated visit next step ${stamp}`,
+          insightsKeyFindings: `Updated training insight ${stamp}`,
+          insightsConclusionsNextSteps: `Updated training next step ${stamp}`,
           insightsRecommendationsRecIds: ["REC-01", "REC-02"],
         },
       },
@@ -200,15 +184,12 @@ test(
       created.id,
       "Approved",
       actor,
-      "postgres visit approved",
+      "postgres training approved",
     );
-    assert.ok(approved, "Expected an approved visit record.");
+    assert.ok(approved, "Expected an approved training record.");
     assert.equal(approved?.status, "Approved");
 
-    const pgRow = await queryPostgres<{
-      status: string | null;
-      reviewNote: string | null;
-    }>(
+    const recordRow = await queryPostgres<{ status: string | null; reviewNote: string | null }>(
       `
         SELECT
           status,
@@ -218,7 +199,17 @@ test(
       `,
       [created.id],
     );
-    assert.equal(pgRow.rows[0]?.status ?? null, "Approved");
-    assert.equal(pgRow.rows[0]?.reviewNote ?? null, "postgres visit approved");
+    assert.equal(recordRow.rows[0]?.status ?? null, "Approved");
+    assert.equal(recordRow.rows[0]?.reviewNote ?? null, "postgres training approved");
+
+    const attendanceRow = await queryPostgres<{ c: string }>(
+      `
+        SELECT COUNT(*)::text AS c
+        FROM portal_training_attendance
+        WHERE portal_record_id = $1
+      `,
+      [created.id],
+    );
+    assert.equal(Number(attendanceRow.rows[0]?.c ?? 0), 1);
   },
 );

@@ -95,6 +95,12 @@ const OPERATIONAL_TABLES = [
   "school_support_status_snapshots",
   "teacher_support_status_snapshots",
   "assessment_item_responses",
+  "training_feedback_entries",
+  "portal_testimonials",
+  "story_activity_participants",
+  "story_activity_learners",
+  "activity_insights",
+  "activity_recommendations",
 ] as const;
 
 const INTELLIGENCE_TABLES = [
@@ -114,6 +120,7 @@ const INTELLIGENCE_TABLES = [
 const VIEW_NAMES = [
   "impact_public_school_scope",
   "impact_public_teacher_support",
+  "school_insights_rollup",
   "teaching_quality_by_school_period",
   "story_participation_by_school_period",
   "teaching_learning_alignment_by_school_period",

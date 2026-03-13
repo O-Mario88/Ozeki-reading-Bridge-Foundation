@@ -33,17 +33,17 @@ function getSuperAdminActor(): PortalUser {
     )
     .get() as
     | {
-      id: number;
-      fullName: string;
-      email: string;
-      phone: string | null;
-      role: PortalUser["role"];
-      geographyScope: string | null;
-      isSupervisor: number;
-      isME: number;
-      isAdmin: number;
-      isSuperAdmin: number;
-    }
+        id: number;
+        fullName: string;
+        email: string;
+        phone: string | null;
+        role: PortalUser["role"];
+        geographyScope: string | null;
+        isSupervisor: number;
+        isME: number;
+        isAdmin: number;
+        isSuperAdmin: number;
+      }
     | undefined;
 
   assert.ok(row, "Expected a superadmin actor.");
@@ -62,7 +62,7 @@ function getSuperAdminActor(): PortalUser {
 }
 
 async function findAvailableRecordDate(
-  module: "visit",
+  module: "story",
   schoolId: number,
   baseDate: string,
 ) {
@@ -81,15 +81,15 @@ async function findAvailableRecordDate(
     if (Number(existing.rows[0]?.c ?? 0) === 0) {
       return candidate;
     }
-    candidate = new Date(`${candidate}T00:00:00.000Z`);
-    candidate.setUTCDate(candidate.getUTCDate() + 1);
-    candidate = candidate.toISOString().slice(0, 10);
+    const nextDate = new Date(`${candidate}T00:00:00.000Z`);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    candidate = nextDate.toISOString().slice(0, 10);
   }
   throw new Error(`Could not find an available date for ${module}.`);
 }
 
 test(
-  "visit portal records write directly to postgres when configured",
+  "story portal records write through postgres-first path when configured",
   { skip: isPostgresConfigured() ? false : "DATABASE_URL is not configured." },
   async (t) => {
     try {
@@ -109,60 +109,56 @@ test(
             sd.id AS schoolId,
             sd.name AS schoolName,
             sd.district AS district,
-            sc.contact_id AS contactId
+            sc.contact_id AS contactId,
+            sl.learner_id AS learnerId
           FROM schools_directory sd
           JOIN school_contacts sc ON sc.school_id = sd.id
-          ORDER BY sd.id ASC, sc.contact_id ASC
+          JOIN school_learners sl ON sl.school_id = sd.id
+          ORDER BY sd.id ASC, sc.contact_id ASC, sl.learner_id ASC
           LIMIT 1
         `,
       )
       .get() as
       | {
-        schoolId: number;
-        schoolName: string;
-        district: string;
-        contactId: number;
-      }
+          schoolId: number;
+          schoolName: string;
+          district: string;
+          contactId: number;
+          learnerId: number;
+        }
       | undefined;
-    assert.ok(seed, "Expected a seeded school contact.");
+    assert.ok(seed, "Expected a seeded school contact and learner.");
 
     const stamp = Date.now();
-    const baseDate = `2027-12-${String((stamp % 28) + 1).padStart(2, "0")}`;
-    const date = await findAvailableRecordDate("visit", seed.schoolId, baseDate);
+    const baseDate = `2027-10-${String((stamp % 28) + 1).padStart(2, "0")}`;
+    const date = await findAvailableRecordDate("story", seed.schoolId, baseDate);
     const basePayload = {
-      sponsorshipType: "Partner-funded",
-      sponsoredBy: "Portal visit postgres test",
-      implementationStatus: "not_started",
-      demoClass: "P3",
-      demoFocus: "New sound routines",
-      demoMinutes: 40,
-      demoTeachersPresentContactIds: [seed.contactId],
-      demoTakeawaysText: `Demo takeaways ${stamp}`,
-      implementationStartDate: "2028-01-08",
-      dailyReadingTimeMinutes: 30,
-      classesToStartFirst: ["P3"],
-      implementationResponsibleContactId: seed.contactId,
-      supportNeededFromOzeki: ["Coaching follow-up"],
-      leadershipAttendeesContactIds: [seed.contactId],
-      leadershipSummary: `Leadership summary ${stamp}`,
-      leadershipAgreements: `Leadership agreements ${stamp}`,
-      leadershipRisks: `Leadership risks ${stamp}`,
-      leadershipNextActionsJson: JSON.stringify([
+      sponsorshipType: "Community-funded",
+      sponsoredBy: "Portal story postgres test",
+      sessionType: "drafting",
+      learnersCount: 1,
+      draftsCount: 1,
+      revisionsCount: 0,
+      notes: `Story notes ${stamp}`,
+      storyParticipants: [
         {
-          action: `Launch reading block ${stamp}`,
-          ownerContactId: seed.contactId,
-          dueDate: "2028-01-10",
+          contactId: seed.contactId,
+          participantName: `Story guide ${stamp}`,
         },
-      ]),
-      leadershipNextVisitDate: "2028-01-20",
-      insightsKeyFindings: `Visit insight ${stamp}`,
-      insightsConclusionsNextSteps: `Visit next step ${stamp}`,
-      insightsRecommendationsRecIds: ["REC-01"],
+      ],
+      storyLearners: [
+        {
+          learnerId: seed.learnerId,
+        },
+      ],
+      insightsKeyFindings: `Story insight ${stamp}`,
+      insightsConclusionsNextSteps: `Story next step ${stamp}`,
+      insightsRecommendationsRecIds: ["REC-03"],
     };
 
     const created = await createPortalRecordAsync(
       {
-        module: "visit",
+        module: "story",
         date,
         district: seed.district,
         schoolId: seed.schoolId,
@@ -172,13 +168,13 @@ test(
       },
       actor,
     );
-    assert.ok(created.id > 0, "Expected a visit record id.");
-    assert.equal(created.module, "visit");
+    assert.ok(created.id > 0, "Expected a story record id.");
+    assert.equal(created.module, "story");
 
     const updated = await updatePortalRecordAsync(
       created.id,
       {
-        module: "visit",
+        module: "story",
         date,
         district: seed.district,
         schoolId: seed.schoolId,
@@ -186,10 +182,10 @@ test(
         status: "Submitted",
         payload: {
           ...basePayload,
-          leadershipSummary: `Updated leadership summary ${stamp}`,
-          insightsKeyFindings: `Updated visit insight ${stamp}`,
-          insightsConclusionsNextSteps: `Updated visit next step ${stamp}`,
-          insightsRecommendationsRecIds: ["REC-01", "REC-02"],
+          notes: `Updated story notes ${stamp}`,
+          insightsKeyFindings: `Updated story insight ${stamp}`,
+          insightsConclusionsNextSteps: `Updated story next step ${stamp}`,
+          insightsRecommendationsRecIds: ["REC-03", "REC-04"],
         },
       },
       actor,
@@ -200,25 +196,40 @@ test(
       created.id,
       "Approved",
       actor,
-      "postgres visit approved",
+      "postgres story approved",
     );
-    assert.ok(approved, "Expected an approved visit record.");
+    assert.ok(approved, "Expected an approved story record.");
     assert.equal(approved?.status, "Approved");
 
-    const pgRow = await queryPostgres<{
-      status: string | null;
-      reviewNote: string | null;
-    }>(
+    const storyActivityRow = await queryPostgres<{ storyActivityId: number | null }>(
       `
-        SELECT
-          status,
-          review_note AS "reviewNote"
-        FROM portal_records
-        WHERE id = $1
+        SELECT id AS "storyActivityId"
+        FROM story_activities
+        WHERE portal_record_id = $1
       `,
       [created.id],
     );
-    assert.equal(pgRow.rows[0]?.status ?? null, "Approved");
-    assert.equal(pgRow.rows[0]?.reviewNote ?? null, "postgres visit approved");
+    const storyActivityId = Number(storyActivityRow.rows[0]?.storyActivityId ?? 0);
+    assert.ok(storyActivityId > 0, "Expected a PostgreSQL story activity row.");
+
+    const participantRow = await queryPostgres<{ c: string }>(
+      `
+        SELECT COUNT(*)::text AS c
+        FROM story_activity_participants
+        WHERE story_activity_id = $1
+      `,
+      [storyActivityId],
+    );
+    assert.equal(Number(participantRow.rows[0]?.c ?? 0), 1);
+
+    const learnerRow = await queryPostgres<{ c: string }>(
+      `
+        SELECT COUNT(*)::text AS c
+        FROM story_activity_learners
+        WHERE story_activity_id = $1
+      `,
+      [storyActivityId],
+    );
+    assert.equal(Number(learnerRow.rows[0]?.c ?? 0), 1);
   },
 );
