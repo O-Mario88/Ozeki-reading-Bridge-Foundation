@@ -894,21 +894,7 @@ async function aiNarrativeFromFacts(factsPass: Record<string, unknown>) {
     ],
     text: {
       format: {
-        type: "json_schema",
-        name: "nlis_facts_normalized",
-        strict: true,
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            metrics: { type: "object", additionalProperties: true },
-            movement: { type: "object", additionalProperties: true },
-            priorities: { type: "array", items: { type: "object", additionalProperties: true } },
-            interventions: { type: "object", additionalProperties: true },
-            methodology: { type: "object", additionalProperties: true },
-          },
-          required: ["metrics", "movement", "priorities", "interventions", "methodology"],
-        },
+        type: "json_object",
       },
     },
   });

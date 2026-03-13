@@ -6318,6 +6318,29 @@ async function syncFinanceStatementLineToPostgres(statementLineId: number, clien
   );
 }
 
+async function syncFinanceMonthlyStatementBundleToPostgres(statementId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+  await upsertFinanceRowsInPostgres(
+    "finance_monthly_statements",
+    "id",
+    selectSqliteFinanceRows(`SELECT * FROM finance_monthly_statements WHERE id = @id`, { id: statementId }),
+    client,
+  );
+  await replaceScopedFinanceRowsInPostgres(
+    "finance_files",
+    "id",
+    "source_type = $1 AND source_id = $2",
+    ["statement_pdf", statementId],
+    selectSqliteFinanceRows(
+      `SELECT * FROM finance_files WHERE source_type = 'statement_pdf' AND source_id = @id`,
+      { id: statementId },
+    ),
+    client,
+  );
+}
+
 async function syncFinanceAuditExceptionToPostgres(exceptionId: number, client?: PoolClient) {
   if (!isPostgresConfigured()) {
     return;
@@ -6873,6 +6896,9 @@ export async function generateFinanceMonthlyStatement(
   });
 
   appendAudit(actor, "generate_statement", "finance_monthly_statements", statement.id, `Generated statement ${window.month} (${currency})`);
+  if (isPostgresConfigured()) {
+    await syncFinanceMonthlyStatementBundleToPostgres(statement.id);
+  }
   return {
     ...statement,
     pdfFileId: balanceFile.id,
