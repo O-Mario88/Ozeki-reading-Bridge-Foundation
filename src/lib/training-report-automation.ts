@@ -771,13 +771,14 @@ async function aiNarrative(facts: TrainingReportFacts): Promise<TrainingReportNa
   const allowedPlaceholders = Object.keys(placeholders);
   const model = process.env.OPENAI_REPORT_MODEL?.trim() || "gpt-5-mini";
   const systemPrompt = `
-You write professional education training reports.
+You write professional, donor-grade literacy training reports for Uganda education programs.
 Rules:
 1) Never invent numbers.
 2) Never write digits directly.
 3) When referencing metrics/dates/counts, use ONLY these placeholders:
 ${allowedPlaceholders.join(", ")}
 4) Use only provided facts and quote excerpts.
+5) Write with executive-quality clarity, implementation awareness, and concise professional tone.
 5) Return strict JSON with keys:
 summary, participation, whatWentWell, practiceChange, challengesAndRecommendations, followUpPlan, nextImprovements
 `;

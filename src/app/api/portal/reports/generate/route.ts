@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import OpenAI from "openai";
 import {
     logAuditEvent,
     getCostEffectivenessData,
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     }, recommendations);
 
     // Generate structured report (without external AI — uses template-based approach)
-    const reportSections = generateTemplateReport(
+    const fallbackSections = generateTemplateReport(
         scopeType,
         scopeId,
         reportType,
@@ -95,6 +96,19 @@ export async function POST(request: Request) {
         recommendations,
         impactAggregate.readingLevels ?? null,
     );
+    const aiReport = await generateAiBackedReport(
+        scopeType,
+        scopeId,
+        reportType,
+        fidelity,
+        gains,
+        cost,
+        quality,
+        recommendations,
+        impactAggregate.readingLevels ?? null,
+        fallbackSections,
+    );
+    const reportSections = aiReport.sections;
 
     // Validate each section against guardrails
     const validations = reportSections.map((section) => ({
@@ -123,7 +137,98 @@ export async function POST(request: Request) {
         recommendations: recommendations.slice(0, 5),
         guardrails: AI_GUARDRAILS,
         hasViolations,
+        generatedWithAi: aiReport.generatedWithAi,
+        model: aiReport.model,
     });
+}
+
+async function generateAiBackedReport(
+    scopeType: string,
+    scopeId: string,
+    reportType: string,
+    fidelity: AggregateFidelityView,
+    gains: AggregateLearningGainsView,
+    cost: ReturnType<typeof getCostEffectivenessData>,
+    quality: AggregateQualitySummaryView,
+    recommendations: ReturnType<typeof getApplicableRecommendations>,
+    readingLevels: ReadingLevelsBlock | null,
+    fallbackSections: Array<{ heading: string; content: string }>,
+) {
+    const apiKey = process.env.OPENAI_API_KEY?.trim();
+    if (!apiKey) {
+        return {
+            sections: fallbackSections,
+            generatedWithAi: false,
+            model: null as string | null,
+        };
+    }
+
+    const model = process.env.OPENAI_REPORT_MODEL?.trim() || "gpt-5-mini";
+    const client = new OpenAI({ apiKey });
+    const evidence = {
+        scopeType,
+        scopeId,
+        reportType,
+        fidelity,
+        gains,
+        cost,
+        quality,
+        recommendations: recommendations.slice(0, 8),
+        readingLevels,
+        fallbackSections,
+    };
+
+    try {
+        const response = await client.chat.completions.create({
+            model,
+            response_format: { type: "json_object" },
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "You are a senior monitoring, evaluation, and literacy impact reporting specialist. Write donor-grade, executive-quality, factual report narration for a literacy CRM in Uganda. Use only the evidence provided. Do not invent numbers. Keep tone professional, concise, and implementation-aware. Return JSON with keys executiveSummary, implementationFidelity, learningOutcomes, readingProgress, costEffectiveness, dataQuality, recommendations.",
+                },
+                {
+                    role: "user",
+                    content:
+                        `Draft a professional ${reportType} report for ${scopeType}:${scopeId}. ` +
+                        `Use the evidence JSON exactly as provided and keep each section to one compact paragraph.\n` +
+                        JSON.stringify(evidence),
+                },
+            ],
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+            throw new Error("No report content returned.");
+        }
+        const parsed = JSON.parse(content) as Record<string, unknown>;
+        const sectionText = (key: string, fallbackHeading: string) => {
+            const normalized = String(parsed[key] ?? "").trim();
+            const fallback = fallbackSections.find((section) => section.heading === fallbackHeading)?.content ?? "";
+            return normalized || fallback;
+        };
+
+        return {
+            sections: [
+                { heading: "Executive Summary", content: sectionText("executiveSummary", "Executive Summary") },
+                { heading: "Implementation Fidelity", content: sectionText("implementationFidelity", "Implementation Fidelity") },
+                { heading: "Learning Outcomes", content: sectionText("learningOutcomes", "Learning Outcomes") },
+                { heading: "Reading Levels Profile and Movement", content: sectionText("readingProgress", "Reading Levels Profile and Movement") },
+                { heading: "Cost-Effectiveness", content: sectionText("costEffectiveness", "Cost-Effectiveness") },
+                { heading: "Data Quality Notes", content: sectionText("dataQuality", "Data Quality Notes") },
+                { heading: "Recommendations", content: sectionText("recommendations", "Recommendations") },
+            ].filter((section) => section.content.trim().length > 0),
+            generatedWithAi: true,
+            model,
+        };
+    } catch {
+        return {
+            sections: fallbackSections,
+            generatedWithAi: false,
+            model: null as string | null,
+        };
+    }
 }
 
 function generateTemplateReport(

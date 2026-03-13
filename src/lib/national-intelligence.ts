@@ -878,7 +878,7 @@ async function aiNarrativeFromFacts(factsPass: Record<string, unknown>) {
   }
 
   const passA = await client.responses.create({
-    model: "gpt-5-mini",
+    model: process.env.OPENAI_REPORT_MODEL?.trim() || "gpt-5-mini",
     input: [
       {
         role: "system",
@@ -905,12 +905,12 @@ async function aiNarrativeFromFacts(factsPass: Record<string, unknown>) {
   );
 
   const passB = await client.responses.create({
-    model: "gpt-5-mini",
+    model: process.env.OPENAI_REPORT_MODEL?.trim() || "gpt-5-mini",
     input: [
       {
         role: "system",
         content:
-          "Write concise government-style report narrative from facts only. No invented numbers. Mention metric references per paragraph.",
+          "Write concise but professional literacy intelligence report narrative from facts only. No invented numbers. Keep a formal government and donor-ready tone. Mention metric references per paragraph.",
       },
       {
         role: "user",

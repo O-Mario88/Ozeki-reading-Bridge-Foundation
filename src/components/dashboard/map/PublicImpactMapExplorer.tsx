@@ -457,6 +457,26 @@ export function PublicImpactMapExplorer({
   const readingLevelLabels =
     payload?.readingLevels?.levels?.map((item) => item.label) ??
     READING_LEVELS;
+  const fluentReaderShare =
+    readingLevelsLatestCycle?.percents?.Fluent ??
+    readingLevelsLatestCycle?.percents?.["Transitional"] ??
+    null;
+  const benchmarkShare = benchmarkStatus
+    ? (benchmarkStatus.atExpected.percent ?? 0) + (benchmarkStatus.aboveExpected.percent ?? 0)
+    : null;
+  const movedUpShare = payload?.readingLevels?.movement?.moved_up_1plus_percent ?? null;
+  const masteryDomainRows = Object.entries(masteryDomains ?? {})
+    .map(([key, value]) => ({
+      key,
+      label: LEARNING_DOMAIN_DICTIONARY[key as keyof typeof LEARNING_DOMAIN_DICTIONARY]?.label_short ?? key,
+      green: value.green.percent,
+      amber: value.amber.percent,
+      red: value.red.percent,
+      n: value.n,
+    }))
+    .sort((left, right) => right.green - left.green)
+    .slice(0, 4);
+  const topReadingStages = readingStageDistribution.slice(0, 4);
   const teachingQuality = payload?.teachingQuality;
   const teachingLearningAlignment = payload?.teachingLearningAlignment;
   const teachingLearningAlignmentPoints = teachingLearningAlignment?.points ?? [];
@@ -529,6 +549,22 @@ export function PublicImpactMapExplorer({
       label: "Assessment completion",
       value: `${(kpis?.assessmentCycleCompletionPct ?? 0).toFixed(1)}%`,
       helper: "Scope-level cycle completion",
+    },
+    {
+      label: "At / above benchmark",
+      value:
+        typeof benchmarkShare === "number" && Number.isFinite(benchmarkShare)
+          ? `${benchmarkShare.toFixed(1)}%`
+          : "Data not available",
+      helper: "Directly from learner outcome records",
+    },
+    {
+      label: "Moved up 1+ reading level",
+      value:
+        typeof movedUpShare === "number" && Number.isFinite(movedUpShare)
+          ? `${movedUpShare.toFixed(1)}%`
+          : "Data not available",
+      helper: "Matched baseline-to-latest learners",
     },
   ];
 
@@ -746,6 +782,85 @@ export function PublicImpactMapExplorer({
               <Link className="inline-download-link" href="/impact/case-studies">
                 Read Change Stories
               </Link>
+            </div>
+          </article>
+
+          <article className="card impact-attract-card impact-attract-card--progress">
+            <header>
+              <h3>Reading Progress Tracker</h3>
+              <p>Assessment-domain evidence tied directly to reading stages and benchmark status.</p>
+            </header>
+            <div className="impact-attract-progress-grid">
+              <article>
+                <span>Fluent reader share</span>
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : typeof fluentReaderShare === "number"
+                      ? `${fluentReaderShare.toFixed(1)}%`
+                      : "Data not available"}
+                </strong>
+                <small>Latest reading-level distribution</small>
+              </article>
+              <article>
+                <span>At / above benchmark</span>
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : typeof benchmarkShare === "number"
+                      ? `${benchmarkShare.toFixed(1)}%`
+                      : "Data not available"}
+                </strong>
+                <small>Expected-vs-actual status from the DB</small>
+              </article>
+              <article>
+                <span>Moved up 1+ level</span>
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : typeof movedUpShare === "number"
+                      ? `${movedUpShare.toFixed(1)}%`
+                      : "Data not available"}
+                </strong>
+                <small>Matched learners only</small>
+              </article>
+              <article>
+                <span>Tracked reading stages</span>
+                <strong>{loading ? "Loading..." : readingStageDistribution.length.toLocaleString()}</strong>
+                <small>Stage bands currently computed</small>
+              </article>
+            </div>
+            <div className="impact-attract-progress-lists">
+              <div>
+                <h4>Strongest Mastery Domains</h4>
+                {masteryDomainRows.length > 0 ? (
+                  masteryDomainRows.map((row) => (
+                    <div key={row.key} className="impact-attract-progress-row">
+                      <strong>{row.label}</strong>
+                      <span>
+                        Green {row.green.toFixed(1)}% • Amber {row.amber.toFixed(1)}% • Red {row.red.toFixed(1)}%
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="impact-mini-footer">Domain mastery data not available for this scope.</p>
+                )}
+              </div>
+              <div>
+                <h4>Latest Reading Stage Mix</h4>
+                {topReadingStages.length > 0 ? (
+                  topReadingStages.map((row) => (
+                    <div key={row.label} className="impact-attract-progress-row">
+                      <strong>{row.label}</strong>
+                      <span>
+                        {row.percent.toFixed(1)}% • n={row.count.toLocaleString()}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="impact-mini-footer">Reading stage distribution is not available yet.</p>
+                )}
+              </div>
             </div>
           </article>
         </div>

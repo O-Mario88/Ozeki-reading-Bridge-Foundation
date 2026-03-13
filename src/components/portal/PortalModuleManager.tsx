@@ -166,6 +166,7 @@ type EgraSummary = {
 
 type TrainingParticipantRole = "" | "Teacher" | "Leader";
 type TrainingParticipantGender = "" | "Male" | "Female";
+type TrainingParticipantType = "" | "In Person" | "Online" | "Hybrid";
 
 type TrainingParticipantRow = {
   contactId: string;
@@ -176,6 +177,11 @@ type TrainingParticipantRow = {
   role: TrainingParticipantRole;
   gender: TrainingParticipantGender;
   phoneContact: string;
+  email: string;
+  participantType: TrainingParticipantType;
+  invited: boolean;
+  confirmed: boolean;
+  attended: boolean;
 };
 
 type TrainingParticipantFeedbackRow = {
@@ -935,6 +941,40 @@ function normalizeParticipantGender(value: unknown): TrainingParticipantGender {
   return "";
 }
 
+function normalizeParticipantType(value: unknown): TrainingParticipantType {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "in person" || normalized === "in-person" || normalized === "onsite") {
+    return "In Person";
+  }
+  if (normalized === "online" || normalized === "virtual") {
+    return "Online";
+  }
+  if (normalized === "hybrid") {
+    return "Hybrid";
+  }
+  return "";
+}
+
+function normalizeBooleanFlag(value: unknown, fallback = true) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) {
+    return fallback;
+  }
+  if (["true", "1", "yes", "y", "confirmed", "attended", "invited"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "n"].includes(normalized)) {
+    return false;
+  }
+  return fallback;
+}
+
 function createEmptyTrainingParticipant(defaultSchoolId = "", defaultSchoolName = ""): TrainingParticipantRow {
   return {
     contactId: "",
@@ -945,6 +985,11 @@ function createEmptyTrainingParticipant(defaultSchoolId = "", defaultSchoolName 
     role: "",
     gender: "",
     phoneContact: "",
+    email: "",
+    participantType: "In Person",
+    invited: true,
+    confirmed: true,
+    attended: true,
   };
 }
 
@@ -957,7 +1002,8 @@ function rowHasTrainingParticipantData(row: TrainingParticipantRow) {
     row.schoolAttachedTo.trim() ||
     row.role ||
     row.gender ||
-    row.phoneContact.trim()
+    row.phoneContact.trim() ||
+    row.email.trim()
   );
 }
 
@@ -1019,6 +1065,14 @@ function parseTrainingParticipants(
         role: normalizeParticipantRole(entry.role),
         gender: normalizeParticipantGender(entry.gender),
         phoneContact: sanitizeForInput(entry.phoneContact),
+        email: sanitizeForInput(entry.email),
+        participantType:
+          normalizeParticipantType(entry.participantType) ||
+          normalizeParticipantType(entry.deliveryMode) ||
+          "In Person",
+        invited: normalizeBooleanFlag(entry.invited, true),
+        confirmed: normalizeBooleanFlag(entry.confirmed, true),
+        attended: normalizeBooleanFlag(entry.attended, true),
       } as TrainingParticipantRow;
     })
     .filter((row) => rowHasTrainingParticipantData(row));
@@ -1971,14 +2025,18 @@ export function PortalModuleManager({
   }, [config.module, formState.district, formState.payload.deliveryMode, formState.region, initialSchools]);
   const trainingParticipantStats = useMemo(() => {
     const activeRows = trainingParticipants.filter((row) => rowHasTrainingParticipantData(row));
-    const teacherRows = activeRows.filter((row) => row.role === "Teacher");
-    const leaderRows = activeRows.filter((row) => row.role === "Leader");
+    const attendedRows = activeRows.filter((row) => row.attended);
+    const teacherRows = attendedRows.filter((row) => row.role === "Teacher");
+    const leaderRows = attendedRows.filter((row) => row.role === "Leader");
     return {
-      total: activeRows.length,
+      total: attendedRows.length,
+      invited: activeRows.filter((row) => row.invited).length,
+      confirmed: activeRows.filter((row) => row.confirmed).length,
+      roster: activeRows.length,
       teachers: teacherRows.length,
       leaders: leaderRows.length,
-      male: activeRows.filter((row) => row.gender === "Male").length,
-      female: activeRows.filter((row) => row.gender === "Female").length,
+      male: attendedRows.filter((row) => row.gender === "Male").length,
+      female: attendedRows.filter((row) => row.gender === "Female").length,
       teacherFemale: teacherRows.filter((row) => row.gender === "Female").length,
       teacherMale: teacherRows.filter((row) => row.gender === "Male").length,
       leaderFemale: leaderRows.filter((row) => row.gender === "Female").length,
@@ -2991,9 +3049,11 @@ export function PortalModuleManager({
   }, []);
 
   const updateTrainingParticipant = useCallback(
-    (index: number, key: keyof TrainingParticipantRow, value: string) => {
+    (index: number, key: keyof TrainingParticipantRow, value: string | boolean) => {
       const schoolForSelection =
-        key === "schoolAccountId" && value ? schoolsById.get(Number(value)) ?? null : null;
+        key === "schoolAccountId" && typeof value === "string" && value
+          ? schoolsById.get(Number(value)) ?? null
+          : null;
       if (config.module === "training" && schoolForSelection) {
         setFormState((prev) => ({
           ...prev,
@@ -3012,15 +3072,18 @@ export function PortalModuleManager({
           if (key === "schoolAccountId") {
             return {
               ...row,
-              schoolAccountId: value,
+              schoolAccountId: String(value),
               schoolAttachedTo: schoolForSelection?.name ?? "",
             };
           }
-          if (key === "role") {
+          if (key === "role" && typeof value === "string") {
             return { ...row, role: normalizeParticipantRole(value) };
           }
-          if (key === "gender") {
+          if (key === "gender" && typeof value === "string") {
             return { ...row, gender: normalizeParticipantGender(value) };
+          }
+          if (key === "participantType" && typeof value === "string") {
+            return { ...row, participantType: normalizeParticipantType(value) || "In Person" };
           }
           return { ...row, [key]: value };
         }),
@@ -3891,6 +3954,11 @@ export function PortalModuleManager({
               role: row.role,
               gender: row.gender,
               phoneContact: row.phoneContact.trim(),
+              email: row.email.trim(),
+              participantType: row.participantType || "In Person",
+              invited: row.invited,
+              confirmed: row.confirmed,
+              attended: row.attended,
             };
           });
 
@@ -3909,23 +3977,25 @@ export function PortalModuleManager({
 
         payload[participantField.key] = JSON.stringify(participantRows);
         payload.participantsTotal = participantRows.length;
+        payload.totalInvited = participantRows.filter((row) => row.invited).length;
+        payload.confirmedTotal = participantRows.filter((row) => row.confirmed).length;
         payload.classroomTeachers = participantRows.filter((row) => row.role === "Teacher").length;
         payload.schoolLeaders = participantRows.filter((row) => row.role === "Leader").length;
-        payload.femaleCount = participantRows.filter((row) => row.gender === "Female").length;
-        payload.maleCount = participantRows.filter((row) => row.gender === "Male").length;
+        payload.femaleCount = participantRows.filter((row) => row.attended && row.gender === "Female").length;
+        payload.maleCount = participantRows.filter((row) => row.attended && row.gender === "Male").length;
         payload.teachersFemale = participantRows.filter(
-          (row) => row.role === "Teacher" && row.gender === "Female",
+          (row) => row.attended && row.role === "Teacher" && row.gender === "Female",
         ).length;
         payload.teachersMale = participantRows.filter(
-          (row) => row.role === "Teacher" && row.gender === "Male",
+          (row) => row.attended && row.role === "Teacher" && row.gender === "Male",
         ).length;
         payload.schoolLeadersFemale = participantRows.filter(
-          (row) => row.role === "Leader" && row.gender === "Female",
+          (row) => row.attended && row.role === "Leader" && row.gender === "Female",
         ).length;
         payload.schoolLeadersMale = participantRows.filter(
-          (row) => row.role === "Leader" && row.gender === "Male",
+          (row) => row.attended && row.role === "Leader" && row.gender === "Male",
         ).length;
-        payload.numberAttended = participantRows.length;
+        payload.numberAttended = participantRows.filter((row) => row.attended).length;
 
         return {
           module: config.module,
@@ -5960,7 +6030,12 @@ export function PortalModuleManager({
                                         <th>School</th>
                                         <th>Role</th>
                                         <th>Gender</th>
-                                        <th>Phone</th>
+                                        <th>Mobile</th>
+                                        <th>Email</th>
+                                        <th>Invited</th>
+                                        <th>Confirmed</th>
+                                        <th>Attended</th>
+                                        <th>Participant Type</th>
                                         <th>Action</th>
                                       </tr>
                                     </thead>
@@ -5999,6 +6074,11 @@ export function PortalModuleManager({
                                                             role: "",
                                                             gender: "",
                                                             phoneContact: "",
+                                                            email: "",
+                                                            participantType: "In Person",
+                                                            invited: true,
+                                                            confirmed: true,
+                                                            attended: true,
                                                           },
                                                       ),
                                                     );
@@ -6011,6 +6091,7 @@ export function PortalModuleManager({
                                                     gender: string;
                                                     category: string;
                                                     phone: string | null;
+                                                    email?: string | null;
                                                   };
                                                   setTrainingParticipants((prev) =>
                                                     prev.map((p, i) =>
@@ -6027,8 +6108,13 @@ export function PortalModuleManager({
                                                               ? (teacher.gender as TrainingParticipantGender)
                                                               : "",
                                                           phoneContact: teacher.phone ?? "",
+                                                          email: teacher.email ?? "",
                                                           schoolAccountId: String(selectedSchoolId ?? ""),
                                                           schoolAttachedTo: formState.schoolName,
+                                                          participantType: "In Person",
+                                                          invited: true,
+                                                          confirmed: true,
+                                                          attended: true,
                                                         },
                                                     ),
                                                   );
@@ -6088,6 +6174,70 @@ export function PortalModuleManager({
                                               }
                                               readOnly={isTrainingScheduledLockedField}
                                             />
+                                          </td>
+                                          <td>
+                                            <input
+                                              value={row.email}
+                                              placeholder="name@school.org"
+                                              inputMode="email"
+                                              onChange={(event) =>
+                                                updateTrainingParticipant(index, "email", event.target.value)
+                                              }
+                                              readOnly={isTrainingScheduledLockedField}
+                                            />
+                                          </td>
+                                          <td>
+                                            <label className="portal-inline-boolean">
+                                              <input
+                                                type="checkbox"
+                                                checked={row.invited}
+                                                onChange={(event) =>
+                                                  updateTrainingParticipant(index, "invited", event.target.checked)
+                                                }
+                                                disabled={isTrainingScheduledLockedField}
+                                              />
+                                              <span>Yes</span>
+                                            </label>
+                                          </td>
+                                          <td>
+                                            <label className="portal-inline-boolean">
+                                              <input
+                                                type="checkbox"
+                                                checked={row.confirmed}
+                                                onChange={(event) =>
+                                                  updateTrainingParticipant(index, "confirmed", event.target.checked)
+                                                }
+                                                disabled={isTrainingScheduledLockedField}
+                                              />
+                                              <span>Yes</span>
+                                            </label>
+                                          </td>
+                                          <td>
+                                            <label className="portal-inline-boolean">
+                                              <input
+                                                type="checkbox"
+                                                checked={row.attended}
+                                                onChange={(event) =>
+                                                  updateTrainingParticipant(index, "attended", event.target.checked)
+                                                }
+                                                disabled={isTrainingScheduledLockedField}
+                                              />
+                                              <span>Yes</span>
+                                            </label>
+                                          </td>
+                                          <td>
+                                            <select
+                                              value={row.participantType}
+                                              onChange={(event) =>
+                                                updateTrainingParticipant(index, "participantType", event.target.value)
+                                              }
+                                              disabled={isTrainingScheduledLockedField}
+                                            >
+                                              <option value="">Type</option>
+                                              <option value="In Person">In Person</option>
+                                              <option value="Online">Online</option>
+                                              <option value="Hybrid">Hybrid</option>
+                                            </select>
                                           </td>
                                           <td>
                                             <button

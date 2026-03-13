@@ -282,6 +282,7 @@ export async function listTrainingAttendanceForPublicImpactPostgres(
       FROM portal_training_attendance pta
       LEFT JOIN portal_records pr ON pr.id = pta.portal_record_id
       WHERE pta.school_id = ANY($1::int[])
+        AND pta.attended IS TRUE
     `,
     [schoolIds],
   );

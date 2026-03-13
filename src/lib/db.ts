@@ -1764,14 +1764,22 @@ function ensureProgramLinkageTables(db: Database.Database) {
       school_id INTEGER,
       contact_id INTEGER,
       contact_uid TEXT,
+      participant_code TEXT,
       participant_name TEXT NOT NULL,
       participant_role TEXT NOT NULL,
+      participant_type TEXT NOT NULL DEFAULT 'In Person',
+      invited INTEGER NOT NULL DEFAULT 1,
+      confirmed INTEGER NOT NULL DEFAULT 1,
       role_at_time TEXT,
       attended INTEGER NOT NULL DEFAULT 1,
       gender TEXT,
       teacher_uid TEXT,
       phone TEXT,
       email TEXT,
+      mobile_number TEXT,
+      school_name_snapshot TEXT,
+      school_region_snapshot TEXT,
+      school_district_snapshot TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY(portal_record_id) REFERENCES portal_records(id) ON DELETE CASCADE,
       FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL,
@@ -1912,8 +1920,16 @@ function ensureProgramLinkageTables(db: Database.Database) {
 
   ensureColumn(db, "portal_training_attendance", "contact_id", "INTEGER");
   ensureColumn(db, "portal_training_attendance", "contact_uid", "TEXT");
+  ensureColumn(db, "portal_training_attendance", "participant_code", "TEXT");
+  ensureColumn(db, "portal_training_attendance", "participant_type", "TEXT NOT NULL DEFAULT 'In Person'");
+  ensureColumn(db, "portal_training_attendance", "invited", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "portal_training_attendance", "confirmed", "INTEGER NOT NULL DEFAULT 1");
   ensureColumn(db, "portal_training_attendance", "role_at_time", "TEXT");
   ensureColumn(db, "portal_training_attendance", "attended", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "portal_training_attendance", "mobile_number", "TEXT");
+  ensureColumn(db, "portal_training_attendance", "school_name_snapshot", "TEXT");
+  ensureColumn(db, "portal_training_attendance", "school_region_snapshot", "TEXT");
+  ensureColumn(db, "portal_training_attendance", "school_district_snapshot", "TEXT");
   ensureColumn(db, "assessment_session_results", "learner_id", "INTEGER");
   ensureColumn(db, "coaching_visits", "implementation_status", "TEXT NOT NULL DEFAULT 'started'");
   ensureColumn(db, "coaching_visits", "visit_pathway", "TEXT NOT NULL DEFAULT 'observation'");
@@ -10554,27 +10570,43 @@ function syncPortalRecordLinkages(
         school_id,
         contact_id,
         contact_uid,
+        participant_code,
         participant_name,
         participant_role,
+        participant_type,
+        invited,
+        confirmed,
         role_at_time,
         gender,
         teacher_uid,
         attended,
         phone,
-        email
+        email,
+        mobile_number,
+        school_name_snapshot,
+        school_region_snapshot,
+        school_district_snapshot
       ) VALUES (
         @portalRecordId,
         @schoolId,
         @contactId,
         @contactUid,
+        @participantCode,
         @participantName,
         @participantRole,
+        @participantType,
+        @invited,
+        @confirmed,
         @roleAtTime,
         @gender,
         @teacherUid,
         @attended,
         @phone,
-        @email
+        @email,
+        @mobileNumber,
+        @schoolNameSnapshot,
+        @schoolRegionSnapshot,
+        @schoolDistrictSnapshot
       )
     `);
 
@@ -10592,14 +10624,25 @@ function syncPortalRecordLinkages(
         schoolId: args.schoolId,
         contactId: contact.contactId,
         contactUid: contact.contactUid,
+        participantCode: `TP-${args.recordId}-${contact.contactId}`,
         participantName: contact.fullName,
         participantRole: roleAtTime,
+        participantType: String(row.participantType ?? args.payload.deliveryMode ?? "In Person").trim() || "In Person",
+        invited: row.invited === false ? 0 : 1,
+        confirmed: row.confirmed === false ? 0 : 1,
         roleAtTime,
         gender: gender ?? null,
         teacherUid: contact.teacherUid ?? (String(row.teacherUid ?? "").trim() || null),
-        attended: 1,
+        attended: row.attended === false ? 0 : 1,
         phone: contact.phone ?? (String(row.phoneContact ?? row.phone ?? "").trim() || null),
         email: contact.email ?? (String(row.email ?? "").trim() || null),
+        mobileNumber:
+          String(row.phoneContact ?? row.mobileNumber ?? row.phone ?? "").trim() ||
+          contact.phone ||
+          null,
+        schoolNameSnapshot: String(args.payload.schoolName ?? args.payload.schoolAttachedTo ?? "").trim() || null,
+        schoolRegionSnapshot: String(args.payload.region ?? "").trim() || null,
+        schoolDistrictSnapshot: String(args.payload.district ?? "").trim() || null,
       });
     });
 
@@ -13847,16 +13890,24 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
             school_id,
             contact_id,
             contact_uid,
+            participant_code,
             participant_name,
             participant_role,
+            participant_type,
+            invited,
+            confirmed,
             role_at_time,
             gender,
             teacher_uid,
             attended,
             phone,
-            email
+            email,
+            mobile_number,
+            school_name_snapshot,
+            school_region_snapshot,
+            school_district_snapshot
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10, $11
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
           )
         `,
         [
@@ -13864,13 +13915,22 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
           args.schoolId,
           contact.contactId,
           contact.contactUid ?? null,
+          `TP-${args.recordId}-${contact.contactId}`,
           contact.fullName,
           roleAtTime,
+          String(row.participantType ?? args.payload.deliveryMode ?? "In Person").trim() || "In Person",
+          row.invited === false ? false : true,
+          row.confirmed === false ? false : true,
           roleAtTime,
           gender ?? null,
           contact.teacherUid ?? (String(row.teacherUid ?? "").trim() || null),
+          row.attended === false ? false : true,
           contact.phone ?? (String(row.phoneContact ?? row.phone ?? "").trim() || null),
           contact.email ?? (String(row.email ?? "").trim() || null),
+          String(row.phoneContact ?? row.mobileNumber ?? row.phone ?? "").trim() || contact.phone || null,
+          String(args.payload.schoolName ?? args.payload.schoolAttachedTo ?? "").trim() || null,
+          String(args.payload.region ?? "").trim() || null,
+          String(args.payload.district ?? "").trim() || null,
         ],
       );
     }

@@ -3764,6 +3764,19 @@ main {
   padding: 0.42rem 0.48rem;
 }
 
+.portal-inline-boolean {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 38px;
+  white-space: nowrap;
+}
+
+.portal-inline-boolean input {
+  width: 16px;
+  height: 16px;
+}
+
 .portal-participants-table td:last-child .button {
   font-size: 0.68rem;
   padding: 0.45rem 0.62rem;
@@ -9753,6 +9766,55 @@ nav[aria-label="Staff navigation"] {
   gap: 0.4rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.impact-attract-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.impact-attract-progress-grid article,
+.impact-attract-progress-row {
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--md-sys-color-surface-container) 78%, white);
+  padding: 0.45rem 0.5rem;
+}
+
+.impact-attract-progress-grid span,
+.impact-attract-progress-row span {
+  display: block;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.68rem;
+}
+
+.impact-attract-progress-grid strong,
+.impact-attract-progress-row strong {
+  display: block;
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.9rem;
+}
+
+.impact-attract-progress-grid small {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.62rem;
+}
+
+.impact-attract-progress-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.impact-attract-progress-lists h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+}
+
+.impact-attract-progress-lists > div {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .impact-tabs {

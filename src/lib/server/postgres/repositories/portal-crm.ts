@@ -59,6 +59,19 @@ function formatDateTime(value: unknown) {
   }).format(date);
 }
 
+function formatBool(value: unknown) {
+  return value ? "Yes" : "No";
+}
+
+function lastToken(value: unknown) {
+  const normalized = text(value, "");
+  if (!normalized) {
+    return "-";
+  }
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  return tokens[tokens.length - 1] ?? normalized;
+}
+
 function safeJson(value: unknown): Record<string, unknown> {
   if (typeof value !== "string" || !value.trim()) {
     return {};
@@ -251,43 +264,128 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
     return null;
   }
   const payload = safeJson(row.payloadJson);
-  const attendanceResult = await queryPostgres(
-    `
-      SELECT
-        COUNT(*)::int AS total,
-        COUNT(*) FILTER (WHERE attended IS TRUE)::int AS attended,
-        COUNT(*) FILTER (WHERE participant_role = 'Classroom teacher' AND attended IS TRUE)::int AS teachers,
-        COUNT(*) FILTER (WHERE participant_role = 'School Leader' AND attended IS TRUE)::int AS leaders,
-        COUNT(*) FILTER (WHERE lower(COALESCE(gender, '')) = 'female' AND attended IS TRUE)::int AS female,
-        COUNT(*) FILTER (WHERE lower(COALESCE(gender, '')) = 'male' AND attended IS TRUE)::int AS male
-      FROM portal_training_attendance
-      WHERE portal_record_id = $1
-    `,
-    [id],
-  );
-  const filesResult = await queryPostgres<{ total: number }>(
-    `SELECT COUNT(*)::int AS total FROM portal_evidence WHERE record_id = $1 AND module = 'training'`,
-    [id],
-  );
-  const participantResult = await queryPostgres(
-    `
-      SELECT
-        pta.id,
-        pta.participant_name AS "participantName",
-        COALESCE(pta.role_at_time, pta.participant_role) AS role,
-        COALESCE(sc.full_name, sd.name, '') AS "linkedSchoolName",
-        pta.created_at::text AS "createdAt"
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      LEFT JOIN schools_directory sd ON sd.id = pta.school_id
-      WHERE pta.portal_record_id = $1
-      ORDER BY pta.participant_role ASC, pta.participant_name ASC
-      LIMIT 50
-    `,
-    [id],
-  );
+  const [
+    attendanceResult,
+    filesResult,
+    participantResult,
+    relatedCountsResult,
+    linkedActivityResult,
+    schoolProgressResult,
+  ] = await Promise.all([
+    queryPostgres(
+      `
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE invited IS TRUE)::int AS invited,
+          COUNT(*) FILTER (WHERE confirmed IS TRUE)::int AS confirmed,
+          COUNT(*) FILTER (WHERE attended IS TRUE)::int AS attended,
+          COUNT(*) FILTER (WHERE participant_role = 'Classroom teacher' AND attended IS TRUE)::int AS teachers,
+          COUNT(*) FILTER (WHERE participant_role = 'School Leader' AND attended IS TRUE)::int AS leaders,
+          COUNT(*) FILTER (WHERE lower(COALESCE(gender, '')) = 'female' AND attended IS TRUE)::int AS female,
+          COUNT(*) FILTER (WHERE lower(COALESCE(gender, '')) = 'male' AND attended IS TRUE)::int AS male
+        FROM portal_training_attendance
+        WHERE portal_record_id = $1
+      `,
+      [id],
+    ),
+    queryPostgres<{ total: number }>(
+      `SELECT COUNT(*)::int AS total FROM portal_evidence WHERE record_id = $1 AND module = 'training'`,
+      [id],
+    ),
+    queryPostgres(
+      `
+        SELECT
+          pta.id,
+          COALESCE(pta.participant_code, 'TP-' || pta.portal_record_id::text || '-' || pta.id::text) AS "participantCode",
+          pta.contact_id AS "contactId",
+          pta.participant_name AS "participantName",
+          COALESCE(pta.role_at_time, pta.participant_role) AS role,
+          COALESCE(pta.school_name_snapshot, sd.name, '') AS "linkedSchoolName",
+          pta.invited,
+          pta.confirmed,
+          pta.attended,
+          COALESCE(pta.email, sc.email, '') AS email,
+          COALESCE(pta.mobile_number, pta.phone, sc.phone, '') AS "mobileNumber",
+          COALESCE(pta.participant_type, 'In Person') AS "participantType",
+          pta.created_at::text AS "createdAt"
+        FROM portal_training_attendance pta
+        LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
+        LEFT JOIN schools_directory sd ON sd.id = pta.school_id
+        WHERE pta.portal_record_id = $1
+        ORDER BY COALESCE(pta.role_at_time, pta.participant_role) ASC, pta.participant_name ASC
+        LIMIT 120
+      `,
+      [id],
+    ),
+    queryPostgres(
+      `
+        SELECT
+          (SELECT COUNT(*)::int FROM coaching_visits WHERE school_id = $1) AS visits,
+          (SELECT COUNT(*)::int FROM assessment_sessions WHERE school_id = $1) AS assessments,
+          (SELECT COUNT(*)::int FROM lesson_evaluations WHERE school_id = $1 AND status != 'void') AS evaluations,
+          (SELECT COUNT(*)::int FROM story_activities WHERE school_id = $1) AS storyProjects
+      `,
+      [row.schoolId ?? -1],
+    ),
+    queryPostgres(
+      `
+        SELECT *
+        FROM (
+          SELECT
+            pr.id,
+            pr.module,
+            COALESCE(NULLIF(pr.program_type, ''), initcap(pr.module)) AS title,
+            pr.record_code AS "recordCode",
+            pr.date::text AS date,
+            pr.status
+          FROM portal_records pr
+          WHERE pr.school_id = $1
+            AND pr.id <> $2
+            AND pr.module IN ('visit', 'assessment', 'story')
+
+          UNION ALL
+
+          SELECT
+            le.id,
+            'teacherEvaluation' AS module,
+            COALESCE(NULLIF(le.overall_level, ''), 'Lesson Evaluation') AS title,
+            COALESCE(le.teacher_uid, '') AS "recordCode",
+            le.lesson_date::text AS date,
+            le.status
+          FROM lesson_evaluations le
+          WHERE le.school_id = $1
+            AND le.status != 'void'
+        ) linked
+        ORDER BY linked.date DESC NULLS LAST, linked.id DESC
+        LIMIT 24
+      `,
+      [row.schoolId ?? -1, id],
+    ),
+    queryPostgres(
+      `
+        SELECT
+          COUNT(*)::int AS assessed,
+          ROUND(AVG(COALESCE(story_reading_score, 0))::numeric, 1) AS "storyReadingAvg",
+          ROUND(AVG(COALESCE(reading_comprehension_score, 0))::numeric, 1) AS "comprehensionAvg",
+          ROUND(AVG(COALESCE(computed_level_band, 0))::numeric, 2) AS "readingLevelBandAvg",
+          ROUND(
+            (
+              COUNT(*) FILTER (
+                WHERE lower(COALESCE(expected_vs_actual_status, '')) IN ('at_expected', 'above_expected')
+              )::numeric / NULLIF(COUNT(*)::numeric, 0)
+            ) * 100,
+            1
+          ) AS "onBenchmarkPct"
+        FROM assessment_records
+        WHERE school_id = $1
+      `,
+      [row.schoolId ?? -1],
+    ),
+  ]);
 
   const attended = whole(attendanceResult.rows[0]?.attended);
+  const invited = whole(attendanceResult.rows[0]?.invited);
+  const confirmed = whole(attendanceResult.rows[0]?.confirmed);
   const trainingName = payloadText(payload, "trainingName") ?? text(row.recordCode);
   const presenter = payloadText(payload, "trainingPresenter", "facilitators") ?? text(row.createdByName);
   const organization = payloadText(payload, "trainingOrganization", "sponsoredBy") ?? text(row.schoolName);
@@ -297,7 +395,11 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
   const audience = payloadText(payload, "audience") ?? "Both";
   const objectives = listFromValue(payload.objectivesCovered).join(", ") || "-";
   const modulesDelivered = listFromValue(payload.modulesDelivered).join(", ") || "-";
-  const totalInvited = payloadInt(payload, "totalInvited", "numberAttended") ?? whole(attendanceResult.rows[0]?.total);
+  const totalInvited =
+    payloadInt(payload, "totalInvited") ??
+    (invited > 0 ? invited : whole(attendanceResult.rows[0]?.total));
+  const relatedCounts = relatedCountsResult.rows[0] as Record<string, unknown> | undefined;
+  const progress = schoolProgressResult.rows[0] as Record<string, unknown> | undefined;
 
   return {
     badge: "Training Session",
@@ -317,8 +419,10 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
     quickLinks: [
       { label: "Participants", count: whole(attendanceResult.rows[0]?.total), href: "#participants", icon: "TR" },
       { label: "Files", count: whole(filesResult.rows[0]?.total), href: `/portal/reports?module=training&search=${encodeURIComponent(text(row.recordCode))}`, icon: "FL" },
-      { label: "Assessments", count: 0, href: `/portal/assessments?school=${encodeURIComponent(text(row.schoolName))}`, icon: "AS" },
-      { label: "School Visits", count: 0, href: `/portal/visits?school=${encodeURIComponent(text(row.schoolName))}`, icon: "VS" },
+      { label: "Assessments", count: whole(relatedCounts?.assessments), href: `/portal/assessments?school=${encodeURIComponent(text(row.schoolName))}`, icon: "AS" },
+      { label: "School Visits", count: whole(relatedCounts?.visits), href: `/portal/visits?school=${encodeURIComponent(text(row.schoolName))}`, icon: "VS" },
+      { label: "Teacher Evaluations", count: whole(relatedCounts?.evaluations), href: `/portal/schools/${row.schoolId}/teachers`, icon: "TE" },
+      { label: "1001 Story", count: whole(relatedCounts?.storyProjects), href: `/portal/story?school=${encodeURIComponent(text(row.schoolName))}`, icon: "ST" },
     ],
     detailsLeft: [
       { label: "Training Session Name", value: trainingName },
@@ -340,6 +444,7 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
       { label: "Training Language", value: language },
       { label: "Training Type", value: trainingType },
       { label: "Total Invited", value: String(totalInvited) },
+      { label: "Confirmed", value: String(confirmed) },
       { label: "Attended", value: String(attended) },
       { label: "Female Attended", value: formatNumber(attendanceResult.rows[0]?.female) },
       { label: "Male Attended", value: formatNumber(attendanceResult.rows[0]?.male) },
@@ -356,13 +461,58 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
         id: "participants",
         label: "Participant List",
         emptyLabel: "No training participants have been linked yet.",
-        items: participantResult.rows.map((item) =>
+        columns: [
+          { key: "participantCode", label: "Participant Code" },
+          { key: "name", label: "Participant Name" },
+          { key: "lastName", label: "Last Name" },
+          { key: "school", label: "Contact's School" },
+          { key: "role", label: "Contact Role" },
+          { key: "invited", label: "Invited" },
+          { key: "confirmed", label: "Confirmed" },
+          { key: "attended", label: "Attended" },
+          { key: "email", label: "Email" },
+          { key: "mobile", label: "Mobile Number" },
+          { key: "participantType", label: "Participant Type" },
+        ],
+        rows: participantResult.rows.map((item) => ({
+          id: Number(item.id),
+          cells: {
+            participantCode: buildCell(item.participantCode),
+            name: buildCell(
+              item.participantName,
+              item.contactId ? `/portal/contacts/${item.contactId}` : null,
+            ),
+            lastName: buildCell(lastToken(item.participantName)),
+            school: buildCell(item.linkedSchoolName),
+            role: buildCell(item.role),
+            invited: buildCell(formatBool(item.invited)),
+            confirmed: buildCell(formatBool(item.confirmed)),
+            attended: buildCell(formatBool(item.attended)),
+            email: buildCell(item.email),
+            mobile: buildCell(item.mobileNumber),
+            participantType: buildCell(item.participantType),
+          },
+        })),
+      },
+      {
+        id: "linked-activity",
+        label: "Linked Activity Chain",
+        emptyLabel: "No linked visits, assessments, teacher evaluations, or story activities found for this school yet.",
+        items: linkedActivityResult.rows.map((item) =>
           activity(
-            Number(item.id),
-            text(item.participantName),
-            text(item.role),
-            text(item.linkedSchoolName),
-            formatDateTime(item.createdAt),
+            `${item.module}-${item.id}`,
+            text(item.title),
+            text(item.recordCode),
+            text(item.module === "teacherEvaluation" ? "Teacher evaluation" : item.module),
+            formatDate(item.date),
+            item.module === "visit"
+              ? `/portal/visits/${item.id}`
+              : item.module === "assessment"
+                ? `/portal/assessments/${item.id}`
+                : item.module === "story"
+                  ? `/portal/story/${item.id}`
+                  : `/portal/schools/${row.schoolId}/teachers/${encodeURIComponent(text(item.recordCode, ""))}/improvement`,
+            text(item.status),
           ),
         ),
       },
@@ -391,6 +541,22 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
           { label: "Organization", value: organization },
           { label: "Attendees", value: String(attended) },
           { label: "School Code", value: text(row.schoolCode) },
+        ],
+      },
+      {
+        title: "Literacy Progress Snapshot",
+        items: [
+          { label: "Learners Assessed", value: formatNumber(progress?.assessed) },
+          { label: "Story Reading Avg", value: text(progress?.storyReadingAvg, "Data not available") },
+          { label: "Comprehension Avg", value: text(progress?.comprehensionAvg, "Data not available") },
+          { label: "Reading Level Band Avg", value: text(progress?.readingLevelBandAvg, "Data not available") },
+          {
+            label: "At / Above Benchmark",
+            value:
+              progress?.onBenchmarkPct === null || progress?.onBenchmarkPct === undefined
+                ? "Data not available"
+                : `${progress.onBenchmarkPct}%`,
+          },
         ],
       },
     ],
@@ -900,7 +1066,16 @@ export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileVi
     return null;
   }
   const payload = safeJson(row.payloadJson);
-  const [visitResult, participantCount, evaluationCount, filesCount] = await Promise.all([
+  const [
+    visitResult,
+    participantCount,
+    evaluationCount,
+    filesCount,
+    participantRows,
+    relatedCountsResult,
+    relatedActivityRows,
+    schoolProgressResult,
+  ] = await Promise.all([
     queryPostgres(
       `
         SELECT
@@ -941,8 +1116,91 @@ export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileVi
       `SELECT COUNT(*)::int AS total FROM portal_evidence WHERE record_id = $1 AND module = 'visit'`,
       [id],
     ),
+    queryPostgres(
+      `
+        SELECT
+          vp.id,
+          vp.contact_id AS "contactId",
+          sc.full_name AS "fullName",
+          COALESCE(sc.role_title, sc.category, vp.role_at_time) AS role,
+          COALESCE(sc.phone, '') AS phone,
+          COALESCE(sc.email, '') AS email,
+          vp.attended,
+          vp.created_at::text AS "createdAt"
+        FROM visit_participants vp
+        JOIN coaching_visits cv ON cv.id = vp.visit_id
+        LEFT JOIN school_contacts sc ON sc.contact_id = vp.contact_id
+        WHERE cv.portal_record_id = $1
+        ORDER BY sc.full_name ASC
+      `,
+      [id],
+    ),
+    queryPostgres(
+      `
+        SELECT
+          (SELECT COUNT(*)::int FROM portal_records WHERE module = 'training' AND school_id = $1) AS trainings,
+          (SELECT COUNT(*)::int FROM assessment_sessions WHERE school_id = $1) AS assessments,
+          (SELECT COUNT(*)::int FROM story_activities WHERE school_id = $1) AS storyProjects
+      `,
+      [row.schoolId ?? -1],
+    ),
+    queryPostgres(
+      `
+        SELECT *
+        FROM (
+          SELECT
+            pr.id,
+            pr.module,
+            COALESCE(NULLIF(pr.program_type, ''), initcap(pr.module)) AS title,
+            pr.record_code AS "recordCode",
+            pr.date::text AS date,
+            pr.status
+          FROM portal_records pr
+          WHERE pr.school_id = $1
+            AND pr.id <> $2
+            AND pr.module IN ('training', 'assessment', 'story')
+
+          UNION ALL
+
+          SELECT
+            le.id,
+            'teacherEvaluation' AS module,
+            COALESCE(NULLIF(le.overall_level, ''), 'Lesson Evaluation') AS title,
+            COALESCE(le.teacher_uid, '') AS "recordCode",
+            le.lesson_date::text AS date,
+            le.status
+          FROM lesson_evaluations le
+          WHERE le.school_id = $1
+            AND le.status != 'void'
+        ) linked
+        ORDER BY linked.date DESC NULLS LAST, linked.id DESC
+        LIMIT 24
+      `,
+      [row.schoolId ?? -1, id],
+    ),
+    queryPostgres(
+      `
+        SELECT
+          COUNT(*)::int AS assessed,
+          ROUND(AVG(COALESCE(story_reading_score, 0))::numeric, 1) AS "storyReadingAvg",
+          ROUND(AVG(COALESCE(reading_comprehension_score, 0))::numeric, 1) AS "comprehensionAvg",
+          ROUND(
+            (
+              COUNT(*) FILTER (
+                WHERE lower(COALESCE(expected_vs_actual_status, '')) IN ('at_expected', 'above_expected')
+              )::numeric / NULLIF(COUNT(*)::numeric, 0)
+            ) * 100,
+            1
+          ) AS "onBenchmarkPct"
+        FROM assessment_records
+        WHERE school_id = $1
+      `,
+      [row.schoolId ?? -1],
+    ),
   ]);
   const visit = (visitResult.rows[0] ?? {}) as Record<string, unknown>;
+  const relatedCounts = relatedCountsResult.rows[0] as Record<string, unknown> | undefined;
+  const progress = schoolProgressResult.rows[0] as Record<string, unknown> | undefined;
   return {
     badge: "School Visit",
     title: text(row.recordCode),
@@ -962,6 +1220,9 @@ export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileVi
       { label: "Participants", count: whole(participantCount.rows[0]?.total), href: "#participants", icon: "PT" },
       { label: "Teacher Evaluations", count: whole(evaluationCount.rows[0]?.total), href: `/portal/schools/${row.schoolId}/teachers`, icon: "TE" },
       { label: "Files", count: whole(filesCount.rows[0]?.total), href: `/portal/reports?module=visit&search=${encodeURIComponent(text(row.recordCode))}`, icon: "FL" },
+      { label: "Trainings", count: whole(relatedCounts?.trainings), href: `/portal/trainings?school=${encodeURIComponent(text(row.schoolName))}`, icon: "TR" },
+      { label: "Assessments", count: whole(relatedCounts?.assessments), href: `/portal/assessments?school=${encodeURIComponent(text(row.schoolName))}`, icon: "AS" },
+      { label: "1001 Story", count: whole(relatedCounts?.storyProjects), href: `/portal/story?school=${encodeURIComponent(text(row.schoolName))}`, icon: "ST" },
       { label: "School Account", count: 1, href: `/portal/schools/${row.schoolId}`, icon: "SC" },
     ],
     detailsLeft: [
@@ -992,6 +1253,30 @@ export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileVi
     ],
     tabs: [
       {
+        id: "participants",
+        label: "Participants",
+        emptyLabel: "No contacts were marked on this visit.",
+        columns: [
+          { key: "name", label: "Participant Name" },
+          { key: "role", label: "Role" },
+          { key: "phone", label: "Phone" },
+          { key: "email", label: "Email" },
+          { key: "attended", label: "Attended" },
+          { key: "createdAt", label: "Linked At" },
+        ],
+        rows: participantRows.rows.map((item) => ({
+          id: Number(item.id),
+          cells: {
+            name: buildCell(text(item.fullName), item.contactId ? `/portal/contacts/${item.contactId}` : null),
+            role: buildCell(item.role),
+            phone: buildCell(item.phone),
+            email: buildCell(item.email),
+            attended: buildCell(formatBool(item.attended)),
+            createdAt: buildCell(formatDateTime(item.createdAt)),
+          },
+        })),
+      },
+      {
         id: "implementation",
         label: "Implementation Notes",
         emptyLabel: "No implementation notes captured yet.",
@@ -1005,6 +1290,28 @@ export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileVi
           ),
         ].filter((item) => item.title !== "Implementation note" || item.subtitle || item.meta),
       },
+      {
+        id: "linked-activity",
+        label: "Linked Activity Chain",
+        emptyLabel: "No linked trainings, assessments, story activity, or teacher evaluations were found for this school.",
+        items: relatedActivityRows.rows.map((item) =>
+          activity(
+            `${item.module}-${item.id}`,
+            text(item.title),
+            text(item.recordCode),
+            text(item.module === "teacherEvaluation" ? "Teacher evaluation" : item.module),
+            formatDate(item.date),
+            item.module === "training"
+              ? `/portal/trainings/${item.id}`
+              : item.module === "assessment"
+                ? `/portal/assessments/${item.id}`
+                : item.module === "story"
+                  ? `/portal/story/${item.id}`
+                  : `/portal/schools/${row.schoolId}/teachers/${encodeURIComponent(text(item.recordCode, ""))}/improvement`,
+            text(item.status),
+          ),
+        ),
+      },
     ],
     sidebarCards: [
       {
@@ -1014,6 +1321,22 @@ export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileVi
           { label: "Participants", value: formatNumber(participantCount.rows[0]?.total) },
           { label: "Teacher Evaluations", value: formatNumber(evaluationCount.rows[0]?.total) },
           { label: "Evidence Files", value: formatNumber(filesCount.rows[0]?.total) },
+        ],
+      },
+      {
+        title: "School Progress Snapshot",
+        items: [
+          { label: "Learners Assessed", value: formatNumber(progress?.assessed) },
+          { label: "Story Reading Avg", value: text(progress?.storyReadingAvg, "Data not available") },
+          { label: "Comprehension Avg", value: text(progress?.comprehensionAvg, "Data not available") },
+          {
+            label: "At / Above Benchmark",
+            value:
+              progress?.onBenchmarkPct === null || progress?.onBenchmarkPct === undefined
+                ? "Data not available"
+                : `${progress.onBenchmarkPct}%`,
+          },
+          { label: "Date of Visit", value: formatDate(row.date) },
         ],
       },
     ],

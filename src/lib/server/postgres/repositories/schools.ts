@@ -347,6 +347,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
     assessmentsResult,
     evaluationsResult,
     summaryResult,
+    progressResult,
     trainingRowsResult,
     onlineRowsResult,
     interactionRowsResult,
@@ -426,6 +427,46 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
           ) AS "schoolVisitsLastFy"
       `,
       [id, schoolIdText, fyStart, fyLastStart, fyLastEnd],
+    ),
+    queryPostgres<{
+      learnersAssessed: number;
+      storyReadingAvg: number | null;
+      comprehensionAvg: number | null;
+      onBenchmarkPct: number | null;
+      fluentReaderPct: number | null;
+      latestReadingStage: string | null;
+    }>(
+      `
+        SELECT
+          COUNT(*)::int AS "learnersAssessed",
+          ROUND(AVG(COALESCE(story_reading_score, 0))::numeric, 1) AS "storyReadingAvg",
+          ROUND(AVG(COALESCE(reading_comprehension_score, 0))::numeric, 1) AS "comprehensionAvg",
+          ROUND(
+            (
+              COUNT(*) FILTER (
+                WHERE lower(COALESCE(expected_vs_actual_status, '')) IN ('at_expected', 'above_expected')
+              )::numeric / NULLIF(COUNT(*)::numeric, 0)
+            ) * 100,
+            1
+          ) AS "onBenchmarkPct",
+          ROUND(
+            (
+              COUNT(*) FILTER (WHERE COALESCE(computed_level_band, 0) >= 4)::numeric / NULLIF(COUNT(*)::numeric, 0)
+            ) * 100,
+            1
+          ) AS "fluentReaderPct",
+          (
+            SELECT ar.reading_stage_label
+            FROM assessment_records ar
+            WHERE ar.school_id = $1
+              AND trim(COALESCE(ar.reading_stage_label, '')) <> ''
+            ORDER BY ar.assessment_date DESC, ar.id DESC
+            LIMIT 1
+          ) AS "latestReadingStage"
+        FROM assessment_records
+        WHERE school_id = $1
+      `,
+      [id],
     ),
     queryPostgres(
       `
@@ -537,6 +578,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
   };
 
   const summaryRow = summaryResult.rows[0];
+  const progressRow = progressResult.rows[0];
   return {
     school,
     counts,
@@ -552,6 +594,28 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
       schoolVisitsThisFy: Number(summaryRow?.schoolVisitsThisFy ?? 0),
       schoolVisitsLastFy: Number(summaryRow?.schoolVisitsLastFy ?? 0),
     },
+    progress: progressRow
+      ? {
+          learnersAssessed: Number(progressRow.learnersAssessed ?? 0),
+          storyReadingAvg:
+            progressRow.storyReadingAvg === null || progressRow.storyReadingAvg === undefined
+              ? null
+              : Number(progressRow.storyReadingAvg),
+          comprehensionAvg:
+            progressRow.comprehensionAvg === null || progressRow.comprehensionAvg === undefined
+              ? null
+              : Number(progressRow.comprehensionAvg),
+          onBenchmarkPct:
+            progressRow.onBenchmarkPct === null || progressRow.onBenchmarkPct === undefined
+              ? null
+              : Number(progressRow.onBenchmarkPct),
+          fluentReaderPct:
+            progressRow.fluentReaderPct === null || progressRow.fluentReaderPct === undefined
+              ? null
+              : Number(progressRow.fluentReaderPct),
+          latestReadingStage: asNullableString(progressRow.latestReadingStage),
+        }
+      : null,
   };
 }
 

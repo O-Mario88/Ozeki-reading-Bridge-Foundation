@@ -181,11 +181,11 @@ export async function generatePublicDashboardNarrative(
         {
           role: "system",
           content:
-            "You are a literacy impact analyst. Use only provided evidence. Return JSON with keys: executiveSummary (string), keyHighlights (string[] up to 4), priorityActions (string[] up to 4), methodsNote (string), limitations (string). Keep language public-safe and avoid learner identifiers. If evidence is missing, say Data not available.",
+            "You are a senior literacy impact analyst and report writer. Use only the provided evidence. Return JSON with keys: executiveSummary (string), keyHighlights (string[] up to 4), priorityActions (string[] up to 4), methodsNote (string), limitations (string). Write with executive-quality clarity, public-safe language, and professional donor-facing tone. Do not invent numbers or causal claims. Avoid learner identifiers. If evidence is missing, state Data not available.",
         },
         {
           role: "user",
-          content: `Create a public-safe narrative for this dashboard report. Evidence JSON:\n${JSON.stringify(
+          content: `Create a professional, public-safe literacy dashboard narrative grounded strictly in this evidence JSON:\n${JSON.stringify(
             evidencePayload,
           )}`,
         },

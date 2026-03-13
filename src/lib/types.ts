@@ -2604,12 +2604,22 @@ export interface SchoolAccountProfileSummary {
   schoolVisitsLastFy: number;
 }
 
+export interface SchoolAccountProgressSnapshot {
+  learnersAssessed: number;
+  storyReadingAvg: number | null;
+  comprehensionAvg: number | null;
+  onBenchmarkPct: number | null;
+  fluentReaderPct: number | null;
+  latestReadingStage: string | null;
+}
+
 export interface SchoolAccountProfile {
   school: SchoolDirectoryRecord;
   counts: SchoolAccountRelatedCounts;
   recentTrainings: SchoolAccountRecentItem[];
   recentInteractions: SchoolAccountRecentItem[];
   summary: SchoolAccountProfileSummary;
+  progress?: SchoolAccountProgressSnapshot | null;
 }
 
 export type GraduationDomainKey =

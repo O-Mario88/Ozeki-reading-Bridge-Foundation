@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  getImpactSummary,
   getCostEffectivenessData,
   runImpactCalculator,
   getGovernmentViewData,
@@ -112,5 +111,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return cachedJson(await getImpactSummary());
+  return cachedJson(await getPublicImpactAggregate("country", "Uganda", period || "FY"));
 }

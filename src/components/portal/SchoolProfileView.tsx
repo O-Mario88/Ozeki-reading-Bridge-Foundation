@@ -64,7 +64,7 @@ function mapUrl(value: string | null | undefined) {
 }
 
 export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
-  const { school, counts, recentTrainings, recentInteractions, summary } = profile;
+  const { school, counts, recentTrainings, recentInteractions, summary, progress } = profile;
   const [activeTab, setActiveTab] = useState<"details" | "related" | "trainings" | "interactions">("details");
   const [graduationLoading, setGraduationLoading] = useState(false);
   const [graduationError, setGraduationError] = useState("");
@@ -523,6 +523,46 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                 </strong>
               </div>
               {supportStatusError ? <p className="school-crm-muted">{supportStatusError}</p> : null}
+            </div>
+          </section>
+
+          <section className="school-crm-card">
+            <div className="school-crm-card-header">
+              <h2>Literacy Progress</h2>
+            </div>
+            <div className="school-crm-side-stack">
+              <div>
+                <span>Learners Assessed</span>
+                <strong>{formatNumber(progress?.learnersAssessed)}</strong>
+              </div>
+              <div>
+                <span>Story Reading Avg</span>
+                <strong>{progress?.storyReadingAvg ?? "Data not available"}</strong>
+              </div>
+              <div>
+                <span>Comprehension Avg</span>
+                <strong>{progress?.comprehensionAvg ?? "Data not available"}</strong>
+              </div>
+              <div>
+                <span>At / Above Benchmark</span>
+                <strong>
+                  {progress?.onBenchmarkPct === null || progress?.onBenchmarkPct === undefined
+                    ? "Data not available"
+                    : `${progress.onBenchmarkPct}%`}
+                </strong>
+              </div>
+              <div>
+                <span>Fluent Reader Share</span>
+                <strong>
+                  {progress?.fluentReaderPct === null || progress?.fluentReaderPct === undefined
+                    ? "Data not available"
+                    : `${progress.fluentReaderPct}%`}
+                </strong>
+              </div>
+              <div>
+                <span>Latest Reading Stage</span>
+                <strong>{progress?.latestReadingStage || "Data not available"}</strong>
+              </div>
             </div>
           </section>
         </aside>

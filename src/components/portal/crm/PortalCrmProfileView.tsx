@@ -101,10 +101,45 @@ export function PortalCrmProfileView({ profile }: PortalCrmProfileViewProps) {
                 <div className="portal-crm-details-column">{profile.detailsLeft.map(renderDetail)}</div>
                 <div className="portal-crm-details-column">{profile.detailsRight.map(renderDetail)}</div>
               </div>
+            ) : active?.columns?.length && active.rows ? (
+              <div className="portal-crm-tab-table-wrap">
+                <table className="portal-crm-tab-table">
+                  <thead>
+                    <tr>
+                      {active.columns.map((column) => (
+                        <th key={`${active.id}-${column.key}`}>{column.label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {active.rows.length > 0 ? (
+                      active.rows.map((row) => (
+                        <tr key={`${active.id}-${row.id}`}>
+                          {active.columns?.map((column) => {
+                            const cell = row.cells[column.key];
+                            const content = cell?.href ? (
+                              <Link href={cell.href}>{cell.value}</Link>
+                            ) : (
+                              <span className={cell?.muted ? "is-muted" : undefined}>{cell?.value ?? "-"}</span>
+                            );
+                            return <td key={`${active.id}-${row.id}-${column.key}`}>{content}</td>;
+                          })}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={active.columns.length} className="portal-crm-empty">
+                          {active.emptyLabel}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             ) : active ? (
               <div className="portal-crm-activity-list">
-                {active.items.length > 0 ? (
-                  active.items.map((item) => (
+                {(active.items ?? []).length > 0 ? (
+                  (active.items ?? []).map((item) => (
                     <div key={`${active.id}-${item.id}`} className="portal-crm-activity-item">
                       <div>
                         {item.href ? <Link href={item.href}>{item.title}</Link> : <strong>{item.title}</strong>}
@@ -329,6 +364,45 @@ export function PortalCrmProfileView({ profile }: PortalCrmProfileViewProps) {
           display: grid;
           gap: 0.85rem;
           margin-top: 1rem;
+        }
+        .portal-crm-tab-table-wrap {
+          margin-top: 1rem;
+          overflow-x: auto;
+        }
+        .portal-crm-tab-table {
+          width: 100%;
+          min-width: 920px;
+          border-collapse: collapse;
+          background: #fff;
+          border: 1px solid #d7dde7;
+          border-radius: 14px;
+          overflow: hidden;
+        }
+        .portal-crm-tab-table th,
+        .portal-crm-tab-table td {
+          padding: 0.85rem 0.95rem;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
+          vertical-align: top;
+        }
+        .portal-crm-tab-table th {
+          background: #f8fafc;
+          color: #475569;
+          font-size: 0.94rem;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .portal-crm-tab-table td {
+          color: #1f2937;
+          font-size: 0.98rem;
+        }
+        .portal-crm-tab-table :global(a) {
+          color: #0f5fc5;
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .portal-crm-tab-table :global(a:hover) {
+          text-decoration: underline;
         }
         .portal-crm-activity-item {
           display: flex;
