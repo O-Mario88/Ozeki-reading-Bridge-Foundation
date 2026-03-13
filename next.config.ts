@@ -13,7 +13,15 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "*": [
       "node_modules/puppeteer-core/lib/esm/puppeteer/node/install.js",
+      "backend/**/*",
+      "database/**/*",
+      "docs/**/*",
+      "frontend/**/*",
+      "public/assets 2/**/*",
+      "src/app 2/**/*",
+      "src/components 2/**/*",
       "assets/videos/**/*",
+      "data/**/*",
       "data/finance/**/*",
     ],
   },
