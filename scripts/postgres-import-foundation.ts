@@ -39,6 +39,13 @@ const TABLES = [
   "observation_rubrics",
 ] as const;
 
+const PRIMARY_KEY_COLUMNS: Partial<Record<(typeof TABLES)[number], string>> = {
+  school_contacts: "contact_id",
+  school_learners: "learner_id",
+  teacher_roster: "id",
+  learner_roster: "id",
+};
+
 const COLUMN_ALIASES: Partial<Record<(typeof TABLES)[number], Record<string, string>>> = {
   audit_logs: {
     created_at: "timestamp",
@@ -172,11 +179,11 @@ async function getPostgresColumns(table: string) {
   return result.rows.map((row) => row.column_name);
 }
 
-async function resetIdentitySequence(table: string) {
+async function resetIdentitySequence(table: string, primaryKeyColumn = "id") {
   const pool = getPostgresPool();
   const sequenceResult = await pool.query<{ sequence_name: string | null }>(
-    `SELECT pg_get_serial_sequence($1, 'id') AS sequence_name`,
-    [table],
+    `SELECT pg_get_serial_sequence($1, $2) AS sequence_name`,
+    [table, primaryKeyColumn],
   );
   const sequenceName = sequenceResult.rows[0]?.sequence_name;
   if (!sequenceName) {
@@ -184,7 +191,7 @@ async function resetIdentitySequence(table: string) {
   }
 
   const maxIdResult = await pool.query<{ max_id: number | null; row_count: string }>(
-    `SELECT MAX(id) AS max_id, COUNT(*)::text AS row_count FROM ${table}`,
+    `SELECT MAX(${primaryKeyColumn}) AS max_id, COUNT(*)::text AS row_count FROM ${table}`,
   );
   const maxId = Number(maxIdResult.rows[0]?.max_id ?? 0);
   const hasRows = Number(maxIdResult.rows[0]?.row_count ?? 0) > 0;
@@ -354,8 +361,9 @@ async function main() {
       );
     }
 
-    if (columnNames.includes("id")) {
-      await resetIdentitySequence(table);
+    const primaryKeyColumn = PRIMARY_KEY_COLUMNS[table] ?? "id";
+    if (columnNames.includes(primaryKeyColumn)) {
+      await resetIdentitySequence(table, primaryKeyColumn);
     }
   }
 

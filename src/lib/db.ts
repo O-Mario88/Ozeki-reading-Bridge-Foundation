@@ -7071,6 +7071,637 @@ export function listAssessmentRecords(limit = 20): AssessmentRecord[] {
   return rows;
 }
 
+function parseLearnerRosterRowPostgres(row: {
+  learnerUid: string;
+  schoolId: number | string;
+  fullName: string;
+  internalChildId: string | null;
+  gender: LearnerRosterRecord["gender"];
+  age: number | string;
+  classGrade: string;
+  consentFlag: boolean | number | null;
+  createdAt: string;
+  updatedAt: string;
+}): LearnerRosterRecord {
+  return {
+    learnerUid: row.learnerUid,
+    schoolId: Number(row.schoolId),
+    fullName: row.fullName,
+    internalChildId: row.internalChildId ?? undefined,
+    gender: row.gender,
+    age: Number(row.age),
+    classGrade: row.classGrade,
+    consentFlag: row.consentFlag === true || Number(row.consentFlag ?? 0) === 1,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+async function nextShortCodePostgres(
+  client: PoolClient,
+  table: string,
+  column: string,
+  prefix: string,
+  width: number,
+) {
+  const result = await client.query<{ value: string | null }>(
+    `SELECT ${column} AS value FROM ${table} WHERE ${column} LIKE $1`,
+    [`${prefix}%`],
+  );
+  let maxSequence = 0;
+  result.rows.forEach((row) => {
+    const parsed = parseCodeSequence(String(row.value ?? ""), prefix);
+    if (parsed && parsed > maxSequence) {
+      maxSequence = parsed;
+    }
+  });
+  return toPaddedCode(prefix, maxSequence + 1, width);
+}
+
+async function findLearnerRosterRecordPostgres(
+  client: PoolClient,
+  input: LearnerRosterInput,
+): Promise<LearnerRosterRecord | null> {
+  const normalizedName = normalizePersonName(input.fullName);
+  const result = await client.query<{
+    learnerUid: string;
+    schoolId: number;
+    fullName: string;
+    internalChildId: string | null;
+    gender: LearnerRosterRecord["gender"];
+    age: number;
+    classGrade: string;
+    consentFlag: boolean | null;
+    createdAt: string;
+    updatedAt: string;
+  }>(
+    `
+      SELECT
+        learner_uid AS "learnerUid",
+        school_id AS "schoolId",
+        full_name AS "fullName",
+        internal_child_id AS "internalChildId",
+        gender,
+        age,
+        class_grade AS "classGrade",
+        consent_flag AS "consentFlag",
+        created_at::text AS "createdAt",
+        updated_at::text AS "updatedAt"
+      FROM learner_roster
+      WHERE school_id = $1
+        AND class_grade = $2
+        AND lower(trim(full_name)) = lower(trim($3))
+      LIMIT 1
+    `,
+    [input.schoolId, input.classGrade, normalizedName],
+  );
+  const row = result.rows[0];
+  return row ? parseLearnerRosterRowPostgres(row) : null;
+}
+
+async function findLearnerRosterRecordByUidPostgres(
+  client: PoolClient,
+  learnerUid: string,
+): Promise<LearnerRosterRecord | null> {
+  const normalizedLearnerUid = learnerUid.trim();
+  if (!normalizedLearnerUid) {
+    return null;
+  }
+
+  const result = await client.query<{
+    learnerUid: string;
+    schoolId: number;
+    fullName: string;
+    internalChildId: string | null;
+    gender: LearnerRosterRecord["gender"];
+    age: number;
+    classGrade: string;
+    consentFlag: boolean | null;
+    createdAt: string;
+    updatedAt: string;
+  }>(
+    `
+      SELECT
+        learner_uid AS "learnerUid",
+        school_id AS "schoolId",
+        full_name AS "fullName",
+        internal_child_id AS "internalChildId",
+        gender,
+        age,
+        class_grade AS "classGrade",
+        consent_flag AS "consentFlag",
+        created_at::text AS "createdAt",
+        updated_at::text AS "updatedAt"
+      FROM learner_roster
+      WHERE learner_uid = $1
+      LIMIT 1
+    `,
+    [normalizedLearnerUid],
+  );
+  const row = result.rows[0];
+  return row ? parseLearnerRosterRowPostgres(row) : null;
+}
+
+async function ensureSchoolLearnerMirrorPostgres(
+  client: PoolClient,
+  learner: LearnerRosterRecord,
+) {
+  await client.query(
+    `
+      INSERT INTO school_learners (
+        learner_uid,
+        school_id,
+        learner_name,
+        class_grade,
+        age,
+        gender,
+        internal_child_id,
+        created_at,
+        updated_at
+      ) VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (learner_uid)
+      DO UPDATE SET
+        school_id = EXCLUDED.school_id,
+        learner_name = EXCLUDED.learner_name,
+        class_grade = EXCLUDED.class_grade,
+        age = EXCLUDED.age,
+        gender = EXCLUDED.gender,
+        internal_child_id = EXCLUDED.internal_child_id,
+        updated_at = NOW()
+    `,
+    [
+      learner.learnerUid,
+      learner.schoolId,
+      learner.fullName,
+      learner.classGrade,
+      learner.age,
+      learner.gender,
+      learner.internalChildId?.trim() || null,
+    ],
+  );
+}
+
+async function createOrUpdateLearnerRosterRecordPostgres(
+  client: PoolClient,
+  input: LearnerRosterInput,
+): Promise<LearnerRosterRecord> {
+  const normalizedName = normalizePersonName(input.fullName);
+  if (!normalizedName) {
+    throw new Error("Learner name is required.");
+  }
+
+  const normalizedAge = Math.max(3, Math.min(25, Math.floor(Number(input.age))));
+  const normalizedInternalChildId = input.internalChildId?.trim() ? input.internalChildId.trim() : null;
+  const existing = await findLearnerRosterRecordPostgres(client, { ...input, fullName: normalizedName });
+  if (existing) {
+    const result = await client.query<{
+      learnerUid: string;
+      schoolId: number;
+      fullName: string;
+      internalChildId: string | null;
+      gender: LearnerRosterRecord["gender"];
+      age: number;
+      classGrade: string;
+      consentFlag: boolean;
+      createdAt: string;
+      updatedAt: string;
+    }>(
+      `
+        UPDATE learner_roster
+        SET
+          internal_child_id = $2,
+          gender = $3,
+          age = $4,
+          class_grade = $5,
+          consent_flag = $6,
+          updated_at = NOW()
+        WHERE learner_uid = $1
+        RETURNING
+          learner_uid AS "learnerUid",
+          school_id AS "schoolId",
+          full_name AS "fullName",
+          internal_child_id AS "internalChildId",
+          gender,
+          age,
+          class_grade AS "classGrade",
+          consent_flag AS "consentFlag",
+          created_at::text AS "createdAt",
+          updated_at::text AS "updatedAt"
+      `,
+      [
+        existing.learnerUid,
+        normalizedInternalChildId,
+        input.gender,
+        normalizedAge,
+        input.classGrade,
+        input.consentFlag ?? false,
+      ],
+    );
+    const updated = result.rows[0];
+    if (!updated) {
+      throw new Error("Could not load learner record.");
+    }
+    const parsed = parseLearnerRosterRowPostgres(updated);
+    await ensureSchoolLearnerMirrorPostgres(client, parsed);
+    return parsed;
+  }
+
+  const learnerUid = await nextShortCodePostgres(client, "learner_roster", "learner_uid", "LR-", 4);
+  const result = await client.query<{
+    learnerUid: string;
+    schoolId: number;
+    fullName: string;
+    internalChildId: string | null;
+    gender: LearnerRosterRecord["gender"];
+    age: number;
+    classGrade: string;
+    consentFlag: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>(
+    `
+      INSERT INTO learner_roster (
+        learner_uid,
+        school_id,
+        full_name,
+        internal_child_id,
+        gender,
+        age,
+        class_grade,
+        consent_flag,
+        created_at,
+        updated_at
+      ) VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        NOW(),
+        NOW()
+      )
+      RETURNING
+        learner_uid AS "learnerUid",
+        school_id AS "schoolId",
+        full_name AS "fullName",
+        internal_child_id AS "internalChildId",
+        gender,
+        age,
+        class_grade AS "classGrade",
+        consent_flag AS "consentFlag",
+        created_at::text AS "createdAt",
+        updated_at::text AS "updatedAt"
+    `,
+    [
+      learnerUid,
+      input.schoolId,
+      normalizedName,
+      normalizedInternalChildId,
+      input.gender,
+      normalizedAge,
+      input.classGrade,
+      input.consentFlag ?? false,
+    ],
+  );
+  const created = result.rows[0];
+  if (!created) {
+    throw new Error("Could not load learner record.");
+  }
+  const parsed = parseLearnerRosterRowPostgres(created);
+  await ensureSchoolLearnerMirrorPostgres(client, parsed);
+  return parsed;
+}
+
+async function replaceAssessmentItemResponsesPostgres(args: {
+  client: PoolClient;
+  learnerResultId: number;
+  assessmentSessionResultId?: number | null;
+  assessmentSessionId?: number | null;
+  learnerUid?: string | null;
+  mastery: ReturnType<typeof computeOneTestStyleMasteryAssessment>;
+}) {
+  const {
+    client,
+    learnerResultId,
+    assessmentSessionResultId,
+    assessmentSessionId,
+    learnerUid,
+    mastery,
+  } = args;
+  await client.query(
+    `DELETE FROM assessment_item_responses WHERE learner_result_id = $1`,
+    [learnerResultId],
+  );
+  if (mastery.itemScores.length === 0) {
+    return;
+  }
+
+  for (const item of mastery.itemScores) {
+    await client.query(
+      `
+        INSERT INTO assessment_item_responses (
+          learner_result_id,
+          assessment_session_result_id,
+          assessment_session_id,
+          learner_uid,
+          domain_key,
+          item_key,
+          accuracy,
+          latency_ms,
+          attempts,
+          hint_used,
+          correction_used,
+          item_score,
+          latency_score,
+          attempt_support_score,
+          model_version,
+          scoring_profile_version
+        ) VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8,
+          $9,
+          $10,
+          $11,
+          $12,
+          $13,
+          $14,
+          $15,
+          $16
+        )
+      `,
+      [
+        learnerResultId,
+        assessmentSessionResultId ?? null,
+        assessmentSessionId ?? null,
+        learnerUid?.trim() || null,
+        item.domainKey,
+        item.itemKey,
+        item.accuracy,
+        item.latencyMs ?? null,
+        item.attempts,
+        item.hintUsed,
+        item.correctionUsed,
+        item.itemScore,
+        item.latencyScore,
+        item.attemptSupportScore,
+        mastery.modelVersion,
+        mastery.scoringProfileVersion,
+      ],
+    );
+  }
+}
+
+async function saveAssessmentRecordPostgres(
+  payload: AssessmentRecordInput,
+  createdByUserId: number,
+): Promise<AssessmentRecord> {
+  return await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const learnerRecord =
+        payload.learnerUid && payload.learnerUid.trim()
+          ? await findLearnerRosterRecordByUidPostgres(client, payload.learnerUid)
+          : await createOrUpdateLearnerRosterRecordPostgres(client, {
+            schoolId: payload.schoolId,
+            fullName: payload.childName,
+            internalChildId: payload.childId?.trim() || undefined,
+            gender: payload.gender,
+            age: payload.age,
+            classGrade: payload.classGrade,
+            consentFlag: false,
+          });
+
+      if (!learnerRecord) {
+        throw new Error("Could not resolve learner roster record.");
+      }
+
+      const masterySettings = getOneTestMasterySettings(getDb());
+      const resolvedModelVersion = ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1;
+      const isOneTestModel = isOneTestStyleModelVersion(resolvedModelVersion);
+      const resolvedBenchmarkVersion = String(payload.benchmarkVersion ?? "").trim();
+      const resolvedScoringProfileVersion = String(payload.scoringProfileVersion ?? "").trim();
+      const domainInputs = parseDomainInputsFromUnknown(payload.masteryDomainInputs);
+      const itemResponses = parseItemResponsesFromUnknown(payload.masteryItemResponses);
+
+      const masteryComputation = isOneTestModel
+        ? computeOneTestStyleMasteryAssessment({
+          grade: payload.learnerExpectedGrade ?? payload.classGrade,
+          age: payload.age,
+          domainInputs,
+          itemResponses,
+          legacyScores: {
+            letterIdentificationScore: payload.letterIdentificationScore,
+            soundIdentificationScore: payload.soundIdentificationScore,
+            decodableWordsScore: payload.decodableWordsScore,
+            undecodableWordsScore: payload.undecodableWordsScore,
+            madeUpWordsScore: payload.madeUpWordsScore,
+            storyReadingScore: payload.storyReadingScore,
+            readingComprehensionScore: payload.readingComprehensionScore,
+            fluencyAccuracyScore: payload.fluencyAccuracyScore ?? null,
+          },
+          settings: masterySettings,
+          modelVersion: resolvedModelVersion,
+          benchmarkVersion: resolvedBenchmarkVersion || masterySettings.benchmarkVersion,
+          scoringProfileVersion:
+            resolvedScoringProfileVersion || masterySettings.scoringProfileVersion,
+        })
+        : null;
+
+      const readingRuleSettings = getAssessmentReadingRuleSettings(getDb(), {
+        grade: payload.classGrade,
+        language: "English",
+        atDate: payload.assessmentDate,
+      });
+      const computedReading = computeAssessmentReadingLevel(
+        {
+          fluencyCwpm: payload.storyReadingScore,
+          fluencyAccuracy: payload.fluencyAccuracyScore ?? null,
+          comprehensionScore: payload.readingComprehensionScore,
+        },
+        readingRuleSettings,
+      );
+      const computedAt = new Date().toISOString();
+      const computedReadingLevelForInsert = masteryComputation
+        ? toLegacyReadingLabelFromStage(
+          masteryComputation.readingStageOrder,
+          masteryComputation.readingStageLabel,
+        )
+        : computedReading.computedReadingLevel;
+      const computedLevelBandForInsert = masteryComputation
+        ? stageBandFromOrder(masteryComputation.readingStageOrder)
+        : computedReading.computedLevelBand;
+      const readingRulesVersionForInsert = masteryComputation
+        ? masteryComputation.modelVersion
+        : computedReading.rulesVersion;
+
+      const insertResult = await client.query<{ id: number }>(
+        `
+          INSERT INTO assessment_records (
+            learner_uid,
+            child_name,
+            child_id,
+            gender,
+            age,
+            school_id,
+            class_grade,
+            assessment_date,
+            assessment_type,
+            letter_identification_score,
+            sound_identification_score,
+            decodable_words_score,
+            undecodable_words_score,
+            made_up_words_score,
+            story_reading_score,
+            fluency_accuracy_score,
+            reading_comprehension_score,
+            computed_reading_level,
+            computed_level_band,
+            reading_rules_version,
+            reading_level_computed_at,
+            notes,
+            created_by_user_id,
+            model_version,
+            benchmark_version,
+            scoring_profile_version,
+            learner_expected_grade
+          ) VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11,
+            $12,
+            $13,
+            $14,
+            $15,
+            $16,
+            $17,
+            $18,
+            $19,
+            $20,
+            $21,
+            $22,
+            $23,
+            $24,
+            $25,
+            $26,
+            $27
+          )
+          RETURNING id
+        `,
+        [
+          learnerRecord.learnerUid,
+          learnerRecord.fullName,
+          payload.childId?.trim()
+            || learnerRecord.internalChildId
+            || `${learnerRecord.schoolId}-${learnerRecord.learnerUid.slice(-6)}`,
+          learnerRecord.gender,
+          learnerRecord.age,
+          learnerRecord.schoolId,
+          learnerRecord.classGrade,
+          payload.assessmentDate,
+          payload.assessmentType,
+          payload.letterIdentificationScore,
+          payload.soundIdentificationScore,
+          payload.decodableWordsScore,
+          payload.undecodableWordsScore,
+          payload.madeUpWordsScore,
+          payload.storyReadingScore,
+          payload.fluencyAccuracyScore ?? null,
+          payload.readingComprehensionScore,
+          computedReadingLevelForInsert,
+          computedLevelBandForInsert,
+          readingRulesVersionForInsert,
+          computedAt,
+          payload.notes?.trim() ? payload.notes : null,
+          createdByUserId,
+          resolvedModelVersion || ASSESSMENT_LEGACY_MODEL_VERSION,
+          resolvedBenchmarkVersion || null,
+          resolvedScoringProfileVersion || null,
+          payload.learnerExpectedGrade ?? payload.classGrade,
+        ],
+      );
+
+      const assessmentId = Number(insertResult.rows[0]?.id ?? 0);
+      if (!assessmentId) {
+        throw new Error("Could not load saved assessment record.");
+      }
+
+      if (masteryComputation) {
+        await upsertSqliteRowToPostgres(
+          "assessment_records",
+          "id",
+          {
+            id: assessmentId,
+            model_version: masteryComputation.modelVersion,
+            benchmark_version: masteryComputation.benchmarkVersion,
+            scoring_profile_version: masteryComputation.scoringProfileVersion,
+            learner_expected_grade: payload.learnerExpectedGrade ?? payload.classGrade,
+            computed_reading_level: toLegacyReadingLabelFromStage(
+              masteryComputation.readingStageOrder,
+              masteryComputation.readingStageLabel,
+            ),
+            computed_level_band: stageBandFromOrder(masteryComputation.readingStageOrder),
+            reading_rules_version: masteryComputation.modelVersion,
+            reading_level_computed_at: computedAt,
+            reading_stage_label: masteryComputation.readingStageLabel,
+            reading_stage_order: masteryComputation.readingStageOrder,
+            benchmark_grade_level: masteryComputation.benchmarkGradeLevel,
+            expected_vs_actual_status: masteryComputation.expectedVsActualStatus,
+            mastery_profile_summary_json: buildMasteryProfileSummaryJson(masteryComputation),
+            stage_reason_code: masteryComputation.stageReasonCode,
+            stage_reason_summary: masteryComputation.stageReasonSummary,
+            assessment_model_computed_at: computedAt,
+            ...buildMasteryDomainPersistencePayload(masteryComputation),
+          },
+          client,
+        );
+        await replaceAssessmentItemResponsesPostgres({
+          client,
+          learnerResultId: assessmentId,
+          learnerUid: learnerRecord.learnerUid,
+          mastery: masteryComputation,
+        });
+      }
+
+      await client.query("COMMIT");
+      const saved = await getAssessmentRecordByIdPostgres(assessmentId);
+      if (!saved) {
+        throw new Error("Could not load saved assessment record.");
+      }
+      return saved;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
 async function getAssessmentRecordByIdPostgres(assessmentId: number): Promise<AssessmentRecord | null> {
   const result = await queryPostgres(
     `
@@ -7114,37 +7745,6 @@ async function getAssessmentRecordByIdPostgres(assessmentId: number): Promise<As
     [assessmentId],
   );
   return (result.rows[0] as AssessmentRecord | undefined) ?? null;
-}
-
-async function mirrorAssessmentRecordToPostgres(assessmentId: number, learnerUid?: string | null) {
-  const db = getDb();
-  const assessmentRow = db
-    .prepare(`SELECT * FROM assessment_records WHERE id = @assessmentId LIMIT 1`)
-    .get({ assessmentId }) as Record<string, unknown> | undefined;
-  if (!assessmentRow) {
-    return;
-  }
-
-  const learnerRow =
-    learnerUid && learnerUid.trim()
-      ? (db
-        .prepare(`SELECT * FROM learner_roster WHERE learner_uid = @learnerUid LIMIT 1`)
-        .get({ learnerUid: learnerUid.trim() }) as Record<string, unknown> | undefined)
-      : undefined;
-
-  await withPostgresClient(async (client) => {
-    await client.query("BEGIN");
-    try {
-      if (learnerRow) {
-        await upsertSqliteRowToPostgres("learner_roster", "id", learnerRow, client);
-      }
-      await upsertSqliteRowToPostgres("assessment_records", "id", assessmentRow, client);
-      await client.query("COMMIT");
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    }
-  });
 }
 
 export async function listAssessmentRecordsAsync(limit = 20): Promise<AssessmentRecord[]> {
@@ -7200,13 +7800,10 @@ export async function saveAssessmentRecordAsync(
   payload: AssessmentRecordInput,
   createdByUserId: number,
 ): Promise<AssessmentRecord> {
-  const saved = saveAssessmentRecord(payload, createdByUserId);
   if (!isPostgresConfigured()) {
-    return saved;
+    return saveAssessmentRecord(payload, createdByUserId);
   }
-
-  await mirrorAssessmentRecordToPostgres(saved.id, saved.learnerUid ?? null);
-  return (await getAssessmentRecordByIdPostgres(saved.id)) ?? saved;
+  return await saveAssessmentRecordPostgres(payload, createdByUserId);
 }
 
 export function saveOnlineTrainingEvent(
@@ -8277,6 +8874,19 @@ function buildMasteryDomainPersistencePayload(
   return payload;
 }
 
+function buildMasteryProfileSummaryJson(
+  mastery: ReturnType<typeof computeOneTestStyleMasteryAssessment>,
+) {
+  return JSON.stringify({
+    text: mastery.masteryProfileSummary,
+    domains: MASTERY_DOMAIN_SEQUENCE.map((domain) => ({
+      key: domain.key,
+      label: domain.displayName,
+      status: masteryStatusLabel(mastery.domains[domain.key].domainMasteryStatus),
+    })),
+  });
+}
+
 function persistMasteryForAssessmentRecord(args: {
   db: Database.Database;
   assessmentRecordId: number;
@@ -8361,14 +8971,7 @@ function persistMasteryForAssessmentRecord(args: {
     readingStageOrder: mastery.readingStageOrder,
     benchmarkGradeLevel: mastery.benchmarkGradeLevel,
     expectedVsActualStatus: mastery.expectedVsActualStatus,
-    masteryProfileSummaryJson: JSON.stringify({
-      text: mastery.masteryProfileSummary,
-      domains: MASTERY_DOMAIN_SEQUENCE.map((domain) => ({
-        key: domain.key,
-        label: domain.displayName,
-        status: masteryStatusLabel(mastery.domains[domain.key].domainMasteryStatus),
-      })),
-    }),
+    masteryProfileSummaryJson: buildMasteryProfileSummaryJson(mastery),
     stageReasonCode: mastery.stageReasonCode,
     stageReasonSummary: mastery.stageReasonSummary,
     ...domainPayload,
@@ -8455,14 +9058,7 @@ function persistMasteryForSessionResult(args: {
     readingStageOrder: mastery.readingStageOrder,
     benchmarkGradeLevel: mastery.benchmarkGradeLevel,
     expectedVsActualStatus: mastery.expectedVsActualStatus,
-    masteryProfileSummaryJson: JSON.stringify({
-      text: mastery.masteryProfileSummary,
-      domains: MASTERY_DOMAIN_SEQUENCE.map((domain) => ({
-        key: domain.key,
-        label: domain.displayName,
-        status: masteryStatusLabel(mastery.domains[domain.key].domainMasteryStatus),
-      })),
-    }),
+    masteryProfileSummaryJson: buildMasteryProfileSummaryJson(mastery),
     stageReasonCode: mastery.stageReasonCode,
     stageReasonSummary: mastery.stageReasonSummary,
     ...domainPayload,
