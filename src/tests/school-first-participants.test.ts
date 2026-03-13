@@ -60,7 +60,7 @@ function getSuperAdminActor(): PortalUser {
   };
 }
 
-function createTestSchool(tag: string) {
+async function createTestSchool(tag: string) {
   return createSchoolDirectoryRecord({
     name: `School First ${tag} ${Date.now()}`,
     district: "Kampala",
@@ -79,7 +79,7 @@ function createTestSchool(tag: string) {
 }
 
 test("school creation requires primary contact", async () => {
-  assert.throws(
+  await assert.rejects(
     () =>
       createSchoolDirectoryRecord({
         name: `Missing Proprietor ${Date.now()}`,
@@ -96,7 +96,7 @@ test("school creation requires primary contact", async () => {
 
 test("training blocks free-text participants and accepts school roster contact IDs", async () => {
   const actor = getSuperAdminActor();
-  const school = createTestSchool("training");
+  const school = await createTestSchool("training");
   const contact = addSchoolContactToSchool({
     schoolId: school.id,
     fullName: "Teacher Training Contact",
@@ -172,7 +172,7 @@ test("training blocks free-text participants and accepts school roster contact I
 
 test("assessment blocks free-text learners and accepts school learner IDs", async () => {
   const actor = getSuperAdminActor();
-  const school = createTestSchool("assessment");
+  const school = await createTestSchool("assessment");
   const learner = addSchoolLearnerToSchool({
     schoolId: school.id,
     learnerName: "Assessment Learner",

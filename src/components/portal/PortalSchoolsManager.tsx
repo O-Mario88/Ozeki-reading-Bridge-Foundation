@@ -304,11 +304,23 @@ export function PortalSchoolsManager({
     const district = String(formData.get("district") ?? "").trim();
     const payload = {
       name: String(formData.get("name") ?? ""),
+      country: String(formData.get("country") ?? "Uganda"),
       district,
       subCounty: String(formData.get("subCounty") ?? ""),
       parish: String(formData.get("parish") ?? ""),
       village: String(formData.get("village") ?? ""),
       notes: String(formData.get("notes") ?? ""),
+      alternateSchoolNames: String(formData.get("alternateSchoolNames") ?? ""),
+      schoolStatus: String(formData.get("schoolStatus") ?? "Open"),
+      schoolStatusDate: String(formData.get("schoolStatusDate") ?? ""),
+      currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
+      yearFounded: String(formData.get("yearFounded") ?? ""),
+      denomination: String(formData.get("denomination") ?? ""),
+      website: String(formData.get("website") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      partnerType: String(formData.get("partnerType") ?? ""),
+      currentPartnerSchool: formData.get("currentPartnerSchool") === "on",
+      schoolActive: formData.get("schoolActive") !== null ? formData.get("schoolActive") === "on" : true,
       enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
       enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
       enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
@@ -434,6 +446,15 @@ export function PortalSchoolsManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...payload,
+          yearFounded: payload.yearFounded.trim() ? Number(payload.yearFounded) : undefined,
+          accountRecordType: "School",
+          schoolType: "School",
+          parentAccountLabel: payload.country.trim() || "Uganda",
+          schoolRelationshipStatus: payload.currentPartnerType.trim() ? "Pre-partner" : undefined,
+          schoolRelationshipStatusDate: payload.schoolStatusDate.trim() || undefined,
+          clientSchoolNumber: 0,
+          metricCount: 0,
+          runningTotalMaxEnrollment: enrollmentTotal,
           enrollmentTotal,
           enrolledBoys,
           enrolledGirls,
@@ -504,11 +525,23 @@ export function PortalSchoolsManager({
     const payload = {
       schoolId: selectedSchool.id,
       name: String(formData.get("name") ?? ""),
+      country: String(formData.get("country") ?? "Uganda"),
       district: String(formData.get("district") ?? ""),
       subCounty: String(formData.get("subCounty") ?? ""),
       parish: String(formData.get("parish") ?? ""),
       village: String(formData.get("village") ?? ""),
       notes: String(formData.get("notes") ?? ""),
+      alternateSchoolNames: String(formData.get("alternateSchoolNames") ?? ""),
+      schoolStatus: String(formData.get("schoolStatus") ?? "Open"),
+      schoolStatusDate: String(formData.get("schoolStatusDate") ?? ""),
+      currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
+      yearFounded: String(formData.get("yearFounded") ?? ""),
+      denomination: String(formData.get("denomination") ?? ""),
+      website: String(formData.get("website") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      partnerType: String(formData.get("partnerType") ?? ""),
+      currentPartnerSchool: formData.get("currentPartnerSchool") === "on",
+      schoolActive: formData.get("schoolActive") !== null ? formData.get("schoolActive") === "on" : true,
       enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
       enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
       enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
@@ -587,11 +620,31 @@ export function PortalSchoolsManager({
         body: JSON.stringify({
           schoolId: selectedSchool.id,
           name: payload.name.trim(),
+          country: payload.country.trim(),
           district: payload.district.trim(),
           subCounty: payload.subCounty.trim(),
           parish: payload.parish.trim(),
           village: payload.village.trim() || null,
           notes: payload.notes.trim() || null,
+          alternateSchoolNames: payload.alternateSchoolNames.trim() || null,
+          schoolStatus: payload.schoolStatus.trim() || "Open",
+          schoolStatusDate: payload.schoolStatusDate.trim() || null,
+          currentPartnerType: payload.currentPartnerType.trim() || "NA",
+          yearFounded: payload.yearFounded.trim() ? Number(payload.yearFounded) : null,
+          accountRecordType: selectedSchool.accountRecordType,
+          schoolType: selectedSchool.schoolType,
+          parentAccountLabel: selectedSchool.parentAccountLabel,
+          schoolRelationshipStatus: selectedSchool.schoolRelationshipStatus,
+          schoolRelationshipStatusDate: selectedSchool.schoolRelationshipStatusDate,
+          denomination: payload.denomination.trim() || null,
+          clientSchoolNumber: selectedSchool.clientSchoolNumber,
+          metricCount: selectedSchool.metricCount,
+          runningTotalMaxEnrollment: Math.max(selectedSchool.runningTotalMaxEnrollment, enrollmentTotal),
+          partnerType: payload.partnerType.trim() || null,
+          currentPartnerSchool: payload.currentPartnerSchool,
+          schoolActive: payload.schoolActive,
+          website: payload.website.trim() || null,
+          description: payload.description.trim() || null,
           enrollmentTotal,
           enrolledBoys,
           enrolledGirls,
@@ -677,6 +730,35 @@ export function PortalSchoolsManager({
                 />
               </label>
               <label>
+                <span className="portal-field-label">Country</span>
+                <input name="country" defaultValue="Uganda" required />
+              </label>
+              <label>
+                <span className="portal-field-label">School Status</span>
+                <select name="schoolStatus" defaultValue="Open">
+                  <option value="Open">Open</option>
+                  <option value="Paused">Paused</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </label>
+              <label>
+                <span className="portal-field-label">Status Date</span>
+                <input name="schoolStatusDate" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+              </label>
+              <label>
+                <span className="portal-field-label">Current Partner Type</span>
+                <select name="currentPartnerType" defaultValue="NA">
+                  <option value="NA">NA</option>
+                  <option value="Client">Client</option>
+                  <option value="Partner">Partner</option>
+                  <option value="Sponsor District">Sponsor District</option>
+                </select>
+              </label>
+              <label>
+                <span className="portal-field-label">Year Founded</span>
+                <input name="yearFounded" type="number" min={0} placeholder="e.g. 2016" />
+              </label>
+              <label>
                 <span className="portal-field-label">
                   <span>Region</span>
                   <span className="portal-required-indicator">
@@ -746,6 +828,38 @@ export function PortalSchoolsManager({
               <label>
                 <span className="portal-field-label">Village (optional)</span>
                 <input name="village" placeholder="e.g. Lukole" autoComplete="address-level4" />
+              </label>
+              <label>
+                <span className="portal-field-label">Alternate School Names</span>
+                <input name="alternateSchoolNames" placeholder="Optional aliases or former names" />
+              </label>
+              <label>
+                <span className="portal-field-label">Denomination</span>
+                <input name="denomination" placeholder="e.g. Catholic" />
+              </label>
+              <label>
+                <span className="portal-field-label">Partner Type</span>
+                <input name="partnerType" placeholder="Optional internal partner label" />
+              </label>
+              <label>
+                <span className="portal-field-label">Website</span>
+                <input name="website" placeholder="school.example.org" />
+              </label>
+              <label className="portal-inline-check">
+                <input name="currentPartnerSchool" type="checkbox" />
+                <span>Current partner school</span>
+              </label>
+              <label className="portal-inline-check">
+                <input name="schoolActive" type="checkbox" defaultChecked />
+                <span>School is active</span>
+              </label>
+              <label className="full-width">
+                <span className="portal-field-label">Description</span>
+                <textarea
+                  name="description"
+                  rows={2}
+                  placeholder="Short account summary for this school profile."
+                />
               </label>
               <label className="full-width">
                 <span className="portal-field-label">Notes</span>
@@ -956,7 +1070,7 @@ export function PortalSchoolsManager({
                   {selectedSchool.name} ({selectedSchool.schoolCode})
                 </h3>
                 <p className="portal-muted">
-                  {selectedSchool.district} • {selectedSchool.subCounty} • {selectedSchool.parish}
+                  {selectedSchool.country} • {selectedSchool.region || selectedSchool.district} • {selectedSchool.district}
                   {selectedSchool.village ? ` • ${selectedSchool.village}` : ""}
                 </p>
                 {selectedSchool.notes ? (
@@ -983,25 +1097,28 @@ export function PortalSchoolsManager({
                 <Link href={`/portal/story?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New 1001 Story
                 </Link>
+                <Link href={`/portal/schools/${selectedSchool.id}`} className="button button-compact">
+                  Open Full Profile
+                </Link>
               </div>
             </div>
 
             <div className="portal-school-profile-kpis">
               <article>
-                <strong>{Number(selectedSchool.enrolledBoys ?? 0).toLocaleString()}</strong>
-                <span>Boys Enrolled</span>
+                <strong>{selectedSchool.schoolStatus}</strong>
+                <span>School Status</span>
               </article>
               <article>
-                <strong>{Number(selectedSchool.enrolledGirls ?? 0).toLocaleString()}</strong>
-                <span>Girls Enrolled</span>
+                <strong>{selectedSchool.currentPartnerType}</strong>
+                <span>Current Partner Type</span>
               </article>
               <article>
-                <strong>{Number(selectedSchool.directImpactLearners ?? 0).toLocaleString()}</strong>
-                <span>Directly Impacted (Baby-P3)</span>
+                <strong>{selectedSchool.yearFounded ?? "-"}</strong>
+                <span>Year Founded</span>
               </article>
               <article>
                 <strong>{Number(selectedSchool.enrolledLearners ?? 0).toLocaleString()}</strong>
-                <span>Overall Impact (General Enrollment)</span>
+                <span>Overall Enrollment</span>
               </article>
               <article>
                 <strong>
@@ -1067,6 +1184,44 @@ export function PortalSchoolsManager({
                   <label>
                     <span className="portal-field-label">School Name</span>
                     <input name="name" defaultValue={selectedSchool.name} required minLength={2} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Country</span>
+                    <input name="country" defaultValue={selectedSchool.country} required />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">School Status</span>
+                    <select name="schoolStatus" defaultValue={selectedSchool.schoolStatus}>
+                      <option value="Open">Open</option>
+                      <option value="Paused">Paused</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Status Date</span>
+                    <input
+                      name="schoolStatusDate"
+                      type="date"
+                      defaultValue={selectedSchool.schoolStatusDate?.slice(0, 10) ?? ""}
+                    />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Current Partner Type</span>
+                    <select name="currentPartnerType" defaultValue={selectedSchool.currentPartnerType}>
+                      <option value="NA">NA</option>
+                      <option value="Client">Client</option>
+                      <option value="Partner">Partner</option>
+                      <option value="Sponsor District">Sponsor District</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Year Founded</span>
+                    <input
+                      name="yearFounded"
+                      type="number"
+                      min={0}
+                      defaultValue={selectedSchool.yearFounded ?? ""}
+                    />
                   </label>
                   <label>
                     <span className="portal-field-label">Region</span>
@@ -1167,6 +1322,49 @@ export function PortalSchoolsManager({
                   <label>
                     <span className="portal-field-label">Village (optional)</span>
                     <input name="village" defaultValue={selectedSchool.village ?? ""} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Alternate School Names</span>
+                    <input
+                      name="alternateSchoolNames"
+                      defaultValue={selectedSchool.alternateSchoolNames ?? ""}
+                    />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Denomination</span>
+                    <input name="denomination" defaultValue={selectedSchool.denomination ?? ""} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Partner Type</span>
+                    <input name="partnerType" defaultValue={selectedSchool.partnerType ?? ""} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Website</span>
+                    <input name="website" defaultValue={selectedSchool.website ?? ""} />
+                  </label>
+                  <label className="portal-inline-check">
+                    <input
+                      name="currentPartnerSchool"
+                      type="checkbox"
+                      defaultChecked={selectedSchool.currentPartnerSchool}
+                    />
+                    <span>Current partner school</span>
+                  </label>
+                  <label className="portal-inline-check">
+                    <input
+                      name="schoolActive"
+                      type="checkbox"
+                      defaultChecked={selectedSchool.schoolActive}
+                    />
+                    <span>School is active</span>
+                  </label>
+                  <label className="full-width">
+                    <span className="portal-field-label">Description</span>
+                    <textarea
+                      name="description"
+                      rows={2}
+                      defaultValue={selectedSchool.description ?? ""}
+                    />
                   </label>
                   <label className="full-width">
                     <span className="portal-field-label">Notes</span>
@@ -1325,72 +1523,57 @@ export function PortalSchoolsManager({
           <table>
             <thead>
               <tr>
+                <th>Account Name</th>
                 <th>School ID</th>
-                <th>Name</th>
-                <th>District</th>
-                <th>Sub-county</th>
-                <th>Parish</th>
-                <th>Village</th>
-                <th>Boys</th>
-                <th>Girls</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>GPS</th>
-                <th>Contact</th>
+                <th>Current Partner Type</th>
+                <th>Country</th>
+                <th>Account Record Type</th>
+                <th>Type</th>
+                <th>Primary Contact</th>
+                <th>Phone</th>
+                <th>School Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {schools.length === 0 ? (
                 <tr>
-                  <td colSpan={13}>No schools available.</td>
+                  <td colSpan={10}>No schools available.</td>
                 </tr>
               ) : (
                 schools.map((school) => (
                   <tr key={school.id}>
+                    <td title={school.name}>
+                      <Link href={`/portal/schools/${school.id}`} className="portal-table-cell-ellipsis is-school-name">
+                        {school.name}
+                      </Link>
+                    </td>
                     <td title={school.schoolCode}>
                       <span className="portal-table-cell-ellipsis is-code">{school.schoolCode}</span>
                     </td>
-                    <td title={school.name}>
-                      <span className="portal-table-cell-ellipsis is-school-name">{school.name}</span>
+                    <td title={school.currentPartnerType}>
+                      <span className="portal-table-cell-ellipsis">{school.currentPartnerType}</span>
                     </td>
-                    <td title={school.district}>
-                      <span className="portal-table-cell-ellipsis">{school.district}</span>
+                    <td title={school.country}>
+                      <span className="portal-table-cell-ellipsis">{school.country}</span>
                     </td>
-                    <td title={school.subCounty}>
-                      <span className="portal-table-cell-ellipsis">{school.subCounty}</span>
+                    <td title={school.accountRecordType}>
+                      <span className="portal-table-cell-ellipsis">{school.accountRecordType}</span>
                     </td>
-                    <td title={school.parish}>
-                      <span className="portal-table-cell-ellipsis">{school.parish}</span>
+                    <td title={school.schoolType}>
+                      <span className="portal-table-cell-ellipsis">{school.schoolType}</span>
                     </td>
-                    <td title={school.village ?? "-"}>
-                      <span className="portal-table-cell-ellipsis">{school.village ?? "-"}</span>
-                    </td>
-                    <td>{Number(school.enrolledBoys ?? 0).toLocaleString()}</td>
-                    <td>{Number(school.enrolledGirls ?? 0).toLocaleString()}</td>
-                    <td>{Number(school.enrolledLearners ?? 0).toLocaleString()}</td>
-                    <td>
-                      {school.programStatus === "graduated" ? (
-                        <span className="portal-filter-chip active">Graduated</span>
-                      ) : (
-                        <span className="portal-filter-chip">{school.programStatus ?? "active"}</span>
-                      )}
-                    </td>
-                    <td>
-                      <span
-                        className="portal-table-cell-ellipsis"
-                        title={school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"}
-                      >
-                        {school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"}
+                    <td title={school.primaryContactName ?? school.contactName ?? "-"}>
+                      <span className="portal-table-cell-ellipsis is-contact">
+                        {school.primaryContactName ?? school.contactName ?? "-"}
                       </span>
                     </td>
+                    <td title={school.contactPhone ?? "-"}>
+                      <span className="portal-table-cell-ellipsis">{school.contactPhone ?? "-"}</span>
+                    </td>
                     <td>
-                      <span
-                        className="portal-table-cell-ellipsis is-contact"
-                        title={`${school.contactName ?? "-"}${school.contactPhone ? ` (${school.contactPhone})` : ""}`}
-                      >
-                        {school.contactName ?? "-"}
-                        {school.contactPhone ? ` (${school.contactPhone})` : ""}
+                      <span className={`portal-filter-chip ${school.schoolStatus === "Open" ? "active" : ""}`}>
+                        {school.schoolStatus}
                       </span>
                     </td>
                     <td>

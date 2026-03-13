@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import {
     logAuditEvent,
-    calculateFidelityScore,
-    getLearningGainsData,
     getCostEffectivenessData,
-    getDataQualitySummary,
-    getImpactSummary,
     getPublicImpactAggregate,
 } from "@/lib/db";
 import type { ReadingLevelsBlock } from "@/lib/types";
+import type {
+    AggregateFidelityView,
+    AggregateLearningGainsView,
+    AggregateQualitySummaryView,
+} from "@/lib/public-impact-views";
+import {
+    buildFidelityFromAggregate,
+    buildImpactKpisFromAggregate,
+    buildLearningGainsFromAggregate,
+    buildQualitySummaryFromAggregate,
+} from "@/lib/public-impact-views";
 import {
     getApplicableRecommendations,
     buildReportPromptContext,
@@ -27,20 +34,30 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { scopeType = "country", scopeId = "Uganda", reportType = "quarterly" } = body;
+    const aggregateScopeType =
+        scopeType === "country"
+            ? "country"
+            : scopeType === "region"
+              ? "region"
+              : scopeType === "sub_region" || scopeType === "subregion"
+                ? "subregion"
+              : scopeType === "district"
+                ? "district"
+                : "school";
 
     // Gather all metrics
-    const fidelity = calculateFidelityScore(
-        scopeType as "country" | "region" | "district" | "school",
+    const impactAggregate = await getPublicImpactAggregate(
+        aggregateScopeType,
         scopeId,
     );
-    const gains = getLearningGainsData(scopeType, scopeId);
+    const fidelity = buildFidelityFromAggregate(impactAggregate, scopeType, scopeId);
+    const gains = buildLearningGainsFromAggregate(impactAggregate, scopeType, scopeId);
     const cost = getCostEffectivenessData(scopeType, scopeId);
-    const quality = getDataQualitySummary(scopeType, scopeId);
-    const summary = await getImpactSummary();
-    const summaryMap = new Map(summary.metrics.map((m) => [m.label, Number(m.value) || 0]));
+    const quality = buildQualitySummaryFromAggregate(impactAggregate, scopeType, scopeId);
+    const kpis = buildImpactKpisFromAggregate(impactAggregate);
 
     // Get recommendations
-    const coachingDriver = fidelity.drivers.find((d) => d.driver === "observation_coverage");
+    const coachingDriver = fidelity.drivers.find((d) => d.driver === "teaching_quality");
     const recommendations = getApplicableRecommendations({
         fidelityScore: fidelity.totalScore,
         domainGains: gains.domains.map((d) => ({ domain: d.domain, change: d.change })),
@@ -62,15 +79,11 @@ export async function POST(request: Request) {
         schoolImprovementIndex: gains.schoolImprovementIndex,
         totalCost: cost.totalCost,
         costPerSchool: cost.costPerSchool,
-        schoolsSupported: summaryMap.get("Schools trained") ?? 0,
-        learnersAssessed: summaryMap.get("Learners assessed") ?? 0,
+        schoolsSupported: kpis.schoolsSupported,
+        learnersAssessed: kpis.learnersAssessed,
     }, recommendations);
 
     // Generate structured report (without external AI — uses template-based approach)
-    const impactAggregate = await getPublicImpactAggregate(
-        (scopeType === "country" ? "country" : scopeType === "region" ? "region" : scopeType === "district" ? "district" : "school") as "country" | "region" | "subregion" | "district" | "school",
-        scopeId,
-    );
     const reportSections = generateTemplateReport(
         scopeType,
         scopeId,
@@ -117,10 +130,10 @@ function generateTemplateReport(
     scopeType: string,
     scopeId: string,
     reportType: string,
-    fidelity: ReturnType<typeof calculateFidelityScore>,
-    gains: ReturnType<typeof getLearningGainsData>,
+    fidelity: AggregateFidelityView,
+    gains: AggregateLearningGainsView,
     cost: ReturnType<typeof getCostEffectivenessData>,
-    quality: ReturnType<typeof getDataQualitySummary>,
+    quality: AggregateQualitySummaryView,
     recommendations: ReturnType<typeof getApplicableRecommendations>,
     readingLevels: ReadingLevelsBlock | null,
 ) {

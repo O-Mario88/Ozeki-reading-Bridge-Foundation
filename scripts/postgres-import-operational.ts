@@ -15,6 +15,7 @@ const TABLES = [
   "visit_participants",
   "visit_demo",
   "visit_leadership_meeting",
+  "portal_evidence",
   "material_distributions",
   "graduation_settings",
   "school_graduation_eligibility_cache",
@@ -69,6 +70,21 @@ async function resetIdentitySequence(table: string, idColumn: string) {
   ]);
 }
 
+async function getPostgresColumns(table: string) {
+  const pool = getPostgresPool();
+  const result = await pool.query<{ column_name: string }>(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = $1
+      ORDER BY ordinal_position
+    `,
+    [table],
+  );
+  return result.rows.map((row) => row.column_name);
+}
+
 async function main() {
   if (!isPostgresConfigured()) {
     throw new Error("DATABASE_URL is not configured.");
@@ -92,7 +108,20 @@ async function main() {
     }
 
     const rows = sqlite.prepare(`SELECT * FROM ${table}`).all() as Array<Record<string, unknown>>;
-    const columnNames = columns.map((column) => column.name);
+    const postgresColumns = await getPostgresColumns(table);
+    if (postgresColumns.length === 0) {
+      console.warn(`Skipping ${table}: not found in PostgreSQL schema.`);
+      continue;
+    }
+
+    const columnNames = columns
+      .map((column) => column.name)
+      .filter((columnName) => postgresColumns.includes(columnName));
+
+    if (columnNames.length === 0) {
+      console.warn(`Skipping ${table}: no shared columns between SQLite and PostgreSQL.`);
+      continue;
+    }
     console.log(`Importing ${table}: ${rows.length} rows`);
 
     await pool.query(`TRUNCATE TABLE ${table} RESTART IDENTITY CASCADE`);

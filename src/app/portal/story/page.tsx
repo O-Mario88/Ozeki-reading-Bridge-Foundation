@@ -1,49 +1,45 @@
-import { PortalModuleManager } from "@/components/portal/PortalModuleManager";
+import { redirect } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
-import {
-  listPortalRecordsAsync,
-  listPortalUsersForFilters,
-  listSchoolDirectoryRecords,
-} from "@/lib/db";
-import { portalModuleConfigByModule } from "@/lib/portal-config";
-import { requirePortalUser } from "@/lib/portal-auth";
-import Link from "next/link";
+import { PortalCrmListView } from "@/components/portal/crm/PortalCrmListView";
+import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { listStoryProjectCrmRows } from "@/lib/server/postgres/repositories/portal-crm";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "1001 Story",
-  description: "Staff portal for 1001 Story activity logs and support workflows.",
+  title: "1001 Story Project",
+  description: "CRM-style 1001 Story project profiles and PostgreSQL-backed story-support records.",
 };
 
-export default async function PortalStoryPage() {
-  const user = await requirePortalUser();
-  const config = portalModuleConfigByModule.story;
-  const records = await listPortalRecordsAsync({ module: "story" }, user);
-  const schools = await listSchoolDirectoryRecords();
-  const users = listPortalUsersForFilters(user);
+function toSearchParams(record: Record<string, string | string[] | undefined>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(record)) {
+    if (Array.isArray(value)) {
+      value.forEach((item) => params.append(key, item));
+    } else if (typeof value === "string" && value.length > 0) {
+      params.set(key, value);
+    }
+  }
+  return params.toString();
+}
+
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function PortalStoryPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const serialized = toSearchParams(params);
+  if (serialized) {
+    redirect(`/portal/story/manage?${serialized}`);
+  }
+
+  const user = await requirePortalStaffUser();
+  const view = await listStoryProjectCrmRows();
 
   return (
-    <PortalShell
-      user={user}
-      activeHref={config.route}
-      title={config.pageTitle}
-      description={config.description}
-      actions={
-        <div className="action-row">
-          <Link href="/portal/reports?module=story" className="button button-ghost">
-            Open 1001 Story Report
-          </Link>
-        </div>
-      }
-    >
-      <PortalModuleManager
-        config={config}
-        initialRecords={records}
-        initialSchools={schools}
-        initialUsers={users}
-        currentUser={user}
-      />
+    <PortalShell user={user} activeHref="/portal/story" title={view.title} description={view.subtitle}>
+      <PortalCrmListView view={view} />
     </PortalShell>
   );
 }

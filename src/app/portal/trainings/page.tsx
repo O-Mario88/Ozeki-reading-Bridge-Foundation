@@ -1,49 +1,50 @@
-import { PortalModuleManager } from "@/components/portal/PortalModuleManager";
+import { redirect } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
-import {
-  listPortalRecordsAsync,
-  listPortalUsersForFilters,
-  listSchoolDirectoryRecords,
-} from "@/lib/db";
-import { portalModuleConfigByModule } from "@/lib/portal-config";
-import { requirePortalUser } from "@/lib/portal-auth";
-import Link from "next/link";
+import { PortalCrmListView } from "@/components/portal/crm/PortalCrmListView";
+import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { listTrainingCrmRows } from "@/lib/server/postgres/repositories/portal-crm";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Trainings",
-  description: "Staff portal training logs and review workflow.",
+  title: "Training Sessions",
+  description: "CRM-style training session profiles and PostgreSQL-backed training records.",
 };
 
-export default async function PortalTrainingsPage() {
-  const user = await requirePortalUser();
-  const config = portalModuleConfigByModule.training;
-  const records = await listPortalRecordsAsync({ module: "training" }, user);
-  const schools = await listSchoolDirectoryRecords();
-  const users = listPortalUsersForFilters(user);
+function toSearchParams(record: Record<string, string | string[] | undefined>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(record)) {
+    if (Array.isArray(value)) {
+      value.forEach((item) => params.append(key, item));
+    } else if (typeof value === "string" && value.length > 0) {
+      params.set(key, value);
+    }
+  }
+  return params.toString();
+}
+
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function PortalTrainingsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const serialized = toSearchParams(params);
+  if (serialized) {
+    redirect(`/portal/trainings/manage?${serialized}`);
+  }
+
+  const user = await requirePortalStaffUser();
+  const view = await listTrainingCrmRows();
 
   return (
     <PortalShell
       user={user}
-      activeHref={config.route}
-      title={config.pageTitle}
-      description={config.description}
-      actions={
-        <div className="action-row">
-          <Link href="/portal/reports?module=training" className="button button-ghost">
-            Open Training Report
-          </Link>
-        </div>
-      }
+      activeHref="/portal/trainings"
+      title={view.title}
+      description={view.subtitle}
     >
-      <PortalModuleManager
-        config={config}
-        initialRecords={records}
-        initialSchools={schools}
-        initialUsers={users}
-        currentUser={user}
-      />
+      <PortalCrmListView view={view} />
     </PortalShell>
   );
 }

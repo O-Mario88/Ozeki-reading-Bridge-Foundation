@@ -1,12 +1,14 @@
 import {
-    getImpactDrilldownData,
-    calculateFidelityScore,
-    getLearningGainsData,
     getPublicImpactAggregate,
 } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { TeacherEvaluationPerformanceCards } from "@/components/impact/TeacherEvaluationPerformanceCards";
+import {
+    buildFidelityFromAggregate,
+    buildImpactKpisFromAggregate,
+    buildLearningGainsFromAggregate,
+} from "@/lib/public-impact-views";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +31,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function SubRegionPage({ params }: { params: Params }) {
     const { id } = await params;
     const name = decodeURIComponent(id);
-    const drilldown = getImpactDrilldownData("sub_region", name);
-    const fidelity = calculateFidelityScore("region", name); // Fallback to region for now if sub_region not fully supported in calculateFidelityScore
-    const gains = getLearningGainsData("region", name);
     const aggregate = await getPublicImpactAggregate("subregion", name, "FY");
+    const fidelity = buildFidelityFromAggregate(aggregate, "sub_region", name);
+    const gains = buildLearningGainsFromAggregate(aggregate, "sub_region", name);
+    const kpis = buildImpactKpisFromAggregate(aggregate);
 
     return (
         <>
@@ -57,13 +59,13 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                         <article className="impact-dash-kpi" style={{ "--kpi-accent": "#D96A0F" } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Schools</span>
-                                <span className="impact-dash-kpi-value">{drilldown.kpis.schoolsSupported}</span>
+                                <span className="impact-dash-kpi-value">{kpis.schoolsSupported}</span>
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{ "--kpi-accent": "#7c3aed" } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Learners Assessed</span>
-                                <span className="impact-dash-kpi-value">{drilldown.kpis.learnersAssessed.toLocaleString()}</span>
+                                <span className="impact-dash-kpi-value">{kpis.learnersAssessed.toLocaleString()}</span>
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{
@@ -74,14 +76,14 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                                 <span className="impact-dash-kpi-value">{fidelity.totalScore}/100</span>
                             </div>
                         </article>
-                        {gains.schoolImprovementIndex !== null && (
+                        {kpis.improvementIndex !== null && (
                             <article className="impact-dash-kpi" style={{
-                                "--kpi-accent": gains.schoolImprovementIndex > 0 ? "#FA7D15" : "#dc2626",
+                                "--kpi-accent": kpis.improvementIndex > 0 ? "#FA7D15" : "#dc2626",
                             } as React.CSSProperties}>
                                 <div className="impact-dash-kpi-body">
                                     <span className="impact-dash-kpi-label">Improvement Index</span>
                                     <span className="impact-dash-kpi-value">
-                                        {gains.schoolImprovementIndex > 0 ? "+" : ""}{gains.schoolImprovementIndex.toFixed(1)}pp
+                                        {kpis.improvementIndex > 0 ? "+" : ""}{kpis.improvementIndex.toFixed(1)}pp
                                     </span>
                                 </div>
                             </article>

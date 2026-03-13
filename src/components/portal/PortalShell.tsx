@@ -30,6 +30,7 @@ const portalNavItems: PortalNavItem[] = [
 
   { href: "/portal/events", label: "Events", staffOnly: true },
   { href: "/portal/schools", label: "Schools", staffOnly: true },
+  { href: "/portal/contacts", label: "Contacts", staffOnly: true },
   { href: "/portal/graduation-queue", label: "Graduation Queue", staffOnly: true },
   { href: "/portal/support", label: "Support Tickets", staffOnly: true },
   { href: "/portal/data-quality", label: "Data Quality", roles: ["Staff", "Admin"] },

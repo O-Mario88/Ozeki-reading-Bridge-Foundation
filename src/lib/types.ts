@@ -1064,6 +1064,14 @@ export interface SchoolContactInput {
   isPrimaryContact?: boolean;
   classTaught?: string;
   subjectTaught?: string;
+  contactRecordType?: string;
+  nickname?: string;
+  leadershipRole?: boolean;
+  subRole?: string;
+  roleFormula?: string;
+  lastSsaSent?: string;
+  trainer?: boolean;
+  notes?: string;
 }
 
 export interface SchoolContactRecord extends SchoolContactInput {
@@ -2439,11 +2447,33 @@ export interface PortalOperationalReportsData {
 
 export interface SchoolDirectoryInput {
   name: string;
+  country?: string;
   district: string;
   subCounty?: string;
   parish?: string;
   village?: string;
   notes?: string;
+  alternateSchoolNames?: string;
+  schoolStatus?: string;
+  schoolStatusDate?: string;
+  currentPartnerType?: string;
+  yearFounded?: number;
+  accountRecordType?: string;
+  schoolType?: string;
+  parentAccountLabel?: string;
+  schoolRelationshipStatus?: string;
+  schoolRelationshipStatusDate?: string;
+  denomination?: string;
+  protestantDenomination?: string;
+  clientSchoolNumber?: number;
+  firstMetricDate?: string;
+  metricCount?: number;
+  runningTotalMaxEnrollment?: number;
+  partnerType?: string;
+  currentPartnerSchool?: boolean;
+  schoolActive?: boolean;
+  website?: string;
+  description?: string;
   enrollmentTotal?: number;
   enrollmentByGrade?: string;
   enrolledBoys?: number;
@@ -2478,6 +2508,7 @@ export interface SchoolDirectoryRecord {
   schoolUid: string;
   schoolCode: string;
   name: string;
+  country: string;
   region: string;
   subRegion: string;
   district: string;
@@ -2485,6 +2516,27 @@ export interface SchoolDirectoryRecord {
   parish: string;
   village: string | null;
   notes: string | null;
+  alternateSchoolNames: string | null;
+  schoolStatus: string;
+  schoolStatusDate: string | null;
+  currentPartnerType: string;
+  yearFounded: number | null;
+  accountRecordType: string;
+  schoolType: string;
+  parentAccountLabel: string;
+  schoolRelationshipStatus: string | null;
+  schoolRelationshipStatusDate: string | null;
+  denomination: string | null;
+  protestantDenomination: string | null;
+  clientSchoolNumber: number;
+  firstMetricDate: string | null;
+  metricCount: number;
+  runningTotalMaxEnrollment: number;
+  partnerType: string | null;
+  currentPartnerSchool: boolean;
+  schoolActive: boolean;
+  website: string | null;
+  description: string | null;
   enrollmentTotal: number;
   enrollmentByGrade: string | null;
   enrolledBoys: number;
@@ -2505,6 +2557,7 @@ export interface SchoolDirectoryRecord {
   gpsLng: string | null;
   contactName: string | null;
   contactPhone: string | null;
+  contactEmail: string | null;
   primaryContactId: number | null;
   primaryContactName: string | null;
   primaryContactCategory: SchoolContactCategory | null;
@@ -2514,6 +2567,49 @@ export interface SchoolDirectoryRecord {
   graduationNotes: string | null;
   graduationVersion: string | null;
   createdAt: string;
+}
+
+export type SchoolAccountModuleKey =
+  | "contacts"
+  | "trainings"
+  | "onlineTrainings"
+  | "visits"
+  | "assessments"
+  | "teacherEvaluations";
+
+export interface SchoolAccountRelatedCounts {
+  contacts: number;
+  trainings: number;
+  onlineTrainings: number;
+  visits: number;
+  assessments: number;
+  teacherEvaluations: number;
+}
+
+export interface SchoolAccountRecentItem {
+  id: number;
+  module: Exclude<SchoolAccountModuleKey, "contacts">;
+  title: string;
+  subtitle: string | null;
+  date: string | null;
+  status: string | null;
+  href: string;
+}
+
+export interface SchoolAccountProfileSummary {
+  dateOfLastActivity: string | null;
+  dateOfLastStaffVisit: string | null;
+  lastMetricsDate: string | null;
+  schoolVisitsThisFy: number;
+  schoolVisitsLastFy: number;
+}
+
+export interface SchoolAccountProfile {
+  school: SchoolDirectoryRecord;
+  counts: SchoolAccountRelatedCounts;
+  recentTrainings: SchoolAccountRecentItem[];
+  recentInteractions: SchoolAccountRecentItem[];
+  summary: SchoolAccountProfileSummary;
 }
 
 export type GraduationDomainKey =

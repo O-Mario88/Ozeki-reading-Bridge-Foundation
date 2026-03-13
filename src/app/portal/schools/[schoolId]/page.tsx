@@ -1,6 +1,6 @@
 import { SchoolProfileView } from "@/components/portal/SchoolProfileView";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getSchoolDirectoryRecord } from "@/lib/db";
+import { getSchoolAccountProfile, getSchoolDirectoryRecord } from "@/lib/db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -18,7 +18,8 @@ export async function generateMetadata({ params }: PageProps) {
     const schoolId = parseInt(schoolIdStr, 10);
     if (isNaN(schoolId)) return { title: "School Not Found" };
 
-    const school = await getSchoolDirectoryRecord(schoolId);
+    const profile = await getSchoolAccountProfile(schoolId);
+    const school = profile?.school ?? (await getSchoolDirectoryRecord(schoolId));
     return {
         title: school ? `${school.name} - School Profile` : "School Not Found",
     };
@@ -33,9 +34,10 @@ export default async function SchoolProfilePage({ params }: PageProps) {
         notFound();
     }
 
-    const school = await getSchoolDirectoryRecord(schoolId);
+    const profile = await getSchoolAccountProfile(schoolId);
+    const school = profile?.school ?? null;
 
-    if (!school) {
+    if (!school || !profile) {
         notFound();
     }
 
@@ -60,7 +62,7 @@ export default async function SchoolProfilePage({ params }: PageProps) {
                 </div>
             }
         >
-            <SchoolProfileView school={school} />
+            <SchoolProfileView profile={profile} />
         </PortalShell>
     );
 }

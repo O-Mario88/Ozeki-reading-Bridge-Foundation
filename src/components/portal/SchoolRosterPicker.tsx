@@ -25,6 +25,14 @@ export interface RosterTeacher {
     phone: string | null;
     email?: string;
     whatsapp?: string;
+    contactRecordType?: string;
+    nickname?: string;
+    leadershipRole?: boolean;
+    subRole?: string;
+    roleFormula?: string;
+    lastSsaSent?: string;
+    trainer?: boolean;
+    notes?: string;
     classTaught?: string;
     subjectTaught?: string;
     status?: string;
@@ -63,8 +71,17 @@ interface AddTeacherForm {
     | "Teacher"
     | "";
     roleTitle: string;
+    phone: string;
     email: string;
     whatsapp: string;
+    contactRecordType: string;
+    nickname: string;
+    leadershipRole: boolean;
+    subRole: string;
+    roleFormula: string;
+    lastSsaSent: string;
+    trainer: boolean;
+    notes: string;
 }
 
 interface AddLearnerForm {
@@ -97,8 +114,17 @@ export function SchoolRosterPicker({
         gender: "",
         category: "Teacher",
         roleTitle: "",
+        phone: "",
         email: "",
         whatsapp: "",
+        contactRecordType: "School Contact",
+        nickname: "",
+        leadershipRole: false,
+        subRole: "",
+        roleFormula: "",
+        lastSsaSent: "",
+        trainer: false,
+        notes: "",
     });
 
     // Learner add form
@@ -187,8 +213,17 @@ export function SchoolRosterPicker({
                     gender: teacherForm.gender,
                     category: teacherForm.category,
                     roleTitle: teacherForm.roleTitle || undefined,
+                    phone: teacherForm.phone || undefined,
                     email: teacherForm.email || undefined,
                     whatsapp: teacherForm.whatsapp || undefined,
+                    contactRecordType: teacherForm.contactRecordType || undefined,
+                    nickname: teacherForm.nickname || undefined,
+                    leadershipRole: teacherForm.leadershipRole,
+                    subRole: teacherForm.subRole || undefined,
+                    roleFormula: teacherForm.roleFormula || undefined,
+                    lastSsaSent: teacherForm.lastSsaSent || undefined,
+                    trainer: teacherForm.trainer,
+                    notes: teacherForm.notes || undefined,
                 };
             }
 
@@ -218,8 +253,17 @@ export function SchoolRosterPicker({
                 gender: "",
                 category: "Teacher",
                 roleTitle: "",
+                phone: "",
                 email: "",
                 whatsapp: "",
+                contactRecordType: "School Contact",
+                nickname: "",
+                leadershipRole: false,
+                subRole: "",
+                roleFormula: "",
+                lastSsaSent: "",
+                trainer: false,
+                notes: "",
             });
             setLearnerForm({ fullName: "", gender: "", age: "", classGrade: "" });
         } catch {
@@ -394,6 +438,17 @@ export function SchoolRosterPicker({
                                     />
                                 </label>
                                 <label>
+                                    Phone
+                                    <input
+                                        type="tel"
+                                        value={teacherForm.phone}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, phone: e.target.value }))
+                                        }
+                                        placeholder="+2567xxxxxxxx"
+                                    />
+                                </label>
+                                <label>
                                     Email (optional)
                                     <input
                                         type="email"
@@ -413,6 +468,99 @@ export function SchoolRosterPicker({
                                             setTeacherForm((p) => ({ ...p, whatsapp: e.target.value }))
                                         }
                                         placeholder="+2567xxxxxxxx"
+                                    />
+                                </label>
+                                <label>
+                                    Contact record type
+                                    <input
+                                        type="text"
+                                        value={teacherForm.contactRecordType}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({
+                                                ...p,
+                                                contactRecordType: e.target.value,
+                                            }))
+                                        }
+                                        placeholder="School Contact"
+                                    />
+                                </label>
+                                <label>
+                                    Nickname
+                                    <input
+                                        type="text"
+                                        value={teacherForm.nickname}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, nickname: e.target.value }))
+                                        }
+                                        placeholder="Optional nickname"
+                                    />
+                                </label>
+                                <label>
+                                    Leadership role
+                                    <select
+                                        value={teacherForm.leadershipRole ? "yes" : "no"}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({
+                                                ...p,
+                                                leadershipRole: e.target.value === "yes",
+                                            }))
+                                        }
+                                    >
+                                        <option value="no">No</option>
+                                        <option value="yes">Yes</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    Sub-role
+                                    <input
+                                        type="text"
+                                        value={teacherForm.subRole}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, subRole: e.target.value }))
+                                        }
+                                        placeholder="e.g. Literacy Lead"
+                                    />
+                                </label>
+                                <label>
+                                    Role formula
+                                    <input
+                                        type="text"
+                                        value={teacherForm.roleFormula}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, roleFormula: e.target.value }))
+                                        }
+                                        placeholder="e.g. Director"
+                                    />
+                                </label>
+                                <label>
+                                    Last SSA sent
+                                    <input
+                                        type="date"
+                                        value={teacherForm.lastSsaSent}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, lastSsaSent: e.target.value }))
+                                        }
+                                    />
+                                </label>
+                                <label className="roster-modal__checkbox">
+                                    <input
+                                        type="checkbox"
+                                        checked={teacherForm.trainer}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, trainer: e.target.checked }))
+                                        }
+                                    />
+                                    <span>Trainer / presenter</span>
+                                </label>
+                                <label>
+                                    Notes
+                                    <textarea
+                                        value={teacherForm.notes}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, notes: e.target.value }))
+                                        }
+                                        placeholder="Quick context for this contact profile"
+                                        rows={3}
                                     />
                                 </label>
                             </div>

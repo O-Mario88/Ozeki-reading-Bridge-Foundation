@@ -11,6 +11,17 @@ import {
   updateSchoolLearnerInSchool,
 } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { isPostgresConfigured } from "@/lib/server/postgres/client";
+import {
+  createSchoolContactInSchoolPostgres,
+  createSchoolLearnerInSchoolPostgres,
+  getSchoolContactByUidPostgres,
+  getSchoolLearnerByUidPostgres,
+  listSchoolContactsBySchoolPostgres,
+  listSchoolLearnersBySchoolPostgres,
+  updateSchoolContactInSchoolPostgres,
+  updateSchoolLearnerInSchoolPostgres,
+} from "@/lib/server/postgres/repositories/schools";
 
 export const runtime = "nodejs";
 
@@ -37,6 +48,14 @@ const addContactSchema = z.object({
   roleTitle: z.string().trim().optional(),
   isPrimaryContact: z.boolean().optional().default(false),
   isReadingTeacher: z.boolean().optional(),
+  contactRecordType: z.string().trim().optional(),
+  nickname: z.string().trim().optional(),
+  leadershipRole: z.boolean().optional(),
+  subRole: z.string().trim().optional(),
+  roleFormula: z.string().trim().optional(),
+  lastSsaSent: z.string().trim().optional(),
+  trainer: z.boolean().optional(),
+  notes: z.string().trim().optional(),
 });
 
 const addLearnerSchema = z.object({
@@ -61,6 +80,14 @@ const updateContactSchema = z.object({
   roleTitle: z.string().trim().nullable().optional(),
   isPrimaryContact: z.boolean().optional(),
   isReadingTeacher: z.boolean().optional(),
+  contactRecordType: z.string().trim().nullable().optional(),
+  nickname: z.string().trim().nullable().optional(),
+  leadershipRole: z.boolean().optional(),
+  subRole: z.string().trim().nullable().optional(),
+  roleFormula: z.string().trim().nullable().optional(),
+  lastSsaSent: z.string().trim().nullable().optional(),
+  trainer: z.boolean().optional(),
+  notes: z.string().trim().nullable().optional(),
 });
 
 const updateLearnerSchema = z.object({
@@ -88,11 +115,25 @@ export async function GET(request: Request) {
   }
 
   if (type === "learner") {
+    if (isPostgresConfigured()) {
+      return NextResponse.json({
+        roster: (await listSchoolLearnersBySchoolPostgres(schoolId)).map((entry) => ({
+          ...entry,
+          fullName: entry.learnerName,
+        })),
+      });
+    }
     return NextResponse.json({
       roster: listSchoolLearnersBySchool(schoolId).map((entry) => ({
         ...entry,
         fullName: entry.learnerName,
       })),
+    });
+  }
+
+  if (isPostgresConfigured()) {
+    return NextResponse.json({
+      roster: await listSchoolContactsBySchoolPostgres(schoolId, { category: "all" }),
     });
   }
 
@@ -113,14 +154,23 @@ export async function POST(request: Request) {
 
     if (type === "learner") {
       const data = addLearnerSchema.parse(body);
-      const entry = addSchoolLearnerToSchool({
-        schoolId: data.schoolId,
-        learnerName: data.fullName,
-        gender: data.gender,
-        age: data.age,
-        classGrade: data.classGrade,
-        internalChildId: data.internalChildId,
-      });
+      const entry = isPostgresConfigured()
+        ? await createSchoolLearnerInSchoolPostgres({
+            schoolId: data.schoolId,
+            learnerName: data.fullName,
+            gender: data.gender,
+            age: data.age,
+            classGrade: data.classGrade,
+            internalChildId: data.internalChildId,
+          })
+        : addSchoolLearnerToSchool({
+            schoolId: data.schoolId,
+            learnerName: data.fullName,
+            gender: data.gender,
+            age: data.age,
+            classGrade: data.classGrade,
+            internalChildId: data.internalChildId,
+          });
       return NextResponse.json({
         ok: true,
         entry: {
@@ -142,17 +192,49 @@ export async function POST(request: Request) {
           ? "Teacher"
           : "Reading Teacher"
         : undefined);
-    const entry = addSchoolContactToSchool({
-      schoolId: data.schoolId,
-      fullName: data.fullName,
-      gender: data.gender,
-      phone: data.phone,
-      email: data.email,
-      whatsapp: data.whatsapp,
-      category,
-      roleTitle,
-      isPrimaryContact: data.isPrimaryContact,
-    });
+    const entry = isPostgresConfigured()
+      ? await createSchoolContactInSchoolPostgres({
+          schoolId: data.schoolId,
+          fullName: data.fullName,
+          gender: data.gender,
+          phone: data.phone,
+          email: data.email,
+          whatsapp: data.whatsapp,
+          category,
+          roleTitle,
+          isPrimaryContact: data.isPrimaryContact,
+          contactRecordType: data.contactRecordType,
+          nickname: data.nickname,
+          leadershipRole:
+            data.leadershipRole ??
+            (category !== "Teacher" && category !== "Administrator" ? true : false),
+          subRole: data.subRole,
+          roleFormula: data.roleFormula,
+          lastSsaSent: data.lastSsaSent,
+          trainer: data.trainer,
+          notes: data.notes,
+        })
+      : addSchoolContactToSchool({
+          schoolId: data.schoolId,
+          fullName: data.fullName,
+          gender: data.gender,
+          phone: data.phone,
+          email: data.email,
+          whatsapp: data.whatsapp,
+          category,
+          roleTitle,
+          isPrimaryContact: data.isPrimaryContact,
+          contactRecordType: data.contactRecordType,
+          nickname: data.nickname,
+          leadershipRole:
+            data.leadershipRole ??
+            (category !== "Teacher" && category !== "Administrator" ? true : false),
+          subRole: data.subRole,
+          roleFormula: data.roleFormula,
+          lastSsaSent: data.lastSsaSent,
+          trainer: data.trainer,
+          notes: data.notes,
+        });
     return NextResponse.json({ ok: true, entry });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -180,17 +262,27 @@ export async function PATCH(request: Request) {
 
     if (type === "learner") {
       const data = updateLearnerSchema.parse(body);
-      const existing = getSchoolLearnerByUid(data.uid);
+      const existing = isPostgresConfigured()
+        ? await getSchoolLearnerByUidPostgres(data.uid)
+        : getSchoolLearnerByUid(data.uid);
       if (!existing) {
         return NextResponse.json({ error: "Learner not found." }, { status: 404 });
       }
-      const entry = updateSchoolLearnerInSchool(existing.learnerId, {
-        learnerName: data.fullName,
-        gender: data.gender,
-        age: data.age,
-        classGrade: data.classGrade,
-        internalChildId: data.internalChildId ?? undefined,
-      });
+      const entry = isPostgresConfigured()
+        ? await updateSchoolLearnerInSchoolPostgres(existing.learnerId, {
+            learnerName: data.fullName,
+            gender: data.gender,
+            age: data.age,
+            classGrade: data.classGrade,
+            internalChildId: data.internalChildId ?? undefined,
+          })
+        : updateSchoolLearnerInSchool(existing.learnerId, {
+            learnerName: data.fullName,
+            gender: data.gender,
+            age: data.age,
+            classGrade: data.classGrade,
+            internalChildId: data.internalChildId ?? undefined,
+          });
       return NextResponse.json({
         ok: true,
         entry: {
@@ -201,7 +293,9 @@ export async function PATCH(request: Request) {
     }
 
     const data = updateContactSchema.parse(body);
-    const existing = getSchoolContactByUid(data.uid);
+    const existing = isPostgresConfigured()
+      ? await getSchoolContactByUidPostgres(data.uid)
+      : getSchoolContactByUid(data.uid);
     if (!existing) {
       return NextResponse.json({ error: "Contact not found." }, { status: 404 });
     }
@@ -215,16 +309,43 @@ export async function PATCH(request: Request) {
             ? "Teacher"
             : "Reading Teacher"
           : undefined;
-    const entry = updateSchoolContactInSchool(existing.contactId, {
-      fullName: data.fullName,
-      gender: data.gender,
-      phone: data.phone ?? undefined,
-      email: data.email ?? undefined,
-      whatsapp: data.whatsapp ?? undefined,
-      category,
-      roleTitle,
-      isPrimaryContact: data.isPrimaryContact,
-    });
+    const entry = isPostgresConfigured()
+      ? await updateSchoolContactInSchoolPostgres(existing.contactId, {
+          fullName: data.fullName,
+          gender: data.gender,
+          phone: data.phone ?? undefined,
+          email: data.email ?? undefined,
+          whatsapp: data.whatsapp ?? undefined,
+          category,
+          roleTitle,
+          isPrimaryContact: data.isPrimaryContact,
+          contactRecordType: data.contactRecordType ?? undefined,
+          nickname: data.nickname ?? undefined,
+          leadershipRole: data.leadershipRole,
+          subRole: data.subRole ?? undefined,
+          roleFormula: data.roleFormula ?? undefined,
+          lastSsaSent: data.lastSsaSent ?? undefined,
+          trainer: data.trainer,
+          notes: data.notes ?? undefined,
+        })
+      : updateSchoolContactInSchool(existing.contactId, {
+          fullName: data.fullName,
+          gender: data.gender,
+          phone: data.phone ?? undefined,
+          email: data.email ?? undefined,
+          whatsapp: data.whatsapp ?? undefined,
+          category,
+          roleTitle,
+          isPrimaryContact: data.isPrimaryContact,
+          contactRecordType: data.contactRecordType ?? undefined,
+          nickname: data.nickname ?? undefined,
+          leadershipRole: data.leadershipRole,
+          subRole: data.subRole ?? undefined,
+          roleFormula: data.roleFormula ?? undefined,
+          lastSsaSent: data.lastSsaSent ?? undefined,
+          trainer: data.trainer,
+          notes: data.notes ?? undefined,
+        });
     return NextResponse.json({ ok: true, entry });
   } catch (error) {
     if (error instanceof z.ZodError) {

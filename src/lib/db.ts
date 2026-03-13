@@ -90,6 +90,7 @@ import {
   ActivityRecommendationRecord,
   SchoolInsightsRollupRecord,
   SchoolDirectoryInput,
+  SchoolAccountProfile,
   SchoolDirectoryRecord,
   SchoolContactCategory,
   SchoolContactInput,
@@ -217,6 +218,7 @@ import {
   syncPrivilegedPortalUsersPostgres,
 } from "@/lib/server/postgres/repositories/auth";
 import {
+  getSchoolAccountProfilePostgres,
   getSchoolDirectoryRecordPostgres,
   listSchoolDirectoryRecordsPostgres,
 } from "@/lib/server/postgres/repositories/schools";
@@ -715,6 +717,7 @@ function ensurePortalResourceColumns(db: Database.Database) {
 
 function ensureSchoolDirectoryColumns(db: Database.Database) {
   ensureColumn(db, "schools_directory", "name", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, "schools_directory", "country", "TEXT NOT NULL DEFAULT 'Uganda'");
   ensureColumn(db, "schools_directory", "district", "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, "schools_directory", "sub_county", "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, "schools_directory", "parish", "TEXT NOT NULL DEFAULT ''");
@@ -722,6 +725,28 @@ function ensureSchoolDirectoryColumns(db: Database.Database) {
   ensureColumn(db, "schools_directory", "school_code", "TEXT");
   ensureColumn(db, "schools_directory", "contact_name", "TEXT");
   ensureColumn(db, "schools_directory", "contact_phone", "TEXT");
+  ensureColumn(db, "schools_directory", "contact_email", "TEXT");
+  ensureColumn(db, "schools_directory", "alternate_school_names", "TEXT");
+  ensureColumn(db, "schools_directory", "school_status", "TEXT NOT NULL DEFAULT 'Open'");
+  ensureColumn(db, "schools_directory", "school_status_date", "TEXT");
+  ensureColumn(db, "schools_directory", "current_partner_type", "TEXT NOT NULL DEFAULT 'NA'");
+  ensureColumn(db, "schools_directory", "year_founded", "INTEGER");
+  ensureColumn(db, "schools_directory", "account_record_type", "TEXT NOT NULL DEFAULT 'School'");
+  ensureColumn(db, "schools_directory", "school_type", "TEXT NOT NULL DEFAULT 'School'");
+  ensureColumn(db, "schools_directory", "parent_account_label", "TEXT NOT NULL DEFAULT 'Uganda'");
+  ensureColumn(db, "schools_directory", "school_relationship_status", "TEXT");
+  ensureColumn(db, "schools_directory", "school_relationship_status_date", "TEXT");
+  ensureColumn(db, "schools_directory", "denomination", "TEXT");
+  ensureColumn(db, "schools_directory", "protestant_denomination", "TEXT");
+  ensureColumn(db, "schools_directory", "client_school_number", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "first_metric_date", "TEXT");
+  ensureColumn(db, "schools_directory", "metric_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "running_total_max_enrollment", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "partner_type", "TEXT");
+  ensureColumn(db, "schools_directory", "current_partner_school", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "schools_directory", "school_active", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "schools_directory", "website", "TEXT");
+  ensureColumn(db, "schools_directory", "description", "TEXT");
   ensureColumn(db, "schools_directory", "enrolled_learners", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrollment_total", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "schools_directory", "enrollment_by_grade", "TEXT");
@@ -3610,10 +3635,30 @@ export function getDb() {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     school_code TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
+    country TEXT NOT NULL DEFAULT 'Uganda',
     district TEXT NOT NULL,
     sub_county TEXT NOT NULL,
     parish TEXT NOT NULL,
     village TEXT,
+    alternate_school_names TEXT,
+    school_status TEXT NOT NULL DEFAULT 'Open',
+    school_status_date TEXT,
+    current_partner_type TEXT NOT NULL DEFAULT 'NA',
+    year_founded INTEGER,
+    account_record_type TEXT NOT NULL DEFAULT 'School',
+    school_type TEXT NOT NULL DEFAULT 'School',
+    parent_account_label TEXT NOT NULL DEFAULT 'Uganda',
+    school_relationship_status TEXT,
+    school_relationship_status_date TEXT,
+    denomination TEXT,
+    protestant_denomination TEXT,
+    client_school_number INTEGER NOT NULL DEFAULT 0,
+    first_metric_date TEXT,
+    metric_count INTEGER NOT NULL DEFAULT 0,
+    running_total_max_enrollment INTEGER NOT NULL DEFAULT 0,
+    partner_type TEXT,
+    current_partner_school INTEGER NOT NULL DEFAULT 0,
+    school_active INTEGER NOT NULL DEFAULT 1,
     enrolled_boys INTEGER NOT NULL DEFAULT 0,
     enrolled_girls INTEGER NOT NULL DEFAULT 0,
     enrolled_learners INTEGER NOT NULL DEFAULT 0,
@@ -3621,6 +3666,9 @@ export function getDb() {
     gps_lng TEXT,
     contact_name TEXT,
     contact_phone TEXT,
+    contact_email TEXT,
+    website TEXT,
+    description TEXT,
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -11917,37 +11965,153 @@ function syncPortalRecordInsights(
   });
 }
 
+function nullableString(value: unknown) {
+  return value === null || value === undefined || String(value).trim() === "" ? null : String(value);
+}
+
+function sqliteBoolean(value: unknown, fallback = false) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return value === 1;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return fallback;
+    }
+    return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  }
+  return fallback;
+}
+
+function mapSchoolDirectoryRowFromSqlite(row: Record<string, unknown>): SchoolDirectoryRecord {
+  const id = Number(row.id ?? 0);
+  return {
+    id,
+    schoolUid: String(row.schoolUid ?? "").trim() || createGeneratedUid("sch"),
+    schoolCode: String(row.schoolCode ?? ""),
+    name: String(row.name ?? ""),
+    country: String(row.country ?? "Uganda"),
+    region: String(row.region ?? ""),
+    subRegion: String(row.subRegion ?? ""),
+    district: String(row.district ?? ""),
+    subCounty: String(row.subCounty ?? ""),
+    parish: String(row.parish ?? ""),
+    village: nullableString(row.village),
+    notes: nullableString(row.notes),
+    alternateSchoolNames: nullableString(row.alternateSchoolNames),
+    schoolStatus: String(row.schoolStatus ?? "Open"),
+    schoolStatusDate: nullableString(row.schoolStatusDate),
+    currentPartnerType: String(row.currentPartnerType ?? "NA"),
+    yearFounded: row.yearFounded === null || row.yearFounded === undefined ? null : Number(row.yearFounded),
+    accountRecordType: String(row.accountRecordType ?? "School"),
+    schoolType: String(row.schoolType ?? "School"),
+    parentAccountLabel: String(row.parentAccountLabel ?? "Uganda"),
+    schoolRelationshipStatus: nullableString(row.schoolRelationshipStatus),
+    schoolRelationshipStatusDate: nullableString(row.schoolRelationshipStatusDate),
+    denomination: nullableString(row.denomination),
+    protestantDenomination: nullableString(row.protestantDenomination),
+    clientSchoolNumber: Number(row.clientSchoolNumber ?? 0),
+    firstMetricDate: nullableString(row.firstMetricDate),
+    metricCount: Number(row.metricCount ?? 0),
+    runningTotalMaxEnrollment: Number(row.runningTotalMaxEnrollment ?? 0),
+    partnerType: nullableString(row.partnerType),
+    currentPartnerSchool: sqliteBoolean(row.currentPartnerSchool),
+    schoolActive: sqliteBoolean(row.schoolActive, true),
+    website: nullableString(row.website),
+    description: nullableString(row.description),
+    enrollmentTotal: Number(row.enrollmentTotal ?? 0),
+    enrollmentByGrade: nullableString(row.enrollmentByGrade),
+    enrolledBoys: Number(row.enrolledBoys ?? 0),
+    enrolledGirls: Number(row.enrolledGirls ?? 0),
+    enrolledLearners: Number(row.enrolledLearners ?? 0),
+    directImpactLearners: Number(row.directImpactLearners ?? 0),
+    enrolledBaby: Number(row.enrolledBaby ?? 0),
+    enrolledMiddle: Number(row.enrolledMiddle ?? 0),
+    enrolledTop: Number(row.enrolledTop ?? 0),
+    enrolledP1: Number(row.enrolledP1 ?? 0),
+    enrolledP2: Number(row.enrolledP2 ?? 0),
+    enrolledP3: Number(row.enrolledP3 ?? 0),
+    enrolledP4: Number(row.enrolledP4 ?? 0),
+    enrolledP5: Number(row.enrolledP5 ?? 0),
+    enrolledP6: Number(row.enrolledP6 ?? 0),
+    enrolledP7: Number(row.enrolledP7 ?? 0),
+    gpsLat: nullableString(row.gpsLat),
+    gpsLng: nullableString(row.gpsLng),
+    contactName: nullableString(row.contactName),
+    contactPhone: nullableString(row.contactPhone),
+    contactEmail: nullableString(row.contactEmail),
+    primaryContactId:
+      row.primaryContactId === null || row.primaryContactId === undefined ? null : Number(row.primaryContactId),
+    primaryContactName: nullableString(row.primaryContactName),
+    primaryContactCategory: row.primaryContactCategory
+      ? (String(row.primaryContactCategory) as SchoolDirectoryRecord["primaryContactCategory"])
+      : null,
+    programStatus: String(row.programStatus ?? "active") as SchoolDirectoryRecord["programStatus"],
+    graduatedAt: nullableString(row.graduatedAt),
+    graduatedByUserId:
+      row.graduatedByUserId === null || row.graduatedByUserId === undefined ? null : Number(row.graduatedByUserId),
+    graduationNotes: nullableString(row.graduationNotes),
+    graduationVersion: nullableString(row.graduationVersion),
+    createdAt: String(row.createdAt ?? new Date(0).toISOString()),
+  };
+}
+
 function getSchoolDirectoryRecordById(id: number) {
   const row = getDb()
     .prepare(
       `
     SELECT
-    id,
+      id,
       school_uid AS schoolUid,
-        school_code AS schoolCode,
-          name,
-          COALESCE(region, '') AS region,
-            COALESCE(sub_region, '') AS subRegion,
-              district,
-              sub_county AS subCounty,
-                parish,
-                village,
-                CASE
+      school_code AS schoolCode,
+      name,
+      COALESCE(country, 'Uganda') AS country,
+      COALESCE(region, '') AS region,
+      COALESCE(sub_region, '') AS subRegion,
+      district,
+      sub_county AS subCounty,
+      parish,
+      village,
+      alternate_school_names AS alternateSchoolNames,
+      COALESCE(school_status, 'Open') AS schoolStatus,
+      school_status_date AS schoolStatusDate,
+      COALESCE(current_partner_type, 'NA') AS currentPartnerType,
+      year_founded AS yearFounded,
+      COALESCE(account_record_type, 'School') AS accountRecordType,
+      COALESCE(school_type, 'School') AS schoolType,
+      COALESCE(parent_account_label, 'Uganda') AS parentAccountLabel,
+      school_relationship_status AS schoolRelationshipStatus,
+      school_relationship_status_date AS schoolRelationshipStatusDate,
+      denomination,
+      protestant_denomination AS protestantDenomination,
+      COALESCE(client_school_number, 0) AS clientSchoolNumber,
+      first_metric_date AS firstMetricDate,
+      COALESCE(metric_count, 0) AS metricCount,
+      COALESCE(running_total_max_enrollment, 0) AS runningTotalMaxEnrollment,
+      partner_type AS partnerType,
+      COALESCE(current_partner_school, 0) AS currentPartnerSchool,
+      COALESCE(school_active, 1) AS schoolActive,
+      website,
+      description,
+      CASE
           WHEN COALESCE(enrollment_total, 0) > 0 THEN COALESCE(enrollment_total, 0)
           WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
             THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
           ELSE COALESCE(enrolled_learners, 0)
         END AS enrollmentTotal,
       enrollment_by_grade AS enrollmentByGrade,
-        enrolled_boys AS enrolledBoys,
-          enrolled_girls AS enrolledGirls,
-            COALESCE(enrolled_baby, 0) AS enrolledBaby,
-              COALESCE(enrolled_middle, 0) AS enrolledMiddle,
-                COALESCE(enrolled_top, 0) AS enrolledTop,
-                  COALESCE(enrolled_p1, 0) AS enrolledP1,
-                    COALESCE(enrolled_p2, 0) AS enrolledP2,
-                      COALESCE(enrolled_p3, 0) AS enrolledP3,
-                        (
+      enrolled_boys AS enrolledBoys,
+      enrolled_girls AS enrolledGirls,
+      COALESCE(enrolled_baby, 0) AS enrolledBaby,
+      COALESCE(enrolled_middle, 0) AS enrolledMiddle,
+      COALESCE(enrolled_top, 0) AS enrolledTop,
+      COALESCE(enrolled_p1, 0) AS enrolledP1,
+      COALESCE(enrolled_p2, 0) AS enrolledP2,
+      COALESCE(enrolled_p3, 0) AS enrolledP3,
+      (
           COALESCE(enrolled_baby, 0) +
           COALESCE(enrolled_middle, 0) +
           COALESCE(enrolled_top, 0) +
@@ -11955,29 +12119,30 @@ function getSchoolDirectoryRecordById(id: number) {
           COALESCE(enrolled_p2, 0) +
           COALESCE(enrolled_p3, 0)
         ) AS directImpactLearners,
-                        COALESCE(enrolled_p4, 0) AS enrolledP4,
-                          COALESCE(enrolled_p5, 0) AS enrolledP5,
-                            COALESCE(enrolled_p6, 0) AS enrolledP6,
-                              COALESCE(enrolled_p7, 0) AS enrolledP7,
-                                CASE
+      COALESCE(enrolled_p4, 0) AS enrolledP4,
+      COALESCE(enrolled_p5, 0) AS enrolledP5,
+      COALESCE(enrolled_p6, 0) AS enrolledP6,
+      COALESCE(enrolled_p7, 0) AS enrolledP7,
+      CASE
           WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
             THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
           ELSE COALESCE(enrolled_learners, 0)
         END AS enrolledLearners,
       gps_lat AS gpsLat,
-        gps_lng AS gpsLng,
-          contact_name AS contactName,
-            contact_phone AS contactPhone,
-              primary_contact_id AS primaryContactId,
-                primary_contact.full_name AS primaryContactName,
-                  primary_contact.category AS primaryContactCategory,
-              COALESCE(program_status, 'active') AS programStatus,
-                graduated_at AS graduatedAt,
-                  graduated_by_user_id AS graduatedByUserId,
-                      graduation_notes AS graduationNotes,
-                        graduation_version AS graduationVersion,
-              notes,
-              schools_directory.created_at AS createdAt
+      gps_lng AS gpsLng,
+      contact_name AS contactName,
+      contact_phone AS contactPhone,
+      contact_email AS contactEmail,
+      primary_contact_id AS primaryContactId,
+      primary_contact.full_name AS primaryContactName,
+      primary_contact.category AS primaryContactCategory,
+      COALESCE(program_status, 'active') AS programStatus,
+      graduated_at AS graduatedAt,
+      graduated_by_user_id AS graduatedByUserId,
+      graduation_notes AS graduationNotes,
+      graduation_version AS graduationVersion,
+      notes,
+      schools_directory.created_at AS createdAt
       FROM schools_directory
       LEFT JOIN school_contacts primary_contact
         ON primary_contact.contact_id = schools_directory.primary_contact_id
@@ -11985,9 +12150,9 @@ function getSchoolDirectoryRecordById(id: number) {
       LIMIT 1
       `,
     )
-    .get({ id }) as SchoolDirectoryRecord | undefined;
+    .get({ id }) as Record<string, unknown> | undefined;
 
-  return row ?? null;
+  return row ? mapSchoolDirectoryRowFromSqlite(row) : null;
 }
 
 function findSchoolByNormalizedName(name: string, excludeId?: number) {
@@ -14763,14 +14928,60 @@ export function getPortalDashboardData(user: PortalUser): PortalDashboardData {
   };
 }
 
-export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): SchoolDirectoryRecord {
+async function syncSchoolDirectoryBundleToPostgres(schoolId: number, client?: PoolClient) {
+  if (!isPostgresConfigured()) {
+    return;
+  }
+
+  const db = getDb();
+  const schoolRow = db
+    .prepare(`SELECT * FROM schools_directory WHERE id = @schoolId LIMIT 1`)
+    .get({ schoolId }) as Record<string, unknown> | undefined;
+
+  if (!schoolRow) {
+    return;
+  }
+
+  const contactRows = db
+    .prepare(`SELECT * FROM school_contacts WHERE school_id = @schoolId ORDER BY contact_id ASC`)
+    .all({ schoolId }) as Array<Record<string, unknown>>;
+
+  await upsertSqliteRowToPostgres("schools_directory", "id", schoolRow, client);
+  await replaceSqliteRowsInPostgres("school_contacts", "contact_id", "school_id", schoolId, contactRows, client);
+}
+
+export async function createSchoolDirectoryRecord(input: SchoolDirectoryInput): Promise<SchoolDirectoryRecord> {
   const db = getDb();
   const normalizedName = input.name.trim();
+  const country = input.country?.trim() || "Uganda";
   const normalizedDistrict = input.district.trim();
   const normalizedSubCounty = input.subCounty?.trim() || "Unspecified";
   const normalizedParish = input.parish?.trim() || "Unspecified";
   const normalizedRegion = inferRegionFromDistrict(normalizedDistrict) ?? "";
   const normalizedSubRegion = inferSubRegionFromDistrict(normalizedDistrict) ?? "";
+  const schoolStatus = input.schoolStatus?.trim() || "Open";
+  const schoolStatusDate = input.schoolStatusDate?.trim() || new Date().toISOString().slice(0, 10);
+  const currentPartnerType = input.currentPartnerType?.trim() || "NA";
+  const yearFounded =
+    input.yearFounded !== undefined && Number.isFinite(Number(input.yearFounded))
+      ? Math.max(0, Math.trunc(Number(input.yearFounded)))
+      : null;
+  const accountRecordType = input.accountRecordType?.trim() || "School";
+  const schoolType = input.schoolType?.trim() || "School";
+  const parentAccountLabel = input.parentAccountLabel?.trim() || "Uganda";
+  const schoolRelationshipStatus = input.schoolRelationshipStatus?.trim() || null;
+  const schoolRelationshipStatusDate = input.schoolRelationshipStatusDate?.trim() || schoolStatusDate;
+  const denomination = input.denomination?.trim() || null;
+  const protestantDenomination = input.protestantDenomination?.trim() || null;
+  const clientSchoolNumber =
+    input.clientSchoolNumber !== undefined && Number.isFinite(Number(input.clientSchoolNumber))
+      ? Math.max(0, Math.trunc(Number(input.clientSchoolNumber)))
+      : 0;
+  const firstMetricDate = input.firstMetricDate?.trim() || null;
+  const metricCount =
+    input.metricCount !== undefined && Number.isFinite(Number(input.metricCount))
+      ? Math.max(0, Math.trunc(Number(input.metricCount)))
+      : 0;
   const enrolledBoys = Math.max(0, Math.floor(Number(input.enrolledBoys ?? 0)));
   const enrolledGirls = Math.max(0, Math.floor(Number(input.enrolledGirls ?? 0)));
   const enrolledBaby = Math.max(0, Math.floor(Number(input.enrolledBaby ?? 0)));
@@ -14799,9 +15010,20 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
     generalEnrollment > 0
       ? generalEnrollment
       : Math.max(0, providedEnrollmentTotal ?? directImpactEnrollment);
+  const runningTotalMaxEnrollment =
+    input.runningTotalMaxEnrollment !== undefined && Number.isFinite(Number(input.runningTotalMaxEnrollment))
+      ? Math.max(0, Math.trunc(Number(input.runningTotalMaxEnrollment)))
+      : enrollmentTotal;
+  const partnerType = input.partnerType?.trim() || null;
+  const currentPartnerSchool = Boolean(input.currentPartnerSchool);
+  const schoolActive = input.schoolActive ?? schoolStatus.toLowerCase() === "open";
+  const website = input.website?.trim() || null;
+  const description = input.description?.trim() || null;
+  const alternateSchoolNames = input.alternateSchoolNames?.trim() || null;
   const primaryContactName = input.proprietor.fullName.trim();
   const primaryContactGender = input.proprietor.gender;
   const primaryContactPhone = input.proprietor.phone?.trim() || "";
+  const primaryContactEmail = input.proprietor.email?.trim() || null;
   const primaryContactCategory = normalizeSchoolContactCategory(
     input.proprietor.category ?? input.proprietor.roleTitle ?? "Proprietor",
   );
@@ -14834,6 +15056,7 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
           school_uid,
           school_code,
           name,
+          country,
           region,
           sub_region,
           region_id,
@@ -14843,6 +15066,25 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
           sub_county,
           parish,
           village,
+          alternate_school_names,
+          school_status,
+          school_status_date,
+          current_partner_type,
+          year_founded,
+          account_record_type,
+          school_type,
+          parent_account_label,
+          school_relationship_status,
+          school_relationship_status_date,
+          denomination,
+          protestant_denomination,
+          client_school_number,
+          first_metric_date,
+          metric_count,
+          running_total_max_enrollment,
+          partner_type,
+          current_partner_school,
+          school_active,
           enrollment_total,
           enrollment_by_grade,
           enrolled_boys,
@@ -14862,11 +15104,15 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
           gps_lng,
           contact_name,
           contact_phone,
+          contact_email,
+          website,
+          description,
           notes
         ) VALUES(
           @schoolUid,
           @schoolCode,
           @name,
+          @country,
           @region,
           @subRegion,
           @regionId,
@@ -14876,6 +15122,25 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
           @subCounty,
           @parish,
           @village,
+          @alternateSchoolNames,
+          @schoolStatus,
+          @schoolStatusDate,
+          @currentPartnerType,
+          @yearFounded,
+          @accountRecordType,
+          @schoolType,
+          @parentAccountLabel,
+          @schoolRelationshipStatus,
+          @schoolRelationshipStatusDate,
+          @denomination,
+          @protestantDenomination,
+          @clientSchoolNumber,
+          @firstMetricDate,
+          @metricCount,
+          @runningTotalMaxEnrollment,
+          @partnerType,
+          @currentPartnerSchool,
+          @schoolActive,
           @enrollmentTotal,
           @enrollmentByGrade,
           @enrolledBoys,
@@ -14895,6 +15160,9 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
           @gpsLng,
           @contactName,
           @contactPhone,
+          @contactEmail,
+          @website,
+          @description,
           @notes
         )
       `,
@@ -14903,6 +15171,7 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         schoolUid: createGeneratedUid("sch"),
         schoolCode: "S-PENDING",
         name: normalizedName,
+        country,
         region: normalizedRegion,
         subRegion: normalizedSubRegion,
         regionId: stableIdFromText("reg", normalizedRegion),
@@ -14912,6 +15181,25 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         subCounty: normalizedSubCounty,
         parish: normalizedParish,
         village: input.village?.trim() ? input.village : null,
+        alternateSchoolNames,
+        schoolStatus,
+        schoolStatusDate,
+        currentPartnerType,
+        yearFounded,
+        accountRecordType,
+        schoolType,
+        parentAccountLabel,
+        schoolRelationshipStatus,
+        schoolRelationshipStatusDate,
+        denomination,
+        protestantDenomination,
+        clientSchoolNumber,
+        firstMetricDate,
+        metricCount,
+        runningTotalMaxEnrollment,
+        partnerType,
+        currentPartnerSchool: currentPartnerSchool ? 1 : 0,
+        schoolActive: schoolActive ? 1 : 0,
         enrollmentTotal,
         enrollmentByGrade: input.enrollmentByGrade?.trim() ? input.enrollmentByGrade.trim() : null,
         enrolledBoys,
@@ -14931,6 +15219,9 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
         gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
         contactName: primaryContactName,
         contactPhone: primaryContactPhone || input.contactPhone?.trim() || null,
+        contactEmail: primaryContactEmail,
+        website,
+        description,
         notes: input.notes?.trim() ? input.notes.trim() : null,
       });
 
@@ -14946,7 +15237,7 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
       fullName: primaryContactName,
       gender: primaryContactGender,
       phone: primaryContactPhone || undefined,
-      email: input.proprietor.email?.trim() || undefined,
+      email: primaryContactEmail || undefined,
       whatsapp: input.proprietor.whatsapp?.trim() || undefined,
       category: primaryContactCategory,
       roleTitle: input.proprietor.roleTitle?.trim() || primaryContactCategory,
@@ -14961,6 +15252,7 @@ export function createSchoolDirectoryRecord(input: SchoolDirectoryInput): School
     throw new Error("Could not load created school.");
   }
 
+  await syncSchoolDirectoryBundleToPostgres(id);
   return row;
 }
 
@@ -15074,14 +15366,36 @@ export function getReportPreviewStats(input: {
   };
 }
 
-export function updateSchoolDirectoryRecord(
+export async function updateSchoolDirectoryRecord(
   schoolId: number,
   input: {
     name?: string;
+    country?: string;
     district?: string;
     subCounty?: string;
     parish?: string;
     village?: string | null;
+    alternateSchoolNames?: string | null;
+    schoolStatus?: string;
+    schoolStatusDate?: string | null;
+    currentPartnerType?: string;
+    yearFounded?: number | null;
+    accountRecordType?: string;
+    schoolType?: string;
+    parentAccountLabel?: string;
+    schoolRelationshipStatus?: string | null;
+    schoolRelationshipStatusDate?: string | null;
+    denomination?: string | null;
+    protestantDenomination?: string | null;
+    clientSchoolNumber?: number;
+    firstMetricDate?: string | null;
+    metricCount?: number;
+    runningTotalMaxEnrollment?: number;
+    partnerType?: string | null;
+    currentPartnerSchool?: boolean;
+    schoolActive?: boolean;
+    website?: string | null;
+    description?: string | null;
     enrollmentTotal?: number;
     enrollmentByGrade?: string | null;
     enrolledBoys?: number;
@@ -15111,6 +15425,14 @@ export function updateSchoolDirectoryRecord(
   const updates: string[] = [];
   const params: Record<string, unknown> = { schoolId };
 
+  if (input.country !== undefined) {
+    const value = input.country.trim();
+    if (!value) {
+      throw new Error("Country is required.");
+    }
+    updates.push("country = @country");
+    params.country = value;
+  }
   if (input.name !== undefined) {
     const value = input.name.trim();
     if (!value) {
@@ -15166,6 +15488,115 @@ export function updateSchoolDirectoryRecord(
     updates.push("village = @village");
     params.village = value ? value : null;
   }
+  if (input.alternateSchoolNames !== undefined) {
+    const value = input.alternateSchoolNames?.trim();
+    updates.push("alternate_school_names = @alternateSchoolNames");
+    params.alternateSchoolNames = value ? value : null;
+  }
+  if (input.schoolStatus !== undefined) {
+    const value = input.schoolStatus.trim();
+    if (!value) {
+      throw new Error("School status is required.");
+    }
+    updates.push("school_status = @schoolStatus");
+    params.schoolStatus = value;
+  }
+  if (input.schoolStatusDate !== undefined) {
+    const value = input.schoolStatusDate?.trim();
+    updates.push("school_status_date = @schoolStatusDate");
+    params.schoolStatusDate = value ? value : null;
+  }
+  if (input.currentPartnerType !== undefined) {
+    const value = input.currentPartnerType.trim();
+    updates.push("current_partner_type = @currentPartnerType");
+    params.currentPartnerType = value || "NA";
+  }
+  if (input.yearFounded !== undefined) {
+    const value =
+      input.yearFounded === null || input.yearFounded === undefined
+        ? null
+        : Math.max(0, Math.trunc(Number(input.yearFounded)));
+    updates.push("year_founded = @yearFounded");
+    params.yearFounded = value;
+  }
+  if (input.accountRecordType !== undefined) {
+    const value = input.accountRecordType.trim();
+    updates.push("account_record_type = @accountRecordType");
+    params.accountRecordType = value || "School";
+  }
+  if (input.schoolType !== undefined) {
+    const value = input.schoolType.trim();
+    updates.push("school_type = @schoolType");
+    params.schoolType = value || "School";
+  }
+  if (input.parentAccountLabel !== undefined) {
+    const value = input.parentAccountLabel.trim();
+    updates.push("parent_account_label = @parentAccountLabel");
+    params.parentAccountLabel = value || "Uganda";
+  }
+  if (input.schoolRelationshipStatus !== undefined) {
+    const value = input.schoolRelationshipStatus?.trim();
+    updates.push("school_relationship_status = @schoolRelationshipStatus");
+    params.schoolRelationshipStatus = value ? value : null;
+  }
+  if (input.schoolRelationshipStatusDate !== undefined) {
+    const value = input.schoolRelationshipStatusDate?.trim();
+    updates.push("school_relationship_status_date = @schoolRelationshipStatusDate");
+    params.schoolRelationshipStatusDate = value ? value : null;
+  }
+  if (input.denomination !== undefined) {
+    const value = input.denomination?.trim();
+    updates.push("denomination = @denomination");
+    params.denomination = value ? value : null;
+  }
+  if (input.protestantDenomination !== undefined) {
+    const value = input.protestantDenomination?.trim();
+    updates.push("protestant_denomination = @protestantDenomination");
+    params.protestantDenomination = value ? value : null;
+  }
+  if (input.clientSchoolNumber !== undefined) {
+    const value = Math.max(0, Math.trunc(Number(input.clientSchoolNumber)));
+    updates.push("client_school_number = @clientSchoolNumber");
+    params.clientSchoolNumber = value;
+  }
+  if (input.firstMetricDate !== undefined) {
+    const value = input.firstMetricDate?.trim();
+    updates.push("first_metric_date = @firstMetricDate");
+    params.firstMetricDate = value ? value : null;
+  }
+  if (input.metricCount !== undefined) {
+    const value = Math.max(0, Math.trunc(Number(input.metricCount)));
+    updates.push("metric_count = @metricCount");
+    params.metricCount = value;
+  }
+  if (input.runningTotalMaxEnrollment !== undefined) {
+    const value = Math.max(0, Math.trunc(Number(input.runningTotalMaxEnrollment)));
+    updates.push("running_total_max_enrollment = @runningTotalMaxEnrollment");
+    params.runningTotalMaxEnrollment = value;
+  }
+  if (input.partnerType !== undefined) {
+    const value = input.partnerType?.trim();
+    updates.push("partner_type = @partnerType");
+    params.partnerType = value ? value : null;
+  }
+  if (input.currentPartnerSchool !== undefined) {
+    updates.push("current_partner_school = @currentPartnerSchool");
+    params.currentPartnerSchool = input.currentPartnerSchool ? 1 : 0;
+  }
+  if (input.schoolActive !== undefined) {
+    updates.push("school_active = @schoolActive");
+    params.schoolActive = input.schoolActive ? 1 : 0;
+  }
+  if (input.website !== undefined) {
+    const value = input.website?.trim();
+    updates.push("website = @website");
+    params.website = value ? value : null;
+  }
+  if (input.description !== undefined) {
+    const value = input.description?.trim();
+    updates.push("description = @description");
+    params.description = value ? value : null;
+  }
   if (input.enrollmentByGrade !== undefined) {
     const value = input.enrollmentByGrade?.trim();
     updates.push("enrollment_by_grade = @enrollmentByGrade");
@@ -15216,6 +15647,24 @@ export function updateSchoolDirectoryRecord(
     const value = input.contactPhone?.trim();
     updates.push("contact_phone = @contactPhone");
     params.contactPhone = value ? value : null;
+  }
+  if ((input.contactName !== undefined || input.contactPhone !== undefined) && current.primaryContactId) {
+    getDb()
+      .prepare(
+        `
+          UPDATE school_contacts
+          SET
+            full_name = @fullName,
+            phone = @phone,
+            updated_at = datetime('now')
+          WHERE contact_id = @contactId
+        `,
+      )
+      .run({
+        contactId: current.primaryContactId,
+        fullName: input.contactName?.trim() || current.primaryContactName || current.name,
+        phone: input.contactPhone?.trim() || current.contactPhone || null,
+      });
   }
   if (input.notes !== undefined) {
     const value = input.notes?.trim();
@@ -15311,6 +15760,7 @@ export function updateSchoolDirectoryRecord(
     throw new Error("Could not load updated school record.");
   }
 
+  await syncSchoolDirectoryBundleToPostgres(schoolId);
   return updated;
 }
 
@@ -15344,44 +15794,66 @@ export async function listSchoolDirectoryRecords(
 
   if (filters?.district) {
     where.push("lower(district) LIKE lower(@district)");
-    params.district = `% ${filters.district}% `;
+    params.district = `%${filters.district}%`;
   }
 
   if (filters?.query) {
     where.push("(lower(name) LIKE lower(@query) OR lower(school_code) LIKE lower(@query))");
-    params.query = `% ${filters.query}% `;
+    params.query = `%${filters.query}%`;
   }
 
   return getDb()
     .prepare(
       `
     SELECT
-    id,
+      id,
       school_uid AS schoolUid,
-        school_code AS schoolCode,
-          name,
-          COALESCE(region, '') AS region,
-            COALESCE(sub_region, '') AS subRegion,
-              district,
-              sub_county AS subCounty,
-                parish,
-                village,
-                CASE
+      school_code AS schoolCode,
+      name,
+      COALESCE(country, 'Uganda') AS country,
+      COALESCE(region, '') AS region,
+      COALESCE(sub_region, '') AS subRegion,
+      district,
+      sub_county AS subCounty,
+      parish,
+      village,
+      alternate_school_names AS alternateSchoolNames,
+      COALESCE(school_status, 'Open') AS schoolStatus,
+      school_status_date AS schoolStatusDate,
+      COALESCE(current_partner_type, 'NA') AS currentPartnerType,
+      year_founded AS yearFounded,
+      COALESCE(account_record_type, 'School') AS accountRecordType,
+      COALESCE(school_type, 'School') AS schoolType,
+      COALESCE(parent_account_label, 'Uganda') AS parentAccountLabel,
+      school_relationship_status AS schoolRelationshipStatus,
+      school_relationship_status_date AS schoolRelationshipStatusDate,
+      denomination,
+      protestant_denomination AS protestantDenomination,
+      COALESCE(client_school_number, 0) AS clientSchoolNumber,
+      first_metric_date AS firstMetricDate,
+      COALESCE(metric_count, 0) AS metricCount,
+      COALESCE(running_total_max_enrollment, 0) AS runningTotalMaxEnrollment,
+      partner_type AS partnerType,
+      COALESCE(current_partner_school, 0) AS currentPartnerSchool,
+      COALESCE(school_active, 1) AS schoolActive,
+      website,
+      description,
+      CASE
           WHEN COALESCE(enrollment_total, 0) > 0 THEN COALESCE(enrollment_total, 0)
           WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
             THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
           ELSE COALESCE(enrolled_learners, 0)
         END AS enrollmentTotal,
       enrollment_by_grade AS enrollmentByGrade,
-        enrolled_boys AS enrolledBoys,
-          enrolled_girls AS enrolledGirls,
-            COALESCE(enrolled_baby, 0) AS enrolledBaby,
-              COALESCE(enrolled_middle, 0) AS enrolledMiddle,
-                COALESCE(enrolled_top, 0) AS enrolledTop,
-                  COALESCE(enrolled_p1, 0) AS enrolledP1,
-                    COALESCE(enrolled_p2, 0) AS enrolledP2,
-                      COALESCE(enrolled_p3, 0) AS enrolledP3,
-                        (
+      enrolled_boys AS enrolledBoys,
+      enrolled_girls AS enrolledGirls,
+      COALESCE(enrolled_baby, 0) AS enrolledBaby,
+      COALESCE(enrolled_middle, 0) AS enrolledMiddle,
+      COALESCE(enrolled_top, 0) AS enrolledTop,
+      COALESCE(enrolled_p1, 0) AS enrolledP1,
+      COALESCE(enrolled_p2, 0) AS enrolledP2,
+      COALESCE(enrolled_p3, 0) AS enrolledP3,
+      (
           COALESCE(enrolled_baby, 0) +
           COALESCE(enrolled_middle, 0) +
           COALESCE(enrolled_top, 0) +
@@ -15389,29 +15861,30 @@ export async function listSchoolDirectoryRecords(
           COALESCE(enrolled_p2, 0) +
           COALESCE(enrolled_p3, 0)
         ) AS directImpactLearners,
-                        COALESCE(enrolled_p4, 0) AS enrolledP4,
-                          COALESCE(enrolled_p5, 0) AS enrolledP5,
-                            COALESCE(enrolled_p6, 0) AS enrolledP6,
-                              COALESCE(enrolled_p7, 0) AS enrolledP7,
-                                CASE
+      COALESCE(enrolled_p4, 0) AS enrolledP4,
+      COALESCE(enrolled_p5, 0) AS enrolledP5,
+      COALESCE(enrolled_p6, 0) AS enrolledP6,
+      COALESCE(enrolled_p7, 0) AS enrolledP7,
+      CASE
           WHEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0) > 0
             THEN COALESCE(enrolled_boys, 0) + COALESCE(enrolled_girls, 0)
           ELSE COALESCE(enrolled_learners, 0)
         END AS enrolledLearners,
       gps_lat AS gpsLat,
-        gps_lng AS gpsLng,
-          contact_name AS contactName,
-            contact_phone AS contactPhone,
-              primary_contact_id AS primaryContactId,
-                primary_contact.full_name AS primaryContactName,
-                  primary_contact.category AS primaryContactCategory,
-              COALESCE(program_status, 'active') AS programStatus,
-                graduated_at AS graduatedAt,
-                  graduated_by_user_id AS graduatedByUserId,
-                    graduation_notes AS graduationNotes,
-                      graduation_version AS graduationVersion,
-              notes,
-              schools_directory.created_at AS createdAt
+      gps_lng AS gpsLng,
+      contact_name AS contactName,
+      contact_phone AS contactPhone,
+      contact_email AS contactEmail,
+      primary_contact_id AS primaryContactId,
+      primary_contact.full_name AS primaryContactName,
+      primary_contact.category AS primaryContactCategory,
+      COALESCE(program_status, 'active') AS programStatus,
+      graduated_at AS graduatedAt,
+      graduated_by_user_id AS graduatedByUserId,
+      graduation_notes AS graduationNotes,
+      graduation_version AS graduationVersion,
+      notes,
+      schools_directory.created_at AS createdAt
       FROM schools_directory
       LEFT JOIN school_contacts primary_contact
         ON primary_contact.contact_id = schools_directory.primary_contact_id
@@ -15420,7 +15893,8 @@ export async function listSchoolDirectoryRecords(
       LIMIT 500
       `,
     )
-    .all(params) as SchoolDirectoryRecord[];
+    .all(params)
+    .map((row) => mapSchoolDirectoryRowFromSqlite(row as Record<string, unknown>));
 }
 
 export function listPortalUsersForFilters(user: PortalUser) {
@@ -17009,8 +17483,8 @@ export function listTrainingFeedbackRecords(filters?: {
   }));
 }
 
-function countTotal(db: Database.Database, query: string) {
-  const row = db.prepare(query).get() as { total: number | null };
+function countTotal(db: Database.Database, query: string, params?: Record<string, unknown>) {
+  const row = db.prepare(query).get(params ?? {}) as { total: number | null };
   return Number(row.total ?? 0);
 }
 
@@ -25251,154 +25725,284 @@ export async function getSchoolDirectoryRecord(id: number): Promise<SchoolDirect
   if (isPostgresConfigured()) {
     return getSchoolDirectoryRecordPostgres(id);
   }
+  return getSchoolDirectoryRecordById(id);
+}
+
+export async function getSchoolAccountProfile(schoolId: number): Promise<SchoolAccountProfile | null> {
+  if (isPostgresConfigured()) {
+    return getSchoolAccountProfilePostgres(schoolId);
+  }
+
+  const school = await getSchoolDirectoryRecord(schoolId);
+  if (!school) {
+    return null;
+  }
 
   const db = getDb();
-  const row = db
+  const fyStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
+  const fyLastStart = new Date(new Date().getFullYear() - 1, 0, 1).toISOString().slice(0, 10);
+  const fyLastEnd = new Date(new Date().getFullYear() - 1, 11, 31).toISOString().slice(0, 10);
+  const hasOnlineSessions = hasTable(db, "online_training_sessions");
+  const hasOnlineParticipants = hasTable(db, "online_training_participants");
+  const hasOnlineAudience = hasOnlineSessions && hasColumn(db, "online_training_sessions", "audience");
+  const hasOnlineScopeType = hasOnlineSessions && hasColumn(db, "online_training_sessions", "scope_type");
+  const hasOnlineScopeId = hasOnlineSessions && hasColumn(db, "online_training_sessions", "scope_id");
+  const hasOnlineStartTime = hasOnlineSessions && hasColumn(db, "online_training_sessions", "start_time");
+  const onlineScopeClause =
+    hasOnlineScopeType && hasOnlineScopeId
+      ? ` OR (ots.scope_type = 'school' AND COALESCE(ots.scope_id, '') = @scopeId)`
+      : "";
+  const onlineDateExpr = hasOnlineStartTime ? "substr(ots.start_time, 1, 10)" : "substr(ots.created_at, 1, 10)";
+
+  const counts = {
+    contacts: countTotal(
+      db,
+      `SELECT COUNT(*) AS total FROM school_contacts WHERE school_id = @schoolId`,
+      { schoolId },
+    ),
+    trainings: countTotal(
+      db,
+      `SELECT COUNT(*) AS total FROM portal_records WHERE module = 'training' AND school_id = @schoolId`,
+      { schoolId },
+    ),
+    onlineTrainings:
+      hasOnlineSessions && hasOnlineParticipants
+        ? countTotal(
+            db,
+            `
+              SELECT COUNT(*) AS total
+              FROM (
+                SELECT DISTINCT ots.id
+                FROM online_training_sessions ots
+                LEFT JOIN online_training_participants otp ON otp.session_id = ots.id
+                WHERE otp.school_id = @schoolId
+                   ${onlineScopeClause}
+              )
+            `,
+            { schoolId, scopeId: String(schoolId) },
+          )
+        : 0,
+    visits: hasTable(db, "coaching_visits")
+      ? countTotal(
+          db,
+          `SELECT COUNT(*) AS total FROM coaching_visits WHERE school_id = @schoolId`,
+          { schoolId },
+        )
+      : 0,
+    assessments: hasTable(db, "assessment_sessions")
+      ? countTotal(
+          db,
+          `SELECT COUNT(*) AS total FROM assessment_sessions WHERE school_id = @schoolId`,
+          { schoolId },
+        )
+      : countTotal(
+          db,
+          `SELECT COUNT(*) AS total FROM portal_records WHERE module = 'assessment' AND school_id = @schoolId`,
+          { schoolId },
+        ),
+    teacherEvaluations: hasTable(db, "lesson_evaluations")
+      ? countTotal(
+          db,
+          `SELECT COUNT(*) AS total FROM lesson_evaluations WHERE school_id = @schoolId AND status != 'void'`,
+          { schoolId },
+        )
+      : 0,
+  };
+
+  const trainingRows = db
     .prepare(
       `
-      SELECT
-        id,
-        school_uid,
-        school_code,
-        name,
-        COALESCE(region, '') AS region,
-        COALESCE(sub_region, '') AS sub_region,
-        district,
-        sub_county,
-        parish,
-        village,
-        notes,
-        COALESCE(enrollment_total, 0) AS enrollment_total,
-        enrollment_by_grade,
-
-        enrolled_boys,
-        enrolled_girls,
-        enrolled_baby,
-        enrolled_middle,
-        enrolled_top,
-        enrolled_p1,
-        enrolled_p2,
-        enrolled_p3,
-        enrolled_p4,
-        enrolled_p5,
-        enrolled_p6,
-        enrolled_p7,
-        enrolled_learners,
-        gps_lat,
-        gps_lng,
-        contact_name,
-        contact_phone,
-        primary_contact_id,
-        primary_contact.full_name AS primary_contact_name,
-        primary_contact.category AS primary_contact_category,
-        COALESCE(program_status, 'active') AS program_status,
-        graduated_at,
-        graduated_by_user_id,
-        graduation_notes,
-        graduation_version,
-        schools_directory.created_at
-      FROM schools_directory
-      LEFT JOIN school_contacts primary_contact
-        ON primary_contact.contact_id = schools_directory.primary_contact_id
-      WHERE id = ?
-    `,
+        SELECT
+          id,
+          'trainings' AS module,
+          COALESCE(NULLIF(program_type, ''), 'Training') AS title,
+          school_name AS subtitle,
+          date,
+          status,
+          '/portal/trainings?record=' || id AS href
+        FROM portal_records
+        WHERE module = 'training'
+          AND school_id = @schoolId
+        ORDER BY date DESC, id DESC
+        LIMIT 6
+      `,
     )
-    .get(id) as
-    | {
-      id: number;
-      school_uid: string | null;
-      school_code: string;
-      name: string;
-      region: string;
-      sub_region: string;
-      district: string;
-      sub_county: string;
-      parish: string;
-      village: string | null;
-      notes: string | null;
-      enrollment_total: number;
-      enrollment_by_grade: string | null;
-      enrolled_boys: number;
-      enrolled_girls: number;
-      enrolled_baby: number;
-      enrolled_middle: number;
-      enrolled_top: number;
-      enrolled_p1: number;
-      enrolled_p2: number;
-      enrolled_p3: number;
-      enrolled_p4: number;
-      enrolled_p5: number;
-      enrolled_p6: number;
-      enrolled_p7: number;
-      enrolled_learners: number;
-      gps_lat: string | null;
-      gps_lng: string | null;
-      contact_name: string | null;
-      contact_phone: string | null;
-      primary_contact_id: number | null;
-      primary_contact_name: string | null;
-      primary_contact_category: SchoolContactCategory | null;
-      program_status: "active" | "graduated" | "paused";
-      graduated_at: string | null;
-      graduated_by_user_id: number | null;
-      graduation_notes: string | null;
-      graduation_version: string | null;
-      created_at: string;
-    }
-    | undefined;
+    .all({ schoolId }) as Array<Record<string, unknown>>;
 
-  if (!row) return null;
+  const onlineRows =
+    hasOnlineSessions && hasOnlineParticipants
+      ? (db
+          .prepare(
+            `
+              SELECT *
+              FROM (
+                SELECT DISTINCT
+                  ots.id,
+                  'onlineTrainings' AS module,
+                  ots.title AS title,
+                  ${hasOnlineAudience ? "ots.audience" : "NULL"} AS subtitle,
+                  ${onlineDateExpr} AS date,
+                  ots.status AS status,
+                  '/portal/events' AS href
+                FROM online_training_sessions ots
+                LEFT JOIN online_training_participants otp ON otp.session_id = ots.id
+                WHERE otp.school_id = @schoolId
+                   ${onlineScopeClause}
+              )
+              ORDER BY date DESC, id DESC
+              LIMIT 6
+            `,
+          )
+          .all({ schoolId, scopeId: String(schoolId) }) as Array<Record<string, unknown>>)
+      : [];
+
+  const interactionRows = db
+    .prepare(
+      `
+        SELECT *
+        FROM (
+          SELECT
+            COALESCE(cv.portal_record_id, cv.id) AS id,
+            'visits' AS module,
+            COALESCE(NULLIF(cv.visit_type, ''), 'School Visit') AS title,
+            COALESCE(cv.implementation_status, cv.visit_pathway) AS subtitle,
+            cv.visit_date AS date,
+            NULL AS status,
+            CASE
+              WHEN cv.portal_record_id IS NOT NULL THEN '/portal/visits?record=' || cv.portal_record_id
+              ELSE '/portal/schools/' || cv.school_id || '#recent-interactions'
+            END AS href
+          FROM coaching_visits cv
+          WHERE cv.school_id = @schoolId
+
+          UNION ALL
+
+          SELECT
+            COALESCE(ses.portal_record_id, ses.id) AS id,
+            'assessments' AS module,
+            COALESCE(upper(substr(ses.assessment_type, 1, 1)) || substr(ses.assessment_type, 2), 'Assessment') || ' assessment' AS title,
+            COALESCE(ses.class_grade, 'All classes') AS subtitle,
+            ses.assessment_date AS date,
+            NULL AS status,
+            CASE
+              WHEN ses.portal_record_id IS NOT NULL THEN '/portal/assessments?record=' || ses.portal_record_id
+              ELSE '/portal/schools/' || ses.school_id || '#recent-interactions'
+            END AS href
+          FROM assessment_sessions ses
+          WHERE ses.school_id = @schoolId
+
+          UNION ALL
+
+          SELECT
+            le.id,
+            'teacherEvaluations' AS module,
+            COALESCE(NULLIF(le.overall_level, ''), 'Lesson Evaluation') AS title,
+            trim(COALESCE(le.grade, '') || CASE WHEN le.top_gap_domain IS NOT NULL AND trim(le.top_gap_domain) != '' THEN ' • ' || le.top_gap_domain ELSE '' END) AS subtitle,
+            le.lesson_date AS date,
+            le.status AS status,
+            '/portal/schools/' || le.school_id || '/teachers/' || le.teacher_uid || '/improvement' AS href
+          FROM lesson_evaluations le
+          WHERE le.school_id = @schoolId
+            AND le.status != 'void'
+        )
+        ORDER BY date DESC, id DESC
+        LIMIT 8
+      `,
+    )
+    .all({ schoolId }) as Array<Record<string, unknown>>;
+
+  const activitySources = [
+    `SELECT date AS activity_date FROM portal_records WHERE school_id = @schoolId`,
+    hasTable(db, "coaching_visits")
+      ? `SELECT visit_date AS activity_date FROM coaching_visits WHERE school_id = @schoolId`
+      : null,
+    hasTable(db, "assessment_sessions")
+      ? `SELECT assessment_date AS activity_date FROM assessment_sessions WHERE school_id = @schoolId`
+      : null,
+    hasTable(db, "lesson_evaluations")
+      ? `SELECT lesson_date AS activity_date FROM lesson_evaluations WHERE school_id = @schoolId AND status != 'void'`
+      : null,
+    hasOnlineSessions && hasOnlineParticipants
+      ? `
+          SELECT ${onlineDateExpr} AS activity_date
+          FROM online_training_sessions ots
+          LEFT JOIN online_training_participants otp ON otp.session_id = ots.id
+          WHERE otp.school_id = @schoolId
+             ${onlineScopeClause}
+        `
+      : null,
+  ].filter(Boolean) as string[];
+
+  const summaryRow = db
+    .prepare(
+      `
+        SELECT MAX(activity_date) AS dateOfLastActivity
+        FROM (
+          ${activitySources.join("\nUNION ALL\n")}
+        )
+      `,
+    )
+    .get({ schoolId, scopeId: String(schoolId) }) as { dateOfLastActivity: string | null } | undefined;
+
+  const dateOfLastStaffVisit = hasTable(db, "coaching_visits")
+    ? ((db
+        .prepare(`SELECT MAX(visit_date) AS dateOfLastStaffVisit FROM coaching_visits WHERE school_id = @schoolId`)
+        .get({ schoolId }) as { dateOfLastStaffVisit: string | null } | undefined)?.dateOfLastStaffVisit ?? null)
+    : null;
+
+  const lastMetricsDate = hasTable(db, "assessment_sessions")
+    ? ((db
+        .prepare(`SELECT MAX(assessment_date) AS lastMetricsDate FROM assessment_sessions WHERE school_id = @schoolId`)
+        .get({ schoolId }) as { lastMetricsDate: string | null } | undefined)?.lastMetricsDate ?? null)
+    : null;
+
+  const schoolVisitsThisFy = hasTable(db, "coaching_visits")
+    ? countTotal(
+        db,
+        `SELECT COUNT(*) AS total FROM coaching_visits WHERE school_id = @schoolId AND visit_date >= @fyStart`,
+        { schoolId, fyStart },
+      )
+    : 0;
+
+  const schoolVisitsLastFy = hasTable(db, "coaching_visits")
+    ? countTotal(
+        db,
+        `
+          SELECT COUNT(*) AS total
+          FROM coaching_visits
+          WHERE school_id = @schoolId
+            AND visit_date >= @fyLastStart
+            AND visit_date <= @fyLastEnd
+        `,
+        { schoolId, fyLastStart, fyLastEnd },
+      )
+    : 0;
+
+  const mapRecentItem = (row: Record<string, unknown>) => ({
+    id: Number(row.id ?? 0),
+    module: String(row.module ?? "trainings") as SchoolAccountProfile["recentTrainings"][number]["module"],
+    title: String(row.title ?? ""),
+    subtitle: nullableString(row.subtitle),
+    date: nullableString(row.date),
+    status: nullableString(row.status),
+    href: String(row.href ?? `/portal/schools/${schoolId}`),
+  });
 
   return {
-    id: row.id,
-    schoolUid: row.school_uid ?? createGeneratedUid("sch"),
-    schoolCode: row.school_code,
-    name: row.name,
-    region: row.region,
-    subRegion: row.sub_region,
-    district: row.district,
-    subCounty: row.sub_county,
-    parish: row.parish,
-    village: row.village,
-    notes: row.notes,
-    enrollmentTotal: Number(row.enrollment_total ?? 0),
-    enrollmentByGrade: row.enrollment_by_grade ?? null,
-    enrolledBoys: row.enrolled_boys,
-    enrolledGirls: row.enrolled_girls,
-    enrolledBaby: row.enrolled_baby,
-    enrolledMiddle: row.enrolled_middle,
-    enrolledTop: row.enrolled_top,
-    enrolledP1: row.enrolled_p1,
-    enrolledP2: row.enrolled_p2,
-    enrolledP3: row.enrolled_p3,
-    enrolledP4: row.enrolled_p4,
-    enrolledP5: row.enrolled_p5,
-    enrolledP6: row.enrolled_p6,
-    enrolledP7: row.enrolled_p7,
-    directImpactLearners:
-      Number(row.enrolled_baby ?? 0) +
-      Number(row.enrolled_middle ?? 0) +
-      Number(row.enrolled_top ?? 0) +
-      Number(row.enrolled_p1 ?? 0) +
-      Number(row.enrolled_p2 ?? 0) +
-      Number(row.enrolled_p3 ?? 0),
-    enrolledLearners:
-      Number(row.enrollment_total ?? 0) > 0
-        ? Number(row.enrollment_total ?? 0)
-        : Number(row.enrolled_learners ?? 0),
-    gpsLat: row.gps_lat,
-    gpsLng: row.gps_lng,
-    contactName: row.contact_name,
-    contactPhone: row.contact_phone,
-    primaryContactId: row.primary_contact_id,
-    primaryContactName: row.primary_contact_name,
-    primaryContactCategory: row.primary_contact_category,
-    programStatus: row.program_status ?? "active",
-    graduatedAt: row.graduated_at ?? null,
-    graduatedByUserId: row.graduated_by_user_id ?? null,
-    graduationNotes: row.graduation_notes ?? null,
-    graduationVersion: row.graduation_version ?? null,
-    createdAt: row.created_at,
+    school,
+    counts,
+    recentTrainings: [...trainingRows, ...onlineRows]
+      .map((row) => mapRecentItem(row))
+      .sort((left, right) => String(right.date ?? "").localeCompare(String(left.date ?? "")))
+      .slice(0, 8),
+    recentInteractions: interactionRows.map((row) => mapRecentItem(row)),
+    summary: {
+      dateOfLastActivity: summaryRow?.dateOfLastActivity ?? null,
+      dateOfLastStaffVisit,
+      lastMetricsDate,
+      schoolVisitsThisFy,
+      schoolVisitsLastFy,
+    },
   };
 }
 

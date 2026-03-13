@@ -1364,8 +1364,23 @@ main {
 }
 
 .portal-shell :is(h1, h2, h3) {
-  font-size: 12px !important;
-  line-height: 1.35 !important;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.portal-shell h1 {
+  font-size: clamp(2rem, 2vw + 1.2rem, 2.7rem);
+  font-weight: 700;
+}
+
+.portal-shell h2 {
+  font-size: clamp(1.45rem, 1vw + 1rem, 1.9rem);
+  font-weight: 700;
+}
+
+.portal-shell h3 {
+  font-size: 1.18rem;
+  font-weight: 700;
 }
 
 .portal-shell :is(h4, h5, h6) {
@@ -6115,7 +6130,7 @@ table {
 
 /* Global typography and button polish */
 :root {
-  --orbf-font-family: "Poppins", "Segoe UI", "Helvetica Neue", sans-serif;
+  --orbf-font-family: Calibri, Candara, "Segoe UI", Segoe, Optima, Arial, sans-serif;
   --orbf-title-light: var(--color-brand-blue);
   --orbf-title-dark: #ffffff;
   --orbf-button-primary: var(--color-brand-blue);

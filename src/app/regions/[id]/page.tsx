@@ -1,12 +1,14 @@
 import {
-    getImpactDrilldownData,
-    calculateFidelityScore,
-    getLearningGainsData,
     getPublicImpactAggregate,
 } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { TeacherEvaluationPerformanceCards } from "@/components/impact/TeacherEvaluationPerformanceCards";
+import {
+    buildFidelityFromAggregate,
+    buildImpactKpisFromAggregate,
+    buildLearningGainsFromAggregate,
+} from "@/lib/public-impact-views";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +31,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function RegionPage({ params }: { params: Params }) {
     const { id } = await params;
     const name = decodeURIComponent(id);
-    const drilldown = getImpactDrilldownData("region", name);
-    const fidelity = calculateFidelityScore("region", name);
-    const gains = getLearningGainsData("region", name);
     const aggregate = await getPublicImpactAggregate("region", name, "FY");
+    const fidelity = buildFidelityFromAggregate(aggregate, "region", name);
+    const gains = buildLearningGainsFromAggregate(aggregate, "region", name);
+    const kpis = buildImpactKpisFromAggregate(aggregate);
 
     return (
         <>
@@ -57,19 +59,19 @@ export default async function RegionPage({ params }: { params: Params }) {
                         <article className="impact-dash-kpi" style={{ "--kpi-accent": "#D96A0F" } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Schools Supported</span>
-                                <span className="impact-dash-kpi-value">{drilldown.kpis.schoolsSupported}</span>
+                                <span className="impact-dash-kpi-value">{kpis.schoolsSupported}</span>
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{ "--kpi-accent": "#2563eb" } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Teachers Trained</span>
-                                <span className="impact-dash-kpi-value">{drilldown.kpis.teachersTrained.toLocaleString()}</span>
+                                <span className="impact-dash-kpi-value">{kpis.teachersSupported.toLocaleString()}</span>
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{ "--kpi-accent": "#7c3aed" } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Learners Assessed</span>
-                                <span className="impact-dash-kpi-value">{drilldown.kpis.learnersAssessed.toLocaleString()}</span>
+                                <span className="impact-dash-kpi-value">{kpis.learnersAssessed.toLocaleString()}</span>
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{

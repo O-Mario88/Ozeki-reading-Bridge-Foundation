@@ -1,12 +1,12 @@
 "use client";
 
-import {
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import type {
   GraduationEligibilityRecord,
-  SchoolDirectoryRecord,
+  SchoolAccountProfile,
   SchoolSupportStatusRecord,
 } from "@/lib/types";
-import Link from "next/link";
-import { useEffect, useState } from "react";
 import { GraduationReviewModal } from "./GraduationReviewModal";
 
 type SupervisorOption = {
@@ -15,13 +15,57 @@ type SupervisorOption = {
 };
 
 interface SchoolProfileViewProps {
-  school: SchoolDirectoryRecord;
+  profile: SchoolAccountProfile;
 }
 
-export function SchoolProfileView({
-  school,
-}: SchoolProfileViewProps) {
-  const [activeTab, setActiveTab] = useState<"details" | "related" | "activity">("details");
+function formatDate(value: string | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-UG", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-UG", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatNumber(value: number | null | undefined) {
+  return Number(value ?? 0).toLocaleString();
+}
+
+function formatYesNo(value: boolean) {
+  return value ? "Yes" : "No";
+}
+
+function mapUrl(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  return value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`;
+}
+
+export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
+  const { school, counts, recentTrainings, recentInteractions, summary } = profile;
+  const [activeTab, setActiveTab] = useState<"details" | "related" | "trainings" | "interactions">("details");
   const [graduationLoading, setGraduationLoading] = useState(false);
   const [graduationError, setGraduationError] = useState("");
   const [graduationOpen, setGraduationOpen] = useState(false);
@@ -35,6 +79,7 @@ export function SchoolProfileView({
     let active = true;
     setGraduationLoading(true);
     setGraduationError("");
+
     fetch(`/api/portal/graduation/school/${school.id}`, { cache: "no-store" })
       .then(async (response) => {
         const json = (await response.json()) as {
@@ -52,10 +97,9 @@ export function SchoolProfileView({
         setGraduationSupervisors(Array.isArray(json.supervisors) ? json.supervisors : []);
       })
       .catch((error) => {
-        if (!active) {
-          return;
+        if (active) {
+          setGraduationError(error instanceof Error ? error.message : "Could not load graduation status.");
         }
-        setGraduationError(error instanceof Error ? error.message : "Could not load graduation status.");
       })
       .finally(() => {
         if (active) {
@@ -90,10 +134,9 @@ export function SchoolProfileView({
         setSchoolSupportStatus(first);
       })
       .catch((error) => {
-        if (!active) {
-          return;
+        if (active) {
+          setSupportStatusError(error instanceof Error ? error.message : "Could not load school support status.");
         }
-        setSupportStatusError(error instanceof Error ? error.message : "Could not load school support status.");
       })
       .finally(() => {
         if (active) {
@@ -106,769 +149,766 @@ export function SchoolProfileView({
     };
   }, [school.id]);
 
-  return (
-    <div className="school-profile-container">
-      {/* Header Section */}
-      <div className="school-header">
-        <div className="school-header-top">
-          <div className="breadcrumbs">
-            <Link href="/portal/schools" className="breadcrumb-link">Schools</Link>
-            <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">{school.name}</span>
-          </div>
-          <div className="header-actions">
-            <button className="button button-outline button-sm">
-              ✏️ Edit
-            </button>
-            <button className="button button-primary button-sm">
-              👤 Change Owner
-            </button>
-          </div>
-        </div>
+  const detailsLeft = useMemo(
+    () => [
+      ["Account Name", school.name],
+      ["Alternate School Names", school.alternateSchoolNames || "-"],
+      ["Account Record Type", school.accountRecordType],
+      ["Type", school.schoolType],
+      ["School ID", school.schoolCode || String(school.id)],
+      ["Primary Contact", school.primaryContactName || school.contactName || "-"],
+      ["Country", school.country],
+      ["Region", school.region || "-"],
+      ["District", school.district],
+      ["GPS Coordinates", school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"],
+      ["Year Founded", school.yearFounded ? String(school.yearFounded) : "-"],
+      ["Client School Number", String(school.clientSchoolNumber ?? 0)],
+      ["First Metric Date", formatDate(school.firstMetricDate)],
+      ["Metric Count", formatNumber(school.metricCount)],
+      ["Running Total Max Enrollment", formatNumber(school.runningTotalMaxEnrollment)],
+      ["Partner Type", school.partnerType || "-"],
+      ["School Visits this FY", formatNumber(summary.schoolVisitsThisFy)],
+      ["School Visits last FY", formatNumber(summary.schoolVisitsLastFy)],
+      ["Date of Last Staff Visit", formatDate(summary.dateOfLastStaffVisit)],
+    ],
+    [school, summary],
+  );
 
-        <div className="school-title-section">
-          <div className="school-icon">
-            <div className="school-avatar">
-              {school.name.charAt(0)}
+  const detailsRight = useMemo(
+    () => [
+      ["Parent Account", school.parentAccountLabel],
+      ["School Status", school.schoolStatus],
+      ["School Status Date", formatDate(school.schoolStatusDate)],
+      ["School Relationship Status", school.schoolRelationshipStatus || "-"],
+      ["Relationship Status Date", formatDate(school.schoolRelationshipStatusDate)],
+      ["School is Active?", formatYesNo(school.schoolActive)],
+      ["Current Partner School", formatYesNo(school.currentPartnerSchool)],
+      ["Current Partner Type", school.currentPartnerType],
+      ["Denomination", school.denomination || "-"],
+      ["Protestant Denomination", school.protestantDenomination || "-"],
+      ["Phone", school.contactPhone || "-"],
+      ["Email", school.contactEmail || "-"],
+      ["Website", school.website || "-"],
+      ["Last Metrics Date", formatDate(summary.lastMetricsDate)],
+      ["Date of Last Activity", formatDate(summary.dateOfLastActivity)],
+      ["Description", school.description || school.notes || "-"],
+    ],
+    [school, summary],
+  );
+
+  const openMapsUrl =
+    school.gpsLat && school.gpsLng
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${school.gpsLat},${school.gpsLng}`)}`
+      : null;
+
+  return (
+    <div className="school-crm-page">
+      <section className="school-crm-hero">
+        <div className="school-crm-hero-main">
+          <div className="school-crm-badge">Account</div>
+          <h1>{school.name}</h1>
+          <div className="school-crm-overview">
+            <div>
+              <span>Country</span>
+              <strong>{school.country}</strong>
+            </div>
+            <div>
+              <span>Region</span>
+              <strong>{school.region || "-"}</strong>
+            </div>
+            <div>
+              <span>School Status</span>
+              <strong>{school.schoolStatus}</strong>
+            </div>
+            <div>
+              <span>Current Partner Type</span>
+              <strong>{school.currentPartnerType}</strong>
+            </div>
+            <div>
+              <span>School Status Date</span>
+              <strong>{formatDate(school.schoolStatusDate)}</strong>
+            </div>
+            <div>
+              <span>Year Founded</span>
+              <strong>{school.yearFounded ? String(school.yearFounded) : "-"}</strong>
             </div>
           </div>
-          <div className="school-info">
-            <div className="school-type">Account</div>
-            <h1>{school.name}</h1>
-          </div>
         </div>
+        <div className="school-crm-hero-actions">
+          <Link className="school-crm-button school-crm-button-ghost" href="/portal/schools">
+            Back to Accounts
+          </Link>
+          <Link className="school-crm-button" href={`/portal/trainings?new=1&schoolId=${school.id}`}>
+            New Training
+          </Link>
+          <Link className="school-crm-button" href={`/portal/events`}>
+            Online Training
+          </Link>
+          <Link className="school-crm-button" href={`/portal/visits?new=1&schoolId=${school.id}`}>
+            New Visit
+          </Link>
+          <Link className="school-crm-button" href={`/portal/assessments?new=1&schoolId=${school.id}`}>
+            New Assessment
+          </Link>
+        </div>
+      </section>
 
-        {/* Quick Actions / Highlights */}
-        <div className="school-highlights">
-          <div className="highlight-item">
-            <span className="label">School ID</span>
-            <span className="value">{school.schoolCode}</span>
-          </div>
-          <div className="highlight-item">
-            <span className="label">District</span>
-            <span className="value">{school.district}</span>
-          </div>
-          <div className="highlight-item">
-            <span className="label">Total Enrollment</span>
-            <span className="value">{school.enrolledLearners.toLocaleString()}</span>
-          </div>
-          <div className="highlight-item">
-            <span className="label">Phone</span>
-            <span className="value">{school.contactPhone || "-"}</span>
-          </div>
-          <div className="highlight-item">
-            <span className="label">Program Status</span>
-            <span className="value">{graduationEligibility?.programStatus ?? school.programStatus}</span>
-          </div>
-        </div>
-      </div>
+      <section className="school-crm-notice">
+        <strong>School account is active.</strong>
+        <span>
+          Profile-linked records for trainings, online trainings, visits, assessments, and teacher
+          evaluations are available from the related sections below.
+        </span>
+      </section>
 
       {graduationEligibility?.isEligible ? (
-        <section className="card graduation-alert-banner">
+        <section className="school-crm-banner school-crm-banner-accent">
           <div>
             <h3>Graduation Eligible</h3>
             <p>
-              This school currently meets configured graduation criteria. Review evidence before confirming
-              graduation.
+              This school meets the configured graduation criteria. Review the evidence before final
+              confirmation.
             </p>
-            <p className="portal-muted">
+            <p className="school-crm-muted">
               {graduationEligibility.eligibilityScorecard.readingSampleSize.toLocaleString()} assessed learners •{" "}
-              {graduationEligibility.eligibilityScorecard.teachingEvaluationsCount.toLocaleString()} lesson
+              {graduationEligibility.eligibilityScorecard.teachingEvaluationsCount.toLocaleString()} teacher
               evaluations • {graduationEligibility.eligibilityScorecard.publishedStoryCount.toLocaleString()}{" "}
               published stories
             </p>
           </div>
-          <div className="action-row">
-            <button className="button" onClick={() => setGraduationOpen(true)}>
+          <div className="school-crm-banner-actions">
+            <button className="school-crm-button" onClick={() => setGraduationOpen(true)}>
               Review Graduation
             </button>
-            <Link href="/portal/graduation-queue" className="button button-ghost">
+            <Link href="/portal/graduation-queue" className="school-crm-button school-crm-button-ghost">
               Open Queue
             </Link>
           </div>
         </section>
       ) : null}
-      {graduationLoading ? <p className="portal-muted">Checking graduation eligibility…</p> : null}
-      {!graduationLoading && graduationError ? <p className="portal-muted">{graduationError}</p> : null}
+      {graduationLoading ? <p className="school-crm-muted">Checking graduation eligibility…</p> : null}
+      {!graduationLoading && graduationError ? <p className="school-crm-muted">{graduationError}</p> : null}
 
-      <section className="card support-status-banner">
-        <div>
-          <h3>Support Status</h3>
-          {supportStatusLoading ? (
-            <p className="portal-muted" style={{ margin: 0 }}>Computing support status…</p>
-          ) : schoolSupportStatus ? (
-            <>
-              <p className="support-status-pill">{schoolSupportStatus.status}</p>
-              <p className="portal-muted">
-                Rules version: {schoolSupportStatus.rulesVersion} • Period: {schoolSupportStatus.periodKey}
-              </p>
-              {schoolSupportStatus.recommendedActions.length > 0 ? (
-                <ul className="support-status-actions">
-                  {schoolSupportStatus.recommendedActions.map((action) => (
-                    <li key={action}>{action}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </>
-          ) : (
-            <p className="portal-muted" style={{ margin: 0 }}>
-              No support-status snapshot available yet. Add assessment entries to compute status.
-            </p>
-          )}
-          {supportStatusError ? <p className="portal-muted">{supportStatusError}</p> : null}
-        </div>
-        <div className="support-status-metrics">
-          <span>Non-readers</span>
-          <strong>
-            {typeof schoolSupportStatus?.metrics?.nonReadersPct === "number"
-              ? `${schoolSupportStatus.metrics.nonReadersPct}%`
-              : "N/A"}
-          </strong>
-          <span>Below minimum</span>
-          <strong>
-            {typeof schoolSupportStatus?.metrics?.belowMinimumPct === "number"
-              ? `${schoolSupportStatus.metrics.belowMinimumPct}%`
-              : "N/A"}
-          </strong>
-        </div>
-      </section>
+      <div className="school-crm-layout">
+        <div className="school-crm-main">
+          <section className="school-crm-card">
+            <div className="school-crm-card-header">
+              <h2>Related List Quick Links</h2>
+            </div>
+            <div className="school-crm-links-grid">
+              <Link className="school-crm-link-card" href="/portal/contacts">
+                <span className="school-crm-link-title">Contacts</span>
+                <strong>{counts.contacts}</strong>
+              </Link>
+              <Link className="school-crm-link-card" href="/portal/trainings">
+                <span className="school-crm-link-title">Trainings</span>
+                <strong>{counts.trainings}</strong>
+              </Link>
+              <Link className="school-crm-link-card" href="/portal/events">
+                <span className="school-crm-link-title">Online Trainings</span>
+                <strong>{counts.onlineTrainings}</strong>
+              </Link>
+              <Link className="school-crm-link-card" href="/portal/visits">
+                <span className="school-crm-link-title">School Visits</span>
+                <strong>{counts.visits}</strong>
+              </Link>
+              <Link className="school-crm-link-card" href="/portal/assessments">
+                <span className="school-crm-link-title">Assessments</span>
+                <strong>{counts.assessments}</strong>
+              </Link>
+              <button className="school-crm-link-card" type="button" onClick={() => setActiveTab("interactions")}>
+                <span className="school-crm-link-title">Teacher Evaluations</span>
+                <strong>{counts.teacherEvaluations}</strong>
+              </button>
+            </div>
+          </section>
 
-      {/* Main Content Area */}
-      <div className="school-content-grid">
-
-        {/* Left/Main Column */}
-        <div className="main-column">
-
-          {/* Related Quick Links */}
-          <div className="quick-links-grid">
-            <Link href={`/portal/contacts?school=${school.id}`} className="quick-link-card">
-              <div className="icon-wrapper purple">👥</div>
-              <span className="link-title">Contacts</span>
-              <span className="link-count">(1)</span>
-            </Link>
-
-            <Link href={`/portal/assessments?school=${school.id}`} className="quick-link-card">
-              <div className="icon-wrapper blue">📖</div>
-              <span className="link-title">Literacy Assessments</span>
-              <span className="link-count">(0)</span>
-            </Link>
-
-            <Link href={`/portal/trainings?school=${school.id}`} className="quick-link-card">
-              <div className="icon-wrapper green">📋</div>
-              <span className="link-title">Training Sessions</span>
-              <span className="link-count">(0)</span>
-            </Link>
-
-            <Link href={`/portal/visits?school=${school.id}`} className="quick-link-card">
-              <div className="icon-wrapper orange">📍</div>
-              <span className="link-title">School Visits</span>
-              <span className="link-count">(0)</span>
-            </Link>
-
-            <Link href={`/portal/story?school=${school.id}`} className="quick-link-card">
-              <div className="icon-wrapper red">📄</div>
-              <span className="link-title">MSC Stories</span>
-              <span className="link-count">(0)</span>
-            </Link>
-
-            <Link href={`/portal/testimonials?schoolId=${school.id}`} className="quick-link-card">
-              <div className="icon-wrapper gold">📈</div>
-              <span className="link-title">Change Stories</span>
-              <span className="link-count">(Open)</span>
-            </Link>
-
-            <Link href={`/portal/resources?school=${school.id}`} className="quick-link-card">
-              <div className="icon-wrapper teal">📚</div>
-              <span className="link-title">Resource Engagements</span>
-              <span className="link-count">(0)</span>
-            </Link>
-          </div>
-
-          {/* Tabs */}
-          <div className="tabs-container">
-            <div className="tabs-header">
+          <section className="school-crm-card">
+            <div className="school-crm-tabs">
               <button
-                className={`tab-btn ${activeTab === "details" ? "active" : ""}`}
+                className={activeTab === "details" ? "is-active" : ""}
+                type="button"
                 onClick={() => setActiveTab("details")}
               >
                 Details
               </button>
               <button
-                className={`tab-btn ${activeTab === "related" ? "active" : ""}`}
+                className={activeTab === "related" ? "is-active" : ""}
+                type="button"
                 onClick={() => setActiveTab("related")}
               >
                 Related
               </button>
               <button
-                className={`tab-btn ${activeTab === "activity" ? "active" : ""}`}
-                onClick={() => setActiveTab("activity")}
+                className={activeTab === "trainings" ? "is-active" : ""}
+                type="button"
+                onClick={() => setActiveTab("trainings")}
               >
-                Most Recent Activity
+                Most Recent Trainings
+              </button>
+              <button
+                className={activeTab === "interactions" ? "is-active" : ""}
+                type="button"
+                onClick={() => setActiveTab("interactions")}
+              >
+                Most Recent Interactions
               </button>
             </div>
 
-            <div className="tab-content">
-              {activeTab === "details" && (
-                <div className="details-view">
-                  <div className="detail-section">
-                    <h3>School Details</h3>
-                    <div className="detail-row">
-                      <div className="detail-group">
-                        <label>Account Name</label>
-                        <div className="detail-value">{school.name}</div>
-                      </div>
-                      <div className="detail-group">
-                        <label>Parent Account</label>
-                        <div className="detail-value link">Uganda</div>
-                      </div>
+            {activeTab === "details" ? (
+              <div className="school-crm-details-grid">
+                <div className="school-crm-details-column">
+                  {detailsLeft.map(([label, value]) => (
+                    <div key={label} className="school-crm-detail-row">
+                      <span>{label}</span>
+                      <strong>{value}</strong>
                     </div>
-                    <div className="detail-row">
-                      <div className="detail-group">
-                        <label>School Record Type</label>
-                        <div className="detail-value">School</div>
-                      </div>
-                      <div className="detail-group">
-                        <label>School Status</label>
-                        <div className="detail-value">
-                          {graduationEligibility?.programStatus ?? school.programStatus}
-                        </div>
-                      </div>
+                  ))}
+                </div>
+                <div className="school-crm-details-column">
+                  {detailsRight.map(([label, value]) => (
+                    <div key={label} className="school-crm-detail-row">
+                      <span>{label}</span>
+                      {label === "Website" && school.website ? (
+                        <a href={mapUrl(school.website) ?? "#"} target="_blank" rel="noreferrer">
+                          {value}
+                        </a>
+                      ) : label === "Email" && school.contactEmail ? (
+                        <a href={`mailto:${school.contactEmail}`}>{value}</a>
+                      ) : (
+                        <strong>{value}</strong>
+                      )}
                     </div>
-                    <div className="detail-row">
-                      <div className="detail-group">
-                        <label>School ID</label>
-                        <div className="detail-value">{school.schoolCode}</div>
-                      </div>
-                      <div className="detail-group">
-                        <label>School/Edify Relationship Status</label>
-                        <div className="detail-value">Partner</div>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
-                  <div className="detail-section">
-                    <h3>Address Information</h3>
-                    <div className="detail-row">
-                      <div className="detail-group">
-                        <label>Region</label>
-                        <div className="detail-value">
-                          {school.notes?.includes("Region:") ? (
-                            <Link href={`/portal/regions/${school.notes.split("Region:")[1].split(",")[0].trim()}`} className="link">
-                              {school.notes.split("Region:")[1].split(",")[0].trim()}
-                            </Link>
-                          ) : (
-                            "-"
-                          )}
-                        </div>
-                      </div>
-                      <div className="detail-group">
-                        <label>District</label>
-                        <div className="detail-value">
-                          <Link href={`/portal/districts/${school.district}`} className="link">
-                            {school.district}
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="detail-row">
-                      <div className="detail-group">
-                        <label>Sub-county</label>
-                        <div className="detail-value">{school.subCounty}</div>
-                      </div>
-                      <div className="detail-group">
-                        <label>Parish</label>
-                        <div className="detail-value">{school.parish}</div>
-                      </div>
-                    </div>
-                    <div className="detail-row">
-                      <div className="detail-group">
-                        <label>Village</label>
-                        <div className="detail-value">{school.village || "-"}</div>
-                      </div>
-                    </div>
-                  </div>
+            {activeTab === "related" ? (
+              <div className="school-crm-related-grid">
+                <article id="school-contacts" className="school-crm-related-card">
+                  <h3>Contacts</h3>
+                  <p>{counts.contacts} contacts linked to this school account.</p>
+                  <strong>
+                    {school.primaryContactName || school.contactName || "No primary contact linked yet"}
+                  </strong>
+                </article>
+                <article className="school-crm-related-card">
+                  <h3>Trainings</h3>
+                  <p>{counts.trainings} historical training records linked to this school.</p>
+                  <Link href="/portal/trainings">Open trainings workspace</Link>
+                </article>
+                <article className="school-crm-related-card">
+                  <h3>Online Trainings</h3>
+                  <p>{counts.onlineTrainings} scheduled or completed online sessions linked to this school.</p>
+                  <Link href="/portal/events">Open online trainings</Link>
+                </article>
+                <article className="school-crm-related-card">
+                  <h3>Visits</h3>
+                  <p>{counts.visits} school visits recorded for this school profile.</p>
+                  <Link href="/portal/visits">Open visits workspace</Link>
+                </article>
+                <article className="school-crm-related-card">
+                  <h3>Assessments</h3>
+                  <p>{counts.assessments} assessment sessions linked to this school.</p>
+                  <Link href="/portal/assessments">Open assessments workspace</Link>
+                </article>
+                <article className="school-crm-related-card">
+                  <h3>Teacher Evaluations</h3>
+                  <p>{counts.teacherEvaluations} lesson evaluation records linked to this school.</p>
+                  <button type="button" onClick={() => setActiveTab("interactions")}>
+                    Review teacher evaluation activity
+                  </button>
+                </article>
+              </div>
+            ) : null}
 
-                  <div className="detail-section">
-                    <h3>Enrollment Information</h3>
-                    <div className="detail-row">
-                      <div className="detail-group">
-                        <label>Enrolled Boys</label>
-                        <div className="detail-value">{school.enrolledBoys.toLocaleString()}</div>
+            {activeTab === "trainings" ? (
+              <div className="school-crm-list">
+                {recentTrainings.length === 0 ? (
+                  <p className="school-crm-empty">No training activity has been linked to this school yet.</p>
+                ) : (
+                  recentTrainings.map((item) => (
+                    <Link key={`${item.module}-${item.id}`} href={item.href} className="school-crm-list-row">
+                      <div>
+                        <strong>{item.title}</strong>
+                        <span>{item.subtitle || item.module}</span>
                       </div>
-                      <div className="detail-group">
-                        <label>Enrolled Girls</label>
-                        <div className="detail-value">{school.enrolledGirls.toLocaleString()}</div>
+                      <div className="school-crm-list-meta">
+                        <span>{formatDateTime(item.date)}</span>
+                        <span>{item.status || "-"}</span>
                       </div>
-                    </div>
-                    <div className="detail-row">
-                      <div className="detail-group">
-                        <label>Total Learners</label>
-                        <div className="detail-value">{school.enrolledLearners.toLocaleString()}</div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            ) : null}
+
+            {activeTab === "interactions" ? (
+              <div id="recent-interactions" className="school-crm-list">
+                {recentInteractions.length === 0 ? (
+                  <p className="school-crm-empty">No recent interactions have been linked to this school yet.</p>
+                ) : (
+                  recentInteractions.map((item) => (
+                    <Link key={`${item.module}-${item.id}`} href={item.href} className="school-crm-list-row">
+                      <div>
+                        <strong>{item.title}</strong>
+                        <span>{item.subtitle || item.module}</span>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {activeTab === "related" && (
-                <div className="related-view p-6 text-gray-500">
-                  Related lists will appear here.
-                </div>
-              )}
-              {activeTab === "activity" && (
-                <div className="activity-view p-6 text-gray-500">
-                  Recent timeline activity will appear here.
-                </div>
-              )}
-            </div>
-          </div>
+                      <div className="school-crm-list-meta">
+                        <span>{formatDateTime(item.date)}</span>
+                        <span>{item.status || "-"}</span>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </section>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="sidebar-column">
-          <div className="sidebar-card">
-            <h3>Knowledge</h3>
-            <div className="sidebar-content">
-              <input type="text" placeholder="Search Knowledge..." className="sidebar-search" />
-              <div className="empty-state">No knowledge articles found.</div>
+        <aside className="school-crm-side">
+          <section className="school-crm-card">
+            <div className="school-crm-card-header">
+              <h2>Knowledge</h2>
             </div>
-          </div>
+            <div className="school-crm-search-box">
+              <input placeholder="Search school knowledge..." readOnly value="" />
+            </div>
+          </section>
 
-          <div className="sidebar-card">
-            <h3>Location</h3>
-            <div className="sidebar-content map-placeholder">
+          <section className="school-crm-card">
+            <div className="school-crm-card-header">
+              <h2>Map</h2>
+            </div>
+            <div className="school-crm-map">
               {school.gpsLat && school.gpsLng ? (
-                <div className="map-coordinates">
-                  <div>Lat: {school.gpsLat}</div>
-                  <div>Lng: {school.gpsLng}</div>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${school.gpsLat},${school.gpsLng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="map-link"
-                  >
-                    View on Google Maps ↗
-                  </a>
-                </div>
+                <>
+                  <strong>{school.gpsLat}, {school.gpsLng}</strong>
+                  {openMapsUrl ? (
+                    <a href={openMapsUrl} target="_blank" rel="noreferrer">
+                      Open in Google Maps
+                    </a>
+                  ) : null}
+                </>
               ) : (
-                <div className="no-map">No GPS coordinates available.</div>
+                <span>GPS coordinates have not been logged for this school.</span>
               )}
             </div>
-          </div>
-        </div>
+          </section>
 
+          <section className="school-crm-card">
+            <div className="school-crm-card-header">
+              <h2>Activity</h2>
+            </div>
+            <div className="school-crm-side-stack">
+              <div>
+                <span>Last activity</span>
+                <strong>{formatDate(summary.dateOfLastActivity)}</strong>
+              </div>
+              <div>
+                <span>Visits this FY</span>
+                <strong>{formatNumber(summary.schoolVisitsThisFy)}</strong>
+              </div>
+              <div>
+                <span>Visits last FY</span>
+                <strong>{formatNumber(summary.schoolVisitsLastFy)}</strong>
+              </div>
+              <div>
+                <span>Support status</span>
+                <strong>
+                  {supportStatusLoading
+                    ? "Computing..."
+                    : schoolSupportStatus?.status || "No snapshot"}
+                </strong>
+              </div>
+              {supportStatusError ? <p className="school-crm-muted">{supportStatusError}</p> : null}
+            </div>
+          </section>
+        </aside>
       </div>
 
       <GraduationReviewModal
         open={graduationOpen}
+        onClose={() => setGraduationOpen(false)}
         eligibility={graduationEligibility}
         supervisors={graduationSupervisors}
-        onClose={() => setGraduationOpen(false)}
-        onUpdated={(next) => setGraduationEligibility(next)}
       />
 
       <style jsx>{`
-        .school-profile-container {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-          background-color: #f3f4f6;
-          min-height: 100vh;
-          padding-bottom: 2rem;
-        }
-        
-        /* Header */
-        .school-header {
-          background-color: white;
-          border-bottom: 1px solid #e5e7eb;
-          padding: 1rem 1.5rem;
-          margin-bottom: 1.5rem;
+        .school-crm-page {
+          display: grid;
+          gap: 1rem;
         }
 
-        .graduation-alert-banner {
-          margin: 0 1.5rem 1.5rem;
-          border-left: 4px solid #FA7D15;
-          display: flex;
-          justify-content: space-between;
+        .school-crm-hero,
+        .school-crm-notice,
+        .school-crm-card,
+        .school-crm-banner {
+          background: #f8f8f8;
+          border: 1px solid #d1d5db;
+          border-radius: 0.65rem;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+        }
+
+        .school-crm-hero {
+          align-items: start;
+          display: grid;
           gap: 1rem;
+          grid-template-columns: minmax(0, 1fr) auto;
+          padding: 1.2rem;
+        }
+
+        .school-crm-badge {
+          color: #4b5563;
+          font-size: 0.85rem;
+          margin-bottom: 0.2rem;
+        }
+
+        .school-crm-hero h1 {
+          font-size: clamp(1.6rem, 2.3vw, 2.3rem);
+          line-height: 1.1;
+          margin: 0 0 1rem;
+        }
+
+        .school-crm-overview {
+          display: grid;
+          gap: 0.9rem;
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+
+        .school-crm-overview div {
+          display: grid;
+          gap: 0.18rem;
+        }
+
+        .school-crm-overview span,
+        .school-crm-side-stack span,
+        .school-crm-detail-row span,
+        .school-crm-list-row span,
+        .school-crm-link-title {
+          color: #4b5563;
+          font-size: 0.85rem;
+        }
+
+        .school-crm-overview strong,
+        .school-crm-side-stack strong {
+          color: #111827;
+          font-size: 1.05rem;
+        }
+
+        .school-crm-hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.55rem;
+          justify-content: flex-end;
+        }
+
+        .school-crm-button {
           align-items: center;
-        }
-
-        .support-status-banner {
-          margin: 0 1.5rem 1.5rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 1rem;
-          border-left: 4px solid #0f766e;
-        }
-
-        .support-status-banner h3 {
-          margin: 0 0 0.35rem;
-          color: #0f172a;
-        }
-
-        .support-status-pill {
+          background: #14532d;
+          border: 1px solid #14532d;
+          border-radius: 0.5rem;
+          color: #ffffff;
           display: inline-flex;
-          align-items: center;
-          margin: 0 0 0.35rem;
-          padding: 0.2rem 0.55rem;
-          border-radius: 999px;
-          border: 1px solid #99f6e4;
-          color: #115e59;
-          background: #f0fdfa;
-          font-size: 0.78rem;
-          font-weight: 700;
+          font-size: 0.88rem;
+          font-weight: 600;
+          justify-content: center;
+          min-height: 42px;
+          padding: 0.65rem 0.9rem;
+          text-decoration: none;
         }
 
-        .support-status-actions {
-          margin: 0.35rem 0 0;
-          padding-left: 1rem;
-          color: #334155;
-          font-size: 0.86rem;
+        .school-crm-button-ghost {
+          background: #ffffff;
+          color: #14532d;
+        }
+
+        .school-crm-notice {
+          align-items: center;
+          display: flex;
+          gap: 0.8rem;
+          padding: 1rem 1.1rem;
+        }
+
+        .school-crm-notice strong {
+          color: #111827;
+          flex: 0 0 auto;
+        }
+
+        .school-crm-notice span,
+        .school-crm-muted,
+        .school-crm-empty {
+          color: #4b5563;
+          font-size: 0.9rem;
+        }
+
+        .school-crm-banner {
+          align-items: start;
+          display: flex;
+          gap: 1rem;
+          justify-content: space-between;
+          padding: 1rem 1.1rem;
+        }
+
+        .school-crm-banner h3 {
+          margin: 0 0 0.25rem;
+        }
+
+        .school-crm-banner p {
+          margin: 0.15rem 0;
+        }
+
+        .school-crm-banner-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+
+        .school-crm-layout {
+          display: grid;
+          gap: 1rem;
+          grid-template-columns: minmax(0, 2.1fr) minmax(320px, 0.95fr);
+        }
+
+        .school-crm-main,
+        .school-crm-side {
+          display: grid;
+          gap: 1rem;
+        }
+
+        .school-crm-card-header {
+          align-items: center;
+          border-bottom: 1px solid #d1d5db;
+          display: flex;
+          justify-content: space-between;
+          padding: 1rem 1rem 0.9rem;
+        }
+
+        .school-crm-card-header h2 {
+          font-size: 1.05rem;
+          margin: 0;
+        }
+
+        .school-crm-links-grid {
+          display: grid;
+          gap: 0.8rem;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          padding: 1rem;
+        }
+
+        .school-crm-link-card {
+          align-items: start;
+          background: #ffffff;
+          border: 1px solid #d1d5db;
+          border-radius: 0.5rem;
+          color: #0f172a;
+          cursor: pointer;
+          display: grid;
+          gap: 0.4rem;
+          min-height: 92px;
+          padding: 0.85rem;
+          text-align: left;
+          text-decoration: none;
+        }
+
+        .school-crm-link-card strong {
+          color: #14532d;
+          font-size: 1.3rem;
+        }
+
+        .school-crm-tabs {
+          border-bottom: 1px solid #d1d5db;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.35rem;
+          padding: 0 1rem;
+        }
+
+        .school-crm-tabs button {
+          background: transparent;
+          border: 0;
+          border-bottom: 2px solid transparent;
+          color: #374151;
+          cursor: pointer;
+          font-size: 1rem;
+          font-weight: 600;
+          padding: 1rem 0.85rem 0.9rem;
+        }
+
+        .school-crm-tabs button.is-active {
+          border-bottom-color: #2563eb;
+          color: #111827;
+        }
+
+        .school-crm-details-grid {
+          display: grid;
+          gap: 1.5rem;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          padding: 1rem;
+        }
+
+        .school-crm-details-column {
+          display: grid;
+        }
+
+        .school-crm-detail-row {
+          border-bottom: 1px solid #d1d5db;
+          display: grid;
+          gap: 0.28rem;
+          padding: 0.85rem 0;
+        }
+
+        .school-crm-detail-row strong,
+        .school-crm-detail-row a {
+          color: #111827;
+          font-size: 1rem;
+          text-decoration: none;
+          word-break: break-word;
+        }
+
+        .school-crm-detail-row a:hover {
+          color: #2563eb;
+        }
+
+        .school-crm-related-grid {
+          display: grid;
+          gap: 0.85rem;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          padding: 1rem;
+        }
+
+        .school-crm-related-card {
+          background: #ffffff;
+          border: 1px solid #d1d5db;
+          border-radius: 0.5rem;
+          display: grid;
+          gap: 0.35rem;
+          padding: 0.9rem;
+        }
+
+        .school-crm-related-card h3 {
+          margin: 0;
+        }
+
+        .school-crm-related-card p {
+          color: #4b5563;
+          font-size: 0.9rem;
+          margin: 0;
+        }
+
+        .school-crm-related-card a,
+        .school-crm-related-card button {
+          background: transparent;
+          border: 0;
+          color: #2563eb;
+          cursor: pointer;
+          font-size: 0.95rem;
+          font-weight: 600;
+          padding: 0;
+          text-align: left;
+          text-decoration: none;
+        }
+
+        .school-crm-list {
+          display: grid;
+          gap: 0.75rem;
+          padding: 1rem;
+        }
+
+        .school-crm-list-row {
+          align-items: center;
+          background: #ffffff;
+          border: 1px solid #d1d5db;
+          border-radius: 0.5rem;
+          color: inherit;
+          display: grid;
+          gap: 0.5rem;
+          grid-template-columns: minmax(0, 1fr) auto;
+          padding: 0.85rem 0.95rem;
+          text-decoration: none;
+        }
+
+        .school-crm-list-row strong {
+          color: #111827;
+          display: block;
+          margin-bottom: 0.2rem;
+        }
+
+        .school-crm-list-meta {
+          display: grid;
+          gap: 0.2rem;
+          justify-items: end;
+          min-width: 120px;
+        }
+
+        .school-crm-search-box,
+        .school-crm-side-stack,
+        .school-crm-map {
+          padding: 1rem;
+        }
+
+        .school-crm-search-box input {
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 0.5rem;
+          min-height: 46px;
+          padding: 0 0.85rem;
+          width: 100%;
+        }
+
+        .school-crm-map {
+          align-items: center;
+          background: #d9f2ff;
+          display: grid;
+          justify-items: center;
+          min-height: 220px;
+          text-align: center;
+        }
+
+        .school-crm-map a {
+          color: #14532d;
+          font-weight: 700;
+          text-decoration: none;
+        }
+
+        .school-crm-side-stack {
+          display: grid;
+          gap: 0.85rem;
+        }
+
+        .school-crm-side-stack div {
           display: grid;
           gap: 0.2rem;
         }
 
-        .support-status-metrics {
-          min-width: 190px;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 0.55rem 0.7rem;
-          display: grid;
-          gap: 0.15rem;
-          background: #f8fafc;
-        }
-
-        .support-status-metrics span {
-          color: #64748b;
-          font-size: 0.72rem;
-          text-transform: uppercase;
-          letter-spacing: 0.02em;
-        }
-
-        .support-status-metrics strong {
-          color: #0f172a;
-          font-size: 0.95rem;
-        }
-
-        .school-header-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1rem;
-        }
-
-        .breadcrumbs {
-          font-size: 0.875rem;
-          color: #6b7280;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-        
-        .breadcrumb-link:hover {
-          text-decoration: underline;
-          color: #1d4ed8;
-        }
-
-        .header-actions {
-          display: flex;
-          gap: 0.75rem;
-        }
-
-        .button-sm {
-          padding: 0.4rem 0.8rem;
-          font-size: 0.875rem;
-        }
-
-        .school-title-section {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-        }
-
-        .school-icon {
-          width: 48px;
-          height: 48px;
-          background-color: #4f46e5;
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .school-avatar {
-          color: white;
-          font-size: 1.5rem;
-          font-weight: bold;
-        }
-
-        .school-type {
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          color: #6b7280;
-          letter-spacing: 0.05em;
-        }
-
-        h1 {
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: #111827;
-          margin: 0;
-          line-height: 1.2;
-        }
-
-        .school-highlights {
-          display: flex;
-          gap: 2rem;
-          padding-top: 0.5rem;
-        }
-
-        .highlight-item {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .highlight-item .label {
-          font-size: 0.75rem;
-          color: #6b7280;
-          margin-bottom: 0.125rem;
-        }
-
-        .highlight-item .value {
-          font-size: 0.875rem;
-          color: #111827;
-          font-weight: 500;
-        }
-
-        /* Content Grid */
-        .school-content-grid {
-          display: grid;
-          grid-template-columns: 1fr 320px;
-          gap: 1.5rem;
-          max-width: 1600px;
-          margin: 0 auto;
-          padding: 0 1.5rem;
-        }
-
-        @media (max-width: 1024px) {
-          .school-content-grid {
+        @media (max-width: 1200px) {
+          .school-crm-hero,
+          .school-crm-layout {
             grid-template-columns: 1fr;
+          }
+
+          .school-crm-overview,
+          .school-crm-links-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
         }
 
-        /* Quick Links */
-        .quick-links-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-          gap: 0.75rem;
-          margin-bottom: 1.5rem;
-        }
+        @media (max-width: 900px) {
+          .school-crm-overview,
+          .school-crm-links-grid,
+          .school-crm-details-grid,
+          .school-crm-related-grid {
+            grid-template-columns: 1fr;
+          }
 
-        .quick-link-card {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 4px;
-          padding: 0.75rem;
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          text-decoration: none;
-          color: #374151;
-          transition: border-color 0.15s, box-shadow 0.15s;
-        }
+          .school-crm-list-row {
+            grid-template-columns: 1fr;
+          }
 
-        .quick-link-card:hover {
-          border-color: #d1d5db;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-          color: #1d4ed8;
-        }
-
-        .icon-wrapper {
-          width: 28px;
-          height: 28px;
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.25rem;
-        }
-        
-        .icon-wrapper.purple { background-color: #f3e8ff; color: #9333ea; }
-        .icon-wrapper.blue { background-color: #dbeafe; color: #2563eb; }
-        .icon-wrapper.green { background-color: #FFF4EC; color: #FA7D15; }
-        .icon-wrapper.orange { background-color: #ffedd5; color: #ea580c; }
-        .icon-wrapper.red { background-color: #fee2e2; color: #dc2626; }
-        .icon-wrapper.teal { background-color: #ccfbf1; color: #0d9488; }
-        .icon-wrapper.gold { background-color: #fef3c7; color: #b45309; }
-
-
-        .link-title {
-          font-size: 0.75rem;
-          font-weight: 600;
-          flex-grow: 1;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .link-count {
-           font-size: 0.75rem;
-           color: #9ca3af;
-        }
-
-        /* Tabs */
-        .tabs-container {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 4px;
-          min-height: 500px;
-        }
-
-        .tabs-header {
-          display: flex;
-          border-bottom: 1px solid #e5e7eb;
-          background-color: #f9fafb;
-        }
-
-        .tab-btn {
-          padding: 1rem 1.5rem;
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #6b7280;
-          background: none;
-          border: none;
-          border-bottom: 2px solid transparent;
-          cursor: pointer;
-        }
-
-        .tab-btn:hover {
-            color: #111827;
-        }
-
-        .tab-btn.active {
-          color: #1d4ed8;
-          border-bottom-color: #1d4ed8;
-          background-color: white;
-          border-top: 2px solid transparent; /* balance */
-        }
-        
-        .details-view {
-          padding: 1.5rem;
-        }
-
-        .detail-section {
-          margin-bottom: 2rem;
-          border-bottom: 1px solid #f3f4f6;
-          padding-bottom: 1rem;
-        }
-
-        .detail-section:last-child {
-          border-bottom: none;
-        }
-
-        .detail-section h3 {
-          font-size: 1rem;
-          font-weight: 600;
-          color: #111827;
-          margin-bottom: 1rem;
-          margin-top: 0;
-        }
-
-        .detail-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-          margin-bottom: 1rem;
-        }
-
-        .detail-group {
-          display: flex;
-          flex-direction: column;
-        }
-        
-        .detail-group label {
-          font-size: 0.75rem;
-          color: #6b7280;
-          margin-bottom: 0.25rem;
-        }
-
-        .detail-value {
-          font-size: 0.875rem;
-          color: #111827;
-          padding-bottom: 0.25rem;
-          border-bottom: 1px solid transparent;
-        }
-
-        .detail-value.link {
-            color: #1d4ed8;
-            cursor: pointer;
-        }
-        
-        .detail-value.link:hover {
-            text-decoration: underline;
-        }
-
-        /* Sidebar */
-        .sidebar-column {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-
-        .sidebar-card {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 4px;
-          overflow: hidden;
-        }
-
-        .sidebar-card h3 {
-          margin: 0;
-          padding: 1rem;
-          font-size: 1rem;
-          font-weight: 600;
-          border-bottom: 1px solid #e5e7eb;
-          background-color: #f9fafb;
-        }
-
-        .sidebar-content {
-          padding: 1rem;
-        }
-        
-        .sidebar-search {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            font-size: 0.875rem;
-        }
-
-        .empty-state {
-            font-size: 0.875rem;
-            color: #9ca3af;
-            text-align: center;
-            padding: 2rem 0;
-        }
-        
-        .map-placeholder {
-            min-height: 200px;
-            background-color: #f0f9ff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
-        
-        .map-coordinates {
-          text-align: center;
-          font-size: 0.875rem;
-        }
-        
-        .map-link {
-          display: inline-block;
-          margin-top: 0.5rem;
-          color: #1d4ed8;
-          font-weight: 500;
+          .school-crm-list-meta {
+            justify-items: start;
+          }
         }
       `}</style>
     </div>
