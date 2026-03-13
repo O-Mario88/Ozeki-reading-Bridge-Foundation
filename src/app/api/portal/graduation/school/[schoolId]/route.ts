@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  getGraduationSettings,
-  getSchoolGraduationEligibility,
-  listGraduationReviewSupervisors,
-  reviewSchoolGraduation,
+  getGraduationSettingsAsync,
+  getSchoolGraduationEligibilityAsync,
+  listGraduationReviewSupervisorsAsync,
+  reviewSchoolGraduationAsync,
 } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
@@ -56,14 +56,14 @@ export async function GET(
     const schoolId = parseSchoolId(schoolIdRaw);
     const { searchParams } = new URL(request.url);
     const refresh = searchParams.get("refresh") !== "0";
-    const eligibility = getSchoolGraduationEligibility(schoolId, { refresh });
+    const eligibility = await getSchoolGraduationEligibilityAsync(schoolId, { refresh });
     if (!eligibility) {
       return NextResponse.json({ error: "School not found." }, { status: 404 });
     }
     return NextResponse.json({
       eligibility,
-      supervisors: listGraduationReviewSupervisors(),
-      settings: getGraduationSettings(),
+      supervisors: await listGraduationReviewSupervisorsAsync(),
+      settings: await getGraduationSettingsAsync(),
     });
   } catch (error) {
     return NextResponse.json(
@@ -90,7 +90,7 @@ export async function POST(
     const schoolId = parseSchoolId(schoolIdRaw);
     const parsed = reviewSchema.parse(await request.json());
 
-    const eligibility = reviewSchoolGraduation(
+    const eligibility = await reviewSchoolGraduationAsync(
       {
         schoolId,
         action: parsed.action,
@@ -118,4 +118,3 @@ export async function POST(
     );
   }
 }
-

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listGraduationQueue } from "@/lib/db";
+import { listGraduationQueueAsync } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const summaryOnly = searchParams.get("summary") === "1";
   const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(1000, Math.round(limitRaw))) : 200;
 
-  const queue = listGraduationQueue({
+  const queue = await listGraduationQueueAsync({
     limit,
     includeSnoozed,
     refresh,
@@ -53,4 +53,3 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ queue });
 }
-

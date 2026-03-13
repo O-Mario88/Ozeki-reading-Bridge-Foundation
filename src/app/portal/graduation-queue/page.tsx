@@ -1,6 +1,6 @@
 import { PortalGraduationQueueManager } from "@/components/portal/PortalGraduationQueueManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listGraduationQueue, listGraduationReviewSupervisors } from "@/lib/db";
+import { listGraduationQueueAsync, listGraduationReviewSupervisorsAsync } from "@/lib/db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +12,8 @@ export const metadata = {
 
 export default async function PortalGraduationQueuePage() {
   const user = await requirePortalStaffUser();
-  const queue = listGraduationQueue({ limit: 500, includeSnoozed: false, refresh: true });
-  const supervisors = listGraduationReviewSupervisors();
+  const queue = await listGraduationQueueAsync({ limit: 500, includeSnoozed: false, refresh: true });
+  const supervisors = await listGraduationReviewSupervisorsAsync();
 
   return (
     <PortalShell
@@ -26,4 +26,3 @@ export default async function PortalGraduationQueuePage() {
     </PortalShell>
   );
 }
-

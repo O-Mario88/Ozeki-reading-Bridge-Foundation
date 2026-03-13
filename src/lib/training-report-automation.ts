@@ -270,6 +270,47 @@ function resolvePeriodWindow(input: {
   };
 }
 
+async function resolvePeriodWindowAsync(input: {
+  scopeType: TrainingReportScopeType;
+  scopeValue?: string;
+  periodStart?: string;
+  periodEnd?: string;
+}): Promise<PeriodWindow> {
+  if (!isPostgresConfigured() || input.scopeType !== "training_session") {
+    return resolvePeriodWindow(input);
+  }
+
+  const today = new Date();
+  const rawScopeValue = String(input.scopeValue ?? "").trim();
+  const sessionId = Number(rawScopeValue);
+  if (!Number.isInteger(sessionId) || sessionId <= 0) {
+    throw new Error("Training session scope requires a numeric record id.");
+  }
+
+  const result = await queryPostgres(
+    `
+      SELECT id, date::text AS date
+      FROM portal_records
+      WHERE id = $1
+        AND module = 'training'
+        AND deleted_at IS NULL
+      LIMIT 1
+    `,
+    [sessionId],
+  );
+  const row = result.rows[0] as { id: number; date: string } | undefined;
+  if (!row?.id) {
+    throw new Error("Training session record was not found.");
+  }
+  const normalizedDate = ensureDate(row.date, toIsoDate(today));
+  return {
+    periodStart: normalizedDate,
+    periodEnd: normalizedDate,
+    scopeValue: String(row.id),
+    scopeLabel: `Training Session ${row.id}`,
+  };
+}
+
 function stripText(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -1749,6 +1790,352 @@ function collectTrainingFacts(input: {
   };
 }
 
+async function collectTrainingFactsAsync(input: {
+  scopeType: TrainingReportScopeType;
+  scopeValue?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  includeObservedInsights?: boolean;
+}): Promise<TrainingReportFacts> {
+  const window = await resolvePeriodWindowAsync(input);
+  const whereClauses = [
+    "pr.module = 'training'",
+    "pr.deleted_at IS NULL",
+    "pr.date >= $1::date",
+    "pr.date <= $2::date",
+  ];
+  const params: unknown[] = [window.periodStart, window.periodEnd];
+
+  if (input.scopeType === "training_session") {
+    params.push(Number(window.scopeValue));
+    whereClauses.push(`pr.id = $${params.length}`);
+  } else if (input.scopeType === "district") {
+    params.push(window.scopeValue);
+    whereClauses.push(`lower(trim(COALESCE(sd.district, pr.district))) = lower(trim($${params.length}))`);
+  } else if (input.scopeType === "region") {
+    params.push(window.scopeValue);
+    whereClauses.push(`lower(trim(COALESCE(sd.region, ''))) = lower(trim($${params.length}))`);
+  } else if (input.scopeType === "sub_region") {
+    params.push(window.scopeValue);
+    whereClauses.push(`lower(trim(COALESCE(sd.sub_region, ''))) = lower(trim($${params.length}))`);
+  }
+
+  const trainingResult = await queryPostgres(
+    `
+      SELECT
+        pr.id,
+        pr.date::text AS date,
+        pr.school_id AS "schoolId",
+        COALESCE(sd.name, pr.school_name) AS "schoolName",
+        COALESCE(sd.district, pr.district) AS district,
+        COALESCE(sd.region, '') AS region,
+        COALESCE(sd.sub_region, '') AS "subRegion",
+        pr.follow_up_date::text AS "followUpDate",
+        pr.follow_up_type AS "followUpType",
+        pr.follow_up_owner_user_id AS "followUpOwnerUserId",
+        pu.full_name AS "followUpOwnerName"
+      FROM portal_records pr
+      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
+      LEFT JOIN portal_users pu ON pu.id = pr.follow_up_owner_user_id
+      WHERE ${whereClauses.join(" AND ")}
+      ORDER BY pr.date ASC, pr.id ASC
+    `,
+    params,
+  );
+  const trainingRows = trainingResult.rows as Array<{
+    id: number;
+    date: string;
+    schoolId: number | null;
+    schoolName: string;
+    district: string;
+    region: string;
+    subRegion: string;
+    followUpDate: string | null;
+    followUpType: string | null;
+    followUpOwnerUserId: number | null;
+    followUpOwnerName: string | null;
+  }>;
+
+  if (trainingRows.length === 0) {
+    throw new Error("No training records found in the selected scope and period.");
+  }
+
+  const trainingIds = trainingRows.map((row) => Number(row.id));
+  const participantSummaryResult = await queryPostgres(
+    `
+      SELECT
+        COUNT(*)::int AS "participantsTotal",
+        COALESCE(SUM(CASE WHEN lower(trim(pta.participant_role)) = 'classroom teacher' THEN 1 ELSE 0 END), 0)::int AS "teachersTotal",
+        COALESCE(SUM(CASE WHEN lower(trim(pta.participant_role)) = 'school leader' THEN 1 ELSE 0 END), 0)::int AS "leadersTotal",
+        COALESCE(SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'female' THEN 1 ELSE 0 END), 0)::int AS "femaleTotal",
+        COALESCE(SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'male' THEN 1 ELSE 0 END), 0)::int AS "maleTotal"
+      FROM portal_training_attendance pta
+      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
+      WHERE pta.portal_record_id = ANY($1::int[])
+    `,
+    [trainingIds],
+  );
+  const participantSummary = (participantSummaryResult.rows[0] as {
+    participantsTotal: number | null;
+    teachersTotal: number | null;
+    leadersTotal: number | null;
+    femaleTotal: number | null;
+    maleTotal: number | null;
+  } | undefined) ?? undefined;
+
+  const leadersByCategoryResult = await queryPostgres(
+    `
+      SELECT
+        COALESCE(sc.category, 'School Leader') AS category,
+        COUNT(*)::int AS total,
+        COALESCE(SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'female' THEN 1 ELSE 0 END), 0)::int AS female,
+        COALESCE(SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'male' THEN 1 ELSE 0 END), 0)::int AS male
+      FROM portal_training_attendance pta
+      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
+      WHERE pta.portal_record_id = ANY($1::int[])
+        AND lower(trim(pta.participant_role)) = 'school leader'
+      GROUP BY COALESCE(sc.category, 'School Leader')
+      ORDER BY total DESC, category ASC
+    `,
+    [trainingIds],
+  );
+  const leadersByCategory = leadersByCategoryResult.rows as Array<{
+    category: string;
+    total: number;
+    female: number;
+    male: number;
+  }>;
+
+  const teacherByClassResult = await queryPostgres(
+    `
+      SELECT
+        COALESCE(NULLIF(trim(sc.class_taught), ''), 'Not specified') AS "classTaught",
+        COUNT(*)::int AS total
+      FROM portal_training_attendance pta
+      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
+      WHERE pta.portal_record_id = ANY($1::int[])
+        AND lower(trim(pta.participant_role)) = 'classroom teacher'
+      GROUP BY COALESCE(NULLIF(trim(sc.class_taught), ''), 'Not specified')
+      ORDER BY total DESC, "classTaught" ASC
+      LIMIT 20
+    `,
+    [trainingIds],
+  );
+  const teacherByClass = teacherByClassResult.rows as Array<{ classTaught: string; total: number }>;
+
+  const teacherBySubjectResult = await queryPostgres(
+    `
+      SELECT
+        COALESCE(NULLIF(trim(sc.subject_taught), ''), 'Not specified') AS "subjectTaught",
+        COUNT(*)::int AS total
+      FROM portal_training_attendance pta
+      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
+      WHERE pta.portal_record_id = ANY($1::int[])
+        AND lower(trim(pta.participant_role)) = 'classroom teacher'
+      GROUP BY COALESCE(NULLIF(trim(sc.subject_taught), ''), 'Not specified')
+      ORDER BY total DESC, "subjectTaught" ASC
+      LIMIT 20
+    `,
+    [trainingIds],
+  );
+  const teacherBySubject = teacherBySubjectResult.rows as Array<{ subjectTaught: string; total: number }>;
+
+  const geographyBreakdownResult = await queryPostgres(
+    `
+      SELECT
+        COALESCE(sd.region, '') AS region,
+        COALESCE(sd.sub_region, '') AS "subRegion",
+        COALESCE(sd.district, pr.district) AS district,
+        COUNT(DISTINCT pr.id)::int AS "trainingsCount",
+        COUNT(DISTINCT pr.school_id)::int AS "schoolsCount",
+        COUNT(pta.id)::int AS "participantsCount"
+      FROM portal_records pr
+      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
+      LEFT JOIN portal_training_attendance pta ON pta.portal_record_id = pr.id
+      WHERE pr.id = ANY($1::int[])
+      GROUP BY COALESCE(sd.region, ''), COALESCE(sd.sub_region, ''), COALESCE(sd.district, pr.district)
+      ORDER BY "trainingsCount" DESC, district ASC
+    `,
+    [trainingIds],
+  );
+  const geographyBreakdown = geographyBreakdownResult.rows as Array<{
+    region: string;
+    subRegion: string;
+    district: string;
+    trainingsCount: number;
+    schoolsCount: number;
+    participantsCount: number;
+  }>;
+
+  const feedbackResult = await queryPostgres(
+    `
+      SELECT
+        tf.feedback_role AS "feedbackRole",
+        tf.what_went_well AS "whatWentWell",
+        tf.how_training_changed_teaching AS "howTrainingChangedTeaching",
+        tf.what_you_will_do_to_improve_reading_levels AS "whatYouWillDoToImproveReadingLevels",
+        tf.challenges,
+        tf.recommendations_next_training AS "recommendationsNextTraining"
+      FROM training_feedback_entries tf
+      WHERE tf.training_record_id = ANY($1::int[])
+    `,
+    [trainingIds],
+  );
+  const feedbackRows = feedbackResult.rows as Array<{
+    feedbackRole: "participant" | "trainer";
+    whatWentWell: string | null;
+    howTrainingChangedTeaching: string | null;
+    whatYouWillDoToImproveReadingLevels: string | null;
+    challenges: string | null;
+    recommendationsNextTraining: string | null;
+  }>;
+
+  const themeTexts = feedbackRows
+    .flatMap((row) => [
+      row.whatWentWell,
+      row.howTrainingChangedTeaching,
+      row.whatYouWillDoToImproveReadingLevels,
+      row.challenges,
+      row.recommendationsNextTraining,
+    ])
+    .map((text) => stripText(text))
+    .filter(Boolean);
+  const themes = extractFeedbackThemes(themeTexts);
+
+  const approvedQuotesResult = await queryPostgres(
+    `
+      SELECT
+        pt.story_text AS quote,
+        pt.storyteller_role AS role,
+        pt.district,
+        pt.school_name AS "schoolName"
+      FROM portal_testimonials pt
+      WHERE pt.source_training_record_id = ANY($1::int[])
+        AND pt.source_type = 'training_feedback'
+        AND COALESCE(pt.moderation_status, 'approved') = 'approved'
+      ORDER BY pt.created_at DESC, pt.id DESC
+      LIMIT 20
+    `,
+    [trainingIds],
+  );
+  const approvedQuotes = approvedQuotesResult.rows as Array<{
+    quote: string;
+    role: string | null;
+    district: string | null;
+    schoolName: string | null;
+  }>;
+
+  const approvedQuoteFallback = approvedQuotes.length > 0
+    ? approvedQuotes
+    : feedbackRows
+        .flatMap((row) => [row.howTrainingChangedTeaching, row.whatYouWillDoToImproveReadingLevels])
+        .map((quote) => stripText(quote))
+        .filter((quote) => quote.length >= 20)
+        .slice(0, 10)
+        .map((quote) => ({
+          quote,
+          role: "Participant",
+          district: null,
+          schoolName: null,
+        }));
+
+  const schoolIds = [...new Set(trainingRows.map((row) => Number(row.schoolId ?? 0)).filter((id) => id > 0))];
+  let observedAfterTraining: { coachingVisitsCount: number; assessmentSessionsCount: number } | null = null;
+  if ((input.includeObservedInsights ?? true) && schoolIds.length > 0) {
+    const periodEndDate = new Date(`${window.periodEnd}T00:00:00.000Z`);
+    periodEndDate.setUTCDate(periodEndDate.getUTCDate() + 120);
+    const observedEnd = toIsoDate(periodEndDate);
+
+    const coachingResult = await queryPostgres(
+      `
+        SELECT COUNT(*)::int AS total
+        FROM coaching_visits
+        WHERE school_id = ANY($1::int[])
+          AND visit_date >= $2::date
+          AND visit_date <= $3::date
+      `,
+      [schoolIds, window.periodStart, observedEnd],
+    );
+    const assessmentResult = await queryPostgres(
+      `
+        SELECT COUNT(*)::int AS total
+        FROM assessment_sessions
+        WHERE school_id = ANY($1::int[])
+          AND assessment_date >= $2::date
+          AND assessment_date <= $3::date
+      `,
+      [schoolIds, window.periodStart, observedEnd],
+    );
+    observedAfterTraining = {
+      coachingVisitsCount: Number((coachingResult.rows[0] as { total?: number } | undefined)?.total ?? 0),
+      assessmentSessionsCount: Number((assessmentResult.rows[0] as { total?: number } | undefined)?.total ?? 0),
+    };
+  }
+
+  return {
+    factsVersion: FACTS_VERSION,
+    scopeType: input.scopeType,
+    scopeValue: window.scopeValue,
+    scopeLabel: window.scopeLabel,
+    periodStart: window.periodStart,
+    periodEnd: window.periodEnd,
+    trainingsCount: trainingRows.length,
+    schoolsTrainedCount: new Set(trainingRows.map((row) => Number(row.schoolId ?? 0)).filter((id) => id > 0)).size,
+    participantsTotal: Number(participantSummary?.participantsTotal ?? 0),
+    teachersTotal: Number(participantSummary?.teachersTotal ?? 0),
+    leadersTotal: Number(participantSummary?.leadersTotal ?? 0),
+    femaleTotal: Number(participantSummary?.femaleTotal ?? 0),
+    maleTotal: Number(participantSummary?.maleTotal ?? 0),
+    teacherByClass: teacherByClass.map((row) => ({
+      classTaught: row.classTaught,
+      total: Number(row.total),
+    })),
+    teacherBySubject: teacherBySubject.map((row) => ({
+      subjectTaught: row.subjectTaught,
+      total: Number(row.total),
+    })),
+    leadersByCategory: leadersByCategory.map((row) => ({
+      category: row.category,
+      total: Number(row.total),
+      female: Number(row.female),
+      male: Number(row.male),
+    })),
+    geographyBreakdown: geographyBreakdown.map((row) => ({
+      region: row.region || "N/A",
+      subRegion: row.subRegion || "N/A",
+      district: row.district || "N/A",
+      trainingsCount: Number(row.trainingsCount),
+      schoolsCount: Number(row.schoolsCount),
+      participantsCount: Number(row.participantsCount),
+    })),
+    followUpPlans: trainingRows.map((row) => ({
+      trainingRecordId: Number(row.id),
+      trainingDate: row.date,
+      schoolName: row.schoolName || "Unknown school",
+      district: row.district || "Unknown district",
+      followUpDate: row.followUpDate ?? null,
+      followUpType: row.followUpType ?? null,
+      followUpOwner: row.followUpOwnerName ?? null,
+    })),
+    feedback: {
+      participantRows: feedbackRows.filter((row) => row.feedbackRole === "participant").length,
+      trainerRows: feedbackRows.filter((row) => row.feedbackRole === "trainer").length,
+      changedTeachingRows: feedbackRows.filter((row) => stripText(row.howTrainingChangedTeaching).length > 0).length,
+      improveReadingRows: feedbackRows.filter((row) => stripText(row.whatYouWillDoToImproveReadingLevels).length > 0).length,
+      challengesRows: feedbackRows.filter((row) => stripText(row.challenges).length > 0).length,
+      recommendationsRows: feedbackRows.filter((row) => stripText(row.recommendationsNextTraining).length > 0).length,
+      themes,
+    },
+    observedAfterTraining,
+    approvedQuotes: approvedQuoteFallback.map((row) => ({
+      quote: stripText(row.quote),
+      role: row.role ?? null,
+      district: row.district ?? null,
+      schoolName: row.schoolName ?? null,
+    })),
+  };
+}
+
 export async function generateTrainingReportArtifact(input: {
   user: PortalUser;
   scopeType: TrainingReportScopeType;
@@ -1757,18 +2144,28 @@ export async function generateTrainingReportArtifact(input: {
   periodEnd?: string;
   includeObservedInsights?: boolean;
 }) {
-  const facts = collectTrainingFacts({
-    scopeType: input.scopeType,
-    scopeValue: input.scopeValue,
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    includeObservedInsights: input.includeObservedInsights,
-  });
+  const facts = isPostgresConfigured()
+    ? await collectTrainingFactsAsync({
+        scopeType: input.scopeType,
+        scopeValue: input.scopeValue,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        includeObservedInsights: input.includeObservedInsights,
+      })
+    : collectTrainingFacts({
+        scopeType: input.scopeType,
+        scopeValue: input.scopeValue,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        includeObservedInsights: input.includeObservedInsights,
+      });
   const narrative = await aiNarrative(facts);
-  const evidencePhotos = collectEvidencePhotos(
-    facts,
-    input.includeObservedInsights ?? true,
-  );
+  const evidencePhotos = isPostgresConfigured()
+    ? []
+    : collectEvidencePhotos(
+        facts,
+        input.includeObservedInsights ?? true,
+      );
   const reportCode = `TRN-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   const htmlReport = buildHtmlReport(facts, narrative, reportCode, evidencePhotos);
   const pdfBytes = await generatePdfBytes(facts, narrative, reportCode, evidencePhotos);
