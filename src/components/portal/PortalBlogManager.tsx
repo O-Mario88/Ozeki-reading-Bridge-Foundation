@@ -1,6 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState, type ClipboardEvent, type MouseEvent } from "react";
+import { useMemo, useState, useEffect, type MouseEvent } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
 import { EditorialArticleLayout } from "@/components/blog/EditorialArticleLayout";
 import { blogPoppins } from "@/components/blog/blog-font";
 import { sanitizeInlineRichText, stripHtmlTags } from "@/lib/rich-text";
@@ -864,7 +869,36 @@ export function PortalBlogManager({
   const [error, setError] = useState("");
   const [previewOpen, setPreviewOpen] = useState(true);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
-  const richEditorRef = useRef<HTMLDivElement | null>(null);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [2, 3],
+        },
+      }),
+      Underline,
+      Link.configure({
+        openOnClick: false,
+      }),
+      Placeholder.configure({
+        placeholder: "Write your article content here...",
+      }),
+    ],
+    content: bodyBlocksToRichHtml(INITIAL_FORM.bodyBlocks),
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      setEditorHtml(html);
+      const nextBlocks = richHtmlToBodyBlocks(html);
+      setForm((prev) => ({ ...prev, bodyBlocks: nextBlocks }));
+    },
+  });
+
+  useEffect(() => {
+    if (editor && editor.getHTML() !== editorHtml) {
+      editor.commands.setContent(editorHtml);
+    }
+  }, [editorVersion, editor, editorHtml]);
 
   const isEditing = form.id !== null;
 
@@ -935,61 +969,34 @@ export function PortalBlogManager({
     });
   }
 
-  function syncBodyBlocksFromEditor() {
-    const html = richEditorRef.current?.innerHTML ?? "";
-    const nextBlocks = richHtmlToBodyBlocks(html);
-    setForm((prev) => ({ ...prev, bodyBlocks: nextBlocks }));
-  }
+  function runRichCommand(command: string) {
+    if (!editor) return;
 
-  function runRichCommand(command: string, value?: string) {
-    if (typeof document === "undefined") {
-      return;
-    }
-    richEditorRef.current?.focus();
-    document.execCommand(command, false, value);
-    syncBodyBlocksFromEditor();
-  }
-
-  function applyBlockFormat(format: BlockFormatValue) {
-    if (typeof document === "undefined") {
-      return;
-    }
-    richEditorRef.current?.focus();
-    const primaryValue = format === "P" ? "P" : format;
-    const applied = document.execCommand("formatBlock", false, primaryValue);
-    if (!applied) {
-      const fallbackValue = format === "P" ? "p" : format.toLowerCase();
-      document.execCommand("formatBlock", false, fallbackValue);
-    }
-    syncBodyBlocksFromEditor();
+    if (command === "bold") editor.chain().focus().toggleBold().run();
+    if (command === "italic") editor.chain().focus().toggleItalic().run();
+    if (command === "underline") editor.chain().focus().toggleUnderline().run();
+    if (command === "strikeThrough") editor.chain().focus().toggleStrike().run();
+    if (command === "insertUnorderedList") editor.chain().focus().toggleBulletList().run();
+    if (command === "insertOrderedList") editor.chain().focus().toggleOrderedList().run();
+    if (command === "undo") editor.chain().focus().undo().run();
+    if (command === "redo") editor.chain().focus().redo().run();
+    if (command === "removeFormat") editor.chain().focus().unsetAllMarks().clearNodes().run();
   }
 
   function handleToolbarMouseDown(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
   }
 
-  function handleEditorPaste(event: ClipboardEvent<HTMLDivElement>) {
-    const plain = event.clipboardData?.getData("text/plain") ?? "";
-    const rich = event.clipboardData?.getData("text/html") ?? "";
+  function applyBlockFormat(format: BlockFormatValue) {
+    if (!editor) return;
 
-    if (!rich && plain.trim()) {
-      event.preventDefault();
-      const paragraphs = plain
-        .replace(/\r\n/g, "\n")
-        .split(/\n{2,}/)
-        .map((segment) => segment.trim())
-        .filter(Boolean);
-      const normalizedHtml = (paragraphs.length > 0 ? paragraphs : [plain.trim()])
-        .map((segment) => `<p>${toInlineHtml(segment)}</p>`)
-        .join("");
-      document.execCommand("insertHTML", false, normalizedHtml || "<p><br></p>");
-      syncBodyBlocksFromEditor();
-      return;
+    if (format === "P") {
+      editor.chain().focus().setParagraph().run();
+    } else if (format === "H2") {
+      editor.chain().focus().toggleHeading({ level: 2 }).run();
+    } else if (format === "H3") {
+      editor.chain().focus().toggleHeading({ level: 3 }).run();
     }
-
-    window.setTimeout(() => {
-      syncBodyBlocksFromEditor();
-    }, 0);
   }
 
   function toggleSpotlightArticle(slug: string, checked: boolean) {
@@ -1782,12 +1789,7 @@ export function PortalBlogManager({
                 </div>
 
                 <div
-                  key={editorVersion}
-                  ref={richEditorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  onInput={syncBodyBlocksFromEditor}
-                  onPaste={handleEditorPaste}
+                  className="tiptap-editor-container"
                   style={{
                     minHeight: "22rem",
                     padding: "0.9rem",
@@ -1798,10 +1800,10 @@ export function PortalBlogManager({
                     fontSize: "1rem",
                     color: "var(--md-sys-color-on-surface)",
                     overflowWrap: "anywhere",
-                    whiteSpace: "pre-wrap",
                   }}
-                  dangerouslySetInnerHTML={{ __html: editorHtml }}
-                />
+                >
+                  <EditorContent editor={editor} />
+                </div>
 
                 <p className="portal-muted" style={{ margin: 0, fontSize: "0.78rem" }}>
                   Paste your full blog content once, then edit with the toolbar (bold, italic, headings,

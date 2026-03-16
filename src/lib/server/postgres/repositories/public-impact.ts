@@ -17,6 +17,7 @@ export type PublicImpactSchoolScopeRow = {
   schoolUid: string;
   schoolName: string;
   district: string;
+  subCounty: string;
   subRegion: string;
   region: string;
   enrollmentTotal: number;
@@ -174,6 +175,7 @@ const SCHOOL_SCOPE_SELECT = `
     COALESCE(school_uid, '') AS "schoolUid",
     school_name AS "schoolName",
     district,
+    sub_county AS "subCounty",
     sub_region AS "subRegion",
     region,
     COALESCE(enrollment_total, 0) AS "enrollmentTotal",
@@ -192,6 +194,7 @@ export async function listScopedSchoolsForPublicImpactPostgres(
       schoolUid: String(row.schoolUid ?? ""),
       schoolName: String(row.schoolName ?? ""),
       district: String(row.district ?? ""),
+      subCounty: String(row.subCounty ?? ""),
       subRegion: String(row.subRegion ?? ""),
       region: String(row.region ?? ""),
       enrollmentTotal: Number(row.enrollmentTotal ?? 0),
@@ -221,6 +224,7 @@ export async function listScopedSchoolsForPublicImpactPostgres(
     schoolUid: String(row.schoolUid ?? ""),
     schoolName: String(row.schoolName ?? ""),
     district: String(row.district ?? ""),
+    subCounty: String(row.subCounty ?? ""),
     subRegion: String(row.subRegion ?? ""),
     region: String(row.region ?? ""),
     enrollmentTotal: Number(row.enrollmentTotal ?? 0),

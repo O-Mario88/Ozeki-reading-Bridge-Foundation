@@ -211,6 +211,7 @@ SELECT
   school_code,
   name AS school_name,
   district,
+  COALESCE(sub_county, '') AS sub_county,
   COALESCE(sub_region, '') AS sub_region,
   COALESCE(region, '') AS region,
   COALESCE(district_id, '') AS district_id,

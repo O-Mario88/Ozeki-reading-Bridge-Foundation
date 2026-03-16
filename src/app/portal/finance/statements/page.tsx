@@ -1,22 +1,25 @@
-import { PortalFinanceStatementsManager } from "@/components/portal/finance/PortalFinanceStatementsManager";
-import { FinanceShell } from "@/components/portal/finance/FinanceShell";
-import { listFinanceMonthlyStatements } from "@/lib/finance-db";
+import { PortalShell } from "@/components/portal/PortalShell";
+import FinanceReportsView from "@/components/portal/finance/FinanceReportsView";
 import { requirePortalFinanceReceiptEditorUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Finance Statements",
-  description: "Generate and export monthly, quarterly, and fiscal year finance statements.",
+  title: "Financial Statements & Analytics",
+  description: "Generate professional financial reports with automated AI narration and variance analysis.",
 };
 
 export default async function PortalFinanceStatementsPage() {
   const user = await requirePortalFinanceReceiptEditorUser();
-  const statements = await listFinanceMonthlyStatements();
 
   return (
-    <FinanceShell user={user} activeHref="/portal/finance/statements" title="Financial Statements">
-      <PortalFinanceStatementsManager initialStatements={statements} />
-    </FinanceShell>
+    <PortalShell 
+      user={user} 
+      activeHref="/portal/finance/statements" 
+      title="Financial Statements & AI Analytics"
+      description="Select a report type to generate a governed PDF export including automated narration."
+    >
+      <FinanceReportsView user={user} />
+    </PortalShell>
   );
 }

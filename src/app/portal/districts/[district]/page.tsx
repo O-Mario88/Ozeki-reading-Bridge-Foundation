@@ -1,6 +1,6 @@
 
 import { requirePortalStaffUser } from "@/lib/portal-auth";
-import { getDistrictStats, listSchoolSupportStatuses } from "@/lib/db";
+import { getDistrictStats, listSchoolSupportStatuses, listSchoolsByDistrict } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { DistrictProfileView } from "@/components/portal/DistrictProfileView";
 
@@ -14,10 +14,18 @@ export default async function DistrictProfilePage({ params }: { params: Promise<
         district: decodedDistrict,
         limit: 300,
     });
+    const schools = listSchoolsByDistrict(decodedDistrict);
 
     if (!stats) {
         notFound();
     }
 
-    return <DistrictProfileView stats={stats} initialSupportStatuses={supportStatuses} />;
+    return (
+        <DistrictProfileView 
+            stats={stats} 
+            initialSupportStatuses={supportStatuses} 
+            initialSchools={schools} 
+        />
+    );
 }
+

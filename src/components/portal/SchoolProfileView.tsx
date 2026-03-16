@@ -429,7 +429,7 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                   <p className="school-crm-empty">No training activity has been linked to this school yet.</p>
                 ) : (
                   recentTrainings.map((item) => (
-                    <Link key={`${item.module}-${item.id}`} href={item.href} className="school-crm-list-row">
+                    <Link key={`${item.module}-${item.id}`} href={item.href} target="_blank" className="school-crm-list-row">
                       <div>
                         <strong>{item.title}</strong>
                         <span>{item.subtitle || item.module}</span>
@@ -450,7 +450,7 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                   <p className="school-crm-empty">No recent interactions have been linked to this school yet.</p>
                 ) : (
                   recentInteractions.map((item) => (
-                    <Link key={`${item.module}-${item.id}`} href={item.href} className="school-crm-list-row">
+                    <Link key={`${item.module}-${item.id}`} href={item.href} target="_blank" className="school-crm-list-row">
                       <div>
                         <strong>{item.title}</strong>
                         <span>{item.subtitle || item.module}</span>

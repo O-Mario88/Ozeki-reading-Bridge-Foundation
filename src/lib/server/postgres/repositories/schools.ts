@@ -556,7 +556,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
             trim(concat_ws(' • ', le.grade, le.top_gap_domain)) AS subtitle,
             le.lesson_date::text AS date,
             le.status,
-            '/portal/schools/' || le.school_id || '/teachers/' || le.teacher_uid || '/improvement' AS href
+            '/portal/evaluations/' || le.id AS href
           FROM lesson_evaluations le
           WHERE le.school_id = $1
             AND le.status != 'void'

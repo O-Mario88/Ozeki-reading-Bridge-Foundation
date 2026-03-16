@@ -44,9 +44,9 @@ export function PortalCrmListView({ view }: PortalCrmListViewProps) {
                   {view.columns.map((column, index) => {
                     const cell = row.cells[column.key];
                     const content = cell?.href ? (
-                      <Link href={cell.href}>{cell.value}</Link>
+                      <Link href={cell.href} target="_blank">{cell.value}</Link>
                     ) : row.href && index === 0 ? (
-                      <Link href={row.href}>{cell?.value ?? "-"}</Link>
+                      <Link href={row.href} target="_blank">{cell?.value ?? "-"}</Link>
                     ) : (
                       <span className={cell?.muted ? "is-muted" : undefined}>{cell?.value ?? "-"}</span>
                     );

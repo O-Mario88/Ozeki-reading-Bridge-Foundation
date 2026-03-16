@@ -7,9 +7,18 @@ import { useMemo, useState } from "react";
 interface DistrictProfileViewProps {
     stats: DistrictStats;
     initialSupportStatuses: SchoolSupportStatusRecord[];
+    initialSchools: Array<{
+        id: number;
+        name: string;
+        district: string;
+        subCounty: string;
+        parish: string;
+        status: string;
+        enrollment: number;
+    }>;
 }
 
-export function DistrictProfileView({ stats, initialSupportStatuses }: DistrictProfileViewProps) {
+export function DistrictProfileView({ stats, initialSupportStatuses, initialSchools }: DistrictProfileViewProps) {
     const [activeTab, setActiveTab] = useState<"schools" | "impact">("schools");
     const statusCounts = useMemo(() => {
         const counts = new Map<string, number>();
@@ -87,13 +96,52 @@ export function DistrictProfileView({ stats, initialSupportStatuses }: DistrictP
 
                         <div className="tab-content">
                             {activeTab === "schools" && (
-                                <div className="placeholder-view">
-                                    <p>List of all {stats.totalSchools} schools in {stats.district} District.</p>
-                                    <Link href={`/portal/schools?district=${stats.district}`} className="action-link">
-                                        View in Schools Directory &rarr;
-                                    </Link>
+                                <div className="list-view">
+                                    <h3>Schools in {stats.district}</h3>
+                                    <div className="table-wrap">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>School Name</th>
+                                                    <th>Sub-county</th>
+                                                    <th>Parish</th>
+                                                    <th>Status</th>
+                                                    <th>Enrollment</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {initialSchools.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={5} className="empty-state-row">
+                                                            No schools found for this district.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    initialSchools.map((school) => (
+                                                        <tr key={school.id}>
+                                                            <td>
+                                                                <Link href={`/portal/schools/${school.id}`} className="value link">
+                                                                    {school.name}
+                                                                </Link>
+                                                            </td>
+                                                            <td>{school.subCounty}</td>
+                                                            <td>{school.parish}</td>
+                                                            <td>{school.status}</td>
+                                                            <td>{school.enrollment.toLocaleString()}</td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div style={{ marginTop: "1rem" }}>
+                                        <Link href={`/portal/schools?district=${stats.district}`} className="action-link">
+                                            View in Schools Directory &rarr;
+                                        </Link>
+                                    </div>
                                 </div>
                             )}
+
 
                             {activeTab === "impact" && (
                                 <div className="list-view">

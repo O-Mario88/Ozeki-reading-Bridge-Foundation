@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
-import type { PublicImpactAggregate } from "@/lib/types";
+import type { PublicImpactAggregate, ReportScope } from "@/lib/types";
 
 const MASTERY_DOMAIN_ORDER: Array<{
   key:
@@ -149,6 +149,7 @@ function normalizeStringList(value: unknown, max = 5) {
 
 export async function generatePublicDashboardNarrative(
   aggregate: PublicImpactAggregate,
+  reportScope: ReportScope = "Public"
 ): Promise<PublicDashboardNarrative> {
   const fallback = summarizeFallbackNarrative(aggregate);
   const apiKey = process.env.OPENAI_API_KEY?.trim();
@@ -173,6 +174,10 @@ export async function generatePublicDashboardNarrative(
     meta: aggregate.meta,
   };
 
+  const publicGuardrail = reportScope === "Public" 
+    ? "\n\nABSOLUTE RULE: You are generating a public-facing report. You must not mention, reference, or deduce any specific student names, student ages, or teacher personal/contact information. Discuss operations, staffing, and beneficiaries only in aggregate numbers and high-level trends."
+    : "";
+
   try {
     const response = await client.chat.completions.create({
       model,
@@ -181,11 +186,12 @@ export async function generatePublicDashboardNarrative(
         {
           role: "system",
           content:
-            "You are a senior literacy impact analyst and report writer. Use only the provided evidence. Return JSON with keys: executiveSummary (string), keyHighlights (string[] up to 4), priorityActions (string[] up to 4), methodsNote (string), limitations (string). Write with executive-quality clarity, public-safe language, and professional donor-facing tone. Do not invent numbers or causal claims. Avoid learner identifiers. If evidence is missing, state Data not available.",
+            "You are a senior literacy impact analyst and report writer. Use only the provided evidence. Return JSON with keys: executiveSummary (string), keyHighlights (string[] up to 4), priorityActions (string[] up to 4), methodsNote (string), limitations (string). Write with executive-quality clarity, public-safe language, and professional donor-facing tone. Do not invent numbers or causal claims. Avoid learner identifiers. If evidence is missing, state Data not available." +
+            publicGuardrail,
         },
         {
           role: "user",
-          content: `Create a professional, public-safe literacy dashboard narrative grounded strictly in this evidence JSON:\n${JSON.stringify(
+          content: `Create a professional literacy dashboard narrative grounded strictly in this evidence JSON:\n${JSON.stringify(
             evidencePayload,
           )}`,
         },

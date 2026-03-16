@@ -231,6 +231,8 @@ export interface BlogPost {
 
 export type PortalBlogPublishStatus = "draft" | "published";
 
+export type ReportScope = "Public" | "Internal_School";
+
 export interface PortalBlogPostRecord {
   id: number;
   slug: string;
@@ -1308,6 +1310,8 @@ export interface PublicImpactAggregate {
   };
   kpis: {
     schoolsSupported: number;
+    subCountiesReached: number;
+    totalBooksRead: number;
     teachersSupportedMale: number;
     teachersSupportedFemale: number;
     onlineLiveSessionsCovered: number;
@@ -3574,4 +3578,218 @@ export interface TrainingNotesRecord {
   aiModel: string;
   generatedAt: string; // ISO string
   guardrailVersion: string;
+}
+
+/* ─── Finance V2 (Core Accounting) ────────────────── */
+
+export type FinanceAccountType = "asset" | "liability" | "equity" | "income" | "expense";
+export type FinanceFundType = "restricted" | "unrestricted" | "designated";
+export type FinanceEntryStatus = "draft" | "posted" | "reversed";
+export type FinanceApprovalStatus = "pending" | "approved" | "rejected";
+export type FinanceDocumentType = "receipt" | "invoice" | "voucher" | "report";
+
+export interface FinanceFund {
+  id: number;
+  code: string;
+  name: string;
+  fundType: FinanceFundType;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface FinanceBranch {
+  id: number;
+  name: string;
+  location: string | null;
+  createdAt: string;
+}
+
+export interface FinanceDepartment {
+  id: number;
+  code: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface FinanceProgram {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface FinanceProject {
+  id: number;
+  code: string;
+  name: string;
+  programId: number | null;
+  createdAt: string;
+}
+
+export interface FinanceGrant {
+  id: number;
+  code: string;
+  name: string;
+  grantorContactId: number;
+  fundId: number;
+  totalAwardAmount: number;
+  currency: string;
+  startDate: string;
+  endDate: string;
+  status: "active" | "closed" | "pending";
+  notes: string | null;
+  complianceNotes: string | null;
+  createdAt: string;
+}
+
+export interface ChartOfAccount {
+  id: number;
+  accountCode: string;
+  accountName: string;
+  accountType: FinanceAccountType;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface JournalEntry {
+  id: number;
+  entryNumber: string;
+  entryDate: string;
+  description: string | null;
+  sourceType: string;
+  sourceId: number | null;
+  status: FinanceEntryStatus;
+  postedAt: string | null;
+  postedByUserId: number | null;
+  createdAt: string;
+}
+
+export interface JournalLine {
+  id: number;
+  journalId: number;
+  accountId: number;
+  debit: number;
+  credit: number;
+  fundId: number;
+  departmentId: number | null;
+  programId: number | null;
+  projectId: number | null;
+  grantId: number | null;
+  branchId: number | null;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface BudgetPlan {
+  id: number;
+  fiscalYear: number;
+  title: string;
+  status: "draft" | "active" | "closed";
+  createdAt: string;
+}
+
+export interface BudgetLine {
+  id: number;
+  planId: number;
+  accountId: number;
+  fundId: number;
+  departmentId: number | null;
+  programId: number | null;
+  projectId: number | null;
+  grantId: number | null;
+  amount: number;
+  fiscalPeriod: string;
+  createdAt: string;
+}
+
+export interface FinanceAsset {
+  id: number;
+  assetCode: string;
+  name: string;
+  acquisitionDate: string;
+  purchaseValue: number;
+  currency: string;
+  usefulLifeMonths: number;
+  residualValue: number;
+  depreciationMethod: "straight_line" | "none";
+  vendorId: number | null;
+  fundId: number | null;
+  sourceTxnId: number | null;
+  status: "active" | "disposed";
+  createdAt: string;
+}
+
+export interface GeneratedDocument {
+  id: number;
+  documentNumber: string;
+  documentType: FinanceDocumentType;
+  sourceType: string;
+  sourceId: number;
+  fileId: number | null;
+  storedPath: string | null;
+  generatedByUserId: number;
+  metadata: Record<string, any> | null;
+  isImmutable: boolean;
+  createdAt: string;
+}
+
+/* ─── Geographic Hierarchy (6-Level) ──────────────── */
+
+export interface GeoCountry {
+  id: number;
+  isoCode: string;
+  name: string;
+}
+
+export interface GeoRegion {
+  id: number;
+  name: string;
+  countryId: number;
+}
+
+export interface GeoSubRegion {
+  id: number;
+  name: string;
+  regionId: number;
+}
+
+export interface GeoDistrict {
+  id: number;
+  name: string;
+  subRegionId: number;
+}
+
+export interface GeoParish {
+  id: number;
+  name: string;
+  districtId: number;
+}
+
+export interface LocationFilterState {
+  countryId?: number;
+  regionId?: number;
+  subRegionId?: number;
+  districtId?: number;
+  parishId?: number;
+  schoolId?: number;
+  academicYear?: number;
+  term?: string;
+  grade?: string;
+}
+
+export interface SchoolHierarchyView {
+  schoolId: number;
+  schoolName: string;
+  parishId: number | null;
+  parishName: string | null;
+  districtId: number | null;
+  districtName: string | null;
+  subRegionId: number | null;
+  subRegionName: string | null;
+  regionId: number | null;
+  regionName: string | null;
+  countryId: number | null;
+  countryName: string | null;
 }

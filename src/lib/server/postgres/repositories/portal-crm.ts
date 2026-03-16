@@ -666,10 +666,13 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
     return null;
   }
 
-  const [trainingCount, visitCount, storyCount, linkedRows] = await Promise.all([
+  const isTeacher = row.contactRecordType === 'Teacher' || row.teacherUid || String(row.roleTitle).toLowerCase().includes('teacher');
+
+  const [trainingCount, visitCount, storyCount, evaluationCount, linkedRows, performanceResult] = await Promise.all([
     queryPostgres<{ total: number }>(`SELECT COUNT(*)::int AS total FROM portal_training_attendance WHERE contact_id = $1`, [id]),
     queryPostgres<{ total: number }>(`SELECT COUNT(*)::int AS total FROM visit_participants WHERE contact_id = $1`, [id]),
     queryPostgres<{ total: number }>(`SELECT COUNT(*)::int AS total FROM story_activity_participants WHERE contact_id = $1`, [id]),
+    queryPostgres<{ total: number }>(`SELECT COUNT(*)::int AS total FROM lesson_evaluations WHERE teacher_uid = $1 AND status != 'void'`, [row.teacherUid || 'NONE']),
     queryPostgres(
       `
         SELECT
@@ -701,6 +704,14 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
       `,
       [id],
     ),
+    isTeacher ? queryPostgres(`
+      SELECT 
+        COUNT(*)::int AS total_learners,
+        ROUND(AVG(story_reading_score)::numeric, 1) as avg_reading,
+        ROUND(AVG(reading_comprehension_score)::numeric, 1) as avg_comp
+      FROM assessment_records
+      WHERE teacher_name = $1 OR teacher_uid = $2
+    `, [row.fullName, row.teacherUid]) : Promise.resolve({ rows: [] }),
   ]);
 
   return {
@@ -712,15 +723,20 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
       { label: "Role", value: text(row.roleTitle ?? row.category) },
     ],
     primaryActions: [
-      { label: "School Account", href: `/portal/schools/${row.schoolId}`, tone: "ghost" },
-      { label: "Contact List", href: "/portal/contacts" },
+      ...(isTeacher ? [
+        { label: "New Evaluation", href: `/portal/evaluations/new?teacherId=${id}&schoolId=${row.schoolId}` },
+        { label: "New Coaching", href: `/portal/visits/new?type=Coaching&teacherId=${id}&schoolId=${row.schoolId}` },
+      ] : []),
+      { label: "School Account", href: `/portal/schools/${row.schoolId}`, tone: "ghost" as const },
+      { label: "Contact List", href: "/portal/contacts", tone: "ghost" as const },
     ],
     notice: text(row.isPrimaryContact ? "This contact is the primary account contact for the linked school." : "This contact is linked to the school account and can be attached to trainings, visits, and 1001 story activities."),
     quickLinks: [
       { label: "Trainings", count: whole(trainingCount.rows[0]?.total), href: `/portal/trainings?contact=${encodeURIComponent(text(row.fullName))}`, icon: "TR" },
       { label: "School Visits", count: whole(visitCount.rows[0]?.total), href: `/portal/visits?contact=${encodeURIComponent(text(row.fullName))}`, icon: "VS" },
       { label: "1001 Story", count: whole(storyCount.rows[0]?.total), href: `/portal/story?contact=${encodeURIComponent(text(row.fullName))}`, icon: "ST" },
-      { label: "Assessments", count: 0, href: `/portal/assessments?school=${encodeURIComponent(text(row.schoolName))}`, icon: "AS" },
+      { label: "Assessments", count: whole(performanceResult.rows[0]?.total_learners), href: `/portal/assessments?school=${encodeURIComponent(text(row.schoolName))}`, icon: "AS" },
+      { label: "Evaluations", count: whole(evaluationCount.rows[0]?.total), href: "#growth", icon: "TE" },
     ],
     detailsLeft: [
       { label: "Name", value: text(row.fullName) },
@@ -753,7 +769,7 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
         id: "activity",
         label: "Most Recent Interactions",
         emptyLabel: "No linked activities yet.",
-        items: linkedRows.rows.map((item) =>
+        items: (linkedRows.rows as any[]).map((item) =>
           activity(
             Number(item.id),
             text(item.title),
@@ -769,6 +785,45 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
           ),
         ),
       },
+      ...(isTeacher ? [
+        {
+          id: "performance",
+          label: "Learner Impact",
+          emptyLabel: "No assessment data found for learners assigned to this teacher.",
+          sidebarCards: [
+            {
+              title: "Performance Snapshot",
+              items: [
+                { label: "Learners Linked", value: String(performanceResult.rows[0]?.total_learners || 0) },
+                { label: "Avg Reading Score", value: String(performanceResult.rows[0]?.avg_reading || 0) },
+                { label: "Avg Comp Score", value: String(performanceResult.rows[0]?.avg_comp || 0) },
+              ]
+            }
+          ]
+        },
+        {
+          id: "growth",
+          label: "Professional Growth",
+          emptyLabel: "No evaluation or coaching history recorded for this teacher.",
+          columns: [
+            { key: "date", label: "Date" },
+            { key: "activity", label: "Activity" },
+            { key: "score", label: "Outcome/Level" },
+            { key: "status", label: "Status" },
+          ],
+          rows: (linkedRows.rows as Array<{id: number, module: string, title: string, date: string, status: string}>)
+            .filter(item => item.module === 'lessonEvaluation' || item.module === 'visit')
+            .map(item => ({
+              id: item.id,
+              cells: {
+                date: buildCell(formatDate(item.date)),
+                activity: buildCell(item.title, item.module === 'visit' ? `/portal/visits/${item.id}` : null),
+                score: buildCell(text(item.status)),
+                status: buildCell(text(item.status))
+              }
+            }))
+        }
+      ] : [])
     ],
     sidebarCards: [
       {
@@ -1504,6 +1559,173 @@ export async function getStoryProjectCrmProfile(id: number): Promise<PortalCrmPr
           { label: "District", value: text(row.district) },
           { label: "School Code", value: text(row.schoolCode) },
         ],
+      },
+    ],
+  };
+}
+
+export async function getEvaluationCrmProfile(id: number): Promise<PortalCrmProfileViewModel | null> {
+  const result = await queryPostgres<{
+    id: number;
+    school_id: number;
+    schoolName: string;
+    schoolCode: string;
+    district: string;
+    teacher_uid: string;
+    teacherName: string;
+    teacherRole: string;
+    grade: string;
+    stream: string;
+    class_size: number;
+    lesson_date: string;
+    lesson_focus_json: string;
+    observerName: string;
+    overall_score: number;
+    overall_level: string;
+    domain_scores_json: string;
+    strengths_text: string;
+    priority_gap_text: string;
+    next_coaching_action: string;
+    teacher_commitment: string;
+    catchup_estimate_count: number;
+    catchup_estimate_percent: number;
+    next_visit_date: string;
+    status: string;
+    created_at: string;
+  }>(
+    `
+      SELECT
+        le.id,
+        le.school_id,
+        sd.name AS "schoolName",
+        sd.school_code AS "schoolCode",
+        sd.district,
+        le.teacher_uid,
+        tr.full_name AS "teacherName",
+        tr.role_title AS "teacherRole",
+        le.grade,
+        le.stream,
+        le.class_size,
+        le.lesson_date::text AS "lesson_date",
+        le.lesson_focus_json,
+        pu.full_name AS "observerName",
+        le.overall_score,
+        le.overall_level,
+        le.domain_scores_json,
+        le.strengths_text,
+        le.priority_gap_text,
+        le.next_coaching_action,
+        le.teacher_commitment,
+        le.catchup_estimate_count,
+        le.catchup_estimate_percent,
+        le.next_visit_date::text AS "next_visit_date",
+        le.status,
+        le.created_at::text AS "created_at"
+      FROM lesson_evaluations le
+      JOIN schools_directory sd ON sd.id = le.school_id
+      JOIN teacher_roster tr ON tr.teacher_uid = le.teacher_uid
+      JOIN portal_users pu ON pu.id = le.observer_id
+      WHERE le.id = $1
+      LIMIT 1
+    `,
+    [id],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+
+  const items = await queryPostgres<{
+    domain_key: string;
+    item_key: string;
+    score: number;
+    note: string;
+  }>(
+    `
+      SELECT domain_key, item_key, score, note
+      FROM lesson_evaluation_items
+      WHERE evaluation_id = $1
+      ORDER BY item_key
+    `,
+    [id],
+  );
+
+  const domainScores = safeJson(row.domain_scores_json);
+  const lessonFocus = listFromValue(row.lesson_focus_json);
+
+  return {
+    badge: "Lesson Evaluation",
+    title: `Lesson: ${row.teacherName}`,
+    subtitle: `${row.grade} ${row.stream || ""} • ${formatDate(row.lesson_date)}`,
+    heroFields: [
+      { label: "Overall Level", value: text(row.overall_level) },
+      { label: "Overall Score", value: `${whole(row.overall_score * 100)}%` },
+      { label: "School", value: text(row.schoolName), href: `/portal/schools/${row.school_id}` },
+      { label: "Observer", value: text(row.observerName) },
+    ],
+    primaryActions: [
+      { label: "Print Evaluation", href: `/portal/reports/evaluation/${id}?print=1`, tone: "ghost" },
+    ],
+    notice: row.status === "void" ? "This evaluation has been voided and is excluded from impact metrics." : null,
+    quickLinks: [
+      { label: "Teacher Profile", count: 1, href: `/portal/schools/${row.school_id}/teachers/${row.teacher_uid}`, icon: "TR" },
+      { label: "School Account", count: 1, href: `/portal/schools/${row.school_id}`, icon: "SC" },
+      { label: "Assessments", count: 0, href: `/portal/assessments?teacherUid=${row.teacher_uid}`, icon: "AS" },
+    ],
+    detailsLeft: [
+      { label: "Teacher", value: text(row.teacherName), href: `/portal/schools/${row.school_id}/teachers/${row.teacher_uid}` },
+      { label: "Grade & Stream", value: `${row.grade} ${row.stream || ""}` },
+      { label: "Class Size", value: String(row.class_size || 0) },
+      { label: "Lesson Date", value: formatDate(row.lesson_date) },
+      { label: "Lesson Focus", value: lessonFocus.join(", ") || "-" },
+    ],
+    detailsRight: [
+      { label: "Status", value: text(row.status) },
+      { label: "Teacher Commitment", value: text(row.teacher_commitment) },
+      { label: "Catch-up Estimate", value: `${row.catchup_estimate_count || 0} (${row.catchup_estimate_percent || 0}%)` },
+      { label: "Next Visit Date", value: formatDate(row.next_visit_date) },
+      { label: "Created At", value: formatDateTime(row.created_at) },
+    ],
+    tabs: [
+      {
+        id: "scores",
+        label: "Item Scores",
+        emptyLabel: "No item-level scores recorded.",
+        columns: [
+          { key: "item", label: "Item" },
+          { key: "domain", label: "Domain" },
+          { key: "score", label: "Score" },
+          { key: "note", label: "Note" },
+        ],
+        rows: items.rows.map((item) => ({
+          id: item.item_key,
+          cells: {
+            item: { value: item.item_key },
+            domain: { value: text(item.domain_key) },
+            score: { value: String(item.score) },
+            note: { value: text(item.note) },
+          },
+        })),
+      },
+      {
+        id: "narrative",
+        label: "Coaching Narrative",
+        emptyLabel: "No narrative data.",
+        items: [
+          { id: "strengths", title: "Strengths", subtitle: text(row.strengths_text) },
+          { id: "gaps", title: "Priority Gaps", subtitle: text(row.priority_gap_text) },
+          { id: "action", title: "Next Coaching Action", subtitle: text(row.next_coaching_action) },
+        ],
+      },
+    ],
+    sidebarCards: [
+      {
+        title: "Domain Performance",
+        items: Object.entries(domainScores).map(([domain, score]) => ({
+          label: domain,
+          value: `${Math.round(Number(score) * 100)}%`,
+        })),
       },
     ],
   };

@@ -65,6 +65,8 @@ function buildDashboardHref(
   return `/impact?${query.toString()}`;
 }
 
+import { resolveReportScope } from "@/lib/auth-middleware";
+
 export async function GET(request: NextRequest) {
   const scopeLevel = normalizeScopeLevel(request.nextUrl.searchParams.get("scopeLevel"));
   if (!scopeLevel) {
@@ -73,6 +75,8 @@ export async function GET(request: NextRequest) {
 
   const requestedScopeId = String(request.nextUrl.searchParams.get("scopeId") ?? "").trim();
   const scopeId = scopeLevel === "country" ? "Uganda" : requestedScopeId;
+  const requestedScope = request.nextUrl.searchParams.get("reportScope");
+
   if (scopeLevel !== "country" && !scopeId) {
     return NextResponse.json(
       { error: "scopeId is required for region, subregion, district, and school." },
@@ -83,9 +87,29 @@ export async function GET(request: NextRequest) {
   const period = String(request.nextUrl.searchParams.get("period") ?? "FY").trim() || "FY";
   const format = normalizeFormat(request.nextUrl.searchParams.get("format"));
 
+  // 1. Resolve Authentication and Permissions
+  const token = request.cookies.get("portal_session")?.value ?? request.headers.get("authorization")?.replace("Bearer ", "");
+  let userPermissions: string[] = [];
+  
+  if (token) {
+    const { findPortalUserBySessionTokenPostgres } = await import("@/lib/server/postgres/repositories/auth");
+    const { getPermissionsForPortalUser } = await import("@/lib/server/postgres/repositories/rbac");
+    const user = await findPortalUserBySessionTokenPostgres(token);
+    if (user) {
+      userPermissions = await getPermissionsForPortalUser(user.id);
+    }
+  }
+
+  // 2. Resolve Report Scope (Enforce Fallback to 'Public' if unauthorized)
+  const reportScope = await resolveReportScope(userPermissions, requestedScope);
+
   try {
-    const aggregate = await getPublicImpactAggregate(scopeLevel, scopeId, period);
-    const narrative = await generatePublicDashboardNarrative(aggregate);
+    // 3. Fetch Data with Scope Awareness
+    const aggregate = await getPublicImpactAggregate(scopeLevel, scopeId, period, reportScope);
+    
+    // 4. Generate Narrative with Scope Awareness
+    const narrative = await generatePublicDashboardNarrative(aggregate, reportScope);
+    
     const report = buildPublicDashboardReportModel(aggregate, narrative);
 
     if (format === "json") {

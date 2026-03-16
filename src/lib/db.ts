@@ -152,6 +152,7 @@ import {
   GraduationQueueSummary,
   GraduationSettingsRecord,
   GraduationWorkflowState,
+  ReportScope,
 } from "@/lib/types";
 import {
   computeReadingLevel,
@@ -7892,7 +7893,7 @@ export async function saveAssessmentRecordAsync(
   createdByUserId: number,
 ): Promise<AssessmentRecord> {
   if (!isPostgresConfigured()) {
-    return saveAssessmentRecord(payload, createdByUserId);
+    throw new Error("CRITICAL PERSISTENCE ERROR: DATABASE_URL is not configured. Student assessments cannot be saved to non-persistent store.");
   }
   return await saveAssessmentRecordPostgres(payload, createdByUserId);
 }
@@ -14730,7 +14731,7 @@ export async function createPortalRecordAsync(
   user: PortalUser,
 ): Promise<PortalRecord> {
   if (!isPostgresConfigured()) {
-    return createPortalRecord(input, user);
+    throw new Error("CRITICAL PERSISTENCE ERROR: DATABASE_URL is not configured. Records cannot be saved to non-persistent store.");
   }
   if (input.module === "visit") {
     return await createVisitPortalRecordPostgres(input, user);
@@ -14744,7 +14745,7 @@ export async function updatePortalRecordAsync(
   user: PortalUser,
 ): Promise<PortalRecord> {
   if (!isPostgresConfigured()) {
-    return updatePortalRecord(id, input, user);
+    throw new Error("CRITICAL PERSISTENCE ERROR: DATABASE_URL is not configured. Records cannot be updated in non-persistent store.");
   }
   if (input.module === "visit") {
     return await updateVisitPortalRecordPostgres(id, input, user);
@@ -14759,7 +14760,7 @@ export async function setPortalRecordStatusAsync(
   reviewNote?: string,
 ): Promise<PortalRecord | null> {
   if (!isPostgresConfigured()) {
-    return setPortalRecordStatus(id, status, user, reviewNote);
+    throw new Error("CRITICAL PERSISTENCE ERROR: DATABASE_URL is not configured. Record status cannot be changed in non-persistent store.");
   }
   const current = await getPortalRecordRowPostgres(id);
   if (current?.module === "visit") {
@@ -29725,7 +29726,7 @@ export async function reviewSchoolGraduationAsync(
   actor: PortalUser,
 ) {
   if (!isPostgresConfigured()) {
-    return reviewSchoolGraduation(input, actor);
+    throw new Error("CRITICAL PERSISTENCE ERROR: DATABASE_URL is not configured. Graduation reviews cannot be saved to non-persistent store.");
   }
 
   const schoolId = Number(input.schoolId);
@@ -30917,6 +30918,7 @@ async function getPublicImpactAggregatePostgres(
   scopeLevel: PublicImpactScopeLevel,
   scopeId: string,
   periodLabel?: string | null,
+  reportScope: ReportScope = "Public",
 ): Promise<PublicImpactAggregate> {
   const period = periodWindowFromLabel(periodLabel);
   const scopedSchools = await listScopedSchoolsForPublicImpactPostgres(scopeLevel, scopeId);
@@ -31071,6 +31073,17 @@ async function getPublicImpactAggregatePostgres(
     bucket.push(record);
     teacherRecordBuckets.set(key, bucket);
   });
+
+  // Mask PII if scope is Public
+  if (reportScope === "Public") {
+    scopedLessonEvaluationRecords.forEach((record) => {
+      record.teacherName = "Teacher";
+      // Scrub any other potentially sensitive free-text
+      record.strengthsText = ""; 
+      record.priorityGapText = "";
+      record.nextCoachingAction = "";
+    });
+  }
 
   const teacherComparisons = [...teacherRecordBuckets.values()]
     .map((records) => buildTeacherComparisonFromRecords(records, teachingImprovementSettings))
@@ -31740,6 +31753,11 @@ async function getPublicImpactAggregatePostgres(
     },
     kpis: {
       schoolsSupported: supportedSchools.size,
+      subCountiesReached: new Set(scopedSchools.map((s) => s.subCounty).filter(Boolean)).size,
+      totalBooksRead: (teachingLearningAlignment.points || []).reduce(
+        (sum, p) => sum + (p.storySessionsCount || 0),
+        0,
+      ),
       teachersSupportedMale: teacherKeyByGender.Male.size,
       teachersSupportedFemale: teacherKeyByGender.Female.size,
       onlineLiveSessionsCovered,
@@ -31845,17 +31863,19 @@ export async function getPublicImpactAggregate(
   scopeLevel: PublicImpactScopeLevel,
   scopeId: string,
   periodLabel?: string | null,
+  reportScope: ReportScope = "Public",
 ): Promise<PublicImpactAggregate> {
   if (isPostgresConfigured()) {
-    return getPublicImpactAggregatePostgres(scopeLevel, scopeId, periodLabel);
+    return getPublicImpactAggregatePostgres(scopeLevel, scopeId, periodLabel, reportScope);
   }
-  return getPublicImpactAggregateSqlite(scopeLevel, scopeId, periodLabel);
+  return getPublicImpactAggregateSqlite(scopeLevel, scopeId, periodLabel, reportScope);
 }
 
 function getPublicImpactAggregateSqlite(
   scopeLevel: PublicImpactScopeLevel,
   scopeId: string,
   periodLabel?: string | null,
+  reportScope: ReportScope = "Public",
 ): PublicImpactAggregate {
   const db = getDb();
   const period = periodWindowFromLabel(periodLabel);
@@ -32048,6 +32068,14 @@ function getPublicImpactAggregateSqlite(
   const scopedAssessments = assessmentRows.filter((row) =>
     isDateInWindow(row.assessmentDate, period.startDate, period.endDate),
   );
+
+  // Mask PII if scope is Public
+  if (reportScope === "Public") {
+    scopedAssessments.forEach((row) => {
+      row.learnerUid = "Learner";
+      row.age = null;
+    });
+  }
 
   const assessmentSessionRows =
     schoolIds.length === 0
@@ -32885,6 +32913,12 @@ function getPublicImpactAggregateSqlite(
     },
     kpis: {
       schoolsSupported: supportedSchools.size,
+      subCountiesReached: new Set(scopedSchools.map((s) => (s as any).sub_county).filter(Boolean))
+        .size,
+      totalBooksRead: (teachingLearningAlignment.points || []).reduce(
+        (sum, p) => sum + (p.storySessionsCount || 0),
+        0,
+      ),
       teachersSupportedMale: teacherKeyByGender.Male.size,
       teachersSupportedFemale: teacherKeyByGender.Female.size,
       onlineLiveSessionsCovered,
@@ -35441,7 +35475,7 @@ export async function createLessonEvaluationAsync(
   userId: number,
 ): Promise<LessonEvaluationRecord> {
   if (!isPostgresConfigured()) {
-    return createLessonEvaluation(input, userId);
+    throw new Error("CRITICAL PERSISTENCE ERROR: DATABASE_URL is not configured. Lesson evaluations cannot be saved to non-persistent store.");
   }
   return await createLessonEvaluationPostgres(input, userId);
 }
@@ -35452,7 +35486,7 @@ export async function updateLessonEvaluationAsync(
   userId: number,
 ): Promise<LessonEvaluationRecord> {
   if (!isPostgresConfigured()) {
-    return updateLessonEvaluation(evaluationId, input, userId);
+    throw new Error("CRITICAL PERSISTENCE ERROR: DATABASE_URL is not configured. Lesson evaluations cannot be updated in non-persistent store.");
   }
   return await updateLessonEvaluationPostgres(evaluationId, input, userId);
 }
@@ -35463,7 +35497,7 @@ export async function voidLessonEvaluationAsync(
   reason: string,
 ): Promise<LessonEvaluationRecord | null> {
   if (!isPostgresConfigured()) {
-    return voidLessonEvaluation(evaluationId, userId, reason);
+    throw new Error("CRITICAL PERSISTENCE ERROR: DATABASE_URL is not configured. Lesson evaluations cannot be voided in non-persistent store.");
   }
   return await voidLessonEvaluationPostgres(evaluationId, userId, reason);
 }
@@ -38091,3 +38125,29 @@ export function searchGeoDistricts(q: string): { id: string, name: string, subre
     LIMIT 20
   `).all(`%${q}%`) as { id: string, name: string, subregionName: string, regionName: string, regionId: string, subregionId: string }[];
 }
+
+export function listSchoolsByDistrict(district: string) {
+  const db = getDb();
+  return db.prepare(`
+    SELECT 
+      id, 
+      name, 
+      district,
+      sub_county as subCounty,
+      parish,
+      school_status as status,
+      enrollment_total as enrollment
+    FROM schools_directory
+    WHERE district = ?
+    ORDER BY name ASC
+  `).all(district) as Array<{
+    id: number;
+    name: string;
+    district: string;
+    subCounty: string;
+    parish: string;
+    status: string;
+    enrollment: number;
+  }>;
+}
+

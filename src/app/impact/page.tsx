@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
+import { PublicStatsBar } from "@/components/impact/PublicStatsBar";
+import { getPublicImpactMetrics } from "@/lib/server/postgres/repositories/public-metrics";
 import { getImpactReportFilterFacets, listPublicImpactReports } from "@/lib/db";
 import {
   ImpactReportOutput,
@@ -167,6 +169,10 @@ export default async function ImpactDashboardPage({
     console.error("[impact] Failed to load report facets/list:", error);
   }
 
+  const liveMetrics = await getPublicImpactMetrics({
+    asOf: new Date().toISOString().split("T")[0]
+  });
+
   const selectedYear = resolveReportYear(selectedYearParam, facets.years);
 
   const topFilteredReport = reports[0] ?? null;
@@ -188,6 +194,13 @@ export default async function ImpactDashboardPage({
             </div>
           </div>
         </section>
+
+        <PublicStatsBar stats={{
+          totalSchools: liveMetrics.totalSchools,
+          totalLearners: liveMetrics.totalLearners,
+          avgReadingScore: liveMetrics.averageReadingScore,
+          avgCompScore: liveMetrics.averageCompScore
+        }} />
 
         {/* ═══ Interactive Dashboard ═══ */}
         <section className="section impact-dashboard-section">

@@ -71,6 +71,10 @@ export interface PortalCrmProfileViewModel {
     columns?: CrmListColumn[];
     rows?: CrmListRow[];
     emptyLabel: string;
+    sidebarCards?: Array<{
+      title: string;
+      items: CrmDetailItem[];
+    }>;
   }>;
   sidebarCards?: Array<{
     title: string;

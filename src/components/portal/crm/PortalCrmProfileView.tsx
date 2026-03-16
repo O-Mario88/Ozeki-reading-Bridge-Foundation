@@ -12,7 +12,7 @@ function renderDetail(item: { label: string; value: string; href?: string | null
   return (
     <div key={item.label} className="portal-crm-detail-row">
       <span>{item.label}</span>
-      {item.href ? <Link href={item.href}>{item.value}</Link> : <strong>{item.value}</strong>}
+      {item.href ? <Link href={item.href} target="_blank">{item.value}</Link> : <strong>{item.value}</strong>}
     </div>
   );
 }
@@ -32,7 +32,7 @@ export function PortalCrmProfileView({ profile }: PortalCrmProfileViewProps) {
             {profile.heroFields.map((field) => (
               <div key={field.label}>
                 <span>{field.label}</span>
-                {field.href ? <Link href={field.href}>{field.value}</Link> : <strong>{field.value}</strong>}
+                {field.href ? <Link href={field.href} target="_blank">{field.value}</Link> : <strong>{field.value}</strong>}
               </div>
             ))}
           </div>
@@ -66,7 +66,7 @@ export function PortalCrmProfileView({ profile }: PortalCrmProfileViewProps) {
             </header>
             <div className="portal-crm-quick-grid">
               {profile.quickLinks.map((link) => (
-                <Link key={link.label} href={link.href} className="portal-crm-quick-link">
+                <Link key={link.label} href={link.href} target="_blank" className="portal-crm-quick-link">
                   <span>{link.icon || "•"}</span>
                   <strong>{link.label}</strong>
                   <small>({link.count})</small>
@@ -118,7 +118,7 @@ export function PortalCrmProfileView({ profile }: PortalCrmProfileViewProps) {
                           {active.columns?.map((column) => {
                             const cell = row.cells[column.key];
                             const content = cell?.href ? (
-                              <Link href={cell.href}>{cell.value}</Link>
+                              <Link href={cell.href} target="_blank">{cell.value}</Link>
                             ) : (
                               <span className={cell?.muted ? "is-muted" : undefined}>{cell?.value ?? "-"}</span>
                             );
@@ -142,7 +142,7 @@ export function PortalCrmProfileView({ profile }: PortalCrmProfileViewProps) {
                   (active.items ?? []).map((item) => (
                     <div key={`${active.id}-${item.id}`} className="portal-crm-activity-item">
                       <div>
-                        {item.href ? <Link href={item.href}>{item.title}</Link> : <strong>{item.title}</strong>}
+                        {item.href ? <Link href={item.href} target="_blank">{item.title}</Link> : <strong>{item.title}</strong>}
                         {item.subtitle ? <p>{item.subtitle}</p> : null}
                       </div>
                       <div>
