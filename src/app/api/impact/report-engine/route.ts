@@ -155,10 +155,14 @@ export async function GET(request: NextRequest) {
       const pdfBuffer = await page.pdf({
         format: "A4",
         printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: "<div></div>",
+        footerTemplate:
+          '<div style="width:100%;padding:0 12mm;font-size:9px;color:#475569;text-align:center;font-family:Times New Roman, serif;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
         margin: {
           top: "12mm",
           right: "12mm",
-          bottom: "12mm",
+          bottom: "18mm",
           left: "12mm",
         },
       });

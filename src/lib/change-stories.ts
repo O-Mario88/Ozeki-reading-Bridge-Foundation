@@ -1,9 +1,10 @@
 import {
-  getPublishedPortalTestimonialById,
-  listPublishedPortalTestimonials,
-} from "@/lib/db";
+  getPublishedPortalTestimonialByIdPostgres,
+  listPublishedPortalTestimonialsPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
+import type { PortalTestimonialRecord } from "@/lib/types";
 
-type ChangeStorySource = ReturnType<typeof listPublishedPortalTestimonials>[number];
+type ChangeStorySource = PortalTestimonialRecord;
 
 export type ChangeStorySummary = {
   id: number;
@@ -123,20 +124,21 @@ function buildSummary(story: ChangeStorySource): ChangeStorySummary {
   };
 }
 
-export function listPublishedChangeStories(limit = 180): ChangeStorySummary[] {
-  return listPublishedPortalTestimonials(limit)
+export async function listPublishedChangeStories(limit = 180): Promise<ChangeStorySummary[]> {
+  const rows = await listPublishedPortalTestimonialsPostgres(limit);
+  return rows
     .filter((story) => story.sourceType === "manual")
     .map((story) => buildSummary(story));
 }
 
-export function getPublishedChangeStoryBySlug(slug: string): ChangeStoryDetail | null {
+export async function getPublishedChangeStoryBySlug(slug: string): Promise<ChangeStoryDetail | null> {
   const match = slug.match(/^(\d+)(?:-|$)/);
   const id = Number(match?.[1] ?? "");
   if (!Number.isInteger(id) || id <= 0) {
     return null;
   }
 
-  const story = getPublishedPortalTestimonialById(id);
+  const story = await getPublishedPortalTestimonialByIdPostgres(id);
   if (!story || story.sourceType !== "manual") {
     return null;
   }

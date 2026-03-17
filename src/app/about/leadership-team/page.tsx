@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
-import { listPortalLeadershipTeamMembers } from "@/lib/db";
+import type { PortalLeadershipTeamMemberRecord } from "@/lib/types";
+import { listPortalLeadershipTeamMembersPostgres } from "@/lib/server/postgres/repositories/public-content";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -11,7 +12,7 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-type Profile = ReturnType<typeof listPortalLeadershipTeamMembers>[number];
+type Profile = PortalLeadershipTeamMemberRecord;
 
 function ProfileCard({ profile }: { profile: Profile }) {
   const initials = profile.name
@@ -52,8 +53,8 @@ function ProfileCard({ profile }: { profile: Profile }) {
   );
 }
 
-export default function LeadershipTeamPage() {
-  const profiles = listPortalLeadershipTeamMembers();
+export default async function LeadershipTeamPage() {
+  const profiles = await listPortalLeadershipTeamMembersPostgres();
   const boardMembers = profiles.filter((profile) => profile.section === "board");
   const staffTeam = profiles.filter((profile) => profile.section === "staff");
   const volunteerTeam = profiles.filter((profile) => profile.section === "volunteer");

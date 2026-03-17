@@ -24,8 +24,54 @@ import {
     AI_GUARDRAILS,
 } from "@/lib/recommendations";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getOpenAiServerConfig } from "@/lib/server/openai-config";
 
 export const runtime = "nodejs";
+
+type ReportSection = { heading: string; content: string };
+
+function ensureDisclosureSection(sections: ReportSection[]): ReportSection[] {
+    const disclosureText = AI_GUARDRAILS.requiredDisclosures.join(" ");
+    const index = sections.findIndex((section) => section.heading === "Disclosure");
+    if (index >= 0) {
+        const next = [...sections];
+        next[index] = {
+            heading: "Disclosure",
+            content: disclosureText,
+        };
+        return next;
+    }
+    return [
+        ...sections,
+        {
+            heading: "Disclosure",
+            content: disclosureText,
+        },
+    ];
+}
+
+function enforceSectionGuardrails(
+    sections: ReportSection[],
+    fallbackSections: ReportSection[],
+): ReportSection[] {
+    const fallbackByHeading = new Map(fallbackSections.map((section) => [section.heading, section.content]));
+    const sanitized = sections.map((section) => {
+        const content = String(section.content ?? "").trim();
+        const validation = validateNarrative(content);
+        if (!content || !validation.isValid) {
+            const fallback = fallbackByHeading.get(section.heading) ?? "Data not available for this period.";
+            return {
+                heading: section.heading,
+                content: fallback,
+            };
+        }
+        return {
+            heading: section.heading,
+            content,
+        };
+    });
+    return ensureDisclosureSection(sanitized);
+}
 
 export async function POST(request: Request) {
     const user = await getAuthenticatedPortalUser();
@@ -100,6 +146,7 @@ export async function POST(request: Request) {
         scopeType,
         scopeId,
         reportType,
+        promptContext,
         fidelity,
         gains,
         cost,
@@ -108,7 +155,7 @@ export async function POST(request: Request) {
         impactAggregate.readingLevels ?? null,
         fallbackSections,
     );
-    const reportSections = aiReport.sections;
+    const reportSections = ensureDisclosureSection(aiReport.sections);
 
     // Validate each section against guardrails
     const validations = reportSections.map((section) => ({
@@ -139,6 +186,12 @@ export async function POST(request: Request) {
         hasViolations,
         generatedWithAi: aiReport.generatedWithAi,
         model: aiReport.model,
+        ai: {
+            configured: aiReport.aiConfigured,
+            status: aiReport.status,
+            generatedWithAi: aiReport.generatedWithAi,
+            model: aiReport.model,
+        },
     });
 }
 
@@ -146,25 +199,28 @@ async function generateAiBackedReport(
     scopeType: string,
     scopeId: string,
     reportType: string,
+    promptContext: string,
     fidelity: AggregateFidelityView,
     gains: AggregateLearningGainsView,
     cost: Awaited<ReturnType<typeof getCostEffectivenessData>>,
     quality: AggregateQualitySummaryView,
     recommendations: ReturnType<typeof getApplicableRecommendations>,
     readingLevels: ReadingLevelsBlock | null,
-    fallbackSections: Array<{ heading: string; content: string }>,
+    fallbackSections: ReportSection[],
 ) {
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    if (!apiKey) {
+    const openAiConfig = getOpenAiServerConfig("gpt-5.2-mini");
+    if (!openAiConfig.configured || !openAiConfig.apiKey) {
         return {
-            sections: fallbackSections,
+            sections: ensureDisclosureSection(fallbackSections),
             generatedWithAi: false,
             model: null as string | null,
+            aiConfigured: false,
+            status: openAiConfig.status,
         };
     }
 
-    const model = process.env.OPENAI_REPORT_MODEL?.trim() || "gpt-5-mini";
-    const client = new OpenAI({ apiKey });
+    const model = openAiConfig.model;
+    const client = new OpenAI({ apiKey: openAiConfig.apiKey });
     const evidence = {
         scopeType,
         scopeId,
@@ -175,24 +231,28 @@ async function generateAiBackedReport(
         quality,
         recommendations: recommendations.slice(0, 8),
         readingLevels,
-        fallbackSections,
     };
 
     try {
         const response = await client.chat.completions.create({
             model,
+            temperature: 0.2,
             response_format: { type: "json_object" },
             messages: [
                 {
                     role: "system",
                     content:
-                        "You are a senior monitoring, evaluation, and literacy impact reporting specialist. Write donor-grade, executive-quality, factual report narration for a literacy CRM in Uganda. Use only the evidence provided. Do not invent numbers. Keep tone professional, concise, and implementation-aware. Return JSON with keys executiveSummary, implementationFidelity, learningOutcomes, readingProgress, costEffectiveness, dataQuality, recommendations.",
+                        "You are a senior monitoring, evaluation, and literacy impact reporting specialist. Write donor-grade, executive-quality, factual report narration for a literacy CRM in Uganda. Use only the evidence provided. Do not invent numbers. Keep tone professional, concise, and implementation-aware. Return JSON with keys executiveSummary, implementationFidelity, learningOutcomes, readingProgress, costEffectiveness, dataQuality, recommendations. If a metric is missing, explicitly say Data not available for this period.",
                 },
                 {
                     role: "user",
                     content:
                         `Draft a professional ${reportType} report for ${scopeType}:${scopeId}. ` +
-                        `Use the evidence JSON exactly as provided and keep each section to one compact paragraph.\n` +
+                        `Use the evidence JSON exactly as provided and keep each section to one compact paragraph.\n\n` +
+                        `Guardrail context:\n${promptContext}\n\n` +
+                        `Hard guardrails:\n` +
+                        `- Max ${AI_GUARDRAILS.maxWordsPerSection} words per section\n` +
+                        `- Avoid banned phrases: ${AI_GUARDRAILS.bannedPhrases.join(", ")}\n` +
                         JSON.stringify(evidence),
                 },
             ],
@@ -209,24 +269,30 @@ async function generateAiBackedReport(
             return normalized || fallback;
         };
 
+        const candidateSections: ReportSection[] = [
+            { heading: "Executive Summary", content: sectionText("executiveSummary", "Executive Summary") },
+            { heading: "Implementation Fidelity", content: sectionText("implementationFidelity", "Implementation Fidelity") },
+            { heading: "Learning Outcomes", content: sectionText("learningOutcomes", "Learning Outcomes") },
+            { heading: "Reading Levels Profile and Movement", content: sectionText("readingProgress", "Reading Levels Profile and Movement") },
+            { heading: "Cost-Effectiveness", content: sectionText("costEffectiveness", "Cost-Effectiveness") },
+            { heading: "Data Quality Notes", content: sectionText("dataQuality", "Data Quality Notes") },
+            { heading: "Recommendations", content: sectionText("recommendations", "Recommendations") },
+        ].filter((section) => section.content.trim().length > 0);
+
         return {
-            sections: [
-                { heading: "Executive Summary", content: sectionText("executiveSummary", "Executive Summary") },
-                { heading: "Implementation Fidelity", content: sectionText("implementationFidelity", "Implementation Fidelity") },
-                { heading: "Learning Outcomes", content: sectionText("learningOutcomes", "Learning Outcomes") },
-                { heading: "Reading Levels Profile and Movement", content: sectionText("readingProgress", "Reading Levels Profile and Movement") },
-                { heading: "Cost-Effectiveness", content: sectionText("costEffectiveness", "Cost-Effectiveness") },
-                { heading: "Data Quality Notes", content: sectionText("dataQuality", "Data Quality Notes") },
-                { heading: "Recommendations", content: sectionText("recommendations", "Recommendations") },
-            ].filter((section) => section.content.trim().length > 0),
+            sections: enforceSectionGuardrails(candidateSections, fallbackSections),
             generatedWithAi: true,
             model,
+            aiConfigured: true,
+            status: "ok" as const,
         };
     } catch {
         return {
-            sections: fallbackSections,
+            sections: ensureDisclosureSection(fallbackSections),
             generatedWithAi: false,
             model: null as string | null,
+            aiConfigured: true,
+            status: "request_failed_or_invalid_response" as const,
         };
     }
 }

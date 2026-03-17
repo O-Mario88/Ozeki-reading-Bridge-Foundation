@@ -17,7 +17,7 @@ export async function generateFinancePdf(options: {
   content: (ctx: { doc: PDFDocument; page: any; font: any; fontBold: any; y: number }) => Promise<number>;
 }) {
   const doc = await PDFDocument.create();
-  const { sans, sansBold } = await embedPdfSansFonts(doc);
+  const { regular: sans, bold: sansBold } = await embedPdfSansFonts(doc);
   const logo = await loadBrandLogo(doc);
 
   let page = doc.addPage([595.27, 841.89]); // A4

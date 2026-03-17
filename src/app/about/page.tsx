@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
-import { listPortalCoreValues } from "@/lib/db";
 import { mission, organizationName, vision } from "@/lib/content";
+import { listPortalCoreValuesPostgres } from "@/lib/server/postgres/repositories/public-content";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -12,8 +12,8 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function AboutPage() {
-  const coreValues = listPortalCoreValues();
+export default async function AboutPage() {
+  const coreValues = await listPortalCoreValuesPostgres();
 
   return (
     <>

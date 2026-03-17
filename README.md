@@ -1,72 +1,70 @@
-# Ozeki Reading Bridge Foundation - Production Rebuild
+# Ozeki Reading Bridge Foundation
 
-Production architecture rebuilt into:
-- `frontend/`: Next.js (public site + staff portal UI)
-- `backend/`: Django + Django REST Framework
-- PostgreSQL-only data layer
+Next.js 15 platform for public impact reporting and portal operations, running on **PostgreSQL only**.
 
-## Why This Rebuild
-The previous stack mixed frontend rendering, backend logic, and SQLite schema mutation in one runtime. This rebuild separates concerns, enforces API permissions, and hardens deployment for AWS.
+## Stack
+- Next.js App Router (`src/app`)
+- PostgreSQL (`pg` client, repository-based server modules)
+- Tailwind CSS
 
-## Repository Layout
-- `frontend/` Next.js app consuming Django APIs
-- `backend/` Django project with modular domain apps
-- `data/` legacy SQLite backups for migration input only
-- `docs/` audit, scope freeze, API contracts, migration map, deployment notes
+## PostgreSQL-Only Rule
+- SQLite is disabled in all runtime environments.
+- `DATABASE_URL` is required for production.
+- Any SQLite runtime path throws a hard policy error.
 
-## Setup (Local)
+## Local Setup
 
-### 1) Start PostgreSQL
-Use your local Postgres or Docker Compose (below).
-
-### 2) Backend
+### 1) Start PostgreSQL (Docker Compose)
 ```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp ../.env.example .env
-# set DATABASE_URL and secrets
-python manage.py makemigrations
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver 0.0.0.0:8000
+docker compose up -d postgres
 ```
 
-### 3) Frontend
+Optional full app+db compose:
 ```bash
-cd frontend
+docker compose up --build
+```
+
+### 2) Configure environment
+```bash
+cp .env.example .env.local
+```
+
+Required minimum:
+- `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ozeki`
+- `PORTAL_PASSWORD_SALT=...`
+- `PORTAL_SESSION_SECRET=...`
+
+### 3) Bootstrap schema
+```bash
 npm install
-cp ../.env.example .env.local
-# ensure NEXT_PUBLIC_API_BASE_URL points to backend
+npm run postgres:bootstrap
+```
+
+### 4) Run app
+```bash
 npm run dev
 ```
 
-## SQLite -> PostgreSQL Migration
-1. Backup legacy SQLite:
+## Build and Verification
 ```bash
-cd backend
-./scripts/backup_sqlite.sh ../data/app.db ../data/backups
-```
-2. Run migration script:
-```bash
-python scripts/migrate_sqlite_to_postgres.py
+npm run ci:verify
 ```
 
-## AWS Deployment Targets
-- Frontend: AWS Amplify SSR (`frontend/amplify.yml`)
-- Backend: AWS Elastic Beanstalk/App Runner style Python runtime (`backend/Procfile`, `backend/apprunner.yaml`)
-- Database: Amazon RDS PostgreSQL (`DATABASE_URL`)
+This runs deploy checks, lint, tests, and production build.
 
-## Production Configuration Checklist
-- `DJANGO_SECRET_KEY`, `DATABASE_URL`, `DJANGO_ALLOWED_HOSTS`
-- `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`
-- S3 media/static variables if using bucket storage
-- `NEXT_PUBLIC_API_BASE_URL` on frontend
+## Health Check
+`GET /api/health` verifies:
+- PostgreSQL configured
+- Database reachable (`SELECT 1`)
+- Active runtime DB reported as `postgres`
 
-## Documentation
-- Audit: `docs/2026-03-12-platform-audit.md`
-- Scope freeze: `docs/scope-freeze.md`
-- API contracts: `docs/api-contracts.md`
-- Migration map: `docs/data-migration-map.md`
-- Rebuild summary: `docs/rebuild-summary.md`
+## Deployment Notes
+- Use `npm run start:standalone` in production.
+- Startup includes DB preflight and logs:
+  - `DB=postgres host=... port=... database=... ssl=...`
+- Keep secrets in deployment environment manager, not in repository files.
+
+## Key Docs
+- [Deployment checklist](/Users/omario/Desktop/Notebook%20LM/Ozeki%20reading%20Bridge%20Foundation/docs/deployment-checklist.md)
+- [SQLite cutover audit](/Users/omario/Desktop/Notebook%20LM/Ozeki%20reading%20Bridge%20Foundation/docs/sqlite-cutover-audit.md)
+- [Intelligence roadmap](/Users/omario/Desktop/Notebook%20LM/Ozeki%20reading%20Bridge%20Foundation/docs/intelligence-platform-roadmap.md)

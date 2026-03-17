@@ -1005,7 +1005,7 @@ export async function getAssessmentCrmProfile(id: number): Promise<PortalCrmProf
       { label: "Survey", value: payloadText(payload, "surveyName") ?? text(row.toolVersion, "Annual School Assessment (Core)") },
       { label: "Assessment Number", value: assessmentNumber },
       { label: "Status", value: text(row.status) },
-      { label: "Type", value: text(row.programType, row.assessmentType) },
+      { label: "Type", value: text(row.programType, nullableText(row.assessmentType) ?? undefined) },
       { label: "Review Year", value: payloadText(payload, "reviewYear") ?? "Baseline" },
       { label: "Training Session", value: payloadText(payload, "trainingSessionName") ?? "-" },
       { label: "Total Questions Unanswered", value: String(payloadInt(payload, "totalQuestionsUnanswered") ?? 0) },
@@ -1728,5 +1728,111 @@ export async function getEvaluationCrmProfile(id: number): Promise<PortalCrmProf
         })),
       },
     ],
+  };
+}
+
+export async function listPublishedPortalTestimonialsPostgres(limit = 180): Promise<any[]> {
+  const result = await queryPostgres(
+    `
+      SELECT
+        pt.id,
+        pt.storyteller_name AS "storytellerName",
+        pt.storyteller_role AS "storytellerRole",
+        pt.school_id AS "schoolId",
+        pt.school_name AS "schoolName",
+        pt.district,
+        pt.story_text AS "storyText",
+        pt.video_source_type AS "videoSourceType",
+        pt.video_file_name AS "videoFileName",
+        pt.video_stored_path AS "videoStoredPath",
+        pt.video_mime_type AS "videoMimeType",
+        pt.video_size_bytes AS "videoSizeBytes",
+        pt.youtube_video_id AS "youtubeVideoId",
+        pt.youtube_video_title AS "youtubeVideoTitle",
+        pt.youtube_channel_title AS "youtubeChannelTitle",
+        pt.youtube_thumbnail_url AS "youtubeThumbnailUrl",
+        pt.youtube_embed_url AS "youtubeEmbedUrl",
+        pt.youtube_watch_url AS "youtubeWatchUrl",
+        pt.photo_file_name AS "photoFileName",
+        pt.photo_stored_path AS "photoStoredPath",
+        pt.photo_mime_type AS "photoMimeType",
+        pt.photo_size_bytes AS "photoSizeBytes",
+        pt.is_published AS "isPublished",
+        pt.moderation_status AS "moderationStatus",
+        pt.source_type AS "sourceType",
+        pt.source_training_feedback_id AS "sourceTrainingFeedbackId",
+        pt.source_training_record_id AS "sourceTrainingRecordId",
+        pt.quote_field AS "quoteField",
+        pt.created_by_user_id AS "createdByUserId",
+        pu.full_name AS "createdByName",
+        pt.created_at::text AS "createdAt"
+      FROM portal_testimonials pt
+      JOIN portal_users pu ON pu.id = pt.created_by_user_id
+      WHERE pt.is_published IS TRUE
+        AND COALESCE(pt.moderation_status, 'approved') = 'approved'
+      ORDER BY pt.created_at DESC
+      LIMIT $1
+    `,
+    [limit],
+  );
+
+  return result.rows.map((row) => ({
+    ...row,
+    id: Number(row.id),
+  }));
+}
+
+export async function getPublishedPortalTestimonialByIdPostgres(id: number): Promise<any | null> {
+  const result = await queryPostgres(
+    `
+      SELECT
+        pt.id,
+        pt.storyteller_name AS "storytellerName",
+        pt.storyteller_role AS "storytellerRole",
+        pt.school_id AS "schoolId",
+        pt.school_name AS "schoolName",
+        pt.district,
+        pt.story_text AS "storyText",
+        pt.video_source_type AS "videoSourceType",
+        pt.video_file_name AS "videoFileName",
+        pt.video_stored_path AS "videoStoredPath",
+        pt.video_mime_type AS "videoMimeType",
+        pt.video_size_bytes AS "videoSizeBytes",
+        pt.youtube_video_id AS "youtubeVideoId",
+        pt.youtube_video_title AS "youtubeVideoTitle",
+        pt.youtube_channel_title AS "youtubeChannelTitle",
+        pt.youtube_thumbnail_url AS "youtubeThumbnailUrl",
+        pt.youtube_embed_url AS "youtubeEmbedUrl",
+        pt.youtube_watch_url AS "youtubeWatchUrl",
+        pt.photo_file_name AS "photoFileName",
+        pt.photo_stored_path AS "photoStoredPath",
+        pt.photo_mime_type AS "photoMimeType",
+        pt.photo_size_bytes AS "photoSizeBytes",
+        pt.is_published AS "isPublished",
+        pt.moderation_status AS "moderationStatus",
+        pt.source_type AS "sourceType",
+        pt.source_training_feedback_id AS "sourceTrainingFeedbackId",
+        pt.source_training_record_id AS "sourceTrainingRecordId",
+        pt.quote_field AS "quoteField",
+        pt.created_by_user_id AS "createdByUserId",
+        pu.full_name AS "createdByName",
+        pt.created_at::text AS "createdAt"
+      FROM portal_testimonials pt
+      JOIN portal_users pu ON pu.id = pt.created_by_user_id
+      WHERE pt.id = $1
+        AND pt.is_published IS TRUE
+        AND COALESCE(pt.moderation_status, 'approved') = 'approved'
+      LIMIT 1
+    `,
+    [id],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return {
+    ...row,
+    id: Number(row.id),
   };
 }

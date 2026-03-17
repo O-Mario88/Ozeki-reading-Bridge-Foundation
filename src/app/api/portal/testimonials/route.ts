@@ -5,13 +5,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   getSchoolDirectoryRecord,
-  listPortalTestimonials,
-  savePortalTestimonial,
-  setPortalTestimonialModerationStatus,
 } from "@/lib/db";
 import { resolveMimeType } from "@/lib/media-response";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import {
+  listPortalTestimonialsPostgres,
+  savePortalTestimonialPostgres,
+  setPortalTestimonialModerationStatusPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export const runtime = "nodejs";
 
@@ -314,11 +316,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const schoolIdParam = searchParams.get("schoolId");
   const schoolId = schoolIdParam ? Number.parseInt(schoolIdParam, 10) : NaN;
-  const testimonials = listPortalTestimonials(
+  const testimonials = (await listPortalTestimonialsPostgres(
     user,
     180,
     Number.isInteger(schoolId) && schoolId > 0 ? { schoolId } : undefined,
-  ).map((item) => ({
+  )).map((item) => ({
     ...item,
     videoUrl:
       item.videoSourceType === "youtube"
@@ -427,7 +429,7 @@ export async function POST(request: Request) {
       ? await persistUpload(photo, testimonialsDir as string, "testimonial-photo", "image")
       : null;
 
-    const testimonial = savePortalTestimonial({
+    const testimonial = await savePortalTestimonialPostgres({
       storytellerName: parsedText.storytellerName,
       storytellerRole: parsedText.storytellerRole,
       schoolId: school.id,
@@ -497,13 +499,13 @@ export async function PATCH(request: Request) {
 
   try {
     const payload = moderationSchema.parse(await request.json());
-    setPortalTestimonialModerationStatus({
+    await setPortalTestimonialModerationStatusPostgres({
       testimonialId: payload.testimonialId,
       moderationStatus: payload.moderationStatus,
       user,
     });
 
-    const testimonial = listPortalTestimonials(user, 500).find(
+    const testimonial = (await listPortalTestimonialsPostgres(user, 500)).find(
       (item) => item.id === payload.testimonialId,
     );
     if (!testimonial) {

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  deletePortalCoreValue,
-  savePortalCoreValue,
-  updatePortalCoreValue,
-} from "@/lib/db";
+  deletePortalCoreValuePostgres,
+  savePortalCoreValuePostgres,
+  updatePortalCoreValuePostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";
@@ -29,13 +29,12 @@ export async function POST(request: Request) {
 
   try {
     const body = payloadSchema.parse(await request.json());
-    const value = savePortalCoreValue({
+    const value = await savePortalCoreValuePostgres({
       title: body.title,
       description: body.description,
       sortOrder: body.sortOrder,
       isPublished: body.isPublished,
       userId: user!.id,
-      userName: user!.fullName,
     });
     return NextResponse.json({ value });
   } catch (error) {
@@ -54,14 +53,13 @@ export async function PATCH(request: Request) {
 
   try {
     const body = payloadSchema.extend({ id: z.number().int().positive() }).parse(await request.json());
-    const value = updatePortalCoreValue({
+    const value = await updatePortalCoreValuePostgres({
       id: body.id,
       title: body.title,
       description: body.description,
       sortOrder: body.sortOrder,
       isPublished: body.isPublished,
       userId: user!.id,
-      userName: user!.fullName,
     });
     return NextResponse.json({ value });
   } catch (error) {
@@ -80,11 +78,7 @@ export async function DELETE(request: Request) {
 
   try {
     const body = z.object({ id: z.number().int().positive() }).parse(await request.json());
-    deletePortalCoreValue({
-      id: body.id,
-      userId: user!.id,
-      userName: user!.fullName,
-    });
+    await deletePortalCoreValuePostgres(body.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

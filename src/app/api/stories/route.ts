@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-    listPublishedStories,
-    listStoryLanguages,
-    listStoryTags,
-} from "@/lib/db";
+    listPublishedStoriesPostgres,
+    listStoryLanguagesPostgres,
+    listStoryTagsPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 import type { StoryLibraryFilters } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
         limit: params.get("limit") ? Number(params.get("limit")) : 24,
     };
 
-    const { stories, total } = listPublishedStories(filters);
-    const languages = listStoryLanguages();
-    const tags = listStoryTags();
+    const { stories, total } = await listPublishedStoriesPostgres(filters);
+    const languages = await listStoryLanguagesPostgres();
+    const tags = await listStoryTagsPostgres();
 
     return NextResponse.json({ stories, total, languages, tags });
 }

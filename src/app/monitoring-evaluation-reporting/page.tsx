@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import merPhoto from "../../../assets/photos/Literacy Training in Loro - Oyam District.jpg";
-import { listPublicImpactReports } from "@/lib/db";
+import { listPublicImpactReportsAsync } from "@/lib/db";
 
 export const metadata = {
   title: "Monitoring, Evaluation & Reporting",
@@ -11,8 +11,8 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function MonitoringEvaluationReportingPage() {
-  const publicReports = listPublicImpactReports({ limit: 12 });
+export default async function MonitoringEvaluationReportingPage() {
+  const publicReports = await listPublicImpactReportsAsync({ limit: 12 });
 
   return (
     <>

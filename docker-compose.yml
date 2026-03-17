@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ozeki-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ozeki
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ozeki_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ozeki"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  app:
+    image: node:22-alpine
+    container_name: ozeki-app
+    working_dir: /app
+    command: sh -c "npm ci && npm run postgres:bootstrap && npm run dev"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ozeki
+      DATABASE_SSL: "false"
+      APP_ORIGIN: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    volumes:
+      - ./:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  ozeki_postgres_data:

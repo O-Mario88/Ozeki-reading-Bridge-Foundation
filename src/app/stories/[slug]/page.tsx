@@ -1,9 +1,15 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getStoryBySlug, listPublishedStoriesBySchool, incrementStoryViewCount, listStoryComments, getStoryRatingStats } from "@/lib/db";
 import { StoryReader } from "@/components/StoryReader";
 import { StoryFeedback } from "@/components/StoryFeedback";
 import { notFound } from "next/navigation";
+import {
+    getStoryBySlugPostgres,
+    getStoryRatingStatsPostgres,
+    incrementStoryViewCountPostgres,
+    listPublishedStoriesBySchoolPostgres,
+    listStoryCommentsPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +17,7 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
     const { slug } = await params;
-    const story = getStoryBySlug(slug);
+    const story = await getStoryBySlugPostgres(slug);
     if (!story) return { title: "Story Not Found" };
     const safeAuthorName = story.publicAuthorDisplay?.trim() || "Learner Author";
 
@@ -28,14 +34,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function StoryDetailPage({ params }: { params: Params }) {
     const { slug } = await params;
-    const story = getStoryBySlug(slug);
+    const story = await getStoryBySlugPostgres(slug);
     if (!story) notFound();
 
-    incrementStoryViewCount(story.id);
+    await incrementStoryViewCountPostgres(story.id);
 
-    const moreStories = listPublishedStoriesBySchool(story.schoolId, 4).filter(s => s.slug !== story.slug);
-    const comments = listStoryComments(story.id);
-    const ratingStats = getStoryRatingStats(story.id);
+    const moreStories = (await listPublishedStoriesBySchoolPostgres(story.schoolId, 4)).filter(s => s.slug !== story.slug);
+    const comments = await listStoryCommentsPostgres(story.id);
+    const ratingStats = await getStoryRatingStatsPostgres(story.id);
     const safeAuthorName = story.publicAuthorDisplay?.trim() || "Learner Author";
 
     const articleSchema = {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getImpactSummary, listPublicImpactReports } from "@/lib/db";
+import { getImpactSummary, listPublicImpactReportsAsync } from "@/lib/db";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 export const metadata = {
@@ -11,7 +11,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ImpactMethodologyPage() {
-  const latestReport = listPublicImpactReports({ limit: 1 })[0] ?? null;
+  const latestReport = (await listPublicImpactReportsAsync({ limit: 1 }))[0] ?? null;
   const summary = await getImpactSummary();
 
   const learnersAssessed =

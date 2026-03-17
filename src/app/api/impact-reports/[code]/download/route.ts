@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, rgb } from "pdf-lib";
-import { getImpactReportByCode, incrementImpactReportDownloadCount } from "@/lib/db";
+import { getImpactReportByCodeAsync, incrementImpactReportDownloadCountAsync } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import {
@@ -40,40 +40,58 @@ export async function GET(
 ) {
   const { code } = await context.params;
   const user = await getAuthenticatedPortalUser();
-  const report = getImpactReportByCode(code, user);
+  const report = await getImpactReportByCodeAsync(code, user);
 
   if (!report) {
     return NextResponse.json({ error: "Report not found." }, { status: 404 });
   }
 
   const doc = await PDFDocument.create();
-  const page = doc.addPage([842, 1191]); // A4 landscape-ish readability
+  const pageWidth = 595.28; // A4 portrait
+  const pageHeight = 841.89;
+  const firstPageStartY = 600;
+  const continuationPageStartY = pageHeight - 74;
+  const minBottomY = 92;
   const serifFonts = await embedPdfSerifFonts(doc);
   const font = serifFonts.regular;
   const bold = serifFonts.bold;
   const logo = await loadBrandLogo(doc);
 
-  drawBrandFrame(page);
-  drawBrandWatermark(page, logo);
-  drawBrandHeader({
-    page,
-    font,
-    fontBold: bold,
-    logo,
-    title: "IMPACT REPORT",
-    documentNumber: report.reportCode,
-    subtitle: `${report.scopeType} • ${report.scopeValue} • ${report.periodStart} to ${report.periodEnd}`,
-    titleColor: rgb(0.04, 0.31, 0.4),
-    titleSize: 24,
-    numberSize: 14,
-    subtitleSize: 9.5,
-  });
+  const createBrandedPage = (includeHeader: boolean) => {
+    const nextPage = doc.addPage([pageWidth, pageHeight]);
+    drawBrandFrame(nextPage);
+    drawBrandWatermark(nextPage, logo);
+    if (includeHeader) {
+      drawBrandHeader({
+        page: nextPage,
+        font,
+        fontBold: bold,
+        logo,
+        title: "IMPACT REPORT",
+        documentNumber: report.reportCode,
+        subtitle: `${report.scopeType} • ${report.scopeValue} • ${report.periodStart} to ${report.periodEnd}`,
+        titleColor: rgb(0.04, 0.31, 0.4),
+        titleSize: 24,
+        numberSize: 14,
+        subtitleSize: 9.5,
+      });
+    }
+    return nextPage;
+  };
 
-  let y = 930;
+  let page = createBrandedPage(true);
+  let y = firstPageStartY;
   const left = 36;
   const lineHeight = 15;
+  const ensureSpace = (requiredHeight: number) => {
+    if (y - requiredHeight < minBottomY) {
+      page = createBrandedPage(false);
+      y = continuationPageStartY;
+    }
+  };
 
   const drawLine = (text: string, size = 11, isBold = false, color = rgb(0.05, 0.09, 0.2)) => {
+    ensureSpace(lineHeight);
     page.drawText(text, {
       x: left,
       y,
@@ -85,12 +103,13 @@ export async function GET(
   };
 
   const drawSection = (heading: string, lines: string[]) => {
-    if (y < 120) return;
     y -= 6;
+    ensureSpace(lineHeight);
     drawLine(heading, 13, true, rgb(0.04, 0.31, 0.4));
     lines.forEach((line) => {
-      if (y < 90) return;
-      drawLine(line, 10, false, rgb(0.1, 0.1, 0.1));
+      wrapText(line, 86).forEach((wrappedLine) => {
+        drawLine(wrappedLine, 10, false, rgb(0.1, 0.1, 0.1));
+      });
     });
   };
 
@@ -316,7 +335,7 @@ export async function GET(
   });
 
   const bytes = await doc.save();
-  incrementImpactReportDownloadCount(report.reportCode);
+  await incrementImpactReportDownloadCountAsync(report.reportCode);
 
   return new NextResponse(Buffer.from(bytes), {
     headers: {

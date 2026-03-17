@@ -1,8 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getPublicImpactAggregate, listPublishedStoriesBySchool, listPublishedAnthologiesBySchool } from "@/lib/db";
+import { getPublicImpactAggregate } from "@/lib/db";
 import { TeacherEvaluationPerformanceCards } from "@/components/impact/TeacherEvaluationPerformanceCards";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
+import {
+  listPublishedAnthologiesBySchoolPostgres,
+  listPublishedStoriesBySchoolPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +76,13 @@ export default async function SchoolPage({ params }: { params: Params }) {
   const { id } = await params;
   const scopeId = decodeSchoolId(id);
   const aggregate = await getPublicImpactAggregate("school", scopeId, "FY");
+  const numericSchoolId = Number(scopeId);
+  const schoolAnthologies = Number.isFinite(numericSchoolId)
+    ? await listPublishedAnthologiesBySchoolPostgres(numericSchoolId, 4)
+    : [];
+  const schoolStories = Number.isFinite(numericSchoolId)
+    ? await listPublishedStoriesBySchoolPostgres(numericSchoolId, 4)
+    : [];
   const kpis = aggregate.kpis;
 
   return (
@@ -208,8 +219,6 @@ export default async function SchoolPage({ params }: { params: Params }) {
 
           {/* 1001 Story Library Section */}
           {(() => {
-            const schoolAnthologies = listPublishedAnthologiesBySchool(Number(scopeId), 4);
-            const schoolStories = listPublishedStoriesBySchool(Number(scopeId), 4);
             if (schoolStories.length === 0 && schoolAnthologies.length === 0) return null;
             return (
               <article className="card impact-map-school-sheet" style={{ marginTop: "1.5rem" }}>

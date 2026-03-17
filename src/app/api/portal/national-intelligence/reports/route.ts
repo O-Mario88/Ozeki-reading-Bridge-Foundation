@@ -101,6 +101,9 @@ export async function POST(request: Request) {
       periodStart: payload.periodStart,
       periodEnd: payload.periodEnd,
     });
+    if (!report) {
+      throw new Error("Could not generate national report pack.");
+    }
 
     return NextResponse.json({
       report: {

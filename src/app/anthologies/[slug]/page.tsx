@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getAnthologyBySlug, listPublishedStoriesByAnthology } from "@/lib/db";
 import { AnthologyPdfViewer } from "@/components/AnthologyPdfViewer";
 import Link from "next/link";
+import {
+    getAnthologyBySlugPostgres,
+    listPublishedStoriesByAnthologyPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +13,7 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
     const { slug } = await params;
-    const anthology = getAnthologyBySlug(slug);
+    const anthology = await getAnthologyBySlugPostgres(slug);
 
     if (!anthology) {
         return { title: "Anthology Not Found" };
@@ -30,13 +33,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function AnthologyPage({ params }: { params: Params }) {
     const { slug } = await params;
-    const anthology = getAnthologyBySlug(slug);
+    const anthology = await getAnthologyBySlugPostgres(slug);
 
     if (!anthology) {
         notFound();
     }
 
-    const stories = listPublishedStoriesByAnthology(anthology.id);
+    const stories = await listPublishedStoriesByAnthologyPostgres(anthology.id);
 
     return (
         <>

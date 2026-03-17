@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import { PDFDocument, PDFImage, PDFPage, PDFFont, rgb } from "pdf-lib";
 import { BRAND_LOGO_PATH, BRAND_ORG_NAME, BRAND_WATERMARK_OPACITY } from "@/lib/brand-identity";
 import { officialContact } from "@/lib/contact";
+import { getActiveOrganizationProfile } from "@/lib/server/postgres/repositories/organization-profile";
 
 type HeaderColor = ReturnType<typeof rgb>;
 
@@ -30,6 +32,60 @@ type DrawBrandFooterOptions = {
   lineColor?: HeaderColor;
 };
 
+type ResolvedBrandProfile = {
+  name: string;
+  address: string;
+  poBox: string;
+  telephone: string;
+  email: string;
+  tin: string;
+  registrationNumber: string;
+  logoSource: string | null;
+};
+
+let activeProfile: ResolvedBrandProfile = {
+  name: BRAND_ORG_NAME,
+  address: officialContact.address,
+  poBox: officialContact.postalAddress,
+  telephone: officialContact.phoneDisplay,
+  email: officialContact.email,
+  tin: officialContact.tin,
+  registrationNumber: officialContact.regNo,
+  logoSource: BRAND_LOGO_PATH,
+};
+
+function getBrandProfile() {
+  return activeProfile;
+}
+
+async function resolveBrandProfile() {
+  try {
+    const profile = await getActiveOrganizationProfile();
+    activeProfile = {
+      name: profile.name || BRAND_ORG_NAME,
+      address: profile.address || officialContact.address,
+      poBox: profile.poBox || officialContact.postalAddress,
+      telephone: profile.telephone || officialContact.phoneDisplay,
+      email: profile.email || officialContact.email,
+      tin: profile.tin || officialContact.tin,
+      registrationNumber: profile.registrationNumber || officialContact.regNo,
+      logoSource: profile.logoStorageUrl || BRAND_LOGO_PATH,
+    };
+  } catch {
+    activeProfile = {
+      name: BRAND_ORG_NAME,
+      address: officialContact.address,
+      poBox: officialContact.postalAddress,
+      telephone: officialContact.phoneDisplay,
+      email: officialContact.email,
+      tin: officialContact.tin,
+      registrationNumber: officialContact.regNo,
+      logoSource: BRAND_LOGO_PATH,
+    };
+  }
+  return activeProfile;
+}
+
 function drawCenteredText(
   page: PDFPage,
   font: PDFFont,
@@ -43,9 +99,32 @@ function drawCenteredText(
   page.drawText(text, { x, y, size, font, color });
 }
 
+async function readLogoBytes(logoSource: string | null) {
+  const candidate = logoSource?.trim();
+  if (!candidate) {
+    return fs.readFile(BRAND_LOGO_PATH);
+  }
+
+  if (/^https?:\/\//i.test(candidate)) {
+    const response = await fetch(candidate, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Could not fetch logo from ${candidate}`);
+    }
+    return Buffer.from(await response.arrayBuffer());
+  }
+
+  if (candidate.startsWith("/")) {
+    return fs.readFile(path.join(process.cwd(), "public", candidate));
+  }
+
+  return fs.readFile(path.resolve(candidate));
+}
+
 export async function loadBrandLogo(doc: PDFDocument): Promise<PDFImage | null> {
+  const profile = await resolveBrandProfile();
+
   try {
-    const logoBytes = await fs.readFile(BRAND_LOGO_PATH);
+    const logoBytes = await readLogoBytes(profile.logoSource);
     try {
       return await doc.embedPng(logoBytes);
     } catch {
@@ -100,6 +179,7 @@ export function drawBrandHeader({
   numberSize = 17,
   subtitleSize = 10,
 }: DrawBrandHeaderOptions) {
+  const profile = getBrandProfile();
   const headerTopY = page.getHeight() - 98;
 
   if (logo) {
@@ -113,12 +193,12 @@ export function drawBrandHeader({
     });
   }
 
-  drawCenteredText(page, fontBold, BRAND_ORG_NAME, headerTopY - 20, 16, titleColor);
-  drawCenteredText(page, font, officialContact.address, headerTopY - 34, 8.6, mutedColor);
+  drawCenteredText(page, fontBold, profile.name, headerTopY - 20, 16, titleColor);
+  drawCenteredText(page, font, profile.address, headerTopY - 34, 8.6, mutedColor);
   drawCenteredText(
     page,
     font,
-    `${officialContact.postalAddress} • ${officialContact.phoneDisplay} • ${officialContact.email}`,
+    `${profile.poBox} • ${profile.telephone} • ${profile.email}`,
     headerTopY - 46,
     8.4,
     mutedColor,
@@ -126,7 +206,7 @@ export function drawBrandHeader({
   drawCenteredText(
     page,
     font,
-    `TIN ${officialContact.tin} • REG ${officialContact.regNo}`,
+    `TIN ${profile.tin} • REG ${profile.registrationNumber}`,
     headerTopY - 58,
     8,
     mutedColor,
@@ -155,6 +235,7 @@ export function drawBrandFooter({
   mutedColor = rgb(0.35, 0.4, 0.5),
   lineColor = rgb(0.1, 0.13, 0.18),
 }: DrawBrandFooterOptions) {
+  const profile = getBrandProfile();
   const lineY = 64;
   const lineLeft = 34;
   const lineRight = page.getWidth() - 34;
@@ -162,7 +243,7 @@ export function drawBrandFooter({
     Number.isFinite(pageNumber) && Number.isFinite(totalPages) && Number(pageNumber) > 0
       ? `Page ${Number(pageNumber)} of ${Number(totalPages)}`
       : "";
-  const metaLineTwoCore = `${officialContact.postalAddress} • TIN ${officialContact.tin} • REG ${officialContact.regNo}`;
+  const metaLineTwoCore = `${profile.poBox} • TIN ${profile.tin} • REG ${profile.registrationNumber}`;
   const metaLineTwo = pageLabel ? `${metaLineTwoCore} • ${pageLabel}` : metaLineTwoCore;
 
   page.drawLine({
@@ -175,7 +256,7 @@ export function drawBrandFooter({
   drawCenteredText(
     page,
     font,
-    `${officialContact.address} • ${officialContact.phoneDisplay} • ${officialContact.email}`,
+    `${profile.address} • ${profile.telephone} • ${profile.email}`,
     lineY - 12,
     8,
     mutedColor,
@@ -185,4 +266,8 @@ export function drawBrandFooter({
   if (footerNote && footerNote.trim().length > 0) {
     drawCenteredText(page, font, footerNote, lineY - 31.5, 6.8, mutedColor);
   }
+}
+
+export function getCurrentPdfBrandProfile() {
+  return getBrandProfile();
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getImpactReportByCode, incrementImpactReportViewCount } from "@/lib/db";
+import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export async function GET(
@@ -8,12 +8,12 @@ export async function GET(
 ) {
   const { code } = await context.params;
   const user = await getAuthenticatedPortalUser();
-  const report = getImpactReportByCode(code, user);
+  const report = await getImpactReportByCodeAsync(code, user);
 
   if (!report) {
     return NextResponse.json({ error: "Report not found." }, { status: 404 });
   }
 
-  incrementImpactReportViewCount(code);
+  await incrementImpactReportViewCountAsync(code);
   return NextResponse.json({ report });
 }

@@ -1,12 +1,12 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
-import {
-  getPortalLeadershipTeamMemberById,
-  getPublishedPortalLeadershipTeamMemberById,
-} from "@/lib/db";
 import { createMediaFileResponse, resolveMimeType } from "@/lib/media-response";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import {
+  getPortalLeadershipTeamMemberByIdPostgres,
+  getPublishedPortalLeadershipTeamMemberByIdPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export const runtime = "nodejs";
 
@@ -37,8 +37,8 @@ export async function GET(
     const user = await getAuthenticatedPortalUser();
     const member =
       user && user.role !== "Volunteer"
-        ? getPortalLeadershipTeamMemberById(id)
-        : getPublishedPortalLeadershipTeamMemberById(id);
+        ? await getPortalLeadershipTeamMemberByIdPostgres(id)
+        : await getPublishedPortalLeadershipTeamMemberByIdPostgres(id);
 
     if (!member || !member.photoStoredPath) {
       return NextResponse.json({ error: "Profile photo not found." }, { status: 404 });

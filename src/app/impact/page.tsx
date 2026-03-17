@@ -4,7 +4,7 @@ import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpact
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
 import { PublicStatsBar } from "@/components/impact/PublicStatsBar";
 import { getPublicImpactMetrics } from "@/lib/server/postgres/repositories/public-metrics";
-import { getImpactReportFilterFacets, listPublicImpactReports } from "@/lib/db";
+import { getImpactReportFilterFacetsAsync, listPublicImpactReportsAsync } from "@/lib/db";
 import {
   ImpactReportOutput,
   ImpactReportPeriodType,
@@ -144,12 +144,12 @@ export default async function ImpactDashboardPage({
 
   let reportDataWarning = false;
   let facets = buildFallbackReportFacets();
-  let reports: ReturnType<typeof listPublicImpactReports> = [];
+  let reports: Awaited<ReturnType<typeof listPublicImpactReportsAsync>> = [];
 
   try {
-    facets = getImpactReportFilterFacets();
+    facets = await getImpactReportFilterFacetsAsync();
     const selectedYear = resolveReportYear(selectedYearParam, facets.years);
-    reports = listPublicImpactReports({
+    reports = await listPublicImpactReportsAsync({
       year: selectedYear,
       reportType: parseReportType(selectedType),
       reportCategory: parseReportCategory(selectedCategory),

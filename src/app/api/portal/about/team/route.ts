@@ -3,11 +3,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import {
-  deletePortalLeadershipTeamMember,
-  getPortalLeadershipTeamMemberById,
-  savePortalLeadershipTeamMember,
-  updatePortalLeadershipTeamMember,
-} from "@/lib/db";
+  deletePortalLeadershipTeamMemberPostgres,
+  getPortalLeadershipTeamMemberByIdPostgres,
+  savePortalLeadershipTeamMemberPostgres,
+  updatePortalLeadershipTeamMemberPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
@@ -72,8 +72,8 @@ async function savePhotoFile(file: File) {
   };
 }
 
-function toClientRecord(id: number) {
-  const member = getPortalLeadershipTeamMemberById(id);
+async function toClientRecord(id: number) {
+  const member = await getPortalLeadershipTeamMemberByIdPostgres(id);
   if (!member) {
     throw new Error("Leadership team member not found.");
   }
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     const upload =
       photo instanceof File && photo.size > 0 ? await savePhotoFile(photo) : null;
 
-    const member = savePortalLeadershipTeamMember({
+    const member = await savePortalLeadershipTeamMemberPostgres({
       section: String(formData.get("section") ?? "").trim() as "board" | "staff" | "volunteer",
       name: String(formData.get("name") ?? ""),
       role: String(formData.get("role") ?? ""),
@@ -106,11 +106,10 @@ export async function POST(request: Request) {
       sortOrder: Number(formData.get("sortOrder") ?? 0),
       isPublished: String(formData.get("isPublished") ?? "1") !== "0",
       userId: user!.id,
-      userName: user!.fullName,
       ...upload,
     });
 
-    return NextResponse.json({ member: toClientRecord(member.id) });
+    return NextResponse.json({ member: await toClientRecord(member.id) });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not save leadership team member." },
@@ -132,7 +131,7 @@ export async function PATCH(request: Request) {
       throw new Error("Leadership team member id is invalid.");
     }
 
-    const existing = getPortalLeadershipTeamMemberById(id);
+    const existing = await getPortalLeadershipTeamMemberByIdPostgres(id);
     if (!existing) {
       throw new Error("Leadership team member not found.");
     }
@@ -145,7 +144,7 @@ export async function PATCH(request: Request) {
       await removeStoredFile(existing.photoStoredPath);
     }
 
-    const member = updatePortalLeadershipTeamMember({
+    const member = await updatePortalLeadershipTeamMemberPostgres({
       id,
       section: String(formData.get("section") ?? existing.section).trim() as "board" | "staff" | "volunteer",
       name: String(formData.get("name") ?? existing.name),
@@ -159,14 +158,13 @@ export async function PATCH(request: Request) {
       isPublished:
         String(formData.get("isPublished") ?? (existing.isPublished ? "1" : "0")) !== "0",
       userId: user!.id,
-      userName: user!.fullName,
       photoFileName: removePhoto ? null : upload?.photoFileName ?? existing.photoFileName,
       photoStoredPath: removePhoto ? null : upload?.photoStoredPath ?? existing.photoStoredPath,
       photoMimeType: removePhoto ? null : upload?.photoMimeType ?? existing.photoMimeType,
       photoSizeBytes: removePhoto ? null : upload?.photoSizeBytes ?? existing.photoSizeBytes,
     });
 
-    return NextResponse.json({ member: toClientRecord(member.id) });
+    return NextResponse.json({ member: await toClientRecord(member.id) });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not update leadership team member." },
@@ -187,16 +185,12 @@ export async function DELETE(request: Request) {
     if (!Number.isInteger(id) || id <= 0) {
       throw new Error("Leadership team member id is invalid.");
     }
-    const existing = getPortalLeadershipTeamMemberById(id);
+    const existing = await getPortalLeadershipTeamMemberByIdPostgres(id);
     if (!existing) {
       throw new Error("Leadership team member not found.");
     }
     await removeStoredFile(existing.photoStoredPath);
-    deletePortalLeadershipTeamMember({
-      id,
-      userId: user!.id,
-      userName: user!.fullName,
-    });
+    await deletePortalLeadershipTeamMemberPostgres(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

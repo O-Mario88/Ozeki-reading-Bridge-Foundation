@@ -3,9 +3,10 @@ import SchoolReportManager from "@/components/portal/reports/SchoolReportManager
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 
-export default async function SchoolReportsPage({ params }: { params: { id: string } }) {
+export default async function SchoolReportsPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePortalStaffUser();
-  const schoolId = parseInt(params.id);
+  const { id } = await params;
+  const schoolId = Number.parseInt(id, 10);
 
   const school = await queryPostgres("SELECT name FROM schools_directory WHERE id = $1", [schoolId]);
 

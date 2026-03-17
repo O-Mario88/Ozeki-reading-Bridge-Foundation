@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { PortalAboutContentManager } from "@/components/portal/PortalAboutContentManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import {
-  listPortalCoreValues,
-  listPortalLeadershipTeamMembers,
-} from "@/lib/db";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
+import {
+  listPortalCoreValuesPostgres,
+  listPortalLeadershipTeamMembersPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export const metadata = {
 
 export default async function PortalAboutPage() {
   const user = await requirePortalStaffUser();
-  const members = listPortalLeadershipTeamMembers({ includeUnpublished: true }).map(
+  const members = (await listPortalLeadershipTeamMembersPostgres({ includeUnpublished: true })).map(
     (member) => ({
       ...member,
       photoUrl: member.photoFileName
@@ -24,7 +24,7 @@ export default async function PortalAboutPage() {
         : null,
     }),
   );
-  const values = listPortalCoreValues({ includeUnpublished: true });
+  const values = await listPortalCoreValuesPostgres({ includeUnpublished: true });
 
   return (
     <PortalShell

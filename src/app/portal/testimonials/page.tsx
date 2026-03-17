@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { PortalTestimonialsManager } from "@/components/portal/PortalTestimonialsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listPortalTestimonials, listSchoolDirectoryRecords } from "@/lib/db";
+import { listSchoolDirectoryRecords } from "@/lib/db";
 import { requirePortalUser } from "@/lib/portal-auth";
+import { listPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -45,11 +46,11 @@ export default async function PortalTestimonialsPage({
       ? schoolOptions.find((item) => item.id === requestedSchoolId) ?? null
       : null;
 
-  const testimonials = listPortalTestimonials(
+  const testimonials = (await listPortalTestimonialsPostgres(
     user,
     180,
     selectedSchool ? { schoolId: selectedSchool.id } : undefined,
-  ).map((item) => ({
+  )).map((item) => ({
     ...item,
     videoUrl:
       item.videoSourceType === "youtube"

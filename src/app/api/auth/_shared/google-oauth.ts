@@ -11,7 +11,11 @@ export function getOAuthClientSecret() {
 }
 
 export function getOAuthRedirectUri(origin: string) {
-    return process.env.GOOGLE_OAUTH_REDIRECT_URI ?? `${origin}/api/auth/google/callback`;
+    return (
+        process.env.GOOGLE_WORKSPACE_OAUTH_REDIRECT_URI
+        ?? process.env.GOOGLE_OAUTH_REDIRECT_URI
+        ?? `${origin}/api/auth/google/callback`
+    );
 }
 
 function splitCsvEnv(value: string | undefined) {

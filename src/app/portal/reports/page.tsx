@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
   getPortalOperationalReportsData,
-  listPortalImpactReports,
+  listPortalImpactReportsAsync,
 } from "@/lib/db";
 import { PortalImpactReportsManager } from "@/components/portal/PortalImpactReportsManager";
 import { requirePortalUser, getPortalHomePath } from "@/lib/portal-auth";
@@ -80,7 +80,7 @@ export default async function PortalReportsPage({
       : null;
   const impactReports =
     activeTab === "impact-reports" || activeTab === "school-reading-performance"
-      ? listPortalImpactReports(user, 180)
+      ? await listPortalImpactReportsAsync(user, 180)
       : [];
   const trainingReports =
     activeTab === "training-reports" && canAccessTrainingReports

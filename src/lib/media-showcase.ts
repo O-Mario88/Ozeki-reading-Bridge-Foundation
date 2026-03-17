@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { testimonials } from "@/lib/content";
-import { listPublishedPortalTestimonials } from "@/lib/db";
+import { listPublishedPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
 
 export type MediaKind = "photo" | "video";
 
@@ -160,7 +160,7 @@ function buildFeaturedItems(
 }
 
 async function buildSubmittedItems() {
-  const submissions = listPublishedPortalTestimonials(240);
+  const submissions = await listPublishedPortalTestimonialsPostgres(240);
   const photoItems: MediaShowcaseItem[] = [];
   const videoItems: MediaShowcaseItem[] = [];
   const photoSignatures = new Set<string>();

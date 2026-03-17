@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getImpactReportByCode, incrementImpactReportViewCount } from "@/lib/db";
+import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from "@/lib/db";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 export const dynamic = "force-dynamic";
@@ -117,11 +117,11 @@ export default async function ImpactReportDetailPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const report = getImpactReportByCode(code, null);
+  const report = await getImpactReportByCodeAsync(code, null);
   if (!report) {
     notFound();
   }
-  incrementImpactReportViewCount(code);
+  await incrementImpactReportViewCountAsync(code);
 
   const outcomes = report.factPack.learningOutcomes;
   const outcomeRows = [

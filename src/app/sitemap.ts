@@ -1,8 +1,8 @@
 import { MetadataRoute } from "next";
-import { listPublishedStories } from "@/lib/db";
 import { listPublishedChangeStories } from "@/lib/change-stories";
+import { listPublishedStoriesPostgres } from "@/lib/server/postgres/repositories/public-content";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://ozekireadingbridge.org";
   const routes = [
     "",
@@ -66,7 +66,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Dynamic story entries
   let storyRoutes: MetadataRoute.Sitemap = [];
   try {
-    const { stories } = listPublishedStories({ limit: 100 });
+    const { stories } = await listPublishedStoriesPostgres({ limit: 100 });
     storyRoutes = stories.map((s) => ({
       url: `${base}/stories/${s.slug}`,
       lastModified: s.publishedAt ? new Date(s.publishedAt) : new Date(),
@@ -79,7 +79,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   let changeStoryRoutes: MetadataRoute.Sitemap = [];
   try {
-    const changeStories = listPublishedChangeStories(200);
+    const changeStories = await listPublishedChangeStories(200);
     changeStoryRoutes = changeStories.map((story) => ({
       url: `${base}/impact/case-studies/${story.slug}`,
       lastModified: story.createdAt ? new Date(story.createdAt) : new Date(),

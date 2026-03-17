@@ -161,6 +161,22 @@ export function SchoolRosterPicker({
         fetchRoster();
     }, [fetchRoster]);
 
+    useEffect(() => {
+        if (!showAddModal) {
+            return;
+        }
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                setShowAddModal(false);
+            }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => {
+            window.removeEventListener("keydown", onKeyDown);
+        };
+    }, [showAddModal]);
+
     /* ── Filtered roster ── */
     const filtered = useMemo(() => {
         if (!searchQuery.trim()) return roster;
@@ -371,12 +387,29 @@ export function SchoolRosterPicker({
 
             {/* ── Add-to-School-Account Modal ── */}
             {showAddModal && (
-                <div className="roster-modal-overlay" onClick={() => setShowAddModal(false)}>
+                <div
+                    className="roster-modal-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={`Add ${participantType === "learner" ? "Learner" : "Contact"} to ${schoolName || "School"}`}
+                    onClick={() => setShowAddModal(false)}
+                >
                     <div className="roster-modal" onClick={(e) => e.stopPropagation()}>
-                        <h3>
-                            Add {participantType === "learner" ? "Learner" : "Contact"} to{" "}
-                            {schoolName || "School"}
-                        </h3>
+                        <div className="roster-modal__header">
+                            <h3>
+                                Add {participantType === "learner" ? "Learner" : "Contact"} to{" "}
+                                {schoolName || "School"}
+                            </h3>
+                            <button
+                                type="button"
+                                className="button button-ghost roster-modal__close"
+                                onClick={() => setShowAddModal(false)}
+                                aria-label="Close"
+                                title="Close"
+                            >
+                                ×
+                            </button>
+                        </div>
 
                         {participantType === "teacher" ? (
                             <div className="roster-modal__fields">

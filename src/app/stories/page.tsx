@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
-import { listPublishedStories, listStoryLanguages, listStoryTags, listPublishedAnthologies } from "@/lib/db";
 import { StoryLibraryClient } from "@/components/StoryLibraryClient";
 import { FeaturedAnthologyHero } from "@/components/dashboard/FeaturedAnthologyHero";
+import {
+    listPublishedAnthologiesPostgres,
+    listPublishedStoriesPostgres,
+    listStoryLanguagesPostgres,
+    listStoryTagsPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +21,11 @@ export const metadata: Metadata = {
     },
 };
 
-export default function StoriesPage() {
-    const { stories, total } = listPublishedStories({ limit: 24 });
-    const anthologies = listPublishedAnthologies({ limit: 24 });
-    const languages = listStoryLanguages();
-    const tags = listStoryTags();
+export default async function StoriesPage() {
+    const { stories, total } = await listPublishedStoriesPostgres({ limit: 24 });
+    const anthologies = await listPublishedAnthologiesPostgres({ limit: 24 });
+    const languages = await listStoryLanguagesPostgres();
+    const tags = await listStoryTagsPostgres();
 
     return (
         <>

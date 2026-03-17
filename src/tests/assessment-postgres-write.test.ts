@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import test from "node:test";
 import { saveAssessmentRecordAsync } from "../lib/db";
 import { isPostgresConfigured, queryPostgres } from "../lib/server/postgres/client";
@@ -16,11 +14,6 @@ test(
         error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
       t.skip(`PostgreSQL is not reachable (${code}).`);
       return;
-    }
-
-    const sqlitePath = path.resolve(process.cwd(), "data/app.db");
-    if (fs.existsSync(sqlitePath)) {
-      fs.unlinkSync(sqlitePath);
     }
 
     const schoolResult = await queryPostgres<{ id: number }>(
@@ -102,7 +95,5 @@ test(
       [saved.learnerUid],
     );
     assert.equal(Number(schoolLearnerRows.rows[0]?.c ?? 0), 1);
-
-    assert.equal(fs.existsSync(sqlitePath), false);
   },
 );

@@ -75,9 +75,9 @@ async function findAvailableRecordDate(
     if (Number(existing.rows[0]?.c ?? 0) === 0) {
       return candidate;
     }
-    candidate = new Date(`${candidate}T00:00:00.000Z`);
-    candidate.setUTCDate(candidate.getUTCDate() + 1);
-    candidate = candidate.toISOString().slice(0, 10);
+    const nextCandidateDate = new Date(`${candidate}T00:00:00.000Z`);
+    nextCandidateDate.setUTCDate(nextCandidateDate.getUTCDate() + 1);
+    candidate = nextCandidateDate.toISOString().slice(0, 10);
   }
   throw new Error(`Could not find an available date for ${module}.`);
 }
@@ -127,14 +127,14 @@ test(
       demoClass: "P3",
       demoFocus: "New sound routines",
       demoMinutes: 40,
-      demoTeachersPresentContactIds: [seed.contactId],
+      demoTeachersPresentContactIds: [String(seed.contactId)],
       demoTakeawaysText: `Demo takeaways ${stamp}`,
       implementationStartDate: "2028-01-08",
       dailyReadingTimeMinutes: 30,
       classesToStartFirst: ["P3"],
       implementationResponsibleContactId: seed.contactId,
       supportNeededFromOzeki: ["Coaching follow-up"],
-      leadershipAttendeesContactIds: [seed.contactId],
+      leadershipAttendeesContactIds: [String(seed.contactId)],
       leadershipSummary: `Leadership summary ${stamp}`,
       leadershipAgreements: `Leadership agreements ${stamp}`,
       leadershipRisks: `Leadership risks ${stamp}`,
