@@ -2,43 +2,43 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import test from "node:test";
 import {
-  createFinanceContact,
-  createFinanceExpense,
+  createFinanceContactAsync,
+  createFinanceExpenseAsync,
   createFinanceFileRecord,
-  createFinanceInvoice,
-  createFinanceReceipt,
+  createFinanceInvoiceAsync,
+  createFinanceReceiptAsync,
   generateFinanceMonthlyStatement,
   issueFinanceReceipt,
   sendFinanceInvoice,
   listFinanceLedgerTransactions,
   postFinanceExpenseAsync,
   recordFinancePayment,
-  submitFinanceExpense,
-  upsertFinanceExpenseReceipts,
+  submitFinanceExpenseAsync,
+  upsertFinanceExpenseReceiptsAsync,
 } from "../lib/finance-db";
-import { getDb } from "../lib/db";
+import { queryPostgres } from "../lib/server/postgres/client";
 
-function getTestActor() {
-  const db = getDb();
-  const row = db.prepare(
+async function getTestActor() {
+  const result = await queryPostgres<{ id: number; full_name: string }>(
     `
-      SELECT id, full_name AS fullName
+      SELECT id, full_name
       FROM portal_users
-      WHERE is_superadmin = 1
+      WHERE is_superadmin = true
       ORDER BY id ASC
       LIMIT 1
     `,
-  ).get() as { id: number; fullName: string } | undefined;
+  );
+  const row = result.rows[0];
   assert.ok(row, "Expected at least one super admin user.");
   return {
-    userId: row.id,
-    userName: row.fullName,
+    userId: Number(row.id),
+    userName: String(row.full_name),
   };
 }
 
 test("issuing receipt auto-creates posted money_in ledger entry", async () => {
-  const actor = getTestActor();
-  const contact = createFinanceContact(
+  const actor = await getTestActor();
+  const contact = await createFinanceContactAsync(
     {
       name: `Finance Test Contact ${Date.now()}`,
       emails: [`finance-test-${Date.now()}@example.org`],
@@ -47,7 +47,7 @@ test("issuing receipt auto-creates posted money_in ledger entry", async () => {
     actor,
   );
 
-  const invoice = createFinanceInvoice(
+  const invoice = await createFinanceInvoiceAsync(
     {
       contactId: contact.id,
       category: "Donation",
@@ -60,7 +60,7 @@ test("issuing receipt auto-creates posted money_in ledger entry", async () => {
     actor,
   );
 
-  const receipt = createFinanceReceipt(
+  const receipt = await createFinanceReceiptAsync(
     {
       contactId: contact.id,
       category: "Donation",
@@ -91,9 +91,9 @@ test("issuing receipt auto-creates posted money_in ledger entry", async () => {
 });
 
 test("invoice email is not marked as sent when SMTP is unavailable", async () => {
-  const actor = getTestActor();
+  const actor = await getTestActor();
   const stamp = Date.now();
-  const contact = createFinanceContact(
+  const contact = await createFinanceContactAsync(
     {
       name: `Invoice Send Contact ${stamp}`,
       emails: [`invoice-send-${stamp}@example.org`],
@@ -102,7 +102,7 @@ test("invoice email is not marked as sent when SMTP is unavailable", async () =>
     actor,
   );
 
-  const invoice = createFinanceInvoice(
+  const invoice = await createFinanceInvoiceAsync(
     {
       contactId: contact.id,
       category: "Contracts",
@@ -123,8 +123,8 @@ test("invoice email is not marked as sent when SMTP is unavailable", async () =>
 });
 
 test("expense posting requires evidence and creates money_out ledger", async () => {
-  const actor = getTestActor();
-  const draft = createFinanceExpense(
+  const actor = await getTestActor();
+  const draft = await createFinanceExpenseAsync(
     {
       vendorName: `Vendor ${Date.now()}`,
       date: "2026-03-03",
@@ -138,7 +138,7 @@ test("expense posting requires evidence and creates money_out ledger", async () 
     actor,
   );
 
-  submitFinanceExpense(draft.id, actor);
+  await submitFinanceExpenseAsync(draft.id, actor);
   await assert.rejects(
     () => postFinanceExpenseAsync(draft.id, actor),
     /(evidence upload is required|EXP-001: Expense has no receipt evidence metadata)/i,
@@ -156,7 +156,7 @@ test("expense posting requires evidence and creates money_out ledger", async () 
     actor,
   );
 
-  upsertFinanceExpenseReceipts(
+  await upsertFinanceExpenseReceiptsAsync(
     draft.id,
     [
       {
@@ -185,7 +185,7 @@ test("expense posting requires evidence and creates money_out ledger", async () 
 });
 
 test("monthly statement sums posted ledger entries", async () => {
-  const actor = getTestActor();
+  const actor = await getTestActor();
   const month = "2026-03";
   const statement = await generateFinanceMonthlyStatement(month, "UGX", actor);
   assert.equal(statement.month, month);
@@ -199,7 +199,7 @@ test("monthly statement sums posted ledger entries", async () => {
 });
 
 test("quarterly and fiscal year statement periods are generated", async () => {
-  const actor = getTestActor();
+  const actor = await getTestActor();
 
   const quarterly = await generateFinanceMonthlyStatement(
     {
@@ -226,9 +226,9 @@ test("quarterly and fiscal year statement periods are generated", async () => {
 });
 
 test("full invoice payment auto-prepares linked receipt PDF", async () => {
-  const actor = getTestActor();
+  const actor = await getTestActor();
   const stamp = Date.now();
-  const contact = createFinanceContact(
+  const contact = await createFinanceContactAsync(
     {
       name: `Invoice Receipt Contact ${stamp}`,
       emails: [`accountant-${stamp}@example.org`],
@@ -237,7 +237,7 @@ test("full invoice payment auto-prepares linked receipt PDF", async () => {
     actor,
   );
 
-  const invoice = createFinanceInvoice(
+  const invoice = await createFinanceInvoiceAsync(
     {
       contactId: contact.id,
       category: "Contracts",

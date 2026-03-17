@@ -396,6 +396,27 @@ function todayIsoDate() {
   return nowIso().slice(0, 10);
 }
 
+function toIsoDateOnly(value: unknown, fallback = todayIsoDate()) {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  const text = String(value).trim();
+  if (!text) {
+    return fallback;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return text;
+  }
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) {
+    return fallback;
+  }
+  return parsed.toISOString().slice(0, 10);
+}
+
 function normalizeCurrency(value: string | undefined | null): FinanceCurrency {
   if (String(value || "").toUpperCase() === "USD") {
     return "USD";
@@ -2421,6 +2442,339 @@ function parseLineItems(input: FinanceInvoiceLineItemInput[]) {
   }));
 }
 
+async function financeQuery<Row extends Record<string, unknown> = Record<string, unknown>>(
+  sql: string,
+  params: unknown[] = [],
+  client?: PoolClient,
+) {
+  if (client) {
+    return client.query<Row>(sql, params);
+  }
+  return queryPostgres<Row>(sql, params);
+}
+
+async function nextNumberForPostgres(
+  table: "finance_invoices" | "finance_receipts" | "finance_expenses",
+  column: "invoice_number" | "receipt_number" | "expense_number",
+  prefix: string,
+  client?: PoolClient,
+) {
+  const normalizedPrefix = String(prefix || "").trim() || "ID";
+  const result = await financeQuery<{ num: string | null }>(
+    `SELECT ${column} AS num FROM ${table} WHERE ${column} LIKE $1`,
+    [`${normalizedPrefix}-%`],
+    client,
+  );
+  let maxSeq = 0;
+  result.rows.forEach((row) => {
+    const raw = String(row.num ?? "").trim();
+    const segments = raw.split("-");
+    const candidate = Number(segments[segments.length - 1] ?? "0");
+    if (Number.isInteger(candidate) && candidate > maxSeq) {
+      maxSeq = candidate;
+    }
+  });
+  const nextSeq = maxSeq > 0 ? maxSeq + 1 : 1001;
+  return `${normalizedPrefix}-${String(nextSeq).padStart(4, "0")}`;
+}
+
+async function ensureFinanceSettingsPostgres(client?: PoolClient) {
+  await financeQuery(
+    `
+      INSERT INTO finance_settings (
+        id,
+        from_email,
+        cc_finance_email,
+        invoice_prefix,
+        receipt_prefix,
+        expense_prefix,
+        subcategories_json,
+        invoice_email_template,
+        receipt_email_template,
+        payment_instructions,
+        cash_threshold_ugx,
+        cash_threshold_usd,
+        backdate_days_limit,
+        allow_receipt_mismatch_override,
+        allow_receipt_reuse_override,
+        outlier_multiplier,
+        updated_at
+      )
+      VALUES (
+        1,
+        $1,
+        NULL,
+        'INV',
+        'RCT',
+        'EXP',
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11,
+        $12
+      )
+      ON CONFLICT (id) DO NOTHING
+    `,
+    [
+      getFinanceDefaultSender(),
+      JSON.stringify(DEFAULT_CATEGORY_SUBCATEGORIES),
+      DEFAULT_INVOICE_TEMPLATE,
+      DEFAULT_RECEIPT_TEMPLATE,
+      DEFAULT_PAYMENT_INSTRUCTIONS,
+      DEFAULT_AUDIT_SETTINGS.cashThresholdUgx,
+      DEFAULT_AUDIT_SETTINGS.cashThresholdUsd,
+      DEFAULT_AUDIT_SETTINGS.backdateDaysLimit,
+      DEFAULT_AUDIT_SETTINGS.allowReceiptMismatchOverride ? 1 : 0,
+      DEFAULT_AUDIT_SETTINGS.allowReceiptReuseOverride ? 1 : 0,
+      DEFAULT_AUDIT_SETTINGS.outlierMultiplier,
+      nowIso(),
+    ],
+    client,
+  );
+}
+
+const FINANCE_SEQUENCE_TABLES = new Set([
+  "finance_contacts",
+  "finance_files",
+  "finance_invoices",
+  "finance_invoice_items",
+  "finance_receipts",
+  "finance_payments",
+  "finance_expenses",
+  "finance_expense_receipts",
+  "finance_transactions_ledger",
+  "finance_email_logs",
+  "finance_statement_lines",
+  "finance_monthly_statements",
+]);
+
+async function syncFinanceIdSequencePostgres(table: string, client?: PoolClient) {
+  if (!FINANCE_SEQUENCE_TABLES.has(table)) {
+    return;
+  }
+  const sequenceResult = await financeQuery<{ seq: string | null }>(
+    "SELECT pg_get_serial_sequence($1, 'id') AS seq",
+    [table],
+    client,
+  );
+  const seq = sequenceResult.rows[0]?.seq;
+  if (!seq) {
+    return;
+  }
+  const maxResult = await financeQuery<{ max_id: number }>(
+    `SELECT COALESCE(MAX(id), 0)::bigint AS max_id FROM ${table}`,
+    [],
+    client,
+  );
+  const maxId = Number(maxResult.rows[0]?.max_id || 0);
+  await financeQuery(
+    "SELECT setval($1, CASE WHEN $2 < 1 THEN 1 ELSE $2 END, true)",
+    [seq, maxId],
+    client,
+  );
+}
+
+async function getFinanceContactPostgres(contactId: number, client?: PoolClient) {
+  const result = await financeQuery<{
+    id: number;
+    name: string;
+    emails_json: string;
+    phone: string | null;
+    address: string | null;
+    contact_type: string;
+    created_at: string;
+  }>(
+    `
+      SELECT
+        id,
+        name,
+        emails_json,
+        phone,
+        address,
+        contact_type,
+        created_at
+      FROM finance_contacts
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [contactId],
+    client,
+  );
+  const row = result.rows[0];
+  if (!row) {
+    throw new Error("Contact not found.");
+  }
+  return parseContactRow({
+    id: Number(row.id),
+    name: String(row.name),
+    emailsJson: String(row.emails_json ?? "[]"),
+    phone: row.phone ?? null,
+    address: row.address ?? null,
+    contactType: String(row.contact_type ?? "other"),
+    createdAt: String(row.created_at),
+  });
+}
+
+async function createLedgerEntryPostgres(
+  input: {
+    txnType: "money_in" | "money_out";
+    category: FinanceBaseIncomeCategory | "Expense";
+    displayCategory?: FinanceIncomeCategory;
+    subcategory?: string;
+    date: string;
+    currency: FinanceCurrency;
+    amount: number;
+    counterpartyContactId?: number;
+    sourceType: FinanceTransactionSourceType;
+    sourceId: number;
+    notes?: string;
+    evidenceFileIds?: number[];
+    postedStatus?: FinancePostedStatus;
+    actor: FinanceActor;
+  },
+  client?: PoolClient,
+) {
+  await syncFinanceIdSequencePostgres("finance_transactions_ledger", client);
+  const status = input.postedStatus || "posted";
+  await financeQuery(
+    `
+      INSERT INTO finance_transactions_ledger (
+        txn_type,
+        category,
+        display_category,
+        subcategory,
+        date,
+        currency,
+        amount,
+        counterparty_contact_id,
+        source_type,
+        source_id,
+        notes,
+        evidence_file_ids_json,
+        posted_status,
+        posted_at,
+        created_by_user_id,
+        created_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+      )
+    `,
+    [
+      input.txnType,
+      input.category,
+      input.displayCategory || null,
+      input.subcategory || null,
+      toIsoDateOnly(input.date),
+      normalizeCurrency(input.currency),
+      normalizeNumber(input.amount),
+      input.counterpartyContactId ?? null,
+      input.sourceType,
+      input.sourceId,
+      input.notes || null,
+      JSON.stringify((input.evidenceFileIds || []).filter((id) => Number.isFinite(id))),
+      status,
+      status === "posted" ? nowIso() : null,
+      input.actor.userId,
+      nowIso(),
+    ],
+    client,
+  );
+}
+
+async function voidLedgerEntriesForSourcePostgres(
+  sourceType: FinanceTransactionSourceType,
+  sourceId: number,
+  reason: string,
+  actor: FinanceActor,
+  client?: PoolClient,
+) {
+  await financeQuery(
+    `
+      UPDATE finance_transactions_ledger
+      SET posted_status = 'void',
+          void_reason = $1,
+          notes = CONCAT(COALESCE(notes, ''), E'\\nVoided by ', $2, ' at ', $3)
+      WHERE source_type = $4
+        AND source_id = $5
+        AND posted_status != 'void'
+    `,
+    [reason, actor.userName, nowIso(), sourceType, sourceId],
+    client,
+  );
+}
+
+async function refreshInvoiceBalancesPostgres(invoiceId: number, client?: PoolClient) {
+  const invoiceResult = await financeQuery<{
+    id: number;
+    total: number;
+    due_date: string;
+    status: FinanceInvoiceRecord["status"];
+  }>(
+    `
+      SELECT id, total, due_date, status
+      FROM finance_invoices
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [invoiceId],
+    client,
+  );
+  const invoice = invoiceResult.rows[0];
+  if (!invoice) {
+    throw new Error("Invoice not found.");
+  }
+  if (invoice.status === "void") {
+    return;
+  }
+
+  const paymentResult = await financeQuery<{ total: number }>(
+    `
+      SELECT COALESCE(SUM(amount), 0) AS total
+      FROM finance_payments
+      WHERE related_invoice_id = $1
+        AND status = 'posted'
+    `,
+    [invoiceId],
+    client,
+  );
+  const receiptResult = await financeQuery<{ total: number }>(
+    `
+      SELECT COALESCE(SUM(amount_received), 0) AS total
+      FROM finance_receipts
+      WHERE related_invoice_id = $1
+        AND status = 'issued'
+    `,
+    [invoiceId],
+    client,
+  );
+
+  const paidAmount = normalizeNumber(
+    Number(paymentResult.rows[0]?.total || 0) + Number(receiptResult.rows[0]?.total || 0),
+  );
+  const total = normalizeNumber(Number(invoice.total || 0));
+  const balanceDue = normalizeNumber(Math.max(0, total - paidAmount));
+  const nextStatus = computeInvoiceStatus(invoice.status, invoice.due_date, total, paidAmount);
+
+  await financeQuery(
+    `
+      UPDATE finance_invoices
+      SET paid_amount = $1,
+          balance_due = $2,
+          status = $3,
+          updated_at = $4
+      WHERE id = $5
+    `,
+    [paidAmount, balanceDue, nextStatus, nowIso(), invoiceId],
+    client,
+  );
+}
+
 export function getSignedFinanceFileUrl(fileId: number, expiresInSeconds = 60 * 60) {
   ensureFinanceSchema();
   const expires = Math.floor(Date.now() / 1000) + Math.max(60, expiresInSeconds);
@@ -3067,6 +3421,139 @@ export async function sendFinanceInvoice(
   options?: { to?: string[]; cc?: string[] },
 ) {
   ensureFinanceSchema();
+  if (isPostgresConfigured()) {
+    await ensureFinanceSettingsPostgres();
+    const settings = await getFinanceSettingsPostgres();
+    const invoice = await getFinanceInvoiceByIdPostgres(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found.");
+    }
+    if (invoice.status === "void") {
+      throw new Error("Cannot send a void invoice.");
+    }
+    const contact = await getFinanceContactPostgres(invoice.contactId);
+    const explicitTo = options?.to?.length ? options.to : [];
+    let to = sanitizeEmailList(explicitTo.length > 0 ? explicitTo : contact.emails.slice(0, 1));
+    if (to.length === 0 && explicitTo.length === 0) {
+      to = sanitizeEmailList(contact.emails);
+    }
+    if (to.length === 0) {
+      throw new Error("Invoice contact has no valid email address.");
+    }
+    const cc = buildFinanceCcList(
+      options?.cc,
+      settings.ccFinanceEmail ? [settings.ccFinanceEmail] : undefined,
+      REQUIRED_INVOICE_CC,
+    );
+    const from = resolveFinanceFromEmail(settings.fromEmail);
+
+    const pdf = await generateInvoicePdfFile({
+      invoiceNumber: invoice.invoiceNumber,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      currency: invoice.currency,
+      category: invoice.category,
+      contactName: contact.name,
+      contactEmails: contact.emails,
+      lineItems: invoice.lineItems,
+      subtotal: invoice.subtotal,
+      tax: invoice.tax || 0,
+      total: invoice.total,
+      notes: invoice.notes,
+      paymentInstructions: settings.paymentInstructions,
+    });
+
+    const file = await createFinanceFileRecord(
+      {
+        sourceType: "invoice_pdf",
+        sourceId: invoice.id,
+        fileName: pdf.fileName,
+        bytes: Buffer.from(""),
+        mimeType: "application/pdf",
+      },
+      actor,
+    );
+    await queryPostgres(
+      `
+        UPDATE finance_files
+        SET stored_path = $1
+        WHERE id = $2
+      `,
+      [pdf.storedPath, file.id],
+    );
+
+    const htmlBodyRaw = renderTemplate(settings.invoiceEmailTemplate, {
+      contactName: contact.name,
+      invoiceNumber: invoice.invoiceNumber,
+      currency: invoice.currency,
+      total: invoice.total.toLocaleString(),
+      dueDate: invoice.dueDate,
+      paymentInstructions: settings.paymentInstructions || "",
+    }).replace(/\n/g, "<br/>") +
+      `<br/><br/>${officialContact.address}<br/>${officialContact.postalAddress}<br/>Email: ${officialContact.email}<br/>Phone: ${officialContact.phoneDisplay}`;
+    const subject = `Invoice ${invoice.invoiceNumber} • Ozeki Reading Bridge Foundation`;
+    const result = await sendFinanceMail({
+      from,
+      to,
+      cc,
+      subject,
+      html: htmlBodyRaw,
+      text: htmlBodyRaw.replace(/<br\s*\/?>/g, "\n"),
+      attachments: [{ filename: pdf.fileName, path: pdf.storedPath, contentType: "application/pdf" }],
+    });
+
+    await queryPostgres(
+      `
+        UPDATE finance_invoices
+        SET status = CASE
+              WHEN $1 = true AND status = 'draft' THEN 'sent'
+              ELSE status
+            END,
+            emailed_at = CASE
+              WHEN $1 = true THEN $2
+              ELSE emailed_at
+            END,
+            last_sent_to = CASE
+              WHEN $1 = true THEN $3
+              ELSE last_sent_to
+            END,
+            pdf_stored_path = $4,
+            pdf_file_id = $5,
+            updated_at = $2
+        WHERE id = $6
+      `,
+      [result.status === "sent", nowIso(), to.join(", "), pdf.storedPath, file.id, invoiceId],
+    );
+    await syncFinanceIdSequencePostgres("finance_email_logs");
+    await queryPostgres(
+      `
+        INSERT INTO finance_email_logs (
+          record_type,
+          record_id,
+          to_email,
+          cc_email,
+          subject,
+          status,
+          provider_message,
+          created_by_user_id,
+          created_at
+        ) VALUES (
+          'invoice', $1, $2, $3, $4, $5, $6, $7, $8
+        )
+      `,
+      [invoiceId, to.join(", "), cc.join(", "), subject, result.status, result.providerMessage || null, actor.userId, nowIso()],
+    );
+    await refreshInvoiceBalancesPostgres(invoiceId);
+    const reloaded = await getFinanceInvoiceByIdPostgres(invoiceId);
+    if (!reloaded) {
+      throw new Error("Failed to reload invoice.");
+    }
+    appendAudit(actor, "send", "finance_invoices", invoiceId, `Sent invoice email (${result.status}) to ${to.join(", ")}`);
+    return {
+      invoice: reloaded,
+      email: result,
+    };
+  }
   const db = getDb();
   const settings = getFinanceSettingsRow(db);
   const row = getInvoiceRowById(db, invoiceId);
@@ -3262,6 +3749,167 @@ export async function recordFinancePayment(
   evidenceFileIds?: number[],
 ) {
   ensureFinanceSchema();
+  if (isPostgresConfigured()) {
+    const invoice = await getFinanceInvoiceByIdPostgres(input.relatedInvoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found.");
+    }
+    if (invoice.status === "void") {
+      throw new Error("Cannot record payment on a void invoice.");
+    }
+    const paymentId = await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await syncFinanceIdSequencePostgres("finance_payments", client);
+        const insert = await client.query<{ id: number }>(
+          `
+            INSERT INTO finance_payments (
+              related_invoice_id,
+              date,
+              amount,
+              currency,
+              method,
+              reference,
+              notes,
+              status,
+              created_by_user_id,
+              created_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, 'posted', $8, $9
+            )
+            RETURNING id
+          `,
+          [
+            input.relatedInvoiceId,
+            input.date || todayIsoDate(),
+            normalizeNumber(input.amount),
+            normalizeCurrency(invoice.currency),
+            input.method,
+            input.reference?.trim() || null,
+            input.notes?.trim() || null,
+            actor.userId,
+            nowIso(),
+          ],
+        );
+        const id = Number(insert.rows[0]?.id || 0);
+        await createLedgerEntryPostgres(
+          {
+            txnType: "money_in",
+            category: mapFinanceIncomeToBaseCategory(invoice.category),
+            displayCategory: invoice.category,
+            date: input.date || todayIsoDate(),
+            currency: normalizeCurrency(invoice.currency),
+            amount: normalizeNumber(input.amount),
+            counterpartyContactId: invoice.contactId,
+            sourceType: "invoice_payment",
+            sourceId: id,
+            notes: input.notes,
+            evidenceFileIds: evidenceFileIds || [],
+            postedStatus: "posted",
+            actor,
+          },
+          client,
+        );
+        await refreshInvoiceBalancesPostgres(input.relatedInvoiceId, client);
+        appendAudit(actor, "post_payment", "finance_payments", id, `Recorded payment for invoice ${invoice.invoiceNumber}`);
+        await client.query("COMMIT");
+        return id;
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+
+    const paymentRow = await queryPostgres<{
+      id: number;
+      related_invoice_id: number;
+      date: string;
+      amount: number;
+      currency: string;
+      method: string;
+      reference: string | null;
+      notes: string | null;
+      status: string;
+      void_reason: string | null;
+      created_by_user_id: number;
+      created_by_name: string | null;
+      created_at: string;
+    }>(
+      `
+        SELECT
+          p.id,
+          p.related_invoice_id,
+          p.date,
+          p.amount,
+          p.currency,
+          p.method,
+          p.reference,
+          p.notes,
+          p.status,
+          p.void_reason,
+          p.created_by_user_id,
+          u.full_name AS created_by_name,
+          p.created_at
+        FROM finance_payments p
+        LEFT JOIN portal_users u ON u.id = p.created_by_user_id
+        WHERE p.id = $1
+        LIMIT 1
+      `,
+      [paymentId],
+    );
+    const payment = paymentRow.rows[0];
+    if (!payment) {
+      throw new Error("Failed to load payment.");
+    }
+
+    let updatedInvoice = await getFinanceInvoiceByIdPostgres(input.relatedInvoiceId);
+    if (!updatedInvoice) {
+      throw new Error("Failed to reload invoice.");
+    }
+
+    let autoReceipt: FinanceReceiptRecord | null = null;
+    if (updatedInvoice.status === "paid") {
+      const created = await createFinanceReceiptAsync(
+        {
+          contactId: updatedInvoice.contactId,
+          category: updatedInvoice.category,
+          receivedFrom: updatedInvoice.contactName || "Finance Contact",
+          receiptDate: input.date || todayIsoDate(),
+          currency: updatedInvoice.currency,
+          amountReceived: normalizeNumber(input.amount),
+          paymentMethod: input.method,
+          referenceNo: input.reference,
+          relatedInvoiceId: updatedInvoice.id,
+          description: input.notes || `Auto-issued receipt for ${updatedInvoice.invoiceNumber}`,
+          notes: input.notes,
+        },
+        actor,
+      );
+      const issued = await issueFinanceReceipt(created.id, actor, { sendEmail: false, ensurePdf: true });
+      autoReceipt = issued.receipt;
+      updatedInvoice = (await getFinanceInvoiceByIdPostgres(input.relatedInvoiceId)) || updatedInvoice;
+    }
+
+    return {
+      payment: {
+        id: Number(payment.id),
+        relatedInvoiceId: Number(payment.related_invoice_id),
+        date: String(payment.date),
+        amount: normalizeNumber(Number(payment.amount)),
+        currency: normalizeCurrency(String(payment.currency)),
+        method: String(payment.method) as FinancePaymentRecord["method"],
+        reference: payment.reference || undefined,
+        notes: payment.notes || undefined,
+        status: String(payment.status) as FinancePostedStatus,
+        voidReason: payment.void_reason || undefined,
+        createdBy: Number(payment.created_by_user_id),
+        createdByName: payment.created_by_name || undefined,
+        createdAt: String(payment.created_at),
+      },
+      invoice: updatedInvoice,
+      autoReceipt,
+    };
+  }
   const db = getDb();
   const invoiceRow = getInvoiceRowById(db, input.relatedInvoiceId);
   if (!invoiceRow) {
@@ -3835,12 +4483,171 @@ async function ensureLinkedReceiptForPaidInvoice(
   return buildReceiptRecord(ensured.row);
 }
 
+async function ensureReceiptPdfArtifactPostgres(
+  receipt: FinanceReceiptRecord,
+  uploadedBy: number,
+) {
+  if (receipt.pdfFileId) {
+    const existing = await getFinanceFileByIdPostgres(receipt.pdfFileId);
+    return {
+      receipt,
+      pdf: {
+        fileId: existing.id,
+        storedPath: existing.storedPath,
+        fileName: existing.fileName,
+      },
+    };
+  }
+
+  const relatedInvoice = receipt.relatedInvoiceId
+    ? await getFinanceInvoiceByIdPostgres(receipt.relatedInvoiceId)
+    : null;
+  const pdf = await generateReceiptPdfFile({
+    receiptNumber: receipt.receiptNumber,
+    receiptDate: receipt.receiptDate,
+    currency: normalizeCurrency(receipt.currency),
+    category: normalizeFinanceIncomeCategory(receipt.category),
+    receivedFrom: receipt.receivedFrom,
+    amount: normalizeNumber(receipt.amountReceived),
+    paymentMethod: receipt.paymentMethod,
+    referenceNo: receipt.referenceNo,
+    relatedInvoiceNumber: relatedInvoice?.invoiceNumber,
+    description: receipt.description,
+  });
+  await syncFinanceIdSequencePostgres("finance_files");
+  const insert = await queryPostgres<{ id: number }>(
+    `
+      INSERT INTO finance_files (
+        source_type,
+        source_id,
+        file_name,
+        stored_path,
+        mime_type,
+        size_bytes,
+        uploaded_by_user_id,
+        created_at
+      ) VALUES (
+        'receipt_pdf', $1, $2, $3, 'application/pdf', 0, $4, $5
+      )
+      RETURNING id
+    `,
+    [receipt.id, pdf.fileName, pdf.storedPath, uploadedBy, nowIso()],
+  );
+  const fileId = Number(insert.rows[0]?.id || 0);
+  await queryPostgres(
+    `
+      UPDATE finance_receipts
+      SET pdf_stored_path = $1,
+          pdf_file_id = $2
+      WHERE id = $3
+    `,
+    [pdf.storedPath, fileId, receipt.id],
+  );
+  const refreshed = await getFinanceReceiptByIdPostgres(receipt.id);
+  if (!refreshed) {
+    throw new Error("Failed to reload receipt PDF.");
+  }
+  return {
+    receipt: refreshed,
+    pdf: {
+      fileId,
+      storedPath: pdf.storedPath,
+      fileName: pdf.fileName,
+    },
+  };
+}
+
 export async function issueFinanceReceipt(
   receiptId: number,
   actor: FinanceActor,
   options?: { sendEmail?: boolean; to?: string[]; cc?: string[]; ensurePdf?: boolean },
 ) {
   ensureFinanceSchema();
+  if (isPostgresConfigured()) {
+    const row = await getFinanceReceiptByIdPostgres(receiptId);
+    if (!row) {
+      throw new Error("Receipt not found.");
+    }
+    if (row.status === "void") {
+      throw new Error("Cannot issue a void receipt.");
+    }
+    if (row.status !== "issued") {
+      await withPostgresClient(async (client) => {
+        await client.query("BEGIN");
+        try {
+          await client.query(
+            `
+              UPDATE finance_receipts
+              SET status = 'issued'
+              WHERE id = $1
+            `,
+            [receiptId],
+          );
+          const existingLedger = await client.query<{ id: number }>(
+            `
+              SELECT id
+              FROM finance_transactions_ledger
+              WHERE source_type = 'receipt'
+                AND source_id = $1
+                AND posted_status = 'posted'
+              LIMIT 1
+            `,
+            [receiptId],
+          );
+          if (!existingLedger.rows[0]) {
+            await createLedgerEntryPostgres(
+              {
+                txnType: "money_in",
+                category: mapFinanceIncomeToBaseCategory(row.category),
+                displayCategory: row.category,
+                date: row.receiptDate,
+                currency: normalizeCurrency(row.currency),
+                amount: normalizeNumber(row.amountReceived),
+                counterpartyContactId: row.contactId,
+                sourceType: "receipt",
+                sourceId: receiptId,
+                notes: row.notes,
+                postedStatus: "posted",
+                actor,
+              },
+              client,
+            );
+          }
+          if (row.relatedInvoiceId) {
+            await refreshInvoiceBalancesPostgres(row.relatedInvoiceId, client);
+          }
+          appendAudit(actor, "issue", "finance_receipts", receiptId, `Issued receipt ${row.receiptNumber}`);
+          await client.query("COMMIT");
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        }
+      });
+    }
+
+    let updated = await getFinanceReceiptByIdPostgres(receiptId);
+    if (!updated) {
+      throw new Error("Failed to reload issued receipt.");
+    }
+    if (options?.ensurePdf) {
+      updated = (await ensureReceiptPdfArtifactPostgres(updated, actor.userId)).receipt;
+    }
+
+    let emailResult: FinanceEmailResult | null = null;
+    if (options?.sendEmail !== false) {
+      const sent = await sendFinanceReceipt(receiptId, actor, {
+        to: options?.to,
+        cc: options?.cc,
+      });
+      emailResult = sent.email;
+      updated = sent.receipt;
+    }
+
+    return {
+      receipt: updated,
+      email: emailResult,
+    };
+  }
   const db = getDb();
   const row = getReceiptRowById(db, receiptId);
   if (!row) {
@@ -3934,6 +4741,100 @@ export async function sendFinanceReceipt(
   options?: { to?: string[]; cc?: string[] },
 ) {
   ensureFinanceSchema();
+  if (isPostgresConfigured()) {
+    await ensureFinanceSettingsPostgres();
+    const settings = await getFinanceSettingsPostgres();
+    const receipt = await getFinanceReceiptByIdPostgres(receiptId);
+    if (!receipt) {
+      throw new Error("Receipt not found.");
+    }
+    if (receipt.status === "void") {
+      throw new Error("Cannot send a void receipt.");
+    }
+    const contact = await getFinanceContactPostgres(receipt.contactId);
+    const to = sanitizeEmailList(options?.to?.length ? options.to : contact.emails);
+    if (to.length === 0) {
+      throw new Error("Receipt contact has no valid email address.");
+    }
+    const cc = buildFinanceCcList(
+      options?.cc,
+      settings.ccFinanceEmail ? [settings.ccFinanceEmail] : undefined,
+    );
+    const from = resolveFinanceFromEmail(settings.fromEmail);
+    const artifact = await ensureReceiptPdfArtifactPostgres(receipt, actor.userId);
+    const subject = `Receipt ${artifact.receipt.receiptNumber} • Ozeki Reading Bridge Foundation`;
+    const description = (artifact.receipt.description || "").trim();
+    const hasDescriptionToken = /\{\{\s*(description|descriptionLine)\s*\}\}/.test(settings.receiptEmailTemplate);
+    let renderedTemplate = renderTemplate(settings.receiptEmailTemplate, {
+      contactName: contact.name,
+      receiptNumber: artifact.receipt.receiptNumber,
+      currency: normalizeCurrency(artifact.receipt.currency),
+      amount: normalizeNumber(artifact.receipt.amountReceived).toLocaleString(),
+      receiptDate: artifact.receipt.receiptDate,
+      description,
+      descriptionLine: description ? `Description: ${description}` : "",
+    });
+    if (description && !hasDescriptionToken) {
+      renderedTemplate += `\nDescription: ${description}`;
+    }
+    const htmlBodyRaw = renderedTemplate.replace(/\n/g, "<br/>") +
+      `<br/><br/>${officialContact.address}<br/>${officialContact.postalAddress}<br/>Email: ${officialContact.email}<br/>Phone: ${officialContact.phoneDisplay}`;
+    const result = await sendFinanceMail({
+      from,
+      to,
+      cc,
+      subject,
+      html: htmlBodyRaw,
+      text: htmlBodyRaw.replace(/<br\s*\/?>/g, "\n"),
+      attachments: [{
+        filename: artifact.pdf.fileName,
+        path: artifact.pdf.storedPath,
+        contentType: "application/pdf",
+      }],
+    });
+    await queryPostgres(
+      `
+        UPDATE finance_receipts
+        SET emailed_at = CASE
+              WHEN $1 = true THEN $2
+              ELSE emailed_at
+            END,
+            last_sent_to = CASE
+              WHEN $1 = true THEN $3
+              ELSE last_sent_to
+            END,
+            pdf_stored_path = $4,
+            pdf_file_id = $5
+        WHERE id = $6
+      `,
+      [result.status === "sent", nowIso(), to.join(", "), artifact.pdf.storedPath, artifact.pdf.fileId, receiptId],
+    );
+    await syncFinanceIdSequencePostgres("finance_email_logs");
+    await queryPostgres(
+      `
+        INSERT INTO finance_email_logs (
+          record_type,
+          record_id,
+          to_email,
+          cc_email,
+          subject,
+          status,
+          provider_message,
+          created_by_user_id,
+          created_at
+        ) VALUES (
+          'receipt', $1, $2, $3, $4, $5, $6, $7, $8
+        )
+      `,
+      [receiptId, to.join(", "), cc.join(", "), subject, result.status, result.providerMessage || null, actor.userId, nowIso()],
+    );
+    appendAudit(actor, "send", "finance_receipts", receiptId, `Sent receipt email (${result.status}) to ${to.join(", ")}`);
+    const refreshed = await getFinanceReceiptByIdPostgres(receiptId);
+    if (!refreshed) {
+      throw new Error("Failed to reload receipt.");
+    }
+    return { receipt: refreshed, email: result };
+  }
   const db = getDb();
   const settings = getFinanceSettingsRow(db);
   const row = getReceiptRowById(db, receiptId);
@@ -4046,6 +4947,59 @@ export async function sendFinanceReceipt(
 }
 
 export async function loadFinanceFileForDownload(fileId: number) {
+  if (isPostgresConfigured()) {
+    const file = await getFinanceFileByIdPostgres(fileId);
+    try {
+      return {
+        fileName: file.fileName,
+        mimeType: file.mimeType || "application/octet-stream",
+        bytes: await fs.readFile(file.storedPath),
+      };
+    } catch (error) {
+      if (file.sourceType === "invoice_pdf") {
+        const invoice = await getFinanceInvoiceByIdPostgres(file.sourceId);
+        if (!invoice) {
+          throw error;
+        }
+        const settings = await getFinanceSettingsPostgres();
+        const contact = await getFinanceContactPostgres(invoice.contactId);
+        const rebuilt = await generateInvoicePdfFile({
+          invoiceNumber: invoice.invoiceNumber,
+          issueDate: invoice.issueDate,
+          dueDate: invoice.dueDate,
+          currency: invoice.currency,
+          category: invoice.category,
+          contactName: contact.name,
+          contactEmails: contact.emails,
+          lineItems: invoice.lineItems,
+          subtotal: invoice.subtotal,
+          tax: invoice.tax || 0,
+          total: invoice.total,
+          notes: invoice.notes,
+          paymentInstructions: settings.paymentInstructions,
+        });
+        return {
+          fileName: rebuilt.fileName,
+          mimeType: "application/pdf",
+          bytes: await fs.readFile(rebuilt.storedPath),
+        };
+      }
+
+      if (file.sourceType === "receipt_pdf") {
+        const receipt = await getFinanceReceiptByIdPostgres(file.sourceId);
+        if (!receipt) {
+          throw error;
+        }
+        const rebuilt = await ensureReceiptPdfArtifactPostgres(receipt, receipt.createdBy);
+        return {
+          fileName: rebuilt.pdf.fileName,
+          mimeType: "application/pdf",
+          bytes: await fs.readFile(rebuilt.pdf.storedPath),
+        };
+      }
+      throw error;
+    }
+  }
   const db = getDb();
   const file = getFinanceFileByIdSqlite(fileId);
 
@@ -5809,6 +6763,51 @@ export async function createFinanceFileRecord(
   const storedName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName || "file"}${ext}`;
   const storedPath = path.join(folder, storedName);
   await fs.writeFile(storedPath, input.bytes);
+  if (isPostgresConfigured()) {
+    await syncFinanceIdSequencePostgres("finance_files");
+    const insert = await queryPostgres<{ id: number; created_at: string }>(
+      `
+        INSERT INTO finance_files (
+          source_type,
+          source_id,
+          file_name,
+          stored_path,
+          mime_type,
+          size_bytes,
+          uploaded_by_user_id,
+          created_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8
+        )
+        RETURNING id, created_at
+      `,
+      [
+        input.sourceType,
+        input.sourceId,
+        input.fileName || storedName,
+        storedPath,
+        input.mimeType || "application/octet-stream",
+        input.bytes.byteLength,
+        actor.userId,
+        nowIso(),
+      ],
+    );
+    const row = insert.rows[0];
+    const record: FinanceFileRecord = {
+      id: Number(row.id),
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+      fileName: input.fileName || storedName,
+      storedPath,
+      mimeType: input.mimeType || "application/octet-stream",
+      sizeBytes: input.bytes.byteLength,
+      uploadedBy: actor.userId,
+      createdAt: String(row.created_at),
+      signedUrl: getSignedFinanceFileUrl(Number(row.id)),
+    };
+    appendAudit(actor, "upload", "finance_files", record.id, `Uploaded file ${record.fileName} (${record.sourceType})`);
+    return record;
+  }
   const record = createFinanceFileRecordInternal(getDb(), {
     sourceType: input.sourceType,
     sourceId: input.sourceId,
@@ -6657,6 +7656,267 @@ export async function generateFinanceMonthlyStatement(
   actor: FinanceActor,
 ) {
   ensureFinanceSchema();
+  if (isPostgresConfigured()) {
+    const window = periodWindowFromInput(periodInput);
+    const totalsResult = await queryPostgres<{ totalmoneyin: number; totalmoneyout: number }>(
+      `
+        SELECT
+          COALESCE(SUM(CASE WHEN txn_type = 'money_in' THEN amount ELSE 0 END), 0) AS totalMoneyIn,
+          COALESCE(SUM(CASE WHEN txn_type = 'money_out' THEN amount ELSE 0 END), 0) AS totalMoneyOut
+        FROM finance_transactions_ledger
+        WHERE posted_status = 'posted'
+          AND currency = $1
+          AND date >= $2
+          AND date < $3
+      `,
+      [currency, window.from, window.to],
+    );
+    const breakdownRows = await queryPostgres<{ category: string; amount: number }>(
+      `
+        SELECT
+          COALESCE(display_category, CASE WHEN category = 'Donations' THEN 'Donation' ELSE category END) AS category,
+          COALESCE(SUM(amount), 0) AS amount
+        FROM finance_transactions_ledger
+        WHERE posted_status = 'posted'
+          AND currency = $1
+          AND date >= $2
+          AND date < $3
+        GROUP BY COALESCE(display_category, CASE WHEN category = 'Donations' THEN 'Donation' ELSE category END)
+      `,
+      [currency, window.from, window.to],
+    );
+    const topIncome = await queryPostgres<{ label: string; amount: number }>(
+      `
+        SELECT source_type AS label, amount
+        FROM finance_transactions_ledger
+        WHERE posted_status = 'posted'
+          AND txn_type = 'money_in'
+          AND currency = $1
+          AND date >= $2
+          AND date < $3
+        ORDER BY amount DESC
+        LIMIT 10
+      `,
+      [currency, window.from, window.to],
+    );
+    const topExpenses = await queryPostgres<{ label: string; amount: number }>(
+      `
+        SELECT COALESCE(subcategory, source_type) AS label, amount
+        FROM finance_transactions_ledger
+        WHERE posted_status = 'posted'
+          AND txn_type = 'money_out'
+          AND currency = $1
+          AND date >= $2
+          AND date < $3
+        ORDER BY amount DESC
+        LIMIT 10
+      `,
+      [currency, window.from, window.to],
+    );
+
+    const breakdownByCategory: Record<FinanceCategory, number> = {
+      ...createFinanceIncomeBreakdownZero(),
+      Expense: 0,
+    };
+    breakdownRows.rows.forEach((row) => {
+      if (row.category === "Expense") {
+        breakdownByCategory.Expense = normalizeNumber(Number(row.amount || 0));
+        return;
+      }
+      try {
+        const normalizedCategory = normalizeFinanceIncomeCategory(row.category);
+        breakdownByCategory[normalizedCategory] = normalizeNumber(Number(row.amount || 0));
+      } catch {
+        // Ignore historical category noise.
+      }
+    });
+
+    const totalMoneyIn = normalizeNumber(Number(totalsResult.rows[0]?.totalmoneyin || 0));
+    const totalMoneyOut = normalizeNumber(Number(totalsResult.rows[0]?.totalmoneyout || 0));
+    const net = normalizeNumber(totalMoneyIn - totalMoneyOut);
+    await syncFinanceIdSequencePostgres("finance_monthly_statements");
+    await queryPostgres(
+      `
+        INSERT INTO finance_monthly_statements (
+          month,
+          period_type,
+          currency,
+          total_money_in,
+          total_money_out,
+          net,
+          breakdown_json,
+          generated_by_user_id,
+          generated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9
+        )
+        ON CONFLICT(month, currency)
+        DO UPDATE SET
+          period_type = excluded.period_type,
+          total_money_in = excluded.total_money_in,
+          total_money_out = excluded.total_money_out,
+          net = excluded.net,
+          breakdown_json = excluded.breakdown_json,
+          generated_by_user_id = excluded.generated_by_user_id,
+          generated_at = excluded.generated_at
+      `,
+      [
+        window.month,
+        window.periodType,
+        currency,
+        totalMoneyIn,
+        totalMoneyOut,
+        net,
+        JSON.stringify(breakdownByCategory),
+        actor.userId,
+        nowIso(),
+      ],
+    );
+    const statementIdResult = await queryPostgres<{ id: number }>(
+      `
+        SELECT id
+        FROM finance_monthly_statements
+        WHERE month = $1
+          AND currency = $2
+        LIMIT 1
+      `,
+      [window.month, currency],
+    );
+    const statementId = Number(statementIdResult.rows[0]?.id || 0);
+    if (!statementId) {
+      throw new Error("Failed to generate monthly statement.");
+    }
+
+    const statement: FinanceMonthlyStatementRecord = {
+      id: statementId,
+      month: window.month,
+      periodType: window.periodType,
+      currency,
+      totalMoneyIn,
+      totalMoneyOut,
+      net,
+      breakdownByCategory,
+      generatedAt: nowIso(),
+      generatedBy: actor.userId,
+      generatedByName: actor.userName,
+    };
+
+    const position: FinanceStatementPosition = {
+      asOfDate: toMonthEndDate(window),
+      currentAssets: [{ label: "Cash", amount: Math.max(0, net) }],
+      nonCurrentAssets: [],
+      currentLiabilities: net < 0 ? [{ label: "Short-term debt", amount: Math.abs(net) }] : [],
+      nonCurrentLiabilities: [],
+      equityLines: [{ label: "Owner's equity", amount: Math.max(0, net) }],
+    };
+    const income: FinanceIncomeStatement = {
+      asOfDate: toMonthEndDate(window),
+      revenue: totalMoneyIn,
+      costOfGoodsSold: 0,
+      grossProfit: totalMoneyIn,
+      marketingExpenses: 0,
+      rent: 0,
+      utilities: 0,
+      insurance: 0,
+      generalAdmin: 0,
+      depreciation: 0,
+      totalOperatingExpenses: totalMoneyOut,
+      operatingIncome: net,
+      interestExpense: 0,
+      incomeBeforeTax: net,
+      incomeTaxExpense: 0,
+      netIncome: net,
+    };
+
+    const [balancePdf, positionPdf, incomePdf] = await Promise.all([
+      generateStatementPdfFile({
+        documentType: "balance_sheet",
+        statement,
+        position,
+        income,
+        topIncome: topIncome.rows,
+        topExpenses: topExpenses.rows,
+      }),
+      generateStatementPdfFile({
+        documentType: "statement_of_financial_position",
+        statement,
+        position,
+        income,
+        topIncome: topIncome.rows,
+        topExpenses: topExpenses.rows,
+      }),
+      generateStatementPdfFile({
+        documentType: "income_statement",
+        statement,
+        position,
+        income,
+        topIncome: topIncome.rows,
+        topExpenses: topExpenses.rows,
+      }),
+    ]);
+
+    await syncFinanceIdSequencePostgres("finance_files");
+    const balanceFileIdResult = await queryPostgres<{ id: number }>(
+      `
+        INSERT INTO finance_files (
+          source_type, source_id, file_name, stored_path, mime_type, size_bytes, uploaded_by_user_id, created_at
+        ) VALUES (
+          'statement_pdf', $1, $2, $3, 'application/pdf', 0, $4, $5
+        )
+        RETURNING id
+      `,
+      [statementId, balancePdf.fileName, balancePdf.storedPath, actor.userId, nowIso()],
+    );
+    const positionFileIdResult = await queryPostgres<{ id: number }>(
+      `
+        INSERT INTO finance_files (
+          source_type, source_id, file_name, stored_path, mime_type, size_bytes, uploaded_by_user_id, created_at
+        ) VALUES (
+          'statement_pdf', $1, $2, $3, 'application/pdf', 0, $4, $5
+        )
+        RETURNING id
+      `,
+      [statementId, positionPdf.fileName, positionPdf.storedPath, actor.userId, nowIso()],
+    );
+    const incomeFileIdResult = await queryPostgres<{ id: number }>(
+      `
+        INSERT INTO finance_files (
+          source_type, source_id, file_name, stored_path, mime_type, size_bytes, uploaded_by_user_id, created_at
+        ) VALUES (
+          'statement_pdf', $1, $2, $3, 'application/pdf', 0, $4, $5
+        )
+        RETURNING id
+      `,
+      [statementId, incomePdf.fileName, incomePdf.storedPath, actor.userId, nowIso()],
+    );
+    const balanceFileId = Number(balanceFileIdResult.rows[0]?.id || 0);
+    const positionFileId = Number(positionFileIdResult.rows[0]?.id || 0);
+    const incomeFileId = Number(incomeFileIdResult.rows[0]?.id || 0);
+    await queryPostgres(
+      `
+        UPDATE finance_monthly_statements
+        SET pdf_stored_path = $1,
+            pdf_file_id = $2,
+            balance_sheet_pdf_file_id = $2,
+            statement_of_financial_position_pdf_file_id = $3,
+            income_statement_pdf_file_id = $4
+        WHERE id = $5
+      `,
+      [balancePdf.storedPath, balanceFileId, positionFileId, incomeFileId, statementId],
+    );
+    appendAudit(actor, "generate_statement", "finance_monthly_statements", statementId, `Generated statement ${window.month} (${currency})`);
+    return {
+      ...statement,
+      pdfFileId: balanceFileId,
+      pdfUrl: getSignedFinanceFileUrl(balanceFileId),
+      balanceSheetPdfFileId: balanceFileId,
+      statementOfFinancialPositionPdfFileId: positionFileId,
+      incomeStatementPdfFileId: incomeFileId,
+      balanceSheetPdfUrl: getSignedFinanceFileUrl(balanceFileId),
+      statementOfFinancialPositionPdfUrl: getSignedFinanceFileUrl(positionFileId),
+      incomeStatementPdfUrl: getSignedFinanceFileUrl(incomeFileId),
+    } as FinanceMonthlyStatementRecord;
+  }
   const db = getDb();
   const window = periodWindowFromInput(periodInput);
 
@@ -8017,6 +9277,50 @@ export function archiveAuditedStatement(actor: FinanceActor, statementId: number
 }
 
 export async function createFinanceContactAsync(input: FinanceContactInput, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    await syncFinanceIdSequencePostgres("finance_contacts");
+    const emails = sanitizeEmailList(input.emails || []);
+    if (!input.name?.trim()) {
+      throw new Error("Contact name is required.");
+    }
+    if (emails.length === 0) {
+      throw new Error("At least one contact email is required.");
+    }
+    const createdAt = nowIso();
+    const insert = await queryPostgres<{ id: number }>(
+      `
+        INSERT INTO finance_contacts (
+          name,
+          emails_json,
+          phone,
+          whatsapp,
+          address,
+          contact_type,
+          created_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7
+        )
+        RETURNING id
+      `,
+      [
+        input.name.trim(),
+        JSON.stringify(emails),
+        input.phone?.trim() || null,
+        input.phone?.trim() || null,
+        input.address?.trim() || null,
+        input.contactType,
+        createdAt,
+      ],
+    );
+    const id = Number(insert.rows[0]?.id || 0);
+    appendAudit(actor, "create", "finance_contacts", id, `Created finance contact ${input.name.trim()}`);
+    const list = await listFinanceContactsPostgres();
+    const contact = list.find((item) => item.id === id);
+    if (!contact) {
+      throw new Error("Failed to load finance contact.");
+    }
+    return contact;
+  }
   const record = createFinanceContact(input, actor);
   if (true) {
     await syncFinanceContactToPostgres(record.id);
@@ -8028,6 +9332,69 @@ export async function updateFinanceSettingsAsync(
   updates: Partial<FinanceSettingsRecord>,
   actor: FinanceActor,
 ) {
+  if (isPostgresConfigured()) {
+    await ensureFinanceSettingsPostgres();
+    const current = await getFinanceSettingsPostgres();
+    const next: FinanceSettingsRecord = {
+      fromEmail: updates.fromEmail ?? current.fromEmail,
+      ccFinanceEmail: updates.ccFinanceEmail ?? current.ccFinanceEmail,
+      invoicePrefix: updates.invoicePrefix?.trim() || current.invoicePrefix,
+      receiptPrefix: updates.receiptPrefix?.trim() || current.receiptPrefix,
+      expensePrefix: updates.expensePrefix?.trim() || current.expensePrefix,
+      categorySubcategories: updates.categorySubcategories || current.categorySubcategories,
+      invoiceEmailTemplate: updates.invoiceEmailTemplate || current.invoiceEmailTemplate,
+      receiptEmailTemplate: updates.receiptEmailTemplate || current.receiptEmailTemplate,
+      paymentInstructions: updates.paymentInstructions ?? current.paymentInstructions,
+      cashThresholdUgx: updates.cashThresholdUgx ?? current.cashThresholdUgx,
+      cashThresholdUsd: updates.cashThresholdUsd ?? current.cashThresholdUsd,
+      backdateDaysLimit: updates.backdateDaysLimit ?? current.backdateDaysLimit,
+      allowReceiptMismatchOverride: updates.allowReceiptMismatchOverride ?? current.allowReceiptMismatchOverride,
+      allowReceiptReuseOverride: updates.allowReceiptReuseOverride ?? current.allowReceiptReuseOverride,
+      outlierMultiplier: updates.outlierMultiplier ?? current.outlierMultiplier,
+    };
+    await queryPostgres(
+      `
+        UPDATE finance_settings
+        SET from_email = $1,
+            cc_finance_email = $2,
+            invoice_prefix = $3,
+            receipt_prefix = $4,
+            expense_prefix = $5,
+            subcategories_json = $6,
+            invoice_email_template = $7,
+            receipt_email_template = $8,
+            payment_instructions = $9,
+            cash_threshold_ugx = $10,
+            cash_threshold_usd = $11,
+            backdate_days_limit = $12,
+            allow_receipt_mismatch_override = $13,
+            allow_receipt_reuse_override = $14,
+            outlier_multiplier = $15,
+            updated_at = $16
+        WHERE id = 1
+      `,
+      [
+        next.fromEmail || null,
+        next.ccFinanceEmail || null,
+        next.invoicePrefix,
+        next.receiptPrefix,
+        next.expensePrefix,
+        JSON.stringify(next.categorySubcategories || {}),
+        next.invoiceEmailTemplate,
+        next.receiptEmailTemplate,
+        next.paymentInstructions,
+        normalizeNumber(Number(next.cashThresholdUgx || 0)),
+        normalizeNumber(Number(next.cashThresholdUsd || 0)),
+        normalizeInteger(next.backdateDaysLimit, DEFAULT_AUDIT_SETTINGS.backdateDaysLimit),
+        next.allowReceiptMismatchOverride,
+        next.allowReceiptReuseOverride,
+        Number(next.outlierMultiplier || DEFAULT_AUDIT_SETTINGS.outlierMultiplier),
+        nowIso(),
+      ],
+    );
+    appendAudit(actor, "update", "finance_settings", 1, "Updated finance settings");
+    return getFinanceSettingsPostgres();
+  }
   const settings = updateFinanceSettings(updates, actor);
   if (true) {
     await syncFinanceSettingsToPostgres();
@@ -8036,6 +9403,109 @@ export async function updateFinanceSettingsAsync(
 }
 
 export async function createFinanceInvoiceAsync(input: FinanceInvoiceInput, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    await ensureFinanceSettingsPostgres();
+    const lineItems = parseLineItems(input.lineItems);
+    const subtotal = normalizeNumber(lineItems.reduce((sum, item) => sum + item.amount, 0));
+    const tax = normalizeNumber(Number(input.tax || 0));
+    const total = normalizeNumber(subtotal + tax);
+    const issueDate = input.issueDate || todayIsoDate();
+    const dueDate = input.dueDate || issueDate;
+    const displayCategory = normalizeFinanceIncomeCategory(input.category);
+    const baseCategory = mapFinanceIncomeToBaseCategory(displayCategory);
+
+    const invoiceId = await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await ensureFinanceSettingsPostgres(client);
+        await syncFinanceIdSequencePostgres("finance_invoices", client);
+        await syncFinanceIdSequencePostgres("finance_invoice_items", client);
+        await getFinanceContactPostgres(input.contactId, client);
+        const settings = await getFinanceSettingsPostgres();
+        const invoiceNumber = await nextNumberForPostgres(
+          "finance_invoices",
+          "invoice_number",
+          settings.invoicePrefix || "INV",
+          client,
+        );
+        const createdAt = nowIso();
+        const insert = await client.query<{ id: number }>(
+          `
+            INSERT INTO finance_invoices (
+              invoice_number,
+              contact_id,
+              category,
+              display_category,
+              issue_date,
+              due_date,
+              currency,
+              subtotal,
+              tax,
+              total,
+              paid_amount,
+              balance_due,
+              status,
+              notes,
+              created_by_user_id,
+              created_at,
+              updated_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0, $10, 'draft', $11, $12, $13, $13
+            )
+            RETURNING id
+          `,
+          [
+            invoiceNumber,
+            input.contactId,
+            baseCategory,
+            displayCategory,
+            issueDate,
+            dueDate,
+            normalizeCurrency(input.currency),
+            subtotal,
+            tax,
+            total,
+            input.notes?.trim() || null,
+            actor.userId,
+            createdAt,
+          ],
+        );
+        const id = Number(insert.rows[0]?.id || 0);
+        for (const item of lineItems) {
+          await client.query(
+            `
+              INSERT INTO finance_invoice_items (
+                invoice_id,
+                description,
+                qty,
+                unit_price,
+                amount,
+                created_at
+              ) VALUES ($1, $2, $3, $4, $5, $6)
+            `,
+            [id, item.description, item.qty, item.unitPrice, item.amount, nowIso()],
+          );
+        }
+        await client.query("COMMIT");
+        appendAudit(
+          actor,
+          "create",
+          "finance_invoices",
+          id,
+          `Created invoice ${invoiceNumber} (${displayCategory}, ${normalizeCurrency(input.currency)} ${total})`,
+        );
+        return id;
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    const invoice = await getFinanceInvoiceByIdPostgres(invoiceId);
+    if (!invoice) {
+      throw new Error("Failed to load invoice after creation.");
+    }
+    return invoice;
+  }
   const invoice = createFinanceInvoice(input, actor);
   if (true) {
     await syncFinanceInvoiceBundleToPostgres(invoice.id);
@@ -8048,6 +9518,89 @@ export async function updateFinanceInvoiceDraftAsync(
   updates: Partial<FinanceInvoiceInput>,
   actor: FinanceActor,
 ) {
+  if (isPostgresConfigured()) {
+    const current = await getFinanceInvoiceByIdPostgres(invoiceId);
+    if (!current) {
+      throw new Error("Invoice not found.");
+    }
+    if (current.status !== "draft") {
+      throw new Error("Only draft invoices can be edited. Void and recreate if changes are required.");
+    }
+    const nextLineItems = updates.lineItems ? parseLineItems(updates.lineItems) : current.lineItems;
+    const subtotal = normalizeNumber(nextLineItems.reduce((sum, item) => sum + item.amount, 0));
+    const tax = updates.tax !== undefined ? normalizeNumber(Number(updates.tax || 0)) : normalizeNumber(Number(current.tax));
+    const total = normalizeNumber(subtotal + tax);
+    const nextDisplayCategory = updates.category
+      ? normalizeFinanceIncomeCategory(updates.category)
+      : normalizeFinanceIncomeCategory(current.category);
+    const nextBaseCategory = mapFinanceIncomeToBaseCategory(nextDisplayCategory);
+
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          `
+            UPDATE finance_invoices
+            SET contact_id = $1,
+                category = $2,
+                display_category = $3,
+                issue_date = $4,
+                due_date = $5,
+                currency = $6,
+                subtotal = $7,
+                tax = $8,
+                total = $9,
+                balance_due = $9,
+                notes = $10,
+                updated_at = $11
+            WHERE id = $12
+          `,
+          [
+            updates.contactId ?? current.contactId,
+            nextBaseCategory,
+            nextDisplayCategory,
+            updates.issueDate ?? current.issueDate,
+            updates.dueDate ?? current.dueDate,
+            normalizeCurrency(updates.currency ?? current.currency),
+            subtotal,
+            tax,
+            total,
+            updates.notes !== undefined ? updates.notes?.trim() || null : current.notes || null,
+            nowIso(),
+            invoiceId,
+          ],
+        );
+        if (updates.lineItems) {
+          await client.query("DELETE FROM finance_invoice_items WHERE invoice_id = $1", [invoiceId]);
+          for (const item of nextLineItems) {
+            await client.query(
+              `
+                INSERT INTO finance_invoice_items (
+                  invoice_id,
+                  description,
+                  qty,
+                  unit_price,
+                  amount,
+                  created_at
+                ) VALUES ($1, $2, $3, $4, $5, $6)
+              `,
+              [invoiceId, item.description, item.qty, item.unitPrice, item.amount, nowIso()],
+            );
+          }
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(actor, "update", "finance_invoices", invoiceId, `Updated draft invoice ${current.invoiceNumber}`);
+    const invoice = await getFinanceInvoiceByIdPostgres(invoiceId);
+    if (!invoice) {
+      throw new Error("Failed to reload invoice.");
+    }
+    return invoice;
+  }
   const invoice = updateFinanceInvoiceDraft(invoiceId, updates, actor);
   if (true) {
     await syncFinanceInvoiceBundleToPostgres(invoiceId);
@@ -8056,6 +9609,62 @@ export async function updateFinanceInvoiceDraftAsync(
 }
 
 export async function deleteFinanceInvoiceDraftAsync(invoiceId: number, reason: string, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    const cleanReason = requireDestructiveReason(reason, "delete");
+    const invoice = await getFinanceInvoiceByIdPostgres(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found.");
+    }
+    if (invoice.status !== "draft") {
+      throw new Error("Only draft invoices can be deleted. Use void for sent/posted invoices.");
+    }
+    assertFinanceDraftDeletePermission(invoice.createdBy, actor);
+    const linkedPayments = await queryPostgres<{ count: number }>(
+      `
+        SELECT COUNT(*)::int AS count
+        FROM finance_payments
+        WHERE related_invoice_id = $1
+          AND status != 'void'
+      `,
+      [invoiceId],
+    );
+    if (Number(linkedPayments.rows[0]?.count || 0) > 0) {
+      throw new Error("Draft invoice cannot be deleted because linked payments exist.");
+    }
+    const linkedReceipts = await queryPostgres<{ count: number }>(
+      `
+        SELECT COUNT(*)::int AS count
+        FROM finance_receipts
+        WHERE related_invoice_id = $1
+          AND status != 'void'
+      `,
+      [invoiceId],
+    );
+    if (Number(linkedReceipts.rows[0]?.count || 0) > 0) {
+      throw new Error("Draft invoice cannot be deleted because linked receipts exist.");
+    }
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await deleteScopedPostgresRows("finance_email_logs", "record_type = $1 AND record_id = $2", ["invoice", invoiceId], client);
+        await deleteScopedPostgresRows("finance_files", "source_type IN ('invoice', 'invoice_pdf') AND source_id = $1", [invoiceId], client);
+        await deleteScopedPostgresRows("finance_invoice_items", "invoice_id = $1", [invoiceId], client);
+        await deleteScopedPostgresRows("finance_audit_exceptions", "entity_type = $1 AND entity_id = $2", ["invoice", invoiceId], client);
+        await deleteScopedPostgresRows("finance_txn_risk_scores", "entity_type = $1 AND entity_id = $2", ["invoice", invoiceId], client);
+        await deleteScopedPostgresRows("finance_invoices", "id = $1", [invoiceId], client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(actor, "delete_draft", "finance_invoices", invoiceId, `Deleted draft invoice ${invoice.invoiceNumber}: ${cleanReason}`);
+    return {
+      deleted: true as const,
+      id: invoiceId,
+      invoiceNumber: invoice.invoiceNumber,
+    };
+  }
   const deleted = deleteFinanceInvoiceDraft(invoiceId, reason, actor);
   if (true) {
     await withPostgresClient(async (client) => {
@@ -8093,6 +9702,33 @@ export async function deleteFinanceInvoiceDraftAsync(invoiceId: number, reason: 
 }
 
 export async function voidFinanceInvoiceAsync(invoiceId: number, reason: string, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    const cleanReason = requireDestructiveReason(reason, "void");
+    const invoice = await getFinanceInvoiceByIdPostgres(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found.");
+    }
+    if (invoice.status === "void") {
+      throw new Error("Invoice already void.");
+    }
+    await queryPostgres(
+      `
+        UPDATE finance_invoices
+        SET status = 'void',
+            void_reason = $1,
+            balance_due = 0,
+            updated_at = $2
+        WHERE id = $3
+      `,
+      [cleanReason, nowIso(), invoiceId],
+    );
+    appendAudit(actor, "void", "finance_invoices", invoiceId, `Voided invoice ${invoice.invoiceNumber}: ${cleanReason}`);
+    const updated = await getFinanceInvoiceByIdPostgres(invoiceId);
+    if (!updated) {
+      throw new Error("Failed to reload invoice.");
+    }
+    return updated;
+  }
   const invoice = voidFinanceInvoice(invoiceId, reason, actor);
   if (true) {
     await syncFinanceInvoiceBundleToPostgres(invoiceId);
@@ -8101,6 +9737,88 @@ export async function voidFinanceInvoiceAsync(invoiceId: number, reason: string,
 }
 
 export async function createFinanceReceiptAsync(input: FinanceReceiptInput, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    await ensureFinanceSettingsPostgres();
+    const displayCategory = normalizeFinanceIncomeCategory(input.category);
+    const baseCategory = mapFinanceIncomeToBaseCategory(displayCategory);
+    const receiptId = await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        const contact = await getFinanceContactPostgres(input.contactId, client);
+        await syncFinanceIdSequencePostgres("finance_receipts", client);
+        const settings = await getFinanceSettingsPostgres();
+        const receiptNumber = await nextNumberForPostgres(
+          "finance_receipts",
+          "receipt_number",
+          settings.receiptPrefix || "RCT",
+          client,
+        );
+        if (input.relatedInvoiceId) {
+          const linkedInvoice = await client.query<{ id: number }>(
+            "SELECT id FROM finance_invoices WHERE id = $1 LIMIT 1",
+            [input.relatedInvoiceId],
+          );
+          if (!linkedInvoice.rows[0]) {
+            throw new Error("Related invoice not found.");
+          }
+        }
+        const insert = await client.query<{ id: number }>(
+          `
+            INSERT INTO finance_receipts (
+              receipt_number,
+              contact_id,
+              category,
+              display_category,
+              received_from,
+              receipt_date,
+              currency,
+              amount_received,
+              payment_method,
+              reference_no,
+              related_invoice_id,
+              description,
+              notes,
+              status,
+              created_by_user_id,
+              created_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'draft', $14, $15
+            )
+            RETURNING id
+          `,
+          [
+            receiptNumber,
+            input.contactId,
+            baseCategory,
+            displayCategory,
+            input.receivedFrom?.trim() || contact.name,
+            input.receiptDate || todayIsoDate(),
+            normalizeCurrency(input.currency),
+            normalizeNumber(Number(input.amountReceived || 0)),
+            input.paymentMethod,
+            input.referenceNo?.trim() || null,
+            input.relatedInvoiceId ?? null,
+            input.description?.trim() || null,
+            input.notes?.trim() || null,
+            actor.userId,
+            nowIso(),
+          ],
+        );
+        const id = Number(insert.rows[0]?.id || 0);
+        appendAudit(actor, "create", "finance_receipts", id, `Created receipt ${receiptNumber}`);
+        await client.query("COMMIT");
+        return id;
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    const receipt = await getFinanceReceiptByIdPostgres(receiptId);
+    if (!receipt) {
+      throw new Error("Failed to load receipt after creation.");
+    }
+    return receipt;
+  }
   const receipt = createFinanceReceipt(input, actor);
   if (true) {
     await syncFinanceReceiptBundleToPostgres(receipt.id);
@@ -8109,6 +9827,38 @@ export async function createFinanceReceiptAsync(input: FinanceReceiptInput, acto
 }
 
 export async function deleteFinanceReceiptDraftAsync(receiptId: number, reason: string, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    const cleanReason = requireDestructiveReason(reason, "delete");
+    const receipt = await getFinanceReceiptByIdPostgres(receiptId);
+    if (!receipt) {
+      throw new Error("Receipt not found.");
+    }
+    if (receipt.status !== "draft") {
+      throw new Error("Only draft receipts can be deleted. Use void for issued receipts.");
+    }
+    assertFinanceDraftDeletePermission(receipt.createdBy, actor);
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await deleteScopedPostgresRows("finance_email_logs", "record_type = $1 AND record_id = $2", ["receipt", receiptId], client);
+        await deleteScopedPostgresRows("finance_transactions_ledger", "source_type = $1 AND source_id = $2", ["receipt", receiptId], client);
+        await deleteScopedPostgresRows("finance_files", "source_type IN ('receipt', 'receipt_pdf') AND source_id = $1", [receiptId], client);
+        await deleteScopedPostgresRows("finance_audit_exceptions", "entity_type = $1 AND entity_id = $2", ["receipt", receiptId], client);
+        await deleteScopedPostgresRows("finance_txn_risk_scores", "entity_type = $1 AND entity_id = $2", ["receipt", receiptId], client);
+        await deleteScopedPostgresRows("finance_receipts", "id = $1", [receiptId], client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(actor, "delete_draft", "finance_receipts", receiptId, `Deleted draft receipt ${receipt.receiptNumber}: ${cleanReason}`);
+    return {
+      deleted: true as const,
+      id: receiptId,
+      receiptNumber: receipt.receiptNumber,
+    };
+  }
   const deleted = deleteFinanceReceiptDraft(receiptId, reason, actor);
   if (true) {
     await withPostgresClient(async (client) => {
@@ -8151,6 +9901,44 @@ export async function deleteFinanceReceiptDraftAsync(receiptId: number, reason: 
 }
 
 export async function voidFinanceReceiptAsync(receiptId: number, reason: string, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    const cleanReason = requireDestructiveReason(reason, "void");
+    const receipt = await getFinanceReceiptByIdPostgres(receiptId);
+    if (!receipt) {
+      throw new Error("Receipt not found.");
+    }
+    if (receipt.status === "void") {
+      throw new Error("Receipt already void.");
+    }
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          `
+            UPDATE finance_receipts
+            SET status = 'void',
+                void_reason = $1
+            WHERE id = $2
+          `,
+          [cleanReason, receiptId],
+        );
+        await voidLedgerEntriesForSourcePostgres("receipt", receiptId, cleanReason, actor, client);
+        if (receipt.relatedInvoiceId) {
+          await refreshInvoiceBalancesPostgres(receipt.relatedInvoiceId, client);
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(actor, "void", "finance_receipts", receiptId, `Voided receipt ${receipt.receiptNumber}: ${cleanReason}`);
+    const updated = await getFinanceReceiptByIdPostgres(receiptId);
+    if (!updated) {
+      throw new Error("Failed to reload receipt.");
+    }
+    return updated;
+  }
   const receipt = voidFinanceReceipt(receiptId, reason, actor);
   if (true) {
     await withPostgresClient(async (client) => {
@@ -8171,6 +9959,60 @@ export async function voidFinanceReceiptAsync(receiptId: number, reason: string,
 }
 
 export async function createFinanceExpenseAsync(input: FinanceExpenseInput, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    await syncFinanceIdSequencePostgres("finance_expenses");
+    await ensureFinanceSettingsPostgres();
+    const settings = await getFinanceSettingsPostgres();
+    const expenseNumber = await nextNumberForPostgres(
+      "finance_expenses",
+      "expense_number",
+      settings.expensePrefix || "EXP",
+    );
+    const createdAt = nowIso();
+    const insert = await queryPostgres<{ id: number }>(
+      `
+        INSERT INTO finance_expenses (
+          expense_number,
+          vendor_name,
+          date,
+          category,
+          subcategory,
+          amount,
+          currency,
+          payment_method,
+          description,
+          notes,
+          status,
+          created_by_user_id,
+          created_at,
+          updated_at
+        ) VALUES (
+          $1, $2, $3, 'Expense', $4, $5, $6, $7, $8, $9, 'draft', $10, $11, $11
+        )
+        RETURNING id
+      `,
+      [
+        expenseNumber,
+        input.vendorName.trim(),
+        input.date || todayIsoDate(),
+        input.subcategory?.trim() || null,
+        normalizeNumber(Number(input.amount)),
+        normalizeCurrency(input.currency),
+        input.paymentMethod,
+        input.description.trim(),
+        input.notes?.trim() || null,
+        actor.userId,
+        createdAt,
+      ],
+    );
+    const id = Number(insert.rows[0]?.id || 0);
+    appendAudit(actor, "create", "finance_expenses", id, `Created expense ${expenseNumber}`);
+    const expense = await getFinanceExpenseByIdPostgres(id);
+    if (!expense) {
+      throw new Error("Failed to load expense.");
+    }
+    return expense;
+  }
   const expense = createFinanceExpense(input, actor);
   if (true) {
     await syncFinanceExpenseBundleToPostgres(expense.id);
@@ -8179,6 +10021,38 @@ export async function createFinanceExpenseAsync(input: FinanceExpenseInput, acto
 }
 
 export async function submitFinanceExpenseAsync(expenseId: number, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    const current = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!current) {
+      throw new Error("Expense not found.");
+    }
+    if (current.status === "void") {
+      throw new Error("Cannot submit a void expense.");
+    }
+    if (current.status === "posted") {
+      throw new Error("Posted expenses are immutable. Void and recreate instead.");
+    }
+    if (current.status !== "submitted") {
+      const submittedAt = nowIso();
+      await queryPostgres(
+        `
+          UPDATE finance_expenses
+          SET status = 'submitted',
+              submitted_at = COALESCE(submitted_at, $1),
+              submitted_by_user_id = COALESCE(submitted_by_user_id, $2),
+              updated_at = $1
+          WHERE id = $3
+        `,
+        [submittedAt, actor.userId, expenseId],
+      );
+      appendAudit(actor, "submit", "finance_expenses", expenseId, `Submitted expense ${current.expenseNumber}`);
+    }
+    const updated = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!updated) {
+      throw new Error("Failed to reload expense.");
+    }
+    return updated;
+  }
   const expense = submitFinanceExpense(expenseId, actor);
   if (true) {
     await syncFinanceExpenseBundleToPostgres(expenseId);
@@ -8191,6 +10065,79 @@ export async function upsertFinanceExpenseReceiptsAsync(
   receipts: ExpenseReceiptMetadataInput[],
   actor: FinanceActor,
 ) {
+  if (isPostgresConfigured()) {
+    const expense = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!expense) {
+      throw new Error("Expense not found.");
+    }
+    if (expense.status === "posted" || expense.status === "void") {
+      throw new Error("Receipts cannot be changed after expense is posted or voided.");
+    }
+    if (!Array.isArray(receipts) || receipts.length === 0) {
+      throw new Error("At least one expense receipt metadata entry is required.");
+    }
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await syncFinanceIdSequencePostgres("finance_expense_receipts", client);
+        await client.query("DELETE FROM finance_expense_receipts WHERE expense_id = $1", [expenseId]);
+        for (const item of receipts) {
+          const file = await client.query<{ id: number }>(
+            `
+              SELECT id
+              FROM finance_files
+              WHERE id = $1
+                AND source_type = 'expense'
+                AND source_id = $2
+              LIMIT 1
+            `,
+            [item.fileId, expenseId],
+          );
+          if (!file.rows[0]) {
+            throw new Error(`Receipt file ${item.fileId} is not linked to this expense.`);
+          }
+          await client.query(
+            `
+              INSERT INTO finance_expense_receipts (
+                expense_id,
+                file_id,
+                file_url,
+                file_hash_sha256,
+                vendor_name,
+                receipt_date,
+                receipt_amount,
+                currency,
+                reference_no,
+                uploaded_by_user_id,
+                uploaded_at
+              ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+              )
+            `,
+            [
+              expenseId,
+              item.fileId,
+              `/api/portal/finance/files/${item.fileId}`,
+              String(item.fileHashSha256 || "").trim().toLowerCase(),
+              String(item.vendorName || "").trim(),
+              toIsoDateOnly(item.receiptDate),
+              normalizeNumber(Number(item.receiptAmount || 0)),
+              normalizeCurrency(item.currency),
+              item.referenceNo?.trim() || null,
+              actor.userId,
+              nowIso(),
+            ],
+          );
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(actor, "link_receipts", "finance_expense_receipts", expenseId, `Updated receipt evidence links for expense ${expense.expenseNumber}`);
+    return listFinanceExpenseReceiptsPostgres(expenseId);
+  }
   const linkedReceipts = upsertFinanceExpenseReceipts(expenseId, receipts, actor);
   if (true) {
     await syncFinanceExpenseBundleToPostgres(expenseId);
@@ -8203,6 +10150,106 @@ export async function postFinanceExpenseAsync(
   actor: FinanceActor,
   options?: ExpensePostOptions,
 ) {
+  if (isPostgresConfigured()) {
+    const expense = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!expense) {
+      throw new Error("Expense not found.");
+    }
+    if (expense.status === "void") {
+      throw new Error("Cannot post a void expense.");
+    }
+    if (expense.status === "posted") {
+      return expense;
+    }
+    if (expense.status !== "submitted") {
+      throw new Error("Only submitted expenses can be posted.");
+    }
+    const receipts = await listFinanceExpenseReceiptsPostgres(expenseId);
+    if (receipts.length === 0) {
+      throw new Error("EXP-001: Expense has no receipt evidence metadata. Evidence upload is required.");
+    }
+    const overrideReason = options?.overrideReason?.trim() || "";
+    const postedAt = nowIso();
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          `
+            UPDATE finance_expenses
+            SET status = 'posted',
+                submitted_at = COALESCE(submitted_at, $1),
+                submitted_by_user_id = COALESCE(submitted_by_user_id, $2),
+                posted_at = $1,
+                posted_by_user_id = $2,
+                mismatch_override_reason = CASE WHEN $3 = '' THEN mismatch_override_reason ELSE $3 END,
+                mismatch_override_by = CASE WHEN $3 = '' THEN mismatch_override_by ELSE $2 END,
+                mismatch_override_at = CASE WHEN $3 = '' THEN mismatch_override_at ELSE $1 END,
+                updated_at = $1
+            WHERE id = $4
+          `,
+          [postedAt, actor.userId, overrideReason, expenseId],
+        );
+        const existingLedger = await client.query<{ id: number }>(
+          `
+            SELECT id
+            FROM finance_transactions_ledger
+            WHERE source_type = 'expense'
+              AND source_id = $1
+              AND posted_status = 'posted'
+            LIMIT 1
+          `,
+          [expenseId],
+        );
+        if (!existingLedger.rows[0]) {
+          const fileRows = await client.query<{ id: number }>(
+            `
+              SELECT id
+              FROM finance_files
+              WHERE source_type = 'expense'
+                AND source_id = $1
+              ORDER BY id ASC
+            `,
+            [expenseId],
+          );
+          await createLedgerEntryPostgres(
+            {
+              txnType: "money_out",
+              category: "Expense",
+              subcategory: expense.subcategory,
+              date: expense.date,
+              currency: expense.currency,
+              amount: expense.amount,
+              sourceType: "expense",
+              sourceId: expenseId,
+              notes: expense.notes || expense.description || undefined,
+              evidenceFileIds: fileRows.rows.map((row) => Number(row.id)),
+              postedStatus: "posted",
+              actor,
+            },
+            client,
+          );
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(
+      actor,
+      "post",
+      "finance_expenses",
+      expenseId,
+      overrideReason
+        ? `Posted expense ${expense.expenseNumber} with override: ${overrideReason}`
+        : `Posted expense ${expense.expenseNumber}`,
+    );
+    const updated = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!updated) {
+      throw new Error("Failed to reload expense.");
+    }
+    return updated;
+  }
   const expense = postFinanceExpense(expenseId, actor, options);
   if (true) {
     await syncFinanceExpenseBundleToPostgres(expenseId);
@@ -8211,6 +10258,51 @@ export async function postFinanceExpenseAsync(
 }
 
 export async function deleteFinanceExpenseDraftAsync(expenseId: number, reason: string, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    const cleanReason = requireDestructiveReason(reason, "delete");
+    const current = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!current) {
+      throw new Error("Expense not found.");
+    }
+    if (current.status !== "draft") {
+      throw new Error("Only draft expenses can be deleted. Use void for posted expenses.");
+    }
+    assertFinanceDraftDeletePermission(current.createdBy, actor);
+    const ledgerLinks = await queryPostgres<{ count: number }>(
+      `
+        SELECT COUNT(*)::int AS count
+        FROM finance_transactions_ledger
+        WHERE source_type = 'expense'
+          AND source_id = $1
+          AND posted_status != 'void'
+      `,
+      [expenseId],
+    );
+    if (Number(ledgerLinks.rows[0]?.count || 0) > 0) {
+      throw new Error("Draft expense cannot be deleted because it has ledger postings.");
+    }
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await deleteScopedPostgresRows("finance_expense_receipts", "expense_id = $1", [expenseId], client);
+        await deleteScopedPostgresRows("finance_transactions_ledger", "source_type = $1 AND source_id = $2", ["expense", expenseId], client);
+        await deleteScopedPostgresRows("finance_files", "source_type = $1 AND source_id = $2", ["expense", expenseId], client);
+        await deleteScopedPostgresRows("finance_audit_exceptions", "entity_type = $1 AND entity_id = $2", ["expense", expenseId], client);
+        await deleteScopedPostgresRows("finance_txn_risk_scores", "entity_type = $1 AND entity_id = $2", ["expense", expenseId], client);
+        await deleteScopedPostgresRows("finance_expenses", "id = $1", [expenseId], client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(actor, "delete_draft", "finance_expenses", expenseId, `Deleted draft expense ${current.expenseNumber}: ${cleanReason}`);
+    return {
+      deleted: true as const,
+      id: expenseId,
+      expenseNumber: current.expenseNumber,
+    };
+  }
   const deleted = deleteFinanceExpenseDraft(expenseId, reason, actor);
   if (true) {
     await withPostgresClient(async (client) => {
@@ -8253,6 +10345,42 @@ export async function deleteFinanceExpenseDraftAsync(expenseId: number, reason: 
 }
 
 export async function voidFinanceExpenseAsync(expenseId: number, reason: string, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    const cleanReason = requireDestructiveReason(reason, "void");
+    const current = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!current) {
+      throw new Error("Expense not found.");
+    }
+    if (current.status === "void") {
+      throw new Error("Expense already void.");
+    }
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          `
+            UPDATE finance_expenses
+            SET status = 'void',
+                void_reason = $1,
+                updated_at = $2
+            WHERE id = $3
+          `,
+          [cleanReason, nowIso(), expenseId],
+        );
+        await voidLedgerEntriesForSourcePostgres("expense", expenseId, cleanReason, actor, client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(actor, "void", "finance_expenses", expenseId, `Voided expense: ${cleanReason}`);
+    const updated = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!updated) {
+      throw new Error("Failed to reload expense.");
+    }
+    return updated;
+  }
   const expense = voidFinanceExpense(expenseId, reason, actor);
   if (true) {
     await syncFinanceExpenseBundleToPostgres(expenseId);
@@ -8261,6 +10389,102 @@ export async function voidFinanceExpenseAsync(expenseId: number, reason: string,
 }
 
 export async function voidFinancePaymentAsync(paymentId: number, reason: string, actor: FinanceActor) {
+  if (isPostgresConfigured()) {
+    const cleanReason = requireDestructiveReason(reason, "void");
+    const paymentRow = await queryPostgres<{ related_invoice_id: number; status: string }>(
+      `
+        SELECT related_invoice_id, status
+        FROM finance_payments
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [paymentId],
+    );
+    const payment = paymentRow.rows[0];
+    if (!payment) {
+      throw new Error("Payment not found.");
+    }
+    if (payment.status === "void") {
+      throw new Error("Payment is already void.");
+    }
+    await withPostgresClient(async (client) => {
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          `
+            UPDATE finance_payments
+            SET status = 'void',
+                void_reason = $1
+            WHERE id = $2
+          `,
+          [cleanReason, paymentId],
+        );
+        await voidLedgerEntriesForSourcePostgres("invoice_payment", paymentId, cleanReason, actor, client);
+        await refreshInvoiceBalancesPostgres(Number(payment.related_invoice_id), client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    });
+    appendAudit(actor, "void_payment", "finance_payments", paymentId, `Voided payment: ${cleanReason}`);
+    const paymentDetails = await queryPostgres<{
+      id: number;
+      related_invoice_id: number;
+      date: string;
+      amount: number;
+      currency: string;
+      method: string;
+      reference: string | null;
+      notes: string | null;
+      status: string;
+      void_reason: string | null;
+      created_by_user_id: number;
+      created_by_name: string | null;
+      created_at: string;
+    }>(
+      `
+        SELECT
+          p.id,
+          p.related_invoice_id,
+          p.date,
+          p.amount,
+          p.currency,
+          p.method,
+          p.reference,
+          p.notes,
+          p.status,
+          p.void_reason,
+          p.created_by_user_id,
+          u.full_name AS created_by_name,
+          p.created_at
+        FROM finance_payments p
+        LEFT JOIN portal_users u ON u.id = p.created_by_user_id
+        WHERE p.id = $1
+        LIMIT 1
+      `,
+      [paymentId],
+    );
+    const updated = paymentDetails.rows[0];
+    if (!updated) {
+      return null;
+    }
+    return {
+      id: Number(updated.id),
+      relatedInvoiceId: Number(updated.related_invoice_id),
+      date: String(updated.date),
+      amount: normalizeNumber(Number(updated.amount)),
+      currency: normalizeCurrency(updated.currency),
+      method: String(updated.method) as FinancePaymentRecord["method"],
+      reference: updated.reference || undefined,
+      notes: updated.notes || undefined,
+      status: String(updated.status) as FinancePostedStatus,
+      voidReason: updated.void_reason || undefined,
+      createdBy: Number(updated.created_by_user_id),
+      createdByName: updated.created_by_name || undefined,
+      createdAt: String(updated.created_at),
+    } as FinancePaymentRecord;
+  }
   const payment = voidFinancePayment(paymentId, reason, actor);
   if (true) {
     const invoiceId = payment?.relatedInvoiceId ?? null;
@@ -8289,6 +10513,86 @@ export async function updateFinanceAuditExceptionStatusAsync(
   },
   actor: FinanceActor,
 ) {
+  if (isPostgresConfigured()) {
+    const now = nowIso();
+    await queryPostgres(
+      `
+        UPDATE finance_audit_exceptions
+        SET status = $1,
+            resolved_at = CASE WHEN $1 IN ('resolved', 'overridden') THEN $2 ELSE resolved_at END,
+            resolved_by_user_id = CASE WHEN $1 IN ('resolved', 'overridden') THEN $3 ELSE resolved_by_user_id END,
+            resolution_notes = COALESCE($4, resolution_notes)
+        WHERE id = $5
+      `,
+      [input.status, now, actor.userId, input.notes?.trim() || null, exceptionId],
+    );
+    const result = await queryPostgres<{
+      id: number;
+      entity_type: string;
+      entity_id: number;
+      severity: string;
+      rule_code: string;
+      message: string;
+      status: string;
+      amount: number | null;
+      currency: string | null;
+      created_by_user_id: number | null;
+      created_by_name: string | null;
+      created_at: string;
+      resolved_at: string | null;
+      resolved_by_user_id: number | null;
+      resolved_by_name: string | null;
+      resolution_notes: string | null;
+    }>(
+      `
+        SELECT
+          e.id,
+          e.entity_type,
+          e.entity_id,
+          e.severity,
+          e.rule_code,
+          e.message,
+          e.status,
+          e.amount,
+          e.currency,
+          e.created_by_user_id,
+          cu.full_name AS created_by_name,
+          e.created_at,
+          e.resolved_at,
+          e.resolved_by_user_id,
+          ru.full_name AS resolved_by_name,
+          e.resolution_notes
+        FROM finance_audit_exceptions e
+        LEFT JOIN portal_users cu ON cu.id = e.created_by_user_id
+        LEFT JOIN portal_users ru ON ru.id = e.resolved_by_user_id
+        WHERE e.id = $1
+        LIMIT 1
+      `,
+      [exceptionId],
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error("Audit exception not found.");
+    }
+    return {
+      id: Number(row.id),
+      entityType: String(row.entity_type) as FinanceAuditExceptionRecord["entityType"],
+      entityId: Number(row.entity_id),
+      severity: String(row.severity) as FinanceAuditExceptionRecord["severity"],
+      ruleCode: String(row.rule_code),
+      message: String(row.message),
+      status: String(row.status) as FinanceAuditExceptionRecord["status"],
+      amount: row.amount === null ? undefined : normalizeNumber(Number(row.amount)),
+      currency: row.currency ? normalizeCurrency(row.currency) : undefined,
+      createdBy: row.created_by_user_id ?? undefined,
+      createdByName: row.created_by_name || undefined,
+      createdAt: String(row.created_at),
+      resolvedAt: row.resolved_at || undefined,
+      resolvedBy: row.resolved_by_user_id ?? undefined,
+      resolvedByName: row.resolved_by_name || undefined,
+      resolutionNotes: row.resolution_notes || undefined,
+    };
+  }
   const exception = updateFinanceAuditExceptionStatus(exceptionId, input, actor);
   if (true) {
     await syncFinanceAuditExceptionToPostgres(exceptionId);
@@ -8307,6 +10611,46 @@ export async function createStatementLineAsync(
     description?: string;
   },
 ) {
+  if (isPostgresConfigured()) {
+    await syncFinanceIdSequencePostgres("finance_statement_lines");
+    const insert = await queryPostgres<{ id: number }>(
+      `
+        INSERT INTO finance_statement_lines (
+          account_type,
+          date,
+          amount,
+          currency,
+          reference,
+          description,
+          match_status,
+          matched_amount,
+          created_by_user_id,
+          created_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, 'unmatched', 0, $7, $8
+        )
+        RETURNING id
+      `,
+      [
+        input.accountType,
+        input.date,
+        normalizeNumber(Number(input.amount || 0)),
+        normalizeCurrency(input.currency),
+        input.reference?.trim() || null,
+        input.description?.trim() || null,
+        actor.userId,
+        nowIso(),
+      ],
+    );
+    const id = Number(insert.rows[0]?.id || 0);
+    const lines = await listStatementLinesPostgres();
+    const line = lines.find((item) => item.id === id);
+    if (!line) {
+      throw new Error("Failed to load statement line.");
+    }
+    appendAudit(actor, "create_statement_line", "finance_statement_lines", id, `Created statement line ${id}`);
+    return line;
+  }
   const line = createStatementLine(actor, input);
   if (true) {
     await syncFinanceStatementLineToPostgres(line.id);
