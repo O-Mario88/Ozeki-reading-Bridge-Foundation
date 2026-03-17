@@ -230,6 +230,7 @@ function mergeFinanceRecordsById<T extends { id: number }>(primary: T[], fallbac
 }
 
 function hasTableColumn(db: any, table: string, column: string) {
+  if (!db) return true;
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
   return rows.some((row) => row.name === column);
 }
@@ -241,7 +242,7 @@ function ensureTableColumn(db: any, table: string, column: string, definition: s
 }
 
 function migrateFinanceExpensesWorkflowSchema(db: any) {
-  if (hasTableColumn(db, "finance_expenses", "submitted_at")) {
+  if (!db || hasTableColumn(db, "finance_expenses", "submitted_at")) {
     return;
   }
 
@@ -383,7 +384,7 @@ function migrateFinanceExpensesWorkflowSchema(db: any) {
       CREATE INDEX IF NOT EXISTS idx_finance_expenses_date ON finance_expenses(date);
     `);
   } finally {
-    db.exec("PRAGMA foreign_keys = ON;");
+    if (db) db.exec("PRAGMA foreign_keys = ON;");
   }
 }
 
@@ -467,7 +468,7 @@ function getFinanceDefaultSender() {
 }
 
 function ensureFinanceSchema() {
-  if (financeSchemaReady) {
+  if (financeSchemaReady || isPostgresConfigured()) {
     return;
   }
 

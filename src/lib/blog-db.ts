@@ -249,21 +249,25 @@ const SELECT_PORTAL_BLOG_COLUMNS_POSTGRES = `
   updated_at::text AS "updatedAt"
 `;
 
-function hasColumn(table: string, column: string) {
-  const db = getDb();
+function hasTableColumn(db: any, table: string, column: string) {
+  if (!db) return true;
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
   return rows.some((row) => row.name === column);
 }
 
 function ensureColumn(table: string, column: string, definition: string) {
   const db = getDb();
-  if (!hasColumn(table, column)) {
+  if (!db) return;
+  if (!hasTableColumn(db, table, column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
 
+
+
 function ensurePortalBlogSchema() {
   const db = getDb();
+  if (!db) return;
   db.exec(`
     CREATE TABLE IF NOT EXISTS portal_blog_posts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -768,6 +772,7 @@ function normalizeBodyBlocksForSave(bodyBlocks: BlogBodyBlock[] | undefined, sec
 
 function resolveUniqueSlug(rawSlug: string | undefined, title: string, excludeId?: number) {
   const db = getDb();
+  if (!db) return rawSlug || slugifySegment(title);
   const candidate = slugifySegment(rawSlug?.trim() || title);
   if (!candidate) {
     throw new Error("A valid slug could not be generated from the title.");

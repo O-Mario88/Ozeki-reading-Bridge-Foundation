@@ -3436,6 +3436,9 @@ function tryOpenWritableRecoveryDb(primaryDbPath: string) {
 }
 
 export function getDb() {
+  if (isPostgresConfigured()) {
+    return null;
+  }
   if (dbInstance) {
     return dbInstance;
   }
@@ -3477,12 +3480,12 @@ export function getDb() {
     db?.pragma("foreign_keys = ON");
   }
 
-  // Only run migrations if NOT read-only
-  if (!isReadonly) {
+  // Only run migrations if NOT read-only AND NOT null
+  if (!isReadonly && db) {
   const attemptedRecoveryPaths = new Set<string>();
   while (true) {
     try {
-    db.exec(`
+    db?.exec(`
   CREATE TABLE IF NOT EXISTS bookings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     service TEXT NOT NULL,
@@ -5030,6 +5033,7 @@ function parseNewsletterDispatchLogRow(row: {
 
 function ensureUniqueNewsletterSlug(rawSlug: string, issueIdToExclude?: number) {
   const db = getDb();
+  if (!db) return slugifyNewsletterSegment(rawSlug) || `newsletter-${new Date().toISOString().slice(0, 10)}`;
   const base = slugifyNewsletterSegment(rawSlug) || `newsletter-${new Date().toISOString().slice(0, 10)}`;
   let candidate = base;
   let suffix = 2;
