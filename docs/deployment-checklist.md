@@ -30,6 +30,9 @@
 - Use `npm run start` (standalone wrapper) so startup DB preflight runs.
 - Startup should log:
   - `DB=postgres host=... database=... ssl=...`
+- Optional strict fail-fast:
+  - set `DB_STARTUP_STRICT=true` to crash startup when DB preflight fails.
+  - leave unset/false to allow app boot in degraded mode while `/api/health` reports DB failure.
 
 ## CI/Pre-Deploy
 - AWS build command:

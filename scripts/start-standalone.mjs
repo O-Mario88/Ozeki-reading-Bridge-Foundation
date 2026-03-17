@@ -32,13 +32,19 @@ function shouldUseSsl(databaseUrl) {
 async function verifyProductionDatabaseReadiness() {
   const isProduction = (process.env.NODE_ENV ?? "").trim().toLowerCase() === "production";
   const shouldCheck = isProduction || toBooleanFlag(process.env.DB_STARTUP_CHECK, false);
+  const strictStartup = toBooleanFlag(process.env.DB_STARTUP_STRICT, false);
   if (!shouldCheck) {
     return;
   }
 
   const databaseUrl = process.env.DATABASE_URL?.trim() || "";
   if (!databaseUrl) {
-    throw new Error("[startup] DATABASE_URL is required in production. SQLite is disabled.");
+    const message = "[startup] DATABASE_URL is not configured. PostgreSQL-backed features will be unavailable.";
+    if (strictStartup) {
+      throw new Error(message);
+    }
+    console.error(`${message} Continuing startup in degraded mode.`);
+    return;
   }
 
   const parsed = new URL(databaseUrl);
@@ -56,6 +62,12 @@ async function verifyProductionDatabaseReadiness() {
     console.log(
       `[startup] DB=postgres host=${parsed.hostname || "unknown"} port=${parsed.port || "5432"} database=${database} ssl=${ssl ? "on" : "off"}`,
     );
+  } catch (error) {
+    if (strictStartup) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[startup] PostgreSQL preflight failed: ${message}. Continuing startup in degraded mode.`);
   } finally {
     await client.end().catch(() => undefined);
   }
