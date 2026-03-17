@@ -11,7 +11,7 @@ import {
   issueFinanceReceipt,
   sendFinanceInvoice,
   listFinanceLedgerTransactions,
-  postFinanceExpense,
+  postFinanceExpenseAsync,
   recordFinancePayment,
   submitFinanceExpense,
   upsertFinanceExpenseReceipts,
@@ -139,8 +139,8 @@ test("expense posting requires evidence and creates money_out ledger", async () 
   );
 
   submitFinanceExpense(draft.id, actor);
-  assert.throws(
-    () => postFinanceExpense(draft.id, actor),
+  await assert.rejects(
+    () => postFinanceExpenseAsync(draft.id, actor),
     /(evidence upload is required|EXP-001: Expense has no receipt evidence metadata)/i,
   );
 
@@ -171,7 +171,7 @@ test("expense posting requires evidence and creates money_out ledger", async () 
     actor,
   );
 
-  const posted = postFinanceExpense(draft.id, actor);
+  const posted = await postFinanceExpenseAsync(draft.id, actor);
   assert.equal(posted.status, "posted");
 
   const ledger = await listFinanceLedgerTransactions({

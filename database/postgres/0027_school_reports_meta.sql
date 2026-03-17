@@ -32,5 +32,5 @@ CREATE TABLE IF NOT EXISTS school_performance_reports (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_school_reports_school_id ON school_performance_reports(school_id);
-CREATE INDEX idx_school_reports_status ON school_performance_reports(status);
+CREATE INDEX IF NOT EXISTS idx_school_reports_school_id ON school_performance_reports(school_id);
+CREATE INDEX IF NOT EXISTS idx_school_reports_status ON school_performance_reports(status);

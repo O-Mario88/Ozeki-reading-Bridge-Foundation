@@ -14,7 +14,7 @@ export const metadata = {
 
 export default async function PortalDashboardPage() {
   const user = await requirePortalStaffUser();
-  const dashboard = getPortalDashboardData(user);
+  const dashboard = await getPortalDashboardData(user);
 
   // Fetch all assessment records to build the performance scorecard
   const assessments = await listPortalRecordsAsync({ module: "assessment" }, user);

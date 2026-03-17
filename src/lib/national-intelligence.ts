@@ -3,7 +3,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
 import { PDFDocument, rgb } from "pdf-lib";
-import { getDb, logAuditEvent } from "@/lib/db";
 import {
   drawBrandFooter,
   drawBrandFrame,
@@ -15,6 +14,29 @@ import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import { isPostgresConfigured, queryPostgres } from "@/lib/server/postgres/client";
 import type { PortalUser } from "@/lib/types";
+
+type LegacyStatement<TGet = unknown, TAll = unknown, TRun = { lastInsertRowid?: number | bigint; changes?: number }> = {
+  get(params?: unknown): TGet;
+  all(params?: unknown): TAll[];
+  run(params?: unknown): TRun;
+};
+
+type LegacyDb = {
+  exec(sql: string): void;
+  prepare(sql: string): LegacyStatement;
+};
+
+function legacyDatabaseRemoved(functionName: string): never {
+  throw new Error(`${functionName} is no longer available. PostgreSQL is required for national intelligence.`);
+}
+
+function getDb(): LegacyDb {
+  return legacyDatabaseRemoved("getDb");
+}
+
+function logAuditEvent(..._args: unknown[]): never {
+  return legacyDatabaseRemoved("logAuditEvent");
+}
 
 export type NlisGeoScopeType =
   | "country"
@@ -347,6 +369,10 @@ function rangeFromScope(scopeType: NlisGeoScopeType, scopeId: string) {
 
 function ensureNationalIntelligenceSchema() {
   if (schemaReady) {
+    return;
+  }
+  if (isPostgresConfigured()) {
+    schemaReady = true;
     return;
   }
   const db = getDb();

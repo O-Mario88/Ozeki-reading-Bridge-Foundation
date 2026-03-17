@@ -1,5 +1,4 @@
 import type { PortalUser } from "@/lib/types";
-import { getDb, replaceSqliteRowsInPostgres, upsertSqliteRowToPostgres } from "@/lib/db";
 import {
   type BenchmarkProfileRecord,
   type BenchmarkRuleInput,
@@ -12,30 +11,25 @@ import {
   type NationalPriorityQueueItem,
   type NationalReportPreset,
   type NlisGeoScopeType,
-  assignPriorityQueueItem,
-  createBenchmarkProfile,
-  createInterventionPlan,
-  createInterventionPlanFromPriority,
-  getNationalInsights,
-  listBenchmarkProfiles,
-  listBenchmarkRules,
-  listDataQualitySummaries,
-  listEducationAuditExceptions,
-  listInterventionActions,
-  listInterventionPlans,
-  listPortalUsersForAssignments,
-  resolveEducationAuditException,
-  runEducationDataQualitySweep,
-  updateBenchmarkProfile,
-  updateInterventionAction,
-  upsertBenchmarkRule,
-  addInterventionAction,
 } from "@/lib/national-intelligence";
-import { isPostgresConfigured, queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import {
+  isPostgresConfigured,
+  queryPostgres,
+  requirePostgresConfigured,
+  withPostgresClient,
+} from "@/lib/server/postgres/client";
 import {
   listAssessmentRowsForPublicImpactPostgres,
   listLessonEvaluationRowsForPublicImpactPostgres,
 } from "@/lib/server/postgres/repositories/public-impact";
+
+async function loadLegacyDbModule() {
+  return import("@/lib/db");
+}
+
+async function loadLegacyNationalIntelligenceModule() {
+  return import("@/lib/national-intelligence");
+}
 
 function normalizeDate(value: string | undefined | null, fallback: string) {
   const normalized = String(value ?? "").trim();
@@ -219,6 +213,7 @@ async function logAuditEventAsync(args: {
 
 async function listSchoolsForScopeAsync(scopeType: NlisGeoScopeType, scopeId: string) {
   if (!isPostgresConfigured()) {
+    const { getDb } = await loadLegacyDbModule();
     const db = getDb();
     const normalizedScopeId = stripText(scopeId);
     const scopeParams: Record<string, string | number> = {};
@@ -317,6 +312,7 @@ async function syncBenchmarkProfileToPostgres(benchmarkId: number) {
   if (!isPostgresConfigured()) {
     return;
   }
+  const { getDb, upsertSqliteRowToPostgres } = await loadLegacyDbModule();
   const db = getDb();
   const row = db
     .prepare("SELECT * FROM benchmark_profiles WHERE benchmark_id = @benchmarkId LIMIT 1")
@@ -332,6 +328,7 @@ async function syncBenchmarkRulesToPostgres(benchmarkId: number) {
   if (!isPostgresConfigured()) {
     return;
   }
+  const { getDb, replaceSqliteRowsInPostgres } = await loadLegacyDbModule();
   const db = getDb();
   const rows = db
     .prepare("SELECT * FROM benchmark_rules WHERE benchmark_id = @benchmarkId")
@@ -343,6 +340,7 @@ async function syncEducationAuditExceptionToPostgres(exceptionId: number) {
   if (!isPostgresConfigured()) {
     return;
   }
+  const { getDb, upsertSqliteRowToPostgres } = await loadLegacyDbModule();
   const db = getDb();
   const row = db
     .prepare("SELECT * FROM edu_audit_exceptions WHERE exception_id = @exceptionId LIMIT 1")
@@ -358,6 +356,7 @@ async function syncDataQualityScopeToPostgres(scopeType: NlisGeoScopeType, scope
   if (!isPostgresConfigured()) {
     return;
   }
+  const { getDb, upsertSqliteRowToPostgres } = await loadLegacyDbModule();
   const db = getDb();
   const exceptions = db
     .prepare(
@@ -428,6 +427,7 @@ async function syncPriorityAssignmentToPostgres(schoolId: number, periodKey: str
   if (!isPostgresConfigured()) {
     return;
   }
+  const { getDb, upsertSqliteRowToPostgres } = await loadLegacyDbModule();
   const db = getDb();
   const row = db
     .prepare(
@@ -453,6 +453,7 @@ async function syncInterventionPlanBundleToPostgres(planId: number) {
   if (!isPostgresConfigured()) {
     return;
   }
+  const { getDb, replaceSqliteRowsInPostgres, upsertSqliteRowToPostgres } = await loadLegacyDbModule();
   const db = getDb();
   const plan = db
     .prepare("SELECT * FROM intervention_plan WHERE plan_id = @planId LIMIT 1")
@@ -539,9 +540,7 @@ function mapInterventionActionRow(row: {
 }
 
 export async function listBenchmarkProfilesAsync() {
-  if (!isPostgresConfigured()) {
-    return listBenchmarkProfiles();
-  }
+  requirePostgresConfigured();
   const result = await queryPostgres<{
     benchmarkId: number;
     name: string;
@@ -574,9 +573,7 @@ export async function listBenchmarkProfilesAsync() {
 }
 
 export async function listBenchmarkRulesAsync(benchmarkId: number) {
-  if (!isPostgresConfigured()) {
-    return listBenchmarkRules(benchmarkId);
-  }
+  requirePostgresConfigured();
   const result = await queryPostgres<{
     ruleId: number;
     benchmarkId: number;
@@ -651,12 +648,64 @@ export async function createBenchmarkProfileAsync(args: {
     isActive?: boolean;
   };
 }) {
-  const profile = createBenchmarkProfile(args);
-  if (!profile) {
-    return null;
+  requirePostgresConfigured();
+  const now = new Date().toISOString();
+  const name = stripText(args.input.name);
+  if (!name) {
+    throw new Error("Benchmark profile name is required.");
   }
-  await syncBenchmarkProfileToPostgres(profile.benchmarkId);
-  return (await listBenchmarkProfilesAsync()).find((item) => item.benchmarkId === profile.benchmarkId) ?? profile;
+  const createdId = await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const insert = await client.query<{ benchmarkId: number }>(
+        `
+          INSERT INTO benchmark_profiles (
+            name,
+            effective_from_date,
+            effective_to_date,
+            notes,
+            is_active,
+            created_by,
+            created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz)
+          RETURNING benchmark_id AS "benchmarkId"
+        `,
+        [
+          name,
+          normalizeDate(args.input.effectiveFromDate, now.slice(0, 10)),
+          args.input.effectiveToDate ? stripText(args.input.effectiveToDate) : null,
+          stripText(args.input.notes ?? "") || null,
+          args.input.isActive === true,
+          args.user.id,
+          now,
+        ],
+      );
+      const benchmarkId = Number(insert.rows[0]?.benchmarkId ?? 0);
+      if (args.input.isActive === true) {
+        await client.query(
+          `
+            UPDATE benchmark_profiles
+            SET is_active = CASE WHEN benchmark_id = $1 THEN TRUE ELSE FALSE END
+          `,
+          [benchmarkId],
+        );
+      }
+      await client.query(
+        `
+          INSERT INTO audit_logs (
+            user_id, user_name, action, target_table, target_id, detail, timestamp
+          ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        `,
+        [args.user.id, args.user.fullName, "create", "benchmark_profiles", String(benchmarkId), `Created benchmark profile ${name}.`],
+      );
+      await client.query("COMMIT");
+      return benchmarkId;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+  return (await listBenchmarkProfilesAsync()).find((item) => item.benchmarkId === createdId) ?? null;
 }
 
 export async function updateBenchmarkProfileAsync(args: {
@@ -670,21 +719,136 @@ export async function updateBenchmarkProfileAsync(args: {
     isActive?: boolean;
   };
 }) {
-  const profile = updateBenchmarkProfile(args);
-  if (!profile) {
-    return null;
+  requirePostgresConfigured();
+  const patch: string[] = [];
+  const values: unknown[] = [];
+  if (typeof args.input.name === "string") {
+    values.push(stripText(args.input.name));
+    patch.push(`name = $${values.length}`);
   }
-  await syncBenchmarkProfileToPostgres(args.benchmarkId);
-  return (await listBenchmarkProfilesAsync()).find((item) => item.benchmarkId === args.benchmarkId) ?? profile;
+  if (typeof args.input.effectiveFromDate === "string") {
+    values.push(normalizeDate(args.input.effectiveFromDate, new Date().toISOString().slice(0, 10)));
+    patch.push(`effective_from_date = $${values.length}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(args.input, "effectiveToDate")) {
+    values.push(args.input.effectiveToDate ? stripText(args.input.effectiveToDate) : null);
+    patch.push(`effective_to_date = $${values.length}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(args.input, "notes")) {
+    values.push(stripText(args.input.notes ?? "") || null);
+    patch.push(`notes = $${values.length}`);
+  }
+  if (typeof args.input.isActive === "boolean") {
+    values.push(args.input.isActive);
+    patch.push(`is_active = $${values.length}`);
+  }
+
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const exists = await client.query(`SELECT benchmark_id FROM benchmark_profiles WHERE benchmark_id = $1 LIMIT 1`, [args.benchmarkId]);
+      if (exists.rows.length === 0) {
+        throw new Error("Benchmark profile not found.");
+      }
+      if (patch.length > 0) {
+        values.push(args.benchmarkId);
+        await client.query(
+          `UPDATE benchmark_profiles SET ${patch.join(", ")} WHERE benchmark_id = $${values.length}`,
+          values,
+        );
+      }
+      if (args.input.isActive === true) {
+        await client.query(
+          `
+            UPDATE benchmark_profiles
+            SET is_active = CASE WHEN benchmark_id = $1 THEN TRUE ELSE FALSE END
+          `,
+          [args.benchmarkId],
+        );
+      }
+      await client.query(
+        `
+          INSERT INTO audit_logs (
+            user_id, user_name, action, target_table, target_id, detail, timestamp
+          ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        `,
+        [args.user.id, args.user.fullName, "update", "benchmark_profiles", String(args.benchmarkId), "Updated benchmark profile metadata."],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+  return (await listBenchmarkProfilesAsync()).find((item) => item.benchmarkId === args.benchmarkId) ?? null;
 }
 
 export async function upsertBenchmarkRuleAsync(args: {
   user: Pick<PortalUser, "id" | "fullName">;
   input: BenchmarkRuleInput;
 }) {
-  const rules = upsertBenchmarkRule(args);
-  await syncBenchmarkRulesToPostgres(args.input.benchmarkId);
-  return isPostgresConfigured() ? listBenchmarkRulesAsync(args.input.benchmarkId) : rules;
+  requirePostgresConfigured();
+  const exists = await queryPostgres(
+    `SELECT benchmark_id FROM benchmark_profiles WHERE benchmark_id = $1 LIMIT 1`,
+    [args.input.benchmarkId],
+  );
+  if (exists.rows.length === 0) {
+    throw new Error("Benchmark profile not found.");
+  }
+
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await client.query(
+        `
+          INSERT INTO benchmark_rules (
+            benchmark_id,
+            grade,
+            language,
+            cwpm_bands_json,
+            comprehension_proficient_rule_json,
+            optional_accuracy_floor,
+            domain_proficiency_thresholds_json,
+            created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+          ON CONFLICT (benchmark_id, grade, language) DO UPDATE SET
+            cwpm_bands_json = EXCLUDED.cwpm_bands_json,
+            comprehension_proficient_rule_json = EXCLUDED.comprehension_proficient_rule_json,
+            optional_accuracy_floor = EXCLUDED.optional_accuracy_floor,
+            domain_proficiency_thresholds_json = EXCLUDED.domain_proficiency_thresholds_json
+        `,
+        [
+          args.input.benchmarkId,
+          args.input.grade,
+          stripText(args.input.language) || "English",
+          JSON.stringify(args.input.cwpmBands),
+          JSON.stringify(args.input.comprehensionProficientRule),
+          args.input.optionalAccuracyFloor === undefined ? null : args.input.optionalAccuracyFloor,
+          JSON.stringify(args.input.domainProficiencyThresholds ?? {}),
+        ],
+      );
+      await client.query(
+        `
+          INSERT INTO audit_logs (
+            user_id, user_name, action, target_table, target_id, detail, timestamp
+          ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        `,
+        [
+          args.user.id,
+          args.user.fullName,
+          "update",
+          "benchmark_rules",
+          null,
+          `Upserted benchmark rule for benchmark ${args.input.benchmarkId}, grade ${args.input.grade}, language ${args.input.language}.`,
+        ],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+  return listBenchmarkRulesAsync(args.input.benchmarkId);
 }
 
 export async function listEducationAuditExceptionsAsync(filters?: {
@@ -695,9 +859,7 @@ export async function listEducationAuditExceptionsAsync(filters?: {
   ruleCode?: string;
   limit?: number;
 }) {
-  if (!isPostgresConfigured()) {
-    return listEducationAuditExceptions(filters);
-  }
+  requirePostgresConfigured();
   const clauses: string[] = ["1=1"];
   const params: unknown[] = [];
   if (filters?.scopeType) {
@@ -787,8 +949,37 @@ export async function resolveEducationAuditExceptionAsync(args: {
   status: "resolved" | "overridden";
   notes: string;
 }) {
-  resolveEducationAuditException(args);
-  await syncEducationAuditExceptionToPostgres(args.exceptionId);
+  requirePostgresConfigured();
+  const notes = stripText(args.notes);
+  if (!notes) {
+    throw new Error("Resolution notes are required.");
+  }
+  if (args.status === "overridden" && !args.user.isSuperAdmin) {
+    throw new Error("Only Super Admin can override education audit exceptions.");
+  }
+  const result = await queryPostgres(
+    `
+      UPDATE edu_audit_exceptions
+      SET
+        status = $2,
+        resolved_by = $3,
+        resolved_at = NOW(),
+        resolution_notes = $4
+      WHERE exception_id = $1
+    `,
+    [args.exceptionId, args.status, args.user.id, notes],
+  );
+  if (result.rowCount === 0) {
+    throw new Error("Audit exception not found.");
+  }
+  await logAuditEventAsync({
+    userId: args.user.id,
+    userName: args.user.fullName,
+    action: args.status === "overridden" ? "override" : "resolve",
+    targetTable: "edu_audit_exceptions",
+    targetId: args.exceptionId,
+    detail: notes,
+  });
 }
 
 export async function listDataQualitySummariesAsync(filters?: {
@@ -797,9 +988,7 @@ export async function listDataQualitySummariesAsync(filters?: {
   periodKey?: string;
   limit?: number;
 }) {
-  if (!isPostgresConfigured()) {
-    return listDataQualitySummaries(filters);
-  }
+  requirePostgresConfigured();
   const clauses: string[] = ["1=1"];
   const params: unknown[] = [];
   if (filters?.scopeType) {
@@ -867,7 +1056,8 @@ export async function runEducationDataQualitySweepAsync(args: {
   scopeType?: NlisGeoScopeType;
   scopeId?: string;
 }) {
-  const result = runEducationDataQualitySweep(args);
+  const mod = await loadLegacyNationalIntelligenceModule();
+  const result = mod.runEducationDataQualitySweep(args);
   if (isPostgresConfigured()) {
     await syncDataQualityScopeToPostgres(result.scopeType, result.scopeId);
   }
@@ -875,9 +1065,7 @@ export async function runEducationDataQualitySweepAsync(args: {
 }
 
 export async function listPortalUsersForAssignmentsAsync() {
-  if (!isPostgresConfigured()) {
-    return listPortalUsersForAssignments();
-  }
+  requirePostgresConfigured();
   const result = await queryPostgres<{
     id: number;
     fullName: string;
@@ -913,8 +1101,32 @@ export async function assignPriorityQueueItemAsync(args: {
   ownerUserId: number;
   notes?: string;
 }) {
-  assignPriorityQueueItem(args);
-  await syncPriorityAssignmentToPostgres(args.schoolId, stripText(args.periodKey ?? "") || currentPeriodKey());
+  requirePostgresConfigured();
+  const periodKey = stripText(args.periodKey ?? "") || currentPeriodKey();
+  await queryPostgres(
+    `
+      INSERT INTO edu_priority_queue_assignments (
+        school_id,
+        period_key,
+        owner_user_id,
+        notes,
+        assigned_at
+      ) VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (school_id, period_key) DO UPDATE SET
+        owner_user_id = EXCLUDED.owner_user_id,
+        notes = EXCLUDED.notes,
+        assigned_at = EXCLUDED.assigned_at
+    `,
+    [args.schoolId, periodKey, args.ownerUserId, stripText(args.notes ?? "") || null],
+  );
+  await logAuditEventAsync({
+    userId: args.user.id,
+    userName: args.user.fullName,
+    action: "assign_priority_queue_item",
+    targetTable: "edu_priority_queue_assignments",
+    targetId: `${args.schoolId}:${periodKey}`,
+    detail: `Assigned school ${args.schoolId} to user ${args.ownerUserId} for ${periodKey}.`,
+  });
 }
 
 export async function getNationalInsightsAsync(args: {
@@ -924,7 +1136,8 @@ export async function getNationalInsightsAsync(args: {
   periodEnd?: string;
 }): Promise<NationalInsightWidgetData> {
   if (!isPostgresConfigured()) {
-    return getNationalInsights(args);
+    const mod = await loadLegacyNationalIntelligenceModule();
+    return mod.getNationalInsights(args);
   }
 
   const periodStart = normalizeDate(args.periodStart ?? "", `${new Date().getUTCFullYear()}-01-01`);
@@ -1275,9 +1488,7 @@ export async function listInterventionPlansAsync(filters?: {
   status?: InterventionPlanRecord["status"];
   limit?: number;
 }) {
-  if (!isPostgresConfigured()) {
-    return listInterventionPlans(filters);
-  }
+  requirePostgresConfigured();
   const clauses: string[] = ["1=1"];
   const params: unknown[] = [];
   if (filters?.scopeType) {
@@ -1374,12 +1585,49 @@ export async function createInterventionPlanAsync(args: {
     notes?: string;
   };
 }) {
-  const plan = createInterventionPlan(args);
-  if (!plan) {
-    return null;
-  }
-  await syncInterventionPlanBundleToPostgres(plan.planId);
-  return (await listInterventionPlansAsync({ limit: 1 })).find((item) => item.planId === plan.planId) ?? plan;
+  requirePostgresConfigured();
+  const created = await queryPostgres<{ planId: number }>(
+    `
+      INSERT INTO intervention_plan (
+        scope_type,
+        scope_id,
+        school_id,
+        district,
+        title,
+        created_by,
+        created_at,
+        status,
+        target_metrics_json,
+        start_date,
+        end_date,
+        notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9, $10, $11)
+      RETURNING plan_id AS "planId"
+    `,
+    [
+      args.input.scopeType,
+      stripText(args.input.scopeId),
+      args.input.schoolId ?? null,
+      stripText(args.input.district ?? "") || null,
+      stripText(args.input.title),
+      args.user.id,
+      args.input.status ?? "planned",
+      JSON.stringify(args.input.targetMetrics ?? {}),
+      args.input.startDate ? stripText(args.input.startDate) : null,
+      args.input.endDate ? stripText(args.input.endDate) : null,
+      stripText(args.input.notes ?? "") || null,
+    ],
+  );
+  const planId = Number(created.rows[0]?.planId ?? 0);
+  await logAuditEventAsync({
+    userId: args.user.id,
+    userName: args.user.fullName,
+    action: "create",
+    targetTable: "intervention_plan",
+    targetId: planId,
+    detail: `Created intervention plan ${stripText(args.input.title)}.`,
+  });
+  return (await listInterventionPlansAsync({ limit: 1000 })).find((item) => item.planId === planId) ?? null;
 }
 
 export async function createInterventionPlanFromPriorityAsync(args: {
@@ -1392,18 +1640,29 @@ export async function createInterventionPlanFromPriorityAsync(args: {
     recommendedIntervention: NationalPriorityQueueItem["recommendedIntervention"];
   };
 }) {
-  const plan = createInterventionPlanFromPriority(args);
-  if (!plan) {
-    return null;
-  }
-  await syncInterventionPlanBundleToPostgres(plan.planId);
-  return (await listInterventionPlansAsync({ limit: 1 })).find((item) => item.planId === plan.planId) ?? plan;
+  requirePostgresConfigured();
+  return createInterventionPlanAsync({
+    user: args.user,
+    input: {
+      scopeType: "school",
+      scopeId: String(args.item.schoolId),
+      schoolId: args.item.schoolId,
+      district: args.item.district,
+      title: `${args.item.recommendedIntervention} - ${args.item.schoolName}`,
+      status: "planned",
+      targetMetrics: {
+        reduce_non_readers_to_pct_lt: 20,
+        increase_at20plus_delta_pct_gt: 10,
+        improve_teaching_quality_pct_gt: 70,
+        source_risk_non_readers_pct: args.item.metrics.nonReadersPct,
+      },
+      notes: `Auto-created from Priority Queue recommendation: ${args.item.recommendedIntervention}.`,
+    },
+  });
 }
 
 export async function listInterventionActionsAsync(planId: number) {
-  if (!isPostgresConfigured()) {
-    return listInterventionActions(planId);
-  }
+  requirePostgresConfigured();
   const result = await queryPostgres<{
     actionId: number;
     planId: number;
@@ -1468,8 +1727,47 @@ export async function addInterventionActionAsync(args: {
     outcomeNotes?: string;
   };
 }) {
-  const actionId = addInterventionAction(args);
-  await syncInterventionPlanBundleToPostgres(args.input.planId);
+  requirePostgresConfigured();
+  const result = await queryPostgres<{ actionId: number }>(
+    `
+      INSERT INTO intervention_actions (
+        plan_id,
+        action_type,
+        owner_user_id,
+        due_date,
+        status,
+        visit_id,
+        training_id,
+        assessment_id,
+        story_activity_id,
+        outcome_notes,
+        created_at,
+        updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      RETURNING action_id AS "actionId"
+    `,
+    [
+      args.input.planId,
+      args.input.actionType,
+      args.input.ownerUserId,
+      args.input.dueDate ? stripText(args.input.dueDate) : null,
+      args.input.status ?? "planned",
+      args.input.visitId ?? null,
+      args.input.trainingId ?? null,
+      args.input.assessmentId ?? null,
+      args.input.storyActivityId ?? null,
+      stripText(args.input.outcomeNotes ?? "") || null,
+    ],
+  );
+  const actionId = Number(result.rows[0]?.actionId ?? 0);
+  await logAuditEventAsync({
+    userId: args.user.id,
+    userName: args.user.fullName,
+    action: "create",
+    targetTable: "intervention_actions",
+    targetId: actionId,
+    detail: `Added intervention action ${args.input.actionType} to plan ${args.input.planId}.`,
+  });
   return actionId;
 }
 
@@ -1487,16 +1785,65 @@ export async function updateInterventionActionAsync(args: {
     outcomeNotes?: string | null;
   };
 }) {
-  updateInterventionAction(args);
-  if (!isPostgresConfigured()) {
+  requirePostgresConfigured();
+  const patch: string[] = [];
+  const params: unknown[] = [];
+  if (typeof args.input.ownerUserId === "number") {
+    params.push(args.input.ownerUserId);
+    patch.push(`owner_user_id = $${params.length}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(args.input, "dueDate")) {
+    params.push(args.input.dueDate ? stripText(args.input.dueDate) : null);
+    patch.push(`due_date = $${params.length}`);
+  }
+  if (args.input.status) {
+    params.push(args.input.status);
+    patch.push(`status = $${params.length}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(args.input, "visitId")) {
+    params.push(args.input.visitId ?? null);
+    patch.push(`visit_id = $${params.length}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(args.input, "trainingId")) {
+    params.push(args.input.trainingId ?? null);
+    patch.push(`training_id = $${params.length}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(args.input, "assessmentId")) {
+    params.push(args.input.assessmentId ?? null);
+    patch.push(`assessment_id = $${params.length}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(args.input, "storyActivityId")) {
+    params.push(args.input.storyActivityId ?? null);
+    patch.push(`story_activity_id = $${params.length}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(args.input, "outcomeNotes")) {
+    params.push(stripText(args.input.outcomeNotes ?? "") || null);
+    patch.push(`outcome_notes = $${params.length}`);
+  }
+  if (patch.length === 0) {
     return;
   }
-  const row = getDb()
-    .prepare("SELECT plan_id AS planId FROM intervention_actions WHERE action_id = @actionId LIMIT 1")
-    .get({ actionId: args.actionId }) as { planId: number } | undefined;
-  if (row?.planId) {
-    await syncInterventionPlanBundleToPostgres(Number(row.planId));
+  params.push(args.actionId);
+  const result = await queryPostgres<{ planId: number }>(
+    `
+      UPDATE intervention_actions
+      SET ${patch.join(", ")}, updated_at = NOW()
+      WHERE action_id = $${params.length}
+      RETURNING plan_id AS "planId"
+    `,
+    params,
+  );
+  if (result.rows.length === 0) {
+    throw new Error("Intervention action not found.");
   }
+  await logAuditEventAsync({
+    userId: args.user.id,
+    userName: args.user.fullName,
+    action: "update",
+    targetTable: "intervention_actions",
+    targetId: args.actionId,
+    detail: "Updated intervention action.",
+  });
 }
 
 export async function computeInterventionCoverageAsync(args: {
@@ -1505,24 +1852,7 @@ export async function computeInterventionCoverageAsync(args: {
   periodStart: string;
   periodEnd: string;
 }) {
-  if (!isPostgresConfigured()) {
-    const schools = await listSchoolsForScopeAsync(args.scopeType, args.scopeId);
-    const plans = listInterventionPlans({
-      scopeType: args.scopeType === "country" ? undefined : (args.scopeType as "school" | "district"),
-      scopeId: args.scopeType === "country" ? undefined : args.scopeId,
-      limit: 1000,
-    });
-    const actions = plans.flatMap((plan) => listInterventionActions(plan.planId));
-    return {
-      schoolsTotal: schools.length,
-      plansTotal: plans.length,
-      actionsTotal: actions.length,
-      actionsCompleted: actions.filter((action) => action.status === "completed").length,
-      periodStart: args.periodStart,
-      periodEnd: args.periodEnd,
-    };
-  }
-
+  requirePostgresConfigured();
   const schools = await listSchoolsForScopeAsync(args.scopeType, args.scopeId);
   const params: unknown[] = [];
   let plansWhere = "1=1";

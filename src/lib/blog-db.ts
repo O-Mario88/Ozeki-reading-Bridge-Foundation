@@ -1,7 +1,10 @@
-import { getDb, logAuditEvent } from "@/lib/db";
 import { blogPosts as staticBlogPosts } from "@/lib/content";
 import { sanitizeInlineRichText, stripHtmlTags } from "@/lib/rich-text";
-import { isPostgresConfigured, queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import {
+  queryPostgres,
+  requirePostgresConfigured,
+  withPostgresClient,
+} from "@/lib/server/postgres/client";
 import type {
   BlogArticleType,
   BlogBodyBlock,
@@ -129,6 +132,30 @@ const DEFAULT_CTA_CARD: BlogGradientCtaCard = {
   buttonLink: "/resources",
   gradientPreset: "preset-1",
 };
+
+type LegacySqliteStatement = {
+  all: (...args: unknown[]) => unknown[];
+  get: (...args: unknown[]) => unknown;
+  run: (...args: unknown[]) => { lastInsertRowid?: number | bigint; changes?: number };
+};
+
+type LegacySqliteDb = {
+  prepare: (...args: unknown[]) => LegacySqliteStatement;
+  exec: (...args: unknown[]) => void;
+  transaction: <T extends (...args: never[]) => unknown>(fn: T) => T;
+};
+
+function sqliteRemoved(functionName: string): never {
+  throw new Error(`${functionName} is not available because SQLite support has been removed. Use PostgreSQL-backed async blog APIs instead.`);
+}
+
+function getDb(): LegacySqliteDb {
+  return sqliteRemoved("getDb");
+}
+
+function logAuditEvent(..._args: unknown[]) {
+  sqliteRemoved("logAuditEvent");
+}
 
 const SELECT_PORTAL_BLOG_COLUMNS = `
   id,
@@ -778,10 +805,7 @@ function resolveUniqueSlug(rawSlug: string | undefined, title: string, excludeId
 }
 
 async function resolveUniqueSlugAsync(rawSlug: string | undefined, title: string, excludeId?: number) {
-  if (!isPostgresConfigured()) {
-    return resolveUniqueSlug(rawSlug, title, excludeId);
-  }
-
+  requirePostgresConfigured();
   const candidate = slugifySegment(rawSlug?.trim() || title);
   if (!candidate) {
     throw new Error("A valid slug could not be generated from the title.");
@@ -992,10 +1016,7 @@ function getPortalBlogPostById(id: number) {
 }
 
 async function getPortalBlogPostByIdAsync(id: number) {
-  if (!isPostgresConfigured()) {
-    return getPortalBlogPostById(id);
-  }
-
+  requirePostgresConfigured();
   const result = await queryPostgres<PortalBlogPostRow>(
     `
       SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES}
@@ -1027,10 +1048,7 @@ export function listPortalBlogPosts(includeDrafts = true): PortalBlogPostRecord[
 }
 
 export async function listPortalBlogPostsAsync(includeDrafts = true): Promise<PortalBlogPostRecord[]> {
-  if (!isPostgresConfigured()) {
-    return listPortalBlogPosts(includeDrafts);
-  }
-
+  requirePostgresConfigured();
   const result = await queryPostgres<PortalBlogPostRow>(
     `
       SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES}
@@ -1062,10 +1080,7 @@ export function getPublishedPortalBlogPostBySlug(slug: string): BlogPost | null 
 }
 
 export async function getPublishedPortalBlogPostBySlugAsync(slug: string): Promise<BlogPost | null> {
-  if (!isPostgresConfigured()) {
-    return getPublishedPortalBlogPostBySlug(slug);
-  }
-
+  requirePostgresConfigured();
   const result = await queryPostgres<PortalBlogPostRow>(
     `
       SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES}
@@ -1110,10 +1125,7 @@ export function recordBlogPostView(postSlugRaw: string, sessionIdRaw: string) {
 }
 
 export async function recordBlogPostViewAsync(postSlugRaw: string, sessionIdRaw: string) {
-  if (!isPostgresConfigured()) {
-    return recordBlogPostView(postSlugRaw, sessionIdRaw);
-  }
-
+  requirePostgresConfigured();
   const postSlug = normalizeBlogSlugInput(postSlugRaw);
   const sessionId = normalizeSessionId(sessionIdRaw);
 
@@ -1175,10 +1187,7 @@ export function toggleBlogPostLike(postSlugRaw: string, sessionIdRaw: string) {
 }
 
 export async function toggleBlogPostLikeAsync(postSlugRaw: string, sessionIdRaw: string) {
-  if (!isPostgresConfigured()) {
-    return toggleBlogPostLike(postSlugRaw, sessionIdRaw);
-  }
-
+  requirePostgresConfigured();
   const postSlug = normalizeBlogSlugInput(postSlugRaw);
   const sessionId = normalizeSessionId(sessionIdRaw);
   let likedByViewer = false;
@@ -1268,10 +1277,7 @@ export async function addBlogPostCommentAsync(input: {
   displayName?: string | null;
   sessionId?: string | null;
 }) {
-  if (!isPostgresConfigured()) {
-    return addBlogPostComment(input);
-  }
-
+  requirePostgresConfigured();
   const postSlug = normalizeBlogSlugInput(input.postSlug);
   const commentText = normalizeCommentText(input.commentText);
   const displayName = normalizeCommentDisplayName(input.displayName);
@@ -1314,10 +1320,7 @@ export function listBlogPostComments(postSlugRaw: string, limit = 50): BlogComme
 }
 
 export async function listBlogPostCommentsAsync(postSlugRaw: string, limit = 50): Promise<BlogComment[]> {
-  if (!isPostgresConfigured()) {
-    return listBlogPostComments(postSlugRaw, limit);
-  }
-
+  requirePostgresConfigured();
   const postSlug = normalizeBlogSlugInput(postSlugRaw);
   const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, Math.round(limit))) : 50;
 
@@ -1376,10 +1379,7 @@ export async function getBlogPostEngagementAsync(
   postSlugRaw: string,
   sessionIdRaw?: string | null,
 ): Promise<BlogEngagement> {
-  if (!isPostgresConfigured()) {
-    return getBlogPostEngagement(postSlugRaw, sessionIdRaw);
-  }
-
+  requirePostgresConfigured();
   const postSlug = normalizeBlogSlugInput(postSlugRaw);
   const sessionId = sessionIdRaw ? normalizeSessionId(sessionIdRaw) : null;
 
@@ -1407,7 +1407,7 @@ export async function getBlogPostEngagementAsync(
         `,
         [postSlug, sessionId],
       )
-      : Promise.resolve({ rows: [] } as Awaited<ReturnType<typeof queryPostgres<{ liked: boolean }>>>),
+      : Promise.resolve({ rows: [] } as unknown as Awaited<ReturnType<typeof queryPostgres<{ liked: boolean }>>>),
     listBlogPostCommentsAsync(postSlug, 120),
   ]);
 
@@ -1513,15 +1513,16 @@ export function savePortalBlogPost(input: SavePortalBlogPostInput, user: PortalU
     if (!existing) {
       throw new Error("Blog post not found.");
     }
-    const canEdit = user.isSuperAdmin || user.isAdmin || existing.createdByUserId === user.id;
+    const existingPost = existing;
+    const canEdit = user.isSuperAdmin || user.isAdmin || existingPost.createdByUserId === user.id;
     if (!canEdit) {
       throw new Error("You do not have permission to edit this blog post.");
     }
 
-    const slug = resolveUniqueSlug(input.slug, title, existing.id);
+    const slug = resolveUniqueSlug(input.slug, title, existingPost.id);
     const publishedAt = normalizeIsoDate(
       input.publishedAt,
-      publishStatus === "published" ? now : existing.publishedAt,
+      publishStatus === "published" ? now : existingPost.publishedAt,
     );
 
     db.prepare(
@@ -1574,7 +1575,7 @@ export function savePortalBlogPost(input: SavePortalBlogPostInput, user: PortalU
        WHERE id = @id`,
     ).run({
       ...values,
-      id: existing.id,
+      id: existingPost.id,
       slug,
       publishedAt,
       updatedAt: now,
@@ -1585,13 +1586,13 @@ export function savePortalBlogPost(input: SavePortalBlogPostInput, user: PortalU
       user.fullName,
       "update",
       "portal_blog_posts",
-      existing.id,
-      JSON.stringify(existing),
+      existingPost.id,
+      JSON.stringify(existingPost),
       JSON.stringify({ slug, title, publishStatus }),
       `Updated blog post ${slug}`,
     );
 
-    return getPortalBlogPostById(existing.id);
+    return getPortalBlogPostById(existingPost.id);
   }
 
   const slug = resolveUniqueSlug(input.slug, title);
@@ -1722,10 +1723,7 @@ export function savePortalBlogPost(input: SavePortalBlogPostInput, user: PortalU
 }
 
 export async function savePortalBlogPostAsync(input: SavePortalBlogPostInput, user: PortalUser) {
-  if (!isPostgresConfigured()) {
-    return savePortalBlogPost(input, user);
-  }
-
+  requirePostgresConfigured();
   const now = new Date().toISOString();
   const title = input.title.trim().slice(0, 220);
   const subtitle = (input.subtitle ?? "").trim().slice(0, 280);
@@ -2139,10 +2137,7 @@ export async function setPortalBlogPublishStatusAsync(
   publishStatus: PortalBlogPublishStatus,
   user: PortalUser,
 ) {
-  if (!isPostgresConfigured()) {
-    return setPortalBlogPublishStatus(postId, publishStatus, user);
-  }
-
+  requirePostgresConfigured();
   const post = await getPortalBlogPostByIdAsync(postId);
   if (!post) {
     throw new Error("Blog post not found.");
@@ -2223,11 +2218,7 @@ export function deletePortalBlogPost(postId: number, user: PortalUser) {
 }
 
 export async function deletePortalBlogPostAsync(postId: number, user: PortalUser) {
-  if (!isPostgresConfigured()) {
-    deletePortalBlogPost(postId, user);
-    return;
-  }
-
+  requirePostgresConfigured();
   const post = await getPortalBlogPostByIdAsync(postId);
   if (!post) {
     throw new Error("Blog post not found.");

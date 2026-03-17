@@ -1,27 +1,27 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
 import { importUgandaGeoData } from "@/lib/geo-importer";
+import { queryPostgres, requirePostgresConfigured } from "@/lib/server/postgres/client";
 import { ugandaRegions } from "@/lib/uganda-locations";
 
 export async function GET() {
     try {
-        const db = getDb();
-        const stats = {
-            regions: db.prepare("SELECT COUNT(*) as count FROM geo_regions").get() as { count: number },
-            subregions: db.prepare("SELECT COUNT(*) as count FROM geo_subregions").get() as { count: number },
-            districts: db.prepare("SELECT COUNT(*) as count FROM geo_districts").get() as { count: number },
-            subcounties: db.prepare("SELECT COUNT(*) as count FROM geo_subcounties").get() as { count: number },
-            parishes: db.prepare("SELECT COUNT(*) as count FROM geo_parishes").get() as { count: number },
-        };
+        requirePostgresConfigured();
+        const [regions, subregions, districts, subcounties, parishes] = await Promise.all([
+            queryPostgres<{ count: string }>("SELECT COUNT(*)::text AS count FROM geo_regions"),
+            queryPostgres<{ count: string }>("SELECT COUNT(*)::text AS count FROM geo_subregions"),
+            queryPostgres<{ count: string }>("SELECT COUNT(*)::text AS count FROM geo_districts"),
+            queryPostgres<{ count: string }>("SELECT COUNT(*)::text AS count FROM geo_subcounties"),
+            queryPostgres<{ count: string }>("SELECT COUNT(*)::text AS count FROM geo_parishes"),
+        ]);
 
         return NextResponse.json({
             ok: true,
             stats: {
-                regions: stats.regions.count,
-                subregions: stats.subregions.count,
-                districts: stats.districts.count,
-                subcounties: stats.subcounties.count,
-                parishes: stats.parishes.count,
+                regions: Number(regions.rows[0]?.count ?? 0),
+                subregions: Number(subregions.rows[0]?.count ?? 0),
+                districts: Number(districts.rows[0]?.count ?? 0),
+                subcounties: Number(subcounties.rows[0]?.count ?? 0),
+                parishes: Number(parishes.rows[0]?.count ?? 0),
             }
         });
     } catch (_error) {
@@ -52,7 +52,7 @@ export async function POST() {
             });
         });
 
-        const result = importUgandaGeoData(units);
+        const result = await importUgandaGeoData(units);
         return NextResponse.json({ ok: true, result });
     } catch (_error) {
         return NextResponse.json({ ok: false, error: "Failed to sync geo hierarchy" }, { status: 500 });

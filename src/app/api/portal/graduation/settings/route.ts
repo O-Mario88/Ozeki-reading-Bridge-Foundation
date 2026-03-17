@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getGraduationSettings, updateGraduationSettings } from "@/lib/db";
+import {
+  getGraduationSettingsAsync,
+  updateGraduationSettingsAsync,
+} from "@/lib/db";
 import { authorizeSuperAdmin } from "@/app/api/portal/_shared/auth";
 
 export const runtime = "nodejs";
@@ -42,7 +45,7 @@ export async function GET() {
     return auth.response ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({ settings: getGraduationSettings() });
+  return NextResponse.json({ settings: await getGraduationSettingsAsync() });
 }
 
 export async function PUT(request: Request) {
@@ -55,7 +58,7 @@ export async function PUT(request: Request) {
 
   try {
     const parsed = settingsSchema.parse(await request.json());
-    const settings = updateGraduationSettings(parsed, user);
+    const settings = await updateGraduationSettingsAsync(parsed, user);
     return NextResponse.json({ settings });
   } catch (error) {
     if (error instanceof z.ZodError) {

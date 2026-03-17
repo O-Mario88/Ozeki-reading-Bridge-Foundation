@@ -207,7 +207,12 @@ import {
   LEARNING_DOMAIN_DICTIONARY,
 } from "@/lib/domain-dictionary";
 import { getRuntimeDataDir, getRuntimeDbFilePath } from "@/lib/runtime-paths";
-import { isPostgresConfigured, queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import {
+  isPostgresConfigured,
+  queryPostgres,
+  requirePostgresConfigured,
+  withPostgresClient,
+} from "@/lib/server/postgres/client";
 import {
   deleteExpiredPortalSessionsPostgres,
   deletePortalSessionPostgres,
@@ -238,6 +243,10 @@ import {
   listTeacherSupportRowsForPublicImpactPostgres,
   listTrainingAttendanceForPublicImpactPostgres,
 } from "@/lib/server/postgres/repositories/public-impact";
+import {
+  buildFidelityFromAggregate,
+  buildLearningGainsFromAggregate,
+} from "@/lib/public-impact-views";
 
 const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-salt";
 const PORTAL_SESSION_SECRET = process.env.PORTAL_SESSION_SECRET ?? PASSWORD_SALT;
@@ -5533,7 +5542,7 @@ function parsePortalUserRow(row: {
   };
 }
 
-function getPortalUserAuthRowById(db: Database.Database, userId: number) {
+function _getPortalUserAuthRowById(db: Database.Database, userId: number) {
   return db
     .prepare(
       `
@@ -5576,93 +5585,13 @@ export async function getPortalUserByEmail(email: string): Promise<PortalUser | 
   if (!normalized) {
     return null;
   }
-
-  if (isPostgresConfigured()) {
-    await syncPrivilegedPortalUsersPostgres(
-      getPrivilegedPortalAccountSeeds(),
-      getDisabledLegacyPortalAdminPasswordHash(),
-    );
-    const row = await findPortalUserByEmailPostgres(normalized);
-    if (row) {
-      return parsePortalUserRow(row);
-    }
-
-    const sqliteFallback = getDb()
-      .prepare(
-        `
-        SELECT *
-        FROM portal_users
-        WHERE lower(email) = @email
-        LIMIT 1
-      `,
-      )
-      .get({ email: normalized }) as Record<string, unknown> | undefined;
-
-    if (!sqliteFallback) {
-      return null;
-    }
-
-    await upsertSqliteRowToPostgres("portal_users", "id", sqliteFallback);
-
-    return parsePortalUserRow({
-      id: Number(sqliteFallback.id),
-      fullName: String(sqliteFallback.full_name ?? ""),
-      email: String(sqliteFallback.email ?? normalized),
-      phone:
-        sqliteFallback.phone === null || sqliteFallback.phone === undefined
-          ? null
-          : String(sqliteFallback.phone),
-      role: String(sqliteFallback.role ?? "Volunteer") as PortalUserRole,
-      geographyScope:
-        sqliteFallback.geography_scope === null || sqliteFallback.geography_scope === undefined
-          ? null
-          : String(sqliteFallback.geography_scope),
-      isSupervisor: Number(sqliteFallback.is_supervisor ?? 0),
-      isME: Number(sqliteFallback.is_me ?? 0),
-      isAdmin: Number(sqliteFallback.is_admin ?? 0),
-      isSuperAdmin: Number(sqliteFallback.is_superadmin ?? 0),
-    });
-  }
-
-  const row = getDb()
-    .prepare(
-      `
-      SELECT
-        id,
-        full_name AS fullName,
-        email,
-        phone,
-        role,
-        geography_scope AS geographyScope,
-        is_supervisor AS isSupervisor,
-        is_me AS isME,
-        is_admin AS isAdmin,
-        is_superadmin AS isSuperAdmin
-      FROM portal_users
-      WHERE lower(email) = @email
-      LIMIT 1
-    `,
-    )
-    .get({ email: normalized }) as
-    | {
-      id: number;
-      fullName: string;
-      email: string;
-      phone: string | null;
-      role: PortalUserRole;
-      geographyScope: string | null;
-      isSupervisor: number;
-      isME: number;
-      isAdmin: number;
-      isSuperAdmin: number;
-    }
-    | undefined;
-
-  if (!row) {
-    return null;
-  }
-
-  return parsePortalUserRow(row);
+  requirePostgresConfigured();
+  await syncPrivilegedPortalUsersPostgres(
+    getPrivilegedPortalAccountSeeds(),
+    getDisabledLegacyPortalAdminPasswordHash(),
+  );
+  const row = await findPortalUserByEmailPostgres(normalized);
+  return row ? parsePortalUserRow(row) : null;
 }
 
 export function canManagePortalUsers(user: PortalUser) {
@@ -6023,78 +5952,24 @@ export async function authenticatePortalUser(
   password: string,
 ): Promise<PortalUser | null> {
   const normalizedIdentifier = identifier.trim();
-  const normalizedEmail = normalizedIdentifier.toLowerCase();
-
-  if (isPostgresConfigured()) {
-    await syncPrivilegedPortalUsersPostgres(
-      getPrivilegedPortalAccountSeeds(),
-      getDisabledLegacyPortalAdminPasswordHash(),
-    );
-    const row = await findPortalUserAuthByIdentifierPostgres(normalizedIdentifier);
-    if (!row) {
-      return null;
-    }
-    if (row.passwordHash !== hashPassword(password)) {
-      return null;
-    }
-    return parsePortalUserRow(row);
-  }
-
-  const db = getDb();
-  ensurePrivilegedPortalUsers(db);
-  const row = db
-    .prepare(
-      `
-      SELECT
-        id,
-        full_name AS fullName,
-        email,
-        phone,
-        role,
-        geography_scope AS geographyScope,
-        is_supervisor AS isSupervisor,
-        is_me AS isME,
-        is_admin AS isAdmin,
-        is_superadmin AS isSuperAdmin,
-        password_hash AS passwordHash
-      FROM portal_users
-      WHERE lower(email) = @email
-         OR phone = @phone
-      LIMIT 1
-    `,
-    )
-    .get({ email: normalizedEmail, phone: normalizedIdentifier }) as
-    | {
-      id: number;
-      fullName: string;
-      email: string;
-      phone: string | null;
-      role: PortalUserRole;
-      geographyScope: string | null;
-      isSupervisor: number;
-      isME: number;
-      isAdmin: number;
-      isSuperAdmin: number;
-      passwordHash: string;
-    }
-    | undefined;
-
+  requirePostgresConfigured();
+  await syncPrivilegedPortalUsersPostgres(
+    getPrivilegedPortalAccountSeeds(),
+    getDisabledLegacyPortalAdminPasswordHash(),
+  );
+  const row = await findPortalUserAuthByIdentifierPostgres(normalizedIdentifier);
   if (!row) {
     return null;
   }
-
   if (row.passwordHash !== hashPassword(password)) {
     return null;
   }
-
   return parsePortalUserRow(row);
 }
 
 export async function createPortalSession(userId: number) {
-  const db = isPostgresConfigured() ? null : getDb();
-  const user = isPostgresConfigured()
-    ? await findPortalUserAuthByIdPostgres(userId)
-    : getPortalUserAuthRowById(db!, userId);
+  requirePostgresConfigured();
+  const user = await findPortalUserAuthByIdPostgres(userId);
   if (!user) {
     throw new Error("Cannot create portal session for unknown user.");
   }
@@ -6108,28 +5983,7 @@ export async function createPortalSession(userId: number) {
     fp: getPortalSessionFingerprint(user.passwordHash),
   });
 
-  if (isPostgresConfigured()) {
-    await insertPortalSessionPostgres(userId, token, expiresAt);
-  } else {
-    try {
-      db!.prepare(
-        `
-        INSERT INTO portal_sessions (
-          user_id,
-          token,
-          expires_at
-        ) VALUES (
-          @userId,
-          @token,
-          @expiresAt
-        )
-      `,
-      ).run({ userId, token, expiresAt });
-    } catch {
-      // Stateless session token remains valid even if the local SQLite session table
-      // cannot be written in the current runtime.
-    }
-  }
+  await insertPortalSessionPostgres(userId, token, expiresAt);
 
   return {
     token,
@@ -6139,60 +5993,11 @@ export async function createPortalSession(userId: number) {
 }
 
 export async function getPortalUserFromSession(token: string): Promise<PortalUser | null> {
-  const db = isPostgresConfigured() ? null : getDb();
-
-  if (isPostgresConfigured()) {
-    await deleteExpiredPortalSessionsPostgres();
-    const row = await findPortalUserBySessionTokenPostgres(token);
-    if (row) {
-      return parsePortalUserRow(row);
-    }
-  } else {
-    try {
-      db!.prepare("DELETE FROM portal_sessions WHERE datetime(expires_at) <= datetime('now')").run();
-    } catch {
-      // Read-only runtimes can still authenticate stateless sessions below.
-    }
-
-    const row = db!
-      .prepare(
-        `
-        SELECT
-          u.id,
-          u.full_name AS fullName,
-          u.email,
-          u.phone,
-          u.role,
-          u.geography_scope AS geographyScope,
-          u.is_supervisor AS isSupervisor,
-          u.is_me AS isME,
-          u.is_admin AS isAdmin,
-          u.is_superadmin AS isSuperAdmin
-        FROM portal_sessions s
-        JOIN portal_users u ON u.id = s.user_id
-        WHERE s.token = @token
-          AND datetime(s.expires_at) > datetime('now')
-        LIMIT 1
-      `,
-      )
-      .get({ token }) as
-      | {
-        id: number;
-        fullName: string;
-        email: string;
-        phone: string | null;
-        role: PortalUserRole;
-        geographyScope: string | null;
-        isSupervisor: number;
-        isME: number;
-        isAdmin: number;
-        isSuperAdmin: number;
-      }
-      | undefined;
-
-    if (row) {
-      return parsePortalUserRow(row);
-    }
+  requirePostgresConfigured();
+  await deleteExpiredPortalSessionsPostgres();
+  const row = await findPortalUserBySessionTokenPostgres(token);
+  if (row) {
+    return parsePortalUserRow(row);
   }
 
   const payload = parsePortalSessionToken(token);
@@ -6200,9 +6005,7 @@ export async function getPortalUserFromSession(token: string): Promise<PortalUse
     return null;
   }
 
-  const userRow = isPostgresConfigured()
-    ? await findPortalUserAuthByIdPostgres(payload.uid)
-    : getPortalUserAuthRowById(db!, payload.uid);
+  const userRow = await findPortalUserAuthByIdPostgres(payload.uid);
   if (!userRow) {
     return null;
   }
@@ -6215,11 +6018,8 @@ export async function getPortalUserFromSession(token: string): Promise<PortalUse
 }
 
 export async function deletePortalSession(token: string) {
-  if (isPostgresConfigured()) {
-    await deletePortalSessionPostgres(token);
-    return;
-  }
-  getDb().prepare("DELETE FROM portal_sessions WHERE token = @token").run({ token });
+  requirePostgresConfigured();
+  await deletePortalSessionPostgres(token);
 }
 
 function normalizePersonName(value: string) {
@@ -7183,6 +6983,116 @@ async function nextShortCodePostgres(
   return toPaddedCode(prefix, maxSequence + 1, width);
 }
 
+async function nextIntegerPrimaryKeyPostgres(
+  client: PoolClient,
+  table: string,
+  column: string,
+): Promise<number> {
+  const sequenceResult = await client.query<{ sequenceName: string | null }>(
+    `SELECT pg_get_serial_sequence('${table}', '${column}') AS "sequenceName"`,
+  );
+  const sequenceName = String(sequenceResult.rows[0]?.sequenceName ?? "").trim();
+  if (!sequenceName) {
+    const result = await client.query<{ id: number }>(
+      `SELECT COALESCE(MAX(${column}), 0) + 1 AS id FROM ${table}`,
+    );
+    return Number(result.rows[0]?.id ?? 1);
+  }
+
+  const maxResult = await client.query<{ maxId: number | null }>(
+    `SELECT MAX(${column}) AS "maxId" FROM ${table}`,
+  );
+  const maxId = Number(maxResult.rows[0]?.maxId ?? 0);
+  if (maxId > 0) {
+    await client.query(
+      `
+        SELECT setval(
+          '${sequenceName}',
+          GREATEST(
+            $1::bigint,
+            COALESCE((SELECT last_value FROM ${sequenceName}), 0)
+          ),
+          true
+        )
+      `,
+      [maxId],
+    );
+  }
+
+  const nextValue = await client.query<{ id: number }>(
+    `SELECT nextval('${sequenceName}') AS id`,
+  );
+  return Number(nextValue.rows[0]?.id ?? 1);
+}
+
+async function resolveDistrictCodePostgres(client: PoolClient, district: string): Promise<string> {
+  const normalizedDistrict = district.trim();
+  if (!normalizedDistrict) {
+    return "";
+  }
+
+  const existing = await client.query<{ districtId: string | null }>(
+    `
+      SELECT district_id AS "districtId"
+      FROM schools_directory
+      WHERE lower(trim(district)) = lower(trim($1))
+        AND district_id LIKE 'DT-%'
+      ORDER BY id ASC
+      LIMIT 1
+    `,
+    [normalizedDistrict],
+  );
+  const existingSequence = parseCodeSequence(String(existing.rows[0]?.districtId ?? ""), "DT-");
+  if (existingSequence) {
+    return toPaddedCode("DT-", existingSequence, 3);
+  }
+
+  const rows = await client.query<{ districtId: string | null }>(
+    `
+      SELECT district_id AS "districtId"
+      FROM schools_directory
+      WHERE district_id LIKE 'DT-%'
+    `,
+  );
+  let maxSequence = 0;
+  rows.rows.forEach((row) => {
+    const parsed = parseCodeSequence(String(row.districtId ?? ""), "DT-");
+    if (parsed && parsed > maxSequence) {
+      maxSequence = parsed;
+    }
+  });
+
+  return toPaddedCode("DT-", maxSequence + 1, 3);
+}
+
+async function findSchoolByNormalizedNamePostgres(name: string, excludeId?: number) {
+  const normalizedName = name.trim().toLowerCase();
+  if (!normalizedName) {
+    return null;
+  }
+  const result = await queryPostgres<{
+    id: number;
+    schoolCode: string;
+    name: string;
+    district: string;
+  }>(
+    `
+      SELECT
+        id,
+        school_code AS "schoolCode",
+        name,
+        district
+      FROM schools_directory
+      WHERE lower(trim(name)) = $1
+        AND ($2::int IS NULL OR id != $2::int)
+      ORDER BY id ASC
+      LIMIT 1
+    `,
+    [normalizedName, excludeId ?? null],
+  );
+  return result.rows[0] ?? null;
+}
+
 async function findLearnerRosterRecordPostgres(
   client: PoolClient,
   input: LearnerRosterInput,
@@ -7271,9 +7181,11 @@ async function ensureSchoolLearnerMirrorPostgres(
   client: PoolClient,
   learner: LearnerRosterRecord,
 ) {
+  const learnerId = await nextIntegerPrimaryKeyPostgres(client, "school_learners", "learner_id");
   await client.query(
     `
       INSERT INTO school_learners (
+        learner_id,
         learner_uid,
         school_id,
         learner_name,
@@ -7284,15 +7196,7 @@ async function ensureSchoolLearnerMirrorPostgres(
         created_at,
         updated_at
       ) VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        NOW(),
-        NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW()
       )
       ON CONFLICT (learner_uid)
       DO UPDATE SET
@@ -7305,6 +7209,7 @@ async function ensureSchoolLearnerMirrorPostgres(
         updated_at = NOW()
     `,
     [
+      learnerId,
       learner.learnerUid,
       learner.schoolId,
       learner.fullName,
@@ -7607,7 +7512,7 @@ async function saveAssessmentRecordPostgres(
         throw new Error("Could not resolve learner roster record.");
       }
 
-      const masterySettings = getOneTestMasterySettings(getDb());
+      const masterySettings = await getOneTestMasterySettingsPostgres(client);
       const resolvedModelVersion = ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1;
       const isOneTestModel = isOneTestStyleModelVersion(resolvedModelVersion);
       const resolvedBenchmarkVersion = String(payload.benchmarkVersion ?? "").trim();
@@ -7639,7 +7544,7 @@ async function saveAssessmentRecordPostgres(
         })
         : null;
 
-      const readingRuleSettings = getAssessmentReadingRuleSettings(getDb(), {
+      const readingRuleSettings = await getAssessmentReadingRuleSettingsPostgres(client, {
         grade: payload.classGrade,
         language: "English",
         atDate: payload.assessmentDate,
@@ -8846,6 +8751,171 @@ function safeParseJson<T>(value: string | null | undefined, fallback: T): T {
   return fallback;
 }
 
+async function postgresTableExists(client: PoolClient, tableName: string) {
+  const result = await client.query<{ relation: string | null }>(
+    `SELECT to_regclass($1) AS relation`,
+    [`public.${tableName}`],
+  );
+  return Boolean(result.rows[0]?.relation);
+}
+
+async function getAssessmentReadingRuleSettingsPostgres(
+  client: PoolClient,
+  options?: {
+    grade?: string | null;
+    language?: string | null;
+    atDate?: string | null;
+  },
+): Promise<AssessmentReadingRuleSettings> {
+  const grade = String(options?.grade ?? "").trim().toUpperCase() || "ALL";
+  const language = String(options?.language ?? "").trim() || "English";
+  const atDate = String(options?.atDate ?? "").trim() || new Date().toISOString().slice(0, 10);
+
+  if (
+    (await postgresTableExists(client, "benchmark_profiles")) &&
+    (await postgresTableExists(client, "benchmark_rules"))
+  ) {
+    const benchmarkRule = await client.query<{
+      benchmarkName: string;
+      cwpmBandsJson: string;
+      comprehensionRuleJson: string;
+      optionalAccuracyFloor: number | null;
+    }>(
+      `
+        SELECT
+          bp.name AS "benchmarkName",
+          br.cwpm_bands_json AS "cwpmBandsJson",
+          br.comprehension_proficient_rule_json AS "comprehensionRuleJson",
+          br.optional_accuracy_floor AS "optionalAccuracyFloor"
+        FROM benchmark_profiles bp
+        JOIN benchmark_rules br
+          ON br.benchmark_id = bp.benchmark_id
+        WHERE bp.is_active = TRUE
+          AND bp.effective_from_date <= $1
+          AND (bp.effective_to_date IS NULL OR bp.effective_to_date = '' OR bp.effective_to_date >= $1)
+          AND br.grade IN ($2, 'ALL')
+          AND lower(trim(br.language)) IN (lower(trim($3)), 'english')
+        ORDER BY
+          CASE br.grade WHEN $2 THEN 0 ELSE 1 END ASC,
+          CASE WHEN lower(trim(br.language)) = lower(trim($3)) THEN 0 ELSE 1 END ASC,
+          br.rule_id DESC
+        LIMIT 1
+      `,
+      [atDate, grade, language],
+    );
+
+    const row = benchmarkRule.rows[0];
+    if (row) {
+      const cwpmBands = (() => {
+        try {
+          return JSON.parse(row.cwpmBandsJson || "{}") as {
+            emergent?: [number, number];
+            minimum?: [number, number];
+            competent?: [number, number];
+          };
+        } catch {
+          return {} as {
+            emergent?: [number, number];
+            minimum?: [number, number];
+            competent?: [number, number];
+          };
+        }
+      })();
+      const comprehensionRule = (() => {
+        try {
+          return JSON.parse(row.comprehensionRuleJson || "{}") as
+            | { type: "percent"; threshold: number }
+            | { type: "count"; correct: number; total: number };
+        } catch {
+          return {} as { type: "percent"; threshold: number };
+        }
+      })();
+
+      const emergentBand = Array.isArray(cwpmBands.emergent) ? cwpmBands.emergent : [1, 19];
+      const minimumBand = Array.isArray(cwpmBands.minimum) ? cwpmBands.minimum : [20, 39];
+      const competentBand = Array.isArray(cwpmBands.competent) ? cwpmBands.competent : [40, 59];
+
+      return {
+        readingLevelVersion: row.benchmarkName || ASSESSMENT_READING_RULE_VERSION,
+        emergentCwpmMax: Number(emergentBand[1] ?? 19),
+        minimumCwpmMax: Number(minimumBand[1] ?? 39),
+        competentCwpmMax: Number(competentBand[1] ?? 59),
+        comprehensionMinPercent:
+          comprehensionRule.type === "percent"
+            ? Number(comprehensionRule.threshold ?? 70)
+            : 70,
+        comprehensionMinScore:
+          comprehensionRule.type === "count"
+            ? Number(comprehensionRule.correct ?? 4)
+            : 4,
+        comprehensionTotalItems:
+          comprehensionRule.type === "count"
+            ? Number(comprehensionRule.total ?? 5)
+            : 5,
+        useAccuracyFloor: row.optionalAccuracyFloor !== null,
+        accuracyFloor:
+          row.optionalAccuracyFloor === null ? 90 : Number(row.optionalAccuracyFloor),
+      };
+    }
+  }
+
+  if (await postgresTableExists(client, "assessment_benchmark_settings")) {
+    const result = await client.query<{
+      readingLevelVersion: string;
+      emergentCwpmMax: number;
+      minimumCwpmMax: number;
+      competentCwpmMax: number;
+      comprehensionMinPercent: number;
+      comprehensionMinScore: number;
+      comprehensionTotalItems: number;
+      useAccuracyFloor: boolean;
+      accuracyFloor: number;
+    }>(
+      `
+        SELECT
+          reading_level_version AS "readingLevelVersion",
+          emergent_cwpm_max AS "emergentCwpmMax",
+          minimum_cwpm_max AS "minimumCwpmMax",
+          competent_cwpm_max AS "competentCwpmMax",
+          comprehension_min_percent AS "comprehensionMinPercent",
+          comprehension_min_score AS "comprehensionMinScore",
+          comprehension_total_items AS "comprehensionTotalItems",
+          use_accuracy_floor AS "useAccuracyFloor",
+          accuracy_floor AS "accuracyFloor"
+        FROM assessment_benchmark_settings
+        WHERE id = 1
+        LIMIT 1
+      `,
+    );
+    const row = result.rows[0];
+    if (row) {
+      return {
+        readingLevelVersion: row.readingLevelVersion || ASSESSMENT_READING_RULE_VERSION,
+        emergentCwpmMax: Number(row.emergentCwpmMax ?? 19),
+        minimumCwpmMax: Number(row.minimumCwpmMax ?? 39),
+        competentCwpmMax: Number(row.competentCwpmMax ?? 59),
+        comprehensionMinPercent: Number(row.comprehensionMinPercent ?? 70),
+        comprehensionMinScore: Number(row.comprehensionMinScore ?? 4),
+        comprehensionTotalItems: Number(row.comprehensionTotalItems ?? 5),
+        useAccuracyFloor: Boolean(row.useAccuracyFloor),
+        accuracyFloor: Number(row.accuracyFloor ?? 90),
+      };
+    }
+  }
+
+  return {
+    readingLevelVersion: ASSESSMENT_READING_RULE_VERSION,
+    emergentCwpmMax: 19,
+    minimumCwpmMax: 39,
+    competentCwpmMax: 59,
+    comprehensionMinPercent: 70,
+    comprehensionMinScore: 4,
+    comprehensionTotalItems: 5,
+    useAccuracyFloor: false,
+    accuracyFloor: 90,
+  };
+}
+
 function getOneTestMasterySettings(db: Database.Database): OneTestMasterySettings {
   const defaults = getDefaultOneTestMasterySettings();
   const row = db
@@ -8892,6 +8962,81 @@ function getOneTestMasterySettings(db: Database.Database): OneTestMasterySetting
         row.itemWeightsJson,
         {},
       ),
+    },
+    masteryThresholds: {
+      ...defaults.masteryThresholds,
+      ...safeParseJson<Partial<OneTestMasterySettings["masteryThresholds"]>>(
+        row.masteryThresholdsJson,
+        {},
+      ),
+    },
+    latencyThresholdsMs: {
+      ...defaults.latencyThresholdsMs,
+      ...safeParseJson<Partial<OneTestMasterySettings["latencyThresholdsMs"]>>(
+        row.latencyThresholdsJson,
+        {},
+      ),
+    } as OneTestMasterySettings["latencyThresholdsMs"],
+    attemptThresholds: {
+      ...defaults.attemptThresholds,
+      ...safeParseJson<Partial<OneTestMasterySettings["attemptThresholds"]>>(
+        row.attemptThresholdsJson,
+        {},
+      ),
+    },
+    benchmarkExpectations: {
+      ...defaults.benchmarkExpectations,
+      ...safeParseJson<Partial<OneTestMasterySettings["benchmarkExpectations"]>>(
+        row.benchmarkExpectationsJson,
+        {},
+      ),
+    },
+  };
+}
+
+async function getOneTestMasterySettingsPostgres(client: PoolClient): Promise<OneTestMasterySettings> {
+  const defaults = getDefaultOneTestMasterySettings();
+  if (!(await postgresTableExists(client, "assessment_model_settings"))) {
+    return defaults;
+  }
+
+  const result = await client.query<{
+    modelVersion: string;
+    benchmarkVersion: string;
+    scoringProfileVersion: string;
+    itemWeightsJson: string;
+    masteryThresholdsJson: string;
+    latencyThresholdsJson: string;
+    attemptThresholdsJson: string;
+    benchmarkExpectationsJson: string;
+  }>(
+    `
+      SELECT
+        model_version AS "modelVersion",
+        benchmark_version AS "benchmarkVersion",
+        scoring_profile_version AS "scoringProfileVersion",
+        item_weights_json AS "itemWeightsJson",
+        mastery_thresholds_json AS "masteryThresholdsJson",
+        latency_thresholds_json AS "latencyThresholdsJson",
+        attempt_thresholds_json AS "attemptThresholdsJson",
+        benchmark_expectations_json AS "benchmarkExpectationsJson"
+      FROM assessment_model_settings
+      WHERE id = 1
+      LIMIT 1
+    `,
+  );
+  const row = result.rows[0];
+  if (!row) {
+    return defaults;
+  }
+
+  return {
+    modelVersion: row.modelVersion || defaults.modelVersion,
+    benchmarkVersion: row.benchmarkVersion || defaults.benchmarkVersion,
+    scoringProfileVersion: row.scoringProfileVersion || defaults.scoringProfileVersion,
+    itemWeights: {
+      ...defaults.itemWeights,
+      ...safeParseJson<Partial<OneTestMasterySettings["itemWeights"]>>(row.itemWeightsJson, {}),
     },
     masteryThresholds: {
       ...defaults.masteryThresholds,
@@ -9310,6 +9455,48 @@ function getTeacherSupportRuleSettings(db: Database.Database): TeacherSupportRul
   };
 }
 
+async function getTeacherSupportRuleSettingsPostgres(
+  client: PoolClient,
+): Promise<TeacherSupportRuleSettings> {
+  if (!(await postgresTableExists(client, "teacher_support_settings"))) {
+    return {
+      rulesVersion: TEACHER_SUPPORT_RULE_VERSION,
+      catchupOverallThreshold: 60,
+      criticalDomainThreshold: 55,
+      onTrackOverallThreshold: 75,
+      onTrackMinDelta: 5,
+    };
+  }
+
+  const result = await client.query<{
+    rulesVersion: string;
+    catchupOverallThreshold: number;
+    criticalDomainThreshold: number;
+    onTrackOverallThreshold: number;
+    onTrackMinDelta: number;
+  }>(
+    `
+      SELECT
+        rules_version AS "rulesVersion",
+        catchup_overall_threshold AS "catchupOverallThreshold",
+        critical_domain_threshold AS "criticalDomainThreshold",
+        on_track_overall_threshold AS "onTrackOverallThreshold",
+        on_track_min_delta AS "onTrackMinDelta"
+      FROM teacher_support_settings
+      WHERE id = 1
+      LIMIT 1
+    `,
+  );
+  const row = result.rows[0];
+  return {
+    rulesVersion: row?.rulesVersion || TEACHER_SUPPORT_RULE_VERSION,
+    catchupOverallThreshold: Number(row?.catchupOverallThreshold ?? 60),
+    criticalDomainThreshold: Number(row?.criticalDomainThreshold ?? 55),
+    onTrackOverallThreshold: Number(row?.onTrackOverallThreshold ?? 75),
+    onTrackMinDelta: Number(row?.onTrackMinDelta ?? 5),
+  };
+}
+
 function normalizeParticipantRole(value: unknown) {
   const normalized = String(value ?? "")
     .trim()
@@ -9454,6 +9641,35 @@ function ensureSchoolHasPrimaryContact(schoolId: number) {
     .get({ schoolId }) as
     | { schoolId: number; primaryContactId: number | null; category: SchoolContactCategory | null }
     | undefined;
+
+  if (!row?.schoolId) {
+    throw new Error("Selected school account was not found.");
+  }
+  if (!row.primaryContactId || !row.category) {
+    throw new Error("Each school must have a primary contact before recording activities.");
+  }
+}
+
+async function ensureSchoolHasPrimaryContactAsync(schoolId: number) {
+  const result = await queryPostgres<{
+    schoolId: number;
+    primaryContactId: number | null;
+    category: SchoolContactCategory | null;
+  }>(
+    `
+      SELECT
+        sd.id AS "schoolId",
+        sd.primary_contact_id AS "primaryContactId",
+        sc.category
+      FROM schools_directory sd
+      LEFT JOIN school_contacts sc
+        ON sc.contact_id = sd.primary_contact_id
+      WHERE sd.id = $1
+      LIMIT 1
+    `,
+    [schoolId],
+  );
+  const row = result.rows[0];
 
   if (!row?.schoolId) {
     throw new Error("Selected school account was not found.");
@@ -11551,6 +11767,282 @@ function normalizePayload(input: PortalRecordInput) {
   return JSON.stringify(linkedPayload);
 }
 
+function normalizeLinkedPayloadPostgresLite(
+  module: PortalRecordModule,
+  payload: PortalRecordInput["payload"],
+  fallbackSchoolId: number,
+) {
+  const linkedPayload: Record<string, unknown> = { ...(payload ?? {}) };
+  if (!Number.isInteger(fallbackSchoolId) || fallbackSchoolId <= 0) {
+    throw new Error("School selection is required.");
+  }
+
+  if (module === "training") {
+    const participantRows = asRecordArray(linkedPayload.participants).filter((row) =>
+      Object.values(row).some((value) => String(value ?? "").trim() !== ""),
+    );
+    const normalizedRows = participantRows.map((row) => {
+      const gender = normalizeTeacherGender(row.gender) ?? String(row.gender ?? "").trim();
+      const role = normalizeParticipantRole(row.role);
+      return {
+        ...row,
+        role,
+        gender,
+        schoolAccountId: fallbackSchoolId,
+      };
+    });
+
+    linkedPayload.participants = JSON.stringify(normalizedRows);
+    linkedPayload.participantsTotal = normalizedRows.length;
+    linkedPayload.classroomTeachers = normalizedRows.filter((row) => row.role === "Classroom teacher").length;
+    linkedPayload.schoolLeaders = normalizedRows.filter((row) => row.role === "School Leader").length;
+    linkedPayload.maleCount = normalizedRows.filter((row) => row.gender === "Male").length;
+    linkedPayload.femaleCount = normalizedRows.filter((row) => row.gender === "Female").length;
+    linkedPayload.numberAttended = normalizedRows.length;
+  }
+
+  if (module === "visit") {
+    const implementationStatus = normalizeVisitImplementationStatus(
+      linkedPayload.implementationStatus ?? linkedPayload.implementation_status,
+    );
+    const visitPathway = normalizeVisitPathway(
+      implementationStatus,
+      linkedPayload.visitPathway ?? linkedPayload.visit_pathway,
+    );
+    linkedPayload.implementationStatus = implementationStatus;
+    linkedPayload.visitPathway = visitPathway;
+    linkedPayload.classesImplementing = parseStringList(
+      linkedPayload.classesImplementing ?? linkedPayload.classes_implementing,
+    );
+    linkedPayload.classesNotImplementing = parseStringList(
+      linkedPayload.classesNotImplementing ?? linkedPayload.classes_not_implementing,
+    );
+    linkedPayload.demoComponents = parseStringList(
+      linkedPayload.demoComponents ?? linkedPayload.demo_components,
+    );
+    linkedPayload.demoMaterialsUsed = parseStringList(
+      linkedPayload.demoMaterialsUsed ?? linkedPayload.materials_used,
+    );
+    linkedPayload.classesToStartFirst = parseStringList(
+      linkedPayload.classesToStartFirst ?? linkedPayload.classes_to_start_first,
+    );
+    linkedPayload.supportNeededFromOzeki = parseStringList(
+      linkedPayload.supportNeededFromOzeki ?? linkedPayload.support_needed_from_ozeki,
+    );
+    linkedPayload.demoTeachersPresentContactIds = parseIdArray(
+      linkedPayload.demoTeachersPresentContactIds ??
+      linkedPayload.demo_teachers_present_contact_ids,
+    );
+    linkedPayload.leadershipAttendeesContactIds = parseIdArray(
+      linkedPayload.leadershipAttendeesContactIds ??
+      linkedPayload.leadership_attendees_contact_ids,
+    );
+
+    const responsibleContactIdRaw = Number(
+      linkedPayload.implementationResponsibleContactId ??
+      linkedPayload.implementation_responsible_contact_id,
+    );
+    linkedPayload.implementationResponsibleContactId =
+      Number.isInteger(responsibleContactIdRaw) && responsibleContactIdRaw > 0
+        ? responsibleContactIdRaw
+        : "";
+
+    const parsedNextActions = parseVisitLeadershipNextActions(
+      linkedPayload.leadershipNextActionsJson ?? linkedPayload.leadership_next_actions_json,
+    );
+    linkedPayload.leadershipNextActionsJson = JSON.stringify(parsedNextActions);
+  }
+
+  if (module === "assessment") {
+    const learnerRows = asRecordArray(linkedPayload.egraLearnersData).filter((row) =>
+      Object.values(row).some((value) => String(value ?? "").trim() !== ""),
+    );
+    linkedPayload.egraLearnersData = JSON.stringify(learnerRows);
+    linkedPayload.learnersAssessed = learnerRows.length;
+  }
+
+  if (module === "story") {
+    const storyParticipantRows = asRecordArray(linkedPayload.storyParticipants);
+    if (storyParticipantRows.length > 0) {
+      linkedPayload.storyParticipants = JSON.stringify(storyParticipantRows);
+    }
+
+    const storyLearnerRows = asRecordArray(linkedPayload.storyLearners);
+    if (storyLearnerRows.length > 0) {
+      linkedPayload.storyLearners = JSON.stringify(storyLearnerRows);
+    }
+  }
+
+  return linkedPayload;
+}
+
+async function normalizeLinkedPayloadPostgres(
+  module: PortalRecordModule,
+  payload: PortalRecordInput["payload"],
+  fallbackSchoolId: number,
+  client?: PoolClient,
+) {
+  const linkedPayload = normalizeLinkedPayloadPostgresLite(module, payload, fallbackSchoolId);
+
+  const withClient = async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
+    if (client) {
+      return callback(client);
+    }
+    return withPostgresClient(callback);
+  };
+
+  if (module === "training") {
+    const participantRows = asRecordArray(linkedPayload.participants).filter((row) =>
+      Object.values(row).some((value) => String(value ?? "").trim() !== ""),
+    );
+    const normalizedRows = await withClient(async (pgClient) =>
+      Promise.all(
+        participantRows.map(async (row) => {
+          const contact = await resolveActivityContactPostgres(pgClient, row, fallbackSchoolId);
+          const gender =
+            contact.gender === "Male" || contact.gender === "Female"
+              ? contact.gender
+              : normalizeTeacherGender(row.gender) ?? String(row.gender ?? "").trim();
+          const role = normalizeParticipantRole(
+            row.role ?? normalizeContactRoleFromCategory((contact.category ?? "Teacher") as SchoolContactCategory),
+          );
+          return {
+            ...row,
+            contactId: contact.contactId,
+            contactUid: contact.contactUid ?? "",
+            participantName: contact.fullName,
+            teacherUid: contact.teacherUid ?? String(row.teacherUid ?? "").trim(),
+            role,
+            gender,
+            schoolAccountId: fallbackSchoolId,
+          };
+        }),
+      ),
+    );
+    linkedPayload.participants = JSON.stringify(normalizedRows);
+    linkedPayload.participantsTotal = normalizedRows.length;
+    linkedPayload.classroomTeachers = normalizedRows.filter((row) => row.role === "Classroom teacher").length;
+    linkedPayload.schoolLeaders = normalizedRows.filter((row) => row.role === "School Leader").length;
+    linkedPayload.maleCount = normalizedRows.filter((row) => row.gender === "Male").length;
+    linkedPayload.femaleCount = normalizedRows.filter((row) => row.gender === "Female").length;
+    linkedPayload.numberAttended = normalizedRows.length;
+  }
+
+  if (module === "assessment") {
+    const classGrade = String(linkedPayload.classLevel ?? linkedPayload.classGrade ?? "").trim() || "Unspecified";
+    const learnerRows = asRecordArray(linkedPayload.egraLearnersData).filter((row) =>
+      Object.values(row).some((value) => String(value ?? "").trim() !== ""),
+    );
+    const normalizedRows = await withClient(async (pgClient) =>
+      Promise.all(
+        learnerRows.map(async (row) => {
+          const learner = await resolveActivityLearnerPostgres(pgClient, row, fallbackSchoolId);
+          const sex = learner.gender === "Boy" ? "M" : learner.gender === "Girl" ? "F" : "";
+          return {
+            ...row,
+            learnerUid: learner.learnerUid,
+            learnerId: learner.learnerId,
+            learnerName: learner.learnerName,
+            childName: learner.learnerName,
+            childId: learner.internalChildId ?? String(learner.learnerId),
+            sex,
+            age: learner.age,
+            classGrade: String(row.classGrade ?? classGrade).trim() || classGrade,
+          };
+        }),
+      ),
+    );
+    linkedPayload.egraLearnersData = JSON.stringify(normalizedRows);
+    linkedPayload.learnersAssessed = normalizedRows.length;
+  }
+
+  if (module === "story") {
+    const storyParticipantRows = asRecordArray(linkedPayload.storyParticipants);
+    if (storyParticipantRows.length > 0) {
+      const resolvedParticipants = await withClient(async (pgClient) =>
+        Promise.all(
+          storyParticipantRows.map(async (row) => {
+            const contact = await resolveActivityContactPostgres(pgClient, row, fallbackSchoolId);
+            return {
+              contactId: contact.contactId,
+              contactUid: contact.contactUid,
+              participantName: contact.fullName,
+              role: normalizeContactRoleFromCategory((contact.category ?? "Teacher") as SchoolContactCategory),
+            };
+          }),
+        ),
+      );
+      linkedPayload.storyParticipants = JSON.stringify(resolvedParticipants);
+    }
+
+    const storyLearnerRows = asRecordArray(linkedPayload.storyLearners);
+    if (storyLearnerRows.length > 0) {
+      const resolvedLearners = await withClient(async (pgClient) =>
+        Promise.all(
+          storyLearnerRows.map(async (row) => {
+            const learner = await resolveActivityLearnerPostgres(pgClient, row, fallbackSchoolId);
+            return {
+              learnerId: learner.learnerId,
+              learnerUid: learner.learnerUid,
+              learnerName: learner.learnerName,
+            };
+          }),
+        ),
+      );
+      linkedPayload.storyLearners = JSON.stringify(resolvedLearners);
+    }
+  }
+
+  return linkedPayload;
+}
+
+async function normalizePayloadPostgres(input: PortalRecordInput, client?: PoolClient) {
+  const linkedPayload = await normalizeLinkedPayloadPostgres(
+    input.module,
+    input.payload ?? {},
+    input.schoolId ?? 0,
+    client,
+  );
+  return JSON.stringify(linkedPayload);
+}
+
+async function logAuditEventPostgres(
+  userId: number,
+  userName: string,
+  action: string,
+  targetTable: string | null,
+  targetId: string | number | null,
+  payloadBefore: string | null,
+  payloadAfter: string | null,
+  detail: string | null,
+) {
+  await queryPostgres(
+    `
+      INSERT INTO audit_logs (
+        user_id,
+        user_name,
+        action,
+        target_table,
+        target_id,
+        payload_before,
+        payload_after,
+        detail,
+        timestamp
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+    `,
+    [
+      userId,
+      userName,
+      action,
+      targetTable,
+      targetId === null ? null : String(targetId),
+      payloadBefore,
+      payloadAfter,
+      detail,
+    ],
+  );
+}
+
 function assertSponsorshipPayload(input: PortalRecordInput) {
   const requiresSponsorship =
     input.module === "training" ||
@@ -13251,7 +13743,7 @@ async function syncVisitPortalRecordLinkagesPostgres(args: {
         );
         teacherContactId = Number(contactResult.rows[0]?.contactId ?? 0);
         roleAtTime = contactResult.rows[0]?.category
-          ? normalizeContactRoleFromCategory(String(contactResult.rows[0].category))
+          ? normalizeContactRoleFromCategory(contactResult.rows[0].category as SchoolContactCategory)
           : null;
       }
     } else {
@@ -13265,7 +13757,7 @@ async function syncVisitPortalRecordLinkagesPostgres(args: {
         [teacherContactId],
       );
       roleAtTime = contactResult.rows[0]?.category
-        ? normalizeContactRoleFromCategory(String(contactResult.rows[0].category))
+        ? normalizeContactRoleFromCategory(contactResult.rows[0].category as SchoolContactCategory)
         : null;
     }
 
@@ -13586,7 +14078,7 @@ async function resolveActivityContactPostgres(
     email: string | null;
   } | undefined;
   if (!contact?.contactId) {
-    throw new Error("Participant is not linked to this school. Add the contact to the school first.");
+    throw new Error("Participant not found in school roster. Add to School Account first.");
   }
   return contact;
 }
@@ -13607,7 +14099,11 @@ async function resolveActivityLearnerPostgres(
         SELECT
           learner_id AS "learnerId",
           learner_uid AS "learnerUid",
-          learner_name AS "learnerName"
+          learner_name AS "learnerName",
+          class_grade AS "classGrade",
+          age,
+          gender,
+          internal_child_id AS "internalChildId"
         FROM school_learners
         WHERE school_id = $1
           AND learner_id = $2
@@ -13621,7 +14117,11 @@ async function resolveActivityLearnerPostgres(
         SELECT
           learner_id AS "learnerId",
           learner_uid AS "learnerUid",
-          learner_name AS "learnerName"
+          learner_name AS "learnerName",
+          class_grade AS "classGrade",
+          age,
+          gender,
+          internal_child_id AS "internalChildId"
         FROM school_learners
         WHERE school_id = $1
           AND trim(COALESCE(learner_uid, '')) = trim($2)
@@ -13635,7 +14135,11 @@ async function resolveActivityLearnerPostgres(
         SELECT
           learner_id AS "learnerId",
           learner_uid AS "learnerUid",
-          learner_name AS "learnerName"
+          learner_name AS "learnerName",
+          class_grade AS "classGrade",
+          age,
+          gender,
+          internal_child_id AS "internalChildId"
         FROM school_learners
         WHERE school_id = $1
           AND lower(trim(learner_name)) = lower(trim($2))
@@ -13651,9 +14155,13 @@ async function resolveActivityLearnerPostgres(
     learnerId: number;
     learnerUid: string | null;
     learnerName: string;
+    classGrade: string | null;
+    age: number | null;
+    gender: SchoolLearnerRecord["gender"] | null;
+    internalChildId: string | null;
   } | undefined;
   if (!learner?.learnerId) {
-    throw new Error("Learner is not linked to this school. Add the learner to the school first.");
+    throw new Error("Learner not found in school roster. Add learner to this school first.");
   }
   return learner;
 }
@@ -13872,13 +14380,15 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
     [args.recordId],
   );
   await args.client.query(`DELETE FROM story_activities WHERE portal_record_id = $1`, [args.recordId]);
+  await args.client.query(`DELETE FROM assessment_records WHERE source_portal_record_id = $1`, [args.recordId]);
+  await args.client.query(`DELETE FROM assessment_sessions WHERE portal_record_id = $1`, [args.recordId]);
 
   if (args.module === "training") {
     const participantRows = asRecordArray(args.payload.participants);
     for (const row of participantRows) {
       const contact = await resolveActivityContactPostgres(args.client, row, args.schoolId);
       const roleAtTime = normalizeParticipantRole(
-        row.role ?? normalizeContactRoleFromCategory(contact.category),
+        row.role ?? normalizeContactRoleFromCategory((contact.category ?? "Teacher") as SchoolContactCategory),
       );
       const gender =
         contact.gender === "Male" || contact.gender === "Female"
@@ -13937,6 +14447,334 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
     }
   }
 
+  if (args.module === "assessment") {
+    const classGrade = String(args.payload.classLevel ?? args.payload.classGrade ?? "").trim() || "Unspecified";
+    const toolVersion = String(args.payload.toolVersion ?? "EGRA-v1").trim() || "EGRA-v1";
+    const assessmentType = normalizeAssessmentType(args.payload.assessmentType ?? args.programType);
+    const masterySettings = await getOneTestMasterySettingsPostgres(args.client);
+    const resolvedModelVersion = ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1;
+    const resolvedBenchmarkVersion = String(
+      args.payload.benchmarkVersion ?? masterySettings.benchmarkVersion,
+    ).trim() || masterySettings.benchmarkVersion;
+    const resolvedScoringProfileVersion = String(
+      args.payload.scoringProfileVersion ?? masterySettings.scoringProfileVersion,
+    ).trim() || masterySettings.scoringProfileVersion;
+    const isOneTestModel = isOneTestStyleModelVersion(resolvedModelVersion);
+    const rows = asRecordArray(args.payload.egraLearnersData);
+
+    const sessionInsert = await args.client.query<{ id: number }>(
+      `
+        INSERT INTO assessment_sessions (
+          session_uid,
+          portal_record_id,
+          school_id,
+          assessment_date,
+          assessment_type,
+          class_grade,
+          tool_version,
+          assessor_user_id,
+          model_version,
+          benchmark_version,
+          scoring_profile_version,
+          updated_at
+        ) VALUES (
+          $1, $2, $3, $4::date, $5, $6, $7, $8, $9, $10, $11, NOW()
+        )
+        RETURNING id
+      `,
+      [
+        `sess_${args.recordId}`,
+        args.recordId,
+        args.schoolId,
+        args.date,
+        assessmentType,
+        classGrade,
+        toolVersion,
+        args.userId,
+        resolvedModelVersion,
+        resolvedBenchmarkVersion,
+        resolvedScoringProfileVersion,
+      ],
+    );
+    const sessionId = Number(sessionInsert.rows[0]?.id ?? 0);
+    if (!sessionId) {
+      throw new Error("Could not load linked assessment session after save.");
+    }
+
+    const readingRuleSettings = await getAssessmentReadingRuleSettingsPostgres(args.client, {
+      grade: classGrade,
+      language: "English",
+      atDate: args.date,
+    });
+    const computedAt = new Date().toISOString();
+
+    for (const [index, row] of rows.entries()) {
+      const learner = await resolveActivityLearnerPostgres(args.client, row, args.schoolId);
+      const learnerUid = learner.learnerUid;
+      const learnerName = learner.learnerName;
+      const childId =
+        String(row.childId ?? row.learnerId ?? "").trim()
+        || learner.internalChildId
+        || String(learner.learnerId);
+      const age = learner.age;
+      const learnerGender = learner.gender;
+
+      const letterIdentificationScore = toNumberOrNull(
+        row.letterIdentification ?? row.letterIdentication ?? row.letterSoundsScore,
+      );
+      const soundIdentificationScore = toNumberOrNull(
+        row.soundIdentification ?? row.letterSoundScore ?? row.letterSoundsScore,
+      );
+      const decodableWordsScore = toNumberOrNull(row.decodableWords);
+      const undecodableWordsScore = toNumberOrNull(row.undecodableWords);
+      const madeUpWordsScore = toNumberOrNull(row.madeUpWords);
+      const fluencyScore = toNumberOrNull(row.storyReading ?? row.fluencyScore);
+      const fluencyAccuracyScore = toNumberOrNull(
+        row.fluencyAccuracy ??
+          row.fluencyAccuracyScore ??
+          row.fluency_accuracy_score ??
+          row.accuracy,
+      );
+      const comprehensionScore = toNumberOrNull(
+        row.readingComprehension ?? row.comprehensionScore,
+      );
+      const decodingCandidates = [
+        decodableWordsScore,
+        undecodableWordsScore,
+        madeUpWordsScore,
+      ].filter((score): score is number => score !== null);
+      const decodingScore =
+        decodingCandidates.length > 0
+          ? decodingCandidates.reduce((sum, score) => sum + score, 0) / decodingCandidates.length
+          : toNumberOrNull(row.decodingScore);
+
+      const computed = computeAssessmentReadingLevel(
+        {
+          fluencyCwpm: fluencyScore,
+          fluencyAccuracy: fluencyAccuracyScore,
+          comprehensionScore,
+        },
+        readingRuleSettings,
+      );
+
+      const rowDomainInputsRaw =
+        row.masteryDomainInputs ?? row.mastery_domains ?? row.domain_mastery_inputs ?? null;
+      const rowItemResponsesRaw =
+        row.masteryItemResponses ??
+        row.mastery_item_responses ??
+        row.itemResponses ??
+        row.assessmentItemResponses ??
+        null;
+      const rowDomainInputs = parseDomainInputsFromUnknown(
+        typeof rowDomainInputsRaw === "string"
+          ? safeParseJson<Record<string, unknown>>(rowDomainInputsRaw, {})
+          : rowDomainInputsRaw,
+      );
+      const rowItemResponses = parseItemResponsesFromUnknown(
+        typeof rowItemResponsesRaw === "string"
+          ? safeParseJson<unknown[]>(rowItemResponsesRaw, [])
+          : rowItemResponsesRaw,
+      );
+      const rowExpectedGrade =
+        String(
+          row.learnerExpectedGrade ??
+            row.expectedGradeLevel ??
+            row.gradeExpectation ??
+            classGrade,
+        ).trim() || classGrade;
+
+      const masteryComputation = isOneTestModel
+        ? computeOneTestStyleMasteryAssessment({
+          grade: rowExpectedGrade,
+          age,
+          domainInputs: rowDomainInputs,
+          itemResponses: rowItemResponses,
+          legacyScores: {
+            letterIdentificationScore,
+            soundIdentificationScore,
+            decodableWordsScore,
+            undecodableWordsScore,
+            madeUpWordsScore,
+            storyReadingScore: fluencyScore,
+            readingComprehensionScore: comprehensionScore,
+            fluencyAccuracyScore,
+          },
+          settings: masterySettings,
+          modelVersion: resolvedModelVersion,
+          benchmarkVersion: resolvedBenchmarkVersion,
+          scoringProfileVersion: resolvedScoringProfileVersion,
+        })
+        : null;
+
+      const sourceRowKey = String(row.no ?? index + 1);
+      const computedReadingLevel = masteryComputation
+        ? toLegacyReadingLabelFromStage(
+          masteryComputation.readingStageOrder,
+          masteryComputation.readingStageLabel,
+        )
+        : computed.computedReadingLevel;
+      const computedLevelBand = masteryComputation
+        ? stageBandFromOrder(masteryComputation.readingStageOrder)
+        : computed.computedLevelBand;
+      const rulesVersion = masteryComputation
+        ? masteryComputation.modelVersion
+        : computed.rulesVersion;
+
+      const sessionResultPayload = {
+        sourceRowKey,
+        learnerId: learner.learnerId,
+        childId,
+        classGrade,
+        assessmentDate: args.date,
+        assessmentType,
+        letterIdentificationScore,
+        soundIdentificationScore,
+        decodableWordsScore,
+        undecodableWordsScore,
+        madeUpWordsScore,
+        storyReadingScore: fluencyScore,
+        fluencyAccuracyScore,
+        readingComprehensionScore: comprehensionScore,
+        decodingScore,
+        computedReadingLevel,
+        computedLevelBand,
+        rulesVersion,
+        computedAt,
+        modelVersion: masteryComputation?.modelVersion ?? resolvedModelVersion,
+        benchmarkVersion: masteryComputation?.benchmarkVersion ?? resolvedBenchmarkVersion,
+        scoringProfileVersion:
+          masteryComputation?.scoringProfileVersion ?? resolvedScoringProfileVersion,
+        readingStageLabel: masteryComputation?.readingStageLabel ?? null,
+        readingStageOrder: masteryComputation?.readingStageOrder ?? null,
+        benchmarkGradeLevel: masteryComputation?.benchmarkGradeLevel ?? null,
+        expectedVsActualStatus: masteryComputation?.expectedVsActualStatus ?? null,
+        masteryProfileSummaryJson: masteryComputation
+          ? buildMasteryProfileSummaryJson(masteryComputation)
+          : null,
+        stageReasonCode: masteryComputation?.stageReasonCode ?? null,
+        stageReasonSummary: masteryComputation?.stageReasonSummary ?? null,
+      };
+
+      const sessionResultInsert = await args.client.query<{ id: number }>(
+        `
+          INSERT INTO assessment_session_results (
+            session_id,
+            learner_uid,
+            learner_name,
+            gender,
+            age,
+            result_json
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6
+          )
+          RETURNING id
+        `,
+        [
+          sessionId,
+          learnerUid,
+          learnerName,
+          learnerGender,
+          age,
+          JSON.stringify(sessionResultPayload),
+        ],
+      );
+      const sessionResultId = Number(sessionResultInsert.rows[0]?.id ?? 0);
+
+      const assessmentInsert = await args.client.query<{ id: number }>(
+        `
+          INSERT INTO assessment_records (
+            learner_uid,
+            child_name,
+            child_id,
+            gender,
+            age,
+            school_id,
+            class_grade,
+            assessment_date,
+            assessment_type,
+            letter_identification_score,
+            sound_identification_score,
+            decodable_words_score,
+            undecodable_words_score,
+            made_up_words_score,
+            story_reading_score,
+            fluency_accuracy_score,
+            reading_comprehension_score,
+            computed_reading_level,
+            computed_level_band,
+            reading_rules_version,
+            reading_level_computed_at,
+            notes,
+            created_by_user_id,
+            source_portal_record_id,
+            source_row_key,
+            model_version,
+            benchmark_version,
+            scoring_profile_version,
+            learner_expected_grade
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8::date, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+            $18, $19, $20, $21::timestamptz, $22, $23, $24, $25, $26, $27, $28, $29
+          )
+          RETURNING id
+        `,
+        [
+          learnerUid,
+          learnerName,
+          childId,
+          learnerGender,
+          age,
+          args.schoolId,
+          classGrade,
+          args.date,
+          assessmentType,
+          letterIdentificationScore,
+          soundIdentificationScore,
+          decodableWordsScore,
+          undecodableWordsScore,
+          madeUpWordsScore,
+          fluencyScore,
+          fluencyAccuracyScore,
+          comprehensionScore,
+          computedReadingLevel,
+          computedLevelBand,
+          rulesVersion,
+          computedAt,
+          null,
+          args.userId,
+          args.recordId,
+          sourceRowKey,
+          resolvedModelVersion || ASSESSMENT_LEGACY_MODEL_VERSION,
+          resolvedBenchmarkVersion || null,
+          resolvedScoringProfileVersion || null,
+          rowExpectedGrade,
+        ],
+      );
+      const assessmentId = Number(assessmentInsert.rows[0]?.id ?? 0);
+      if (!assessmentId) {
+        throw new Error("Could not load linked assessment record after save.");
+      }
+
+      if (masteryComputation) {
+        await applyAssessmentMasteryFieldsPostgres({
+          client: args.client,
+          assessmentId,
+          mastery: masteryComputation,
+          learnerExpectedGrade: rowExpectedGrade,
+          computedAt,
+        });
+        await replaceAssessmentItemResponsesPostgres({
+          client: args.client,
+          learnerResultId: assessmentId,
+          assessmentSessionResultId: sessionResultId > 0 ? sessionResultId : null,
+          assessmentSessionId: sessionId,
+          learnerUid,
+          mastery: masteryComputation,
+        });
+      }
+    }
+  }
+
   if (args.module === "story") {
     const insertStory = await args.client.query(
       `
@@ -13986,7 +14824,7 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
             storyActivityId,
             args.schoolId,
             contact.contactId,
-            normalizeContactRoleFromCategory(contact.category),
+            normalizeContactRoleFromCategory((contact.category ?? "Teacher") as SchoolContactCategory),
           ],
         );
       }
@@ -14035,7 +14873,7 @@ async function createVisitPortalRecordPostgres(
   if (!school) {
     throw new Error("Selected school account was not found.");
   }
-  ensureSchoolHasPrimaryContact(school.id);
+  await ensureSchoolHasPrimaryContactAsync(school.id);
 
   if (await checkPortalDuplicatePostgres(input.module, input.date, school.id, school.name)) {
     throw new Error(
@@ -14043,12 +14881,11 @@ async function createVisitPortalRecordPostgres(
     );
   }
 
-  const payloadJson = normalizePayload(input);
-  const payloadData = JSON.parse(payloadJson) as Record<string, unknown>;
-
   const recordId = await withPostgresClient(async (client) => {
     await client.query("BEGIN");
     try {
+      const payloadJson = await normalizePayloadPostgres(input, client);
+      const payloadData = JSON.parse(payloadJson) as Record<string, unknown>;
       const insertResult = await client.query<{ id: number }>(
         `
           INSERT INTO portal_records (
@@ -14142,7 +14979,7 @@ async function createVisitPortalRecordPostgres(
     throw new Error("Could not load newly created record.");
   }
 
-  logAuditEvent(
+  await logAuditEventPostgres(
     user.id,
     user.fullName,
     "create",
@@ -14171,7 +15008,7 @@ async function updateVisitPortalRecordPostgres(
   if (!school) {
     throw new Error("Selected school account was not found.");
   }
-  ensureSchoolHasPrimaryContact(school.id);
+  await ensureSchoolHasPrimaryContactAsync(school.id);
 
   const current = await getPortalRecordRowPostgres(id);
   if (!current || current.deletedAt) {
@@ -14189,12 +15026,11 @@ async function updateVisitPortalRecordPostgres(
     );
   }
 
-  const payloadJson = normalizePayload(input);
-  const payloadData = JSON.parse(payloadJson) as Record<string, unknown>;
-
   await withPostgresClient(async (client) => {
     await client.query("BEGIN");
     try {
+      const payloadJson = await normalizePayloadPostgres(input, client);
+      const payloadData = JSON.parse(payloadJson) as Record<string, unknown>;
       await client.query(
         `
           UPDATE portal_records
@@ -14262,7 +15098,7 @@ async function updateVisitPortalRecordPostgres(
     throw new Error("Could not load updated record.");
   }
 
-  logAuditEvent(
+  await logAuditEventPostgres(
     user.id,
     user.fullName,
     "update",
@@ -14318,15 +15154,17 @@ async function setVisitPortalRecordStatusPostgres(
         `,
         [status, reviewNote?.trim() ? reviewNote : null, user.id, id],
       );
-      await syncPortalRecordInsightsPostgres({
-        client,
-        recordId: id,
-        module: current.module,
-        payload: payload,
-        schoolId: current.schoolId,
-        userId: user.id,
-        status,
-      });
+      if (current.schoolId) {
+        await syncPortalRecordInsightsPostgres({
+          client,
+          recordId: id,
+          module: current.module,
+          payload: payload,
+          schoolId: Number(current.schoolId),
+          userId: user.id,
+          status,
+        });
+      }
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");
@@ -14339,7 +15177,7 @@ async function setVisitPortalRecordStatusPostgres(
     throw new Error("Could not load updated record.");
   }
 
-  logAuditEvent(
+  await logAuditEventPostgres(
     user.id,
     user.fullName,
     "set_status",
@@ -14384,7 +15222,7 @@ async function createGenericPortalRecordPostgres(
   if (!school) {
     throw new Error("Selected school account was not found.");
   }
-  ensureSchoolHasPrimaryContact(school.id);
+  await ensureSchoolHasPrimaryContactAsync(school.id);
 
   if (await checkPortalDuplicatePostgres(input.module, input.date, school.id, school.name)) {
     throw new Error(
@@ -14392,10 +15230,10 @@ async function createGenericPortalRecordPostgres(
     );
   }
 
-  const payloadJson = normalizePayload(input);
   const recordId = await withPostgresClient(async (client) => {
     await client.query("BEGIN");
     try {
+      const payloadJson = await normalizePayloadPostgres(input, client);
       const insertResult = await client.query<{ id: number }>(
         `
           INSERT INTO portal_records (
@@ -14484,7 +15322,7 @@ async function createGenericPortalRecordPostgres(
     throw new Error("Could not load newly created record.");
   }
 
-  logAuditEvent(
+  await logAuditEventPostgres(
     user.id,
     user.fullName,
     "create",
@@ -14535,7 +15373,7 @@ async function updateGenericPortalRecordPostgres(
   if (!school) {
     throw new Error("Selected school account was not found.");
   }
-  ensureSchoolHasPrimaryContact(school.id);
+  await ensureSchoolHasPrimaryContactAsync(school.id);
 
   const current = await getPortalRecordRowPostgres(id);
   if (!current || current.deletedAt) {
@@ -14553,11 +15391,10 @@ async function updateGenericPortalRecordPostgres(
     );
   }
 
-  const payloadJson = normalizePayload(input);
-
   await withPostgresClient(async (client) => {
     await client.query("BEGIN");
     try {
+      const payloadJson = await normalizePayloadPostgres(input, client);
       await client.query(
         `
           UPDATE portal_records
@@ -14620,7 +15457,7 @@ async function updateGenericPortalRecordPostgres(
     throw new Error("Could not load updated record.");
   }
 
-  logAuditEvent(
+  await logAuditEventPostgres(
     user.id,
     user.fullName,
     "update",
@@ -14684,15 +15521,17 @@ async function setGenericPortalRecordStatusPostgres(
         `,
         [status, reviewNote?.trim() ? reviewNote : null, user.id, id],
       );
-      await syncPortalRecordInsightsPostgres({
-        client,
-        recordId: id,
-        module: current.module,
-        payload: payload,
-        schoolId: current.schoolId,
-        userId: user.id,
-        status,
-      });
+      if (current.schoolId) {
+        await syncPortalRecordInsightsPostgres({
+          client,
+          recordId: id,
+          module: current.module,
+          payload: payload,
+          schoolId: Number(current.schoolId),
+          userId: user.id,
+          status,
+        });
+      }
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");
@@ -14705,7 +15544,7 @@ async function setGenericPortalRecordStatusPostgres(
     throw new Error("Could not load updated record.");
   }
 
-  logAuditEvent(
+  await logAuditEventPostgres(
     user.id,
     user.fullName,
     "set_status",
@@ -14793,121 +15632,125 @@ function getTodayPlusDays(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-export function getPortalDashboardData(user: PortalUser): PortalDashboardData {
-  const db = getDb();
+export async function getPortalDashboardData(user: PortalUser): Promise<PortalDashboardData> {
+  requirePostgresConfigured();
   const weekBounds = getWeekBounds();
   const today = new Date().toISOString().slice(0, 10);
   const weekAhead = getTodayPlusDays(7);
 
-  const baseUserFilter = canViewAllRecords(user) ? "" : "AND created_by_user_id = @currentUserId";
-  const baseParams = canViewAllRecords(user) ? {} : { currentUserId: user.id };
+  const scopedCondition = canViewAllRecords(user)
+    ? ""
+    : "AND created_by_user_id = $3";
+  const scopedParams = canViewAllRecords(user) ? [] : [user.id];
 
-  const kpiRows = db
-    .prepare(
-      `
-      SELECT module, COUNT(*) AS total
-      FROM portal_records
-      WHERE date >= @from AND date <= @to
-      ${baseUserFilter}
-      GROUP BY module
-      `,
-    )
-    .all({ ...baseParams, from: weekBounds.from, to: weekBounds.to }) as Array<{
-      module: PortalRecordModule;
-      total: number;
-    }>;
+  const [kpiResult, agendaResult, followUpResult, recentResult, learnersResult, visitResult] =
+    await Promise.all([
+      queryPostgres<{ module: PortalRecordModule; total: number }>(
+        `
+          SELECT module, COUNT(*)::int AS total
+          FROM portal_records
+          WHERE date >= $1::date
+            AND date <= $2::date
+            AND deleted_at IS NULL
+            ${scopedCondition}
+          GROUP BY module
+        `,
+        canViewAllRecords(user)
+          ? [weekBounds.from, weekBounds.to]
+          : [weekBounds.from, weekBounds.to, ...scopedParams],
+      ),
+      queryPostgres<DashboardAgendaItem>(
+        `
+          SELECT
+            id,
+            record_code AS "recordCode",
+            module,
+            date::text AS date,
+            school_name AS "schoolName",
+            program_type AS "programType"
+          FROM portal_records
+          WHERE date >= $1::date
+            AND date <= $2::date
+            AND deleted_at IS NULL
+            ${scopedCondition}
+          ORDER BY date ASC, id ASC
+          LIMIT 15
+        `,
+        canViewAllRecords(user) ? [today, weekAhead] : [today, weekAhead, ...scopedParams],
+      ),
+      queryPostgres<DashboardFollowUpItem>(
+        `
+          SELECT
+            id,
+            record_code AS "recordCode",
+            module,
+            school_name AS "schoolName",
+            follow_up_date::text AS "followUpDate"
+          FROM portal_records
+          WHERE follow_up_date IS NOT NULL
+            AND follow_up_date <= $1::date
+            AND status != 'Approved'
+            AND deleted_at IS NULL
+            ${canViewAllRecords(user) ? "" : "AND created_by_user_id = $2"}
+          ORDER BY follow_up_date ASC
+          LIMIT 12
+        `,
+        canViewAllRecords(user) ? [today] : [today, user.id],
+      ),
+      queryPostgres<DashboardActivityItem>(
+        `
+          SELECT
+            id,
+            record_code AS "recordCode",
+            module,
+            date::text AS date,
+            school_name AS "schoolName",
+            status,
+            updated_at::text AS "updatedAt"
+          FROM portal_records
+          WHERE deleted_at IS NULL
+            ${canViewAllRecords(user) ? "" : "AND created_by_user_id = $1"}
+          ORDER BY updated_at DESC
+          LIMIT 10
+        `,
+        canViewAllRecords(user) ? [] : [user.id],
+      ),
+      queryPostgres<{ total: number }>(
+        `SELECT COALESCE(SUM(enrolled_learners), 0)::int AS total FROM schools_directory`,
+      ),
+      queryPostgres<{
+        schoolId: number | null;
+        schoolName: string;
+        district: string;
+        date: string;
+        payloadJson: string;
+      }>(
+        `
+          SELECT
+            school_id AS "schoolId",
+            school_name AS "schoolName",
+            district,
+            date::text AS date,
+            payload_json AS "payloadJson"
+          FROM portal_records
+          WHERE module = 'visit'
+            AND deleted_at IS NULL
+            ${canViewAllRecords(user) ? "" : "AND created_by_user_id = $1"}
+          ORDER BY date DESC, id DESC
+        `,
+        canViewAllRecords(user) ? [] : [user.id],
+      ),
+    ]);
 
-  const agendaRows = db
-    .prepare(
-      `
-    SELECT
-    id,
-      record_code AS recordCode,
-        module,
-        date,
-        school_name AS schoolName,
-          program_type AS programType
-      FROM portal_records
-      WHERE date >= @today
-        AND date <= @weekAhead
-        ${baseUserFilter}
-      ORDER BY date ASC, id ASC
-      LIMIT 15
-      `,
-    )
-    .all({ ...baseParams, today, weekAhead }) as DashboardAgendaItem[];
-
-  const followUpRows = db
-    .prepare(
-      `
-    SELECT
-    id,
-      record_code AS recordCode,
-        module,
-        school_name AS schoolName,
-          follow_up_date AS followUpDate
-      FROM portal_records
-      WHERE follow_up_date IS NOT NULL
-        AND follow_up_date <= @today
-        AND status != 'Approved'
-        ${baseUserFilter}
-      ORDER BY follow_up_date ASC
-      LIMIT 12
-      `,
-    )
-    .all({ ...baseParams, today }) as DashboardFollowUpItem[];
-
-  const recentRows = db
-    .prepare(
-      `
-    SELECT
-    id,
-      record_code AS recordCode,
-        module,
-        date,
-        school_name AS schoolName,
-          status,
-          updated_at AS updatedAt
-      FROM portal_records
-      WHERE 1 = 1
-        ${baseUserFilter}
-      ORDER BY updated_at DESC
-      LIMIT 10
-      `,
-    )
-    .all(baseParams) as DashboardActivityItem[];
+  const kpiRows = kpiResult.rows;
+  const agendaRows = agendaResult.rows;
+  const followUpRows = followUpResult.rows;
+  const recentRows = recentResult.rows;
 
   const getCount = (module: PortalRecordModule) =>
     Number(kpiRows.find((row) => row.module === module)?.total ?? 0);
-
-  const learnersResult = db
-    .prepare("SELECT SUM(enrolled_learners) as total FROM schools_directory")
-    .get() as { total: number };
-  const totalLearners = learnersResult?.total ?? 0;
-
-  const visitRows = db
-    .prepare(
-      `
-      SELECT
-        school_id AS schoolId,
-        school_name AS schoolName,
-        district,
-        date,
-        payload_json AS payloadJson
-      FROM portal_records
-      WHERE module = 'visit'
-        AND deleted_at IS NULL
-        ${baseUserFilter}
-      ORDER BY date DESC, id DESC
-      `,
-    )
-    .all(baseParams) as Array<{
-      schoolId: number | null;
-      schoolName: string;
-      district: string;
-      date: string;
-      payloadJson: string;
-    }>;
+  const totalLearners = Number(learnersResult.rows[0]?.total ?? 0);
+  const visitRows = visitResult.rows;
 
   const latestBySchool = new Map<
     string,
@@ -15012,7 +15855,6 @@ async function syncSchoolDirectoryBundleToPostgres(schoolId: number, client?: Po
 }
 
 export async function createSchoolDirectoryRecord(input: SchoolDirectoryInput): Promise<SchoolDirectoryRecord> {
-  const db = getDb();
   const normalizedName = input.name.trim();
   const country = input.country?.trim() || "Uganda";
   const normalizedDistrict = input.district.trim();
@@ -15102,219 +15944,446 @@ export async function createSchoolDirectoryRecord(input: SchoolDirectoryInput): 
     throw new Error("A primary contact is required.");
   }
 
-  const duplicateSchool = findSchoolByNormalizedName(normalizedName);
+  if (!isPostgresConfigured()) {
+    const db = getDb();
+    const duplicateSchool = findSchoolByNormalizedName(normalizedName);
+    if (duplicateSchool) {
+      throw new Error(
+        "A school with this name already exists. Append location details (district/sub-county/parish) to distinguish it.",
+      );
+    }
+
+    const id = db.transaction(() => {
+      const insertResult = db
+        .prepare(
+          `
+          INSERT INTO schools_directory(
+            school_uid,
+            school_code,
+            name,
+            country,
+            region,
+            sub_region,
+            region_id,
+            subregion_id,
+            district_id,
+            district,
+            sub_county,
+            parish,
+            village,
+            alternate_school_names,
+            school_status,
+            school_status_date,
+            current_partner_type,
+            year_founded,
+            account_record_type,
+            school_type,
+            parent_account_label,
+            school_relationship_status,
+            school_relationship_status_date,
+            denomination,
+            protestant_denomination,
+            client_school_number,
+            first_metric_date,
+            metric_count,
+            running_total_max_enrollment,
+            partner_type,
+            current_partner_school,
+            school_active,
+            enrollment_total,
+            enrollment_by_grade,
+            enrolled_boys,
+            enrolled_girls,
+            enrolled_baby,
+            enrolled_middle,
+            enrolled_top,
+            enrolled_p1,
+            enrolled_p2,
+            enrolled_p3,
+            enrolled_p4,
+            enrolled_p5,
+            enrolled_p6,
+            enrolled_p7,
+            enrolled_learners,
+            gps_lat,
+            gps_lng,
+            contact_name,
+            contact_phone,
+            contact_email,
+            website,
+            description,
+            notes
+          ) VALUES(
+            @schoolUid,
+            @schoolCode,
+            @name,
+            @country,
+            @region,
+            @subRegion,
+            @regionId,
+            @subregionId,
+            @districtId,
+            @district,
+            @subCounty,
+            @parish,
+            @village,
+            @alternateSchoolNames,
+            @schoolStatus,
+            @schoolStatusDate,
+            @currentPartnerType,
+            @yearFounded,
+            @accountRecordType,
+            @schoolType,
+            @parentAccountLabel,
+            @schoolRelationshipStatus,
+            @schoolRelationshipStatusDate,
+            @denomination,
+            @protestantDenomination,
+            @clientSchoolNumber,
+            @firstMetricDate,
+            @metricCount,
+            @runningTotalMaxEnrollment,
+            @partnerType,
+            @currentPartnerSchool,
+            @schoolActive,
+            @enrollmentTotal,
+            @enrollmentByGrade,
+            @enrolledBoys,
+            @enrolledGirls,
+            @enrolledBaby,
+            @enrolledMiddle,
+            @enrolledTop,
+            @enrolledP1,
+            @enrolledP2,
+            @enrolledP3,
+            @enrolledP4,
+            @enrolledP5,
+            @enrolledP6,
+            @enrolledP7,
+            @enrolledLearners,
+            @gpsLat,
+            @gpsLng,
+            @contactName,
+            @contactPhone,
+            @contactEmail,
+            @website,
+            @description,
+            @notes
+          )
+        `,
+        )
+        .run({
+          schoolUid: createGeneratedUid("sch"),
+          schoolCode: "S-PENDING",
+          name: normalizedName,
+          country,
+          region: normalizedRegion,
+          subRegion: normalizedSubRegion,
+          regionId: stableIdFromText("reg", normalizedRegion),
+          subregionId: stableIdFromText("sub", normalizedSubRegion),
+          districtId: resolveDistrictCode(db, normalizedDistrict),
+          district: normalizedDistrict,
+          subCounty: normalizedSubCounty,
+          parish: normalizedParish,
+          village: input.village?.trim() ? input.village : null,
+          alternateSchoolNames,
+          schoolStatus,
+          schoolStatusDate,
+          currentPartnerType,
+          yearFounded,
+          accountRecordType,
+          schoolType,
+          parentAccountLabel,
+          schoolRelationshipStatus,
+          schoolRelationshipStatusDate,
+          denomination,
+          protestantDenomination,
+          clientSchoolNumber,
+          firstMetricDate,
+          metricCount,
+          runningTotalMaxEnrollment,
+          partnerType,
+          currentPartnerSchool: currentPartnerSchool ? 1 : 0,
+          schoolActive: schoolActive ? 1 : 0,
+          enrollmentTotal,
+          enrollmentByGrade: input.enrollmentByGrade?.trim() ? input.enrollmentByGrade.trim() : null,
+          enrolledBoys,
+          enrolledGirls,
+          enrolledBaby,
+          enrolledMiddle,
+          enrolledTop,
+          enrolledP1,
+          enrolledP2,
+          enrolledP3,
+          enrolledP4,
+          enrolledP5,
+          enrolledP6,
+          enrolledP7,
+          enrolledLearners: enrollmentTotal,
+          gpsLat: input.gpsLat?.trim() ? input.gpsLat : null,
+          gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
+          contactName: primaryContactName,
+          contactPhone: primaryContactPhone || input.contactPhone?.trim() || null,
+          contactEmail: primaryContactEmail,
+          website,
+          description,
+          notes: input.notes?.trim() ? input.notes.trim() : null,
+        });
+
+      const schoolId = Number(insertResult.lastInsertRowid);
+      const schoolCode = toPaddedCode("S-", schoolId, 4);
+      db.prepare("UPDATE schools_directory SET school_code = @schoolCode WHERE id = @id").run({
+        id: schoolId,
+        schoolCode,
+      });
+
+      addSchoolContactToSchool({
+        schoolId,
+        fullName: primaryContactName,
+        gender: primaryContactGender,
+        phone: primaryContactPhone || undefined,
+        email: primaryContactEmail || undefined,
+        whatsapp: input.proprietor.whatsapp?.trim() || undefined,
+        category: primaryContactCategory,
+        roleTitle: input.proprietor.roleTitle?.trim() || primaryContactCategory,
+        isPrimaryContact: true,
+      });
+
+      return schoolId;
+    })();
+
+    const row = getSchoolDirectoryRecordById(id);
+    if (!row) {
+      throw new Error("Could not load created school.");
+    }
+
+    await syncSchoolDirectoryBundleToPostgres(id);
+    return row;
+  }
+
+  const duplicateSchool = await findSchoolByNormalizedNamePostgres(normalizedName);
   if (duplicateSchool) {
     throw new Error(
       "A school with this name already exists. Append location details (district/sub-county/parish) to distinguish it.",
     );
   }
 
-  const id = db.transaction(() => {
-    const insertResult = db
-      .prepare(
+  const schoolId = await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const nextSchoolId = await nextIntegerPrimaryKeyPostgres(client, "schools_directory", "id");
+      const schoolUid = createGeneratedUid("sch");
+      const districtId = await resolveDistrictCodePostgres(client, normalizedDistrict);
+      const insertResult = await client.query<{ id: number }>(
         `
-        INSERT INTO schools_directory(
-          school_uid,
-          school_code,
-          name,
+          INSERT INTO schools_directory (
+            id,
+            school_uid,
+            school_code,
+            name,
+            country,
+            region,
+            sub_region,
+            region_id,
+            subregion_id,
+            district_id,
+            district,
+            sub_county,
+            parish,
+            village,
+            alternate_school_names,
+            school_status,
+            school_status_date,
+            current_partner_type,
+            year_founded,
+            account_record_type,
+            school_type,
+            parent_account_label,
+            school_relationship_status,
+            school_relationship_status_date,
+            denomination,
+            protestant_denomination,
+            client_school_number,
+            first_metric_date,
+            metric_count,
+            running_total_max_enrollment,
+            partner_type,
+            current_partner_school,
+            school_active,
+            enrollment_total,
+            enrollment_by_grade,
+            enrolled_boys,
+            enrolled_girls,
+            enrolled_baby,
+            enrolled_middle,
+            enrolled_top,
+            enrolled_p1,
+            enrolled_p2,
+            enrolled_p3,
+            enrolled_p4,
+            enrolled_p5,
+            enrolled_p6,
+            enrolled_p7,
+            enrolled_learners,
+            gps_lat,
+            gps_lng,
+            contact_name,
+            contact_phone,
+            contact_email,
+            website,
+            description,
+            notes
+          ) VALUES (
+            $1, $2, 'S-PENDING', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+            $16::date, $17, $18, $19, $20, $21, $22, $23::date, $24, $25, $26, $27::date, $28, $29,
+            $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46,
+            $47, $48, $49, $50, $51, $52, $53, $54, $55
+          )
+          RETURNING id
+        `,
+        [
+          nextSchoolId,
+          schoolUid,
+          normalizedName,
           country,
-          region,
-          sub_region,
-          region_id,
-          subregion_id,
-          district_id,
-          district,
-          sub_county,
-          parish,
-          village,
-          alternate_school_names,
-          school_status,
-          school_status_date,
-          current_partner_type,
-          year_founded,
-          account_record_type,
-          school_type,
-          parent_account_label,
-          school_relationship_status,
-          school_relationship_status_date,
+          normalizedRegion,
+          normalizedSubRegion,
+          stableIdFromText("reg", normalizedRegion),
+          stableIdFromText("sub", normalizedSubRegion),
+          districtId,
+          normalizedDistrict,
+          normalizedSubCounty,
+          normalizedParish,
+          input.village?.trim() ? input.village.trim() : null,
+          alternateSchoolNames,
+          schoolStatus,
+          schoolStatusDate,
+          currentPartnerType,
+          yearFounded,
+          accountRecordType,
+          schoolType,
+          parentAccountLabel,
+          schoolRelationshipStatus,
+          schoolRelationshipStatusDate,
           denomination,
-          protestant_denomination,
-          client_school_number,
-          first_metric_date,
-          metric_count,
-          running_total_max_enrollment,
-          partner_type,
-          current_partner_school,
-          school_active,
-          enrollment_total,
-          enrollment_by_grade,
-          enrolled_boys,
-          enrolled_girls,
-          enrolled_baby,
-          enrolled_middle,
-          enrolled_top,
-          enrolled_p1,
-          enrolled_p2,
-          enrolled_p3,
-          enrolled_p4,
-          enrolled_p5,
-          enrolled_p6,
-          enrolled_p7,
-          enrolled_learners,
-          gps_lat,
-          gps_lng,
-          contact_name,
-          contact_phone,
-          contact_email,
+          protestantDenomination,
+          clientSchoolNumber,
+          firstMetricDate,
+          metricCount,
+          runningTotalMaxEnrollment,
+          partnerType,
+          currentPartnerSchool,
+          schoolActive,
+          enrollmentTotal,
+          input.enrollmentByGrade?.trim() ? input.enrollmentByGrade.trim() : null,
+          enrolledBoys,
+          enrolledGirls,
+          enrolledBaby,
+          enrolledMiddle,
+          enrolledTop,
+          enrolledP1,
+          enrolledP2,
+          enrolledP3,
+          enrolledP4,
+          enrolledP5,
+          enrolledP6,
+          enrolledP7,
+          enrollmentTotal,
+          input.gpsLat?.trim() ? input.gpsLat.trim() : null,
+          input.gpsLng?.trim() ? input.gpsLng.trim() : null,
+          primaryContactName,
+          primaryContactPhone || input.contactPhone?.trim() || null,
+          primaryContactEmail,
           website,
           description,
-          notes
-        ) VALUES(
-          @schoolUid,
-          @schoolCode,
-          @name,
-          @country,
-          @region,
-          @subRegion,
-          @regionId,
-          @subregionId,
-          @districtId,
-          @district,
-          @subCounty,
-          @parish,
-          @village,
-          @alternateSchoolNames,
-          @schoolStatus,
-          @schoolStatusDate,
-          @currentPartnerType,
-          @yearFounded,
-          @accountRecordType,
-          @schoolType,
-          @parentAccountLabel,
-          @schoolRelationshipStatus,
-          @schoolRelationshipStatusDate,
-          @denomination,
-          @protestantDenomination,
-          @clientSchoolNumber,
-          @firstMetricDate,
-          @metricCount,
-          @runningTotalMaxEnrollment,
-          @partnerType,
-          @currentPartnerSchool,
-          @schoolActive,
-          @enrollmentTotal,
-          @enrollmentByGrade,
-          @enrolledBoys,
-          @enrolledGirls,
-          @enrolledBaby,
-          @enrolledMiddle,
-          @enrolledTop,
-          @enrolledP1,
-          @enrolledP2,
-          @enrolledP3,
-          @enrolledP4,
-          @enrolledP5,
-          @enrolledP6,
-          @enrolledP7,
-          @enrolledLearners,
-          @gpsLat,
-          @gpsLng,
-          @contactName,
-          @contactPhone,
-          @contactEmail,
-          @website,
-          @description,
-          @notes
-        )
-      `,
-      )
-      .run({
-        schoolUid: createGeneratedUid("sch"),
-        schoolCode: "S-PENDING",
-        name: normalizedName,
-        country,
-        region: normalizedRegion,
-        subRegion: normalizedSubRegion,
-        regionId: stableIdFromText("reg", normalizedRegion),
-        subregionId: stableIdFromText("sub", normalizedSubRegion),
-        districtId: resolveDistrictCode(db, normalizedDistrict),
-        district: normalizedDistrict,
-        subCounty: normalizedSubCounty,
-        parish: normalizedParish,
-        village: input.village?.trim() ? input.village : null,
-        alternateSchoolNames,
-        schoolStatus,
-        schoolStatusDate,
-        currentPartnerType,
-        yearFounded,
-        accountRecordType,
-        schoolType,
-        parentAccountLabel,
-        schoolRelationshipStatus,
-        schoolRelationshipStatusDate,
-        denomination,
-        protestantDenomination,
-        clientSchoolNumber,
-        firstMetricDate,
-        metricCount,
-        runningTotalMaxEnrollment,
-        partnerType,
-        currentPartnerSchool: currentPartnerSchool ? 1 : 0,
-        schoolActive: schoolActive ? 1 : 0,
-        enrollmentTotal,
-        enrollmentByGrade: input.enrollmentByGrade?.trim() ? input.enrollmentByGrade.trim() : null,
-        enrolledBoys,
-        enrolledGirls,
-        enrolledBaby,
-        enrolledMiddle,
-        enrolledTop,
-        enrolledP1,
-        enrolledP2,
-        enrolledP3,
-        enrolledP4,
-        enrolledP5,
-        enrolledP6,
-        enrolledP7,
-        enrolledLearners: enrollmentTotal,
-        gpsLat: input.gpsLat?.trim() ? input.gpsLat : null,
-        gpsLng: input.gpsLng?.trim() ? input.gpsLng : null,
-        contactName: primaryContactName,
-        contactPhone: primaryContactPhone || input.contactPhone?.trim() || null,
-        contactEmail: primaryContactEmail,
-        website,
-        description,
-        notes: input.notes?.trim() ? input.notes.trim() : null,
-      });
+          input.notes?.trim() ? input.notes.trim() : null,
+        ],
+      );
+      const createdSchoolId = Number(insertResult.rows[0]?.id ?? 0);
+      if (!createdSchoolId) {
+        throw new Error("Could not load created school.");
+      }
 
-    const schoolId = Number(insertResult.lastInsertRowid);
-    const schoolCode = toPaddedCode("S-", schoolId, 4);
-    db.prepare("UPDATE schools_directory SET school_code = @schoolCode WHERE id = @id").run({
-      id: schoolId,
-      schoolCode,
-    });
+      const schoolCode = toPaddedCode("S-", createdSchoolId, 4);
+      await client.query(`UPDATE schools_directory SET school_code = $1 WHERE id = $2`, [
+        schoolCode,
+        createdSchoolId,
+      ]);
 
-    addSchoolContactToSchool({
-      schoolId,
-      fullName: primaryContactName,
-      gender: primaryContactGender,
-      phone: primaryContactPhone || undefined,
-      email: primaryContactEmail || undefined,
-      whatsapp: input.proprietor.whatsapp?.trim() || undefined,
-      category: primaryContactCategory,
-      roleTitle: input.proprietor.roleTitle?.trim() || primaryContactCategory,
-      isPrimaryContact: true,
-    });
+      const nextContactId = await nextIntegerPrimaryKeyPostgres(client, "school_contacts", "contact_id");
+      const contactInsert = await client.query<{ contactId: number }>(
+        `
+          INSERT INTO school_contacts (
+            contact_id,
+            contact_uid,
+            school_id,
+            full_name,
+            gender,
+            phone,
+            email,
+            whatsapp,
+            category,
+            role_title,
+            is_primary_contact,
+            created_at,
+            updated_at
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, NOW(), NOW()
+          )
+          RETURNING contact_id AS "contactId"
+        `,
+        [
+          nextContactId,
+          createGeneratedUid("cnt"),
+          createdSchoolId,
+          primaryContactName,
+          primaryContactGender,
+          primaryContactPhone || null,
+          primaryContactEmail,
+          input.proprietor.whatsapp?.trim() || null,
+          primaryContactCategory,
+          input.proprietor.roleTitle?.trim() || primaryContactCategory,
+        ],
+      );
+      const primaryContactId = Number(contactInsert.rows[0]?.contactId ?? 0);
+      if (primaryContactId > 0) {
+        await client.query(`UPDATE schools_directory SET primary_contact_id = $1 WHERE id = $2`, [
+          primaryContactId,
+          createdSchoolId,
+        ]);
+      }
 
-    return schoolId;
-  })();
+      await client.query(
+        `
+          INSERT INTO audit_logs (
+            user_id,
+            user_name,
+            action,
+            target_table,
+            target_id,
+            payload_before,
+            payload_after,
+            detail
+          ) VALUES (
+            0, 'System', 'create', 'schools_directory', $1, NULL, $2, 'Created school directory record.'
+          )
+        `,
+        [String(createdSchoolId), JSON.stringify({ name: normalizedName, district: normalizedDistrict })],
+      );
 
-  const row = getSchoolDirectoryRecordById(id);
-  if (!row) {
+      await client.query("COMMIT");
+      return createdSchoolId;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+
+  const created = await getSchoolDirectoryRecord(schoolId);
+  if (!created) {
     throw new Error("Could not load created school.");
   }
-
-  await syncSchoolDirectoryBundleToPostgres(id);
-  return row;
+  return created;
 }
 
 export function getReportPreviewStats(input: {
@@ -15477,7 +16546,7 @@ export async function updateSchoolDirectoryRecord(
     contactPhone?: string | null;
     notes?: string | null;
   },
-): SchoolDirectoryRecord {
+): Promise<SchoolDirectoryRecord> {
   const current = getSchoolDirectoryRecordById(schoolId);
   if (!current) {
     throw new Error("School not found.");
@@ -27616,6 +28685,110 @@ export function updateGraduationSettings(
   return getGraduationSettings();
 }
 
+export async function updateGraduationSettingsAsync(
+  input: Partial<Omit<GraduationSettingsRecord, "updatedAt">>,
+  actor: PortalUser,
+): Promise<GraduationSettingsRecord> {
+  if (!isPostgresConfigured()) {
+    return updateGraduationSettings(input, actor);
+  }
+
+  const current = await getGraduationSettingsAsync();
+  const next: GraduationSettingsRecord = {
+    ...current,
+    ...input,
+    requiredDomains:
+      input.requiredDomains && input.requiredDomains.length > 0
+        ? input.requiredDomains.filter((domain) => isGraduationDomainKey(domain))
+        : current.requiredDomains,
+    assessmentCycleMode:
+      input.assessmentCycleMode &&
+        (input.assessmentCycleMode === "latest" ||
+          input.assessmentCycleMode === "endline" ||
+          input.assessmentCycleMode === "latest_or_endline")
+        ? input.assessmentCycleMode
+        : current.assessmentCycleMode,
+    requiredReadingLevel: normalizeReadingLevel(input.requiredReadingLevel ?? current.requiredReadingLevel),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (next.requiredDomains.length === 0) {
+    next.requiredDomains = DEFAULT_GRADUATION_SETTINGS.requiredDomains;
+  }
+
+  await queryPostgres(
+    `
+      UPDATE graduation_settings
+      SET
+        graduation_enabled = $1,
+        target_domain_proficiency_pct = $2,
+        required_domains_json = $3,
+        required_reading_level = $4,
+        required_fluent_pct = $5,
+        min_published_stories = $6,
+        target_teaching_quality_pct = $7,
+        require_teaching_domains = $8,
+        latest_assessment_required = $9,
+        latest_evaluation_required = $10,
+        assessment_cycle_mode = $11,
+        dismiss_snooze_days = $12,
+        criteria_version = $13,
+        updated_at = $14::timestamptz,
+        min_learners_assessed_n = $15,
+        target_grades_json = $16,
+        min_teacher_evaluations_total = $17,
+        min_evaluations_per_reading_teacher = $18,
+        data_completeness_threshold = $19,
+        require_sustainability_validation = $20,
+        sustainability_checklist_json = $21
+      WHERE id = 1
+    `,
+    [
+      next.graduationEnabled,
+      next.targetDomainProficiencyPct,
+      JSON.stringify(next.requiredDomains),
+      next.requiredReadingLevel,
+      next.requiredFluentPct,
+      next.minPublishedStories,
+      next.targetTeachingQualityPct,
+      next.requireTeachingDomains,
+      next.latestAssessmentRequired,
+      next.latestEvaluationRequired,
+      next.assessmentCycleMode,
+      next.dismissSnoozeDays,
+      next.criteriaVersion.trim() || DEFAULT_GRADUATION_SETTINGS.criteriaVersion,
+      next.updatedAt,
+      next.minLearnersAssessedN,
+      JSON.stringify(next.targetGrades),
+      next.minTeacherEvaluationsTotal,
+      next.minEvaluationsPerReadingTeacher,
+      next.dataCompletenessThreshold,
+      next.requireSustainabilityValidation,
+      JSON.stringify(next.sustainabilityChecklistItems),
+    ],
+  );
+
+  await queryPostgres(
+    `
+      INSERT INTO audit_logs (
+        user_id, user_name, action, target_table, target_id, payload_before, payload_after, detail
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `,
+    [
+      actor.id,
+      actor.fullName,
+      "update",
+      "graduation_settings",
+      "1",
+      JSON.stringify(current),
+      JSON.stringify(next),
+      "Updated school graduation criteria settings.",
+    ],
+  );
+
+  return await getGraduationSettingsAsync();
+}
+
 function toNullableNumber(value: number | string | null | undefined) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -31728,6 +32901,11 @@ async function getPublicImpactAggregatePostgres(
   const navigatorDistricts = [...new Set(scopedSchools.map((school) => school.district))]
     .filter((value): value is string => Boolean(value))
     .sort((left, right) => left.localeCompare(right));
+  const subCountiesReached = new Set(
+    scopedSchools
+      .map((school) => (school as { subCounty?: string }).subCounty)
+      .filter((value): value is string => Boolean(value)),
+  ).size;
   const navigatorSchools = [...scopedSchools]
     .filter((school) => Number.isInteger(school.schoolId) && school.schoolId > 0)
     .sort((left, right) => left.schoolName.localeCompare(right.schoolName))
@@ -31738,7 +32916,6 @@ async function getPublicImpactAggregatePostgres(
       subRegion: school.subRegion,
       region: school.region,
     }));
-
   const aggregate: PublicImpactAggregate = {
     scope: {
       level: scopeLevel,
@@ -32888,6 +34065,11 @@ function getPublicImpactAggregateSqlite(
   const navigatorDistricts = [...new Set(scopedSchools.map((school) => school.district))]
     .filter((value): value is string => Boolean(value))
     .sort((left, right) => left.localeCompare(right));
+  const subCountiesReached = new Set(
+    scopedSchools
+      .map((school) => (school as { subCounty?: string }).subCounty)
+      .filter((value): value is string => Boolean(value)),
+  ).size;
   const navigatorSchools = [...scopedSchools]
     .filter((school) => Number.isInteger(school.schoolId) && school.schoolId > 0)
     .sort((left, right) => left.schoolName.localeCompare(right.schoolName))
@@ -32913,8 +34095,7 @@ function getPublicImpactAggregateSqlite(
     },
     kpis: {
       schoolsSupported: supportedSchools.size,
-      subCountiesReached: new Set(scopedSchools.map((s) => (s as any).sub_county).filter(Boolean))
-        .size,
+      subCountiesReached,
       totalBooksRead: (teachingLearningAlignment.points || []).reduce(
         (sum, p) => sum + (p.storySessionsCount || 0),
         0,
@@ -33203,12 +34384,42 @@ export function logAuditEvent(
   detail: string | null = null,
   ipAddress: string | null = null,
 ): AuditLogEntry {
-  const result = getDb()
-    .prepare(
-      `INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, payload_before, payload_after, detail, ip_address)
-       VALUES (@userId, @userName, @action, @targetTable, @targetId, @payloadBefore, @payloadAfter, @detail, @ipAddress)`,
-    )
-    .run({
+  const timestamp = new Date().toISOString();
+
+  if (isPostgresConfigured()) {
+    void queryPostgres(
+      `
+        INSERT INTO audit_logs (
+          user_id,
+          user_name,
+          action,
+          target_table,
+          target_id,
+          payload_before,
+          payload_after,
+          detail,
+          ip_address,
+          timestamp
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz)
+      `,
+      [
+        userId,
+        userName,
+        action,
+        targetTable,
+        targetId === null ? null : String(targetId),
+        payloadBefore,
+        payloadAfter,
+        detail,
+        ipAddress,
+        timestamp,
+      ],
+    ).catch((error) => {
+      console.error("Failed to write audit log to PostgreSQL.", error);
+    });
+
+    return {
+      id: 0,
       userId,
       userName,
       action,
@@ -33218,10 +34429,12 @@ export function logAuditEvent(
       payloadAfter,
       detail,
       ipAddress,
-    });
+      timestamp,
+    };
+  }
 
   return {
-    id: Number(result.lastInsertRowid),
+    id: 0,
     userId,
     userName,
     action,
@@ -33231,7 +34444,228 @@ export function logAuditEvent(
     payloadAfter,
     detail,
     ipAddress,
-    timestamp: new Date().toISOString(),
+    timestamp,
+  };
+}
+
+export async function saveCostEntryAsync(
+  input: CostEntryInput,
+  userId: number,
+): Promise<CostEntryRecord> {
+  requirePostgresConfigured();
+  const actor = await findPortalUserAuthByIdPostgres(userId);
+  const result = await queryPostgres<{ id: number; createdAt: string }>(
+    `
+      INSERT INTO cost_entries (
+        scope_type,
+        scope_value,
+        period,
+        category,
+        amount,
+        notes,
+        created_by_user_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING id, created_at::text AS "createdAt"
+    `,
+    [
+      input.scopeType,
+      input.scopeValue,
+      input.period,
+      input.category,
+      input.amount,
+      input.notes ?? null,
+      userId,
+    ],
+  );
+
+  return {
+    id: Number(result.rows[0]?.id ?? 0),
+    ...input,
+    createdByUserId: userId,
+    createdByName: actor?.fullName ?? "Unknown",
+    createdAt: String(result.rows[0]?.createdAt ?? new Date().toISOString()),
+  };
+}
+
+export async function saveObservationRubricAsync(
+  input: ObservationRubricInput,
+  userId: number,
+): Promise<ObservationRubricRecord> {
+  requirePostgresConfigured();
+  const actor = await findPortalUserAuthByIdPostgres(userId);
+  const overallScore =
+    input.indicators.length > 0
+      ? input.indicators.reduce((sum, indicator) => sum + indicator.score, 0) / input.indicators.length
+      : 0;
+  const indicatorsJson = JSON.stringify(input.indicators);
+  const result = await queryPostgres<{ id: number; createdAt: string }>(
+    `
+      INSERT INTO observation_rubrics (
+        school_id,
+        teacher_uid,
+        date,
+        lesson_type,
+        indicators_json,
+        overall_score,
+        strengths,
+        gaps,
+        coaching_actions,
+        created_by_user_id
+      ) VALUES ($1,$2,$3::date,$4,$5,$6,$7,$8,$9,$10)
+      RETURNING id, created_at::text AS "createdAt"
+    `,
+    [
+      input.schoolId,
+      input.teacherUid,
+      input.date,
+      input.lessonType,
+      indicatorsJson,
+      overallScore,
+      input.strengths,
+      input.gaps,
+      input.coachingActions,
+      userId,
+    ],
+  );
+
+  return {
+    id: Number(result.rows[0]?.id ?? 0),
+    schoolId: input.schoolId,
+    teacherUid: input.teacherUid,
+    date: input.date,
+    lessonType: input.lessonType,
+    overallScore,
+    indicatorsJson,
+    strengths: input.strengths,
+    gaps: input.gaps,
+    coachingActions: input.coachingActions,
+    createdByUserId: userId,
+    createdByName: actor?.fullName ?? "Unknown",
+    createdAt: String(result.rows[0]?.createdAt ?? new Date().toISOString()),
+  };
+}
+
+export async function saveInterventionGroupAsync(
+  input: InterventionGroupInput,
+  userId: number,
+): Promise<InterventionGroupRecord> {
+  requirePostgresConfigured();
+  const learnersJson = JSON.stringify(input.learnerUids);
+  const result = await queryPostgres<{ id: number; createdAt: string }>(
+    `
+      INSERT INTO intervention_groups (
+        school_id,
+        grade,
+        target_skill,
+        learners_json,
+        schedule,
+        start_date,
+        end_date,
+        created_by_user_id
+      ) VALUES ($1,$2,$3,$4,$5,$6::date,$7::date,$8)
+      RETURNING id, created_at::text AS "createdAt"
+    `,
+    [
+      input.schoolId,
+      input.grade,
+      input.targetSkill,
+      learnersJson,
+      input.schedule,
+      input.startDate,
+      input.endDate,
+      userId,
+    ],
+  );
+
+  return {
+    id: Number(result.rows[0]?.id ?? 0),
+    schoolId: input.schoolId,
+    grade: input.grade,
+    targetSkill: input.targetSkill,
+    learnersJson,
+    schedule: input.schedule,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    createdByUserId: userId,
+    createdAt: String(result.rows[0]?.createdAt ?? new Date().toISOString()),
+  };
+}
+
+export async function saveMaterialDistributionAsync(
+  input: MaterialDistributionInput,
+  userId: number,
+): Promise<MaterialDistributionRecord> {
+  requirePostgresConfigured();
+  const actor = await findPortalUserAuthByIdPostgres(userId);
+  const result = await queryPostgres<{ id: number; createdAt: string }>(
+    `
+      INSERT INTO material_distributions (
+        school_id,
+        date,
+        material_type,
+        quantity,
+        receipt_path,
+        notes,
+        created_by_user_id
+      ) VALUES ($1,$2::date,$3,$4,$5,$6,$7)
+      RETURNING id, created_at::text AS "createdAt"
+    `,
+    [
+      input.schoolId,
+      input.date,
+      input.materialType,
+      input.quantity,
+      input.receiptPath ?? null,
+      input.notes ?? null,
+      userId,
+    ],
+  );
+
+  return {
+    id: Number(result.rows[0]?.id ?? 0),
+    ...input,
+    createdByUserId: userId,
+    createdByName: actor?.fullName ?? "Unknown",
+    createdAt: String(result.rows[0]?.createdAt ?? new Date().toISOString()),
+  };
+}
+
+export async function saveConsentRecordAsync(
+  input: ConsentRecordInput,
+  userId: number,
+): Promise<ConsentRecordEntry> {
+  requirePostgresConfigured();
+  const result = await queryPostgres<{ id: number; createdAt: string }>(
+    `
+      INSERT INTO consent_records (
+        school_id,
+        consent_type,
+        source,
+        date,
+        allowed_usage,
+        linked_files,
+        expiry_date,
+        created_by_user_id
+      ) VALUES ($1,$2,$3,$4::date,$5,$6,$7::date,$8)
+      RETURNING id, created_at::text AS "createdAt"
+    `,
+    [
+      input.schoolId,
+      input.consentType,
+      input.source,
+      input.date,
+      input.allowedUsage,
+      input.linkedFiles,
+      input.expiryDate ?? null,
+      userId,
+    ],
+  );
+
+  return {
+    id: Number(result.rows[0]?.id ?? 0),
+    ...input,
+    createdByUserId: userId,
+    createdAt: String(result.rows[0]?.createdAt ?? new Date().toISOString()),
   };
 }
 
@@ -33703,7 +35137,7 @@ async function upsertTeacherSupportStatusSnapshotPostgres(
     return;
   }
 
-  const settings = getTeacherSupportRuleSettings(getDb());
+  const settings = await getTeacherSupportRuleSettingsPostgres(client);
   const baseline = rowsResult.rows[0];
   const latest = rowsResult.rows[rowsResult.rows.length - 1];
   const baselinePct = score4ToPercent(Number(baseline.overallScore));
@@ -36187,42 +37621,57 @@ export function getLearningGainsData(
    NLIS — Phase 2: Cost-Effectiveness
    ═══════════════════════════════════════════════════════ */
 
-export function getCostEffectivenessData(
+export async function getCostEffectivenessData(
   scopeType: string,
   scopeValue: string,
   period?: string,
-): CostEffectivenessData {
-  const db = getDb();
+): Promise<CostEffectivenessData> {
+  requirePostgresConfigured();
   const conditions: string[] = [];
-  const params: Record<string, string> = {};
+  const params: unknown[] = [];
 
   if (scopeType && scopeType !== "country") {
-    conditions.push("lower(scope_type) = @scopeType");
-    params.scopeType = scopeType.toLowerCase();
-    conditions.push("lower(trim(scope_value)) = @scopeValue");
-    params.scopeValue = scopeValue.toLowerCase().trim();
+    params.push(scopeType.toLowerCase());
+    conditions.push(`lower(scope_type) = $${params.length}`);
+    params.push(scopeValue.toLowerCase().trim());
+    conditions.push(`lower(trim(scope_value)) = $${params.length}`);
   }
   if (period) {
-    conditions.push("period = @period");
-    params.period = period;
+    params.push(period);
+    conditions.push(`period = $${params.length}`);
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const totalsResult = await queryPostgres<{ total: number; category: CostCategory }>(
+    `
+      SELECT COALESCE(SUM(amount), 0)::float8 AS total, category
+      FROM cost_entries
+      ${where}
+      GROUP BY category
+    `,
+    params,
+  );
+  const totals = totalsResult.rows;
+  const totalCost = totals.reduce((sum, row) => sum + Number(row.total ?? 0), 0);
 
-  const totals = db
-    .prepare(
-      `SELECT SUM(amount) AS total, category
-       FROM cost_entries ${where}
-       GROUP BY category`,
-    )
-    .all(params) as Array<{ total: number; category: CostCategory }>;
-
-  const totalCost = totals.reduce((s, t) => s + (t.total || 0), 0);
-
-  // Get denominators from existing aggregation
-  const schoolCount = (db.prepare("SELECT COUNT(*) AS c FROM schools_directory").get() as { c: number })?.c ?? 0;
-  const teacherCount = (db.prepare("SELECT COUNT(DISTINCT participant_name) AS c FROM training_participants").get() as { c: number })?.c ?? 0;
-  const learnerCount = (db.prepare("SELECT COUNT(*) AS c FROM assessment_records").get() as { c: number })?.c ?? 0;
+  const aggregateScopeType =
+    scopeType === "country"
+      ? "country"
+      : scopeType === "region"
+        ? "region"
+        : scopeType === "sub_region" || scopeType === "subregion"
+          ? "subregion"
+          : scopeType === "district"
+            ? "district"
+            : "school";
+  const aggregate = await getPublicImpactAggregate(
+    aggregateScopeType,
+    aggregateScopeType === "country" ? "Uganda" : scopeValue,
+    period,
+  );
+  const schoolCount = aggregate.kpis.schoolsSupported;
+  const teacherCount = aggregate.kpis.teachersSupportedMale + aggregate.kpis.teachersSupportedFemale;
+  const learnerCount = aggregate.kpis.learnersAssessedUnique;
 
   return {
     totalCost,
@@ -36233,17 +37682,17 @@ export function getCostEffectivenessData(
     period: period ?? "All time",
     scopeType,
     scopeValue,
-    breakdown: totals.map((t) => ({ category: t.category, amount: t.total })),
+    breakdown: totals.map((t) => ({ category: t.category, amount: Number(t.total ?? 0) })),
   };
 }
 
-export function runImpactCalculator(
+export async function runImpactCalculator(
   amount: number,
   scopeType: string,
   scopeId: string,
-): ImpactCalculatorResult {
+): Promise<ImpactCalculatorResult> {
   // Use current cost-effectiveness data to estimate
-  const costData = getCostEffectivenessData(scopeType, scopeId);
+  const costData = await getCostEffectivenessData(scopeType, scopeId);
 
   const costPerSchool = costData.costPerSchool ?? 500;
   const costPerTeacher = costData.costPerTeacher ?? 50;
@@ -36345,52 +37794,45 @@ export function getDataQualitySummary(
    NLIS — Government / District League View
    ═══════════════════════════════════════════════════════ */
 
-export function getGovernmentViewData(period?: string): GovernmentViewData {
-  const db = getDb();
+export async function getGovernmentViewData(period?: string): Promise<GovernmentViewData> {
+  requirePostgresConfigured();
+  const districtsResult = await queryPostgres<{ district: string }>(
+    `
+      SELECT DISTINCT district
+      FROM schools_directory
+      WHERE trim(COALESCE(district, '')) != ''
+      ORDER BY district
+    `,
+  );
 
-  const districts = db
-    .prepare(
-      `SELECT DISTINCT district FROM schools_directory ORDER BY district`,
-    )
-    .all() as Array<{ district: string }>;
+  const leagueTable = await Promise.all(
+    districtsResult.rows.map(async (row) => {
+      const district = String(row.district ?? "").trim();
+      const region = inferRegionFromDistrict(district) ?? "Unknown";
+      const aggregate = await getPublicImpactAggregate("district", district, period);
+      const fidelity = buildFidelityFromAggregate(aggregate, "district", district);
+      const gains = buildLearningGainsFromAggregate(aggregate, "district", district);
+      const outcomesScore = gains.schoolImprovementIndex;
 
-  const leagueTable: DistrictLeagueRow[] = districts.map((row, index) => {
-    const region = inferRegionFromDistrict(row.district) ?? "Unknown";
-    const fidelity = calculateFidelityScore("district", row.district);
-    const gains = getLearningGainsData("district", row.district);
+      let priority: "urgent" | "watch" | "on-track" = "on-track";
+      if (fidelity.totalScore < 25 || (outcomesScore !== null && outcomesScore < 0)) {
+        priority = "urgent";
+      } else if (fidelity.totalScore < 50) {
+        priority = "watch";
+      }
 
-    const outcomesScore = gains.schoolImprovementIndex;
-
-    let priority: "urgent" | "watch" | "on-track" = "on-track";
-    if (fidelity.totalScore < 25 || (outcomesScore !== null && outcomesScore < 0)) {
-      priority = "urgent";
-    } else if (fidelity.totalScore < 50) {
-      priority = "watch";
-    }
-
-    const schoolCount = (db
-      .prepare("SELECT COUNT(*) AS c FROM schools_directory WHERE lower(trim(district)) = lower(trim(@d))")
-      .get({ d: row.district }) as { c: number })?.c ?? 0;
-
-    const learnersAssessed = (db
-      .prepare(
-        `SELECT COUNT(*) AS c FROM assessment_records a
-         JOIN schools_directory sd ON sd.id = a.school_id
-         WHERE lower(trim(sd.district)) = lower(trim(@d))`,
-      )
-      .get({ d: row.district }) as { c: number })?.c ?? 0;
-
-    return {
-      district: row.district,
-      region,
-      outcomesScore,
-      fidelityScore: fidelity.totalScore,
-      rank: index + 1,
-      priorityFlag: priority,
-      schoolsSupported: schoolCount,
-      learnersAssessed,
-    };
-  });
+      return {
+        district,
+        region,
+        outcomesScore,
+        fidelityScore: fidelity.totalScore,
+        rank: 0,
+        priorityFlag: priority,
+        schoolsSupported: aggregate.kpis.schoolsSupported,
+        learnersAssessed: aggregate.kpis.learnersAssessedUnique,
+      } satisfies DistrictLeagueRow;
+    }),
+  );
 
   // Sort by fidelity + outcomes
   leagueTable.sort((a, b) => {
@@ -38150,4 +39592,3 @@ export function listSchoolsByDistrict(district: string) {
     enrollment: number;
   }>;
 }
-

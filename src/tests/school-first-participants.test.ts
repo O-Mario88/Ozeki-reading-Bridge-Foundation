@@ -1,63 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  addSchoolContactToSchool,
-  addSchoolLearnerToSchool,
-  createPortalRecord,
+  createPortalRecordAsync,
   createSchoolDirectoryRecord,
-  getDb,
+  getPortalUserByEmail,
 } from "../lib/db";
+import { queryPostgres } from "../lib/server/postgres/client";
 import type { PortalUser } from "../lib/types";
 
-function getSuperAdminActor(): PortalUser {
-  const db = getDb();
-  const row = db
-    .prepare(
-      `
-        SELECT
-          id,
-          full_name AS fullName,
-          email,
-          phone,
-          role,
-          geography_scope AS geographyScope,
-          is_supervisor AS isSupervisor,
-          is_me AS isME,
-          is_admin AS isAdmin,
-          is_superadmin AS isSuperAdmin
-        FROM portal_users
-        WHERE is_superadmin = 1
-        ORDER BY id ASC
-        LIMIT 1
-      `,
-    )
-    .get() as
-    | {
-      id: number;
-      fullName: string;
-      email: string;
-      phone: string | null;
-      role: PortalUser["role"];
-      geographyScope: string | null;
-      isSupervisor: number;
-      isME: number;
-      isAdmin: number;
-      isSuperAdmin: number;
-    }
-    | undefined;
-  assert.ok(row, "Expected at least one super admin.");
-  return {
-    id: row.id,
-    fullName: row.fullName,
-    email: row.email,
-    phone: row.phone,
-    role: row.role,
-    geographyScope: row.geographyScope,
-    isSupervisor: row.isSupervisor === 1,
-    isME: row.isME === 1,
-    isAdmin: row.isAdmin === 1,
-    isSuperAdmin: row.isSuperAdmin === 1,
-  };
+async function getSuperAdminActor(): Promise<PortalUser> {
+  const actor =
+    (await getPortalUserByEmail(process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org")) ??
+    (await getPortalUserByEmail("edwin@ozekiread.org")) ??
+    (await getPortalUserByEmail("admin@ozekiread.org"));
+  assert.ok(actor, "Expected at least one super admin.");
+  return actor as PortalUser;
 }
 
 async function createTestSchool(tag: string) {
@@ -78,6 +35,72 @@ async function createTestSchool(tag: string) {
   });
 }
 
+async function createSchoolContact(schoolId: number) {
+  const stamp = Date.now();
+  const result = await queryPostgres<{
+    contactId: number;
+    contactUid: string;
+    fullName: string;
+  }>(
+    `
+      WITH next_id AS (
+        SELECT COALESCE(MAX(contact_id), 0) + 1 AS id
+        FROM school_contacts
+      )
+      INSERT INTO school_contacts (
+        contact_id,
+        contact_uid,
+        school_id,
+        full_name,
+        gender,
+        phone,
+        category,
+        class_taught,
+        subject_taught,
+        is_primary_contact,
+        created_at,
+        updated_at
+      ) VALUES (
+        (SELECT id FROM next_id), $1, $2, $3, $4, $5, $6, $7, $8, FALSE, NOW(), NOW()
+      )
+      RETURNING contact_id AS "contactId", contact_uid AS "contactUid", full_name AS "fullName"
+    `,
+    [`SC-TEST-${stamp}`, schoolId, "Teacher Training Contact", "Female", "+256771111111", "Teacher", "P3", "Literacy"],
+  );
+  return result.rows[0]!;
+}
+
+async function createSchoolLearner(schoolId: number) {
+  const stamp = Date.now();
+  const result = await queryPostgres<{
+    learnerId: number;
+    learnerUid: string;
+  }>(
+    `
+      WITH next_id AS (
+        SELECT COALESCE(MAX(learner_id), 0) + 1 AS id
+        FROM school_learners
+      )
+      INSERT INTO school_learners (
+        learner_id,
+        learner_uid,
+        school_id,
+        learner_name,
+        class_grade,
+        age,
+        gender,
+        created_at,
+        updated_at
+      ) VALUES (
+        (SELECT id FROM next_id), $1, $2, $3, $4, $5, $6, NOW(), NOW()
+      )
+      RETURNING learner_id AS "learnerId", learner_uid AS "learnerUid"
+    `,
+    [`SL-TEST-${stamp}`, schoolId, "Assessment Learner", "P4", 10, "Girl"],
+  );
+  return result.rows[0]!;
+}
+
 test("school creation requires primary contact", async () => {
   await assert.rejects(
     () =>
@@ -95,21 +118,13 @@ test("school creation requires primary contact", async () => {
 });
 
 test("training blocks free-text participants and accepts school roster contact IDs", async () => {
-  const actor = getSuperAdminActor();
+  const actor = await getSuperAdminActor();
   const school = await createTestSchool("training");
-  const contact = addSchoolContactToSchool({
-    schoolId: school.id,
-    fullName: "Teacher Training Contact",
-    gender: "Female",
-    category: "Teacher",
-    classTaught: "P3",
-    subjectTaught: "Literacy",
-    phone: "+256771111111",
-  });
+  const contact = await createSchoolContact(school.id);
 
-  assert.throws(
+  await assert.rejects(
     () =>
-      createPortalRecord(
+      createPortalRecordAsync(
         {
           module: "training",
           date: "2026-03-06",
@@ -136,7 +151,7 @@ test("training blocks free-text participants and accepts school roster contact I
     /Participant not found in school roster/i,
   );
 
-  const record = createPortalRecord(
+  const record = await createPortalRecordAsync(
     {
       module: "training",
       date: "2026-03-06",
@@ -171,19 +186,13 @@ test("training blocks free-text participants and accepts school roster contact I
 });
 
 test("assessment blocks free-text learners and accepts school learner IDs", async () => {
-  const actor = getSuperAdminActor();
+  const actor = await getSuperAdminActor();
   const school = await createTestSchool("assessment");
-  const learner = addSchoolLearnerToSchool({
-    schoolId: school.id,
-    learnerName: "Assessment Learner",
-    classGrade: "P4",
-    age: 10,
-    gender: "Girl",
-  });
+  const learner = await createSchoolLearner(school.id);
 
-  assert.throws(
+  await assert.rejects(
     () =>
-      createPortalRecord(
+      createPortalRecordAsync(
         {
           module: "assessment",
           date: "2026-03-06",
@@ -208,7 +217,7 @@ test("assessment blocks free-text learners and accepts school learner IDs", asyn
     /Learner not found in school roster/i,
   );
 
-  const record = createPortalRecord(
+  const record = await createPortalRecordAsync(
     {
       module: "assessment",
       date: "2026-03-06",
@@ -232,17 +241,15 @@ test("assessment blocks free-text learners and accepts school learner IDs", asyn
     actor,
   );
 
-  const db = getDb();
-  const row = db
-    .prepare(
-      `
-        SELECT asr.learner_id AS learnerId
-        FROM assessment_session_results asr
-        JOIN assessment_sessions ass ON ass.id = asr.assessment_session_id
-        WHERE ass.portal_record_id = @recordId
-        LIMIT 1
-      `,
-    )
-    .get({ recordId: record.id }) as { learnerId: number } | undefined;
-  assert.equal(row?.learnerId, learner.learnerId);
+  const result = await queryPostgres<{ learnerUid: string }>(
+    `
+      SELECT asr.learner_uid AS "learnerUid"
+      FROM assessment_session_results asr
+      JOIN assessment_sessions ass ON ass.id = asr.session_id
+      WHERE ass.portal_record_id = $1
+      LIMIT 1
+    `,
+    [record.id],
+  );
+  assert.equal(result.rows[0]?.learnerUid, learner.learnerUid);
 });

@@ -3,7 +3,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
 import { PDFDocument, rgb } from "pdf-lib";
-import { getDb, logAuditEvent } from "@/lib/db";
 import {
   drawBrandFooter,
   drawBrandFrame,
@@ -13,7 +12,11 @@ import {
 } from "@/lib/pdf-branding";
 import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
-import { isPostgresConfigured, queryPostgres } from "@/lib/server/postgres/client";
+import {
+  isPostgresConfigured,
+  queryPostgres,
+  requirePostgresConfigured,
+} from "@/lib/server/postgres/client";
 import type {
   PortalUser,
   TrainingReportArtifactRecord,
@@ -58,6 +61,28 @@ type TrainingReportEvidencePhoto = {
   createdAt: string;
   tags: TrainingReportEvidenceTag[];
 };
+
+type LegacyStatement<TGet = unknown, TAll = unknown, TRun = { lastInsertRowid?: number | bigint; changes?: number }> = {
+  get(params?: unknown): TGet;
+  all(params?: unknown): TAll[];
+  run(params?: unknown): TRun;
+};
+
+type LegacyDb = {
+  prepare(sql: string): LegacyStatement;
+};
+
+function legacyDatabaseRemoved(functionName: string): never {
+  throw new Error(`${functionName} is no longer available. PostgreSQL is required for training reports.`);
+}
+
+function getDb(): LegacyDb {
+  return legacyDatabaseRemoved("getDb");
+}
+
+function logAuditEvent(..._args: unknown[]): never {
+  return legacyDatabaseRemoved("logAuditEvent");
+}
 
 const FEEDBACK_THEME_RULES: Array<{ theme: string; keywords: string[] }> = [
   { theme: "Phonics and sound routines", keywords: ["phonics", "sound", "letter", "blend", "decod"] },
@@ -197,32 +222,7 @@ function resolvePeriodWindow(input: {
   }
 
   if (scopeType === "training_session") {
-    const sessionId = Number(rawScopeValue);
-    if (!Number.isInteger(sessionId) || sessionId <= 0) {
-      throw new Error("Training session scope requires a numeric record id.");
-    }
-    const row = getDb()
-      .prepare(
-        `
-        SELECT id, date
-        FROM portal_records
-        WHERE id = @recordId
-          AND module = 'training'
-          AND deleted_at IS NULL
-        LIMIT 1
-        `,
-      )
-      .get({ recordId: sessionId }) as { id: number; date: string } | undefined;
-    if (!row?.id) {
-      throw new Error("Training session record was not found.");
-    }
-    const normalizedDate = ensureDate(row.date, toIsoDate(today));
-    return {
-      periodStart: normalizedDate,
-      periodEnd: normalizedDate,
-      scopeValue: String(row.id),
-      scopeLabel: `Training Session ${row.id}`,
-    };
+    throw new Error("Training session scope must be resolved through the PostgreSQL async path.");
   }
 
   const normalizedStart = ensureDate(input.periodStart ?? "", defaultStart);
@@ -480,196 +480,9 @@ function collectEvidencePhotos(
   facts: TrainingReportFacts,
   includeObservedInsights: boolean,
 ): TrainingReportEvidencePhoto[] {
-  const db = getDb();
-  const trainingRecordIds = [
-    ...new Set(
-      facts.followUpPlans
-        .map((row) => Number(row.trainingRecordId))
-        .filter((value) => Number.isInteger(value) && value > 0),
-    ),
-  ];
-  if (trainingRecordIds.length === 0) {
-    return [];
-  }
-
-  const { clause: trainingClause, params: trainingParams } = buildSqlInClause(
-    trainingRecordIds,
-    "reportTraining",
-  );
-  const trainingSchoolRows = db
-    .prepare(
-      `
-      SELECT DISTINCT school_id AS schoolId
-      FROM portal_records
-      WHERE id IN (${trainingClause})
-        AND school_id IS NOT NULL
-      `,
-    )
-    .all(trainingParams) as Array<{ schoolId: number | null }>;
-  const schoolIds = [
-    ...new Set(
-      trainingSchoolRows
-        .map((row) => Number(row.schoolId ?? 0))
-        .filter((value) => Number.isInteger(value) && value > 0),
-    ),
-  ];
-
-  const reportEndDate = new Date(`${facts.periodEnd}T00:00:00.000Z`);
-  if (includeObservedInsights) {
-    reportEndDate.setUTCDate(reportEndDate.getUTCDate() + 120);
-  }
-  const evidencePeriodEnd = toIsoDate(reportEndDate);
-  const { clause: visitSchoolClause, params: visitSchoolParams } = buildSqlInClause(
-    schoolIds,
-    "visitSchool",
-  );
-  const { clause: assessmentSchoolClause, params: assessmentSchoolParams } = buildSqlInClause(
-    schoolIds,
-    "assessmentSchool",
-  );
-
-  const visitRows =
-    schoolIds.length > 0
-      ? (db
-          .prepare(
-            `
-            SELECT
-              pr.id,
-              pr.payload_json AS payloadJson
-            FROM portal_records pr
-            WHERE pr.module = 'visit'
-              AND pr.deleted_at IS NULL
-              AND pr.school_id IN (${visitSchoolClause})
-              AND date(pr.date) >= date(@periodStart)
-              AND date(pr.date) <= date(@periodEnd)
-            `,
-          )
-          .all({
-            ...visitSchoolParams,
-            periodStart: facts.periodStart,
-            periodEnd: evidencePeriodEnd,
-          }) as Array<{ id: number; payloadJson: string | null }>)
-      : [];
-
-  const assessmentRows =
-    schoolIds.length > 0
-      ? (db
-          .prepare(
-            `
-            SELECT
-              pr.id
-            FROM portal_records pr
-            WHERE pr.module = 'assessment'
-              AND pr.deleted_at IS NULL
-              AND pr.school_id IN (${assessmentSchoolClause})
-              AND date(pr.date) >= date(@periodStart)
-              AND date(pr.date) <= date(@periodEnd)
-            `,
-          )
-          .all({
-            ...assessmentSchoolParams,
-            periodStart: facts.periodStart,
-            periodEnd: evidencePeriodEnd,
-          }) as Array<{ id: number }>)
-      : [];
-
-  const visitRecordIds = visitRows.map((row) => Number(row.id)).filter((value) => value > 0);
-  const assessmentRecordIds = assessmentRows
-    .map((row) => Number(row.id))
-    .filter((value) => value > 0);
-
-  const candidateRecordIds = [
-    ...new Set([...trainingRecordIds, ...visitRecordIds, ...assessmentRecordIds]),
-  ];
-  if (candidateRecordIds.length === 0) {
-    return [];
-  }
-
-  const { clause: recordClause, params: recordParams } = buildSqlInClause(
-    candidateRecordIds,
-    "evidenceRecord",
-  );
-  const evidenceRows = db
-    .prepare(
-      `
-      SELECT
-        pe.id,
-        pe.record_id AS recordId,
-        pe.module,
-        pe.date,
-        pe.school_name AS schoolName,
-        pe.file_name AS fileName,
-        pe.stored_path AS storedPath,
-        pe.mime_type AS mimeType,
-        pe.size_bytes AS sizeBytes,
-        pe.created_at AS createdAt
-      FROM portal_evidence pe
-      WHERE pe.record_id IN (${recordClause})
-        AND pe.module IN ('training', 'visit', 'assessment')
-        AND lower(pe.mime_type) LIKE 'image/%'
-      `,
-    )
-    .all(recordParams) as Array<{
-    id: number;
-    recordId: number | null;
-    module: "training" | "visit" | "assessment";
-    date: string;
-    schoolName: string;
-    fileName: string;
-    storedPath: string;
-    mimeType: string;
-    sizeBytes: number;
-    createdAt: string;
-  }>;
-
-  const trainingRecordIdSet = new Set(trainingRecordIds);
-  const assessmentRecordIdSet = new Set(assessmentRecordIds);
-  const visitPayloadByRecordId = new Map<number, Record<string, unknown>>();
-  visitRows.forEach((row) => {
-    visitPayloadByRecordId.set(Number(row.id), parseJsonObject(row.payloadJson));
-  });
-
-  const candidates = evidenceRows
-    .filter(
-      (row) =>
-        Number.isInteger(row.recordId) &&
-        Number(row.recordId) > 0 &&
-        isImageMimeType(row.mimeType),
-    )
-    .map((row) => {
-      const recordId = Number(row.recordId);
-      const tags = new Set<TrainingReportEvidenceTag>();
-      if (trainingRecordIdSet.has(recordId) || row.module === "training") {
-        tags.add("training");
-      }
-      if (assessmentRecordIdSet.has(recordId) || row.module === "assessment") {
-        tags.add("assessment");
-      }
-      const visitPayload = visitPayloadByRecordId.get(recordId);
-      if (visitPayload) {
-        tagsForVisitPayload(visitPayload).forEach((tag) => tags.add(tag));
-      }
-      if (tags.size === 0 && row.module === "visit") {
-        tags.add("lesson_observation_coaching");
-      }
-
-      return {
-        id: Number(row.id),
-        recordId,
-        module: row.module,
-        date: row.date,
-        schoolName: row.schoolName,
-        fileName: row.fileName,
-        storedPath: row.storedPath,
-        mimeType: row.mimeType,
-        sizeBytes: Number(row.sizeBytes),
-        createdAt: row.createdAt,
-        tags: [...tags],
-      } as TrainingReportEvidencePhoto;
-    })
-    .filter((row) => row.tags.length > 0);
-
-  return selectBestEvidencePhotos(candidates);
+  void facts;
+  void includeObservedInsights;
+  return [];
 }
 
 function renderEvidenceGallery(
@@ -2145,103 +1958,24 @@ export async function generateTrainingReportArtifact(input: {
   periodEnd?: string;
   includeObservedInsights?: boolean;
 }) {
-  const facts = isPostgresConfigured()
-    ? await collectTrainingFactsAsync({
-        scopeType: input.scopeType,
-        scopeValue: input.scopeValue,
-        periodStart: input.periodStart,
-        periodEnd: input.periodEnd,
-        includeObservedInsights: input.includeObservedInsights,
-      })
-    : collectTrainingFacts({
-        scopeType: input.scopeType,
-        scopeValue: input.scopeValue,
-        periodStart: input.periodStart,
-        periodEnd: input.periodEnd,
-        includeObservedInsights: input.includeObservedInsights,
-      });
+  requirePostgresConfigured();
+  const facts = await collectTrainingFactsAsync({
+    scopeType: input.scopeType,
+    scopeValue: input.scopeValue,
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    includeObservedInsights: input.includeObservedInsights,
+  });
   const narrative = await aiNarrative(facts);
-  const evidencePhotos = isPostgresConfigured()
-    ? []
-    : collectEvidencePhotos(
-        facts,
-        input.includeObservedInsights ?? true,
-      );
+  const evidencePhotos: TrainingReportEvidencePhoto[] = [];
   const reportCode = `TRN-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   const htmlReport = buildHtmlReport(facts, narrative, reportCode, evidencePhotos);
   const pdfBytes = await generatePdfBytes(facts, narrative, reportCode, evidencePhotos);
   const pdfStoredPath = await savePdfToDisk(reportCode, pdfBytes);
 
   const now = new Date().toISOString();
-  if (isPostgresConfigured()) {
-    const insertResult = await queryPostgres<{ id: number }>(
-      `
-        INSERT INTO training_report_artifacts (
-          report_code,
-          scope_type,
-          scope_value,
-          period_start,
-          period_end,
-          facts_json,
-          narrative_json,
-          html_report,
-          pdf_stored_path,
-          generated_by_user_id,
-          generated_at,
-          updated_at
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12::timestamptz
-        )
-        RETURNING id
-      `,
-      [
-        reportCode,
-        facts.scopeType,
-        facts.scopeValue,
-        facts.periodStart,
-        facts.periodEnd,
-        JSON.stringify(facts),
-        JSON.stringify(narrative),
-        htmlReport,
-        pdfStoredPath,
-        input.user.id,
-        now,
-        now,
-      ],
-    );
-
-    const artifactId = Number(insertResult.rows[0]?.id ?? 0);
-    await queryPostgres(
-      `
-        INSERT INTO audit_logs (
-          user_id, user_name, action, target_table, target_id, payload_after, detail
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      `,
-      [
-        input.user.id,
-        input.user.fullName,
-        "generate_training_report",
-        "training_report_artifacts",
-        String(artifactId),
-        JSON.stringify({
-          reportCode,
-          scopeType: facts.scopeType,
-          scopeValue: facts.scopeValue,
-          periodStart: facts.periodStart,
-          periodEnd: facts.periodEnd,
-          generatedWithAi: narrative.generatedWithAi,
-        }),
-        "Generated training report artifact.",
-      ],
-    );
-
-    return await getTrainingReportArtifactByCodeAsync(reportCode);
-  }
-
-  const db = getDb();
-  const insertResult = db
-    .prepare(
-      `
+  const insertResult = await queryPostgres<{ id: number }>(
+    `
       INSERT INTO training_report_artifacts (
         report_code,
         scope_type,
@@ -2256,56 +1990,52 @@ export async function generateTrainingReportArtifact(input: {
         generated_at,
         updated_at
       ) VALUES (
-        @reportCode,
-        @scopeType,
-        @scopeValue,
-        @periodStart,
-        @periodEnd,
-        @factsJson,
-        @narrativeJson,
-        @htmlReport,
-        @pdfStoredPath,
-        @generatedByUserId,
-        @generatedAt,
-        @updatedAt
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12::timestamptz
       )
-      `,
-    )
-    .run({
+      RETURNING id
+    `,
+    [
       reportCode,
-      scopeType: facts.scopeType,
-      scopeValue: facts.scopeValue,
-      periodStart: facts.periodStart,
-      periodEnd: facts.periodEnd,
-      factsJson: JSON.stringify(facts),
-      narrativeJson: JSON.stringify(narrative),
+      facts.scopeType,
+      facts.scopeValue,
+      facts.periodStart,
+      facts.periodEnd,
+      JSON.stringify(facts),
+      JSON.stringify(narrative),
       htmlReport,
       pdfStoredPath,
-      generatedByUserId: input.user.id,
-      generatedAt: now,
-      updatedAt: now,
-    });
-
-  const artifactId = Number(insertResult.lastInsertRowid);
-  logAuditEvent(
-    input.user.id,
-    input.user.fullName,
-    "generate_training_report",
-    "training_report_artifacts",
-    artifactId,
-    null,
-    JSON.stringify({
-      reportCode,
-      scopeType: facts.scopeType,
-      scopeValue: facts.scopeValue,
-      periodStart: facts.periodStart,
-      periodEnd: facts.periodEnd,
-      generatedWithAi: narrative.generatedWithAi,
-    }),
-    "Generated training report artifact.",
+      input.user.id,
+      now,
+      now,
+    ],
   );
 
-  return getTrainingReportArtifactByCode(reportCode);
+  const artifactId = Number(insertResult.rows[0]?.id ?? 0);
+  await queryPostgres(
+    `
+      INSERT INTO audit_logs (
+        user_id, user_name, action, target_table, target_id, payload_after, detail
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `,
+    [
+      input.user.id,
+      input.user.fullName,
+      "generate_training_report",
+      "training_report_artifacts",
+      String(artifactId),
+      JSON.stringify({
+        reportCode,
+        scopeType: facts.scopeType,
+        scopeValue: facts.scopeValue,
+        periodStart: facts.periodStart,
+        periodEnd: facts.periodEnd,
+        generatedWithAi: narrative.generatedWithAi,
+      }),
+      "Generated training report artifact.",
+    ],
+  );
+
+  return await getTrainingReportArtifactByCodeAsync(reportCode);
 }
 
 export function listTrainingReportArtifacts(filters?: {
@@ -2313,61 +2043,8 @@ export function listTrainingReportArtifacts(filters?: {
   scopeValue?: string;
   limit?: number;
 }) {
-  const clauses: string[] = [];
-  const params: Record<string, string | number> = {};
-  if (filters?.scopeType) {
-    clauses.push("tra.scope_type = @scopeType");
-    params.scopeType = filters.scopeType;
-  }
-  if (filters?.scopeValue?.trim()) {
-    clauses.push("lower(trim(tra.scope_value)) = lower(trim(@scopeValue))");
-    params.scopeValue = filters.scopeValue.trim();
-  }
-  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
-  const limit = Math.max(1, Math.min(filters?.limit ?? 60, 500));
-  const rows = getDb()
-    .prepare(
-      `
-      SELECT
-        tra.id,
-        tra.report_code AS reportCode,
-        tra.scope_type AS scopeType,
-        tra.scope_value AS scopeValue,
-        tra.period_start AS periodStart,
-        tra.period_end AS periodEnd,
-        tra.facts_json AS factsJson,
-        tra.narrative_json AS narrativeJson,
-        tra.html_report AS htmlReport,
-        tra.pdf_stored_path AS pdfStoredPath,
-        tra.generated_by_user_id AS generatedByUserId,
-        pu.full_name AS generatedByName,
-        tra.generated_at AS generatedAt,
-        tra.updated_at AS updatedAt
-      FROM training_report_artifacts tra
-      JOIN portal_users pu ON pu.id = tra.generated_by_user_id
-      ${whereClause}
-      ORDER BY tra.generated_at DESC, tra.id DESC
-      LIMIT ${limit}
-      `,
-    )
-    .all(params) as Array<{
-      id: number;
-      reportCode: string;
-      scopeType: TrainingReportScopeType;
-      scopeValue: string;
-      periodStart: string;
-      periodEnd: string;
-      factsJson: string;
-      narrativeJson: string;
-      htmlReport: string;
-      pdfStoredPath: string | null;
-      generatedByUserId: number;
-      generatedByName: string;
-      generatedAt: string;
-      updatedAt: string;
-    }>;
-
-  return rows.map((row) => parseArtifactRow(row));
+  void filters;
+  throw new Error("Synchronous training report access has been removed. Use the PostgreSQL async API.");
 }
 
 export async function listTrainingReportArtifactsAsync(filters?: {
@@ -2375,9 +2052,7 @@ export async function listTrainingReportArtifactsAsync(filters?: {
   scopeValue?: string;
   limit?: number;
 }) {
-  if (!isPostgresConfigured()) {
-    return listTrainingReportArtifacts(filters);
-  }
+  requirePostgresConfigured();
 
   const clauses: string[] = [];
   const params: unknown[] = [];
@@ -2436,59 +2111,12 @@ export async function listTrainingReportArtifactsAsync(filters?: {
 }
 
 export function getTrainingReportArtifactByCode(reportCode: string) {
-  const row = getDb()
-    .prepare(
-      `
-      SELECT
-        tra.id,
-        tra.report_code AS reportCode,
-        tra.scope_type AS scopeType,
-        tra.scope_value AS scopeValue,
-        tra.period_start AS periodStart,
-        tra.period_end AS periodEnd,
-        tra.facts_json AS factsJson,
-        tra.narrative_json AS narrativeJson,
-        tra.html_report AS htmlReport,
-        tra.pdf_stored_path AS pdfStoredPath,
-        tra.generated_by_user_id AS generatedByUserId,
-        pu.full_name AS generatedByName,
-        tra.generated_at AS generatedAt,
-        tra.updated_at AS updatedAt
-      FROM training_report_artifacts tra
-      JOIN portal_users pu ON pu.id = tra.generated_by_user_id
-      WHERE tra.report_code = @reportCode
-      LIMIT 1
-      `,
-    )
-    .get({ reportCode: reportCode.trim() }) as
-    | {
-      id: number;
-      reportCode: string;
-      scopeType: TrainingReportScopeType;
-      scopeValue: string;
-      periodStart: string;
-      periodEnd: string;
-      factsJson: string;
-      narrativeJson: string;
-      htmlReport: string;
-      pdfStoredPath: string | null;
-      generatedByUserId: number;
-      generatedByName: string;
-      generatedAt: string;
-      updatedAt: string;
-    }
-    | undefined;
-
-  if (!row) {
-    return null;
-  }
-  return parseArtifactRow(row);
+  void reportCode;
+  throw new Error("Synchronous training report access has been removed. Use the PostgreSQL async API.");
 }
 
 export async function getTrainingReportArtifactByCodeAsync(reportCode: string) {
-  if (!isPostgresConfigured()) {
-    return getTrainingReportArtifactByCode(reportCode);
-  }
+  requirePostgresConfigured();
 
   const result = await queryPostgres<{
     id: number;
@@ -2559,30 +2187,15 @@ export async function readTrainingReportPdf(reportCode: string) {
   );
   const regeneratedPath = await savePdfToDisk(reportCode, regeneratedBytes);
   const updatedAt = new Date().toISOString();
-  if (isPostgresConfigured()) {
-    await queryPostgres(
-      `
-        UPDATE training_report_artifacts
-        SET pdf_stored_path = $2,
-            updated_at = $3::timestamptz
-        WHERE report_code = $1
-      `,
-      [reportCode, regeneratedPath, updatedAt],
-    );
-  } else {
-    getDb().prepare(
-      `
-        UPDATE training_report_artifacts
-        SET pdf_stored_path = @pdfStoredPath,
-            updated_at = @updatedAt
-        WHERE report_code = @reportCode
-      `,
-    ).run({
-      reportCode,
-      pdfStoredPath: regeneratedPath,
-      updatedAt,
-    });
-  }
+  await queryPostgres(
+    `
+      UPDATE training_report_artifacts
+      SET pdf_stored_path = $2,
+          updated_at = $3::timestamptz
+      WHERE report_code = $1
+    `,
+    [reportCode, regeneratedPath, updatedAt],
+  );
 
   return {
     artifact: {

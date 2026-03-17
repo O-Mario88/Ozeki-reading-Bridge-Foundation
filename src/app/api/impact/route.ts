@@ -74,14 +74,14 @@ export async function GET(request: Request) {
   if (view === "cost") {
     const period = searchParams.get("period") ?? undefined;
     return cachedJson(
-      getCostEffectivenessData(level || "country", id, period),
+      await getCostEffectivenessData(level || "country", id, period),
     );
   }
 
   if (view === "calculator") {
     const amount = Number(searchParams.get("amount") || 10000);
     return cachedJson(
-      runImpactCalculator(amount, level || "country", id),
+      await runImpactCalculator(amount, level || "country", id),
     );
   }
 
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
 
   if (view === "government") {
     const period = searchParams.get("period") ?? undefined;
-    return cachedJson(getGovernmentViewData(period));
+    return cachedJson(await getGovernmentViewData(period));
   }
 
   // Original drill-down views

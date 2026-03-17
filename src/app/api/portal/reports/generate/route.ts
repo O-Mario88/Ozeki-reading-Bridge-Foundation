@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     );
     const fidelity = buildFidelityFromAggregate(impactAggregate, scopeType, scopeId);
     const gains = buildLearningGainsFromAggregate(impactAggregate, scopeType, scopeId);
-    const cost = getCostEffectivenessData(scopeType, scopeId);
+    const cost = await getCostEffectivenessData(scopeType, scopeId);
     const quality = buildQualitySummaryFromAggregate(impactAggregate, scopeType, scopeId);
     const kpis = buildImpactKpisFromAggregate(impactAggregate);
 
@@ -148,7 +148,7 @@ async function generateAiBackedReport(
     reportType: string,
     fidelity: AggregateFidelityView,
     gains: AggregateLearningGainsView,
-    cost: ReturnType<typeof getCostEffectivenessData>,
+    cost: Awaited<ReturnType<typeof getCostEffectivenessData>>,
     quality: AggregateQualitySummaryView,
     recommendations: ReturnType<typeof getApplicableRecommendations>,
     readingLevels: ReadingLevelsBlock | null,
@@ -237,7 +237,7 @@ function generateTemplateReport(
     reportType: string,
     fidelity: AggregateFidelityView,
     gains: AggregateLearningGainsView,
-    cost: ReturnType<typeof getCostEffectivenessData>,
+    cost: Awaited<ReturnType<typeof getCostEffectivenessData>>,
     quality: AggregateQualitySummaryView,
     recommendations: ReturnType<typeof getApplicableRecommendations>,
     readingLevels: ReadingLevelsBlock | null,

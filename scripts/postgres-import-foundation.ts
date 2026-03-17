@@ -204,6 +204,18 @@ async function resetIdentitySequence(table: string, primaryKeyColumn = "id") {
 
 async function importGeography(sqlite: Database.Database) {
   const pool = getPostgresPool();
+  const countryResult = await pool.query<{ id: number }>(
+    `
+      INSERT INTO geo_countries (iso_code, name)
+      VALUES ('UGA', 'Uganda')
+      ON CONFLICT (iso_code) DO UPDATE SET name = EXCLUDED.name
+      RETURNING id
+    `,
+  );
+  const ugandaCountryId = Number(countryResult.rows[0]?.id ?? 0);
+  if (!ugandaCountryId) {
+    throw new Error("Failed to resolve Uganda country row for geography import.");
+  }
 
   const regionRows = sqlite.prepare(`SELECT * FROM geo_regions ORDER BY name ASC`).all() as Array<Record<string, unknown>>;
   const subregionRows = sqlite.prepare(`SELECT * FROM geo_subregions ORDER BY name ASC`).all() as Array<Record<string, unknown>>;
@@ -227,8 +239,8 @@ async function importGeography(sqlite: Database.Database) {
     const legacyId = String(row.id ?? "").trim();
     regionIdMap.set(legacyId, id);
     await pool.query(
-      `INSERT INTO geo_regions (id, region_id, name) VALUES ($1, $2, $3)`,
-      [id, legacyId || null, String(row.name ?? "")],
+      `INSERT INTO geo_regions (id, region_id, name, country_id) VALUES ($1, $2, $3, $4)`,
+      [id, legacyId || null, String(row.name ?? ""), ugandaCountryId],
     );
   }
 

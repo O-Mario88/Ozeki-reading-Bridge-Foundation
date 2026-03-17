@@ -2,50 +2,44 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createPortalRecordAsync,
-  getDb,
   setPortalRecordStatusAsync,
   updatePortalRecordAsync,
 } from "../lib/db";
 import { isPostgresConfigured, queryPostgres } from "../lib/server/postgres/client";
 import type { PortalUser } from "../lib/types";
 
-function getSuperAdminActor(): PortalUser {
-  const db = getDb();
-  const row = db
-    .prepare(
-      `
-        SELECT
-          id,
-          full_name AS fullName,
-          email,
-          phone,
-          role,
-          geography_scope AS geographyScope,
-          is_supervisor AS isSupervisor,
-          is_me AS isME,
-          is_admin AS isAdmin,
-          is_superadmin AS isSuperAdmin
-        FROM portal_users
-        WHERE is_superadmin = 1
-        ORDER BY id ASC
-        LIMIT 1
-      `,
-    )
-    .get() as
-    | {
-        id: number;
-        fullName: string;
-        email: string;
-        phone: string | null;
-        role: PortalUser["role"];
-        geographyScope: string | null;
-        isSupervisor: number;
-        isME: number;
-        isAdmin: number;
-        isSuperAdmin: number;
-      }
-    | undefined;
-
+async function getSuperAdminActor(): Promise<PortalUser> {
+  const rowResult = await queryPostgres<{
+    id: number;
+    fullName: string;
+    email: string;
+    phone: string | null;
+    role: PortalUser["role"];
+    geographyScope: string | null;
+    isSupervisor: boolean;
+    isME: boolean;
+    isAdmin: boolean;
+    isSuperAdmin: boolean;
+  }>(
+    `
+      SELECT
+        id,
+        full_name AS "fullName",
+        email,
+        phone,
+        role,
+        geography_scope AS "geographyScope",
+        is_supervisor AS "isSupervisor",
+        is_me AS "isME",
+        is_admin AS "isAdmin",
+        is_superadmin AS "isSuperAdmin"
+      FROM portal_users
+      WHERE is_superadmin = TRUE
+      ORDER BY id ASC
+      LIMIT 1
+    `,
+  );
+  const row = rowResult.rows[0];
   assert.ok(row, "Expected a superadmin actor.");
   return {
     id: row.id,
@@ -54,10 +48,10 @@ function getSuperAdminActor(): PortalUser {
     phone: row.phone,
     role: row.role,
     geographyScope: row.geographyScope,
-    isSupervisor: row.isSupervisor === 1,
-    isME: row.isME === 1,
-    isAdmin: row.isAdmin === 1,
-    isSuperAdmin: row.isSuperAdmin === 1,
+    isSupervisor: Boolean(row.isSupervisor),
+    isME: Boolean(row.isME),
+    isAdmin: Boolean(row.isAdmin),
+    isSuperAdmin: Boolean(row.isSuperAdmin),
   };
 }
 
@@ -101,32 +95,29 @@ test(
       return;
     }
 
-    const actor = getSuperAdminActor();
-    const seed = getDb()
-      .prepare(
-        `
-          SELECT
-            sd.id AS schoolId,
-            sd.name AS schoolName,
-            sd.district AS district,
-            sc.contact_id AS contactId,
-            sl.learner_id AS learnerId
-          FROM schools_directory sd
-          JOIN school_contacts sc ON sc.school_id = sd.id
-          JOIN school_learners sl ON sl.school_id = sd.id
-          ORDER BY sd.id ASC, sc.contact_id ASC, sl.learner_id ASC
-          LIMIT 1
-        `,
-      )
-      .get() as
-      | {
-          schoolId: number;
-          schoolName: string;
-          district: string;
-          contactId: number;
-          learnerId: number;
-        }
-      | undefined;
+    const actor = await getSuperAdminActor();
+    const seedResult = await queryPostgres<{
+      schoolId: number;
+      schoolName: string;
+      district: string;
+      contactId: number;
+      learnerId: number;
+    }>(
+      `
+        SELECT
+          sd.id AS "schoolId",
+          sd.name AS "schoolName",
+          sd.district AS district,
+          sc.contact_id AS "contactId",
+          sl.learner_id AS "learnerId"
+        FROM schools_directory sd
+        JOIN school_contacts sc ON sc.school_id = sd.id
+        JOIN school_learners sl ON sl.school_id = sd.id
+        ORDER BY sd.id ASC, sc.contact_id ASC, sl.learner_id ASC
+        LIMIT 1
+      `,
+    );
+    const seed = seedResult.rows[0];
     assert.ok(seed, "Expected a seeded school contact and learner.");
 
     const stamp = Date.now();

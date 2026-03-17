@@ -20,6 +20,12 @@ export function isPostgresConfigured() {
   return getDatabaseUrl().length > 0;
 }
 
+export function requirePostgresConfigured() {
+  if (!isPostgresConfigured()) {
+    throw new Error("DATABASE_URL is not configured. PostgreSQL is required for this backend.");
+  }
+}
+
 export function getPostgresPool() {
   const databaseUrl = getDatabaseUrl();
   if (!databaseUrl) {

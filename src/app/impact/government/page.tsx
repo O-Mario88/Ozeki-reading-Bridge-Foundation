@@ -40,8 +40,8 @@ function priorityBadge(flag: "urgent" | "watch" | "on-track") {
     );
 }
 
-export default function GovernmentViewPage() {
-    const data = getGovernmentViewData();
+export default async function GovernmentViewPage() {
+    const data = await getGovernmentViewData();
 
     const urgentCount = data.leagueTable.filter((r) => r.priorityFlag === "urgent").length;
     const watchCount = data.leagueTable.filter((r) => r.priorityFlag === "watch").length;

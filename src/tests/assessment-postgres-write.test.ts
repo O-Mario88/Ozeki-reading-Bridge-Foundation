@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
-import { getDb, saveAssessmentRecordAsync } from "../lib/db";
+import { saveAssessmentRecordAsync } from "../lib/db";
 import { isPostgresConfigured, queryPostgres } from "../lib/server/postgres/client";
 
 test(
@@ -14,6 +16,11 @@ test(
         error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
       t.skip(`PostgreSQL is not reachable (${code}).`);
       return;
+    }
+
+    const sqlitePath = path.resolve(process.cwd(), "data/app.db");
+    if (fs.existsSync(sqlitePath)) {
+      fs.unlinkSync(sqlitePath);
     }
 
     const schoolResult = await queryPostgres<{ id: number }>(
@@ -96,29 +103,6 @@ test(
     );
     assert.equal(Number(schoolLearnerRows.rows[0]?.c ?? 0), 1);
 
-    const sqliteDb = getDb();
-    const sqliteAssessmentCount =
-      (sqliteDb
-        .prepare(
-          `
-            SELECT COUNT(*) AS c
-            FROM assessment_records
-            WHERE learner_uid = @learnerUid
-          `,
-        )
-        .get({ learnerUid: saved.learnerUid }) as { c: number } | undefined)?.c ?? 0;
-    assert.equal(sqliteAssessmentCount, 0);
-
-    const sqliteLearnerCount =
-      (sqliteDb
-        .prepare(
-          `
-            SELECT COUNT(*) AS c
-            FROM learner_roster
-            WHERE learner_uid = @learnerUid
-          `,
-        )
-        .get({ learnerUid: saved.learnerUid }) as { c: number } | undefined)?.c ?? 0;
-    assert.equal(sqliteLearnerCount, 0);
+    assert.equal(fs.existsSync(sqlitePath), false);
   },
 );
