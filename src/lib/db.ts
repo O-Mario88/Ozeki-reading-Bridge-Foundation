@@ -211,6 +211,7 @@ import {
   requirePostgresConfigured,
   withPostgresClient,
 } from "@/lib/server/postgres/client";
+import { assertSqliteRuntimeAllowed, isProductionRuntime } from "@/lib/db-runtime-policy";
 import {
   deleteExpiredPortalSessionsPostgres,
   deletePortalSessionPostgres,
@@ -246,8 +247,8 @@ import {
   buildLearningGainsFromAggregate,
 } from "@/lib/public-impact-views";
 
-const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT ?? "orbf-portal-default-salt";
-const PORTAL_SESSION_SECRET = process.env.PORTAL_SESSION_SECRET ?? PASSWORD_SALT;
+const PASSWORD_SALT = process.env.PORTAL_PASSWORD_SALT?.trim() ?? "";
+const PORTAL_SESSION_SECRET = process.env.PORTAL_SESSION_SECRET?.trim() || PASSWORD_SALT;
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const ASSESSMENT_READING_RULE_VERSION = "UG-RLv1";
 const SCHOOL_SUPPORT_RULE_VERSION = "UG-Support-v1";
@@ -280,10 +281,17 @@ let dbInstance: any | null = null;
 
 // Redundant getDb export removed
 
+function requireConfiguredSecret(name: string, value: string) {
+  if (!value) {
+    throw new Error(`${name} is not configured.`);
+  }
+  return value;
+}
+
 function hashPassword(password: string) {
   return crypto
     .createHash("sha256")
-    .update(`${PASSWORD_SALT}:${password}`)
+    .update(`${requireConfiguredSecret("PORTAL_PASSWORD_SALT", PASSWORD_SALT)}:${password}`)
     .digest("hex");
 }
 
@@ -296,7 +304,10 @@ type PortalSessionTokenPayload = {
 
 function getPortalSessionFingerprint(passwordHash: string) {
   return crypto
-    .createHmac("sha256", PORTAL_SESSION_SECRET)
+    .createHmac(
+      "sha256",
+      requireConfiguredSecret("PORTAL_SESSION_SECRET", PORTAL_SESSION_SECRET),
+    )
     .update(passwordHash)
     .digest("hex")
     .slice(0, 24);
@@ -304,7 +315,10 @@ function getPortalSessionFingerprint(passwordHash: string) {
 
 function signPortalSessionPayload(encodedPayload: string) {
   return crypto
-    .createHmac("sha256", PORTAL_SESSION_SECRET)
+    .createHmac(
+      "sha256",
+      requireConfiguredSecret("PORTAL_SESSION_SECRET", PORTAL_SESSION_SECRET),
+    )
     .update(encodedPayload)
     .digest("base64url");
 }
@@ -3174,13 +3188,25 @@ function ensureAutomationTables(db: any) {
 
 
 function getSeedPortalAccounts() {
-  return [
+  const getOptionalEnv = (name: string) => process.env[name]?.trim() ?? "";
+  const getOptionalLowerEnv = (name: string) => getOptionalEnv(name).toLowerCase();
+  const definitions: Array<{
+    fullName: string;
+    emailEnv: string;
+    phoneEnv: string;
+    role: PortalUserRole;
+    passwordEnv: string;
+    isSupervisor: number;
+    isME: number;
+    isAdmin: number;
+    isSuperAdmin: number;
+  }> = [
     {
       fullName: "ORB Foundation Staff",
-      email: process.env.PORTAL_STAFF_EMAIL?.toLowerCase() ?? "staff@ozekireadingbridge.org",
-      phone: process.env.PORTAL_STAFF_PHONE ?? "+256700100001",
-      role: "Staff" as PortalUserRole,
-      password: process.env.PORTAL_STAFF_PASSWORD ?? "Staff@12345",
+      emailEnv: "PORTAL_STAFF_EMAIL",
+      phoneEnv: "PORTAL_STAFF_PHONE",
+      role: "Staff",
+      passwordEnv: "PORTAL_STAFF_PASSWORD",
       isSupervisor: 0,
       isME: 0,
       isAdmin: 0,
@@ -3188,12 +3214,10 @@ function getSeedPortalAccounts() {
     },
     {
       fullName: "ORB Foundation Volunteer",
-      email:
-        process.env.PORTAL_VOLUNTEER_EMAIL?.toLowerCase() ??
-        "volunteer@ozekireadingbridge.org",
-      phone: process.env.PORTAL_VOLUNTEER_PHONE ?? "+256700100002",
-      role: "Volunteer" as PortalUserRole,
-      password: process.env.PORTAL_VOLUNTEER_PASSWORD ?? "Volunteer@12345",
+      emailEnv: "PORTAL_VOLUNTEER_EMAIL",
+      phoneEnv: "PORTAL_VOLUNTEER_PHONE",
+      role: "Volunteer",
+      passwordEnv: "PORTAL_VOLUNTEER_PASSWORD",
       isSupervisor: 0,
       isME: 0,
       isAdmin: 0,
@@ -3201,10 +3225,10 @@ function getSeedPortalAccounts() {
     },
     {
       fullName: "ORB Supervisor",
-      email: process.env.PORTAL_SUPERVISOR_EMAIL?.toLowerCase() ?? "supervisor@ozekireadingbridge.org",
-      phone: process.env.PORTAL_SUPERVISOR_PHONE ?? "+256700100003",
-      role: "Staff" as PortalUserRole,
-      password: process.env.PORTAL_SUPERVISOR_PASSWORD ?? "Supervisor@12345",
+      emailEnv: "PORTAL_SUPERVISOR_EMAIL",
+      phoneEnv: "PORTAL_SUPERVISOR_PHONE",
+      role: "Staff",
+      passwordEnv: "PORTAL_SUPERVISOR_PASSWORD",
       isSupervisor: 1,
       isME: 0,
       isAdmin: 0,
@@ -3212,10 +3236,10 @@ function getSeedPortalAccounts() {
     },
     {
       fullName: "ORB M&E Officer",
-      email: process.env.PORTAL_ME_EMAIL?.toLowerCase() ?? "me@ozekireadingbridge.org",
-      phone: process.env.PORTAL_ME_PHONE ?? "+256700100004",
-      role: "Staff" as PortalUserRole,
-      password: process.env.PORTAL_ME_PASSWORD ?? "ME@12345",
+      emailEnv: "PORTAL_ME_EMAIL",
+      phoneEnv: "PORTAL_ME_PHONE",
+      role: "Staff",
+      passwordEnv: "PORTAL_ME_PASSWORD",
       isSupervisor: 0,
       isME: 1,
       isAdmin: 0,
@@ -3223,10 +3247,10 @@ function getSeedPortalAccounts() {
     },
     {
       fullName: "ORB Admin",
-      email: process.env.PORTAL_ADMIN_EMAIL?.toLowerCase() ?? "admin@ozekiread.org",
-      phone: process.env.PORTAL_ADMIN_PHONE ?? "+256773397375",
-      role: "Staff" as PortalUserRole,
-      password: process.env.PORTAL_ADMIN_PASSWORD ?? "Admin@16079",
+      emailEnv: "PORTAL_ADMIN_EMAIL",
+      phoneEnv: "PORTAL_ADMIN_PHONE",
+      role: "Staff",
+      passwordEnv: "PORTAL_ADMIN_PASSWORD",
       isSupervisor: 0,
       isME: 0,
       isAdmin: 1,
@@ -3234,16 +3258,47 @@ function getSeedPortalAccounts() {
     },
     {
       fullName: "ORB Super Admin",
-      email: process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org",
-      phone: process.env.PORTAL_SUPERADMIN_PHONE ?? "+256773397375",
-      role: "Staff" as PortalUserRole,
-      password: process.env.PORTAL_SUPERADMIN_PASSWORD ?? "Ozeki@16079",
+      emailEnv: "PORTAL_SUPERADMIN_EMAIL",
+      phoneEnv: "PORTAL_SUPERADMIN_PHONE",
+      role: "Staff",
+      passwordEnv: "PORTAL_SUPERADMIN_PASSWORD",
       isSupervisor: 0,
       isME: 0,
       isAdmin: 1,
       isSuperAdmin: 1,
     },
   ];
+
+  return definitions
+    .map((definition) => {
+      const email = getOptionalLowerEnv(definition.emailEnv);
+      const password = getOptionalEnv(definition.passwordEnv);
+      if (!email || !password) {
+        return null;
+      }
+      return {
+        fullName: definition.fullName,
+        email,
+        phone: getOptionalEnv(definition.phoneEnv) || null,
+        role: definition.role,
+        password,
+        isSupervisor: definition.isSupervisor,
+        isME: definition.isME,
+        isAdmin: definition.isAdmin,
+        isSuperAdmin: definition.isSuperAdmin,
+      };
+    })
+    .filter((account): account is {
+      fullName: string;
+      email: string;
+      phone: string | null;
+      role: PortalUserRole;
+      password: string;
+      isSupervisor: number;
+      isME: number;
+      isAdmin: number;
+      isSuperAdmin: number;
+    } => account !== null);
 }
 
 function getPrivilegedPortalAccountSeeds() {
@@ -3263,8 +3318,8 @@ function getPrivilegedPortalAccountSeeds() {
 }
 
 function getDisabledLegacyPortalAdminPasswordHash() {
-  const seededSuperAdminEmail =
-    process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
+  const seededSuperAdminEmail = process.env.PORTAL_SUPERADMIN_EMAIL?.trim().toLowerCase()
+    || "superadmin";
   return hashPassword(`${seededSuperAdminEmail}:disabled`);
 }
 
@@ -3322,8 +3377,7 @@ function syncPortalAccounts(
 
 function disableLegacyPortalAdmin(db: any) {
   const legacyAdminEmail = "admin@ozekireadingbridge.org";
-  const seededSuperAdminEmail =
-    process.env.PORTAL_SUPERADMIN_EMAIL?.toLowerCase() ?? "edwin@ozekiread.org";
+  const seededSuperAdminEmail = process.env.PORTAL_SUPERADMIN_EMAIL?.trim().toLowerCase() || "";
   if (legacyAdminEmail !== seededSuperAdminEmail) {
     db.prepare(
       `
@@ -3359,823 +3413,28 @@ function seedPortalUsers(db: any) {
 
 function shouldAutoSeedPortalUsers() {
   const explicit = process.env.PORTAL_AUTO_SEED_USERS;
-  if (explicit !== undefined) {
-    const normalized = explicit.trim().toLowerCase();
-    return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-  }
-  return process.env.NODE_ENV !== "production";
-}
-
-function isSqliteReadonlyError(error: unknown) {
-  if (!error || typeof error !== "object") {
+  if (explicit === undefined) {
     return false;
   }
-  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
-  const message =
-    "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
-  return code === "SQLITE_READONLY" || /readonly/i.test(message);
+  const normalized = explicit.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
-function uniquePathCandidates(values: string[]) {
-  const seen = new Set<string>();
-  const candidates: string[] = [];
-  values.forEach((value) => {
-    const normalized = path.resolve(value);
-    if (!normalized || seen.has(normalized)) {
-      return;
-    }
-    seen.add(normalized);
-    candidates.push(normalized);
-  });
-  return candidates;
-}
-
-function tryOpenWritableRecoveryDb(primaryDbPath: string) {
-  const runtimeDir = getRuntimeDataDir();
-  const primaryPath = path.resolve(primaryDbPath);
-  const baseName = path.basename(primaryPath) || "app.db";
-  const candidates = uniquePathCandidates([
-    path.join(runtimeDir, baseName),
-    path.join(runtimeDir, "app-runtime.db"),
-    path.join("/tmp/ozeki-data", baseName),
-    path.join("/tmp/ozeki-data", "app-runtime.db"),
-  ]);
-
-  for (const candidatePath of candidates) {
-    if (candidatePath === primaryPath) {
-      continue;
-    }
-
-    let candidateDb: any | null = null;
-    try {
-      fs.mkdirSync(path.dirname(candidatePath), { recursive: true });
-      if (!fs.existsSync(candidatePath) && fs.existsSync(primaryPath)) {
-        fs.copyFileSync(primaryPath, candidatePath);
-      }
-      try {
-        fs.chmodSync(candidatePath, 0o600);
-      } catch {
-        // noop
-      }
-      candidateDb = null;
-      if (candidateDb) {
-        candidateDb?.pragma("busy_timeout = 5000");
-        candidateDb?.pragma("foreign_keys = ON");
-      }
-      return { db: candidateDb, path: candidatePath };
-    } catch {
-      try {
-        candidateDb?.close();
-      } catch {
-        // noop
-      }
-    }
-  }
-
-  return null;
-}
-
-export function getDb() {
+export function getDb(): never {
   if (isPostgresConfigured()) {
-    return null;
-  }
-  if (dbInstance) {
-    return dbInstance;
-  }
-
-  const dbFile = getRuntimeDbFilePath();
-  const dataDir = getRuntimeDataDir();
-
-  // Ensure data dir exists only if we can actually write to it or if it doesn't exist
-  try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-  } catch (_e) {
-    // Ignore folder creation errors (likely read-only bundle)
+    throw new Error(
+      "[db-policy] SQLite code path reached while PostgreSQL is configured. Migrate this feature to PostgreSQL repositories.",
+    );
   }
 
-  let db: any;
-  let isReadonly = false;
-  try {
-    db = null;
-  } catch (err) {
-    // If RW open fails, try readonly mode as fallback for production/standalone
-    try {
-      db = null;
-      isReadonly = true;
-      if (db) {
-        db?.pragma("busy_timeout = 5000");
-        db?.pragma("foreign_keys = ON");
-      }
-      dbInstance = db;
-      return db;
-    } catch (_e) {
-      throw err; // Rethrow original error if both fail
-    }
+  if (isProductionRuntime()) {
+    throw new Error("[db-policy] DATABASE_URL is required in production and SQLite is disabled.");
   }
 
-  if (db) {
-    db?.pragma("busy_timeout = 5000");
-    db?.pragma("foreign_keys = ON");
-  }
-
-  // Only run migrations if NOT read-only AND NOT null
-  if (!isReadonly && db) {
-  const attemptedRecoveryPaths = new Set<string>();
-  while (true) {
-    try {
-    db?.exec(`
-  CREATE TABLE IF NOT EXISTS bookings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    service TEXT NOT NULL,
-    school_name TEXT NOT NULL,
-    contact_name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    teachers INTEGER NOT NULL,
-    grades TEXT NOT NULL,
-    challenges TEXT NOT NULL,
-    location TEXT NOT NULL,
-    preferred_date TEXT NOT NULL,
-    preferred_time TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  assertSqliteRuntimeAllowed("SQLite code path reached with no PostgreSQL configuration.");
+  throw new Error(
+    "[db-policy] SQLite runtime support has been hard-disabled in this branch. Configure PostgreSQL and migrate the feature.",
   );
-
-  CREATE TABLE IF NOT EXISTS contacts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    phone TEXT,
-    organization TEXT,
-    message TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS download_leads (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    resource_slug TEXT NOT NULL,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    organization TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS newsletter_subscribers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS newsletter_issues (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    preheader TEXT NOT NULL DEFAULT '',
-    html_content TEXT NOT NULL,
-    plain_text TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published')),
-    auto_send_enabled INTEGER NOT NULL DEFAULT 1,
-    published_at TEXT,
-    auto_sent_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_newsletter_issues_status_published
-    ON newsletter_issues(status, published_at DESC, created_at DESC);
-
-  CREATE TABLE IF NOT EXISTS newsletter_dispatch_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    issue_id INTEGER NOT NULL,
-    recipient_email TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('sent', 'failed', 'skipped')),
-    provider_message TEXT,
-    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(issue_id) REFERENCES newsletter_issues(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_newsletter_dispatch_issue
-    ON newsletter_dispatch_logs(issue_id, sent_at DESC);
-
-  CREATE TABLE IF NOT EXISTS portal_users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    full_name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    role TEXT NOT NULL CHECK(role IN ('Staff', 'Volunteer')),
-    password_hash TEXT NOT NULL,
-    is_superadmin INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS portal_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    token TEXT NOT NULL UNIQUE,
-    expires_at TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(user_id) REFERENCES portal_users(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_portal_sessions_token
-    ON portal_sessions(token);
-
-  CREATE TABLE IF NOT EXISTS training_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    school_name TEXT NOT NULL,
-    district TEXT NOT NULL,
-    sub_county TEXT NOT NULL,
-    parish TEXT NOT NULL,
-    village TEXT,
-    session_date TEXT NOT NULL,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS training_participants (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id INTEGER NOT NULL,
-    participant_name TEXT NOT NULL,
-    participant_role TEXT NOT NULL CHECK(participant_role IN ('Classroom teacher', 'School Leader')),
-    phone TEXT NOT NULL,
-    email TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(session_id) REFERENCES training_sessions(id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS legacy_assessment_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    school_name TEXT NOT NULL,
-    district TEXT NOT NULL,
-    sub_county TEXT NOT NULL,
-    parish TEXT NOT NULL,
-    village TEXT,
-    learners_assessed INTEGER NOT NULL DEFAULT 0,
-    stories_published INTEGER NOT NULL DEFAULT 0,
-    assessment_date TEXT NOT NULL,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS assessment_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    child_name TEXT NOT NULL,
-    child_id TEXT NOT NULL,
-    gender TEXT NOT NULL,
-    age INTEGER NOT NULL,
-    school_id INTEGER NOT NULL,
-    class_grade TEXT NOT NULL,
-    assessment_date TEXT NOT NULL,
-    assessment_type TEXT NOT NULL,
-    letter_identification_score INTEGER,
-    sound_identification_score INTEGER,
-    decodable_words_score INTEGER,
-    undecodable_words_score INTEGER,
-    made_up_words_score INTEGER,
-    story_reading_score INTEGER,
-    reading_comprehension_score INTEGER,
-    notes TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS online_training_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    description TEXT,
-    audience TEXT NOT NULL,
-    start_datetime TEXT NOT NULL,
-    end_datetime TEXT NOT NULL,
-    duration_minutes INTEGER NOT NULL,
-    attendee_emails TEXT,
-    attendee_count INTEGER NOT NULL DEFAULT 0,
-    online_teachers_trained INTEGER NOT NULL DEFAULT 0,
-    online_school_leaders_trained INTEGER NOT NULL DEFAULT 0,
-    calendar_event_id TEXT,
-    calendar_link TEXT,
-    meet_link TEXT,
-    recording_url TEXT,
-    chat_summary TEXT,
-    attendance_captured_at TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS schools_directory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    school_code TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    country TEXT NOT NULL DEFAULT 'Uganda',
-    district TEXT NOT NULL,
-    sub_county TEXT NOT NULL,
-    parish TEXT NOT NULL,
-    village TEXT,
-    alternate_school_names TEXT,
-    school_status TEXT NOT NULL DEFAULT 'Open',
-    school_status_date TEXT,
-    current_partner_type TEXT NOT NULL DEFAULT 'NA',
-    year_founded INTEGER,
-    account_record_type TEXT NOT NULL DEFAULT 'School',
-    school_type TEXT NOT NULL DEFAULT 'School',
-    parent_account_label TEXT NOT NULL DEFAULT 'Uganda',
-    school_relationship_status TEXT,
-    school_relationship_status_date TEXT,
-    denomination TEXT,
-    protestant_denomination TEXT,
-    client_school_number INTEGER NOT NULL DEFAULT 0,
-    first_metric_date TEXT,
-    metric_count INTEGER NOT NULL DEFAULT 0,
-    running_total_max_enrollment INTEGER NOT NULL DEFAULT 0,
-    partner_type TEXT,
-    current_partner_school INTEGER NOT NULL DEFAULT 0,
-    school_active INTEGER NOT NULL DEFAULT 1,
-    enrolled_boys INTEGER NOT NULL DEFAULT 0,
-    enrolled_girls INTEGER NOT NULL DEFAULT 0,
-    enrolled_learners INTEGER NOT NULL DEFAULT 0,
-    gps_lat TEXT,
-    gps_lng TEXT,
-    contact_name TEXT,
-    contact_phone TEXT,
-    contact_email TEXT,
-    website TEXT,
-    description TEXT,
-    notes TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS portal_resources (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    grade TEXT NOT NULL CHECK(grade IN ('Nursery', 'P1-P2', 'P3-P4', 'P5-P7', 'All Primary')),
-    skill TEXT NOT NULL CHECK(skill IN ('Phonics', 'Fluency', 'Comprehension', 'Assessment', 'Remedial', 'Writing')),
-    type TEXT NOT NULL CHECK(type IN ('Toolkit', 'Lesson Plan', 'Assessment', 'Poster', 'Guide', 'Reader')),
-    file_name TEXT,
-    stored_path TEXT,
-    mime_type TEXT,
-    size_bytes INTEGER,
-    external_url TEXT,
-    download_label TEXT,
-    section TEXT NOT NULL DEFAULT 'Resources Library',
-    is_published INTEGER NOT NULL DEFAULT 1,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_portal_resources_created_at
-    ON portal_resources(created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_portal_resources_published
-    ON portal_resources(is_published);
-
-  CREATE TABLE IF NOT EXISTS portal_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    record_code TEXT NOT NULL UNIQUE,
-    module TEXT NOT NULL CHECK(module IN ('training', 'visit', 'assessment', 'story')),
-    date TEXT NOT NULL,
-    district TEXT NOT NULL,
-    school_id INTEGER,
-    school_name TEXT NOT NULL,
-    program_type TEXT,
-    status TEXT NOT NULL CHECK(status IN ('Draft', 'Submitted', 'Returned', 'Approved')),
-    follow_up_date TEXT,
-    payload_json TEXT NOT NULL,
-    review_note TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    updated_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL,
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
-    FOREIGN KEY(updated_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_portal_records_module ON portal_records(module);
-  CREATE INDEX IF NOT EXISTS idx_portal_records_date ON portal_records(date);
-  CREATE INDEX IF NOT EXISTS idx_portal_records_status ON portal_records(status);
-  CREATE INDEX IF NOT EXISTS idx_portal_records_created_by ON portal_records(created_by_user_id);
-  CREATE INDEX IF NOT EXISTS idx_portal_records_follow_up ON portal_records(follow_up_date);
-
-  CREATE TABLE IF NOT EXISTS portal_evidence (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    record_id INTEGER,
-    module TEXT NOT NULL CHECK(module IN ('training', 'visit', 'assessment', 'story')),
-    date TEXT NOT NULL,
-    school_name TEXT NOT NULL,
-    file_name TEXT NOT NULL,
-    stored_path TEXT NOT NULL,
-    mime_type TEXT NOT NULL,
-    size_bytes INTEGER NOT NULL,
-    uploaded_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(record_id) REFERENCES portal_records(id) ON DELETE SET NULL,
-    FOREIGN KEY(uploaded_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_portal_evidence_record_id ON portal_evidence(record_id);
-  CREATE INDEX IF NOT EXISTS idx_portal_evidence_module ON portal_evidence(module);
-  CREATE INDEX IF NOT EXISTS idx_portal_evidence_date ON portal_evidence(date);
-  CREATE INDEX IF NOT EXISTS idx_portal_evidence_school ON portal_evidence(school_name);
-
-  CREATE TABLE IF NOT EXISTS portal_testimonials (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    storyteller_name TEXT NOT NULL,
-    storyteller_role TEXT NOT NULL,
-    school_id INTEGER,
-    school_name TEXT NOT NULL,
-    district TEXT NOT NULL,
-    story_text TEXT NOT NULL,
-    video_source_type TEXT NOT NULL DEFAULT 'upload' CHECK(video_source_type IN ('upload', 'youtube')),
-    video_file_name TEXT NOT NULL,
-    video_stored_path TEXT NOT NULL,
-    video_mime_type TEXT NOT NULL,
-    video_size_bytes INTEGER NOT NULL,
-    youtube_video_id TEXT,
-    youtube_video_title TEXT,
-    youtube_channel_title TEXT,
-    youtube_thumbnail_url TEXT,
-    youtube_embed_url TEXT,
-    youtube_watch_url TEXT,
-    photo_file_name TEXT,
-    photo_stored_path TEXT,
-    photo_mime_type TEXT,
-    photo_size_bytes INTEGER,
-    is_published INTEGER NOT NULL DEFAULT 1,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL,
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_portal_testimonials_created_at
-    ON portal_testimonials(created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_portal_testimonials_published
-    ON portal_testimonials(is_published);
-
-  CREATE TABLE IF NOT EXISTS portal_leadership_team_members (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    section TEXT NOT NULL CHECK(section IN ('board', 'staff', 'volunteer')),
-    name TEXT NOT NULL,
-    role TEXT NOT NULL,
-    biography TEXT NOT NULL,
-    background TEXT NOT NULL,
-    career TEXT NOT NULL,
-    photo_file_name TEXT,
-    photo_stored_path TEXT,
-    photo_mime_type TEXT,
-    photo_size_bytes INTEGER,
-    photo_alt TEXT,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    is_published INTEGER NOT NULL DEFAULT 1,
-    created_by_user_id INTEGER NOT NULL,
-    updated_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
-    FOREIGN KEY(updated_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_portal_leadership_team_members_section
-    ON portal_leadership_team_members(section, sort_order ASC, updated_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_portal_leadership_team_members_published
-    ON portal_leadership_team_members(is_published, section, sort_order ASC, updated_at DESC);
-
-  CREATE TABLE IF NOT EXISTS portal_core_values (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    is_published INTEGER NOT NULL DEFAULT 1,
-    created_by_user_id INTEGER NOT NULL,
-    updated_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
-    FOREIGN KEY(updated_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_portal_core_values_sort
-    ON portal_core_values(sort_order ASC, updated_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_portal_core_values_published
-    ON portal_core_values(is_published, sort_order ASC, updated_at DESC);
-
-  CREATE TABLE IF NOT EXISTS impact_reports (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    report_code TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    partner_name TEXT,
-    report_type TEXT NOT NULL,
-    report_category TEXT,
-    scope_type TEXT NOT NULL CHECK(scope_type IN ('National', 'Region', 'Sub-region', 'District', 'Sub-county', 'Parish', 'School')),
-    scope_value TEXT NOT NULL DEFAULT 'All',
-    region_id TEXT,
-    sub_region_id TEXT,
-    district_id TEXT,
-    school_id INTEGER,
-    period_type TEXT NOT NULL DEFAULT 'FY' CHECK(period_type IN ('FY', 'Term', 'Quarter', 'Custom')),
-    period_start TEXT NOT NULL,
-    period_end TEXT NOT NULL,
-    programs_json TEXT NOT NULL,
-    fact_pack_json TEXT NOT NULL,
-    narrative_json TEXT NOT NULL,
-    audience TEXT NOT NULL DEFAULT 'Public-safe' CHECK(audience IN ('Public-safe', 'Staff-only')),
-    output TEXT NOT NULL DEFAULT 'PDF' CHECK(output IN ('PDF', 'HTML preview')),
-    status TEXT NOT NULL DEFAULT 'Generated',
-    is_public INTEGER NOT NULL DEFAULT 0,
-    version TEXT NOT NULL DEFAULT 'v1.0',
-    generated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    view_count INTEGER NOT NULL DEFAULT 0,
-    download_count INTEGER NOT NULL DEFAULT 0,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_impact_reports_generated_at
-    ON impact_reports(generated_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_impact_reports_public
-    ON impact_reports(is_public, generated_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_impact_reports_scope
-    ON impact_reports(scope_type, scope_value);
-
-  CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    user_name TEXT NOT NULL,
-    action TEXT NOT NULL,
-    target_table TEXT NOT NULL,
-    target_id INTEGER,
-    detail TEXT,
-    ip_address TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_audit_logs_user
-    ON audit_logs(user_id, created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_audit_logs_target
-    ON audit_logs(target_table, target_id);
-
-  CREATE TABLE IF NOT EXISTS cost_entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    scope_type TEXT NOT NULL CHECK(scope_type IN ('country', 'region', 'district', 'school')),
-    scope_value TEXT NOT NULL,
-    period TEXT NOT NULL,
-    category TEXT NOT NULL,
-    amount REAL NOT NULL DEFAULT 0,
-    notes TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_cost_entries_scope
-    ON cost_entries(scope_type, scope_value, period);
-
-  CREATE TABLE IF NOT EXISTS observation_rubrics (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    school_id INTEGER NOT NULL,
-    teacher_uid TEXT NOT NULL,
-    date TEXT NOT NULL,
-    lesson_type TEXT NOT NULL,
-    indicators_json TEXT NOT NULL DEFAULT '[]',
-    overall_score REAL NOT NULL DEFAULT 0,
-    strengths TEXT,
-    gaps TEXT,
-    coaching_actions TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_observation_rubrics_school
-    ON observation_rubrics(school_id, date DESC);
-  CREATE INDEX IF NOT EXISTS idx_observation_rubrics_teacher
-    ON observation_rubrics(teacher_uid);
-
-  CREATE TABLE IF NOT EXISTS intervention_groups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    school_id INTEGER NOT NULL,
-    grade TEXT NOT NULL,
-    target_skill TEXT NOT NULL,
-    learners_json TEXT NOT NULL DEFAULT '[]',
-    schedule TEXT,
-    start_date TEXT NOT NULL,
-    end_date TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_intervention_groups_school
-    ON intervention_groups(school_id);
-
-  CREATE TABLE IF NOT EXISTS intervention_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    group_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    attendance INTEGER NOT NULL DEFAULT 0,
-    skills_practiced TEXT,
-    quick_check_score REAL,
-    notes TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(group_id) REFERENCES intervention_groups(id) ON DELETE CASCADE,
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_intervention_sessions_group
-    ON intervention_sessions(group_id, date DESC);
-
-  CREATE TABLE IF NOT EXISTS material_distributions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    school_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    material_type TEXT NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 0,
-    receipt_path TEXT,
-    notes TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_material_distributions_school
-    ON material_distributions(school_id);
-
-  CREATE TABLE IF NOT EXISTS consent_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    school_id INTEGER NOT NULL,
-    consent_type TEXT NOT NULL CHECK(consent_type IN ('photo', 'video', 'story')),
-    source TEXT NOT NULL,
-    date TEXT NOT NULL,
-    allowed_usage TEXT NOT NULL CHECK(allowed_usage IN ('public', 'partner', 'internal')),
-    linked_files TEXT,
-    expiry_date TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id),
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_consent_records_school
-    ON consent_records(school_id);
-
-  CREATE TABLE IF NOT EXISTS geography_master (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    code TEXT NOT NULL UNIQUE,
-    parent_id INTEGER,
-    level TEXT NOT NULL CHECK(level IN ('country', 'region', 'sub_region', 'district', 'sub_county', 'parish')),
-    metadata TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(parent_id) REFERENCES geography_master(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_geography_master_level
-    ON geography_master(level, name);
-  CREATE INDEX IF NOT EXISTS idx_geography_master_parent
-    ON geography_master(parent_id);
-
-  CREATE TABLE IF NOT EXISTS story_anthologies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    school_id INTEGER,
-    district_scope TEXT,
-    edition TEXT NOT NULL DEFAULT '',
-    pdf_stored_path TEXT,
-    cover_image_path TEXT,
-    publish_status TEXT NOT NULL DEFAULT 'draft' CHECK(publish_status IN ('draft', 'published')),
-    download_count INTEGER NOT NULL DEFAULT 0,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id) ON DELETE SET NULL,
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS story_library (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL UNIQUE,
-    school_id INTEGER NOT NULL,
-    anthology_id INTEGER,
-    title TEXT NOT NULL,
-    author_about TEXT NOT NULL DEFAULT '',
-    excerpt TEXT NOT NULL DEFAULT '',
-    content_text TEXT,
-    pdf_stored_path TEXT,
-    cover_image_path TEXT,
-    grade TEXT NOT NULL DEFAULT '',
-    language TEXT NOT NULL DEFAULT 'English',
-    tags TEXT NOT NULL DEFAULT '[]',
-    publish_status TEXT NOT NULL DEFAULT 'draft' CHECK(publish_status IN ('draft', 'review', 'published')),
-    consent_status TEXT NOT NULL DEFAULT 'pending' CHECK(consent_status IN ('pending', 'approved', 'denied')),
-    public_author_display TEXT NOT NULL DEFAULT '',
-    learner_uid TEXT,
-    view_count INTEGER NOT NULL DEFAULT 0,
-    created_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    published_at TEXT,
-    FOREIGN KEY(school_id) REFERENCES schools_directory(id),
-    FOREIGN KEY(anthology_id) REFERENCES story_anthologies(id) ON DELETE SET NULL,
-    FOREIGN KEY(created_by_user_id) REFERENCES portal_users(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_story_library_slug ON story_library(slug);
-  CREATE INDEX IF NOT EXISTS idx_story_library_school ON story_library(school_id);
-  CREATE INDEX IF NOT EXISTS idx_story_library_published
-    ON story_library(publish_status, consent_status);
-  CREATE INDEX IF NOT EXISTS idx_story_library_published_at
-    ON story_library(published_at DESC);
-  `);
-
-  ensurePortalUserColumns(db);
-  ensureAuditAndSoftDeleteColumns(db);
-  ensureOnlineTrainingColumns(db);
-  ensureImpactReportColumns(db);
-  ensurePortalResourceColumns(db);
-  ensureSchoolDirectoryColumns(db);
-  ensureSchoolIdentityColumns(db);
-  ensureGeoHierarchyTables(db);
-  ensurePortalRecordColumns(db);
-  ensurePortalTestimonialSchoolColumns(db);
-  ensureGeographyColumns(db);
-  ensureDistrictMasterData(db);
-  ensureTeacherLearnerRosterTables(db);
-  ensureSchoolRosterTables(db);
-  ensureProgramLinkageTables(db);
-  ensureActivityInsightsTables(db);
-  ensureLessonEvaluationTables(db);
-  ensureTeachingImprovementSettingsTable(db);
-  ensureGraduationTables(db);
-  ensurePortalTestimonialVideoColumns(db);
-  ensureAssessmentDomainsColumns(db);
-  ensureMasteryAssessmentSchema(db);
-  ensureAutomationTables(db);
-  ensureStoryLibraryColumns(db);
-  ensurePaginatedReaderColumns(db);
-  ensurePublicImpactViews(db);
-  ensureSupportRequestTables(db);
-  ensureSchoolContactForeignKeyReferences(db);
-  ensurePrivilegedPortalUsers(db);
-    if (shouldAutoSeedPortalUsers()) {
-      seedPortalUsers(db);
-    }
-      break;
-    } catch (error) {
-      if (!isSqliteReadonlyError(error)) {
-        throw error;
-      }
-
-      const recovery = tryOpenWritableRecoveryDb(dbFile);
-      if (recovery && !attemptedRecoveryPaths.has(path.resolve(recovery.path))) {
-        attemptedRecoveryPaths.add(path.resolve(recovery.path));
-        try {
-          db.close();
-        } catch {
-          // noop
-        }
-        db = recovery.db;
-        if (db) {
-          db?.pragma("busy_timeout = 5000");
-          db?.pragma("foreign_keys = ON");
-        }
-        console.warn(
-          `[db] Switched to writable recovery database at "${recovery.path}" after readonly failure on "${dbFile}".`,
-        );
-        continue;
-      }
-
-      try {
-        db.close();
-      } catch {
-        // noop
-      }
-
-      const readonlyDb = null;
-      readonlyDb?.pragma("busy_timeout = 5000");
-      readonlyDb?.pragma("foreign_keys = ON");
-      dbInstance = readonlyDb;
-      return readonlyDb;
-    }
-  }
-  } // Matches if (!isReadonly)
-
-  dbInstance = db;
-  return db;
 }
 
 function ensureStoryLibraryColumns(db: any) {
@@ -16937,14 +16196,16 @@ export async function listSchoolDirectoryRecords(
     });
   }
 
-  if (filters?.district) {
+  const districtFilter = filters?.district;
+  if (districtFilter) {
     where.push("lower(district) LIKE lower(@district)");
-    params.district = `%${filters.district}%`;
+    params.district = `%${districtFilter}%`;
   }
 
-  if (filters?.query) {
+  const queryFilter = filters?.query;
+  if (queryFilter) {
     where.push("(lower(name) LIKE lower(@query) OR lower(school_code) LIKE lower(@query))");
-    params.query = `%${filters.query}%`;
+    params.query = `%${queryFilter}%`;
   }
 
   return getDb()
@@ -17039,7 +16300,7 @@ export async function listSchoolDirectoryRecords(
       `,
     )
     .all(params)
-    .map((row) => mapSchoolDirectoryRowFromSqlite(row as Record<string, unknown>));
+    .map((row: unknown) => mapSchoolDirectoryRowFromSqlite(row as Record<string, unknown>));
 }
 
 export function listPortalUsersForFilters(user: PortalUser) {
@@ -24787,6 +24048,292 @@ export async function createImpactReport(
   input: ImpactReportBuildInput,
   user: PortalUser,
 ): Promise<ImpactReportRecord> {
+  if (isPostgresConfigured()) {
+    const reportCategory = resolveReportCategory(input);
+    const periodType = resolvePeriodType(input);
+    const audience = resolveAudience(input);
+    const output = resolveOutput(input);
+    const normalizedScopeValue = normalizeScopeValue(input.scopeType, input.scopeValue);
+    const normalizedPartnerName = input.partnerName?.trim() ? input.partnerName.trim() : null;
+    const normalizedRegionId = input.regionId?.trim() ? input.regionId.trim() : null;
+    const normalizedSubRegionId = input.subRegionId?.trim() ? input.subRegionId.trim() : null;
+    const normalizedDistrictId = input.districtId?.trim() ? input.districtId.trim() : null;
+    const normalizedSchoolId =
+      Number.isInteger(input.schoolId) && Number(input.schoolId) > 0 ? Number(input.schoolId) : null;
+    const programsIncluded = resolveProgramsForCategoryBuild(reportCategory, input.programsIncluded);
+    const { startDate, endDate } = normalizeDateRange(input.periodStart, input.periodEnd);
+    const generatedAt = new Date().toISOString();
+    const reportVersion = input.version.trim() || "v1.0";
+    const reportCode = buildImpactReportCode(input.reportType);
+    const title =
+      input.title?.trim() ||
+      `${reportCategory}${normalizedPartnerName ? ` - ${normalizedPartnerName}` : ""} - ${normalizedScopeValue} (${startDate} to ${endDate})`;
+
+    const publicScopeLevel: PublicImpactScopeLevel =
+      input.scopeType === "Region"
+        ? "region"
+        : input.scopeType === "Sub-region"
+          ? "subregion"
+          : input.scopeType === "District"
+            ? "district"
+            : input.scopeType === "School"
+              ? "school"
+              : "country";
+    const publicScopeId =
+      publicScopeLevel === "country"
+        ? "Uganda"
+        : normalizedScopeValue || normalizedDistrictId || normalizedRegionId || "Uganda";
+
+    let aggregate: PublicImpactAggregate | null = null;
+    try {
+      aggregate = await getPublicImpactAggregate(
+        publicScopeLevel,
+        publicScopeId,
+        `${startDate} to ${endDate}`,
+        audience === "Staff-only" ? "Internal_School" : "Public",
+      );
+    } catch {
+      aggregate = null;
+    }
+
+    const toOutcomeMetric = (domain?: PublicImpactDomainAggregate): ImpactReportLearningOutcomeMetric => {
+      const baseline = domain?.baseline ?? null;
+      const endline = domain?.endline ?? domain?.latest ?? null;
+      const change =
+        baseline !== null && endline !== null
+          ? Number((endline - baseline).toFixed(2))
+          : null;
+      return {
+        baseline,
+        progress: null,
+        endline,
+        change,
+      };
+    };
+
+    const totalTeachers =
+      Number(aggregate?.kpis.teachersSupportedMale ?? 0) +
+      Number(aggregate?.kpis.teachersSupportedFemale ?? 0);
+    const factPack: ImpactReportFactPack = {
+      generatedAt,
+      reportType: input.reportType,
+      reportCategory,
+      periodType,
+      audience,
+      output,
+      scopeType: input.scopeType,
+      scopeValue: normalizedScopeValue,
+      regionId: normalizedRegionId,
+      subRegionId: normalizedSubRegionId,
+      districtId: normalizedDistrictId,
+      schoolId: normalizedSchoolId,
+      periodStart: startDate,
+      periodEnd: endDate,
+      programsIncluded,
+      definitions: {
+        learnersReached: "Estimated learners reached across supported schools in the selected scope.",
+        schoolsImpacted: "Distinct schools with tracked implementation activity in the selected scope.",
+        schoolsCoachedVisited: "Distinct schools with at least one coaching/visit record in the selected period.",
+        improvement: "Difference between baseline and latest available score in each domain.",
+        reportingCalendar:
+          "FY reports follow Uganda school-calendar sessions (Term I-III): 01 February to 30 November.",
+      },
+      coverageDelivery: {
+        schoolsImpacted: Number(aggregate?.kpis.schoolsSupported ?? 0),
+        schoolsCoachedVisited: Number(aggregate?.kpis.schoolsSupported ?? 0),
+        teachersTrained: totalTeachers,
+        schoolLeadersTrained: 0,
+        learnersReached: Number(aggregate?.kpis.learnersReachedEstimated ?? 0),
+        coachingVisitsCompleted: Number(aggregate?.kpis.coachingVisitsCompleted ?? 0),
+        coachingVisitsPlanned: Number(aggregate?.kpis.coachingVisitsCompleted ?? 0),
+        assessmentsConducted: {
+          baseline: Number(aggregate?.kpis.assessmentsBaselineCount ?? 0),
+          progress: Number(aggregate?.kpis.assessmentsProgressCount ?? 0),
+          endline: Number(aggregate?.kpis.assessmentsEndlineCount ?? 0),
+        },
+      },
+      sponsorship: undefined,
+      engagement: {
+        resourcesDownloaded: 0,
+        topDownloads: [],
+        downloadsByType: [],
+        downloadsByGrade: [],
+        bookingRequests: 0,
+      },
+      learningOutcomes: {
+        letterIdentification: toOutcomeMetric(aggregate?.outcomes.letterNames),
+        soundIdentification: toOutcomeMetric(aggregate?.outcomes.letterSounds),
+        decodableWords: toOutcomeMetric(aggregate?.outcomes.realWords),
+        undecodableWords: { baseline: null, progress: null, endline: null, change: null },
+        madeUpWords: toOutcomeMetric(aggregate?.outcomes.madeUpWords),
+        storyReading: toOutcomeMetric(aggregate?.outcomes.storyReading),
+        readingComprehension: toOutcomeMetric(aggregate?.outcomes.comprehension),
+        proficiencyBandMovementPercent: null,
+        reductionInNonReadersPercent: null,
+      },
+      instructionQuality: {
+        routineAdoptionRate: null,
+        observationScoreChange: null,
+        topGaps: [],
+      },
+      visitPathways: undefined,
+      teacherLessonEvaluation: undefined,
+      teacherImprovementSummary: undefined,
+      teachingLearningAlignment: undefined,
+      readingLevels: aggregate?.readingLevels ?? undefined,
+      dataQuality: {
+        approvedRecords: Number(aggregate?.kpis.learnersAssessedUnique ?? 0),
+        totalRecords: Number(aggregate?.kpis.learnersAssessedUnique ?? 0),
+        missingPayloadRate: 0,
+        verificationNote: "PostgreSQL aggregate build generated without SQLite dependencies.",
+      },
+      categoryData: undefined,
+      categoryFactsJson: undefined,
+      dataTrust: {
+        n: Number(aggregate?.kpis.learnersAssessedUnique ?? 0),
+        completenessPercent: 100,
+        toolVersion: ASSESSMENT_LEGACY_MODEL_VERSION,
+        lastUpdated: generatedAt,
+      },
+      audit: {
+        generatedByUserId: user.id,
+        generatedByName: user.fullName,
+        generatedAt,
+        dataTimestamp: generatedAt,
+        scopeLabel: `${input.scopeType} • ${normalizedScopeValue}`,
+        periodLabel: `${startDate} to ${endDate}`,
+        reportVersion,
+      },
+    };
+
+    const narrative = buildFallbackImpactNarrative(input.reportType, generatedAt);
+
+    const insertResult = await queryPostgres<{ id: number }>(
+      `
+        INSERT INTO impact_reports (
+          report_code,
+          title,
+          partner_name,
+          report_type,
+          report_category,
+          scope_type,
+          scope_value,
+          region_id,
+          sub_region_id,
+          district_id,
+          school_id,
+          period_type,
+          period_start,
+          period_end,
+          programs_json,
+          fact_pack_json,
+          narrative_json,
+          audience,
+          output,
+          status,
+          is_public,
+          version,
+          generated_at,
+          created_by_user_id,
+          updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+          $15::jsonb, $16::jsonb, $17::jsonb, $18, $19, 'Generated', $20, $21, $22::timestamptz, $23, $22::timestamptz
+        )
+        RETURNING id
+      `,
+      [
+        reportCode,
+        title,
+        normalizedPartnerName,
+        input.reportType,
+        reportCategory,
+        input.scopeType,
+        normalizedScopeValue,
+        normalizedRegionId,
+        normalizedSubRegionId,
+        normalizedDistrictId,
+        normalizedSchoolId,
+        periodType,
+        startDate,
+        endDate,
+        JSON.stringify(programsIncluded),
+        JSON.stringify(factPack),
+        JSON.stringify(narrative),
+        audience,
+        output,
+        input.isPublic,
+        reportVersion,
+        generatedAt,
+        user.id,
+      ],
+    );
+
+    const reportId = Number(insertResult.rows[0]?.id ?? 0);
+    if (!reportId) {
+      throw new Error("Could not load generated report.");
+    }
+
+    await queryPostgres(
+      `
+        INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, detail)
+        VALUES ($1, $2, 'generate', 'impact_reports', $3, $4)
+      `,
+      [
+        user.id,
+        user.fullName,
+        String(reportId),
+        `${reportCategory} generated for ${input.scopeType}: ${normalizedScopeValue}`,
+      ],
+    );
+
+    const rowResult = await queryPostgres(
+      `
+        SELECT
+          ir.id,
+          ir.report_code AS "reportCode",
+          ir.title,
+          ir.partner_name AS "partnerName",
+          ir.report_type AS "reportType",
+          ir.report_category AS "reportCategory",
+          ir.period_type AS "periodType",
+          ir.audience,
+          ir.output,
+          ir.scope_type AS "scopeType",
+          ir.scope_value AS "scopeValue",
+          ir.region_id AS "regionId",
+          ir.sub_region_id AS "subRegionId",
+          ir.district_id AS "districtId",
+          ir.school_id AS "schoolId",
+          ir.period_start AS "periodStart",
+          ir.period_end AS "periodEnd",
+          ir.programs_json::text AS "programsJson",
+          ir.fact_pack_json::text AS "factPackJson",
+          ir.narrative_json::text AS "narrativeJson",
+          ir.is_public AS "isPublic",
+          ir.version,
+          ir.generated_at::text AS "generatedAt",
+          ir.view_count AS "viewCount",
+          ir.download_count AS "downloadCount",
+          ir.created_by_user_id AS "createdByUserId",
+          pu.full_name AS "createdByName",
+          ir.created_at::text AS "createdAt",
+          ir.updated_at::text AS "updatedAt"
+        FROM impact_reports ir
+        JOIN portal_users pu ON pu.id = ir.created_by_user_id
+        WHERE ir.id = $1
+        LIMIT 1
+      `,
+      [reportId],
+    );
+
+    const row = rowResult.rows[0];
+    if (!row) {
+      throw new Error("Could not load generated report.");
+    }
+    return parseImpactReportRow(mapImpactReportPostgresRow(row));
+  }
+
   const db = getDb();
   const reportCategory = resolveReportCategory(input);
   const periodType = resolvePeriodType(input);
@@ -25764,6 +25311,518 @@ export function getImpactReportFilterFacets() {
     subRegions,
     districts,
     schools,
+  };
+}
+
+function mapImpactReportPostgresRow(
+  row: Record<string, unknown>,
+): Parameters<typeof parseImpactReportRow>[0] {
+  const toText = (value: unknown) => String(value ?? "");
+  const toNullableText = (value: unknown) => {
+    const normalized = String(value ?? "").trim();
+    return normalized || null;
+  };
+  const toInt = (value: unknown, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
+  };
+  const toNullableInt = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+  };
+
+  return {
+    id: toInt(row.id),
+    reportCode: toText(row.reportCode),
+    title: toText(row.title),
+    partnerName: toNullableText(row.partnerName),
+    reportType: toText(row.reportType) as ImpactReportType,
+    reportCategory: toNullableText(row.reportCategory) as ReportCategory | null,
+    periodType: toNullableText(row.periodType) as ImpactReportPeriodType | null,
+    audience: toNullableText(row.audience) as ImpactReportAudience | null,
+    output: toNullableText(row.output) as ImpactReportOutput | null,
+    scopeType: toText(row.scopeType) as ImpactReportScopeType,
+    scopeValue: toText(row.scopeValue),
+    regionId: toNullableText(row.regionId),
+    subRegionId: toNullableText(row.subRegionId),
+    districtId: toNullableText(row.districtId),
+    schoolId: toNullableInt(row.schoolId),
+    periodStart: toText(row.periodStart),
+    periodEnd: toText(row.periodEnd),
+    programsJson:
+      typeof row.programsJson === "string"
+        ? row.programsJson
+        : JSON.stringify(row.programsJson ?? []),
+    factPackJson:
+      typeof row.factPackJson === "string"
+        ? row.factPackJson
+        : JSON.stringify(row.factPackJson ?? {}),
+    narrativeJson:
+      typeof row.narrativeJson === "string"
+        ? row.narrativeJson
+        : JSON.stringify(row.narrativeJson ?? {}),
+    status: "Generated",
+    isPublic:
+      row.isPublic === true || row.isPublic === 1 || row.isPublic === "1" ? 1 : 0,
+    version: toText(row.version || "v1.0"),
+    generatedAt: toText(row.generatedAt),
+    viewCount: toInt(row.viewCount),
+    downloadCount: toInt(row.downloadCount),
+    createdByUserId: toInt(row.createdByUserId),
+    createdByName: toText(row.createdByName),
+    createdAt: toText(row.createdAt),
+    updatedAt: toText(row.updatedAt),
+  };
+}
+
+export async function listPublicImpactReportsAsync(filters?: {
+  year?: string;
+  scopeType?: ImpactReportScopeType;
+  scopeValue?: string;
+  reportType?: ImpactReportType;
+  reportCategory?: ReportCategory;
+  periodType?: ImpactReportPeriodType;
+  audience?: ImpactReportAudience;
+  output?: ImpactReportOutput;
+  region?: string;
+  subRegion?: string;
+  district?: string;
+  schoolId?: number;
+  limit?: number;
+}) {
+  try {
+    const clauses = ["ir.is_public IS TRUE"];
+    const params: unknown[] = [];
+
+    if (filters?.year && /^\d{4}$/.test(filters.year)) {
+      params.push(filters.year);
+      clauses.push(`to_char(ir.generated_at, 'YYYY') = $${params.length}`);
+    }
+    if (filters?.scopeType) {
+      params.push(filters.scopeType);
+      clauses.push(`ir.scope_type = $${params.length}`);
+    }
+    if (filters?.scopeValue && filters.scopeValue.trim()) {
+      params.push(filters.scopeValue.trim());
+      clauses.push(`lower(ir.scope_value) = lower($${params.length})`);
+    }
+    if (filters?.reportType) {
+      params.push(filters.reportType);
+      clauses.push(`ir.report_type = $${params.length}`);
+    }
+    if (filters?.reportCategory && isReportCategory(filters.reportCategory)) {
+      params.push(filters.reportCategory);
+      clauses.push(`ir.report_category = $${params.length}`);
+    }
+    if (filters?.periodType) {
+      params.push(filters.periodType);
+      clauses.push(`ir.period_type = $${params.length}`);
+    }
+    if (filters?.audience) {
+      params.push(filters.audience);
+      clauses.push(`ir.audience = $${params.length}`);
+    }
+    if (filters?.output) {
+      params.push(filters.output);
+      clauses.push(`ir.output = $${params.length}`);
+    }
+
+    const limit = Math.min(filters?.limit ?? 60, 200);
+    const result = await queryPostgres(
+      `
+        SELECT
+          ir.id,
+          ir.report_code AS "reportCode",
+          ir.title,
+          ir.partner_name AS "partnerName",
+          ir.report_type AS "reportType",
+          ir.report_category AS "reportCategory",
+          ir.period_type AS "periodType",
+          ir.audience,
+          ir.output,
+          ir.scope_type AS "scopeType",
+          ir.scope_value AS "scopeValue",
+          ir.region_id AS "regionId",
+          ir.sub_region_id AS "subRegionId",
+          ir.district_id AS "districtId",
+          ir.school_id AS "schoolId",
+          ir.period_start AS "periodStart",
+          ir.period_end AS "periodEnd",
+          ir.programs_json::text AS "programsJson",
+          ir.fact_pack_json::text AS "factPackJson",
+          ir.narrative_json::text AS "narrativeJson",
+          ir.is_public AS "isPublic",
+          ir.version,
+          ir.generated_at::text AS "generatedAt",
+          ir.view_count AS "viewCount",
+          ir.download_count AS "downloadCount",
+          ir.created_by_user_id AS "createdByUserId",
+          pu.full_name AS "createdByName",
+          ir.created_at::text AS "createdAt",
+          ir.updated_at::text AS "updatedAt",
+          sd.region AS "_schoolRegion",
+          sd.sub_region AS "_schoolSubRegion",
+          sd.district AS "_schoolDistrict",
+          sd.name AS "_schoolName"
+        FROM impact_reports ir
+        JOIN portal_users pu ON pu.id = ir.created_by_user_id
+        LEFT JOIN schools_directory sd ON sd.id = ir.school_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY ir.generated_at DESC, ir.id DESC
+        LIMIT ${limit}
+      `,
+      params,
+    );
+
+    const requestedRegion = normalizeGeoValue(filters?.region);
+    const requestedSubRegion = normalizeGeoValue(filters?.subRegion);
+    const requestedDistrict = normalizeGeoValue(filters?.district);
+    const requestedSchoolId = filters?.schoolId && Number.isFinite(filters.schoolId)
+      ? Number(filters.schoolId)
+      : null;
+
+    const scopedRows = result.rows.filter((row) => {
+      const contextRegion = normalizeGeoValue(
+        row._schoolRegion
+        ?? row.regionId
+        ?? (row.scopeType === "Region" ? row.scopeValue : null),
+      );
+      const contextSubRegion = normalizeGeoValue(
+        row._schoolSubRegion
+        ?? row.subRegionId
+        ?? (row.scopeType === "Sub-region" ? row.scopeValue : null),
+      );
+      const contextDistrict = normalizeGeoValue(
+        row._schoolDistrict
+        ?? row.districtId
+        ?? (row.scopeType === "District" ? row.scopeValue : null),
+      );
+      const contextSchoolId = Number(row.schoolId ?? 0);
+      const scopeSchoolId = Number(row.scopeType === "School" ? row.scopeValue : 0);
+
+      if (requestedSchoolId !== null) {
+        return contextSchoolId === requestedSchoolId || scopeSchoolId === requestedSchoolId;
+      }
+      if (requestedDistrict) {
+        return contextDistrict === requestedDistrict;
+      }
+      if (requestedSubRegion) {
+        return contextSubRegion === requestedSubRegion;
+      }
+      if (requestedRegion) {
+        return contextRegion === requestedRegion;
+      }
+      return true;
+    });
+
+    return scopedRows
+      .map((row) => parseImpactReportRow(mapImpactReportPostgresRow(row)))
+      .map(redactImpactReportTeacherDetails);
+  } catch (error) {
+    console.error("[impact] listPublicImpactReportsAsync failed:", error);
+    return [];
+  }
+}
+
+export async function getImpactReportByCodeAsync(
+  reportCode: string,
+  user?: PortalUser | null,
+): Promise<ImpactReportRecord | null> {
+  const result = await queryPostgres(
+    `
+      SELECT
+        ir.id,
+        ir.report_code AS "reportCode",
+        ir.title,
+        ir.partner_name AS "partnerName",
+        ir.report_type AS "reportType",
+        ir.report_category AS "reportCategory",
+        ir.period_type AS "periodType",
+        ir.audience,
+        ir.output,
+        ir.scope_type AS "scopeType",
+        ir.scope_value AS "scopeValue",
+        ir.region_id AS "regionId",
+        ir.sub_region_id AS "subRegionId",
+        ir.district_id AS "districtId",
+        ir.school_id AS "schoolId",
+        ir.period_start AS "periodStart",
+        ir.period_end AS "periodEnd",
+        ir.programs_json::text AS "programsJson",
+        ir.fact_pack_json::text AS "factPackJson",
+        ir.narrative_json::text AS "narrativeJson",
+        ir.is_public AS "isPublic",
+        ir.version,
+        ir.generated_at::text AS "generatedAt",
+        ir.view_count AS "viewCount",
+        ir.download_count AS "downloadCount",
+        ir.created_by_user_id AS "createdByUserId",
+        pu.full_name AS "createdByName",
+        ir.created_at::text AS "createdAt",
+        ir.updated_at::text AS "updatedAt"
+      FROM impact_reports ir
+      JOIN portal_users pu ON pu.id = ir.created_by_user_id
+      WHERE ir.report_code = $1
+      LIMIT 1
+    `,
+    [reportCode],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+
+  const parsed = parseImpactReportRow(mapImpactReportPostgresRow(row));
+  if (parsed.isPublic) {
+    return redactImpactReportTeacherDetails(parsed);
+  }
+  if (!user) {
+    return null;
+  }
+  if (canViewAllRecords(user) || parsed.createdByUserId === user.id) {
+    return parsed;
+  }
+  return null;
+}
+
+export async function listPortalImpactReportsAsync(
+  user: PortalUser,
+  limit = 120,
+): Promise<ImpactReportRecord[]> {
+  const canViewAll = canViewAllRecords(user);
+  const boundedLimit = Math.min(Math.max(limit, 1), 200);
+  const params: unknown[] = [];
+  const whereClause = canViewAll
+    ? "1=1"
+    : (() => {
+      params.push(user.id);
+      return `ir.created_by_user_id = $${params.length}`;
+    })();
+
+  const result = await queryPostgres(
+    `
+      SELECT
+        ir.id,
+        ir.report_code AS "reportCode",
+        ir.title,
+        ir.partner_name AS "partnerName",
+        ir.report_type AS "reportType",
+        ir.report_category AS "reportCategory",
+        ir.period_type AS "periodType",
+        ir.audience,
+        ir.output,
+        ir.scope_type AS "scopeType",
+        ir.scope_value AS "scopeValue",
+        ir.region_id AS "regionId",
+        ir.sub_region_id AS "subRegionId",
+        ir.district_id AS "districtId",
+        ir.school_id AS "schoolId",
+        ir.period_start AS "periodStart",
+        ir.period_end AS "periodEnd",
+        ir.programs_json::text AS "programsJson",
+        ir.fact_pack_json::text AS "factPackJson",
+        ir.narrative_json::text AS "narrativeJson",
+        ir.is_public AS "isPublic",
+        ir.version,
+        ir.generated_at::text AS "generatedAt",
+        ir.view_count AS "viewCount",
+        ir.download_count AS "downloadCount",
+        ir.created_by_user_id AS "createdByUserId",
+        pu.full_name AS "createdByName",
+        ir.created_at::text AS "createdAt",
+        ir.updated_at::text AS "updatedAt"
+      FROM impact_reports ir
+      JOIN portal_users pu ON pu.id = ir.created_by_user_id
+      WHERE ${whereClause}
+      ORDER BY ir.generated_at DESC, ir.id DESC
+      LIMIT ${boundedLimit}
+    `,
+    params,
+  );
+
+  return result.rows.map((row) => parseImpactReportRow(mapImpactReportPostgresRow(row)));
+}
+
+export async function incrementImpactReportViewCountAsync(reportCode: string) {
+  await queryPostgres(
+    `
+      UPDATE impact_reports
+      SET
+        view_count = COALESCE(view_count, 0) + 1,
+        updated_at = NOW()
+      WHERE report_code = $1
+    `,
+    [reportCode],
+  );
+}
+
+export async function incrementImpactReportDownloadCountAsync(reportCode: string) {
+  await queryPostgres(
+    `
+      UPDATE impact_reports
+      SET
+        download_count = COALESCE(download_count, 0) + 1,
+        updated_at = NOW()
+      WHERE report_code = $1
+    `,
+    [reportCode],
+  );
+}
+
+export async function getImpactReportFilterFacetsAsync() {
+  const [reportResult, schoolResult] = await Promise.all([
+    queryPostgres<{
+      reportType: ImpactReportType;
+      reportCategory: ReportCategory | null;
+      scopeType: ImpactReportScopeType;
+      scopeValue: string;
+      periodType: ImpactReportPeriodType | null;
+      audience: ImpactReportAudience | null;
+      output: ImpactReportOutput | null;
+      year: string;
+      regionId: string | null;
+      subRegionId: string | null;
+      districtId: string | null;
+      schoolId: number | null;
+    }>(
+      `
+        SELECT
+          report_type AS "reportType",
+          report_category AS "reportCategory",
+          scope_type AS "scopeType",
+          scope_value AS "scopeValue",
+          period_type AS "periodType",
+          audience,
+          output,
+          to_char(generated_at, 'YYYY') AS year,
+          region_id AS "regionId",
+          sub_region_id AS "subRegionId",
+          district_id AS "districtId",
+          school_id AS "schoolId"
+        FROM impact_reports
+        WHERE is_public IS TRUE
+        ORDER BY generated_at DESC
+      `,
+    ),
+    queryPostgres<{
+      id: number;
+      name: string;
+      district: string;
+      region: string | null;
+      subRegion: string | null;
+    }>(
+      `
+        SELECT
+          id,
+          name,
+          COALESCE(district, '') AS district,
+          region,
+          sub_region AS "subRegion"
+        FROM schools_directory
+        WHERE name IS NOT NULL
+        ORDER BY name
+      `,
+    ),
+  ]);
+
+  const reportRows = reportResult.rows;
+  const schoolRows = schoolResult.rows;
+
+  const reportTypes = [...new Set(reportRows.map((row) => row.reportType))];
+  const reportCategories = [
+    ...new Set(
+      reportRows
+        .map((row) => row.reportCategory)
+        .filter((value): value is ReportCategory => Boolean(value && isReportCategory(value))),
+    ),
+  ];
+  const periodTypes = [
+    ...new Set(
+      reportRows
+        .map((row) => row.periodType)
+        .filter((value): value is ImpactReportPeriodType => Boolean(value)),
+    ),
+  ];
+  const audiences = [
+    ...new Set(
+      reportRows
+        .map((row) => row.audience)
+        .filter((value): value is ImpactReportAudience => Boolean(value)),
+    ),
+  ];
+  const outputs = [
+    ...new Set(
+      reportRows
+        .map((row) => row.output)
+        .filter((value): value is ImpactReportOutput => Boolean(value)),
+    ),
+  ];
+  const scopeTypes = [...new Set(reportRows.map((row) => row.scopeType))];
+  const dataYears = [...new Set(reportRows.map((row) => row.year))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const years = Array.from({ length: 2050 - 2025 + 1 }, (_, index) => String(2025 + index));
+  const scopeValues = [...new Set(reportRows.map((row) => String(row.scopeValue ?? "").trim()).filter(Boolean))];
+
+  const pushIfPresent = (set: Set<string>, raw: unknown) => {
+    const value = String(raw ?? "").trim();
+    if (value) {
+      set.add(value);
+    }
+  };
+
+  const regionSet = new Set<string>();
+  const subRegionSet = new Set<string>();
+  const districtSet = new Set<string>();
+
+  ugandaRegions.forEach((region) => {
+    pushIfPresent(regionSet, region.region);
+    region.subRegions.forEach((subRegion) => {
+      pushIfPresent(subRegionSet, subRegion.subRegion);
+      subRegion.districts.forEach((district) => pushIfPresent(districtSet, district));
+    });
+  });
+
+  schoolRows.forEach((row) => {
+    pushIfPresent(regionSet, row.region);
+    pushIfPresent(subRegionSet, row.subRegion);
+    pushIfPresent(districtSet, row.district);
+  });
+
+  reportRows.forEach((row) => {
+    pushIfPresent(regionSet, row.regionId);
+    pushIfPresent(subRegionSet, row.subRegionId);
+    pushIfPresent(districtSet, row.districtId);
+    if (row.scopeType === "Region") {
+      pushIfPresent(regionSet, row.scopeValue);
+    }
+    if (row.scopeType === "Sub-region") {
+      pushIfPresent(subRegionSet, row.scopeValue);
+    }
+    if (row.scopeType === "District") {
+      pushIfPresent(districtSet, row.scopeValue);
+    }
+  });
+
+  return {
+    reportTypes,
+    reportCategories: [...new Set([...REPORT_CATEGORIES, ...reportCategories])],
+    periodTypes: [...new Set(["FY", "Term", "Quarter", "Custom", ...periodTypes])],
+    audiences: [...new Set(["Public-safe", "Staff-only", ...audiences])],
+    outputs: [...new Set(["PDF", "HTML preview", ...outputs])],
+    scopeTypes,
+    years,
+    dataYears,
+    scopeValues,
+    regions: [...regionSet].sort((a, b) => a.localeCompare(b)),
+    subRegions: [...subRegionSet].sort((a, b) => a.localeCompare(b)),
+    districts: [...districtSet].sort((a, b) => a.localeCompare(b)),
+    schools: schoolRows.map((row) => ({
+      id: Number(row.id),
+      name: String(row.name ?? ""),
+      district: String(row.district ?? ""),
+    })),
   };
 }
 
@@ -26882,6 +26941,7 @@ export async function getSchoolAccountProfile(schoolId: number): Promise<SchoolA
   if (!school) {
     return null;
   }
+  const schoolRecord = school as SchoolDirectoryRecord;
 
   const db = getDb();
   const fyStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
@@ -27134,7 +27194,7 @@ export async function getSchoolAccountProfile(schoolId: number): Promise<SchoolA
   });
 
   return {
-    school,
+    school: schoolRecord,
     counts,
     recentTrainings: [...trainingRows, ...onlineRows]
       .map((row) => mapRecentItem(row))

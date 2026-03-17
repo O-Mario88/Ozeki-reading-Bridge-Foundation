@@ -107,6 +107,45 @@ function validateGroup(label, keys) {
   notes.push(`${label}: configured.`);
 }
 
+function validateOneOf(label, keys) {
+  const present = keys.filter((key) => value(key));
+  if (present.length === 0) {
+    warnings.push(`${label}: not configured (expected one of ${keys.join(", ")}).`);
+    return;
+  }
+  notes.push(`${label}: configured via ${present[0]}.`);
+}
+
+function validateOpenAiConfiguration() {
+  const apiKey = value("OPENAI_API_KEY");
+  const model = value("OPENAI_REPORT_MODEL");
+
+  if (!apiKey && !model) {
+    notes.push("OpenAI: not configured.");
+    return;
+  }
+
+  if (!apiKey || !model) {
+    const configuredCount = (apiKey ? 1 : 0) + (model ? 1 : 0);
+    warnings.push(`OpenAI: partially configured (${configuredCount}/2).`);
+    return;
+  }
+
+  if (isPlaceholder(apiKey)) {
+    addMessage("error", "OPENAI_API_KEY still looks like a placeholder value.");
+    return;
+  }
+
+  if (!/^sk-[A-Za-z0-9._-]{20,}$/.test(apiKey)) {
+    addMessage(
+      strictMode ? "error" : "warning",
+      "OPENAI_API_KEY format looks invalid (expected key beginning with sk-).",
+    );
+  }
+
+  notes.push("OpenAI: configured.");
+}
+
 async function validateDataDir() {
   const dir = value("APP_DATA_DIR") || path.join(process.cwd(), "data");
   try {
@@ -140,6 +179,22 @@ async function main() {
     addMessage("error", "PUBLIC_SITE_HOST and ADMIN_PORTAL_HOST must not be the same.");
   }
 
+  const databaseUrl = requireNonEmpty("DATABASE_URL");
+  if (databaseUrl && !/^postgres(ql)?:\/\//i.test(databaseUrl)) {
+    addMessage("error", "DATABASE_URL must be a PostgreSQL connection string.");
+  }
+  if (value("ALLOW_SQLITE")) {
+    addMessage("error", "ALLOW_SQLITE is no longer supported. Remove it from the environment.");
+  }
+  if (value("SQLITE_DB_PATH")) {
+    addMessage("error", "SQLITE_DB_PATH is not supported. Remove it from the environment.");
+  }
+  if (value("DATABASE_PATH")) {
+    addMessage("error", "DATABASE_PATH is not supported. Remove it from the environment.");
+  }
+
+  requireNonEmpty("PORTAL_SESSION_SECRET");
+
   const seedUsers = value("PORTAL_AUTO_SEED_USERS");
   if (strictMode && seedUsers.toLowerCase() !== "false") {
     addMessage("error", "PORTAL_AUTO_SEED_USERS must be false in strict mode.");
@@ -165,8 +220,9 @@ async function main() {
   validatePortalCredential("PORTAL_STAFF_PASSWORD", { strictOnly: true });
 
   validateGroup("SMTP", ["SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"]);
-  validateGroup("Google Calendar", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_WORKSPACE_OAUTH_REDIRECT_URI"]);
-  validateGroup("OpenAI", ["OPENAI_API_KEY", "OPENAI_REPORT_MODEL"]);
+  validateGroup("Google Calendar", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]);
+  validateOneOf("Google OAuth redirect", ["GOOGLE_WORKSPACE_OAUTH_REDIRECT_URI", "GOOGLE_OAUTH_REDIRECT_URI", "GOOGLE_REDIRECT_URI"]);
+  validateOpenAiConfiguration();
   validateGroup("YouTube", ["YOUTUBE_API_KEY", "YOUTUBE_CHANNEL_ID"]);
 
   await validateDataDir();

@@ -37,7 +37,9 @@ export function getGoogleWorkspaceConfig() {
   const refreshToken = getOptionalEnv("GOOGLE_REFRESH_TOKEN");
   const calendarId = getOptionalEnv("GOOGLE_CALENDAR_ID");
   const redirectUri =
-    getOptionalEnv("GOOGLE_OAUTH_REDIRECT_URI") || getOptionalEnv("GOOGLE_REDIRECT_URI");
+    getOptionalEnv("GOOGLE_WORKSPACE_OAUTH_REDIRECT_URI")
+    || getOptionalEnv("GOOGLE_OAUTH_REDIRECT_URI")
+    || getOptionalEnv("GOOGLE_REDIRECT_URI");
 
   return {
     clientId,
@@ -191,4 +193,3 @@ export async function getGoogleWorkspaceDiagnostics(): Promise<GoogleWorkspaceDi
     };
   }
 }
-

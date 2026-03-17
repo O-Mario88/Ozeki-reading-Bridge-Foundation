@@ -17,8 +17,8 @@ function formatDate(value: string) {
   });
 }
 
-export default function ImpactCaseStudiesPage() {
-  const stories = listPublishedChangeStories(240);
+export default async function ImpactCaseStudiesPage() {
+  const stories = await listPublishedChangeStories(240);
 
   return (
     <>

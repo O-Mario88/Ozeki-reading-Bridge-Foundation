@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useId } from "react";
 import { SchoolRosterPicker, RosterEntry, RosterLearner } from "./SchoolRosterPicker";
 import {
   ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1,
   computeOneTestStyleMasteryAssessment,
 } from "@/lib/mastery-assessment";
+import { FormActions, FormModal, ValidationMessage } from "@/components/forms";
 
 export interface EgraLearner {
     no: number;
@@ -88,6 +89,7 @@ export function EgraLearnerInputModal({
     schoolId,
     schoolName,
 }: EgraLearnerInputModalProps) {
+    const formId = useId();
     const [validationError, setValidationError] = useState("");
     const [learner, setLearner] = useState<EgraLearner>({
         no: nextNo,
@@ -112,6 +114,7 @@ export function EgraLearnerInputModal({
         () => computeReadingLevelPreview(learner),
         [learner],
     );
+    const canPersist = Boolean(schoolId && selectedLearnerUid.trim());
 
     // Reset form when modal opens or nextLearnerId changes
     useEffect(() => {
@@ -137,8 +140,6 @@ export function EgraLearnerInputModal({
             setValidationError("");
         }
     }, [isOpen, nextLearnerId, nextNo]);
-
-    if (!isOpen) return null;
 
     const persistLearner = (closeAfterSave: boolean) => {
         if (!schoolId) {
@@ -198,238 +199,167 @@ export function EgraLearnerInputModal({
     };
 
     return (
-        <div className="portal-modal-overlay">
-            <div className="portal-modal-content card">
-                <div className="portal-modal-header">
-                    <h3>Add Learner Result</h3>
+        <FormModal
+            open={isOpen}
+            onClose={onClose}
+            title="Add Learner Result"
+            description={
+                schoolName
+                    ? `Capture mastery-aligned reading assessment for ${schoolName}.`
+                    : "Capture mastery-aligned reading assessment."
+            }
+            maxWidth="980px"
+            footer={
+                <FormActions>
                     <button type="button" className="button button-ghost" onClick={onClose}>
-                        ✕
+                        Cancel
                     </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="form-grid">
-                    {/* Roster Picker for learner selection */}
-                    {schoolId ? (
-                        <div className="full-width" style={{ marginBottom: "0.75rem" }}>
-                            <SchoolRosterPicker
-                                schoolId={schoolId}
-                                schoolName={schoolName}
-                                participantType="learner"
-                                selectedUid={selectedLearnerUid}
-                                onSelect={handleLearnerSelect}
-                                label="Select Learner from School Roster"
-                            />
-                            {!selectedLearnerUid && (
-                                <p style={{ color: "#b45309", fontSize: "0.78rem", fontStyle: "italic", margin: "0.3rem 0 0" }}>
-                                    Learner must be in the school roster. Use &quot;Add Learner to School Account&quot; if not listed.
-                                </p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="full-width" style={{ marginBottom: "0.75rem" }}>
-                            <p style={{ color: "#b45309", fontSize: "0.82rem", fontStyle: "italic" }}>
-                                Select a school first to load learners from the school roster. Free-text learners are not allowed.
+                    <button
+                        type="button"
+                        className="button button-ghost"
+                        disabled={!canPersist}
+                        onClick={() => persistLearner(true)}
+                    >
+                        Save
+                    </button>
+                    <button type="submit" form={formId} className="button" disabled={!canPersist}>
+                        Save & Add Next
+                    </button>
+                </FormActions>
+            }
+        >
+            <form id={formId} onSubmit={handleSubmit} className="form-grid portal-form-grid form-grid--two">
+                {schoolId ? (
+                    <div className="full-width">
+                        <SchoolRosterPicker
+                            schoolId={schoolId}
+                            schoolName={schoolName}
+                            participantType="learner"
+                            selectedUid={selectedLearnerUid}
+                            onSelect={handleLearnerSelect}
+                            label="Select Learner from School Roster"
+                        />
+                        {!selectedLearnerUid ? (
+                            <p className="form-inline-note form-inline-note--warning">
+                                Learner must be in the school roster. Use &quot;Add Learner to School Account&quot; if not listed.
                             </p>
-                        </div>
-                    )}
-
-                    {/* Auto-filled learner info when from roster */}
-                    {schoolId && selectedLearnerUid && (
-                        <div className="full-width grid grid-cols-2 gap-4" style={{ marginBottom: "0.5rem" }}>
-                            <label>
-                                <span className="label-text">Learner ID</span>
-                                <input value={learner.learnerId} readOnly className="bg-slate-100" />
-                            </label>
-                            <label>
-                                <span className="label-text">Name</span>
-                                <input value={learner.learnerName} readOnly className="bg-slate-100" />
-                            </label>
-                            <label>
-                                <span className="label-text">Gender</span>
-                                <input value={learner.sex === "M" ? "Male" : learner.sex === "F" ? "Female" : "-"} readOnly className="bg-slate-100" />
-                            </label>
-                            <label>
-                                <span className="label-text">Class</span>
-                                <input value={learner.classGrade || "-"} readOnly className="bg-slate-100" />
-                            </label>
-                            <label>
-                                <span className="label-text">Age</span>
-                                <input value={String(learner.age)} readOnly className="bg-slate-100" />
-                            </label>
-                        </div>
-                    )}
-
-                    <label>
-                        <span className="label-text">Phonemic Awareness</span>
-                        <input
-                            type="number" min="0"
-                            value={learner.letterIdentification}
-                            onChange={(e) => updateField("letterIdentification", e.target.value)}
-                        />
-                    </label>
-
-                    <label>
-                        <span className="label-text">Grapheme-Phoneme Correspondence</span>
-                        <input
-                            type="number" min="0"
-                            value={learner.soundIdentification}
-                            onChange={(e) => updateField("soundIdentification", e.target.value)}
-                        />
-                    </label>
-
-                    <label>
-                        <span className="label-text">Blending & Decoding</span>
-                        <input
-                            type="number" min="0"
-                            value={learner.decodableWords}
-                            onChange={(e) => updateField("decodableWords", e.target.value)}
-                        />
-                    </label>
-
-                    <label>
-                        <span className="label-text">Word Recognition & Fluency</span>
-                        <input
-                            type="number" min="0"
-                            value={learner.madeUpWords}
-                            onChange={(e) => updateField("madeUpWords", e.target.value)}
-                        />
-                    </label>
-
-                    <label>
-                        <span className="label-text">Sentence & Paragraph Construction</span>
-                        <input
-                            type="number" min="0"
-                            value={learner.storyReading}
-                            onChange={(e) => updateField("storyReading", e.target.value)}
-                        />
-                    </label>
-
-                    <label>
-                        <span className="label-text">Comprehension</span>
-                        <input
-                            type="number" min="0"
-                            value={learner.readingComprehension}
-                            onChange={(e) => updateField("readingComprehension", e.target.value)}
-                        />
-                    </label>
-
-                    <label className="full-width">
-                        <span className="label-text">Computed Reading Stage</span>
-                        <div
-                            className="computed-reading-level"
-                            title={READING_LEVEL_RULE_TOOLTIP}
-                            aria-label={READING_LEVEL_RULE_TOOLTIP}
-                        >
-                            <strong>{readingPreview.readingStageLabel}</strong>
-                            <span>
-                                Benchmark level: {readingPreview.benchmarkGradeLevel}
-                            </span>
-                            <span className="portal-muted">
-                                {readingPreview.expectedVsActualStatus}
-                            </span>
-                            <span className="portal-muted" style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: "0.74rem" }}>
-                                Rubric profile: {formatMasteryProfile(readingPreview)}
-                            </span>
-                        </div>
-                    </label>
-
-                    <div className="full-width action-row mt-4">
-                        <button type="button" className="button button-ghost" onClick={onClose}>
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            className="button button-ghost"
-                            disabled={!schoolId || !selectedLearnerUid.trim()}
-                            onClick={() => persistLearner(true)}
-                        >
-                            Save
-                        </button>
-                        <button type="submit" className="button" disabled={!schoolId || !selectedLearnerUid.trim()}>
-                            Save & Add Next
-                        </button>
+                        ) : null}
                     </div>
-                    {validationError ? (
-                        <p className="full-width" style={{ color: "#b91c1c", marginTop: "0.5rem" }}>
-                            {validationError}
+                ) : (
+                    <div className="full-width">
+                        <p className="form-inline-note form-inline-note--warning">
+                            Select a school first to load learners from the school roster. Free-text learners are not allowed.
                         </p>
-                    ) : null}
-                </form>
-            </div>
-            <style jsx>{`
-        .portal-modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(13, 51, 48, 0.4);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-        }
-        .portal-modal-content {
-          width: 90%;
-          max-width: 860px;
-          max-height: 90vh;
-          overflow-y: auto;
-          background: white;
-          padding: 2rem;
-          border-radius: 24px;
-          box-shadow: var(--elevation-3);
-          border: 1px solid var(--md-sys-color-outline-variant);
-        }
-        .portal-modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
-          border-bottom: 1px solid var(--md-sys-color-surface-container);
-          padding-bottom: 1rem;
-        }
-        .portal-modal-header h3 {
-          color: var(--md-sys-color-primary);
-          font-weight: 700;
-          font-size: 1.25rem;
-          margin: 0;
-        }
-        .form-grid input,
-        .form-grid select,
-        .form-grid textarea {
-          min-height: 3.2rem;
-          padding: 0.8rem 0.95rem;
-          font-size: 1.02rem;
-        }
-        .grid-cols-2 {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-        }
-        .computed-reading-level {
-          display: grid;
-          gap: 0.25rem;
-          border: 1px solid var(--md-sys-color-outline-variant);
-          border-radius: 12px;
-          padding: 0.75rem 0.9rem;
-          background: var(--md-sys-color-surface-container-low, #f8fafc);
-        }
-        .computed-reading-level strong {
-          font-size: 0.95rem;
-          color: var(--md-sys-color-primary);
-        }
-        .computed-reading-level span {
-          font-size: 0.78rem;
-          color: var(--md-sys-color-on-surface);
-        }
-        .gap-4 {
-          gap: 1.25rem;
-        }
-        .bg-slate-100 {
-          background-color: var(--md-sys-color-surface-container);
-          border: 1px solid var(--md-sys-color-outline-variant);
-        }
-      `}</style>
-        </div>
+                    </div>
+                )}
+
+                {schoolId && selectedLearnerUid ? (
+                    <div className="full-width form-grid form-grid--two">
+                        <label>
+                            <span className="label-text">Learner ID</span>
+                            <input value={learner.learnerId} readOnly className="form-readonly-input" />
+                        </label>
+                        <label>
+                            <span className="label-text">Name</span>
+                            <input value={learner.learnerName} readOnly className="form-readonly-input" />
+                        </label>
+                        <label>
+                            <span className="label-text">Gender</span>
+                            <input
+                                value={learner.sex === "M" ? "Male" : learner.sex === "F" ? "Female" : "-"}
+                                readOnly
+                                className="form-readonly-input"
+                            />
+                        </label>
+                        <label>
+                            <span className="label-text">Class</span>
+                            <input value={learner.classGrade || "-"} readOnly className="form-readonly-input" />
+                        </label>
+                        <label>
+                            <span className="label-text">Age</span>
+                            <input value={String(learner.age)} readOnly className="form-readonly-input" />
+                        </label>
+                    </div>
+                ) : null}
+
+                <label>
+                    <span className="label-text">Phonemic Awareness</span>
+                    <input
+                        type="number"
+                        min="0"
+                        value={learner.letterIdentification}
+                        onChange={(e) => updateField("letterIdentification", e.target.value)}
+                    />
+                </label>
+
+                <label>
+                    <span className="label-text">Grapheme-Phoneme Correspondence</span>
+                    <input
+                        type="number"
+                        min="0"
+                        value={learner.soundIdentification}
+                        onChange={(e) => updateField("soundIdentification", e.target.value)}
+                    />
+                </label>
+
+                <label>
+                    <span className="label-text">Blending & Decoding</span>
+                    <input
+                        type="number"
+                        min="0"
+                        value={learner.decodableWords}
+                        onChange={(e) => updateField("decodableWords", e.target.value)}
+                    />
+                </label>
+
+                <label>
+                    <span className="label-text">Word Recognition & Fluency</span>
+                    <input
+                        type="number"
+                        min="0"
+                        value={learner.madeUpWords}
+                        onChange={(e) => updateField("madeUpWords", e.target.value)}
+                    />
+                </label>
+
+                <label>
+                    <span className="label-text">Sentence & Paragraph Construction</span>
+                    <input
+                        type="number"
+                        min="0"
+                        value={learner.storyReading}
+                        onChange={(e) => updateField("storyReading", e.target.value)}
+                    />
+                </label>
+
+                <label>
+                    <span className="label-text">Comprehension</span>
+                    <input
+                        type="number"
+                        min="0"
+                        value={learner.readingComprehension}
+                        onChange={(e) => updateField("readingComprehension", e.target.value)}
+                    />
+                </label>
+
+                <label className="full-width">
+                    <span className="label-text">Computed Reading Stage</span>
+                    <div
+                        className="computed-reading-level"
+                        title={READING_LEVEL_RULE_TOOLTIP}
+                        aria-label={READING_LEVEL_RULE_TOOLTIP}
+                    >
+                        <strong>{readingPreview.readingStageLabel}</strong>
+                        <span>Benchmark level: {readingPreview.benchmarkGradeLevel}</span>
+                        <span className="portal-muted">{readingPreview.expectedVsActualStatus}</span>
+                        <span className="computed-reading-level__profile">
+                            Rubric profile: {formatMasteryProfile(readingPreview)}
+                        </span>
+                    </div>
+                </label>
+
+                <ValidationMessage message={validationError} className="full-width" />
+            </form>
+        </FormModal>
     );
 }

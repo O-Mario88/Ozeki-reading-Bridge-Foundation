@@ -5,8 +5,7 @@ build:
   commands:
     build:
       - npm ci
-      - npm rebuild better-sqlite3
-      - npm run build
+      - npm run ci:verify
 
 run:
   command: npm run start:standalone

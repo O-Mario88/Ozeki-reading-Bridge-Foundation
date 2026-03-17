@@ -18,7 +18,7 @@ export default async function ImpactCaseStudyDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const story = getPublishedChangeStoryBySlug(slug);
+  const story = await getPublishedChangeStoryBySlug(slug);
 
   if (!story) {
     notFound();

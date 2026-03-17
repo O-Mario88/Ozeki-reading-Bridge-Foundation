@@ -148,7 +148,7 @@ export async function postReceiptToGl(receiptId: number, userId: number) {
         programId: receipt.program_id,
         projectId: null,
         grantId: receipt.grant_id,
-        branch_id: null,
+        branchId: null,
         description: "Cash received",
       },
       {
@@ -160,7 +160,7 @@ export async function postReceiptToGl(receiptId: number, userId: number) {
         programId: receipt.program_id,
         projectId: null,
         grantId: receipt.grant_id,
-        branch_id: null,
+        branchId: null,
         description: "Donation income",
       },
     ],

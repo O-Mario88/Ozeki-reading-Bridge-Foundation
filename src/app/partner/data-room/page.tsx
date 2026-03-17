@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listPublicImpactReports, getImpactSummary } from "@/lib/db";
+import { listPublicImpactReportsAsync, getImpactSummary } from "@/lib/db";
 
 export const metadata = {
     title: "Partner Data Room — Ozeki Reading Bridge Foundation",
@@ -10,7 +10,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PartnerDataRoomPage() {
-    const reports = listPublicImpactReports({ limit: 20 });
+    const reports = await listPublicImpactReportsAsync({ limit: 20 });
     const summary = await getImpactSummary();
     const metrics = new Map(summary.metrics.map((m) => [m.label, m.value]));
 

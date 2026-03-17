@@ -8,12 +8,11 @@ frontend:
         - node -v
         - npm -v
         - npm ci
-        - npm ci
     build:
       commands:
         - export NODE_OPTIONS="--max-old-space-size=8192"
         - export NEXT_TELEMETRY_DISABLED=1
-        - npm run build
+        - npm run ci:verify
         - mkdir -p .next/standalone/data
         - cp -r data/* .next/standalone/data/ || true
         - cp -r public .next/standalone/public || true

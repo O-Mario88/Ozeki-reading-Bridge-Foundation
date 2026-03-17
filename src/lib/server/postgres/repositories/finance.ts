@@ -982,7 +982,7 @@ export async function listFinanceLedgerTransactionsPostgres(filters: FinanceLedg
         .map((item) => Number(item))
         .filter((item) => Number.isFinite(item));
 
-      let evidenceFiles = await Promise.all(
+      const resolvedEvidenceFiles = await Promise.all(
         directFileIds.map(async (fileId) => {
           try {
             return await getFinanceFileByIdPostgres(fileId);
@@ -991,7 +991,9 @@ export async function listFinanceLedgerTransactionsPostgres(filters: FinanceLedg
           }
         }),
       );
-      evidenceFiles = evidenceFiles.filter((item): item is FinanceFileRecord => Boolean(item));
+      let evidenceFiles: FinanceFileRecord[] = resolvedEvidenceFiles.filter(
+        (item): item is FinanceFileRecord => Boolean(item),
+      );
 
       if (evidenceFiles.length === 0) {
         const sourceType = String(record.sourceType ?? "");

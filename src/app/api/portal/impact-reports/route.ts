@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createImpactReport, listPortalImpactReports } from "@/lib/db";
+import { createImpactReport, listPortalImpactReportsAsync } from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";
@@ -92,7 +92,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const reports = listPortalImpactReports(user, 180);
+  const reports = await listPortalImpactReportsAsync(user, 180);
   return NextResponse.json({ reports });
 }
 

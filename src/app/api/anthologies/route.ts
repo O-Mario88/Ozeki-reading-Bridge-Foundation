@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listPublishedAnthologies } from "@/lib/db";
+import { listPublishedAnthologiesPostgres } from "@/lib/server/postgres/repositories/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const limit = params.get("limit") ? Number(params.get("limit")) : 50;
 
     // We only expose published anthologies with approved consent
-    const anthologies = listPublishedAnthologies({ limit });
+    const anthologies = await listPublishedAnthologiesPostgres({ limit });
 
     return NextResponse.json({ anthologies });
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getImpactReportFilterFacets, listPublicImpactReports } from "@/lib/db";
+import { getImpactReportFilterFacetsAsync, listPublicImpactReportsAsync } from "@/lib/db";
 import {
   ImpactReportAudience,
   ImpactReportOutput,
@@ -105,8 +105,8 @@ function parseFilters(request: Request) {
 export async function GET(request: Request) {
   try {
     const filters = parseFilters(request);
-    const reports = listPublicImpactReports(filters);
-    const facets = getImpactReportFilterFacets();
+    const reports = await listPublicImpactReportsAsync(filters);
+    const facets = await getImpactReportFilterFacetsAsync();
     return NextResponse.json({ reports, facets });
   } catch (error) {
     if (error instanceof z.ZodError) {

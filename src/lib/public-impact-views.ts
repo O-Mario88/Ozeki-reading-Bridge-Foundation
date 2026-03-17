@@ -77,14 +77,19 @@ export function buildLearningGainsFromAggregate(
   scopeType: string,
   scopeId: string,
 ): AggregateLearningGainsView {
-  const domains: AggregateLearningDomainView[] = [
-    ["Letter Names", aggregate.outcomes.letterNames],
-    ["Letter Sounds", aggregate.outcomes.letterSounds],
-    ["Real Words", aggregate.outcomes.realWords],
-    ["Made Up Words", aggregate.outcomes.madeUpWords],
-    ["Story Reading", aggregate.outcomes.storyReading],
-    ["Comprehension", aggregate.outcomes.comprehension],
-  ].map(([domain, values]) => ({
+  const domainPairs: Array<{
+    domain: string;
+    values: PublicImpactAggregate["outcomes"][keyof PublicImpactAggregate["outcomes"]];
+  }> = [
+    { domain: "Letter Names", values: aggregate.outcomes.letterNames },
+    { domain: "Letter Sounds", values: aggregate.outcomes.letterSounds },
+    { domain: "Real Words", values: aggregate.outcomes.realWords },
+    { domain: "Made Up Words", values: aggregate.outcomes.madeUpWords },
+    { domain: "Story Reading", values: aggregate.outcomes.storyReading },
+    { domain: "Comprehension", values: aggregate.outcomes.comprehension },
+  ];
+
+  const domains: AggregateLearningDomainView[] = domainPairs.map(({ domain, values }) => ({
     domain,
     baselineAvg: values.baseline,
     endlineAvg: values.latest ?? values.endline,
@@ -108,7 +113,7 @@ export function buildLearningGainsFromAggregate(
     period: aggregate.period.label,
     domains,
     schoolImprovementIndex:
-      aggregate.teachingLearningAlignment?.summary?.schoolImprovementIndex ?? null,
+      aggregate.teachingLearningAlignment?.summary?.teachingDelta ?? null,
     readingLevels: aggregate.readingLevels ?? null,
     lastUpdated: aggregate.meta.lastUpdated,
   };
@@ -147,6 +152,6 @@ export function buildImpactKpisFromAggregate(aggregate: PublicImpactAggregate) {
       aggregate.kpis.teachersSupportedMale + aggregate.kpis.teachersSupportedFemale,
     learnersAssessed: aggregate.kpis.learnersAssessedUnique,
     improvementIndex:
-      aggregate.teachingLearningAlignment?.summary?.schoolImprovementIndex ?? null,
+      aggregate.teachingLearningAlignment?.summary?.teachingDelta ?? null,
   };
 }

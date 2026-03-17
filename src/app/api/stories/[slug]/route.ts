@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getStoryBySlug, incrementStoryViewCount } from "@/lib/db";
+import {
+    getStoryBySlugPostgres,
+    incrementStoryViewCountPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -10,14 +13,14 @@ export async function GET(
     { params }: { params: Params },
 ) {
     const { slug } = await params;
-    const story = getStoryBySlug(slug);
+    const story = await getStoryBySlugPostgres(slug);
 
     if (!story) {
         return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
     // Increment view count asynchronously
-    incrementStoryViewCount(story.id);
+    await incrementStoryViewCountPostgres(story.id);
 
     return NextResponse.json({ story });
 }

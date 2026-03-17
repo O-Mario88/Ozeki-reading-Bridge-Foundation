@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStoryBySlug, addStoryRating, getStoryRatingStats } from "@/lib/db";
+import {
+    addStoryRatingPostgres,
+    getStoryBySlugPostgres,
+    getStoryRatingStatsPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
     const slug = (await params).slug;
@@ -18,14 +22,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "Invalid rating" }, { status: 400 });
     }
 
-    const story = getStoryBySlug(slug);
+    const story = await getStoryBySlugPostgres(slug);
     if (!story) {
         return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
     try {
-        addStoryRating(story.id, stars, undefined, anonymousId);
-        const stats = getStoryRatingStats(story.id);
+        await addStoryRatingPostgres(story.id, stars, undefined, anonymousId);
+        const stats = await getStoryRatingStatsPostgres(story.id);
         return NextResponse.json({ success: true, stats });
     } catch (err: unknown) {
         console.error("Error adding rating:", err);

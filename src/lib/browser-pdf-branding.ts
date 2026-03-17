@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import { BRAND_LOGO_PATH, BRAND_ORG_NAME, BRAND_WATERMARK_OPACITY } from "@/lib/brand-identity";
 import { officialContact } from "@/lib/contact";
 import { getPdfThemeCss } from "@/lib/pdf-theme";
+import { getActiveOrganizationProfile } from "@/lib/server/postgres/repositories/organization-profile";
 
 const DEFAULT_FOOTER_NOTE =
   "Aggregated, privacy-protected operational document. Internal use only where applicable.";
@@ -31,26 +33,47 @@ function escapeHtml(input: string) {
     .replace(/'/g, "&#039;");
 }
 
-async function loadBrandLogoDataUri() {
-  try {
-    const logoBytes = await fs.readFile(BRAND_LOGO_PATH);
-    const base64 = logoBytes.toString("base64");
-    return `data:image/png;base64,${base64}`;
-  } catch {
-    return null;
+async function logoToDataUri(source: string | null) {
+  const candidate = source?.trim();
+  let logoBytes: Buffer;
+
+  if (!candidate) {
+    logoBytes = await fs.readFile(BRAND_LOGO_PATH);
+  } else if (/^https?:\/\//i.test(candidate)) {
+    const response = await fetch(candidate, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Could not fetch logo from ${candidate}`);
+    }
+    logoBytes = Buffer.from(await response.arrayBuffer());
+  } else if (candidate.startsWith("/")) {
+    logoBytes = await fs.readFile(path.join(process.cwd(), "public", candidate));
+  } else {
+    logoBytes = await fs.readFile(path.resolve(candidate));
   }
+
+  const base64 = logoBytes.toString("base64");
+  return `data:image/png;base64,${base64}`;
 }
 
 export async function buildBrowserPdfBranding(
   input: BrowserPdfBrandingInput,
 ): Promise<BrowserPdfBrandingPayload> {
-  const logoDataUri = await loadBrandLogoDataUri();
+  const profile = await getActiveOrganizationProfile();
+  const logoDataUri = await logoToDataUri(profile.logoStorageUrl || "/photos/logo.png").catch(() => null);
   const pdfThemeCss = await getPdfThemeCss();
   const safeTitle = escapeHtml(input.title);
   const safeSubtitle = input.subtitle ? escapeHtml(input.subtitle) : "";
   const safeDocumentNumber = input.documentNumber ? escapeHtml(input.documentNumber) : "";
   const safeFooterNote = escapeHtml(input.footerNote || DEFAULT_FOOTER_NOTE);
   const accentHex = input.accentHex || "#1f2a44";
+
+  const orgName = escapeHtml(profile.name || BRAND_ORG_NAME);
+  const address = escapeHtml(profile.address || officialContact.address);
+  const poBox = escapeHtml(profile.poBox || officialContact.postalAddress);
+  const telephone = escapeHtml(profile.telephone || officialContact.phoneDisplay);
+  const email = escapeHtml(profile.email || officialContact.email);
+  const tin = escapeHtml(profile.tin || officialContact.tin);
+  const registrationNumber = escapeHtml(profile.registrationNumber || officialContact.regNo);
 
   const css = `
     ${pdfThemeCss}
@@ -76,7 +99,7 @@ export async function buildBrowserPdfBranding(
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 46%;
+      width: 44%;
       opacity: var(--orbf-watermark-opacity);
       pointer-events: none;
       z-index: 0;
@@ -90,12 +113,11 @@ export async function buildBrowserPdfBranding(
     }
 
     .orbf-brand-header {
-      position: fixed;
-      top: 10mm;
-      left: 18mm;
-      right: 18mm;
+      position: relative;
+      margin: 10mm 18mm 10mm;
       text-align: center;
       z-index: 5;
+      page-break-inside: avoid;
     }
 
     .orbf-brand-header-logo {
@@ -190,9 +212,8 @@ export async function buildBrowserPdfBranding(
     .orbf-brand-main {
       position: relative;
       z-index: 2;
-      padding-top: 90mm;
-      padding-bottom: 34mm;
-      min-height: calc(100vh - 124mm);
+      margin: 0 18mm 34mm;
+      min-height: calc(100vh - 44mm);
     }
   `;
 
@@ -202,11 +223,11 @@ export async function buildBrowserPdfBranding(
     : "";
   const headerHtml = `
     <header class="orbf-brand-header">
-      ${logoDataUri ? `<img class="orbf-brand-header-logo" src="${logoDataUri}" alt="${escapeHtml(BRAND_ORG_NAME)} logo" />` : ""}
-      <p class="orbf-brand-org">${escapeHtml(BRAND_ORG_NAME)}</p>
-      <p class="orbf-brand-meta">${escapeHtml(officialContact.address)}</p>
-      <p class="orbf-brand-meta">${escapeHtml(`${officialContact.postalAddress} • ${officialContact.phoneDisplay} • ${officialContact.email}`)}</p>
-      <p class="orbf-brand-meta">${escapeHtml(`TIN ${officialContact.tin} • REG ${officialContact.regNo}`)}</p>
+      ${logoDataUri ? `<img class="orbf-brand-header-logo" src="${logoDataUri}" alt="${orgName} logo" />` : ""}
+      <p class="orbf-brand-org">${orgName}</p>
+      <p class="orbf-brand-meta">${address}</p>
+      <p class="orbf-brand-meta">${poBox} • ${telephone} • ${email}</p>
+      <p class="orbf-brand-meta">TIN ${tin} • REG ${registrationNumber}</p>
       <h1 class="orbf-brand-title">${safeTitle}</h1>
       ${safeDocumentNumber ? `<p class="orbf-brand-number">${safeDocumentNumber}</p>` : ""}
       ${safeSubtitle ? `<p class="orbf-brand-subtitle">${safeSubtitle}</p>` : ""}
@@ -216,8 +237,8 @@ export async function buildBrowserPdfBranding(
   const footerHtml = `
     <footer class="orbf-brand-footer">
       <div class="orbf-brand-footer-line"></div>
-      <p class="orbf-brand-footer-main">${escapeHtml(`${officialContact.address} • ${officialContact.phoneDisplay} • ${officialContact.email}`)}</p>
-      <p class="orbf-brand-footer-sub">${escapeHtml(`${officialContact.postalAddress} • TIN ${officialContact.tin} • REG ${officialContact.regNo}`)}</p>
+      <p class="orbf-brand-footer-main">${address} • ${telephone} • ${email}</p>
+      <p class="orbf-brand-footer-sub">${poBox} • TIN ${tin} • REG ${registrationNumber}</p>
       <p class="orbf-brand-footer-note">${safeFooterNote}</p>
     </footer>
   `;

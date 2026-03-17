@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { HomeSupportRequestModal } from "@/components/home/HomeSupportRequestModal";
-import { listPublishedPortalTestimonials } from "@/lib/db";
 import { organizationName, tagline } from "@/lib/content";
 import {
   INTELLIGENCE_LOOP,
@@ -9,6 +8,8 @@ import {
   PARTNERSHIP_OPTIONS,
   TRUST_LINKS,
 } from "@/lib/home-static-data";
+import { listPublishedPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
+import type { PortalTestimonialRecord } from "@/lib/types";
 import styles from "./homepage.module.css";
 
 export const revalidate = 300;
@@ -36,10 +37,10 @@ function clipQuote(text: string, maxChars: number) {
   return `${clean.slice(0, maxChars).trimEnd()}...`;
 }
 
-export default function HomePage() {
-  let testimonialRows: ReturnType<typeof listPublishedPortalTestimonials> = [];
+export default async function HomePage() {
+  let testimonialRows: PortalTestimonialRecord[] = [];
   try {
-    testimonialRows = listPublishedPortalTestimonials(90)
+    testimonialRows = (await listPublishedPortalTestimonialsPostgres(90))
       .filter(
         (item) =>
           item.sourceType === "training_feedback" &&

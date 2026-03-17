@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
+import { AI_GUARDRAILS, validateNarrative } from "@/lib/recommendations";
+import { getOpenAiServerConfig } from "@/lib/server/openai-config";
 import type { PublicImpactAggregate, ReportScope } from "@/lib/types";
 
 const MASTERY_DOMAIN_ORDER: Array<{
@@ -152,13 +154,13 @@ export async function generatePublicDashboardNarrative(
   reportScope: ReportScope = "Public"
 ): Promise<PublicDashboardNarrative> {
   const fallback = summarizeFallbackNarrative(aggregate);
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+  const openAiConfig = getOpenAiServerConfig("gpt-5.2-mini");
+  if (!openAiConfig.configured || !openAiConfig.apiKey) {
     return fallback;
   }
 
-  const model = process.env.OPENAI_REPORT_MODEL?.trim() || "gpt-5-mini";
-  const client = new OpenAI({ apiKey });
+  const model = openAiConfig.model;
+  const client = new OpenAI({ apiKey: openAiConfig.apiKey });
 
   const evidencePayload = {
     scope: aggregate.scope,
@@ -187,7 +189,8 @@ export async function generatePublicDashboardNarrative(
           role: "system",
           content:
             "You are a senior literacy impact analyst and report writer. Use only the provided evidence. Return JSON with keys: executiveSummary (string), keyHighlights (string[] up to 4), priorityActions (string[] up to 4), methodsNote (string), limitations (string). Write with executive-quality clarity, public-safe language, and professional donor-facing tone. Do not invent numbers or causal claims. Avoid learner identifiers. If evidence is missing, state Data not available." +
-            publicGuardrail,
+            publicGuardrail +
+            ` Keep each narrative field under ${AI_GUARDRAILS.maxWordsPerSection} words and avoid these phrases: ${AI_GUARDRAILS.bannedPhrases.join(", ")}.`,
         },
         {
           role: "user",
@@ -214,12 +217,24 @@ export async function generatePublicDashboardNarrative(
       return fallback;
     }
 
+    const safeExecutiveSummary = validateNarrative(executiveSummary).isValid
+      ? executiveSummary
+      : fallback.executiveSummary;
+    const safeMethodsNote = validateNarrative(methodsNote).isValid
+      ? methodsNote
+      : fallback.methodsNote;
+    const safeLimitations = validateNarrative(limitations).isValid
+      ? limitations
+      : fallback.limitations;
+    const safeHighlights = keyHighlights.filter((item) => validateNarrative(item).isValid);
+    const safePriorityActions = priorityActions.filter((item) => validateNarrative(item).isValid);
+
     return {
-      executiveSummary,
-      keyHighlights: keyHighlights.length > 0 ? keyHighlights : fallback.keyHighlights,
-      priorityActions: priorityActions.length > 0 ? priorityActions : fallback.priorityActions,
-      methodsNote: methodsNote || fallback.methodsNote,
-      limitations: limitations || fallback.limitations,
+      executiveSummary: safeExecutiveSummary,
+      keyHighlights: safeHighlights.length > 0 ? safeHighlights : fallback.keyHighlights,
+      priorityActions: safePriorityActions.length > 0 ? safePriorityActions : fallback.priorityActions,
+      methodsNote: safeMethodsNote || fallback.methodsNote,
+      limitations: safeLimitations || fallback.limitations,
       generatedWithAi: true,
       model,
     };

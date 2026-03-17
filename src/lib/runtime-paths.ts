@@ -1,35 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
+import { assertSqliteRuntimeAllowed } from "@/lib/db-runtime-policy";
 
 const DEFAULT_DATA_DIR = path.resolve(process.cwd(), "data");
 const TMP_FALLBACK_DATA_DIR = path.resolve("/tmp/ozeki-data");
-const DEFAULT_DB_FILE_NAME = "app.db";
 
 let cachedDataDir: string | null = null;
-let cachedDbFilePath: string | null = null;
 let dataDirWarningLogged = false;
-let dbPathWarningLogged = false;
-
-function resolveEnvDbPath() {
-  const explicit = process.env.SQLITE_DB_PATH?.trim() || process.env.DATABASE_PATH?.trim();
-  if (!explicit) {
-    return null;
-  }
-  return path.resolve(explicit);
-}
 
 function directoryExists(dir: string) {
   try {
     const stats = fs.statSync(dir);
     return stats.isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-function hasExistingDb(dir: string) {
-  try {
-    return fs.existsSync(path.join(dir, DEFAULT_DB_FILE_NAME));
   } catch {
     return false;
   }
@@ -60,18 +42,6 @@ function warnDataFallback(selectedDir: string, requestedDir: string | null) {
   }
 }
 
-function warnDbFallback(selectedPath: string, requestedPath: string) {
-  if (dbPathWarningLogged) {
-    return;
-  }
-  dbPathWarningLogged = true;
-  if (selectedPath !== requestedPath) {
-    console.warn(
-      `[runtime-paths] Using database path "${selectedPath}" because "${requestedPath}" was not writable.`,
-    );
-  }
-}
-
 function uniqueCandidates(values: Array<string | null>) {
   const seen = new Set<string>();
   const candidates: string[] = [];
@@ -93,29 +63,23 @@ export function getRuntimeDataDir() {
   const envDataDir = process.env.APP_DATA_DIR?.trim()
     ? path.resolve(process.env.APP_DATA_DIR.trim())
     : null;
-  const envDbPath = resolveEnvDbPath();
-  const envDbDir = envDbPath ? path.dirname(envDbPath) : null;
-  const requestedDir = envDataDir ?? envDbDir ?? DEFAULT_DATA_DIR;
+  const requestedDir = envDataDir ?? DEFAULT_DATA_DIR;
 
   const candidates = uniqueCandidates([
     envDataDir,
-    envDbDir,
     DEFAULT_DATA_DIR,
     TMP_FALLBACK_DATA_DIR,
   ]);
 
   const selectedDir = candidates.find((candidate) => {
     if (!candidate) return false;
-    // Prefer writable, but accept read-only if DB is already there (the DB layer has RW fallback)
-    const writable = canUseDirectory(candidate);
-    const existing = hasExistingDb(candidate);
-    return writable || existing;
+    return canUseDirectory(candidate);
   });
 
   if (!selectedDir) {
     console.error(`[runtime-paths] FAILED to find writable data directory. Candidates: ${candidates.join(", ")}`);
     throw new Error(
-      "[runtime-paths] Could not find a writable directory for runtime data. Set APP_DATA_DIR or SQLITE_DB_PATH to a writable path.",
+      "[runtime-paths] Could not find a writable directory for runtime data. Set APP_DATA_DIR to a writable path.",
     );
   }
 
@@ -126,24 +90,6 @@ export function getRuntimeDataDir() {
 }
 
 export function getRuntimeDbFilePath() {
-  if (cachedDbFilePath) {
-    return cachedDbFilePath;
-  }
-
-  const envDbPath = resolveEnvDbPath();
-  if (envDbPath) {
-    const envDbDir = path.dirname(envDbPath);
-    if (canUseDirectory(envDbDir) || hasExistingDb(envDbDir)) {
-      cachedDbFilePath = envDbPath;
-      return cachedDbFilePath;
-    }
-  }
-
-  const fallbackPath = path.join(getRuntimeDataDir(), DEFAULT_DB_FILE_NAME);
-  if (envDbPath) {
-    warnDbFallback(fallbackPath, envDbPath);
-  }
-  cachedDbFilePath = fallbackPath;
-  console.log(`[runtime-paths] Database path: ${cachedDbFilePath}`);
-  return cachedDbFilePath;
+  assertSqliteRuntimeAllowed("SQLite runtime database path requested.");
+  throw new Error("[runtime-paths] SQLite runtime database paths are disabled. Use PostgreSQL (DATABASE_URL).");
 }

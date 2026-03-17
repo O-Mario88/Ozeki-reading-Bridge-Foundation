@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStoryBySlug, addStoryComment, listStoryComments } from "@/lib/db";
+import {
+    addStoryCommentPostgres,
+    getStoryBySlugPostgres,
+    listStoryCommentsPostgres,
+} from "@/lib/server/postgres/repositories/public-content";
 
 const BAD_WORDS = /fuck|shit|bitch|asshole|cunt|dick/i;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
     const slug = (await params).slug;
-    const story = getStoryBySlug(slug);
+    const story = await getStoryBySlugPostgres(slug);
     if (!story) {
         return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
-    const comments = listStoryComments(story.id);
+    const comments = await listStoryCommentsPostgres(story.id);
     return NextResponse.json({ comments });
 }
 
@@ -39,13 +43,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "Your comment contains inappropriate language." }, { status: 422 });
     }
 
-    const story = getStoryBySlug(slug);
+    const story = await getStoryBySlugPostgres(slug);
     if (!story) {
         return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
     try {
-        const newComment = addStoryComment(story.id, commentText, displayName, undefined, anonymousId);
+        const newComment = await addStoryCommentPostgres(
+            story.id,
+            commentText,
+            displayName,
+            undefined,
+            anonymousId,
+        );
         return NextResponse.json({ success: true, comment: newComment });
     } catch (err: unknown) {
         console.error("Error adding comment:", err);

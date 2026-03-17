@@ -1,10 +1,19 @@
 import type { Metadata } from "next";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 import "@/styles/finance-theme.css";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { ModalAccessibilityManager } from "@/components/ModalAccessibilityManager";
 import { organizationName, tagline } from "@/lib/content";
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["100", "300", "400", "500", "700", "900"],
+  display: "swap",
+  variable: "--font-roboto",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ozekireadingbridge.org"),
@@ -43,15 +52,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="bg-brand-background text-brand-text antialiased">
+      <body className={`${roboto.variable} bg-brand-background text-brand-text antialiased`}>
+        <ModalAccessibilityManager />
         <ServiceWorkerRegister />
         <SiteHeader />
         <main className="dashboard-inspired-main min-h-[calc(100vh-var(--header-height))]">{children}</main>

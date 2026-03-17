@@ -1,8 +1,8 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { getPublishedPortalTestimonialById } from "@/lib/db";
 import { createMediaFileResponse, resolveMimeType } from "@/lib/media-response";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import { getPublishedPortalTestimonialByIdPostgres } from "@/lib/server/postgres/repositories/public-content";
 
 export const runtime = "nodejs";
 
@@ -30,7 +30,7 @@ export async function GET(
   try {
     const params = await context.params;
     const id = toId(params.id);
-    const testimonial = getPublishedPortalTestimonialById(id);
+    const testimonial = await getPublishedPortalTestimonialByIdPostgres(id);
     if (!testimonial || !testimonial.photoStoredPath || !testimonial.photoMimeType) {
       return NextResponse.json({ error: "Testimonial photo not found." }, { status: 404 });
     }
