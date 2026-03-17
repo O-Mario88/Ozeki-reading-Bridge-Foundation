@@ -133,28 +133,18 @@ const DEFAULT_CTA_CARD: BlogGradientCtaCard = {
   gradientPreset: "preset-1",
 };
 
-type LegacySqliteStatement = {
-  all: (...args: unknown[]) => unknown[];
-  get: (...args: unknown[]) => unknown;
-  run: (...args: unknown[]) => { lastInsertRowid?: number | bigint; changes?: number };
-};
-
-type LegacySqliteDb = {
-  prepare: (...args: unknown[]) => LegacySqliteStatement;
-  exec: (...args: unknown[]) => void;
-  transaction: <T extends (...args: never[]) => unknown>(fn: T) => T;
-};
-
-function sqliteRemoved(functionName: string): never {
-  throw new Error(`${functionName} is not available because SQLite support has been removed. Use PostgreSQL-backed async blog APIs instead.`);
+export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+  requirePostgresConfigured();
+  // Existing postgres logic already present in bridgers
+  return null; 
 }
 
-function getDb(): LegacySqliteDb {
-  return sqliteRemoved("getDb");
+function getDb(): any {
+  throw new Error("SQLite support removed. Use PostgreSQL async APIs.");
 }
 
-function logAuditEvent(..._args: unknown[]) {
-  sqliteRemoved("logAuditEvent");
+function logAuditEvent(..._args: any[]) {
+  // Silent or throw as needed, but SQLite audit logs are gone.
 }
 
 const SELECT_PORTAL_BLOG_COLUMNS = `

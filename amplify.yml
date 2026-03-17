@@ -8,7 +8,7 @@ frontend:
         - node -v
         - npm -v
         - npm ci
-        - npm rebuild better-sqlite3
+        - npm ci
     build:
       commands:
         - export NODE_OPTIONS="--max-old-space-size=8192"

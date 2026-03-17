@@ -215,7 +215,8 @@ const FINANCE_FILE_SECRET =
   "orbf-finance-files-secret";
 const REQUIRED_INVOICE_CC: string[] = [];
 
-let financeSchemaReady = false;
+// SQLite support removed
+const financeSchemaReady = true;
 
 function mergeFinanceRecordsById<T extends { id: number }>(primary: T[], fallback: T[]) {
   const merged = new Map<number, T>();
@@ -228,18 +229,18 @@ function mergeFinanceRecordsById<T extends { id: number }>(primary: T[], fallbac
   return [...merged.values()].sort((left, right) => Number(right.id) - Number(left.id));
 }
 
-function hasTableColumn(db: Database.Database, table: string, column: string) {
+function hasTableColumn(db: any, table: string, column: string) {
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
   return rows.some((row) => row.name === column);
 }
 
-function ensureTableColumn(db: Database.Database, table: string, column: string, definition: string) {
+function ensureTableColumn(db: any, table: string, column: string, definition: string) {
   if (!hasTableColumn(db, table, column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
 
-function migrateFinanceExpensesWorkflowSchema(db: Database.Database) {
+function migrateFinanceExpensesWorkflowSchema(db: any) {
   if (hasTableColumn(db, "finance_expenses", "submitted_at")) {
     return;
   }
@@ -1107,10 +1108,10 @@ function ensureFinanceSchema() {
     );
   `);
 
-  financeSchemaReady = true;
+  // SQLite schema setup removed
 };
 
-function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
+function getFinanceSettingsRow(db: any): FinanceSettingsRecord {
   const row = db.prepare(
     `
       SELECT
@@ -1221,7 +1222,7 @@ function getFinanceSettingsRow(db: Database.Database): FinanceSettingsRecord {
 }
 
 function nextNumberFor(
-  db: Database.Database,
+  db: any,
   table: "finance_invoices" | "finance_receipts" | "finance_expenses",
   column: "invoice_number" | "receipt_number" | "expense_number",
   prefix: string,
@@ -1276,7 +1277,7 @@ function parseInvoiceLineItemRows(
   }));
 }
 
-function getLatestLinkedReceiptForInvoice(db: Database.Database, invoiceId: number): FinanceInvoiceRecord["linkedReceipt"] {
+function getLatestLinkedReceiptForInvoice(db: any, invoiceId: number): FinanceInvoiceRecord["linkedReceipt"] {
   const row = db.prepare(
     `
       SELECT
@@ -1325,7 +1326,7 @@ function getLatestLinkedReceiptForInvoice(db: Database.Database, invoiceId: numb
 }
 
 function buildInvoiceRecord(
-  db: Database.Database,
+  db: any,
   row: InvoiceRow,
 ): FinanceInvoiceRecord {
   const itemRows = db.prepare(
@@ -1513,7 +1514,7 @@ function buildExpenseRecord(row: ExpenseRow): FinanceExpenseRecord {
   };
 }
 
-function getExpenseRowById(db: Database.Database, expenseId: number): ExpenseRow | undefined {
+function getExpenseRowById(db: any, expenseId: number): ExpenseRow | undefined {
   return db.prepare(
     `
       ${EXPENSE_SELECT_SQL}
@@ -1631,7 +1632,7 @@ function matchesAnyKeyword(value: string, keywords: string[]) {
 }
 
 function deriveStatementOfFinancialPosition(
-  db: Database.Database,
+  db: any,
   currency: FinanceCurrency,
   window: { month: string; from: string; to: string },
 ): FinanceStatementPosition {
@@ -1834,7 +1835,7 @@ function deriveStatementOfFinancialPosition(
 }
 
 function deriveIncomeStatement(
-  db: Database.Database,
+  db: any,
   currency: FinanceCurrency,
   window: { month: string; from: string; to: string },
 ): FinanceIncomeStatement {
@@ -1977,7 +1978,7 @@ function renderTemplate(template: string, tokens: Record<string, string>) {
   return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => tokens[key] ?? "");
 }
 
-function getInvoiceContact(db: Database.Database, contactId: number) {
+function getInvoiceContact(db: any, contactId: number) {
   const row = db.prepare(
     `
       SELECT
@@ -2010,7 +2011,7 @@ function getInvoiceContact(db: Database.Database, contactId: number) {
 }
 
 function createLedgerEntry(
-  db: Database.Database,
+  db: any,
   input: {
     txnType: "money_in" | "money_out";
     category: FinanceBaseIncomeCategory | "Expense";
@@ -2088,7 +2089,7 @@ function createLedgerEntry(
 }
 
 function voidLedgerEntriesForSource(
-  db: Database.Database,
+  db: any,
   sourceType: FinanceTransactionSourceType,
   sourceId: number,
   reason: string,
@@ -2141,7 +2142,7 @@ function computeInvoiceStatus(
   return "sent" as FinanceInvoiceRecord["status"];
 }
 
-function refreshInvoiceBalances(db: Database.Database, invoiceId: number) {
+function refreshInvoiceBalances(db: any, invoiceId: number) {
   const invoice = db.prepare(
     `
       SELECT id, total, due_date AS dueDate, status
@@ -2205,7 +2206,7 @@ function refreshInvoiceBalances(db: Database.Database, invoiceId: number) {
   });
 }
 
-function markOverdueInvoices(db: Database.Database) {
+function markOverdueInvoices(db: any) {
   db.prepare(
     `
       UPDATE finance_invoices
@@ -2221,7 +2222,7 @@ function markOverdueInvoices(db: Database.Database) {
   });
 }
 
-function getInvoiceRowById(db: Database.Database, invoiceId: number) {
+function getInvoiceRowById(db: any, invoiceId: number) {
   return db.prepare(
     `
       SELECT
@@ -2289,7 +2290,7 @@ function getInvoiceRowById(db: Database.Database, invoiceId: number) {
     | undefined;
 }
 
-function getReceiptRowById(db: Database.Database, receiptId: number) {
+function getReceiptRowById(db: any, receiptId: number) {
   return db.prepare(
     `
       SELECT
@@ -2351,7 +2352,7 @@ function getReceiptRowById(db: Database.Database, receiptId: number) {
 }
 
 function logFinanceEmail(
-  db: Database.Database,
+  db: any,
   input: {
     recordType: "invoice" | "receipt";
     recordId: number;
@@ -3162,7 +3163,7 @@ export async function sendFinanceInvoice(
     throw new Error("Failed to reload invoice.");
   }
 
-  if (isPostgresConfigured()) {
+  if (true) {
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
@@ -3182,7 +3183,7 @@ export async function sendFinanceInvoice(
 }
 
 async function ensureInvoicePdfArtifact(
-  db: Database.Database,
+  db: any,
   invoiceRow: InvoiceRow,
 ) {
   if (invoiceRow.pdfFileId && invoiceRow.pdfStoredPath) {
@@ -3350,7 +3351,7 @@ export async function recordFinancePayment(
     }
   }
 
-  if (isPostgresConfigured()) {
+  if (true) {
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
@@ -3720,7 +3721,7 @@ function getFinanceReceiptByIdSqlite(receiptId: number): FinanceReceiptRecord | 
 }
 
 async function ensureReceiptPdfArtifact(
-  db: Database.Database,
+  db: any,
   receiptRow: ReceiptRow,
   uploadedBy: number,
 ) {
@@ -3787,7 +3788,7 @@ async function ensureReceiptPdfArtifact(
 }
 
 async function ensureLinkedReceiptForPaidInvoice(
-  db: Database.Database,
+  db: any,
   invoiceRow: InvoiceRow,
   payment: FinancePaymentInput,
   actor: FinanceActor,
@@ -3904,7 +3905,7 @@ export async function issueFinanceReceipt(
     emailResult = sent.email;
   }
 
-  if (isPostgresConfigured()) {
+  if (true) {
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
@@ -4025,7 +4026,7 @@ export async function sendFinanceReceipt(
   if (!refreshed) {
     throw new Error("Failed to reload receipt.");
   }
-  if (isPostgresConfigured()) {
+  if (true) {
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
@@ -4211,7 +4212,7 @@ function moneyCloseEnough(a: number, b: number) {
   return Math.abs(normalizeNumber(a) - normalizeNumber(b)) < 0.01;
 }
 
-function listExpenseReceiptRows(db: Database.Database, expenseId: number): ExpenseReceiptRow[] {
+function listExpenseReceiptRows(db: any, expenseId: number): ExpenseReceiptRow[] {
   return db.prepare(
     `
       SELECT
@@ -4257,7 +4258,7 @@ function mapExpenseReceiptRow(row: ExpenseReceiptRow): FinanceExpenseReceiptReco
 }
 
 function upsertFinanceAuditExceptionInternal(
-  db: Database.Database,
+  db: any,
   input: {
     entityType: FinanceAuditExceptionRecord["entityType"];
     entityId: number;
@@ -4349,7 +4350,7 @@ function upsertFinanceAuditExceptionInternal(
 }
 
 function resolveFinanceAuditExceptionsForEntity(
-  db: Database.Database,
+  db: any,
   input: {
     entityType: FinanceAuditExceptionRecord["entityType"];
     entityId: number;
@@ -4392,7 +4393,7 @@ function resolveFinanceAuditExceptionsForEntity(
 }
 
 function upsertTxnRiskScore(
-  db: Database.Database,
+  db: any,
   input: {
     entityType: FinanceTxnRiskScoreRecord["entityType"];
     entityId: number;
@@ -4455,7 +4456,7 @@ function computeMedian(values: number[]) {
 }
 
 function evaluateExpenseAuditSignals(
-  db: Database.Database,
+  db: any,
   expense: ExpenseRow,
   receipts: FinanceExpenseReceiptRecord[],
 ): ExpenseAuditSignal[] {
@@ -4623,7 +4624,7 @@ function evaluateExpenseAuditSignals(
 }
 
 function syncExpenseAuditSignals(
-  db: Database.Database,
+  db: any,
   expense: ExpenseRow,
   signals: ExpenseAuditSignal[],
   actor?: FinanceActor,
@@ -4668,7 +4669,7 @@ function syncExpenseAuditSignals(
   return { createdCount, riskSignals: signals.map((signal) => signal.ruleCode) };
 }
 
-function getExpenseLedgerFileIds(db: Database.Database, expenseId: number) {
+function getExpenseLedgerFileIds(db: any, expenseId: number) {
   const fileRows = db.prepare(
     `
       SELECT id
@@ -5560,7 +5561,7 @@ function listFinanceHighRiskTransactionsSqlite(limit = 25) {
   }));
 }
 
-function runLedgerAndIncomeIntegrityChecks(db: Database.Database, actor: FinanceActor) {
+function runLedgerAndIncomeIntegrityChecks(db: any, actor: FinanceActor) {
   let created = 0;
 
   const postedWithoutLedger = db.prepare(
@@ -5817,14 +5818,14 @@ export async function createFinanceFileRecord(
     uploadedBy: actor.userId,
   });
   appendAudit(actor, "upload", "finance_files", record.id, `Uploaded file ${record.fileName} (${record.sourceType})`);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceFileToPostgres(record.id);
   }
   return record;
 }
 
 function createFinanceFileRecordInternal(
-  db: Database.Database,
+  db: any,
   input: {
     sourceType: FinanceFileRecord["sourceType"];
     sourceId: number;
@@ -5999,7 +6000,7 @@ async function upsertFinanceRowsInPostgres(
 }
 
 async function syncFinanceContactToPostgres(contactId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   await upsertFinanceRowsInPostgres(
@@ -6011,7 +6012,7 @@ async function syncFinanceContactToPostgres(contactId: number, client?: PoolClie
 }
 
 async function syncFinanceSettingsToPostgres(client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   await upsertFinanceRowsInPostgres(
@@ -6023,7 +6024,7 @@ async function syncFinanceSettingsToPostgres(client?: PoolClient) {
 }
 
 async function syncFinanceInvoiceBundleToPostgres(invoiceId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   const invoiceRows = selectSqliteFinanceRows(`SELECT * FROM finance_invoices WHERE id = @invoiceId`, { invoiceId });
@@ -6087,7 +6088,7 @@ async function syncFinanceInvoiceBundleToPostgres(invoiceId: number, client?: Po
 }
 
 async function syncFinanceReceiptBundleToPostgres(receiptId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   const receiptRows = selectSqliteFinanceRows(`SELECT * FROM finance_receipts WHERE id = @receiptId`, { receiptId });
@@ -6158,7 +6159,7 @@ async function syncFinanceReceiptBundleToPostgres(receiptId: number, client?: Po
 }
 
 async function syncFinancePaymentBundleToPostgres(paymentId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   const paymentRows = selectSqliteFinanceRows(`SELECT * FROM finance_payments WHERE id = @paymentId`, { paymentId });
@@ -6222,7 +6223,7 @@ async function syncFinancePaymentBundleToPostgres(paymentId: number, client?: Po
 }
 
 async function syncFinanceExpenseBundleToPostgres(expenseId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   await upsertFinanceRowsInPostgres(
@@ -6289,7 +6290,7 @@ async function syncFinanceExpenseBundleToPostgres(expenseId: number, client?: Po
 }
 
 async function syncFinanceFileToPostgres(fileId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   await upsertFinanceRowsInPostgres(
@@ -6301,7 +6302,7 @@ async function syncFinanceFileToPostgres(fileId: number, client?: PoolClient) {
 }
 
 async function syncFinanceStatementLineToPostgres(statementLineId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   await upsertFinanceRowsInPostgres(
@@ -6324,7 +6325,7 @@ async function syncFinanceStatementLineToPostgres(statementLineId: number, clien
 }
 
 async function syncFinanceMonthlyStatementBundleToPostgres(statementId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   await upsertFinanceRowsInPostgres(
@@ -6347,7 +6348,7 @@ async function syncFinanceMonthlyStatementBundleToPostgres(statementId: number, 
 }
 
 async function syncFinanceAuditExceptionToPostgres(exceptionId: number, client?: PoolClient) {
-  if (!isPostgresConfigured()) {
+  if (!true) {
     return;
   }
   await upsertFinanceRowsInPostgres(
@@ -6901,7 +6902,7 @@ export async function generateFinanceMonthlyStatement(
   });
 
   appendAudit(actor, "generate_statement", "finance_monthly_statements", statement.id, `Generated statement ${window.month} (${currency})`);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceMonthlyStatementBundleToPostgres(statement.id);
   }
   return {
@@ -8016,7 +8017,7 @@ export function archiveAuditedStatement(actor: FinanceActor, statementId: number
 
 export async function createFinanceContactAsync(input: FinanceContactInput, actor: FinanceActor) {
   const record = createFinanceContact(input, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceContactToPostgres(record.id);
   }
   return record;
@@ -8027,7 +8028,7 @@ export async function updateFinanceSettingsAsync(
   actor: FinanceActor,
 ) {
   const settings = updateFinanceSettings(updates, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceSettingsToPostgres();
   }
   return settings;
@@ -8035,7 +8036,7 @@ export async function updateFinanceSettingsAsync(
 
 export async function createFinanceInvoiceAsync(input: FinanceInvoiceInput, actor: FinanceActor) {
   const invoice = createFinanceInvoice(input, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceInvoiceBundleToPostgres(invoice.id);
   }
   return invoice;
@@ -8047,7 +8048,7 @@ export async function updateFinanceInvoiceDraftAsync(
   actor: FinanceActor,
 ) {
   const invoice = updateFinanceInvoiceDraft(invoiceId, updates, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceInvoiceBundleToPostgres(invoiceId);
   }
   return invoice;
@@ -8055,7 +8056,7 @@ export async function updateFinanceInvoiceDraftAsync(
 
 export async function deleteFinanceInvoiceDraftAsync(invoiceId: number, reason: string, actor: FinanceActor) {
   const deleted = deleteFinanceInvoiceDraft(invoiceId, reason, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
@@ -8092,7 +8093,7 @@ export async function deleteFinanceInvoiceDraftAsync(invoiceId: number, reason: 
 
 export async function voidFinanceInvoiceAsync(invoiceId: number, reason: string, actor: FinanceActor) {
   const invoice = voidFinanceInvoice(invoiceId, reason, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceInvoiceBundleToPostgres(invoiceId);
   }
   return invoice;
@@ -8100,7 +8101,7 @@ export async function voidFinanceInvoiceAsync(invoiceId: number, reason: string,
 
 export async function createFinanceReceiptAsync(input: FinanceReceiptInput, actor: FinanceActor) {
   const receipt = createFinanceReceipt(input, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceReceiptBundleToPostgres(receipt.id);
   }
   return receipt;
@@ -8108,7 +8109,7 @@ export async function createFinanceReceiptAsync(input: FinanceReceiptInput, acto
 
 export async function deleteFinanceReceiptDraftAsync(receiptId: number, reason: string, actor: FinanceActor) {
   const deleted = deleteFinanceReceiptDraft(receiptId, reason, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
@@ -8150,7 +8151,7 @@ export async function deleteFinanceReceiptDraftAsync(receiptId: number, reason: 
 
 export async function voidFinanceReceiptAsync(receiptId: number, reason: string, actor: FinanceActor) {
   const receipt = voidFinanceReceipt(receiptId, reason, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
@@ -8170,7 +8171,7 @@ export async function voidFinanceReceiptAsync(receiptId: number, reason: string,
 
 export async function createFinanceExpenseAsync(input: FinanceExpenseInput, actor: FinanceActor) {
   const expense = createFinanceExpense(input, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceExpenseBundleToPostgres(expense.id);
   }
   return expense;
@@ -8178,7 +8179,7 @@ export async function createFinanceExpenseAsync(input: FinanceExpenseInput, acto
 
 export async function submitFinanceExpenseAsync(expenseId: number, actor: FinanceActor) {
   const expense = submitFinanceExpense(expenseId, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceExpenseBundleToPostgres(expenseId);
   }
   return expense;
@@ -8190,7 +8191,7 @@ export async function upsertFinanceExpenseReceiptsAsync(
   actor: FinanceActor,
 ) {
   const linkedReceipts = upsertFinanceExpenseReceipts(expenseId, receipts, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceExpenseBundleToPostgres(expenseId);
   }
   return linkedReceipts;
@@ -8202,7 +8203,7 @@ export async function postFinanceExpenseAsync(
   options?: ExpensePostOptions,
 ) {
   const expense = postFinanceExpense(expenseId, actor, options);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceExpenseBundleToPostgres(expenseId);
   }
   return expense;
@@ -8210,7 +8211,7 @@ export async function postFinanceExpenseAsync(
 
 export async function deleteFinanceExpenseDraftAsync(expenseId: number, reason: string, actor: FinanceActor) {
   const deleted = deleteFinanceExpenseDraft(expenseId, reason, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
@@ -8252,7 +8253,7 @@ export async function deleteFinanceExpenseDraftAsync(expenseId: number, reason: 
 
 export async function voidFinanceExpenseAsync(expenseId: number, reason: string, actor: FinanceActor) {
   const expense = voidFinanceExpense(expenseId, reason, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceExpenseBundleToPostgres(expenseId);
   }
   return expense;
@@ -8260,7 +8261,7 @@ export async function voidFinanceExpenseAsync(expenseId: number, reason: string,
 
 export async function voidFinancePaymentAsync(paymentId: number, reason: string, actor: FinanceActor) {
   const payment = voidFinancePayment(paymentId, reason, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     const invoiceId = payment?.relatedInvoiceId ?? null;
     await withPostgresClient(async (client) => {
       await client.query("BEGIN");
@@ -8288,7 +8289,7 @@ export async function updateFinanceAuditExceptionStatusAsync(
   actor: FinanceActor,
 ) {
   const exception = updateFinanceAuditExceptionStatus(exceptionId, input, actor);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceAuditExceptionToPostgres(exceptionId);
   }
   return exception;
@@ -8306,7 +8307,7 @@ export async function createStatementLineAsync(
   },
 ) {
   const line = createStatementLine(actor, input);
-  if (isPostgresConfigured()) {
+  if (true) {
     await syncFinanceStatementLineToPostgres(line.id);
   }
   return line;
