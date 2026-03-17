@@ -3643,9 +3643,6 @@ export function PortalModuleManager({
             if (!Number.isInteger(participantSchoolId) || participantSchoolId <= 0 || !schoolsById.has(participantSchoolId)) {
               return `Participant ${index + 1}: select a valid school account.`;
             }
-            if (participantSchoolId !== selectedSchoolId) {
-              return `Participant ${index + 1}: participant must belong to the selected school.`;
-            }
             if (!participant.role) {
               return `Participant ${index + 1}: role is required.`;
             }
@@ -3943,7 +3940,11 @@ export function PortalModuleManager({
         const participantRows = trainingParticipants
           .filter((row) => rowHasTrainingParticipantData(row))
           .map((row) => {
-            const mappedSchool = selectedSchool ?? null;
+            const participantSchoolId = Number(row.schoolAccountId);
+            const mappedSchool =
+              Number.isInteger(participantSchoolId) && participantSchoolId > 0
+                ? schoolsById.get(participantSchoolId) ?? null
+                : selectedSchool ?? null;
             return {
               contactId: row.contactId.trim() ? Number(row.contactId.trim()) : null,
               contactUid: row.contactUid.trim() || null,

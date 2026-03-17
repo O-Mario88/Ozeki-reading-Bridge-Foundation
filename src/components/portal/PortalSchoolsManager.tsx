@@ -305,6 +305,7 @@ export function PortalSchoolsManager({
     const payload = {
       name: String(formData.get("name") ?? ""),
       country: String(formData.get("country") ?? "Uganda"),
+      region,
       district,
       subCounty: String(formData.get("subCounty") ?? ""),
       parish: String(formData.get("parish") ?? ""),

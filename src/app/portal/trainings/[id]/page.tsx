@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalCrmProfileView } from "@/components/portal/crm/PortalCrmProfileView";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
@@ -29,6 +30,28 @@ export default async function PortalTrainingProfilePage({ params }: PageProps) {
       activeHref="/portal/trainings"
       title={profile.title}
       description={profile.subtitle ?? undefined}
+      actions={
+        <div className="action-row">
+          <Link href={`/portal/trainings/participants/new?trainingId=${trainingId}`} className="button">
+            Add Participant
+          </Link>
+          <Link href={`/portal/trainings/import-participants?trainingId=${trainingId}`} className="button button-ghost">
+            Import Participants
+          </Link>
+          <Link
+            href={`/api/import/templates/training-participants.xlsx?trainingId=${trainingId}`}
+            className="button button-ghost"
+          >
+            Download Excel Template
+          </Link>
+          <Link
+            href={`/api/import/templates/training-participants.csv?trainingId=${trainingId}`}
+            className="button button-ghost"
+          >
+            Download CSV Template
+          </Link>
+        </div>
+      }
     >
       <PortalCrmProfileView profile={profile} />
     </PortalShell>

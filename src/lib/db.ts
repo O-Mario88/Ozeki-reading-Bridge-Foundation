@@ -11060,11 +11060,16 @@ function normalizeLinkedPayloadPostgresLite(
     const normalizedRows = participantRows.map((row) => {
       const gender = normalizeTeacherGender(row.gender) ?? String(row.gender ?? "").trim();
       const role = normalizeParticipantRole(row.role);
+      const participantSchoolIdRaw = Number(row.schoolAccountId ?? row.school_id ?? 0);
+      const participantSchoolId =
+        Number.isInteger(participantSchoolIdRaw) && participantSchoolIdRaw > 0
+          ? participantSchoolIdRaw
+          : fallbackSchoolId;
       return {
         ...row,
         role,
         gender,
-        schoolAccountId: fallbackSchoolId,
+        schoolAccountId: participantSchoolId,
       };
     });
 
@@ -11174,7 +11179,12 @@ async function normalizeLinkedPayloadPostgres(
     const normalizedRows = await withClient(async (pgClient) =>
       Promise.all(
         participantRows.map(async (row) => {
-          const contact = await resolveActivityContactPostgres(pgClient, row, fallbackSchoolId);
+          const participantSchoolIdRaw = Number(row.schoolAccountId ?? row.school_id ?? 0);
+          const participantSchoolId =
+            Number.isInteger(participantSchoolIdRaw) && participantSchoolIdRaw > 0
+              ? participantSchoolIdRaw
+              : fallbackSchoolId;
+          const contact = await resolveActivityContactPostgres(pgClient, row, participantSchoolId);
           const gender =
             contact.gender === "Male" || contact.gender === "Female"
               ? contact.gender
@@ -11190,7 +11200,7 @@ async function normalizeLinkedPayloadPostgres(
             teacherUid: contact.teacherUid ?? String(row.teacherUid ?? "").trim(),
             role,
             gender,
-            schoolAccountId: fallbackSchoolId,
+            schoolAccountId: participantSchoolId,
           };
         }),
       ),
@@ -13257,6 +13267,11 @@ async function resolveActivityContactPostgres(
   row: Record<string, unknown>,
   schoolId: number,
 ) {
+  const participantSchoolIdRaw = Number(row.schoolAccountId ?? row.school_id ?? 0);
+  const scopedSchoolId =
+    Number.isInteger(participantSchoolIdRaw) && participantSchoolIdRaw > 0
+      ? participantSchoolIdRaw
+      : schoolId;
   const contactId = Number(row.contactId ?? row.contact_id ?? 0);
   const contactUid = String(row.contactUid ?? row.contact_uid ?? "").trim();
   const teacherUid = String(row.teacherUid ?? row.teacher_uid ?? "").trim();
@@ -13280,7 +13295,7 @@ async function resolveActivityContactPostgres(
           AND contact_id = $2
         LIMIT 1
       `,
-      [schoolId, contactId],
+      [scopedSchoolId, contactId],
     );
   } else if (contactUid) {
     result = await client.query(
@@ -13299,7 +13314,7 @@ async function resolveActivityContactPostgres(
           AND trim(COALESCE(contact_uid, '')) = trim($2)
         LIMIT 1
       `,
-      [schoolId, contactUid],
+      [scopedSchoolId, contactUid],
     );
   } else if (teacherUid) {
     result = await client.query(
@@ -13318,7 +13333,7 @@ async function resolveActivityContactPostgres(
           AND trim(COALESCE(teacher_uid, '')) = trim($2)
         LIMIT 1
       `,
-      [schoolId, teacherUid],
+      [scopedSchoolId, teacherUid],
     );
   } else if (participantName) {
     result = await client.query(
@@ -13337,7 +13352,7 @@ async function resolveActivityContactPostgres(
           AND lower(trim(full_name)) = lower(trim($2))
         LIMIT 1
       `,
-      [schoolId, participantName],
+      [scopedSchoolId, participantName],
     );
   } else {
     throw new Error("Training participant must be linked to a school contact.");
@@ -13662,7 +13677,12 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
   if (args.module === "training") {
     const participantRows = asRecordArray(args.payload.participants);
     for (const row of participantRows) {
-      const contact = await resolveActivityContactPostgres(args.client, row, args.schoolId);
+      const participantSchoolIdRaw = Number(row.schoolAccountId ?? row.school_id ?? 0);
+      const participantSchoolId =
+        Number.isInteger(participantSchoolIdRaw) && participantSchoolIdRaw > 0
+          ? participantSchoolIdRaw
+          : args.schoolId;
+      const contact = await resolveActivityContactPostgres(args.client, row, participantSchoolId);
       const roleAtTime = normalizeParticipantRole(
         row.role ?? normalizeContactRoleFromCategory((contact.category ?? "Teacher") as SchoolContactCategory),
       );
@@ -13670,6 +13690,21 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
         contact.gender === "Male" || contact.gender === "Female"
           ? contact.gender
           : normalizeTeacherGender(row.gender);
+      const schoolSnapshotResult = await args.client.query(
+        `
+          SELECT
+            name,
+            COALESCE(region, '') AS region,
+            COALESCE(district, '') AS district
+          FROM schools_directory
+          WHERE id = $1
+          LIMIT 1
+        `,
+        [participantSchoolId],
+      );
+      const schoolSnapshot = schoolSnapshotResult.rows[0] as
+        | { name?: string | null; region?: string | null; district?: string | null }
+        | undefined;
       await args.client.query(
         `
           INSERT INTO portal_training_attendance (
@@ -13692,17 +13727,24 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
             mobile_number,
             school_name_snapshot,
             school_region_snapshot,
-            school_district_snapshot
+            school_district_snapshot,
+            attendance_status,
+            attended_from,
+            attended_to,
+            certificate_status,
+            notes,
+            updated_at
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+            $21, $22::date, $23::date, $24, $25, NOW()
           )
         `,
         [
           args.recordId,
-          args.schoolId,
+          participantSchoolId,
           contact.contactId,
           contact.contactUid ?? null,
-          `TP-${args.recordId}-${contact.contactId}`,
+          String(row.participantExternalId ?? row.participantCode ?? "").trim() || `TP-${args.recordId}-${contact.contactId}`,
           contact.fullName,
           roleAtTime,
           String(row.participantType ?? args.payload.deliveryMode ?? "In Person").trim() || "In Person",
@@ -13715,9 +13757,14 @@ async function syncGenericPortalRecordLinkagesPostgres(args: {
           contact.phone ?? (String(row.phoneContact ?? row.phone ?? "").trim() || null),
           contact.email ?? (String(row.email ?? "").trim() || null),
           String(row.phoneContact ?? row.mobileNumber ?? row.phone ?? "").trim() || contact.phone || null,
-          String(args.payload.schoolName ?? args.payload.schoolAttachedTo ?? "").trim() || null,
-          String(args.payload.region ?? "").trim() || null,
-          String(args.payload.district ?? "").trim() || null,
+          String(schoolSnapshot?.name ?? row.schoolAttachedTo ?? args.payload.schoolName ?? "").trim() || null,
+          String(schoolSnapshot?.region ?? "").trim() || null,
+          String(schoolSnapshot?.district ?? "").trim() || null,
+          String(row.attendanceStatus ?? (row.attended === false ? "Registered" : "Attended")).trim() || "Attended",
+          String(row.attendedFrom ?? "").trim() || null,
+          String(row.attendedTo ?? "").trim() || null,
+          String(row.certificateStatus ?? "Pending").trim() || "Pending",
+          String(row.notes ?? "").trim() || null,
         ],
       );
     }

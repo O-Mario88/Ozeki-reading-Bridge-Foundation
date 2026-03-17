@@ -37,6 +37,8 @@
 ## CI/Pre-Deploy
 - AWS build command:
   - `npm run build:aws`
+- General CI verify (artifact-safe when DB is unavailable):
+  - `npm run ci:verify`
 - Full strict pre-deploy verification (recommended before release):
   - `npm run ci:verify:strict`
 - Ensure strict deploy check passes:
@@ -56,3 +58,9 @@
 - Generate at least one invoice/receipt/report PDF after deploy.
 - Confirm branded metadata values match the active organization profile.
 - Confirm no secrets appear in logs.
+- Validate import workflows after deploy:
+  - schools template download
+  - schools preview + commit
+  - training participants preview + commit
+  - missing-schools template download when participant rows reference unknown schools
+- Confirm imported schools and participants appear in portal views and reports that depend on them.

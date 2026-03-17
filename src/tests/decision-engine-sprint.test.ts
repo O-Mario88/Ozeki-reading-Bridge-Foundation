@@ -5,7 +5,6 @@ import {
   createImpactReport,
   createPortalRecord,
   createSupportRequest,
-  getDb,
   getPortalUserByEmail,
   getPublicImpactAggregate,
   listAuditLogs,
@@ -14,6 +13,7 @@ import {
 } from "../lib/db";
 import { buildDataTrustSnapshot, buildPriorityActionsFromPublicAggregate } from "../lib/decision-engine";
 import { RECOMMENDATION_CATALOG } from "../lib/recommendations";
+import { queryPostgres } from "../lib/server/postgres/client";
 import type { PortalUser } from "../lib/types";
 
 test("trust badge snapshot reflects aggregate last_updated and sample size", async () => {
@@ -78,10 +78,8 @@ test("impact report generation logs audit event and stores report audit metadata
 });
 
 test("support requests auto-route and can be converted into activity records", async () => {
-  const db = getDb();
-  const schoolWithTeacher = db
-    .prepare(
-      `
+  const schoolWithTeacherResult = await queryPostgres<{ id: number; name: string; district: string }>(
+    `
       SELECT sd.id, sd.name, sd.district
       FROM schools_directory sd
       JOIN teacher_roster tr ON tr.school_id = sd.id
@@ -89,20 +87,19 @@ test("support requests auto-route and can be converted into activity records", a
       ORDER BY sd.id ASC
       LIMIT 1
     `,
-    )
-    .get() as { id: number; name: string; district: string } | undefined;
-  const school =
-    schoolWithTeacher ??
-    (db
-      .prepare(
-        `
+  );
+  const schoolWithTeacher = schoolWithTeacherResult.rows[0];
+  const schoolResult = schoolWithTeacher
+    ? { rows: [schoolWithTeacher] }
+    : await queryPostgres<{ id: number; name: string; district: string }>(
+      `
         SELECT id, name, district
         FROM schools_directory
         ORDER BY id ASC
         LIMIT 1
       `,
-      )
-      .get() as { id: number; name: string; district: string } | undefined);
+    );
+  const school = schoolResult.rows[0];
 
   assert.ok(school, "Expected at least one school in schools_directory.");
 
@@ -118,30 +115,24 @@ test("support requests auto-route and can be converted into activity records", a
 
   const now = Date.now();
   const tempEmail = `routing-test-${now}@example.org`;
-  db
-    .prepare(
-      `
+  await queryPostgres(
+    `
       INSERT INTO portal_users (
         full_name,
         email,
         role,
         password_hash,
         geography_scope
-      ) VALUES (
-        @fullName,
-        @email,
-        'Staff',
-        @passwordHash,
-        @geographyScope
-      )
+      ) VALUES ($1, $2, 'Staff', $3, $4)
+      ON CONFLICT (email) DO NOTHING
     `,
-    )
-    .run({
-      fullName: `Routing Test Staff ${now}`,
-      email: tempEmail,
-      passwordHash: `hash-${now}`,
-      geographyScope: `district:${school!.district}`,
-    });
+    [
+      `Routing Test Staff ${now}`,
+      tempEmail,
+      `hash-${now}`,
+      `district:${school!.district}`,
+    ],
+  );
 
   const created = createSupportRequest(
     {
@@ -157,16 +148,16 @@ test("support requests auto-route and can be converted into activity records", a
   );
 
   assert.ok(created.assignedStaffId, "Expected support request to be assigned.");
-  const assignedScopeRow = db
-    .prepare(
-      `
-      SELECT geography_scope AS geographyScope
+  const assignedScopeResult = await queryPostgres<{ geographyScope: string | null }>(
+    `
+      SELECT geography_scope AS "geographyScope"
       FROM portal_users
-      WHERE id = @id
+      WHERE id = $1
       LIMIT 1
     `,
-    )
-    .get({ id: created.assignedStaffId }) as { geographyScope: string | null } | undefined;
+    [created.assignedStaffId],
+  );
+  const assignedScopeRow = assignedScopeResult.rows[0];
   assert.ok(assignedScopeRow, "Expected assigned user row to exist.");
   assert.ok(
     String(assignedScopeRow?.geographyScope ?? "")

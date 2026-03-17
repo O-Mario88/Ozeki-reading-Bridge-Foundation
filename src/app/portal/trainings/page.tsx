@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalCrmListView } from "@/components/portal/crm/PortalCrmListView";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
@@ -43,6 +44,22 @@ export default async function PortalTrainingsPage({ searchParams }: PageProps) {
       activeHref="/portal/trainings"
       title={view.title}
       description={view.subtitle}
+      actions={
+        <div className="action-row">
+          <Link href="/portal/trainings/participants/new" className="button">
+            Add Participant
+          </Link>
+          <Link href="/portal/trainings/import-participants" className="button button-ghost">
+            Import Participants
+          </Link>
+          <Link href="/api/import/templates/training-participants.xlsx" className="button button-ghost">
+            Download Excel Template
+          </Link>
+          <Link href="/api/import/templates/training-participants.csv" className="button button-ghost">
+            Download CSV Template
+          </Link>
+        </div>
+      }
     >
       <PortalCrmListView view={view} />
     </PortalShell>

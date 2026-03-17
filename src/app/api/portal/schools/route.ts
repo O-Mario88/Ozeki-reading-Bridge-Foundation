@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  createSchoolDirectoryRecord,
-  listSchoolDirectoryRecords,
-  updateSchoolDirectoryRecord,
-} from "@/lib/db";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { listSchoolDirectoryRecordsPostgres } from "@/lib/server/postgres/repositories/schools";
+import { createOrUpdateSchool } from "@/lib/server/services/schools/write-service";
 
 export const runtime = "nodejs";
 
 const schoolSchema = z.object({
   name: z.string().min(2),
   country: z.string().trim().optional(),
+  region: z.string().trim().optional(),
+  subRegion: z.string().trim().optional(),
   district: z.string().min(2),
   subCounty: z.string().trim().optional(),
   parish: z.string().trim().optional(),
@@ -71,6 +70,8 @@ const schoolUpdateSchema = z.object({
   schoolId: z.coerce.number().int().positive(),
   name: z.string().trim().min(2).optional(),
   country: z.string().trim().min(2).optional(),
+  region: z.string().trim().min(2).optional(),
+  subRegion: z.string().trim().min(2).optional(),
   district: z.string().trim().min(2).optional(),
   subCounty: z.string().trim().min(2).optional(),
   parish: z.string().trim().min(2).optional(),
@@ -121,7 +122,7 @@ export async function GET(request: Request) {
   const query = searchParams.get("query") || undefined;
 
   return NextResponse.json({
-    schools: await listSchoolDirectoryRecords({ district, query }),
+    schools: await listSchoolDirectoryRecordsPostgres({ district, query }),
   });
 }
 
@@ -136,51 +137,59 @@ export async function POST(request: Request) {
 
   try {
     const payload = schoolSchema.parse(await request.json());
-    const school = await createSchoolDirectoryRecord({
-      ...payload,
-      country: payload.country?.trim() || undefined,
-      village: payload.village?.trim() || undefined,
-      notes: payload.notes?.trim() || undefined,
-      alternateSchoolNames: payload.alternateSchoolNames?.trim() || undefined,
-      schoolStatus: payload.schoolStatus?.trim() || undefined,
-      schoolStatusDate: payload.schoolStatusDate?.trim() || undefined,
-      currentPartnerType: payload.currentPartnerType?.trim() || undefined,
-      yearFounded: payload.yearFounded,
-      accountRecordType: payload.accountRecordType?.trim() || undefined,
-      schoolType: payload.schoolType?.trim() || undefined,
-      parentAccountLabel: payload.parentAccountLabel?.trim() || undefined,
-      schoolRelationshipStatus: payload.schoolRelationshipStatus?.trim() || undefined,
-      schoolRelationshipStatusDate: payload.schoolRelationshipStatusDate?.trim() || undefined,
-      denomination: payload.denomination?.trim() || undefined,
-      protestantDenomination: payload.protestantDenomination?.trim() || undefined,
-      clientSchoolNumber: payload.clientSchoolNumber,
-      firstMetricDate: payload.firstMetricDate?.trim() || undefined,
-      metricCount: payload.metricCount,
-      runningTotalMaxEnrollment: payload.runningTotalMaxEnrollment,
-      partnerType: payload.partnerType?.trim() || undefined,
-      currentPartnerSchool: payload.currentPartnerSchool,
-      schoolActive: payload.schoolActive,
-      website: payload.website?.trim() || undefined,
-      description: payload.description?.trim() || undefined,
-      enrollmentTotal: payload.enrollmentTotal,
-      enrollmentByGrade: payload.enrollmentByGrade?.trim() || undefined,
-      enrolledBoys: payload.enrolledBoys ?? 0,
-      enrolledGirls: payload.enrolledGirls ?? 0,
-      gpsLat: payload.gpsLat?.trim() || undefined,
-      gpsLng: payload.gpsLng?.trim() || undefined,
-      contactName: payload.contactName?.trim() || undefined,
-      contactPhone: payload.contactPhone?.trim() || undefined,
-      proprietor: {
-        fullName: payload.proprietor.fullName.trim(),
-        gender: payload.proprietor.gender,
-        phone: payload.proprietor.phone?.trim() || undefined,
-        email: payload.proprietor.email?.trim() || undefined,
-        whatsapp: payload.proprietor.whatsapp?.trim() || undefined,
-        category: payload.proprietor.category,
-        roleTitle: payload.proprietor.roleTitle?.trim() || undefined,
+    const result = await createOrUpdateSchool({
+      actor: user,
+      input: {
+        name: payload.name,
+        country: payload.country?.trim() || undefined,
+        region: payload.region?.trim() || undefined,
+        subRegion: payload.subRegion?.trim() || undefined,
+        district: payload.district,
+        subCounty: payload.subCounty?.trim() || undefined,
+        parish: payload.parish?.trim() || undefined,
+        village: payload.village?.trim() || undefined,
+        notes: payload.notes?.trim() || undefined,
+        alternativeSchoolNames: payload.alternateSchoolNames?.trim() || undefined,
+        schoolStatus: payload.schoolStatus?.trim() || undefined,
+        schoolStatusDate: payload.schoolStatusDate?.trim() || undefined,
+        currentPartnerType: payload.currentPartnerType?.trim() || undefined,
+        yearFounded: payload.yearFounded,
+        accountRecordType: payload.accountRecordType?.trim() || undefined,
+        schoolType: payload.schoolType?.trim() || undefined,
+        parentAccountLabel: payload.parentAccountLabel?.trim() || undefined,
+        schoolRelationshipStatus: payload.schoolRelationshipStatus?.trim() || undefined,
+        schoolRelationshipStatusDate: payload.schoolRelationshipStatusDate?.trim() || undefined,
+        denomination: payload.denomination?.trim() || undefined,
+        protestantDenomination: payload.protestantDenomination?.trim() || undefined,
+        clientSchoolNumber: payload.clientSchoolNumber,
+        firstMetricDate: payload.firstMetricDate?.trim() || undefined,
+        metricCount: payload.metricCount,
+        runningTotalMaxEnrollment: payload.runningTotalMaxEnrollment,
+        partnerType: payload.partnerType?.trim() || undefined,
+        currentPartnerSchool: payload.currentPartnerSchool,
+        schoolActive: payload.schoolActive,
+        website: payload.website?.trim() || undefined,
+        description: payload.description?.trim() || undefined,
+        enrollmentTotal: payload.enrollmentTotal,
+        enrollmentByGrade: payload.enrollmentByGrade?.trim() || undefined,
+        enrolledBoys: payload.enrolledBoys ?? 0,
+        enrolledGirls: payload.enrolledGirls ?? 0,
+        latitude: payload.gpsLat?.trim() || undefined,
+        longitude: payload.gpsLng?.trim() || undefined,
+        schoolPhone: payload.contactPhone?.trim() || payload.proprietor.phone?.trim() || undefined,
+        schoolEmail: payload.proprietor.email?.trim() || undefined,
+        primaryContact: {
+          fullName: payload.proprietor.fullName.trim(),
+          gender: payload.proprietor.gender,
+          phone: payload.proprietor.phone?.trim() || payload.contactPhone?.trim() || undefined,
+          email: payload.proprietor.email?.trim() || undefined,
+          whatsapp: payload.proprietor.whatsapp?.trim() || undefined,
+          category: payload.proprietor.category,
+          roleTitle: payload.proprietor.roleTitle?.trim() || undefined,
+        },
       },
     });
-    return NextResponse.json({ ok: true, school });
+    return NextResponse.json({ ok: true, school: result.school });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -206,46 +215,58 @@ export async function PATCH(request: Request) {
 
   try {
     const payload = schoolUpdateSchema.parse(await request.json());
-    const school = await updateSchoolDirectoryRecord(payload.schoolId, {
-      name: payload.name,
-      country: payload.country,
-      district: payload.district,
-      subCounty: payload.subCounty,
-      parish: payload.parish,
-      village: payload.village,
-      notes: payload.notes,
-      alternateSchoolNames: payload.alternateSchoolNames,
-      schoolStatus: payload.schoolStatus,
-      schoolStatusDate: payload.schoolStatusDate,
-      currentPartnerType: payload.currentPartnerType,
-      yearFounded: payload.yearFounded,
-      accountRecordType: payload.accountRecordType,
-      schoolType: payload.schoolType,
-      parentAccountLabel: payload.parentAccountLabel,
-      schoolRelationshipStatus: payload.schoolRelationshipStatus,
-      schoolRelationshipStatusDate: payload.schoolRelationshipStatusDate,
-      denomination: payload.denomination,
-      protestantDenomination: payload.protestantDenomination,
-      clientSchoolNumber: payload.clientSchoolNumber,
-      firstMetricDate: payload.firstMetricDate,
-      metricCount: payload.metricCount,
-      runningTotalMaxEnrollment: payload.runningTotalMaxEnrollment,
-      partnerType: payload.partnerType,
-      currentPartnerSchool: payload.currentPartnerSchool,
-      schoolActive: payload.schoolActive,
-      website: payload.website,
-      description: payload.description,
-      enrollmentTotal: payload.enrollmentTotal,
-      enrollmentByGrade: payload.enrollmentByGrade,
-      enrolledBoys: payload.enrolledBoys,
-      enrolledGirls: payload.enrolledGirls,
-      gpsLat: payload.gpsLat,
-      gpsLng: payload.gpsLng,
-      contactName: payload.contactName,
-      contactPhone: payload.contactPhone,
+    const result = await createOrUpdateSchool({
+      actor: user,
+      input: {
+        schoolId: payload.schoolId,
+        name: payload.name,
+        country: payload.country,
+        region: payload.region,
+        subRegion: payload.subRegion,
+        district: payload.district,
+        subCounty: payload.subCounty,
+        parish: payload.parish,
+        village: payload.village,
+        notes: payload.notes,
+        alternativeSchoolNames: payload.alternateSchoolNames,
+        schoolStatus: payload.schoolStatus,
+        schoolStatusDate: payload.schoolStatusDate,
+        currentPartnerType: payload.currentPartnerType,
+        yearFounded: payload.yearFounded,
+        accountRecordType: payload.accountRecordType,
+        schoolType: payload.schoolType,
+        parentAccountLabel: payload.parentAccountLabel,
+        schoolRelationshipStatus: payload.schoolRelationshipStatus,
+        schoolRelationshipStatusDate: payload.schoolRelationshipStatusDate,
+        denomination: payload.denomination,
+        protestantDenomination: payload.protestantDenomination,
+        clientSchoolNumber: payload.clientSchoolNumber,
+        firstMetricDate: payload.firstMetricDate,
+        metricCount: payload.metricCount,
+        runningTotalMaxEnrollment: payload.runningTotalMaxEnrollment,
+        partnerType: payload.partnerType,
+        currentPartnerSchool: payload.currentPartnerSchool,
+        schoolActive: payload.schoolActive,
+        website: payload.website,
+        description: payload.description,
+        enrollmentTotal: payload.enrollmentTotal,
+        enrollmentByGrade: payload.enrollmentByGrade,
+        enrolledBoys: payload.enrolledBoys,
+        enrolledGirls: payload.enrolledGirls,
+        latitude: payload.gpsLat,
+        longitude: payload.gpsLng,
+        schoolPhone: payload.contactPhone,
+        primaryContact:
+          payload.contactName || payload.contactPhone
+            ? {
+                fullName: payload.contactName ?? undefined,
+                phone: payload.contactPhone ?? undefined,
+              }
+            : undefined,
+      },
     });
 
-    return NextResponse.json({ ok: true, school });
+    return NextResponse.json({ ok: true, school: result.school });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
