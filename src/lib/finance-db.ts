@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type Database from "better-sqlite3";
+
 import type { PoolClient } from "pg";
 import {
   getDb,
@@ -7498,7 +7498,7 @@ export function listInvoiceAllocations(invoiceId: number): FinancePaymentAllocat
   ).all({ iid: invoiceId }) as FinancePaymentAllocationRecord[];
 }
 
-function getPaymentAllocationById(db: import("better-sqlite3").Database, id: number): FinancePaymentAllocationRecord | null {
+function getPaymentAllocationById(db: any, id: number): FinancePaymentAllocationRecord | null {
   const row = db.prepare(
     `SELECT pa.id, pa.payment_id AS paymentId, pa.invoice_id AS invoiceId,
             pa.allocated_amount AS allocatedAmount, i.invoice_number AS invoiceNumber,
@@ -7510,7 +7510,7 @@ function getPaymentAllocationById(db: import("better-sqlite3").Database, id: num
   return row || null;
 }
 
-function recalculateInvoiceFromAllocations(db: import("better-sqlite3").Database, invoiceId: number) {
+function recalculateInvoiceFromAllocations(db: any, invoiceId: number) {
   const allocs = db.prepare(
     `SELECT COALESCE(SUM(allocated_amount), 0) AS total FROM finance_payment_allocations WHERE invoice_id = @iid`,
   ).get({ iid: invoiceId }) as { total: number };

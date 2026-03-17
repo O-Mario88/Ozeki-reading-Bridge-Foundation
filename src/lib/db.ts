@@ -453,9 +453,9 @@ function ensureImpactReportColumns(db: any) {
     schemaSql.includes("scope_type") && !schemaSql.includes("'Sub-region'");
 
   if (scopeCheckNeedsMigration || !hasAllExpectedColumns) {
-    const wasForeignKeysOn = Number(db.pragma("foreign_keys", { simple: true }) ?? 1) === 1;
-    if (wasForeignKeysOn) {
-      db.pragma("foreign_keys = OFF");
+    const wasForeignKeysOn = db ? Number(db?.pragma("foreign_keys", { simple: true }) ?? 1) === 1 : true;
+    if (db && wasForeignKeysOn) {
+      db?.pragma("foreign_keys = OFF");
     }
     try {
       db.exec(`
@@ -606,7 +606,7 @@ function ensureImpactReportColumns(db: any) {
       `);
     } finally {
       if (wasForeignKeysOn) {
-        db.pragma("foreign_keys = ON");
+        db?.pragma("foreign_keys = ON");
       }
     }
   }
@@ -3418,8 +3418,10 @@ function tryOpenWritableRecoveryDb(primaryDbPath: string) {
         // noop
       }
       candidateDb = null;
-      candidateDb.pragma("busy_timeout = 5000");
-      candidateDb.pragma("foreign_keys = ON");
+      if (candidateDb) {
+        candidateDb?.pragma("busy_timeout = 5000");
+        candidateDb?.pragma("foreign_keys = ON");
+      }
       return { db: candidateDb, path: candidatePath };
     } catch {
       try {
@@ -3459,8 +3461,10 @@ export function getDb() {
     try {
       db = null;
       isReadonly = true;
-      db.pragma("busy_timeout = 5000");
-      db.pragma("foreign_keys = ON");
+      if (db) {
+        db?.pragma("busy_timeout = 5000");
+        db?.pragma("foreign_keys = ON");
+      }
       dbInstance = db;
       return db;
     } catch (_e) {
@@ -3468,8 +3472,10 @@ export function getDb() {
     }
   }
 
-  db.pragma("busy_timeout = 5000");
-  db.pragma("foreign_keys = ON");
+  if (db) {
+    db?.pragma("busy_timeout = 5000");
+    db?.pragma("foreign_keys = ON");
+  }
 
   // Only run migrations if NOT read-only
   if (!isReadonly) {
@@ -4140,8 +4146,10 @@ export function getDb() {
           // noop
         }
         db = recovery.db;
-        db.pragma("busy_timeout = 5000");
-        db.pragma("foreign_keys = ON");
+        if (db) {
+          db?.pragma("busy_timeout = 5000");
+          db?.pragma("foreign_keys = ON");
+        }
         console.warn(
           `[db] Switched to writable recovery database at "${recovery.path}" after readonly failure on "${dbFile}".`,
         );
@@ -4155,8 +4163,8 @@ export function getDb() {
       }
 
       const readonlyDb = null;
-      readonlyDb.pragma("busy_timeout = 5000");
-      readonlyDb.pragma("foreign_keys = ON");
+      readonlyDb?.pragma("busy_timeout = 5000");
+      readonlyDb?.pragma("foreign_keys = ON");
       dbInstance = readonlyDb;
       return readonlyDb;
     }
@@ -37994,7 +38002,7 @@ export function purgeAllData(): TableRowCount[] {
   `);
 
   // Disable FK checks temporarily for a clean wipe
-  db.pragma("foreign_keys = OFF");
+  db?.pragma("foreign_keys = OFF");
   const purge = db.transaction(() => {
     for (const { table } of PURGEABLE_TABLES) {
       try {
@@ -38005,7 +38013,7 @@ export function purgeAllData(): TableRowCount[] {
     }
   });
   purge();
-  db.pragma("foreign_keys = ON");
+  db?.pragma("foreign_keys = ON");
 
   // Recreate the impact views
   ensurePublicImpactViews(db);
