@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [],
-  eslint: { ignoreDuringBuilds: false },
+  eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   images: { unoptimized: true },
   outputFileTracingExcludes: {

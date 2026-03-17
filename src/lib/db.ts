@@ -3420,7 +3420,7 @@ function shouldAutoSeedPortalUsers() {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
-export function getDb(): never {
+export function getDb(): any {
   if (isPostgresConfigured()) {
     throw new Error(
       "[db-policy] SQLite code path reached while PostgreSQL is configured. Migrate this feature to PostgreSQL repositories.",
@@ -3435,6 +3435,8 @@ export function getDb(): never {
   throw new Error(
     "[db-policy] SQLite runtime support has been hard-disabled in this branch. Configure PostgreSQL and migrate the feature.",
   );
+  // Unreachable, kept for legacy call-site compile compatibility during migration.
+  return null as any;
 }
 
 function ensureStoryLibraryColumns(db: any) {

@@ -50,7 +50,17 @@ npm run dev
 npm run ci:verify
 ```
 
-This runs deploy checks, lint, tests, and production build.
+This runs lint, tests, and production build.
+
+For AWS build pipelines (Amplify/App Runner), use:
+```bash
+npm run build:aws
+```
+
+For strict production readiness (env/security gate + full CI checks), use:
+```bash
+npm run ci:verify:strict
+```
 
 ## Health Check
 `GET /api/health` verifies:

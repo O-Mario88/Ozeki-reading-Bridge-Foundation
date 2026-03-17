@@ -32,7 +32,10 @@
   - `DB=postgres host=... database=... ssl=...`
 
 ## CI/Pre-Deploy
-- `npm run ci:verify`
+- AWS build command:
+  - `npm run build:aws`
+- Full strict pre-deploy verification (recommended before release):
+  - `npm run ci:verify:strict`
 - Ensure strict deploy check passes:
   - rejects `ALLOW_SQLITE`
   - rejects SQLite path env vars

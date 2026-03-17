@@ -1753,6 +1753,7 @@ export interface FinanceInvoiceRecord extends FinanceInvoiceInput {
   lineItems: FinanceInvoiceLineItemRecord[];
   id: number;
   invoiceNumber: string;
+  contactName?: string;
   subtotal: number;
   total: number;
   paidAmount: number;

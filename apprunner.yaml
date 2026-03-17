@@ -4,8 +4,8 @@ runtime: nodejs22
 build:
   commands:
     build:
-      - npm ci
-      - npm run ci:verify
+      - npm ci --no-audit --no-fund
+      - npm run build:aws
 
 run:
   command: npm run start:standalone

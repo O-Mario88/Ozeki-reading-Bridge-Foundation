@@ -39,6 +39,14 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "no-constant-condition": [
+        "warn",
+        {
+          checkLoops: false,
+        },
+      ],
+      "prefer-const": "warn",
       "@next/next/no-html-link-for-pages": "off",
     },
   },

@@ -8,6 +8,7 @@ import {
   PARTNERSHIP_OPTIONS,
   TRUST_LINKS,
 } from "@/lib/home-static-data";
+import { isPostgresConfigured } from "@/lib/server/postgres/client";
 import { listPublishedPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
 import type { PortalTestimonialRecord } from "@/lib/types";
 import styles from "./homepage.module.css";
@@ -39,16 +40,18 @@ function clipQuote(text: string, maxChars: number) {
 
 export default async function HomePage() {
   let testimonialRows: PortalTestimonialRecord[] = [];
-  try {
-    testimonialRows = (await listPublishedPortalTestimonialsPostgres(90))
-      .filter(
-        (item) =>
-          item.sourceType === "training_feedback" &&
-          TESTIMONIAL_FIELDS.has(String(item.quoteField ?? "")),
-      )
-      .slice(0, 6);
-  } catch (error) {
-    console.error("Failed to load homepage testimonials.", error);
+  if (isPostgresConfigured()) {
+    try {
+      testimonialRows = (await listPublishedPortalTestimonialsPostgres(90))
+        .filter(
+          (item) =>
+            item.sourceType === "training_feedback" &&
+            TESTIMONIAL_FIELDS.has(String(item.quoteField ?? "")),
+        )
+        .slice(0, 6);
+    } catch (error) {
+      console.error("Failed to load homepage testimonials.", error);
+    }
   }
 
   const orgSchema = {
