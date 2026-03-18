@@ -400,28 +400,36 @@ export async function getCostEffectivenessDataPostgres(
 }
 
 export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
-  const [
-    recordsRes,
-    schoolsRes,
-    supportRes,
-    usersRes
-  ] = await Promise.all([
-    queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records`),
-    queryPostgres(`SELECT COUNT(*)::int AS total FROM schools_directory`),
-    queryPostgres(`SELECT COUNT(*)::int AS total FROM support_requests WHERE status != 'resolved'`),
-    queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_users`)
-  ]);
+  try {
+    const [
+      recordsRes,
+      schoolsRes,
+      supportRes,
+      usersRes
+    ] = await Promise.all([
+      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records`),
+      queryPostgres(`SELECT COUNT(*)::int AS total FROM schools_directory`),
+      queryPostgres(`SELECT COUNT(*)::int AS total FROM support_requests WHERE status != 'resolved'`),
+      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_users`)
+    ]);
 
-  return {
-    stats: {
-      totalRecords: toNumber(recordsRes.rows[0]?.total),
-      activeSchools: toNumber(schoolsRes.rows[0]?.total),
-      openSupport: toNumber(supportRes.rows[0]?.total),
-      totalUsers: toNumber(usersRes.rows[0]?.total)
-    },
-    recentActivities: [],
-    generatedAt: new Date().toISOString()
-  };
+    return {
+      stats: {
+        totalRecords: toNumber(recordsRes.rows[0]?.total),
+        activeSchools: toNumber(schoolsRes.rows[0]?.total),
+        openSupport: toNumber(supportRes.rows[0]?.total),
+        totalUsers: toNumber(usersRes.rows[0]?.total)
+      },
+      recentActivities: [],
+      generatedAt: new Date().toISOString()
+    };
+  } catch {
+    return {
+      stats: { totalRecords: 0, activeSchools: 0, openSupport: 0, totalUsers: 0 },
+      recentActivities: [],
+      generatedAt: new Date().toISOString()
+    };
+  }
 }
 
 export async function getTableRowCountsPostgres(): Promise<any[]> {
