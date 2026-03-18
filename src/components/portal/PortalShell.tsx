@@ -13,18 +13,36 @@ type PortalNavItem = {
   staffOnly?: boolean;
   superAdminOnly?: boolean;
   roles?: PortalUserRole[];
-  section: "menu" | "features" | "system";
+  section: "menu" | "features" | "cms" | "system";
 };
 
 const primaryNavItems: PortalNavItem[] = [
+  // Menu
   { href: "/portal/dashboard", label: "Dashboard", icon: "📊", staffOnly: true, section: "menu" },
   { href: "/portal/national-intelligence", label: "Insights", icon: "💡", staffOnly: true, section: "menu" },
   { href: "/portal/schools", label: "Schools", icon: "🏫", staffOnly: true, section: "menu" },
-  { href: "/portal/assessments", label: "Assessments", icon: "📝", staffOnly: true, section: "menu" },
+  { href: "/portal/crm", label: "CRM", icon: "👥", staffOnly: true, section: "menu" },
+  { href: "/portal/finance", label: "Finance", icon: "💰", staffOnly: true, section: "menu" },
+
+  // Features
+  { href: "/portal/assessments", label: "Assessments", icon: "📝", staffOnly: true, section: "features" },
   { href: "/portal/visits", label: "Visits/Coaching", icon: "🚶", staffOnly: true, section: "features" },
   { href: "/portal/trainings", label: "Trainings", icon: "🎓", staffOnly: true, section: "features" },
   { href: "/portal/interventions", label: "Interventions", icon: "🎯", staffOnly: true, section: "features" },
+  { href: "/portal/stories", label: "1001 Story", icon: "📖", staffOnly: true, section: "features" },
   { href: "/portal/reports", label: "Reports", icon: "📄", roles: ["Staff", "Volunteer", "Admin"], section: "features" },
+  { href: "/portal/graduation-queue", label: "Graduation Queue", icon: "🎓", staffOnly: true, section: "features" },
+
+  // CMS
+  { href: "/portal/blog", label: "Blog", icon: "✏️", staffOnly: true, section: "cms" },
+  { href: "/portal/events", label: "Events", icon: "📅", staffOnly: true, section: "cms" },
+  { href: "/portal/testimonials", label: "Testimonials", icon: "💬", staffOnly: true, section: "cms" },
+  { href: "/portal/gallery", label: "Gallery", icon: "🖼️", staffOnly: true, section: "cms" },
+  { href: "/portal/about", label: "About Page", icon: "ℹ️", staffOnly: true, section: "cms" },
+
+  // System
+  { href: "/portal/data-quality", label: "Data Quality", icon: "🛡️", staffOnly: true, section: "system" },
+  { href: "/portal/support", label: "Support Requests", icon: "🎧", staffOnly: true, section: "system" },
   { href: "/portal/admin/settings", label: "Admin/Settings", icon: "⚙️", superAdminOnly: true, section: "system" },
 ];
 
@@ -67,6 +85,7 @@ export function PortalShell({
 
   const menuItems = navItems.filter((i) => i.section === "menu");
   const featureItems = navItems.filter((i) => i.section === "features");
+  const cmsItems = navItems.filter((i) => i.section === "cms");
   const systemItems = navItems.filter((i) => i.section === "system");
 
   const roleLabel = [
@@ -109,6 +128,23 @@ export function PortalShell({
           <nav className="ds-sidebar-section">
             <p className="ds-sidebar-section-label">Features</p>
             {featureItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`ds-nav-item${activeHref === item.href ? " active" : ""}`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <span className="ds-nav-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
+
+        {cmsItems.length > 0 && (
+          <nav className="ds-sidebar-section">
+            <p className="ds-sidebar-section-label">Content / Website</p>
+            {cmsItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -26,14 +26,14 @@
   --ds-text-secondary: #6c7293;
   --ds-text-muted: #a1a5b7;
 
-  --ds-accent-blue: #5c6bc0;
-  --ds-accent-green: #4caf50;
-  --ds-accent-orange: #ff9800;
-  --ds-accent-red: #f44336;
-  --ds-accent-purple: #7c4dff;
-  --ds-accent-teal: #00bcd4;
+  --ds-accent-blue: #006b61;
+  --ds-accent-green: #1dc9ba;
+  --ds-accent-orange: #fe8b5c;
+  --ds-accent-red: #e46f3e;
+  --ds-accent-purple: #005248;
+  --ds-accent-teal: #006b61;
 
-  --ds-font: "Inter", "Roboto", system-ui, -apple-system, sans-serif;
+  --ds-font: "Roboto", system-ui, -apple-system, sans-serif;
 }
 
 /* ── Full-page shell ───────────────────────────────────────── */
@@ -128,7 +128,7 @@
 }
 
 .ds-nav-item.active {
-  background: rgba(92, 107, 192, 0.12);
+  background: color-mix(in oklab, var(--ds-accent-blue), transparent 85%);
   color: var(--ds-sidebar-text-active);
   border-left-color: var(--ds-accent-blue);
   font-weight: 600;
@@ -390,7 +390,7 @@
 .ds-kpi-sparkline {
   height: 40px;
   margin: 0.5rem -1.25rem -0.75rem;
-  background: linear-gradient(180deg, transparent 0%, rgba(92, 107, 192, 0.04) 100%);
+  background: linear-gradient(180deg, transparent 0%, color-mix(in oklab, var(--ds-accent-blue), transparent 96%) 100%);
   position: relative;
 }
 
@@ -406,7 +406,7 @@
 }
 
 .ds-kpi-card:nth-child(2) .ds-kpi-sparkline {
-  background: linear-gradient(180deg, transparent 0%, rgba(76, 175, 80, 0.04) 100%);
+  background: linear-gradient(180deg, transparent 0%, color-mix(in oklab, var(--ds-accent-green), transparent 96%) 100%);
 }
 
 .ds-kpi-card:nth-child(2) .ds-kpi-sparkline::after {
@@ -414,7 +414,7 @@
 }
 
 .ds-kpi-card:nth-child(3) .ds-kpi-sparkline {
-  background: linear-gradient(180deg, transparent 0%, rgba(255, 152, 0, 0.04) 100%);
+  background: linear-gradient(180deg, transparent 0%, color-mix(in oklab, var(--ds-accent-orange), transparent 96%) 100%);
 }
 
 .ds-kpi-card:nth-child(3) .ds-kpi-sparkline::after {
@@ -422,7 +422,7 @@
 }
 
 .ds-kpi-card:nth-child(4) .ds-kpi-sparkline {
-  background: linear-gradient(180deg, transparent 0%, rgba(124, 77, 255, 0.04) 100%);
+  background: linear-gradient(180deg, transparent 0%, color-mix(in oklab, var(--ds-accent-purple), transparent 96%) 100%);
 }
 
 .ds-kpi-card:nth-child(4) .ds-kpi-sparkline::after {
@@ -606,12 +606,12 @@
   flex-shrink: 0;
 }
 
-.ds-quick-action-icon.blue { background: rgba(92, 107, 192, 0.12); color: var(--ds-accent-blue); }
-.ds-quick-action-icon.green { background: rgba(76, 175, 80, 0.12); color: var(--ds-accent-green); }
-.ds-quick-action-icon.orange { background: rgba(255, 152, 0, 0.12); color: var(--ds-accent-orange); }
-.ds-quick-action-icon.purple { background: rgba(124, 77, 255, 0.12); color: var(--ds-accent-purple); }
-.ds-quick-action-icon.teal { background: rgba(0, 188, 212, 0.12); color: var(--ds-accent-teal); }
-.ds-quick-action-icon.red { background: rgba(244, 67, 54, 0.12); color: var(--ds-accent-red); }
+.ds-quick-action-icon.blue { background: color-mix(in oklab, var(--ds-accent-blue), transparent 88%); color: var(--ds-accent-blue); }
+.ds-quick-action-icon.green { background: color-mix(in oklab, var(--ds-accent-green), transparent 88%); color: var(--ds-accent-green); }
+.ds-quick-action-icon.orange { background: color-mix(in oklab, var(--ds-accent-orange), transparent 88%); color: var(--ds-accent-orange); }
+.ds-quick-action-icon.purple { background: color-mix(in oklab, var(--ds-accent-purple), transparent 88%); color: var(--ds-accent-purple); }
+.ds-quick-action-icon.teal { background: color-mix(in oklab, var(--ds-accent-teal), transparent 88%); color: var(--ds-accent-teal); }
+.ds-quick-action-icon.red { background: color-mix(in oklab, var(--ds-accent-red), transparent 88%); color: var(--ds-accent-red); }
 
 /* ── Follow-up / Agenda Lists ──────────────────────────────── */
 .ds-list {
