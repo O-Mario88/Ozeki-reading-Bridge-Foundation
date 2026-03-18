@@ -337,8 +337,10 @@ export async function recomputeLearningAutomationSnapshots(_filters?: unknown) {
 
 // ── Auth / Portal User Management ───────────────────────────────────
 export async function authenticatePortalUser(identifier: string, password: string) {
+    const crypto = await import("node:crypto");
+    const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
     const { authenticatePortalUser: fn } = await import("@/services/authService");
-    return fn(identifier, password);
+    return fn(identifier, passwordHash);
 }
 
 export async function getPortalUserByEmail(email: string) {
