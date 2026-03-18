@@ -136,23 +136,26 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
   );
 
   return (
-    <div className="ds-dashboard-grid">
+    <div className="ds-dashboard-grid" style={{ minWidth: 0 }}>
       {/* Graduation Alert Banner */}
       {graduationEligibleCount > 0 && (
         <div className="ds-alert-banner warning">
-          🎓 {graduationEligibleCount.toLocaleString()} school{graduationEligibleCount === 1 ? "" : "s"} are graduation eligible.
-          <div className="ds-alert-banner-actions">
+          <span style={{ flexShrink: 0 }}>🎓</span>
+          <span style={{ flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {graduationEligibleCount.toLocaleString()} school{graduationEligibleCount === 1 ? "" : "s"} are graduation eligible.
+          </span>
+          <div className="ds-alert-banner-actions" style={{ flexShrink: 0 }}>
             <Link href="/portal/graduation-queue">Review now</Link>
           </div>
         </div>
       )}
 
-      {/* KPI Cards Row */}
+      {/* KPI Cards Row (Spans Full Width) */}
       <section className="ds-kpi-grid">
         {kpiCards.map((item) => (
           <article className="ds-kpi-card" key={item.label}>
             <div className="ds-kpi-header">
-              <p className="ds-kpi-label">{item.label}</p>
+              <p className="ds-kpi-label" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</p>
               {item.trend !== null && (
                 <span className={`ds-kpi-trend ${Number(item.trend) >= 0 ? "up" : "down"}`}>
                   {Number(item.trend) >= 0 ? "↑" : "↓"} {Math.abs(Number(item.trend))}%
@@ -166,189 +169,199 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
         ))}
       </section>
 
-      {/* Two-Column: Recent Activity + Quick Actions */}
-      <div className="ds-two-col">
-        {/* Recent Activity Table */}
-        <section className="ds-card">
-          <div className="ds-card-header">
-            <h2 className="ds-card-title">Recent Activity</h2>
-            <Link href="/portal/reports" className="ds-card-action">View all</Link>
-          </div>
-          <div className="ds-table-wrap">
-            <table className="ds-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>School</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dashboard.recentActivity.length === 0 ? (
-                  <tr>
-                    <td colSpan={5}>
-                      <div className="ds-empty">No recent activity found.</div>
-                    </td>
-                  </tr>
-                ) : (
-                  dashboard.recentActivity.map((item) => (
-                    <tr key={item.id}>
-                      <td>{formatDay(item.date)}</td>
-                      <td>{moduleLabel[item.module]}</td>
-                      <td>{item.schoolName}</td>
-                      <td>
-                        <span className={getStatusBadgeClass(item.status)}>{item.status}</span>
-                      </td>
-                      <td>
-                        <Link href={`${moduleRoute[item.module]}?record=${item.id}`} className="ds-list-item-action">
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      {/* Main Layout Splitting into Left (Main) and Right (Sidebar) */}
+      <div className="ds-dashboard-layout">
+        
+        {/* === MAIN CONTENT (Left) === */}
+        <div className="ds-dashboard-main">
+          {/* Performance Cascade */}
+          {performanceData && <PerformanceCascade data={performanceData} />}
 
-          <div className="ds-status-row">
-            <span>Drafts: {draftModules.length > 0 ? draftModules.join(", ") : "None"}</span>
-            <span>Offline queue: {offlineCount} item(s)</span>
-          </div>
-        </section>
-
-        {/* Quick Actions Card */}
-        <section className="ds-card">
-          <div className="ds-card-header">
-            <h2 className="ds-card-title">Quick Actions</h2>
-          </div>
-          <div className="ds-quick-actions">
-            {quickActions.map((item) => (
-              <Link key={item.href} href={item.href} className="ds-quick-action-link">
-                <span className={`ds-quick-action-icon ${item.color}`}>{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* Two-Column: Follow-ups + Week Agenda */}
-      <div className="ds-two-col">
-        {/* Due Follow-ups */}
-        <section className="ds-card">
-          <div className="ds-card-header">
-            <h2 className="ds-card-title">Due Follow-ups</h2>
-            <span className="ds-kpi-trend neutral">{dashboard.dueFollowUps.length} items</span>
-          </div>
-          {dashboard.dueFollowUps.length === 0 ? (
-            <div className="ds-empty">No follow-ups due right now.</div>
-          ) : (
-            <ul className="ds-list">
-              {dashboard.dueFollowUps.map((item) => (
-                <li key={item.id} className="ds-list-item">
-                  <div className="ds-list-item-content">
-                    <p className="ds-list-item-title">{item.schoolName}</p>
-                    <p className="ds-list-item-meta">{item.recordCode} • Due {formatDay(item.followUpDate)}</p>
-                  </div>
-                  <Link href={`${moduleRoute[item.module]}?record=${item.id}`} className="ds-list-item-action">
-                    Open
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* Week at a Glance */}
-        <section className="ds-card">
-          <div className="ds-card-header">
-            <h2 className="ds-card-title">My Week at a Glance</h2>
-            <span className="ds-kpi-trend neutral">{dashboard.weekAgenda.length} items</span>
-          </div>
-          {dashboard.weekAgenda.length === 0 ? (
-            <div className="ds-empty">No upcoming events in the next 7 days.</div>
-          ) : (
-            <ul className="ds-list">
-              {dashboard.weekAgenda.map((item) => (
-                <li key={item.id} className="ds-list-item">
-                  <div className="ds-list-item-content">
-                    <p className="ds-list-item-title">{formatDay(item.date)}</p>
-                    <p className="ds-list-item-meta">
-                      {moduleLabel[item.module]} - {item.schoolName}
-                      {item.programType ? ` (${item.programType})` : ""}
-                    </p>
-                  </div>
-                  <Link href={`${moduleRoute[item.module]}?record=${item.id}`} className="ds-list-item-action">
-                    Open
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      {/* Performance Cascade */}
-      {performanceData && <PerformanceCascade data={performanceData} />}
-
-      {/* Additional KPIs Row */}
-      <div className="ds-two-col">
-        <section className="ds-card">
-          <div className="ds-card-header">
-            <h2 className="ds-card-title">Program Coverage</h2>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
-            <div>
-              <p className="ds-kpi-label">Schools Implementing</p>
-              <p className="ds-kpi-value" style={{ fontSize: "1.5rem" }}>
-                {dashboard.kpis.schoolsImplementingPercent.toFixed(1)}%
-              </p>
-            </div>
-            <div>
-              <p className="ds-kpi-label">Not Implementing</p>
-              <p className="ds-kpi-value" style={{ fontSize: "1.5rem" }}>
-                {dashboard.kpis.schoolsNotImplementingPercent.toFixed(1)}%
-              </p>
-            </div>
-            <div>
-              <p className="ds-kpi-label">School Visits</p>
-              <p className="ds-kpi-value" style={{ fontSize: "1.5rem" }}>
-                {dashboard.kpis.schoolVisits.toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className="ds-kpi-label">1001 Activities</p>
-              <p className="ds-kpi-value" style={{ fontSize: "1.5rem" }}>
-                {dashboard.kpis.storyActivities.toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Graduation Schools */}
-        {graduationEligibleCount > 0 && (
+          {/* Recent Activity Table */}
           <section className="ds-card">
             <div className="ds-card-header">
-              <h2 className="ds-card-title">Graduation Eligible</h2>
-              <Link href="/portal/graduation-queue" className="ds-card-action">View all</Link>
+              <h2 className="ds-card-title">Recent Activity</h2>
+              <Link href="/portal/reports" className="ds-card-action">View all</Link>
             </div>
-            <ul className="ds-list">
-              {graduationSchools.map((school) => (
-                <li key={school.schoolId} className="ds-list-item">
-                  <div className="ds-list-item-content">
-                    <p className="ds-list-item-title">{school.schoolName}</p>
-                  </div>
-                  <Link href={`/portal/schools/${school.schoolId}`} className="ds-list-item-action">
-                    Review
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="ds-table-wrap">
+              <table className="ds-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>School</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboard.recentActivity.length === 0 ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <div className="ds-empty">No recent activity found.</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    dashboard.recentActivity.map((item) => (
+                      <tr key={item.id}>
+                        <td style={{ whiteSpace: "nowrap" }}>{formatDay(item.date)}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{moduleLabel[item.module]}</td>
+                        <td>
+                          <div style={{ maxWidth: "200px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={item.schoolName}>
+                            {item.schoolName}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={getStatusBadgeClass(item.status)}>{item.status}</span>
+                        </td>
+                        <td>
+                          <Link href={`${moduleRoute[item.module]}?record=${item.id}`} className="ds-list-item-action">
+                            View
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </section>
-        )}
+
+          {/* Program Coverage */}
+          <section className="ds-card">
+            <div className="ds-card-header">
+              <h2 className="ds-card-title">Program Implementation Coverage</h2>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1.25rem" }}>
+              <div>
+                <p className="ds-kpi-label" style={{ whiteSpace: "nowrap" }}>Schools Implementing</p>
+                <p className="ds-kpi-value" style={{ fontSize: "1.5rem", marginTop: "0.25rem" }}>
+                  {dashboard.kpis.schoolsImplementingPercent.toFixed(1)}%
+                </p>
+              </div>
+              <div>
+                <p className="ds-kpi-label" style={{ whiteSpace: "nowrap" }}>Not Implementing</p>
+                <p className="ds-kpi-value" style={{ fontSize: "1.5rem", marginTop: "0.25rem" }}>
+                  {dashboard.kpis.schoolsNotImplementingPercent.toFixed(1)}%
+                </p>
+              </div>
+              <div>
+                <p className="ds-kpi-label" style={{ whiteSpace: "nowrap" }}>School Visits</p>
+                <p className="ds-kpi-value" style={{ fontSize: "1.5rem", marginTop: "0.25rem" }}>
+                  {dashboard.kpis.schoolVisits.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="ds-kpi-label" style={{ whiteSpace: "nowrap" }}>1001 Activities</p>
+                <p className="ds-kpi-value" style={{ fontSize: "1.5rem", marginTop: "0.25rem" }}>
+                  {dashboard.kpis.storyActivities.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* === SIDEBAR (Right) === */}
+        <div className="ds-dashboard-sidebar">
+          
+          {/* Quick Actions Card */}
+          <section className="ds-card">
+            <div className="ds-card-header">
+              <h2 className="ds-card-title">Quick Actions</h2>
+            </div>
+            <div className="ds-quick-actions">
+              {quickActions.map((item) => (
+                <Link key={item.href} href={item.href} className="ds-quick-action-link" style={{ minWidth: 0 }}>
+                  <span className={`ds-quick-action-icon ${item.color}`}>{item.icon}</span>
+                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
+                </Link>
+              ))}
+            </div>
+            
+            {(draftModules.length > 0 || offlineCount > 0) && (
+              <div className="ds-status-row" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f4f5f8', flexDirection: "column", gap: "0.5rem" }}>
+                {draftModules.length > 0 && <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Drafts: {draftModules.join(", ")}</span>}
+                {offlineCount > 0 && <span style={{ color: 'var(--ds-accent-orange)', fontWeight: 600 }}>Offline queue: {offlineCount} item(s)</span>}
+              </div>
+            )}
+          </section>
+
+          {/* Due Follow-ups */}
+          <section className="ds-card">
+            <div className="ds-card-header">
+              <h2 className="ds-card-title">Due Follow-ups</h2>
+              <span className="ds-kpi-trend neutral">{dashboard.dueFollowUps.length} items</span>
+            </div>
+            {dashboard.dueFollowUps.length === 0 ? (
+              <div className="ds-empty">No follow-ups due right now.</div>
+            ) : (
+              <ul className="ds-list">
+                {dashboard.dueFollowUps.map((item) => (
+                  <li key={item.id} className="ds-list-item">
+                    <div className="ds-list-item-content">
+                      <p className="ds-list-item-title" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.schoolName}</p>
+                      <p className="ds-list-item-meta" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.recordCode} • Due {formatDay(item.followUpDate)}</p>
+                    </div>
+                    <Link href={`${moduleRoute[item.module]}?record=${item.id}`} className="ds-list-item-action">
+                      Open
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Week at a Glance */}
+          <section className="ds-card">
+            <div className="ds-card-header">
+              <h2 className="ds-card-title">My Week at a Glance</h2>
+              <span className="ds-kpi-trend neutral">{dashboard.weekAgenda.length} items</span>
+            </div>
+            {dashboard.weekAgenda.length === 0 ? (
+              <div className="ds-empty">No upcoming events in the next 7 days.</div>
+            ) : (
+              <ul className="ds-list">
+                {dashboard.weekAgenda.map((item) => (
+                  <li key={item.id} className="ds-list-item">
+                    <div className="ds-list-item-content">
+                      <p className="ds-list-item-title" style={{ whiteSpace: "nowrap" }}>{formatDay(item.date)}</p>
+                      <p className="ds-list-item-meta" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {moduleLabel[item.module]} - {item.schoolName}
+                        {item.programType ? ` (${item.programType})` : ""}
+                      </p>
+                    </div>
+                    <Link href={`${moduleRoute[item.module]}?record=${item.id}`} className="ds-list-item-action">
+                      Open
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Graduation Eligible */}
+          {graduationEligibleCount > 0 && (
+            <section className="ds-card" style={{ borderColor: 'rgba(255, 152, 0, 0.3)', borderStyle: 'solid', borderWidth: '1px' }}>
+              <div className="ds-card-header">
+                <h2 className="ds-card-title">Graduation Readiness</h2>
+                <Link href="/portal/graduation-queue" className="ds-card-action">View all</Link>
+              </div>
+              <ul className="ds-list">
+                {graduationSchools.map((school) => (
+                  <li key={school.schoolId} className="ds-list-item">
+                    <div className="ds-list-item-content">
+                      <p className="ds-list-item-title" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--ds-accent-orange)" }}>{school.schoolName}</p>
+                    </div>
+                    <Link href={`/portal/schools/${school.schoolId}`} className="ds-list-item-action">
+                      Evaluate
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+        </div>
       </div>
 
       {/* Graduation Toast */}

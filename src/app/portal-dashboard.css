@@ -432,13 +432,33 @@
 /* ── Dashboard Grid ────────────────────────────────────────── */
 .ds-dashboard-grid {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+}
+
+.ds-dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.ds-dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.ds-dashboard-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .ds-two-col {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 1rem;
+  grid-template-columns: 1fr 350px;
+  gap: 1.25rem;
 }
 
 /* ── Cards ─────────────────────────────────────────────────── */
