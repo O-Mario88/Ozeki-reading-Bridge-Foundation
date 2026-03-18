@@ -20,14 +20,14 @@ function safeSegment(value: string) {
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: { params: Promise<{ type: string }> },
 ) {
   const auth = await requireFinanceEditor();
   if (auth.error) {
     return auth.error;
   }
 
-  const { id } = await context.params;
+  const { type: id } = await context.params;
   const statementId = Number(id);
   if (!Number.isFinite(statementId) || statementId <= 0) {
     return NextResponse.json({ error: "Invalid statement id." }, { status: 400 });
