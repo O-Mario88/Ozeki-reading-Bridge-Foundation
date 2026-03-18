@@ -79,6 +79,7 @@ export function getPostgresPool() {
       idleTimeoutMillis: Number(process.env.DATABASE_IDLE_TIMEOUT_MS ?? 30_000),
       allowExitOnIdle: true,
       ssl: shouldUseSsl(databaseUrl) ? { rejectUnauthorized: false } : undefined,
+      options: "-c search_path=public",
     });
     if (toBooleanFlag(process.env.LOG_ACTIVE_DB, true)) {
       logPostgresSelectionOnce();
