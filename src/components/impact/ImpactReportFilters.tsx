@@ -101,14 +101,14 @@ export function ImpactReportFilters({
 
   const selectedRegionOption = useMemo(
     () =>
-      regions.find(
+      ((Array.isArray(regions) ? regions : [])).find(
         (item) => normalize(item.name) === normalize(region) || normalize(item.id) === normalize(region),
       ) ?? null,
     [regions, region],
   );
   const selectedSubRegionOption = useMemo(
     () =>
-      subRegions.find(
+      ((Array.isArray(subRegions) ? subRegions : [])).find(
         (item) =>
           normalize(item.name) === normalize(subRegion) || normalize(item.id) === normalize(subRegion),
       ) ?? null,
@@ -116,7 +116,7 @@ export function ImpactReportFilters({
   );
   const selectedDistrictOption = useMemo(
     () =>
-      districts.find(
+      ((Array.isArray(districts) ? districts : [])).find(
         (item) => normalize(item.name) === normalize(district) || normalize(item.id) === normalize(district),
       ) ?? null,
     [districts, district],
@@ -257,7 +257,7 @@ export function ImpactReportFilters({
     subRegion || "All sub-regions",
     district || "All districts",
     schoolId
-      ? schools.find((item) => String(item.id) === String(schoolId))?.name ?? "Selected school"
+      ? ((Array.isArray(schools) ? schools : [])).find((item) => String(item.id) === String(schoolId))?.name ?? "Selected school"
       : "All schools",
   ].join(" > ");
 
@@ -298,7 +298,7 @@ export function ImpactReportFilters({
       <label>
         <span>Year/FY</span>
         <select value={year} onChange={(event) => setYear(event.target.value)}>
-          {years.map((value) => (
+          {(years ?? []).map((value) => (
             <option key={value} value={value}>
               {value}
             </option>
@@ -310,7 +310,7 @@ export function ImpactReportFilters({
         <span>Report Type</span>
         <select value={reportType} onChange={(event) => setReportType(event.target.value)}>
           <option value="">All report types</option>
-          {reportTypes.map((type) => (
+          {(reportTypes ?? []).map((type) => (
             <option value={type} key={type}>
               {type}
             </option>
@@ -322,7 +322,7 @@ export function ImpactReportFilters({
         <span>Report Category</span>
         <select value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}>
           <option value="">All categories</option>
-          {reportCategories.map((category) => (
+          {(reportCategories ?? []).map((category) => (
             <option value={category} key={category}>
               {category}
             </option>
@@ -333,7 +333,7 @@ export function ImpactReportFilters({
       <label>
         <span>Period Type</span>
         <select value={periodType} onChange={(event) => setPeriodType(event.target.value)}>
-          {periodTypes.map((type) => (
+          {(periodTypes ?? []).map((type) => (
             <option value={type} key={type}>
               {type}
             </option>
@@ -344,7 +344,7 @@ export function ImpactReportFilters({
       <label>
         <span>Output</span>
         <select value={output} onChange={(event) => setOutput(event.target.value)}>
-          {outputs.map((type) => (
+          {(outputs ?? []).map((type) => (
             <option value={type} key={type}>
               {type}
             </option>
@@ -364,7 +364,7 @@ export function ImpactReportFilters({
           }}
         >
           <option value="">All regions</option>
-          {regions.map((item) => (
+          {((Array.isArray(regions) ? regions : [])).map((item) => (
             <option value={item.name} key={item.id}>
               {item.name}
             </option>
@@ -384,7 +384,7 @@ export function ImpactReportFilters({
           }}
         >
           <option value="">All sub-regions</option>
-          {subRegions.map((item) => (
+          {((Array.isArray(subRegions) ? subRegions : [])).map((item) => (
             <option value={item.name} key={item.id}>
               {item.name}
             </option>
@@ -403,7 +403,7 @@ export function ImpactReportFilters({
           }}
         >
           <option value="">All districts</option>
-          {districts.map((item) => (
+          {((Array.isArray(districts) ? districts : [])).map((item) => (
             <option value={item.name} key={item.id}>
               {item.name}
             </option>
@@ -419,7 +419,7 @@ export function ImpactReportFilters({
           onChange={(event) => setSchoolId(event.target.value)}
         >
           <option value="">All schools</option>
-          {schools.map((item) => (
+          {((Array.isArray(schools) ? schools : [])).map((item) => (
             <option value={String(item.id)} key={item.id}>
               {item.name}
             </option>
