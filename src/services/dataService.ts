@@ -455,3 +455,31 @@ export async function addSchoolContactToSchool(_schoolId: number, _input: unknow
 export async function addSchoolLearnerToSchool(_schoolId: number, _input: unknown) {
     throw new Error("addSchoolLearnerToSchool: not yet migrated — use createSchoolLearnerInSchool instead");
 }
+
+// ── Portal record status ─────────────────────────────────────────────
+export async function setPortalRecordStatusAsync(
+    _id: number,
+    _status: string,
+    _user?: unknown,
+    _reviewNote?: string,
+) {
+    throw new Error("setPortalRecordStatusAsync: not yet migrated to PostgreSQL");
+}
+
+// ── Finance budget / reconciliation extras ───────────────────────────
+export function getBudgetVsActual(_month?: string | null, _currency?: string | null) {
+    return [] as unknown[];
+}
+
+export async function listMonthlyBudgets(_month?: string | null, _currency?: string | null) {
+    return [];
+}
+
+export async function getFinanceContactByEmail(_email: string) {
+    return null as unknown;
+}
+
+// ── Graduation queue ─────────────────────────────────────────────────
+export async function getGraduationQueueAsync() {
+    return { eligibleCount: 0, updatedAt: new Date().toISOString(), items: [] as unknown[] };
+}

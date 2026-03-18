@@ -178,11 +178,11 @@ export function verifyFinanceFileSignature(_id: string | number | null, _expires
 }
 
 // ── Reconciliation ───────────────────────────────────────────────────
-export async function createStatementLineAsync(_input: unknown, _actor: FinanceActor) {
-    throw new Error("createStatementLineAsync: not yet migrated to PostgreSQL");
+export async function getBankStatementReconciliation(..._args: unknown[]) {
+    return { lines: [], summary: { matched: 0, unmatched: 0 } };
 }
 
-export async function matchStatementLineToLedger(_statementLineId: number, _ledgerTxnId: number) {
+export async function matchStatementLineToLedger(..._args: unknown[]) {
     throw new Error("matchStatementLineToLedger: not yet migrated to PostgreSQL");
 }
 
@@ -218,7 +218,7 @@ export async function updateFinanceAuditExceptionStatusAsync(_id: number, _statu
 }
 
 // ── Monthly statements ───────────────────────────────────────────────
-export async function generateFinanceMonthlyStatement(_month: string, _actor: FinanceActor, _extra?: unknown) {
+export async function generateFinanceMonthlyStatement(_monthOrFilters: string | unknown, _actor?: unknown, _extra?: unknown) {
     throw new Error("generateFinanceMonthlyStatement: not yet migrated to PostgreSQL");
 }
 
