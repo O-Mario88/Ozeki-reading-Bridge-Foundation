@@ -26,7 +26,7 @@ function shouldUseSsl(databaseUrl?: string) {
   const value = (process.env.DATABASE_SSL ?? process.env.DB_SSL_REQUIRE)?.trim().toLowerCase();
   if (!value) {
     const candidate = databaseUrl ?? getDatabaseUrlRaw();
-    return candidate.includes("amazonaws.com");
+    return candidate.includes("amazonaws.com") || candidate.includes("neon.tech");
   }
   return value === "1" || value === "true" || value === "require" || value === "yes";
 }
