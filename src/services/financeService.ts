@@ -85,11 +85,10 @@ export {
   issueFinanceReceiptPostgres as issueFinanceReceipt,
   sendFinanceReceiptPostgres as sendFinanceReceipt,
   recordFinancePaymentPostgres as recordFinancePayment,
+  createFinanceContactPostgres as createFinanceContactAsync,
+  updateFinanceInvoiceDraftPostgres as updateFinanceInvoiceDraftAsync,
+  upsertMonthlyBudgetPostgres as upsertMonthlyBudget,
 } from "@/lib/server/postgres/repositories/finance-documents";
-
-export async function updateFinanceInvoiceDraftAsync(_id: number, _input: unknown, _actor: FinanceActor) {
-    throw new Error("updateFinanceInvoiceDraftAsync: not yet migrated to PostgreSQL");
-}
 
 export async function voidFinancePaymentAsync(_id: number, _reason: string, _actor: FinanceActor) {
     throw new Error("voidFinancePaymentAsync: not yet migrated to PostgreSQL");
@@ -111,11 +110,7 @@ export async function listInvoiceAllocations(_invoiceId: number) {
     return [];
 }
 
-// ── Contacts ─────────────────────────────────────────────────────────
-export async function createFinanceContactAsync(_input: unknown, ..._extra: unknown[]) {
-    const inputObj = _input as Record<string, unknown>;
-    return { id: 0, ...inputObj } as Record<string, unknown> & { id: number };
-}
+// ── Contacts (now natively exported above) ───────────────────────────
 
 // ── File operations ──────────────────────────────────────────────────
 export async function createFinanceFileRecord(_input: unknown, _actor?: unknown) {
@@ -160,10 +155,7 @@ export async function createStatementLineAsync(_actor: unknown, _input: unknown)
     return { id: 0 };
 }
 
-// ── Budgets ──────────────────────────────────────────────────────────
-export async function upsertMonthlyBudget(_input: unknown, _actor: FinanceActor) {
-    throw new Error("upsertMonthlyBudget: not yet migrated to PostgreSQL");
-}
+// ── Budgets (now natively exported above) ────────────────────────────
 
 // ── Settings ─────────────────────────────────────────────────────────
 export async function updateFinanceSettingsAsync(_input: unknown, _actor?: unknown) {

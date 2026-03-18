@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     try {
-        const record = upsertMonthlyBudget(actor, {
+        const record = await upsertMonthlyBudget({
             month: body.month,
             currency: body.currency || "UGX",
             subcategory: body.subcategory,
             budgetAmount: Number(body.budgetAmount),
-        });
+        }, actor.id);
         return NextResponse.json({ budget: record });
     } catch (err) {
         return NextResponse.json(

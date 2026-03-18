@@ -1,5 +1,5 @@
 import { queryPostgres, withPostgresClient } from "../client";
-import type { FinanceInvoiceRecord, FinanceReceiptRecord } from "@/lib/types";
+import type { FinanceContactRecord, FinanceInvoiceRecord, FinanceReceiptRecord } from "@/lib/types";
 import { getFinanceInvoiceByIdPostgres, getFinanceReceiptByIdPostgres } from "./finance";
 import { postReceiptToGl } from "./finance-v2";
 import { mapFinanceIncomeToBaseCategory } from "@/lib/finance-categories";
@@ -433,4 +433,179 @@ export async function recordFinancePaymentPostgres(
       throw e;
     }
   });
+}
+
+// ── Contact Creation (was a no-op stub returning {id:0}) ─────────────
+export async function createFinanceContactPostgres(
+  input: {
+    name: string;
+    emails: string[];
+    phone?: string;
+    address?: string;
+    contactType: string;
+  },
+  _actor?: FinanceActor,
+): Promise<FinanceContactRecord> {
+  const result = await queryPostgres<{ id: number; createdAt: string }>(
+    `INSERT INTO finance_contacts (name, emails_json, phone, address, contact_type)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, created_at AS "createdAt"`,
+    [
+      input.name,
+      JSON.stringify(input.emails || []),
+      input.phone || null,
+      input.address || null,
+      input.contactType,
+    ],
+  );
+  const row = result.rows[0];
+  return {
+    id: Number(row.id),
+    name: input.name,
+    emails: input.emails || [],
+    phone: input.phone,
+    address: input.address,
+    contactType: input.contactType as FinanceContactRecord["contactType"],
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+// ── Invoice Draft Update (was a throwing stub) ───────────────────────
+export async function updateFinanceInvoiceDraftPostgres(
+  id: number,
+  input: {
+    contactId?: number;
+    category?: string;
+    issueDate?: string;
+    dueDate?: string;
+    currency?: string;
+    lineItems?: Array<{ description: string; qty: number; unitPrice: number }>;
+    tax?: number;
+    notes?: string;
+  },
+  _actor: FinanceActor,
+): Promise<FinanceInvoiceRecord> {
+  return await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const current = await client.query(
+        "SELECT status FROM finance_invoices WHERE id = $1",
+        [id],
+      );
+      if (current.rows.length === 0) throw new Error("Invoice not found.");
+      if (current.rows[0].status !== "draft") {
+        throw new Error("Only draft invoices can be edited.");
+      }
+
+      const sets: string[] = [];
+      const params: unknown[] = [];
+      let paramIndex = 1;
+
+      if (input.contactId !== undefined) {
+        sets.push(`contact_id = $${paramIndex++}`);
+        params.push(input.contactId);
+      }
+      if (input.category !== undefined) {
+        const baseCategory = mapFinanceIncomeToBaseCategory(input.category);
+        sets.push(`category = $${paramIndex++}`);
+        params.push(baseCategory);
+        sets.push(`display_category = $${paramIndex++}`);
+        params.push(input.category);
+      }
+      if (input.issueDate !== undefined) {
+        sets.push(`issue_date = $${paramIndex++}`);
+        params.push(input.issueDate);
+      }
+      if (input.dueDate !== undefined) {
+        sets.push(`due_date = $${paramIndex++}`);
+        params.push(input.dueDate);
+      }
+      if (input.currency !== undefined) {
+        sets.push(`currency = $${paramIndex++}`);
+        params.push(input.currency);
+      }
+      if (input.tax !== undefined) {
+        sets.push(`tax = $${paramIndex++}`);
+        params.push(input.tax);
+      }
+      if (input.notes !== undefined) {
+        sets.push(`notes = $${paramIndex++}`);
+        params.push(input.notes);
+      }
+
+      if (input.lineItems && input.lineItems.length > 0) {
+        let subtotal = 0;
+        for (const item of input.lineItems) {
+          subtotal += item.qty * item.unitPrice;
+        }
+        const tax = input.tax ?? 0;
+        const total = subtotal + tax;
+
+        sets.push(`subtotal = $${paramIndex++}`);
+        params.push(subtotal);
+        sets.push(`total = $${paramIndex++}`);
+        params.push(total);
+        sets.push(`balance_due = $${paramIndex++}`);
+        params.push(total);
+      }
+
+      sets.push(`updated_at = NOW()`);
+
+      if (sets.length > 1) {
+        params.push(id);
+        await client.query(
+          `UPDATE finance_invoices SET ${sets.join(", ")} WHERE id = $${paramIndex}`,
+          params,
+        );
+      }
+
+      if (input.lineItems && input.lineItems.length > 0) {
+        await client.query("DELETE FROM finance_invoice_items WHERE invoice_id = $1", [id]);
+        for (const item of input.lineItems) {
+          const amount = item.qty * item.unitPrice;
+          await client.query(
+            `INSERT INTO finance_invoice_items (invoice_id, description, qty, unit_price, amount)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [id, item.description, item.qty, item.unitPrice, amount],
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+      const savedInvoice = await getFinanceInvoiceByIdPostgres(id);
+      if (!savedInvoice) throw new Error("Failed to read back updated invoice.");
+      return savedInvoice;
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    }
+  });
+}
+
+// ── Monthly Budget Upsert (was a throwing stub) ──────────────────────
+export async function upsertMonthlyBudgetPostgres(
+  input: {
+    month: string;
+    currency?: string;
+    subcategory: string;
+    budgetAmount: number;
+  },
+  actorUserId: number,
+) {
+  const currency = input.currency || "UGX";
+  const result = await queryPostgres<{ id: number }>(
+    `INSERT INTO finance_budgets_monthly (month, currency, subcategory, budget_amount, created_by_user_id)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (month, currency, subcategory)
+     DO UPDATE SET budget_amount = EXCLUDED.budget_amount, updated_at = NOW()
+     RETURNING id`,
+    [input.month, currency, input.subcategory, input.budgetAmount, actorUserId],
+  );
+  return {
+    id: Number(result.rows[0]?.id ?? 0),
+    month: input.month,
+    currency,
+    subcategory: input.subcategory,
+    budgetAmount: input.budgetAmount,
+  };
 }
