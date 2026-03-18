@@ -88,8 +88,8 @@ export async function POST(request: Request) {
   try {
     const payload = postSchema.parse(await request.json());
     const profile = await createBenchmarkProfileAsync({
-      user,
-      input: {
+      user: user as { id: number; fullName: string },
+      profile: {
         name: payload.name,
         effectiveFromDate: payload.effectiveFromDate,
         effectiveToDate: payload.effectiveToDate,
@@ -125,9 +125,9 @@ export async function PATCH(request: Request) {
   try {
     const payload = patchSchema.parse(await request.json());
     const profile = await updateBenchmarkProfileAsync({
-      user,
+      user: user as { id: number; fullName: string },
       benchmarkId: payload.benchmarkId,
-      input: {
+      profile: {
         name: payload.name,
         effectiveFromDate: payload.effectiveFromDate,
         effectiveToDate:

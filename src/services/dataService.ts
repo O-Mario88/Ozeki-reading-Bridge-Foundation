@@ -148,11 +148,34 @@ export type DistrictProfile = {
 
 export type SchoolProfile = {
     schoolId: number;
+    id: number;
     schoolName: string;
+    name: string;
+    schoolCode: string;
     region: string;
+    subRegion: string;
     district: string;
+    subCounty: string;
+    parish: string;
+    village: string;
     enrolledBoys: number;
     enrolledGirls: number;
+    enrolledLearners: number;
+    status: string;
+    trainings: number;
+    visits: number;
+    assessments: number;
+    storyActivities: number;
+    coachingCycles: number;
+    participantsTotal: number;
+    participantsTeachers: number;
+    participantsLeaders: number;
+    learnersAssessed: number;
+    storiesPublished: number;
+    evidenceUploads: number;
+    lastActivityDate: string;
+    timeline: unknown[];
+    [key: string]: unknown;
 };
 
 export type ImpactExplorerProfiles = {
@@ -271,6 +294,7 @@ export async function getGovernmentViewData(_period?: string) {
 }
 
 export async function validateParticipantBelongsToSchool(
+    _participantType: string,
     _participantUid: string,
     _schoolId: number,
 ) {
@@ -374,9 +398,9 @@ export async function updateLessonEvaluationAsync(id: number, input: unknown, ac
     return fn(id, input, actor as never);
 }
 
-export async function voidLessonEvaluationAsync(id: number, _reason: string, actor: unknown) {
+export async function voidLessonEvaluationAsync(id: number, actorOrUserId: unknown, _reason?: string) {
     const { voidLessonEvaluationAsync: fn } = await import("@/lib/db-api");
-    return fn(id, actor as never);
+    return fn(id, actorOrUserId as number, _reason);
 }
 
 // ── Teaching quality improvement ─────────────────────────────────────

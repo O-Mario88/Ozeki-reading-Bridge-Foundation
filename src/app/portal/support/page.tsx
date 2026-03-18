@@ -12,7 +12,7 @@ export default async function SupportPage() {
 
     // Fetch initial data
     const initialRequests = await listSupportRequests();
-    const staffMembers = await listPortalUsersForAdmin(user);
+    const staffMembers = await listPortalUsersForAdmin(user) as unknown as import("@/lib/types").PortalUserAdminRecord[];
 
     return (
         <PortalShell

@@ -15,8 +15,8 @@ export const metadata = {
 
 export default async function PortalSuperAdminPage() {
   const user = await requirePortalSuperAdminUser();
-  const users = await listPortalUsersForAdmin(user);
-  const graduationSettings = await getGraduationSettings();
+  const users = await listPortalUsersForAdmin(user) as unknown as import("@/lib/types").PortalUserAdminRecord[];
+  const graduationSettings = (await getGraduationSettings()) ?? {} as unknown as import("@/lib/types").GraduationSettingsRecord;
 
   return (
     <PortalShell

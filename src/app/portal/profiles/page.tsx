@@ -46,7 +46,7 @@ type ProfileSelection = {
   schoolId: number | null;
 };
 
-type ExplorerProfiles = ReturnType<typeof getImpactExplorerProfiles>;
+type ExplorerProfiles = Awaited<ReturnType<typeof getImpactExplorerProfiles>>;
 type ExplorerSchool = ExplorerProfiles["schools"][number];
 
 type SchoolWithGeo = ExplorerSchool & {

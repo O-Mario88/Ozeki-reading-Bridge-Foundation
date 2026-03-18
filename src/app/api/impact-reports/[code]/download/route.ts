@@ -152,7 +152,7 @@ export async function GET(
       `Attributed activities: ${report.factPack.sponsorship.totalAttributedActivities.toLocaleString()}`,
       `Unique sponsors: ${report.factPack.sponsorship.uniqueSponsors.toLocaleString()}`,
       ...report.factPack.sponsorship.topSponsors.slice(0, 8).map((entry: Record<string, unknown>) =>
-        `${entry.sponsoredBy} (${entry.sponsorType}) - ${entry.activities} activities [${entry.modules.join(", ")}]`,
+        `${entry.sponsoredBy} (${entry.sponsorType}) - ${entry.activities} activities [${(entry.modules as string[]).join(", ")}]`,
       ),
     ]);
   }
@@ -244,7 +244,7 @@ export async function GET(
     if (teacherEval.records.length > 0) {
       drawSection(
         "Teacher Observation Records (Private)",
-        teacherEval.records.slice(0, 12).flatMap((record, index) => [
+        teacherEval.records.slice(0, 12).flatMap((record: Record<string, unknown>, index: number) => [
           `${index + 1}. ${record.teacherName} • ${record.classObserved} • ${record.lessonDate} • ${record.overallLevel} (${record.overallScore}/4)`,
           ...wrapText(`Strength: ${record.strengthsText}`, 86),
           ...wrapText(`Gap: ${record.priorityGapText}`, 86),
@@ -272,7 +272,7 @@ export async function GET(
     if (summary.teacherComparisons.length > 0) {
       drawSection(
         "Teacher Improvement Records (Private)",
-        summary.teacherComparisons.slice(0, 12).flatMap((entry, index) => [
+        summary.teacherComparisons.slice(0, 12).flatMap((entry: Record<string, unknown>, index: number) => [
           `${index + 1}. ${entry.teacherName} • ${entry.classObserved} • Δ overall ${entry.deltaOverall > 0 ? "+" : ""}${entry.deltaOverall.toFixed(2)} • ${entry.improvementStatus}`,
           `Baseline: ${entry.baselineDate} • Comparison: ${entry.comparisonDate} • Latest: ${entry.latestDate}`,
         ]),
@@ -292,7 +292,7 @@ export async function GET(
     if (alignment.points.length > 0) {
       drawSection(
         "Aligned Timeline Points",
-        alignment.points.slice(-8).flatMap((point) => [
+        alignment.points.slice(-8).flatMap((point: Record<string, unknown>) => [
           `${point.period}: Teaching ${point.teachingQualityAvg ?? "N/A"} | Decoding ${point.decodingAvg ?? "N/A"} | Fluency ${point.fluencyAvg ?? "N/A"} | ${LEARNING_DOMAIN_DICTIONARY.comprehension.label_full} ${point.comprehensionAvg ?? "N/A"}`,
           `Non-reader ${point.nonReaderPct ?? "N/A"}% | 20+ CWPM ${point.cwpm20PlusPct ?? "N/A"}% | Story sessions ${point.storySessionsCount}`,
         ]),
@@ -300,10 +300,10 @@ export async function GET(
     }
   }
 
-  drawSection("Priorities", report.narrative.nextPriorities.flatMap((item) => wrapText(`- ${item}`)));
+  drawSection("Priorities", report.narrative.nextPriorities.flatMap((item: string) => wrapText(`- ${item}`)));
   drawSection(
     "Section Narratives",
-    report.narrative.sectionNarratives.slice(0, 8).flatMap((section) => [
+    report.narrative.sectionNarratives.slice(0, 8).flatMap((section: Record<string, unknown>) => [
       `${section.title}:`,
       ...wrapText(section.summary, 90),
     ]),

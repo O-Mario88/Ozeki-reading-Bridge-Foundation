@@ -390,7 +390,7 @@ export default async function ImpactReportDetailPage({
               {report.factPack.engagement.topDownloads.length === 0 ? (
                 <li>Data not available</li>
               ) : (
-                report.factPack.engagement.topDownloads.map((item) => (
+                report.factPack.engagement.topDownloads.map((item: { slug: string; title: string; downloads: number }) => (
                   <li key={item.slug}>
                     {item.title}: {item.downloads.toLocaleString()}
                   </li>
@@ -462,7 +462,7 @@ export default async function ImpactReportDetailPage({
             <h4>Top 5 gaps</h4>
             <ul>
               {report.factPack.instructionQuality.topGaps.length > 0 ? (
-                report.factPack.instructionQuality.topGaps.map((gap) => <li key={gap}>{gap}</li>)
+                report.factPack.instructionQuality.topGaps.map((gap: string) => <li key={gap}>{gap}</li>)
               ) : (
                 <li>Data not available</li>
               )}
@@ -472,7 +472,7 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h3>Next Priorities</h3>
             <ul>
-              {report.narrative.nextPriorities.map((item) => (
+              {report.narrative.nextPriorities.map((item: string) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>

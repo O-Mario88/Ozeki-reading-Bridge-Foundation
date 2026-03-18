@@ -79,8 +79,8 @@ export async function POST(request: Request) {
   try {
     const payload = postSchema.parse(await request.json());
     const rules = await upsertBenchmarkRuleAsync({
-      user,
-      input: payload,
+      user: user as { id: number; fullName: string },
+      rule: payload,
     });
     return NextResponse.json({ rules });
   } catch (error) {

@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function PortalGraduationQueuePage() {
   const user = await requirePortalStaffUser();
-  const queue = await listGraduationQueueAsync({ limit: 500, includeSnoozed: false, refresh: true });
+  const queue = await listGraduationQueueAsync({ limit: 500, includeSnoozed: false, refresh: true }) as unknown as import("@/lib/types").GraduationQueueSummary;
   const supervisors = await listGraduationReviewSupervisorsAsync();
 
   return (
