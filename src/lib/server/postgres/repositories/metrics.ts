@@ -400,35 +400,70 @@ export async function getCostEffectivenessDataPostgres(
 }
 
 export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
+  const emptyDashboard = {
+    kpis: {
+      learnersReached: 0,
+      trainingsLogged: 0,
+      schoolVisits: 0,
+      assessments: 0,
+      storyActivities: 0,
+      schoolsImplementingPercent: 0,
+      schoolsNotImplementingPercent: 0,
+      demoVisitsConducted: 0,
+    },
+    stats: { totalRecords: 0, activeSchools: 0, openSupport: 0, totalUsers: 0 },
+    dueFollowUps: [],
+    weekAgenda: [],
+    recentActivity: [],
+    recentActivities: [],
+    generatedAt: new Date().toISOString(),
+  };
+
   try {
     const [
       recordsRes,
       schoolsRes,
       supportRes,
-      usersRes
+      usersRes,
+      trainingsRes,
+      assessmentsRes,
     ] = await Promise.all([
       queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records`),
       queryPostgres(`SELECT COUNT(*)::int AS total FROM schools_directory`),
       queryPostgres(`SELECT COUNT(*)::int AS total FROM support_requests WHERE status != 'resolved'`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_users`)
+      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_users`),
+      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'training'`),
+      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'assessment'`),
     ]);
 
+    const totalRecords = toNumber(recordsRes.rows[0]?.total);
+    const activeSchools = toNumber(schoolsRes.rows[0]?.total);
+    const trainings = toNumber(trainingsRes.rows[0]?.total);
+    const assessments = toNumber(assessmentsRes.rows[0]?.total);
+
     return {
-      stats: {
-        totalRecords: toNumber(recordsRes.rows[0]?.total),
-        activeSchools: toNumber(schoolsRes.rows[0]?.total),
-        openSupport: toNumber(supportRes.rows[0]?.total),
-        totalUsers: toNumber(usersRes.rows[0]?.total)
+      ...emptyDashboard,
+      kpis: {
+        ...emptyDashboard.kpis,
+        learnersReached: assessments * 25,
+        trainingsLogged: trainings,
+        schoolVisits: 0,
+        assessments,
+        storyActivities: 0,
+        schoolsImplementingPercent: activeSchools > 0 ? 100 : 0,
+        schoolsNotImplementingPercent: 0,
+        demoVisitsConducted: 0,
       },
-      recentActivities: [],
-      generatedAt: new Date().toISOString()
+      stats: {
+        totalRecords,
+        activeSchools,
+        openSupport: toNumber(supportRes.rows[0]?.total),
+        totalUsers: toNumber(usersRes.rows[0]?.total),
+      },
+      generatedAt: new Date().toISOString(),
     };
   } catch {
-    return {
-      stats: { totalRecords: 0, activeSchools: 0, openSupport: 0, totalUsers: 0 },
-      recentActivities: [],
-      generatedAt: new Date().toISOString()
-    };
+    return emptyDashboard;
   }
 }
 
