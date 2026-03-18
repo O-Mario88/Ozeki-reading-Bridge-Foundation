@@ -2,6 +2,7 @@ import { queryPostgres, withPostgresClient } from "../client";
 import type { FinanceInvoiceRecord, FinanceReceiptRecord } from "@/lib/types";
 import { getFinanceInvoiceByIdPostgres, getFinanceReceiptByIdPostgres } from "./finance";
 import { postReceiptToGl } from "./finance-v2";
+import { mapFinanceIncomeToBaseCategory } from "@/lib/finance-categories";
 
 type FinanceActor = { id: number };
 
@@ -40,16 +41,18 @@ export async function createFinanceInvoicePostgres(
       const total = subtotal + taxAmount;
 
       // 3. Insert Invoice
+      const baseCategory = mapFinanceIncomeToBaseCategory(input.category);
       const invoiceResult = await client.query(
         `INSERT INTO finance_invoices (
-          invoice_number, contact_id, category, issue_date, due_date, currency,
+          invoice_number, contact_id, category, display_category, issue_date, due_date, currency,
           subtotal, tax, total, balance_due, status, notes, created_by_user_id
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'draft', $11, $12
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'draft', $12, $13
         ) RETURNING id`,
         [
           invoiceNumber,
           input.contactId,
+          baseCategory,
           input.category,
           input.issueDate,
           input.dueDate,
@@ -137,17 +140,19 @@ export async function createFinanceReceiptPostgres(
       const receiptNumber = `${prefix}${nextSeq}`;
 
       // 2. Insert Receipt
+      const baseCategory = mapFinanceIncomeToBaseCategory(input.category);
       const result = await client.query(
         `INSERT INTO finance_receipts (
-          receipt_number, contact_id, category, received_from, receipt_date, currency,
+          receipt_number, contact_id, category, display_category, received_from, receipt_date, currency,
           amount_received, payment_method, reference_no, related_invoice_id,
           description, notes, status, created_by_user_id
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'draft', $13
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'draft', $14
         ) RETURNING id`,
         [
           receiptNumber,
           input.contactId,
+          baseCategory,
           input.category,
           input.receivedFrom,
           input.receiptDate,
@@ -259,13 +264,14 @@ export async function issueFinanceReceiptPostgres(
       // 2. Post to Ledger (Money In)
       await client.query(
         `INSERT INTO finance_transactions_ledger (
-          txn_type, category, date, currency, amount, counterparty_contact_id, 
+          txn_type, category, display_category, date, currency, amount, counterparty_contact_id, 
           source_type, source_id, posted_status, posted_at, created_by_user_id
         ) VALUES (
-          'money_in', $1, $2, $3, $4, $5, 'receipt', $6, 'posted', NOW(), $7
+          'money_in', $1, $2, $3, $4, $5, $6, 'receipt', $7, 'posted', NOW(), $8
         )`,
         [
           receipt.category,
+          receipt.display_category,
           receipt.receipt_date,
           receipt.currency,
           receipt.amount_received,
@@ -365,16 +371,17 @@ export async function recordFinancePaymentPostgres(
 
       const receiptInsert = await client.query(
         `INSERT INTO finance_receipts (
-          receipt_number, contact_id, category, received_from, receipt_date, currency,
+          receipt_number, contact_id, category, display_category, received_from, receipt_date, currency,
           amount_received, payment_method, reference_no, related_invoice_id,
           description, notes, status, created_by_user_id
         ) VALUES (
-          $1, $2, $3, (SELECT name FROM finance_contacts WHERE id = $2 limit 1), $4, $5, $6, $7, $8, $9, $10, $11, 'issued', $12
+          $1, $2, $3, $4, (SELECT name FROM finance_contacts WHERE id = $2 limit 1), $5, $6, $7, $8, $9, $10, $11, $12, 'issued', $13
         ) RETURNING id`,
         [
           receiptNumber,
           invoice.contact_id,
           invoice.category,
+          invoice.display_category,
           input.date,
           invoice.currency,
           input.amount,
@@ -391,12 +398,12 @@ export async function recordFinancePaymentPostgres(
       // 2. Post Ledger
       await client.query(
         `INSERT INTO finance_transactions_ledger (
-          txn_type, category, date, currency, amount, counterparty_contact_id, 
+          txn_type, category, display_category, date, currency, amount, counterparty_contact_id, 
           source_type, source_id, posted_status, posted_at, created_by_user_id
         ) VALUES (
-          'money_in', $1, $2, $3, $4, $5, 'receipt', $6, 'posted', NOW(), $7
+          'money_in', $1, $2, $3, $4, $5, $6, 'receipt', $7, 'posted', NOW(), $8
         )`,
-        [invoice.category, input.date, invoice.currency, input.amount, invoice.contact_id, receiptId, actor.id]
+        [invoice.category, invoice.display_category, input.date, invoice.currency, input.amount, invoice.contact_id, receiptId, actor.id]
       );
 
       // 3. Update Invoice
