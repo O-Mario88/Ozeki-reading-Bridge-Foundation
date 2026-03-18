@@ -157,7 +157,7 @@ test(
         status: "Submitted",
         payload: basePayload,
       },
-      actor,
+      actor.id,
     );
     assert.ok(created.id > 0, "Expected a story record id.");
     assert.equal(created.module, "story");
@@ -179,14 +179,14 @@ test(
           insightsRecommendationsRecIds: ["REC-03", "REC-04"],
         },
       },
-      actor,
+      actor.id,
     );
     assert.equal(updated.id, created.id);
 
     const approved = await setPortalRecordStatusAsync(
       created.id,
       "Approved",
-      actor,
+      actor.id,
       "postgres story approved",
     );
     assert.ok(approved, "Expected an approved story record.");

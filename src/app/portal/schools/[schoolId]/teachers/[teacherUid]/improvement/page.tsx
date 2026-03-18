@@ -114,28 +114,32 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
               </table>
             </div>
 
-            <article className="card" style={{ display: "grid", gap: "0.5rem" }}>
-              <h3 style={{ margin: 0 }}>Recommended Next Support</h3>
-              <p style={{ margin: 0 }}>
-                Status: {profile.teacherSupportStatus ?? "Data not available"}
-              </p>
-              <p style={{ margin: 0 }}>
-                Action: {profile.teacherSupportAction ?? "No action recommendation yet."}
-              </p>
-            </article>
+            {profile && (
+              <>
+                <article className="card" style={{ display: "grid", gap: "0.5rem" }}>
+                  <h3 style={{ margin: 0 }}>Recommended Next Support</h3>
+                  <p style={{ margin: 0 }}>
+                    Status: {profile.teacherSupportStatus ?? "Data not available"}
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    Action: {profile.teacherSupportAction ?? "No action recommendation yet."}
+                  </p>
+                </article>
 
-            <article className="card" style={{ display: "grid", gap: "0.5rem" }}>
-              <h3 style={{ margin: 0 }}>Teaching → Learning Alignment</h3>
-              <p style={{ margin: 0 }}>
-                Teaching quality delta:{" "}
-                {profile.alignment.summary.teachingDelta ?? "Data not available"} • Non-reader
-                reduction: {profile.alignment.summary.nonReaderReductionPp ?? "Data not available"}{" "}
-                pp • 20+ CWPM delta:{" "}
-                {profile.alignment.summary.cwpm20PlusDeltaPp ?? "Data not available"} pp • 1001
-                story sessions (latest): {profile.alignment.summary.storySessionsLatest}
-              </p>
-              <p style={{ margin: 0 }}>{profile.alignment.caveat}</p>
-            </article>
+                <article className="card" style={{ display: "grid", gap: "0.5rem" }}>
+                  <h3 style={{ margin: 0 }}>Teaching → Learning Alignment</h3>
+                  <p style={{ margin: 0 }}>
+                    Teaching quality delta:{" "}
+                    {profile.alignment.summary.teachingDelta ?? "Data not available"} • Non-reader
+                    reduction: {profile.alignment.summary.nonReaderReductionPp ?? "Data not available"}{" "}
+                    pp • 20+ CWPM delta:{" "}
+                    {profile.alignment.summary.cwpm20PlusDeltaPp ?? "Data not available"} pp • 1001
+                    story sessions (latest): {profile.alignment.summary.storySessionsLatest}
+                  </p>
+                  <p style={{ margin: 0 }}>{profile.alignment.caveat}</p>
+                </article>
+              </>
+            )}
           </>
         )}
       </section>

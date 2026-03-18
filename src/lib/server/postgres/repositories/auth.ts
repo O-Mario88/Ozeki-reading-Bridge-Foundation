@@ -8,10 +8,10 @@ export type PortalUserAuthRow = {
   phone: string | null;
   role: PortalUserRole;
   geographyScope: string | null;
-  isSupervisor: number;
-  isME: number;
-  isAdmin: number;
-  isSuperAdmin: number;
+  isSupervisor: boolean;
+  isME: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
   passwordHash: string;
 };
 
@@ -23,10 +23,10 @@ export type PrivilegedPortalAccountSeed = {
   phone: string | null;
   role: PortalUserRole;
   passwordHash: string;
-  isSupervisor: number;
-  isME: number;
-  isAdmin: number;
-  isSuperAdmin: number;
+  isSupervisor: boolean;
+  isME: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
 };
 
 function mapPortalUserAuthRow(row: Record<string, unknown>): PortalUserAuthRow {
@@ -37,10 +37,10 @@ function mapPortalUserAuthRow(row: Record<string, unknown>): PortalUserAuthRow {
     phone: row.phone ? String(row.phone) : null,
     role: String(row.role ?? "Volunteer") as PortalUserRole,
     geographyScope: row.geographyScope ? String(row.geographyScope) : null,
-    isSupervisor: Number(row.isSupervisor ? 1 : 0),
-    isME: Number(row.isME ? 1 : 0),
-    isAdmin: Number(row.isAdmin ? 1 : 0),
-    isSuperAdmin: Number(row.isSuperAdmin ? 1 : 0),
+    isSupervisor: Boolean(row.isSupervisor),
+    isME: Boolean(row.isME),
+    isAdmin: Boolean(row.isAdmin),
+    isSuperAdmin: Boolean(row.isSuperAdmin),
     passwordHash: String(row.passwordHash ?? ""),
   };
 }

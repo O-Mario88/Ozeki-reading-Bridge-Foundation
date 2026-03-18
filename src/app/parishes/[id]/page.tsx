@@ -32,9 +32,9 @@ export default async function ParishPage({ params }: { params: Params }) {
     const subCountyName = parts.length > 1 ? parts[parts.length - 2] : name;
     const districtName = parts[0] || name;
 
-    const drilldown = getImpactDrilldownData("parish", name);
-    const fidelity = calculateFidelityScore("district", districtName); // Fallback to district for now
-    const gains = getLearningGainsData("district", districtName);
+    const drilldown = await getImpactDrilldownData("parish", name);
+    const fidelity = await calculateFidelityScore("district", districtName); // Fallback to district for now
+    const gains = await getLearningGainsData("district", districtName);
 
     return (
         <>

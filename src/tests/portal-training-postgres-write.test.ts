@@ -146,7 +146,7 @@ test(
         status: "Submitted",
         payload: basePayload,
       },
-      actor,
+      actor.id,
     );
     assert.ok(created.id > 0, "Expected a training record id.");
     assert.equal(created.module, "training");
@@ -167,14 +167,14 @@ test(
           insightsRecommendationsRecIds: ["REC-01", "REC-02"],
         },
       },
-      actor,
+      actor.id,
     );
     assert.equal(updated.id, created.id);
 
     const approved = await setPortalRecordStatusAsync(
       created.id,
       "Approved",
-      actor,
+      actor.id,
       "postgres training approved",
     );
     assert.ok(approved, "Expected an approved training record.");

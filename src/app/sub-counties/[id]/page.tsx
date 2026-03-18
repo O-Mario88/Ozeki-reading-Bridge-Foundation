@@ -29,9 +29,9 @@ export default async function SubCountyPage({ params }: { params: Params }) {
     const displayName = name.split("::").pop() || name;
     const districtName = name.split("::")[0] || name;
 
-    const drilldown = getImpactDrilldownData("sub_county", name);
-    const fidelity = calculateFidelityScore("district", districtName); // Fallback to district for now
-    const gains = getLearningGainsData("district", districtName);
+    const drilldown = await getImpactDrilldownData("sub_county", name);
+    const fidelity = await calculateFidelityScore("district", districtName); // Fallback to district for now
+    const gains = await getLearningGainsData("district", districtName);
 
     return (
         <>

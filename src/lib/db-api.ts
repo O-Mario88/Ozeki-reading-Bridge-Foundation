@@ -183,7 +183,33 @@ export async function listLessonEvaluationsAsync(filters?: { userId?: number; li
   return result.rows;
 }
 
-export async function getTeacherImprovementProfileAsync(_teacherUid: string) {
+export type TeacherImprovementProfileResult = {
+  teacherUid: string;
+  teacherSupportStatus?: string;
+  teacherSupportAction?: string;
+  alignment: {
+    summary: {
+      teachingDelta?: number;
+      nonReaderReductionPp?: number;
+      cwpm20PlusDeltaPp?: number;
+      storySessionsLatest?: number;
+    };
+    caveat: string;
+  };
+  teacherComparison?: {
+    teacherName: string;
+    firstEvaluationDate: string;
+    comparisonEvaluationDate: string;
+    latestEvaluationDate: string;
+    overallScoreBaseline: number;
+    overallScoreComparison: number;
+    deltaOverall: number;
+    improvementStatus: string;
+    domainDeltas: Record<string, number | null>;
+  };
+};
+
+export async function getTeacherImprovementProfileAsync(_input: { schoolId: number; teacherUid: string }): Promise<TeacherImprovementProfileResult | null> {
   return null;
 }
 

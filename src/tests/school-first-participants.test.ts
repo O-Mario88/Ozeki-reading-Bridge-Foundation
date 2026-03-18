@@ -146,7 +146,7 @@ test("training blocks free-text participants and accepts school roster contact I
             ]),
           },
         },
-        actor,
+        actor.id,
       ),
     /Participant not found in school roster/i,
   );
@@ -173,7 +173,7 @@ test("training blocks free-text participants and accepts school roster contact I
         ]),
       },
     },
-    actor,
+    actor.id,
   );
 
   const payloadRows = JSON.parse(String(record.payload.participants ?? "[]")) as Array<{
@@ -212,7 +212,7 @@ test("assessment blocks free-text learners and accepts school learner IDs", asyn
             ]),
           },
         },
-        actor,
+        actor.id,
       ),
     /Learner not found in school roster/i,
   );
@@ -238,7 +238,7 @@ test("assessment blocks free-text learners and accepts school learner IDs", asyn
         ]),
       },
     },
-    actor,
+    actor.id,
   );
 
   const result = await queryPostgres<{ learnerUid: string }>(

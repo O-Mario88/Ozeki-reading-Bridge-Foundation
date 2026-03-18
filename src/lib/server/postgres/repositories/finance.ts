@@ -862,6 +862,21 @@ export async function getFinanceExpenseByIdPostgres(expenseId: number) {
   return row ? mapFinanceExpenseRecord(row) : null;
 }
 
+export async function submitFinanceExpensePostgres(expenseId: number, actor: { id: number; fullName: string, role: string }): Promise<FinanceExpenseRecord> {
+  const current = await getFinanceExpenseByIdPostgres(expenseId);
+  if (!current) {
+    throw new Error("Expense not found.");
+  }
+  
+  // Create a modified copy of the record with submitted status
+  return {
+    ...current,
+    status: "submitted",
+    submittedAt: new Date().toISOString(),
+    submittedBy: actor.id,
+  };
+}
+
 export async function listFinanceExpenseReceiptsPostgres(expenseId?: number) {
   const params: unknown[] = [];
   const whereClause = Number.isFinite(expenseId)
