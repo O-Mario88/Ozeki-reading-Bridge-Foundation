@@ -5,9 +5,9 @@ export async function createPortalRecordPostgres(input: PortalRecordInput, userI
   const result = await queryPostgres(
     `
     INSERT INTO portal_records (
-      school_id, module, status, payload, created_by_user_id, created_at, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-    RETURNING id, school_id AS "schoolId", module, status, payload, created_at AS "createdAt", updated_at AS "updatedAt"
+      school_id, module, status, payload_json, created_by_user_id, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, NOW())
+    RETURNING id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt"
     `,
     [input.schoolId, input.module, input.status, JSON.stringify(input.payload), userId]
   );
@@ -16,7 +16,7 @@ export async function createPortalRecordPostgres(input: PortalRecordInput, userI
 
 export async function listPortalRecordsPostgres(filters: PortalRecordFilters, _user?: unknown): Promise<PortalRecord[]> {
   const params: any[] = [];
-  let query = `SELECT id, school_id AS "schoolId", module, status, payload, created_at AS "createdAt", updated_at AS "updatedAt" FROM portal_records WHERE deleted_at IS NULL`;
+  let query = `SELECT id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt" FROM portal_records WHERE 1=1`;
   
   if (filters.module) {
     params.push(filters.module);
@@ -31,7 +31,7 @@ export async function listPortalRecordsPostgres(filters: PortalRecordFilters, _u
     query += ` AND school_id = $${params.length}`;
   }
 
-  query += ` ORDER BY created_at DESC`;
+  query += ` ORDER BY updated_at DESC`;
   const result = await queryPostgres(query, params);
   return result.rows as unknown as PortalRecord[];
 }
@@ -68,7 +68,7 @@ export async function saveConsentRecordPostgres(input: any, userId: number): Pro
 
 export async function getPortalRecordByIdPostgres(id: number): Promise<PortalRecord | null> {
   const result = await queryPostgres(
-    `SELECT id, school_id AS "schoolId", module, status, payload, created_at AS "createdAt", updated_at AS "updatedAt" FROM portal_records WHERE id = $1 AND deleted_at IS NULL`,
+    `SELECT id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt" FROM portal_records WHERE id = $1`,
     [id]
   );
   return (result.rows[0] as unknown as PortalRecord) || null;
@@ -84,7 +84,7 @@ export async function updatePortalRecordPostgres(id: number, input: Partial<Port
   }
   if (input.payload) {
     params.push(JSON.stringify(input.payload));
-    query += `, payload = $${params.length}`;
+    query += `, payload_json = $${params.length}`;
   }
   if (input.schoolId) {
     params.push(input.schoolId);
@@ -92,16 +92,15 @@ export async function updatePortalRecordPostgres(id: number, input: Partial<Port
   }
 
   params.push(id);
-  query += ` WHERE id = $${params.length} RETURNING id, school_id AS "schoolId", module, status, payload, created_at AS "createdAt", updated_at AS "updatedAt"`;
+  query += ` WHERE id = $${params.length} RETURNING id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt"`;
   
   const result = await queryPostgres(query, params);
   return result.rows[0] as unknown as PortalRecord;
 }
 
-export async function softDeletePortalRecordPostgres(id: number, userId: number, reason: string): Promise<void> {
+export async function softDeletePortalRecordPostgres(id: number, _userId: number, _reason: string): Promise<void> {
   await queryPostgres(
-    `UPDATE portal_records SET deleted_at = NOW() WHERE id = $1`,
+    `DELETE FROM portal_records WHERE id = $1`,
     [id]
   );
-  // Log deletion in audit logs via repository if needed, or handle in service.
 }
