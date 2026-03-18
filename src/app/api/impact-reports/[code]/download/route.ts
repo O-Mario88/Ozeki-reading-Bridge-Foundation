@@ -273,7 +273,7 @@ export async function GET(
       drawSection(
         "Teacher Improvement Records (Private)",
         summary.teacherComparisons.slice(0, 12).flatMap((entry: Record<string, unknown>, index: number) => [
-          `${index + 1}. ${entry.teacherName} • ${entry.classObserved} • Δ overall ${entry.deltaOverall > 0 ? "+" : ""}${entry.deltaOverall.toFixed(2)} • ${entry.improvementStatus}`,
+          `${index + 1}. ${entry.teacherName} • ${entry.classObserved} • Δ overall ${Number(entry.deltaOverall) > 0 ? "+" : ""}${Number(entry.deltaOverall).toFixed(2)} • ${entry.improvementStatus}`,
           `Baseline: ${entry.baselineDate} • Comparison: ${entry.comparisonDate} • Latest: ${entry.latestDate}`,
         ]),
       );
@@ -305,7 +305,7 @@ export async function GET(
     "Section Narratives",
     report.narrative.sectionNarratives.slice(0, 8).flatMap((section: Record<string, unknown>) => [
       `${section.title}:`,
-      ...wrapText(section.summary, 90),
+      ...wrapText(String(section.summary), 90),
     ]),
   );
   if (report.factPack.dataTrust) {
