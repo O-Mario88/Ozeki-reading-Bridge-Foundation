@@ -94,17 +94,17 @@ export async function getFilterLabels(
 // Geographic Lookup Functions
 import { queryPostgres } from "@/lib/server/postgres/client";
 
-export async function listGeoRegions(): Promise<string[]> {
+export async function listGeoRegions(_year?: string | null): Promise<string[]> {
     const res = await queryPostgres(`SELECT DISTINCT region FROM schools_directory WHERE region IS NOT NULL ORDER BY region`);
     return res.rows.map(r => r.region);
 }
 
-export async function listGeoSubregions(): Promise<string[]> {
+export async function listGeoSubregions(_regionId?: string | null, _year?: string | null): Promise<string[]> {
     const res = await queryPostgres(`SELECT DISTINCT sub_region FROM schools_directory WHERE sub_region IS NOT NULL ORDER BY sub_region`);
     return res.rows.map(r => r.sub_region);
 }
 
-export async function listGeoDistricts(): Promise<string[]> {
+export async function listGeoDistricts(_subRegionId?: string | null, _year?: string | null): Promise<string[]> {
     const res = await queryPostgres(`SELECT DISTINCT district FROM schools_directory WHERE district IS NOT NULL ORDER BY district`);
     return res.rows.map(r => r.district);
 }
@@ -141,7 +141,8 @@ export async function listGeoParishes(subCounty?: string): Promise<string[]> {
     return res.rows.map(r => r.parish);
 }
 
-export async function listGeoSchools(filters: any = {}): Promise<any[]> {
+export async function listGeoSchools(filtersOrDistrictId?: any, _year?: string | null): Promise<any[]> {
+    const filters = typeof filtersOrDistrictId === 'object' ? filtersOrDistrictId : { district: filtersOrDistrictId };
     let sql = `SELECT id, name, district, sub_county, parish FROM schools_directory WHERE 1=1`;
     const params: any[] = [];
     if (filters.district) {

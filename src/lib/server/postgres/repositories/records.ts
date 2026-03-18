@@ -14,7 +14,7 @@ export async function createPortalRecordPostgres(input: PortalRecordInput, userI
   return result.rows[0] as unknown as PortalRecord;
 }
 
-export async function listPortalRecordsPostgres(filters: PortalRecordFilters): Promise<PortalRecord[]> {
+export async function listPortalRecordsPostgres(filters: PortalRecordFilters, _user?: unknown): Promise<PortalRecord[]> {
   const params: any[] = [];
   let query = `SELECT id, school_id AS "schoolId", module, status, payload, created_at AS "createdAt", updated_at AS "updatedAt" FROM portal_records WHERE deleted_at IS NULL`;
   

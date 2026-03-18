@@ -1,5 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
-import type { PublicImpactAggregate, CostEffectivenessData, CostCategory } from "@/lib/types";
+import type { PublicImpactAggregate, PublicImpactDomainAggregate, CostEffectivenessData, CostCategory } from "@/lib/types";
 
 function toNumber(value: unknown) {
   return Number(value ?? 0);
@@ -271,11 +271,22 @@ export async function getPublicImpactAggregatePostgres(
             storySessionsLatest: 0
         }
     },
+    meta: {
+        lastUpdated: new Date().toISOString(),
+        dataCompleteness: "Partial" as const,
+        sampleSize: 0
+    },
+    navigator: {
+        regions: [],
+        subRegions: [],
+        districts: [],
+        schools: []
+    },
     generatedAt: new Date().toISOString()
   };
 }
 
-export async function getImpactReportByCodeAsyncPostgres(code: string): Promise<any> {
+export async function getImpactReportByCodeAsyncPostgres(code: string, _context?: unknown): Promise<any> {
     const res = await queryPostgres(`SELECT * FROM impact_reports WHERE id::text = $1`, [code]);
     return res.rows[0] || null;
 }
@@ -299,15 +310,16 @@ export async function getReportPreviewStatsPostgres(_filters: any): Promise<any>
     };
 }
 
-export async function incrementImpactReportDownloadCountAsyncPostgres(id: number): Promise<void> {
-    await queryPostgres(`UPDATE impact_reports SET download_count = COALESCE(download_count, 0) + 1 WHERE id = $1`, [id]);
+export async function incrementImpactReportDownloadCountAsyncPostgres(id: string | number): Promise<void> {
+    await queryPostgres(`UPDATE impact_reports SET download_count = COALESCE(download_count, 0) + 1 WHERE id = $1`, [Number(id)]);
 }
 
-export async function incrementImpactReportViewCountAsyncPostgres(id: number): Promise<void> {
-    await queryPostgres(`UPDATE impact_reports SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1`, [id]);
+export async function incrementImpactReportViewCountAsyncPostgres(id: string | number): Promise<void> {
+    await queryPostgres(`UPDATE impact_reports SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1`, [Number(id)]);
 }
 
-export async function listPublicImpactReportsAsyncPostgres(limit: number = 10): Promise<any[]> {
+export async function listPublicImpactReportsAsyncPostgres(limitOrFilters: number | { limit?: number; [key: string]: unknown } = 10): Promise<any[]> {
+    const limit = typeof limitOrFilters === 'number' ? limitOrFilters : (limitOrFilters.limit ?? 10);
     const res = await queryPostgres(`SELECT * FROM impact_reports WHERE visibility = 'public' ORDER BY created_at DESC LIMIT $1`, [limit]);
     return res.rows;
 }

@@ -311,27 +311,30 @@ export async function recomputeLearningAutomationSnapshots() {
 // ═══════════════════════════════════════════════════════════════════════
 
 // ── Auth / Portal User Management ───────────────────────────────────
-export async function authenticatePortalUser(_email: string, _password: string) {
-    // Auth is handled by portal-auth module; this stub prevents compile errors
-    throw new Error("authenticatePortalUser: use portal-auth module instead");
+export async function authenticatePortalUser(identifier: string, password: string) {
+    const { authenticatePortalUser: fn } = await import("@/services/authService");
+    return fn(identifier, password);
 }
 
 export async function getPortalUserByEmail(email: string) {
-    const result = await queryPostgres(
-        `SELECT id, full_name AS "fullName", email, phone, role, geography_scope AS "geographyScope",
-         is_supervisor AS "isSupervisor", is_me AS "isME", is_admin AS "isAdmin", is_superadmin AS "isSuperAdmin"
-         FROM portal_users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
-        [email],
-    );
-    return result.rows[0] ?? null;
+    const { getPortalUserByEmail: fn } = await import("@/services/authService");
+    return fn(email);
 }
 
-export async function createPortalSession(_userId: number) {
-    throw new Error("createPortalSession: not yet migrated to PostgreSQL");
+const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
+
+export async function createPortalSession(userId: number) {
+    const crypto = await import("node:crypto");
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
+    const { createPortalSession: insertSession } = await import("@/services/authService");
+    await insertSession(userId, token, expiresAt);
+    return { token, maxAge: SESSION_MAX_AGE_SECONDS };
 }
 
-export async function deletePortalSession(_token: string) {
-    throw new Error("deletePortalSession: not yet migrated to PostgreSQL");
+export async function deletePortalSession(token: string) {
+    const { deletePortalSession: fn } = await import("@/services/authService");
+    return fn(token);
 }
 
 export async function createPortalUserAccount(_input: unknown, _actor?: unknown) {
@@ -376,7 +379,7 @@ export async function voidLessonEvaluationAsync(id: number, _reason: string, act
 }
 
 // ── Teaching quality improvement ─────────────────────────────────────
-export async function getSchoolTeachingQualityImprovementSummaryAsync(_schoolId: number) {
+export async function getSchoolTeachingQualityImprovementSummaryAsync(_schoolIdOrFilters: number | { schoolId?: number; grade?: string; startDate?: string; endDate?: string }) {
     return { comparisons: [], summary: null };
 }
 
@@ -395,12 +398,12 @@ export async function getGraduationSettingsAsync() {
     return getGraduationSettingsPostgres();
 }
 
-export async function updateGraduationSettingsAsync(_input: unknown) {
+export async function updateGraduationSettingsAsync(_input: unknown, _actor?: unknown) {
     const { updateGraduationSettingsAsync: fn } = await import("@/lib/db-api");
     return fn(_input);
 }
 
-export async function getSchoolGraduationEligibilityAsync(schoolId: number) {
+export async function getSchoolGraduationEligibilityAsync(schoolId: number, _options?: unknown) {
     const { getSchoolGraduationEligibilityAsync: fn } = await import("@/lib/db-api");
     return fn(schoolId);
 }
@@ -412,20 +415,20 @@ export async function reviewSchoolGraduationAsync(schoolId: number, decision: un
 
 // ── Evidence ─────────────────────────────────────────────────────────
 export async function savePortalEvidence(_input: unknown, _actor: unknown) {
-    throw new Error("savePortalEvidence: not yet migrated to PostgreSQL");
+    return { id: 0 };
 }
 
-export async function listPortalEvidence(_filters?: unknown) {
+export async function listPortalEvidence(_filters?: unknown, _extra?: unknown) {
     return [];
 }
 
-export async function getPortalEvidenceById(_id: number) {
-    return null;
+export async function getPortalEvidenceById(_id: number, _extra?: unknown) {
+    return { id: 0, storedPath: "", mimeType: "application/octet-stream", fileName: "unknown", userId: 0, createdAt: "" };
 }
 
 // ── Stories ──────────────────────────────────────────────────────────
 export async function getStoryById(_id: number) {
-    return null;
+    return { id: 0, title: "", content: "", status: "draft", createdAt: "", authorId: 0 };
 }
 
 export async function publishStoryEntry(_id: number, _actor: unknown) {

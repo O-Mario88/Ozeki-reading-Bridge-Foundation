@@ -1415,6 +1415,7 @@ export interface PublicImpactAggregate {
       region: string;
     }>;
   };
+  generatedAt?: string;
 }
 
 export interface OnlineTrainingEventInput {
