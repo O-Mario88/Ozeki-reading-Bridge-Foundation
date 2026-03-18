@@ -56,6 +56,8 @@ const addContactSchema = z.object({
   lastSsaSent: z.string().trim().optional(),
   trainer: z.boolean().optional(),
   notes: z.string().trim().optional(),
+  classTaught: z.string().trim().optional(),
+  subjectTaught: z.string().trim().optional(),
 });
 
 const addLearnerSchema = z.object({
@@ -88,6 +90,8 @@ const updateContactSchema = z.object({
   lastSsaSent: z.string().trim().nullable().optional(),
   trainer: z.boolean().optional(),
   notes: z.string().trim().nullable().optional(),
+  classTaught: z.string().trim().nullable().optional(),
+  subjectTaught: z.string().trim().nullable().optional(),
 });
 
 const updateLearnerSchema = z.object({
@@ -213,6 +217,8 @@ export async function POST(request: Request) {
           lastSsaSent: data.lastSsaSent,
           trainer: data.trainer,
           notes: data.notes,
+          classTaught: data.classTaught,
+          subjectTaught: data.subjectTaught,
         })
       : await addSchoolContactToSchool({
           schoolId: data.schoolId,
@@ -234,6 +240,8 @@ export async function POST(request: Request) {
           lastSsaSent: data.lastSsaSent,
           trainer: data.trainer,
           notes: data.notes,
+          classTaught: data.classTaught,
+          subjectTaught: data.subjectTaught,
         });
     return NextResponse.json({ ok: true, entry });
   } catch (error) {
@@ -327,6 +335,8 @@ export async function PATCH(request: Request) {
           lastSsaSent: data.lastSsaSent ?? undefined,
           trainer: data.trainer,
           notes: data.notes ?? undefined,
+          classTaught: data.classTaught ?? undefined,
+          subjectTaught: data.subjectTaught ?? undefined,
         })
       : await updateSchoolContactInSchool(existing.contactId, {
           fullName: data.fullName,
@@ -345,6 +355,8 @@ export async function PATCH(request: Request) {
           lastSsaSent: data.lastSsaSent ?? undefined,
           trainer: data.trainer,
           notes: data.notes ?? undefined,
+          classTaught: data.classTaught ?? undefined,
+          subjectTaught: data.subjectTaught ?? undefined,
         });
     return NextResponse.json({ ok: true, entry });
   } catch (error) {

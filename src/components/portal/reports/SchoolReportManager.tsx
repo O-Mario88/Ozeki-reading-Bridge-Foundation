@@ -16,7 +16,9 @@ export default function SchoolReportManager({ schoolId }: SchoolReportManagerPro
   const [step, setStep] = useState<"init" | "facts" | "narrative" | "review" | "done">("init");
   const [loading, setLoading] = useState(false);
   const [reportId, setReportId] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [factPack, setFactPack] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [narrative, setNarrative] = useState<any>(null);
   const [override, setOverride] = useState("");
 
@@ -178,9 +180,9 @@ export default function SchoolReportManager({ schoolId }: SchoolReportManagerPro
             <p className="text-gray-500 mb-8">
               The report is now archived. A permanent, immutable PDF has been generated and is ready for donor distribution or school feedback.
             </p>
-            <button onClick={() => window.open(`/portal/schools/${schoolId}`)} className="button button-primary w-full shadow-md">
+            <a href={`/api/portal/schools/${schoolId}/reports/${reportId}/pdf`} target="_blank" rel="noreferrer" className="button button-primary w-full shadow-md text-center inline-block">
               Download PDF Report
-            </button>
+            </a>
           </div>
         )}
       </div>

@@ -12,6 +12,7 @@ import { formatDate, formatMoney } from "@/components/portal/finance/format";
 
 type PortalFinanceDashboardProps = {
   summary: FinanceDashboardSummary;
+  totalAssets: number;
   recentInvoices: FinanceInvoiceRecord[];
   recentReceipts: FinanceReceiptRecord[];
   recentExpenses: FinanceExpenseRecord[];
@@ -33,6 +34,7 @@ function FinanceKpi({ label, value, helper }: { label: string; value: string; he
 
 export function PortalFinanceDashboard({
   summary,
+  totalAssets,
   recentInvoices,
   recentReceipts,
   recentExpenses,
@@ -135,9 +137,10 @@ export function PortalFinanceDashboard({
       </section>
 
       <section className="finance-kpis finance-kpis-compact">
-        <FinanceKpi label="Money In (MTD)" value={formatMoney(summary.currency, summary.moneyIn)} />
-        <FinanceKpi label="Money Out (MTD)" value={formatMoney(summary.currency, summary.moneyOut)} />
-        <FinanceKpi label="Net (MTD)" value={formatMoney(summary.currency, summary.net)} />
+        <FinanceKpi label="Total Assets" value={formatMoney(summary.currency, totalAssets)} />
+        <FinanceKpi label="Income (YTD)" value={formatMoney(summary.currency, summary.moneyIn)} />
+        <FinanceKpi label="Expenses (YTD)" value={formatMoney(summary.currency, summary.moneyOut)} />
+        <FinanceKpi label="Surplus/Deficit" value={formatMoney(summary.currency, summary.net)} />
         <FinanceKpi
           label="Outstanding invoices"
           value={summary.outstandingInvoiceCount.toLocaleString()}

@@ -2,6 +2,9 @@
 export * from "@/lib/server/postgres/repositories/finance";
 export * from "@/lib/server/postgres/repositories/finance-reports";
 export * from "@/lib/server/postgres/repositories/finance-v2";
+export * from "@/lib/server/postgres/repositories/finance-documents";
+export * from "@/lib/server/postgres/repositories/finance-assets";
+export * from "@/lib/server/postgres/repositories/finance-liabilities";
 
 // ── Aliased re-exports (pages import without "Postgres" suffix) ──────
 export {
@@ -14,6 +17,11 @@ export {
     listFinanceExpensesPostgres as listFinanceExpenses,
     getFinanceExpenseByIdPostgres as getFinanceExpenseById,
     submitFinanceExpensePostgres as submitFinanceExpenseAsync,
+    createFinanceExpensePostgres as createFinanceExpenseAsync,
+    deleteFinanceExpenseDraftPostgres as deleteFinanceExpenseDraftAsync,
+    voidFinanceExpensePostgres as voidFinanceExpenseAsync,
+    postFinanceExpensePostgres as postFinanceExpenseAsync,
+    upsertFinanceExpenseReceiptsPostgres as upsertFinanceExpenseReceiptsAsync,
     listFinanceLedgerTransactionsPostgres as listFinanceLedgerTransactions,
     getFinanceDashboardSummaryPostgres as getFinanceDashboardSummary,
     listFinanceMonthlyStatementsPostgres as listFinanceMonthlyStatements,
@@ -66,85 +74,22 @@ export function exportFinanceRowsToCsv(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FinanceActor = any;
 
-// ── Invoice CRUD ─────────────────────────────────────────────────────
-export async function createFinanceInvoiceAsync(_input: unknown, _actor: FinanceActor) {
-    const inputObj = _input as Record<string, unknown>;
-    return { id: 0, ...inputObj } as Record<string, unknown> & { id: number };
-}
+export {
+  createFinanceInvoicePostgres as createFinanceInvoiceAsync,
+  deleteFinanceInvoiceDraftPostgres as deleteFinanceInvoiceDraftAsync,
+  voidFinanceInvoicePostgres as voidFinanceInvoiceAsync,
+  sendFinanceInvoicePostgres as sendFinanceInvoice,
+  createFinanceReceiptPostgres as createFinanceReceiptAsync,
+  deleteFinanceReceiptDraftPostgres as deleteFinanceReceiptDraftAsync,
+  voidFinanceReceiptPostgres as voidFinanceReceiptAsync,
+  issueFinanceReceiptPostgres as issueFinanceReceipt,
+  sendFinanceReceiptPostgres as sendFinanceReceipt,
+  recordFinancePaymentPostgres as recordFinancePayment,
+} from "@/lib/server/postgres/repositories/finance-documents";
 
 export async function updateFinanceInvoiceDraftAsync(_id: number, _input: unknown, _actor: FinanceActor) {
     throw new Error("updateFinanceInvoiceDraftAsync: not yet migrated to PostgreSQL");
 }
-
-export async function deleteFinanceInvoiceDraftAsync(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    throw new Error("deleteFinanceInvoiceDraftAsync: not yet migrated to PostgreSQL");
-}
-
-export async function voidFinanceInvoiceAsync(_id: number, _reason: string, _actor: FinanceActor) {
-    throw new Error("voidFinanceInvoiceAsync: not yet migrated to PostgreSQL");
-}
-
-export async function sendFinanceInvoice(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    return { email: { status: 'skipped' as string }, invoice: { id: _id, status: 'draft', emailedAt: undefined, lastSentTo: undefined } as Record<string, unknown> & { id: number } };
-}
-
-// ── Receipt CRUD ─────────────────────────────────────────────────────
-export async function createFinanceReceiptAsync(_input: unknown, _actor: FinanceActor) {
-    return { id: 0 } as Record<string, unknown> & { id: number };
-}
-
-export async function deleteFinanceReceiptDraftAsync(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    throw new Error("deleteFinanceReceiptDraftAsync: not yet migrated to PostgreSQL");
-}
-
-export async function voidFinanceReceiptAsync(_id: number, _reason: string, _actor: FinanceActor) {
-    throw new Error("voidFinanceReceiptAsync: not yet migrated to PostgreSQL");
-}
-
-export async function issueFinanceReceipt(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    return { receipt: { id: 0 } as Record<string, unknown>, email: null as unknown };
-}
-
-export async function sendFinanceReceipt(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    return { receipt: { id: 0 } as Record<string, unknown>, email: null as unknown };
-}
-
-// ── Expense lifecycle ────────────────────────────────────────────────
-export async function createFinanceExpenseAsync(_input: unknown, _actor: FinanceActor) {
-    const inputObj = _input as Record<string, unknown>;
-    return { id: 0, ...inputObj } as Record<string, unknown> & { id: number };
-}
-
-export async function deleteFinanceExpenseDraftAsync(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    throw new Error("deleteFinanceExpenseDraftAsync: not yet migrated to PostgreSQL");
-}
-
-export async function voidFinanceExpenseAsync(_id: number, _reason: string, _actor: FinanceActor) {
-    throw new Error("voidFinanceExpenseAsync: not yet migrated to PostgreSQL");
-}
-
-export async function postFinanceExpenseAsync(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    return { id: _id } as Record<string, unknown> & { id: number };
-}
-
-export async function upsertFinanceExpenseReceiptsAsync(_expenseId: number, _receipts: unknown[], _actor: FinanceActor) {
-    return [] as import("@/lib/types").FinanceExpenseReceiptRecord[];
-}
-
-// ── Payments ─────────────────────────────────────────────────────────
-export async function listFinancePayments(_filters: unknown) {
-    return [];
-}
-
-export async function recordFinancePayment(_input: unknown, ..._extra: unknown[]) {
-    const inputObj = _input as Record<string, unknown>;
-    return {
-        payment: { id: 0, ...inputObj } as Record<string, unknown> & { id: number },
-        invoice: { id: 0, status: 'paid', balanceDue: 0 } as Record<string, unknown> & { id: number },
-        autoReceipt: { relatedInvoiceId: 0, pdfFileId: `pdf-${Date.now()}` } as Record<string, unknown>,
-    };
-}
-
 
 export async function voidFinancePaymentAsync(_id: number, _reason: string, _actor: FinanceActor) {
     throw new Error("voidFinancePaymentAsync: not yet migrated to PostgreSQL");
@@ -202,6 +147,11 @@ export async function autoSuggestMatches(_statementLineId: number) {
     return [];
 }
 
+export async function listFinancePayments(_filter: unknown) {
+    return [];
+}
+
+// ── Expenses are natively exported above ───────────────────────────
 export async function getReconciliationSummary(_month?: string, _currency?: string) {
     return { matched: 0, unmatched: 0, total: 0 };
 }

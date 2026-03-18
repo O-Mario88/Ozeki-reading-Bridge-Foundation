@@ -121,11 +121,13 @@ export function fileResponse(args: {
 }) {
   const responseBody =
     typeof args.body === "string" ? args.body : new Uint8Array(args.body);
+  const isInline = args.contentType === "application/pdf" || args.contentType.startsWith("image/");
+  const disposition = isInline ? "inline" : "attachment";
   return new NextResponse(responseBody, {
     status: args.status ?? 200,
     headers: {
       "content-type": args.contentType,
-      "content-disposition": `attachment; filename="${args.fileName}"`,
+      "content-disposition": `${disposition}; filename="${args.fileName}"`,
       "x-request-id": args.requestId,
     },
   });

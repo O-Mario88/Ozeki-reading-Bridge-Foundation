@@ -63,6 +63,7 @@ function normalizeSchoolRecord(row: Record<string, unknown>): SchoolDirectoryRec
     schoolStatusDate: asNullableString(row.schoolStatusDate),
     currentPartnerType: String(row.currentPartnerType ?? "NA"),
     yearFounded: asNullableNumber(row.yearFounded),
+
     accountRecordType: String(row.accountRecordType ?? "School"),
     schoolType: String(row.schoolType ?? "School"),
     parentAccountLabel: String(row.parentAccountLabel ?? "Uganda"),
@@ -212,7 +213,6 @@ const SCHOOL_SELECT = `
     s.school_relationship_status AS "schoolRelationshipStatus",
     s.school_relationship_status_date::text AS "schoolRelationshipStatusDate",
     s.denomination,
-    s.protestant_denomination AS "protestantDenomination",
     COALESCE(s.client_school_number, 0) AS "clientSchoolNumber",
     s.first_metric_date::text AS "firstMetricDate",
     COALESCE(s.metric_count, 0) AS "metricCount",

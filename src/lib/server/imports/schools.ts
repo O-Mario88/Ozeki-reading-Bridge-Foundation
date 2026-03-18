@@ -79,13 +79,11 @@ function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
     subRegion: requiredValue(row.sub_region, "sub_region"),
     district: requiredValue(row.district, "district"),
     parish: requiredValue(row.parish, "parish"),
-    emisCode: collapseWhitespace(row.emis_code) || null,
-    schoolLevel: collapseWhitespace(row.school_level) || null,
-    ownership: collapseWhitespace(row.ownership) || null,
+
     denomination: collapseWhitespace(row.denomination) || null,
     schoolPhone: collapseWhitespace(row.school_phone) || null,
     schoolEmail: collapseWhitespace(row.school_email) || null,
-    schoolShippingAddress: collapseWhitespace(row.school_shipping_address) || null,
+
     latitude: latitude === null ? null : String(latitude),
     longitude: longitude === null ? null : String(longitude),
     yearFounded,

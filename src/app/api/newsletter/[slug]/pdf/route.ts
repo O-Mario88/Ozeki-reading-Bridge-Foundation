@@ -89,7 +89,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${encodeURIComponent(issue.slug)}.pdf"`,
+        "Content-Disposition": `inline; filename="${encodeURIComponent(issue.slug)}.pdf"`,
       },
     });
   } catch (error) {

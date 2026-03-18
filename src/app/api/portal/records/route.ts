@@ -149,6 +149,46 @@ export async function POST(request: Request) {
       }
     }
 
+    if (payload.payload.egraLearnersData && typeof payload.payload.egraLearnersData === 'string') {
+      try {
+        const { saveAssessmentRecordAsync } = await import("@/services/dataService");
+        const egraLearners = JSON.parse(payload.payload.egraLearnersData);
+        if (Array.isArray(egraLearners) && egraLearners.length > 0) {
+          await Promise.all(
+            egraLearners.map(async (learnerObj: unknown) => {
+              const learner = learnerObj as Record<string, unknown>;
+              if (!learner.learnerId && !learner.learnerName && !learner.sex) return;
+              
+              const pType = payload.payload.assessmentType;
+              const assessmentType = (typeof pType === 'string' ? pType : "progress") as "baseline" | "progress" | "endline";
+              const assessmentDate = payload.date || new Date().toISOString().split("T")[0];
+              
+              await saveAssessmentRecordAsync({
+                  childId: learner.learnerId ? String(learner.learnerId) : undefined,
+                  childName: learner.learnerName ? String(learner.learnerName) : "Unknown Learner",
+                  gender: String(learner.sex) === "M" ? "Boy" : String(learner.sex) === "F" ? "Girl" : "Other",
+                  age: Number(learner.age) || 0,
+                  schoolId: payload.schoolId,
+                  classGrade: typeof payload.payload.classLevel === 'string' ? payload.payload.classLevel : "P1",
+                  assessmentDate: assessmentDate,
+                  assessmentType: assessmentType,
+                  letterIdentificationScore: learner.letterIdentification !== "" ? Number(learner.letterIdentification) : null,
+                  soundIdentificationScore: learner.soundIdentification !== "" ? Number(learner.soundIdentification) : null,
+                  decodableWordsScore: learner.decodableWords !== "" ? Number(learner.decodableWords) : null,
+                  undecodableWordsScore: learner.undecodableWords !== "" ? Number(learner.undecodableWords) : null,
+                  madeUpWordsScore: learner.madeUpWords !== "" ? Number(learner.madeUpWords) : null,
+                  storyReadingScore: learner.storyReading !== "" ? Number(learner.storyReading) : null,
+                  readingComprehensionScore: learner.readingComprehension !== "" ? Number(learner.readingComprehension) : null,
+                  notes: `Extracted from Portal Record #${record.id}`
+              }, user.id);
+            })
+          );
+        }
+      } catch (e) {
+        console.error("Failed to extract EGRA learners from portal record", e);
+      }
+    }
+
     return NextResponse.json({ ok: true, record });
   } catch (error) {
     if (error instanceof z.ZodError) {

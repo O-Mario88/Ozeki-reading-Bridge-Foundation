@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { getSchoolDirectoryRecordPostgres } from "@/lib/server/postgres/repositories/schools";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
-import { assertImportScope, collapseWhitespace, normalizeBooleanString, normalizeOptionalInteger, normalizeOptionalNumber, normalizeText } from "@/lib/server/imports/utils";
-import type { PortalUser, SchoolContactCategory, SchoolDirectoryRecord } from "@/lib/types";
+import { assertImportScope, collapseWhitespace, normalizeOptionalInteger, normalizeText } from "@/lib/server/imports/utils";
+import type { PortalUser, SchoolContactCategory } from "@/lib/types";
 
 export interface SchoolDirectoryWriteInput {
   schoolId?: number | null;
@@ -15,13 +15,11 @@ export interface SchoolDirectoryWriteInput {
   subRegion?: string | null;
   district?: string | null;
   parish?: string | null;
-  emisCode?: string | null;
-  schoolLevel?: string | null;
-  ownership?: string | null;
+
   denomination?: string | null;
   schoolPhone?: string | null;
   schoolEmail?: string | null;
-  schoolShippingAddress?: string | null;
+
   latitude?: string | number | null;
   longitude?: string | number | null;
   yearFounded?: number | null;
@@ -86,13 +84,11 @@ interface SchoolWriteRow {
   subCounty: string;
   parish: string;
   parishId: number | null;
-  emisCode: string | null;
-  schoolLevel: string | null;
-  ownership: string | null;
+
   denomination: string | null;
   schoolPhone: string | null;
   schoolEmail: string | null;
-  schoolShippingAddress: string | null;
+
   gpsLat: string | null;
   gpsLng: string | null;
   yearFounded: number | null;
@@ -705,13 +701,11 @@ export async function writeSchoolDirectoryRecord(args: {
         subCounty: nullableText(args.input.subCounty) ?? current?.subCounty ?? "Unspecified",
         parish: hierarchy.parishName,
         parishId: hierarchy.parishId,
-        emisCode: nullableText(args.input.emisCode) ?? current?.emisCode ?? null,
-        schoolLevel: nullableText(args.input.schoolLevel) ?? current?.schoolLevel ?? null,
-        ownership: nullableText(args.input.ownership) ?? current?.ownership ?? null,
+
         denomination: nullableText(args.input.denomination) ?? current?.denomination ?? null,
         schoolPhone,
         schoolEmail,
-        schoolShippingAddress: nullableText(args.input.schoolShippingAddress) ?? current?.schoolShippingAddress ?? null,
+
         gpsLat: nullableCoordinate(args.input.latitude) ?? current?.gpsLat ?? null,
         gpsLng: nullableCoordinate(args.input.longitude) ?? current?.gpsLng ?? null,
         yearFounded:
@@ -833,13 +827,9 @@ export async function writeSchoolDirectoryRecord(args: {
               sub_county,
               parish,
               parish_id,
-              emis_code,
-              school_level,
-              ownership,
-              denomination,
+
               contact_phone,
               contact_email,
-              school_shipping_address,
               gps_lat,
               gps_lng,
               year_founded,
@@ -881,8 +871,8 @@ export async function writeSchoolDirectoryRecord(args: {
               contact_name,
               created_at
             ) VALUES (
-              $1, 'S-PENDING', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-              $16, $17, $18, $19, $20, $21, $22, $23::date, $24, $25, $26, $27, $28, $29::date,
+              $1, 'S-PENDING', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $15,
+              $16, $17, $19, $20, $21, $22, $23::date, $24, $25, $26, $27, $28, $29::date,
               $30, $31, $32::date, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44,
               $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, NOW()
             ) RETURNING id
@@ -899,13 +889,8 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.subCounty,
             resolved.parish,
             resolved.parishId,
-            resolved.emisCode,
-            resolved.schoolLevel,
-            resolved.ownership,
-            resolved.denomination,
-            resolved.schoolPhone,
+
             resolved.schoolEmail,
-            resolved.schoolShippingAddress,
             resolved.gpsLat,
             resolved.gpsLng,
             resolved.yearFounded,
@@ -967,13 +952,9 @@ export async function writeSchoolDirectoryRecord(args: {
               sub_county = $9,
               parish = $10,
               parish_id = $11,
-              emis_code = $12,
-              school_level = $13,
-              ownership = $14,
               denomination = $15,
               contact_phone = $16,
               contact_email = $17,
-              school_shipping_address = $18,
               gps_lat = $19,
               gps_lng = $20,
               year_founded = $21,
@@ -1028,13 +1009,8 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.subCounty,
             resolved.parish,
             resolved.parishId,
-            resolved.emisCode,
-            resolved.schoolLevel,
-            resolved.ownership,
-            resolved.denomination,
-            resolved.schoolPhone,
+
             resolved.schoolEmail,
-            resolved.schoolShippingAddress,
             resolved.gpsLat,
             resolved.gpsLng,
             resolved.yearFounded,
@@ -1161,13 +1137,11 @@ export async function loadSchoolImportCandidate(schoolId: number) {
     country: string;
     region: string;
     subRegion: string;
-    emisCode: string | null;
-    schoolLevel: string | null;
-    ownership: string | null;
+
     denomination: string | null;
     schoolPhone: string | null;
     schoolEmail: string | null;
-    schoolShippingAddress: string | null;
+
     gpsLat: string | null;
     gpsLng: string | null;
     yearFounded: number | null;
@@ -1184,13 +1158,11 @@ export async function loadSchoolImportCandidate(schoolId: number) {
         country,
         region,
         sub_region AS "subRegion",
-        emis_code AS "emisCode",
-        school_level AS "schoolLevel",
-        ownership,
+
         denomination,
         contact_phone AS "schoolPhone",
         contact_email AS "schoolEmail",
-        school_shipping_address AS "schoolShippingAddress",
+
         gps_lat AS "gpsLat",
         gps_lng AS "gpsLng",
         year_founded AS "yearFounded",
@@ -1219,13 +1191,11 @@ export async function schoolImportFieldsChanged(schoolId: number, input: SchoolD
     [current.subRegion, nullableText(input.subRegion)],
     [current.district, nullableText(input.district)],
     [current.parish, nullableText(input.parish)],
-    [current.emisCode, nullableText(input.emisCode)],
-    [current.schoolLevel, nullableText(input.schoolLevel)],
-    [current.ownership, nullableText(input.ownership)],
+
     [current.denomination, nullableText(input.denomination)],
     [current.schoolPhone, nullableText(input.schoolPhone)],
     [current.schoolEmail, nullableText(input.schoolEmail)],
-    [current.schoolShippingAddress, nullableText(input.schoolShippingAddress)],
+
     [current.gpsLat, nullableCoordinate(input.latitude)],
     [current.gpsLng, nullableCoordinate(input.longitude)],
     [current.yearFounded, input.yearFounded ?? null],

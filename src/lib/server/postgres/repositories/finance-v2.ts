@@ -167,3 +167,51 @@ export async function postReceiptToGl(receiptId: number, userId: number) {
     userId
   );
 }
+
+/**
+ * Post an Expense to GL.
+ */
+export async function postExpenseToGl(expenseId: number, userId: number) {
+  const expenseRes = await queryPostgres("SELECT * FROM finance_expenses WHERE id = $1", [expenseId]);
+  const expense = expenseRes.rows[0];
+  if (!expense) throw new Error("Expense not found");
+
+  const cashAccId = await getAccountIdByCode("1000"); // Cash at Bank
+  const expenseAccId = await getAccountIdByCode("6000"); // General & Administrative
+
+  await createJournalEntry(
+    {
+      entryDate: expense.date,
+      description: `Expense ${expense.expense_number}: ${expense.description || expense.vendor_name}`,
+      sourceType: "expense",
+      sourceId: expense.id,
+    },
+    [
+      {
+        accountId: expenseAccId,
+        debit: expense.amount,
+        credit: 0,
+        fundId: expense.fund_id || 1, // Default unrestricted
+        departmentId: expense.department_id || null,
+        programId: expense.program_id || null,
+        projectId: expense.project_id || null,
+        grantId: expense.grant_id || null,
+        branchId: null,
+        description: "Expense booked",
+      },
+      {
+        accountId: cashAccId,
+        debit: 0,
+        credit: expense.amount,
+        fundId: expense.fund_id || 1,
+        departmentId: expense.department_id || null,
+        programId: expense.program_id || null,
+        projectId: expense.project_id || null,
+        grantId: expense.grant_id || null,
+        branchId: null,
+        description: "Cash paid out",
+      },
+    ],
+    userId
+  );
+}

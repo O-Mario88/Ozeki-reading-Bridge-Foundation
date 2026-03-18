@@ -16,7 +16,7 @@ const SchoolRosterPicker = dynamic(
   { ssr: false, loading: () => <div>Loading roster...</div> },
 );
 
-import { FloatingSurface } from "@/components/FloatingSurface";
+import { FormModal } from "@/components/forms";
 
 interface PortalSchoolsManagerProps {
   initialSchools: SchoolDirectoryRecord[];
@@ -317,6 +317,14 @@ export function PortalSchoolsManager({
       currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
       yearFounded: String(formData.get("yearFounded") ?? ""),
       denomination: String(formData.get("denomination") ?? ""),
+      protestantDenomination: String(formData.get("protestantDenomination") ?? ""),
+      accountRecordType: String(formData.get("accountRecordType") ?? "School"),
+      schoolType: String(formData.get("schoolType") ?? "School"),
+      parentAccountLabel: String(formData.get("parentAccountLabel") ?? "Uganda"),
+      schoolRelationshipStatus: String(formData.get("schoolRelationshipStatus") ?? ""),
+      schoolRelationshipStatusDate: String(formData.get("schoolRelationshipStatusDate") ?? ""),
+      clientSchoolNumber: Number(formData.get("clientSchoolNumber")) || 0,
+      firstMetricDate: String(formData.get("firstMetricDate") ?? ""),
       website: String(formData.get("website") ?? ""),
       description: String(formData.get("description") ?? ""),
       partnerType: String(formData.get("partnerType") ?? ""),
@@ -538,6 +546,14 @@ export function PortalSchoolsManager({
       currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
       yearFounded: String(formData.get("yearFounded") ?? ""),
       denomination: String(formData.get("denomination") ?? ""),
+      protestantDenomination: String(formData.get("protestantDenomination") ?? ""),
+      accountRecordType: String(formData.get("accountRecordType") ?? "School"),
+      schoolType: String(formData.get("schoolType") ?? "School"),
+      parentAccountLabel: String(formData.get("parentAccountLabel") ?? "Uganda"),
+      schoolRelationshipStatus: String(formData.get("schoolRelationshipStatus") ?? ""),
+      schoolRelationshipStatusDate: String(formData.get("schoolRelationshipStatusDate") ?? ""),
+      clientSchoolNumber: Number(formData.get("clientSchoolNumber")) || 0,
+      firstMetricDate: String(formData.get("firstMetricDate") ?? ""),
       website: String(formData.get("website") ?? ""),
       description: String(formData.get("description") ?? ""),
       partnerType: String(formData.get("partnerType") ?? ""),
@@ -706,7 +722,7 @@ export function PortalSchoolsManager({
         </div>
         <p className="portal-muted">Create school records in a floating form without leaving this page.</p>
         {isCreateFormOpen ? (
-          <FloatingSurface
+          <FormModal
             open={isCreateFormOpen}
             onClose={() => setIsCreateFormOpen(false)}
             title="New School Entry"
@@ -837,6 +853,38 @@ export function PortalSchoolsManager({
               <label>
                 <span className="portal-field-label">Denomination</span>
                 <input name="denomination" placeholder="e.g. Catholic" />
+              </label>
+              <label>
+                <span className="portal-field-label">Protestant Denomination</span>
+                <input name="protestantDenomination" placeholder="e.g. Anglican" />
+              </label>
+              <label>
+                <span className="portal-field-label">Account Record Type</span>
+                <input name="accountRecordType" defaultValue="School" />
+              </label>
+              <label>
+                <span className="portal-field-label">School Type</span>
+                <input name="schoolType" defaultValue="School" />
+              </label>
+              <label>
+                <span className="portal-field-label">Parent Account Label</span>
+                <input name="parentAccountLabel" defaultValue="Uganda" />
+              </label>
+              <label>
+                <span className="portal-field-label">Relationship Status</span>
+                <input name="schoolRelationshipStatus" placeholder="e.g. Active" />
+              </label>
+              <label>
+                <span className="portal-field-label">Relationship Status Date</span>
+                <input name="schoolRelationshipStatusDate" type="date" />
+              </label>
+              <label>
+                <span className="portal-field-label">Client School Number</span>
+                <input name="clientSchoolNumber" type="number" defaultValue={0} />
+              </label>
+              <label>
+                <span className="portal-field-label">First Metric Date</span>
+                <input name="firstMetricDate" type="date" />
               </label>
               <label>
                 <span className="portal-field-label">Partner Type</span>
@@ -1054,7 +1102,7 @@ export function PortalSchoolsManager({
                 </p>
               ) : null}
             </form>
-          </FloatingSurface>
+          </FormModal>
         ) : null}
       </section>
 
@@ -1169,7 +1217,7 @@ export function PortalSchoolsManager({
                 </button>
               </div>
             ) : (
-              <FloatingSurface
+              <FormModal
                 open={editingProfile}
                 onClose={() => setEditingProfile(false)}
                 title="Edit School Profile"
@@ -1336,6 +1384,38 @@ export function PortalSchoolsManager({
                     <input name="denomination" defaultValue={selectedSchool.denomination ?? ""} />
                   </label>
                   <label>
+                    <span className="portal-field-label">Protestant Denomination</span>
+                    <input name="protestantDenomination" defaultValue={selectedSchool.protestantDenomination ?? ""} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Account Record Type</span>
+                    <input name="accountRecordType" defaultValue={selectedSchool.accountRecordType ?? "School"} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">School Type</span>
+                    <input name="schoolType" defaultValue={selectedSchool.schoolType ?? "School"} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Parent Account Label</span>
+                    <input name="parentAccountLabel" defaultValue={selectedSchool.parentAccountLabel ?? "Uganda"} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Relationship Status</span>
+                    <input name="schoolRelationshipStatus" defaultValue={selectedSchool.schoolRelationshipStatus ?? ""} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Relationship Status Date</span>
+                    <input name="schoolRelationshipStatusDate" type="date" defaultValue={selectedSchool.schoolRelationshipStatusDate?.slice(0, 10) ?? ""} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Client School Number</span>
+                    <input name="clientSchoolNumber" type="number" defaultValue={selectedSchool.clientSchoolNumber ?? 0} />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">First Metric Date</span>
+                    <input name="firstMetricDate" type="date" defaultValue={selectedSchool.firstMetricDate?.slice(0, 10) ?? ""} />
+                  </label>
+                  <label>
                     <span className="portal-field-label">Partner Type</span>
                     <input name="partnerType" defaultValue={selectedSchool.partnerType ?? ""} />
                   </label>
@@ -1434,7 +1514,7 @@ export function PortalSchoolsManager({
                     </button>
                   </div>
                 </form>
-              </FloatingSurface>
+              </FormModal>
             )}
 
             {profileFeedback.message ? (

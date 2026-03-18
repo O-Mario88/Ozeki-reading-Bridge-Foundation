@@ -29,8 +29,6 @@ export async function POST(
     const parsed = bodySchema.parse(await request.json().catch(() => ({})));
     const result = await issueFinanceReceipt(receiptId, auth.actor, {
       sendEmail: parsed.sendEmail,
-      to: parsed.to,
-      cc: parsed.cc,
     });
     return NextResponse.json(result);
   } catch (error) {

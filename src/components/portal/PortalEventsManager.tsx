@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { OnlineTrainingEventRecord } from "@/lib/types";
-import { FloatingSurface } from "@/components/FloatingSurface";
+import { FormModal } from "@/components/forms";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 interface PortalEventsManagerProps {
@@ -240,7 +240,7 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
         )}
       </section>
 
-      <FloatingSurface
+      <FormModal
         open={isScheduleOpen}
         onClose={() => setIsScheduleOpen(false)}
         title="Schedule Event / Webinar"
@@ -307,9 +307,9 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
             </button>
           </div>
         </form>
-      </FloatingSurface>
+      </FormModal>
 
-      <FloatingSurface
+      <FormModal
         open={isAttendanceOpen}
         onClose={() => setIsAttendanceOpen(false)}
         title="Capture Webinar Outcomes"
@@ -368,7 +368,7 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
             </button>
           </div>
         </form>
-      </FloatingSurface>
+      </FormModal>
     </div>
   );
 }

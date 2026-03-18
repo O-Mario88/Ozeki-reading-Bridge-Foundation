@@ -68,7 +68,7 @@ export async function GET(
         return new NextResponse(fileBuffer, {
             headers: {
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `attachment; filename="${filename}"`,
+                "Content-Disposition": `inline; filename="${filename}"`,
             },
         });
     } catch (error: unknown) {

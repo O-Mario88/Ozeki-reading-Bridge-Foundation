@@ -199,3 +199,98 @@ export async function getGrantAndDonorReport(grantId?: number) {
   const res = await queryPostgres(sql, params);
   return res.rows;
 }
+
+/**
+ * 1. Income vs Expense Summary
+ */
+export async function getIncomeVsExpenseSummary(startDate: string, endDate: string) {
+  const sql = `
+    SELECT 
+      DATE_TRUNC('month', je.entry_date) as month,
+      coa.account_type,
+      SUM(CASE WHEN coa.account_type = 'income' THEN jl.credit - jl.debit ELSE 0 END) as total_income,
+      SUM(CASE WHEN coa.account_type = 'expense' THEN jl.debit - jl.credit ELSE 0 END) as total_expense
+    FROM finance_journal_lines jl
+    JOIN finance_journal_entries je ON jl.journal_id = je.id
+    JOIN finance_chart_of_accounts coa ON jl.account_id = coa.id
+    WHERE je.status = 'posted'
+      AND je.entry_date BETWEEN $1 AND $2
+      AND coa.account_type IN ('income', 'expense')
+    GROUP BY DATE_TRUNC('month', je.entry_date), coa.account_type
+    ORDER BY DATE_TRUNC('month', je.entry_date);
+  `;
+  const res = await queryPostgres(sql, [startDate, endDate]);
+  return res.rows;
+}
+
+/**
+ * 3. Project / Fund Financial Report
+ */
+export async function getProjectFundFinancialReport(startDate: string, endDate: string) {
+  const sql = `
+    SELECT 
+      COALESCE(p.name, f.name, 'Unallocated') as project_or_fund,
+      SUM(CASE WHEN coa.account_type = 'income' THEN jl.credit - jl.debit ELSE 0 END) as total_income,
+      SUM(CASE WHEN coa.account_type = 'expense' THEN jl.debit - jl.credit ELSE 0 END) as total_expense,
+      SUM(CASE WHEN coa.account_type = 'income' THEN jl.credit - jl.debit ELSE 0 END) - 
+      SUM(CASE WHEN coa.account_type = 'expense' THEN jl.debit - jl.credit ELSE 0 END) as net_surplus
+    FROM finance_journal_lines jl
+    JOIN finance_journal_entries je ON jl.journal_id = je.id
+    JOIN finance_chart_of_accounts coa ON jl.account_id = coa.id
+    LEFT JOIN finance_projects p ON jl.project_id = p.id
+    LEFT JOIN finance_funds f ON jl.fund_id = f.id
+    WHERE je.status = 'posted'
+      AND je.entry_date BETWEEN $1 AND $2
+      AND coa.account_type IN ('income', 'expense')
+    GROUP BY p.name, f.name
+    ORDER BY net_surplus DESC;
+  `;
+  const res = await queryPostgres(sql, [startDate, endDate]);
+  return res.rows;
+}
+
+/**
+ * 4. Expense by Category Report
+ */
+export async function getExpenseByCategoryReport(startDate: string, endDate: string) {
+  const sql = `
+    SELECT 
+      coa.account_code,
+      coa.account_name as category,
+      SUM(jl.debit) - SUM(jl.credit) as total_expense
+    FROM finance_journal_lines jl
+    JOIN finance_journal_entries je ON jl.journal_id = je.id
+    JOIN finance_chart_of_accounts coa ON jl.account_id = coa.id
+    WHERE je.status = 'posted'
+      AND je.entry_date BETWEEN $1 AND $2
+      AND coa.account_type = 'expense'
+    GROUP BY coa.account_code, coa.account_name
+    ORDER BY total_expense DESC;
+  `;
+  const res = await queryPostgres(sql, [startDate, endDate]);
+  return res.rows;
+}
+
+/**
+ * 6. Receipts Report
+ */
+export async function getReceiptsReport(startDate: string, endDate: string) {
+  const sql = `
+    SELECT 
+      r.receipt_number,
+      r.issue_date,
+      r.amount,
+      r.currency,
+      r.payment_method,
+      COALESCE(c.name, r.client_name) as client_name,
+      i.invoice_number,
+      r.status
+    FROM finance_receipts r
+    LEFT JOIN finance_contacts c ON r.client_id = c.id
+    LEFT JOIN finance_invoices i ON r.invoice_id = i.id
+    WHERE r.issue_date BETWEEN $1 AND $2
+    ORDER BY r.issue_date DESC, r.receipt_number DESC;
+  `;
+  const res = await queryPostgres(sql, [startDate, endDate]);
+  return res.rows;
+}

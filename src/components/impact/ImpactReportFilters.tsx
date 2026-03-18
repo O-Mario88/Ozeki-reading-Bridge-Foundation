@@ -132,7 +132,7 @@ export function ImpactReportFilters({
         });
         const json = (await response.json()) as { regions?: GeoOption[] };
         if (!active) return;
-        const nextRegions = json.regions ?? [];
+        const nextRegions = Array.isArray(json.regions) ? json.regions : [];
         setRegions(nextRegions);
         if (region && !nextRegions.some((item) => normalize(item.name) === normalize(region))) {
           setRegion("");
@@ -170,7 +170,7 @@ export function ImpactReportFilters({
       );
       const json = (await response.json()) as { subregions?: GeoOption[] };
       if (!active) return;
-      const nextSubRegions = json.subregions ?? [];
+      const nextSubRegions = Array.isArray(json.subregions) ? json.subregions : [];
       setSubRegions(nextSubRegions);
       if (
         subRegion &&
@@ -205,7 +205,7 @@ export function ImpactReportFilters({
       );
       const json = (await response.json()) as { districts?: GeoOption[] };
       if (!active) return;
-      const nextDistricts = json.districts ?? [];
+      const nextDistricts = Array.isArray(json.districts) ? json.districts : [];
       setDistricts(nextDistricts);
       if (
         district &&
@@ -237,7 +237,7 @@ export function ImpactReportFilters({
       );
       const json = (await response.json()) as { schools?: SchoolOption[] };
       if (!active) return;
-      const nextSchools = json.schools ?? [];
+      const nextSchools = Array.isArray(json.schools) ? json.schools : [];
       setSchools(nextSchools);
       if (
         schoolId &&

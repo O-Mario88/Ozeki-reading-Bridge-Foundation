@@ -332,16 +332,10 @@ export async function validateParticipantBelongsToSchool(
     return true; // Allow all for now; full validation to be implemented
 }
 
-export async function listAssessmentRecordsAsync(filters?: number | { userId?: number; limit?: number }) {
-    const { listAssessmentRecordsAsync: fn } = await import("@/lib/db-api");
-    const resolved = typeof filters === 'number' ? { limit: filters } : filters;
-    return fn(resolved);
-}
-
-export async function saveAssessmentRecordAsync(input: unknown, actor: unknown) {
-    const { saveAssessmentRecordAsync: fn } = await import("@/lib/db-api");
-    return fn(input, actor as never);
-}
+export {
+    saveAssessmentRecordPostgres as saveAssessmentRecordAsync,
+    listAssessmentRecordsPostgres as listAssessmentRecordsAsync,
+} from "@/lib/server/postgres/repositories/assessments";
 
 export async function listGraduationQueueAsync(filters?: unknown) {
     const { listGraduationQueueAsync: fn } = await import("@/lib/db-api");

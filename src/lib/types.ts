@@ -2527,6 +2527,7 @@ export interface SchoolDirectoryRecord {
   schoolStatusDate: string | null;
   currentPartnerType: string;
   yearFounded: number | null;
+
   accountRecordType: string;
   schoolType: string;
   parentAccountLabel: string;

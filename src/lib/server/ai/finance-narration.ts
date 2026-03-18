@@ -2,9 +2,12 @@ import OpenAI from "openai";
 
 export interface FinancialNarrationResult {
   executiveSummary: string;
-  keyInsights: string[];
-  risksAndConcerns: string[];
-  recommendations: string[];
+  introduction: string;
+  methodology: string;
+  findings: string;
+  conclusion: string;
+  recommendations: string;
+  references: string;
 }
 
 /**
@@ -13,16 +16,19 @@ export interface FinancialNarrationResult {
  */
 export async function generateFinancialNarration(
   reportType: string,
-  data: Record<string, any>,
+  data: unknown,
   options: { period: string; organization: string }
 ): Promise<FinancialNarrationResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return {
       executiveSummary: "AI Narration is currently unavailable (API Key not set).",
-      keyInsights: ["No AI insights generated."],
-      risksAndConcerns: [],
-      recommendations: ["Ensure OPENAI_API_KEY is configured in server environment."]
+      introduction: "AI Analysis offline.",
+      methodology: "Internal financial ledgers.",
+      findings: "No AI insights generated.",
+      conclusion: "Risk assessment offline.",
+      recommendations: "Ensure OPENAI_API_KEY is configured in server environment.",
+      references: "Ozeki Internal Operations System."
     };
   }
 
@@ -36,17 +42,19 @@ Your task is to analyze the provided ${reportType} data (JSON) and produce a pro
 RULES:
 1. TRUTHFULNESS: Only use data provided in the JSON. If a figure is 0 or null, treat it as such.
 2. NO HALLUCINATION: Do not invent transactions, donors, or specific financial events not in the data.
-3. TONE: Professional, formal, and analytical.
-4. STRUCTURE: Provide an executive summary, top 3-4 key insights, potential risks/concerns, and actionable recommendations.
-5. CONTEXT: Focus on fund health, budget variance, and cash flow stability.
+3. TONE: Professional, formal, and highly academic. Ensure output resembles a professional audited financial report.
+4. FORMATTING: Use Markdown within the string fields. Use numbered subheadings (e.g. ### 6.1 Variance Analysis) inside the 'findings' and 'recommendations' sections where applicable.
 
 Response Format:
-Return ONLY a valid JSON object with the following fields:
+Return ONLY a valid JSON object with the following string fields:
 {
   "executiveSummary": "...",
-  "keyInsights": ["...", "..."],
-  "risksAndConcerns": ["...", "..."],
-  "recommendations": ["...", "..."]
+  "introduction": "Brief context on the report objectives.",
+  "methodology": "Describe the data extracted and methods of analysis.",
+  "findings": "Detailed markdown analysis of fund health, variance, stability. (You MUST use markdown).",
+  "conclusion": "Synthesize the financial trajectory.",
+  "recommendations": "Actionable numbered next steps based on analysis.",
+  "references": "Cite the specific ledger or organization systems analyzed."
 }
   `;
 
@@ -69,17 +77,23 @@ Return ONLY a valid JSON object with the following fields:
     const parsed = JSON.parse(content) as FinancialNarrationResult;
     return {
       executiveSummary: parsed.executiveSummary || "No summary provided.",
-      keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
-      risksAndConcerns: Array.isArray(parsed.risksAndConcerns) ? parsed.risksAndConcerns : [],
-      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : []
+      introduction: parsed.introduction || "No introduction provided.",
+      methodology: parsed.methodology || "Data from internal ledgers.",
+      findings: parsed.findings || "No findings analyzed.",
+      conclusion: parsed.conclusion || "No conclusion generated.",
+      recommendations: parsed.recommendations || "No recommendations generated.",
+      references: parsed.references || "Ozeki Internal Database."
     };
   } catch (error) {
     console.error("Financial Narration Failure:", error);
     return {
       executiveSummary: "Error generating AI narrative. Please review raw data tables.",
-      keyInsights: ["Analysis failed due to a technical error."],
-      risksAndConcerns: ["System was unable to perform AI risk assessment."],
-      recommendations: ["Review financial tables manually for variance compliance."]
+      introduction: "Error encountered.",
+      methodology: "System extraction failure.",
+      findings: "Analysis failed due to a technical error.",
+      conclusion: "Unable to assess.",
+      recommendations: "Review financial tables manually.",
+      references: "System logs."
     };
   }
 }

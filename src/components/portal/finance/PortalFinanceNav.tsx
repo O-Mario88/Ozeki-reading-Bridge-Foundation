@@ -10,6 +10,9 @@ const financeItems = [
   { href: "/portal/finance/receipts", label: "Receipts" },
   { href: "/portal/finance/money-in", label: "Money In" },
   { href: "/portal/finance/money-out", label: "Money Out" },
+  { href: "/portal/finance/assets", label: "Fixed Assets" },
+  { href: "/portal/finance/liabilities", label: "Liabilities" },
+  { href: "/portal/finance/reports", label: "NGO Reports" },
   { href: "/portal/finance/statements", label: "Financial Statements" },
   { href: "/portal/finance/settings", label: "Settings" },
 ];

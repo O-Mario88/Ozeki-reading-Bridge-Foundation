@@ -157,6 +157,9 @@ export async function POST(request: NextRequest) {
       },
       auth.actor,
     );
+    if (!expense) {
+      throw new Error("Failed to create expense record.");
+    }
 
     const evidence = [];
     const evidenceMeta: Array<{
@@ -222,7 +225,8 @@ export async function POST(request: NextRequest) {
       if (linkedReceipts.length === 0) {
         throw new Error("At least one receipt file with metadata is required to post this expense.");
       }
-      finalExpense = await postFinanceExpenseAsync(expense.id, auth.actor);
+      const posted = await postFinanceExpenseAsync(expense.id, auth.actor);
+      if (posted) finalExpense = posted;
       autoPosted = true;
       submitted = true;
     }

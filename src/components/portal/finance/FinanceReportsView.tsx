@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { PortalShell } from "@/components/portal/PortalShell";
-import { generateFinancialReport } from "@/app/actions/finance-report-actions";
-import { LucideFileText, LucidePieChart, LucideDownload, LucideLoader2 } from "lucide-react";
+import { LucideFileText, LucidePieChart, LucideDownload } from "lucide-react";
 
 const REPORT_TYPES = [
   { id: "PnL", name: "Statement of Activities (P&L)", icon: LucideTrendingUp },
@@ -14,36 +11,12 @@ const REPORT_TYPES = [
 ];
 
 import { LucideTrendingUp, LucideWallet, LucideShield } from "lucide-react";
-
-export default function FinanceReportsPage({ user }: { user: any }) {
-  const [loading, setLoading] = useState<string | null>(null);
-  const [lastPdf, setLastPdf] = useState<{ url: string; name: string } | null>(null);
-
-  async function handleGenerate(type: string) {
-    setLoading(type);
-    try {
-      const result = await generateFinancialReport(type, {
-        fiscalYear: 2024,
-        startDate: "2024-01-01",
-        endDate: "2024-12-31"
-      });
-      
-      const blob = await fetch(`data:application/pdf;base64,${result.pdfBase64}`).then(res => res.blob());
-      const url = URL.createObjectURL(blob);
-      setLastPdf({ url, name: result.fileName });
-      
-      // Auto-download
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = result.fileName;
-      link.click();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to generate report. Check API logs.");
-    } finally {
-      setLoading(null);
-    }
-  }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default function FinanceReportsPage({ user: _user }: { user: any }) {
+  // We no longer need state handling for PDF downloads since we use native endpoints
+  const year = 2024;
+  const start = "2024-01-01";
+  const end = "2024-12-31";
 
   return (
     <div className="space-y-6">
@@ -61,43 +34,17 @@ export default function FinanceReportsPage({ user }: { user: any }) {
               Generate a presentation-ready PDF including automated AI narration, variance analysis, and fund health summaries.
             </p>
 
-            <button 
-              disabled={!!loading}
-              onClick={() => handleGenerate(report.id)}
+            <a 
+              href={`/api/portal/finance/statements/${report.id}/pdf?fiscalYear=${year}&startDate=${start}&endDate=${end}`}
+              target="_blank"
               className="button button-primary w-full flex items-center justify-center gap-2"
             >
-              {loading === report.id ? (
-                <>
-                  <LucideLoader2 className="w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <LucideDownload className="w-4 h-4" />
-                  Download PDF
-                </>
-              )}
-            </button>
+              <LucideDownload className="w-4 h-4" />
+              View PDF
+            </a>
           </div>
         ))}
       </div>
-
-      {lastPdf && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-full text-green-700">
-              <LucideFileText className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-medium text-green-900">Success: {lastPdf.name}</p>
-              <p className="text-sm text-green-700">The report was generated and downloaded successfully.</p>
-            </div>
-          </div>
-          <a href={lastPdf.url} download={lastPdf.name} className="button button-outline button-sm">
-            Download Again
-          </a>
-        </div>
-      )}
 
       <div className="card p-6 bg-blue-50 border-blue-100">
         <h3 className="font-bold text-lg mb-2 flex items-center gap-2">

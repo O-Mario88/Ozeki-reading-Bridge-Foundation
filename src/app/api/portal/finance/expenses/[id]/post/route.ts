@@ -5,10 +5,6 @@ import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";
 
-const bodySchema = z.object({
-  overrideReason: z.string().trim().max(500).optional(),
-});
-
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -24,11 +20,9 @@ export async function POST(
   }
 
   try {
-    const parsed = bodySchema.parse(await request.json().catch(() => ({})));
-    const expense = await postFinanceExpenseAsync(expenseId, auth.actor, {
-      overrideReason: parsed.overrideReason,
-    });
-    return NextResponse.json({ expense });
+    await request.json().catch(() => ({}));
+    const updatedExpense = await postFinanceExpenseAsync(Number(id), auth.actor);
+    return NextResponse.json({ expense: updatedExpense });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });

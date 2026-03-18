@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { PortalUserAdminRecord, PortalUserRole } from "@/lib/types";
-import { FloatingSurface } from "@/components/FloatingSurface";
+import { FormModal } from "@/components/forms";
 
 interface PortalUserAdminManagerProps {
   initialUsers: PortalUserAdminRecord[];
@@ -230,7 +230,7 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
         </p>
       ) : null}
 
-      <FloatingSurface
+      <FormModal
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         title="Create Staff / Volunteer Account"
@@ -300,10 +300,10 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
             </button>
           </div>
         </form>
-      </FloatingSurface>
+      </FormModal>
 
       {editingUserId ? (
-        <FloatingSurface
+        <FormModal
           open={Boolean(editingUserId)}
           onClose={() => setEditingUserId(null)}
           title="Edit User Permissions"
@@ -390,7 +390,7 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
               </form>
             );
           })()}
-        </FloatingSurface>
+        </FormModal>
       ) : null}
     </div>
   );

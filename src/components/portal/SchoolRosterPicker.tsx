@@ -82,6 +82,8 @@ interface AddTeacherForm {
     lastSsaSent: string;
     trainer: boolean;
     notes: string;
+    classTaught: string;
+    subjectTaught: string;
 }
 
 interface AddLearnerForm {
@@ -89,6 +91,7 @@ interface AddLearnerForm {
     gender: "Boy" | "Girl" | "Other" | "";
     age: string;
     classGrade: string;
+    internalChildId: string;
 }
 
 /* ── Component ── */
@@ -125,6 +128,8 @@ export function SchoolRosterPicker({
         lastSsaSent: "",
         trainer: false,
         notes: "",
+        classTaught: "",
+        subjectTaught: "",
     });
 
     // Learner add form
@@ -133,6 +138,7 @@ export function SchoolRosterPicker({
         gender: "",
         age: "",
         classGrade: "",
+        internalChildId: "",
     });
 
     /* ── Fetch roster when schoolId changes ── */
@@ -215,6 +221,7 @@ export function SchoolRosterPicker({
                     gender: learnerForm.gender,
                     age: Number(learnerForm.age),
                     classGrade: learnerForm.classGrade,
+                    internalChildId: learnerForm.internalChildId || undefined,
                 };
             } else {
                 if (!teacherForm.fullName.trim() || !teacherForm.gender || !teacherForm.category) {
@@ -240,6 +247,8 @@ export function SchoolRosterPicker({
                     lastSsaSent: teacherForm.lastSsaSent || undefined,
                     trainer: teacherForm.trainer,
                     notes: teacherForm.notes || undefined,
+                    classTaught: teacherForm.classTaught || undefined,
+                    subjectTaught: teacherForm.subjectTaught || undefined,
                 };
             }
 
@@ -280,8 +289,10 @@ export function SchoolRosterPicker({
                 lastSsaSent: "",
                 trainer: false,
                 notes: "",
+                classTaught: "",
+                subjectTaught: "",
             });
-            setLearnerForm({ fullName: "", gender: "", age: "", classGrade: "" });
+            setLearnerForm({ fullName: "", gender: "", age: "", classGrade: "", internalChildId: "" });
         } catch {
             setAddError("Network error. Try again.");
         } finally {
@@ -586,6 +597,28 @@ export function SchoolRosterPicker({
                                     <span>Trainer / presenter</span>
                                 </label>
                                 <label>
+                                    Class Taught (optional)
+                                    <input
+                                        type="text"
+                                        value={teacherForm.classTaught}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, classTaught: e.target.value }))
+                                        }
+                                        placeholder="e.g. P1 - P3"
+                                    />
+                                </label>
+                                <label>
+                                    Subject Taught (optional)
+                                    <input
+                                        type="text"
+                                        value={teacherForm.subjectTaught}
+                                        onChange={(e) =>
+                                            setTeacherForm((p) => ({ ...p, subjectTaught: e.target.value }))
+                                        }
+                                        placeholder="e.g. Literacy"
+                                    />
+                                </label>
+                                <label>
                                     Notes
                                     <textarea
                                         value={teacherForm.notes}
@@ -663,6 +696,17 @@ export function SchoolRosterPicker({
                                         <option value="P6">P6</option>
                                         <option value="P7">P7</option>
                                     </select>
+                                </label>
+                                <label>
+                                    Internal Child ID (optional)
+                                    <input
+                                        type="text"
+                                        value={learnerForm.internalChildId}
+                                        onChange={(e) =>
+                                            setLearnerForm((p) => ({ ...p, internalChildId: e.target.value }))
+                                        }
+                                        placeholder="External system ID"
+                                    />
                                 </label>
                             </div>
                         )}

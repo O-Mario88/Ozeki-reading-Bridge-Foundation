@@ -89,7 +89,6 @@ export async function buildBrowserPdfBranding(
     .orbf-brand-frame {
       position: fixed;
       inset: 5mm;
-      border: 1.2px solid var(--orbf-border);
       pointer-events: none;
       z-index: 1;
     }
@@ -174,7 +173,7 @@ export async function buildBrowserPdfBranding(
       position: fixed;
       left: 18mm;
       right: 18mm;
-      bottom: 9mm;
+      bottom: 0mm;
       text-align: center;
       z-index: 5;
     }
@@ -212,8 +211,7 @@ export async function buildBrowserPdfBranding(
     .orbf-brand-main {
       position: relative;
       z-index: 2;
-      margin: 0 18mm 34mm;
-      min-height: calc(100vh - 44mm);
+      margin: 0 18mm;
     }
   `;
 

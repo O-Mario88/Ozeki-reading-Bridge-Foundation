@@ -36,10 +36,8 @@
   --ds-font: "Roboto", system-ui, -apple-system, sans-serif;
 }
 
-/* ── Full-page shell ───────────────────────────────────────── */
 .ds-portal-shell {
-  display: grid;
-  grid-template-columns: var(--ds-sidebar-width) 1fr;
+  display: block;
   min-height: 100vh;
   font-family: var(--ds-font);
   background: var(--ds-content-bg);

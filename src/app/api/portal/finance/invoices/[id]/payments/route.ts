@@ -74,13 +74,14 @@ export async function POST(
 
     const paymentResult = await recordFinancePayment(
       {
-        relatedInvoiceId: invoiceId,
+        invoiceId: invoiceId,
         date: payload.date,
         amount: payload.amount,
         method: payload.method,
         reference: payload.reference,
         notes: payload.notes,
       },
+      invoiceId,
       auth.actor,
     );
     if (!paymentResult?.payment) {

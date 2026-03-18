@@ -71,7 +71,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${pdf.fileName}"`,
+        "Content-Disposition": `inline; filename="${pdf.fileName}"`,
       },
     });
   } catch (error) {

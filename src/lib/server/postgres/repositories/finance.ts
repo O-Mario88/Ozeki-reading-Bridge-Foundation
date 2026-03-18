@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import { createFinanceIncomeBreakdownZero, FINANCE_INCOME_CATEGORIES, normalizeFinanceIncomeCategory } from "@/lib/finance-categories";
 import { getDefaultFinanceFromEmail, resolveFinanceFromEmail } from "@/lib/finance-email";
-import { queryPostgres } from "@/lib/server/postgres/client";
+import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import { postExpenseToGl } from "./finance-v2";
 import type {
   FinanceAuditComplianceCheckRecord,
   FinanceAuditExceptionRecord,
@@ -862,19 +863,157 @@ export async function getFinanceExpenseByIdPostgres(expenseId: number) {
   return row ? mapFinanceExpenseRecord(row) : null;
 }
 
+export async function createFinanceExpensePostgres(
+  input: {
+    vendorName: string;
+    date: string;
+    subcategory?: string;
+    amount: number;
+    currency: string;
+    paymentMethod: string;
+    description: string;
+    notes?: string;
+  },
+  actor: { id: number },
+): Promise<FinanceExpenseRecord> {
+  return await withPostgresClient(async (client) => {
+    const year = new Date(input.date).getFullYear().toString();
+    const prefix = `EXP-${year}-`;
+    const seqResult = await client.query(
+      "SELECT COUNT(*) FROM finance_expenses WHERE expense_number LIKE $1",
+      [`${prefix}%`],
+    );
+    const nextSeq = (parseInt(seqResult.rows[0].count) + 1).toString().padStart(5, "0");
+    const expenseNumber = `${prefix}${nextSeq}`;
+
+    const insertResult = await client.query(
+      `INSERT INTO finance_expenses (
+        expense_number, vendor_name, date, category, subcategory, amount, currency, 
+        payment_method, description, notes, status, created_by_user_id
+      ) VALUES (
+        $1, $2, $3, 'Expense', $4, $5, $6, $7, $8, $9, 'draft', $10
+      ) RETURNING id`,
+      [
+        expenseNumber, input.vendorName, input.date, input.subcategory || null,
+        input.amount, input.currency, input.paymentMethod, input.description,
+        input.notes || null, actor.id
+      ]
+    );
+
+    const expenseId = insertResult.rows[0].id;
+    const finalExpense = await getFinanceExpenseByIdPostgres(expenseId);
+    if (!finalExpense) throw new Error("Failed to read back created expense.");
+    return finalExpense;
+  });
+}
+
 export async function submitFinanceExpensePostgres(expenseId: number, actor: { id?: number; userId?: number; fullName?: string; userName?: string; role?: string }): Promise<FinanceExpenseRecord> {
+  const actorId = actor.id ?? actor.userId;
+  const res = await queryPostgres(
+    "UPDATE finance_expenses SET status = 'submitted', submitted_at = NOW(), submitted_by_user_id = $1, updated_at = NOW() WHERE id = $2 AND status = 'draft'",
+    [actorId, expenseId]
+  );
+  if (res.rowCount === 0) throw new Error("Expense not found or not in draft status.");
   const current = await getFinanceExpenseByIdPostgres(expenseId);
-  if (!current) {
-    throw new Error("Expense not found.");
-  }
-  
-  // Create a modified copy of the record with submitted status
-  return {
-    ...current,
-    status: "submitted",
-    submittedAt: new Date().toISOString(),
-    submittedBy: actor.id ?? actor.userId,
-  };
+  return current!;
+}
+
+export async function deleteFinanceExpenseDraftPostgres(id: number, _reason: string, actor: { id: number }) {
+  const res = await queryPostgres("DELETE FROM finance_expenses WHERE id = $1 AND status = 'draft'", [id]);
+  if (res.rowCount === 0) throw new Error("Expense not found or not in draft status.");
+  return true;
+}
+
+export async function voidFinanceExpensePostgres(id: number, reason: string, actor: { id: number }) {
+  return await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await client.query(
+        "UPDATE finance_expenses SET status = 'void', void_reason = $1, updated_at = NOW() WHERE id = $2 AND status != 'void'",
+        [reason, id]
+      );
+      await client.query(
+        "UPDATE finance_transactions_ledger SET posted_status = 'void', void_reason = $1 WHERE source_type = 'expense' AND source_id = $2",
+        [reason, id]
+      );
+      // NOTE: Journal entry reversal should happen here for full integrity. MVP voids the ledger.
+      await client.query("COMMIT");
+      const current = await getFinanceExpenseByIdPostgres(id);
+      return current!;
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    }
+  });
+}
+
+export async function postFinanceExpensePostgres(expenseId: number, actor: { id: number }) {
+  return await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const expenseRes = await client.query("SELECT * FROM finance_expenses WHERE id = $1", [expenseId]);
+      if (expenseRes.rows.length === 0) throw new Error("Expense not found");
+      const expense = expenseRes.rows[0];
+
+      if (expense.status === 'posted') {
+         await client.query("COMMIT");
+         return await getFinanceExpenseByIdPostgres(expenseId);
+      }
+
+      await client.query(
+        "UPDATE finance_expenses SET status = 'posted', posted_at = NOW(), posted_by_user_id = $1, updated_at = NOW() WHERE id = $2",
+        [actor.id, expenseId]
+      );
+
+      await client.query(
+        `INSERT INTO finance_transactions_ledger (
+          txn_type, category, subcategory, date, currency, amount,
+          source_type, source_id, posted_status, posted_at, created_by_user_id
+        ) VALUES (
+          'money_out', 'Expense', $1, $2, $3, $4, 'expense', $5, 'posted', NOW(), $6
+        )`,
+        [expense.subcategory, expense.date, expense.currency, expense.amount, expense.id, actor.id]
+      );
+
+      await client.query("COMMIT");
+
+      // Natively insert the journal entry through finance-v2.ts logic
+      await postExpenseToGl(expenseId, actor.id);
+
+      const current = await getFinanceExpenseByIdPostgres(expenseId);
+      return current!;
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    }
+  });
+}
+
+export async function upsertFinanceExpenseReceiptsPostgres(expenseId: number, receipts: any[], actor: { id: number }) {
+  return await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await client.query("DELETE FROM finance_expense_receipts WHERE expense_id = $1", [expenseId]);
+
+      for (const r of receipts) {
+        await client.query(
+          `INSERT INTO finance_expense_receipts (
+            expense_id, file_id, file_url, file_hash_sha256, vendor_name,
+            receipt_date, receipt_amount, currency, reference_no, uploaded_by_user_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            expenseId, r.fileId, 'handled-by-storage', r.fileHashSha256, r.vendorName,
+            r.receiptDate, r.receiptAmount, r.currency, r.referenceNo || null, actor.id
+          ]
+        );
+      }
+      await client.query("COMMIT");
+      return await listFinanceExpenseReceiptsPostgres(expenseId);
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    }
+  });
 }
 
 export async function listFinanceExpenseReceiptsPostgres(expenseId?: number) {

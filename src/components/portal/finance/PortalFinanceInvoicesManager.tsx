@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { FloatingSurface } from "@/components/FloatingSurface";
+import { FormModal, FormPage, FormSection, FormField, FormActions } from "@/components/forms";
 import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
@@ -563,17 +563,22 @@ export function PortalFinanceInvoicesManager({
                         >
                           {item.status === "draft" ? "Delete" : "Void"}
                         </button>
-                        {item.pdfUrl ? (
-                          <a className="button button-ghost button-sm" href={item.pdfUrl} target="_blank" rel="noreferrer">
-                            PDF
-                          </a>
-                        ) : null}
-                        {item.linkedReceipt?.pdfUrl ? (
+                        <a
+                          className="button button-ghost button-sm"
+                          href={`/api/portal/finance/invoices/${item.id}/pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Download latest A4 PDF"
+                        >
+                          Download PDF
+                        </a>
+                        {item.linkedReceipt ? (
                           <a
                             className="button button-ghost button-sm"
-                            href={item.linkedReceipt.pdfUrl}
+                            href={`/api/portal/finance/receipts/${item.linkedReceipt.id}/pdf`}
                             target="_blank"
                             rel="noreferrer"
+                            title="Download latest Receipt PDF"
                           >
                             Receipt PDF
                           </a>
@@ -602,7 +607,7 @@ export function PortalFinanceInvoicesManager({
         )}
       </section>
 
-      <FloatingSurface
+      <FormModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         title="Create Invoice"
@@ -610,156 +615,164 @@ export function PortalFinanceInvoicesManager({
         closeLabel="Close"
         maxWidth="980px"
       >
-        <form className="form-grid portal-form-grid" onSubmit={handleCreateInvoice}>
-          <label>
-            <span className="portal-field-label">Contact</span>
-            <select
-              value={invoiceForm.contactId}
-              required
-              onChange={(event) => setInvoiceForm((prev) => ({ ...prev, contactId: event.target.value }))}
-            >
-              <option value="">Select contact</option>
-              {contacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {contact.name} ({contact.emails[0] || "no-email"})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="portal-field-label">Category</span>
-            <select
-              value={invoiceForm.category}
-              onChange={(event) => setInvoiceForm((prev) => ({ ...prev, category: event.target.value }))}
-            >
-              {FINANCE_INCOME_CATEGORIES.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="portal-field-label">Currency</span>
-            <select
-              value={invoiceForm.currency}
-              onChange={(event) => setInvoiceForm((prev) => ({ ...prev, currency: event.target.value }))}
-            >
-              <option value="UGX">UGX</option>
-              <option value="USD">USD</option>
-            </select>
-          </label>
-          <label>
-            <span className="portal-field-label">Issue Date</span>
-            <input
-              type="date"
-              value={invoiceForm.issueDate}
-              onChange={(event) => setInvoiceForm((prev) => ({ ...prev, issueDate: event.target.value }))}
-              required
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Due Date</span>
-            <input
-              type="date"
-              value={invoiceForm.dueDate}
-              onChange={(event) => setInvoiceForm((prev) => ({ ...prev, dueDate: event.target.value }))}
-              required
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Tax</span>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={invoiceForm.tax}
-              onChange={(event) => setInvoiceForm((prev) => ({ ...prev, tax: event.target.value }))}
-            />
-          </label>
-
-          <fieldset className="card full-width">
-            <legend>Line Items</legend>
-            <div className="portal-list">
-              {lineItems.map((item, index) => (
-                <div key={index} className="portal-filter-grid">
+        <form onSubmit={handleCreateInvoice}>
+          <FormPage title="Draft Invoice">
+            <FormSection title="Details">
+              <div className="form-grid portal-form-grid">
+                <FormField label="Contact" required>
+                  <select
+                    value={invoiceForm.contactId}
+                    required
+                    onChange={(event) => setInvoiceForm((prev) => ({ ...prev, contactId: event.target.value }))}
+                  >
+                    <option value="">Select contact</option>
+                    {contacts.map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.name} ({contact.emails[0] || "no-email"})
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="Category">
+                  <select
+                    value={invoiceForm.category}
+                    onChange={(event) => setInvoiceForm((prev) => ({ ...prev, category: event.target.value }))}
+                  >
+                    {FINANCE_INCOME_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="Currency">
+                  <select
+                    value={invoiceForm.currency}
+                    onChange={(event) => setInvoiceForm((prev) => ({ ...prev, currency: event.target.value }))}
+                  >
+                    <option value="UGX">UGX</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </FormField>
+                <FormField label="Issue Date" required>
                   <input
-                    placeholder="Description"
-                    value={item.description}
-                    onChange={(event) => {
-                      const next = [...lineItems];
-                      next[index] = { ...next[index], description: event.target.value };
-                      setLineItems(next);
-                    }}
+                    type="date"
+                    value={invoiceForm.issueDate}
+                    onChange={(event) => setInvoiceForm((prev) => ({ ...prev, issueDate: event.target.value }))}
                     required
                   />
+                </FormField>
+                <FormField label="Due Date" required>
                   <input
-                    type="number"
-                    min={0.01}
-                    step="0.01"
-                    placeholder="Qty"
-                    value={item.qty}
-                    onChange={(event) => {
-                      const next = [...lineItems];
-                      next[index] = { ...next[index], qty: event.target.value };
-                      setLineItems(next);
-                    }}
+                    type="date"
+                    value={invoiceForm.dueDate}
+                    onChange={(event) => setInvoiceForm((prev) => ({ ...prev, dueDate: event.target.value }))}
                     required
                   />
+                </FormField>
+                <FormField label="Tax">
                   <input
                     type="number"
                     min={0}
                     step="0.01"
-                    placeholder="Unit Price"
-                    value={item.unitPrice}
-                    onChange={(event) => {
-                      const next = [...lineItems];
-                      next[index] = { ...next[index], unitPrice: event.target.value };
-                      setLineItems(next);
-                    }}
-                    required
+                    value={invoiceForm.tax}
+                    onChange={(event) => setInvoiceForm((prev) => ({ ...prev, tax: event.target.value }))}
                   />
-                  <button
-                    type="button"
-                    className="button button-ghost"
-                    onClick={() => setLineItems((prev) => prev.filter((_, i) => i !== index))}
-                    disabled={lineItems.length <= 1}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="action-row">
-              <button
-                type="button"
-                className="button button-ghost"
-                onClick={() => setLineItems((prev) => [...prev, { description: "", qty: "1", unitPrice: "" }])}
-              >
-                + Add Line
+                </FormField>
+              </div>
+            </FormSection>
+
+            <FormSection title="Line Items">
+              <div className="portal-list" style={{ marginTop: "1rem" }}>
+                {lineItems.map((item, index) => (
+                  <div key={index} className="portal-filter-grid">
+                    <FormField label={index === 0 ? "Description" : ""} required>
+                      <input
+                        placeholder="Description"
+                        value={item.description}
+                        onChange={(event) => {
+                          const next = [...lineItems];
+                          next[index] = { ...next[index], description: event.target.value };
+                          setLineItems(next);
+                        }}
+                        required
+                      />
+                    </FormField>
+                    <FormField label={index === 0 ? "Qty" : ""} required>
+                      <input
+                        type="number"
+                        min={0.01}
+                        step="0.01"
+                        placeholder="Qty"
+                        value={item.qty}
+                        onChange={(event) => {
+                          const next = [...lineItems];
+                          next[index] = { ...next[index], qty: event.target.value };
+                          setLineItems(next);
+                        }}
+                        required
+                      />
+                    </FormField>
+                    <FormField label={index === 0 ? "Unit Price" : ""} required>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        placeholder="Unit Price"
+                        value={item.unitPrice}
+                        onChange={(event) => {
+                          const next = [...lineItems];
+                          next[index] = { ...next[index], unitPrice: event.target.value };
+                          setLineItems(next);
+                        }}
+                        required
+                      />
+                    </FormField>
+                    <FormField label={index === 0 ? "Action" : ""}>
+                      <button
+                        type="button"
+                        className="button button-ghost"
+                        onClick={() => setLineItems((prev) => prev.filter((_, i) => i !== index))}
+                        disabled={lineItems.length <= 1}
+                      >
+                        Remove
+                      </button>
+                    </FormField>
+                  </div>
+                ))}
+              </div>
+              <div className="action-row" style={{ marginTop: "1rem" }}>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() => setLineItems((prev) => [...prev, { description: "", qty: "1", unitPrice: "" }])}
+                >
+                  + Add Line
+                </button>
+              </div>
+            </FormSection>
+
+            <FormSection title="Additional Information">
+              <FormField label="Notes">
+                <textarea
+                  rows={4}
+                  value={invoiceForm.notes}
+                  onChange={(event) => setInvoiceForm((prev) => ({ ...prev, notes: event.target.value }))}
+                />
+              </FormField>
+            </FormSection>
+
+            <FormActions>
+              <button className="button" type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save Invoice"}
               </button>
-            </div>
-          </fieldset>
-
-          <label className="full-width">
-            <span className="portal-field-label">Notes</span>
-            <textarea
-              rows={4}
-              value={invoiceForm.notes}
-              onChange={(event) => setInvoiceForm((prev) => ({ ...prev, notes: event.target.value }))}
-            />
-          </label>
-
-          <div className="full-width action-row portal-form-actions">
-            <button className="button" type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save Invoice"}
-            </button>
-            <button type="button" className="button button-ghost" onClick={resetCreateForm} disabled={saving}>
-              Reset
-            </button>
-          </div>
+              <button type="button" className="button button-ghost" onClick={resetCreateForm} disabled={saving}>
+                Reset
+              </button>
+            </FormActions>
+          </FormPage>
         </form>
-      </FloatingSurface>
+      </FormModal>
 
-      <FloatingSurface
+      <FormModal
         open={contactOpen}
         onClose={() => setContactOpen(false)}
         title="New Finance Contact"
@@ -767,59 +780,66 @@ export function PortalFinanceInvoicesManager({
         closeLabel="Close"
         maxWidth="760px"
       >
-        <form className="form-grid portal-form-grid" onSubmit={handleCreateContact}>
-          <label>
-            <span className="portal-field-label">Name</span>
-            <input
-              value={contactForm.name}
-              required
-              onChange={(event) => setContactForm((prev) => ({ ...prev, name: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Type</span>
-            <select
-              value={contactForm.contactType}
-              onChange={(event) => setContactForm((prev) => ({ ...prev, contactType: event.target.value }))}
-            >
-              <option value="donor">Donor</option>
-              <option value="partner">Partner</option>
-              <option value="sponsor">Sponsor</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-          <label className="full-width">
-            <span className="portal-field-label">Emails (comma or new line separated)</span>
-            <textarea
-              rows={3}
-              value={contactForm.emails}
-              required
-              onChange={(event) => setContactForm((prev) => ({ ...prev, emails: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Phone</span>
-            <input
-              value={contactForm.phone}
-              onChange={(event) => setContactForm((prev) => ({ ...prev, phone: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Address</span>
-            <input
-              value={contactForm.address}
-              onChange={(event) => setContactForm((prev) => ({ ...prev, address: event.target.value }))}
-            />
-          </label>
-          <div className="full-width action-row portal-form-actions">
-            <button className="button" type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save Contact"}
-            </button>
-          </div>
-        </form>
-      </FloatingSurface>
+        <form onSubmit={handleCreateContact}>
+          <FormPage title="Contact Details">
+            <FormSection title="Basic Info">
+              <div className="form-grid portal-form-grid">
+                <FormField label="Name" required>
+                  <input
+                    value={contactForm.name}
+                    required
+                    onChange={(event) => setContactForm((prev) => ({ ...prev, name: event.target.value }))}
+                  />
+                </FormField>
+                <FormField label="Type">
+                  <select
+                    value={contactForm.contactType}
+                    onChange={(event) => setContactForm((prev) => ({ ...prev, contactType: event.target.value }))}
+                  >
+                    <option value="donor">Donor</option>
+                    <option value="partner">Partner</option>
+                    <option value="sponsor">Sponsor</option>
+                    <option value="other">Other</option>
+                  </select>
+                </FormField>
+              </div>
+            </FormSection>
+            
+            <FormSection title="Contact Information">
+              <FormField label="Emails (comma or new line separated)" required>
+                <textarea
+                  rows={3}
+                  value={contactForm.emails}
+                  required
+                  onChange={(event) => setContactForm((prev) => ({ ...prev, emails: event.target.value }))}
+                />
+              </FormField>
+              <div className="form-grid portal-form-grid">
+                <FormField label="Phone">
+                  <input
+                    value={contactForm.phone}
+                    onChange={(event) => setContactForm((prev) => ({ ...prev, phone: event.target.value }))}
+                  />
+                </FormField>
+                <FormField label="Address">
+                  <input
+                    value={contactForm.address}
+                    onChange={(event) => setContactForm((prev) => ({ ...prev, address: event.target.value }))}
+                  />
+                </FormField>
+              </div>
+            </FormSection>
 
-      <FloatingSurface
+            <FormActions>
+              <button className="button" type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save Contact"}
+              </button>
+            </FormActions>
+          </FormPage>
+        </form>
+      </FormModal>
+
+      <FormModal
         open={Boolean(paymentOpenFor)}
         onClose={() => setPaymentOpenFor(null)}
         title={paymentOpenFor ? `Record Payment • ${paymentOpenFor.invoiceNumber}` : "Record Payment"}
@@ -827,64 +847,68 @@ export function PortalFinanceInvoicesManager({
         closeLabel="Close"
         maxWidth="760px"
       >
-        <form className="form-grid portal-form-grid" onSubmit={handleRecordPayment}>
-          <label>
-            <span className="portal-field-label">Date</span>
-            <input
-              type="date"
-              value={paymentForm.date}
-              onChange={(event) => setPaymentForm((prev) => ({ ...prev, date: event.target.value }))}
-              required
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Amount</span>
-            <input
-              type="number"
-              min={0.01}
-              step="0.01"
-              value={paymentForm.amount}
-              onChange={(event) => setPaymentForm((prev) => ({ ...prev, amount: event.target.value }))}
-              required
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Method</span>
-            <select
-              value={paymentForm.method}
-              onChange={(event) => setPaymentForm((prev) => ({ ...prev, method: event.target.value }))}
-            >
-              {paymentMethods.map((method) => (
-                <option key={method} value={method}>{method}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="portal-field-label">Reference</span>
-            <input
-              value={paymentForm.reference}
-              onChange={(event) => setPaymentForm((prev) => ({ ...prev, reference: event.target.value }))}
-            />
-          </label>
-          <label className="full-width">
-            <span className="portal-field-label">Notes</span>
-            <textarea
-              rows={3}
-              value={paymentForm.notes}
-              onChange={(event) => setPaymentForm((prev) => ({ ...prev, notes: event.target.value }))}
-            />
-          </label>
-          <label className="full-width">
-            <span className="portal-field-label">Evidence (optional)</span>
-            <input type="file" multiple accept="image/*,.pdf" onChange={(event) => setPaymentEvidence(event.target.files)} />
-          </label>
-          <div className="full-width action-row portal-form-actions">
-            <button className="button" type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Post Payment"}
-            </button>
-          </div>
+        <form onSubmit={handleRecordPayment}>
+          <FormPage title="Payment Details">
+            <FormSection title="Transaction">
+              <div className="form-grid portal-form-grid">
+                <FormField label="Date" required>
+                  <input
+                    type="date"
+                    value={paymentForm.date}
+                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, date: event.target.value }))}
+                    required
+                  />
+                </FormField>
+                <FormField label="Amount" required>
+                  <input
+                    type="number"
+                    min={0.01}
+                    step="0.01"
+                    value={paymentForm.amount}
+                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, amount: event.target.value }))}
+                    required
+                  />
+                </FormField>
+                <FormField label="Method">
+                  <select
+                    value={paymentForm.method}
+                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, method: event.target.value }))}
+                  >
+                    {paymentMethods.map((method) => (
+                      <option key={method} value={method}>{method}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="Reference">
+                  <input
+                    value={paymentForm.reference}
+                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, reference: event.target.value }))}
+                  />
+                </FormField>
+              </div>
+            </FormSection>
+
+            <FormSection title="Additional Information">
+              <FormField label="Notes">
+                <textarea
+                  rows={3}
+                  value={paymentForm.notes}
+                  onChange={(event) => setPaymentForm((prev) => ({ ...prev, notes: event.target.value }))}
+                />
+              </FormField>
+              <FormField label="Evidence (optional)">
+                <input type="file" multiple accept="image/*,.pdf" onChange={(event) => setPaymentEvidence(event.target.files)} />
+              </FormField>
+            </FormSection>
+
+            <FormActions>
+              <button className="button" type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Post Payment"}
+              </button>
+            </FormActions>
+          </FormPage>
         </form>
-      </FloatingSurface>
+      </FormModal>
 
       <FinanceDestructiveActionModal
         open={Boolean(destructiveTarget)}

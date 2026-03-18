@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { FloatingSurface } from "@/components/FloatingSurface";
+import { FormModal, FormPage, FormSection, FormField, FormActions } from "@/components/forms";
 import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
@@ -426,11 +426,15 @@ export function PortalFinanceReceiptsManager({
                         >
                           {item.status === "draft" ? "Delete" : "Void"}
                         </button>
-                        {item.pdfUrl ? (
-                          <a className="button button-ghost button-sm" href={item.pdfUrl} target="_blank" rel="noreferrer">
-                            PDF
-                          </a>
-                        ) : null}
+                        <a
+                          className="button button-ghost button-sm"
+                          href={`/api/portal/finance/receipts/${item.id}/pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Download latest A4 PDF"
+                        >
+                          Download PDF
+                        </a>
                       </div>
                     </td>
                   </tr>
@@ -441,7 +445,7 @@ export function PortalFinanceReceiptsManager({
         )}
       </section>
 
-      <FloatingSurface
+      <FormModal
         open={open}
         onClose={() => setOpen(false)}
         title="Create Receipt"
@@ -449,165 +453,176 @@ export function PortalFinanceReceiptsManager({
         closeLabel="Close"
         maxWidth="880px"
       >
-        <form className="form-grid portal-form-grid" onSubmit={handleCreate}>
-          <label>
-            <span className="portal-field-label">Contact</span>
-            <select
-              value={form.contactId}
-              required
-              onChange={(event) => {
-                const contactId = event.target.value;
-                const selected = contacts.find((contact) => String(contact.id) === contactId);
-                setForm((prev) => ({
-                  ...prev,
-                  contactId,
-                  receivedFrom: selected?.name || prev.receivedFrom,
-                }));
-              }}
-            >
-              <option value="">Select contact</option>
-              {contacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {contact.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="portal-field-label">Category</span>
-            <select
-              value={form.category}
-              onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-            >
-              {FINANCE_INCOME_CATEGORIES.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="portal-field-label">Received From</span>
-            <input
-              value={form.receivedFrom}
-              required
-              onChange={(event) => setForm((prev) => ({ ...prev, receivedFrom: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Date</span>
-            <input
-              type="date"
-              value={form.receiptDate}
-              required
-              onChange={(event) => setForm((prev) => ({ ...prev, receiptDate: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Amount</span>
-            <input
-              type="number"
-              min={0.01}
-              step="0.01"
-              value={form.amountReceived}
-              required
-              onChange={(event) => setForm((prev) => ({ ...prev, amountReceived: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Currency</span>
-            <select
-              value={form.currency}
-              onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value }))}
-            >
-              <option value="UGX">UGX</option>
-              <option value="USD">USD</option>
-            </select>
-          </label>
-          <label>
-            <span className="portal-field-label">Payment Method</span>
-            <select
-              value={form.paymentMethod}
-              onChange={(event) => setForm((prev) => ({ ...prev, paymentMethod: event.target.value }))}
-            >
-              <option value="cash">cash</option>
-              <option value="bank_transfer">bank_transfer</option>
-              <option value="mobile_money">mobile_money</option>
-              <option value="cheque">cheque</option>
-              <option value="other">other</option>
-            </select>
-          </label>
-          <label className="full-width">
-            <span className="portal-field-label">Description</span>
-            <textarea
-              rows={4}
-              maxLength={1000}
-              placeholder="e.g., Donation towards phonics training in Lango; Sponsorship for teacher workshop; Contract payment for coaching support..."
-              value={form.description}
-              style={{ resize: "vertical", minHeight: 96, maxHeight: 192 }}
-              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-            />
-            <small className="portal-field-help">Optional but strongly recommended.</small>
-            <small className="portal-field-help">{form.description.length}/1000</small>
-          </label>
-          <label>
-            <span className="portal-field-label">Reference</span>
-            <input
-              value={form.referenceNo}
-              onChange={(event) => setForm((prev) => ({ ...prev, referenceNo: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Related Invoice (optional)</span>
-            <select
-              value={form.relatedInvoiceId}
-              onChange={(event) => setForm((prev) => ({ ...prev, relatedInvoiceId: event.target.value }))}
-            >
-              <option value="">None</option>
-              {invoices.map((invoice) => (
-                <option key={invoice.id} value={invoice.id}>
-                  {invoice.invoiceNumber} ({formatMoney(invoice.currency, invoice.balanceDue)})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="full-width">
-            <span className="portal-field-label">Notes / Internal comments</span>
-            <textarea
-              rows={3}
-              value={form.notes}
-              onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span className="portal-field-label">Issue now</span>
-            <input
-              type="checkbox"
-              checked={form.issueNow}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  issueNow: event.target.checked,
-                  sendEmail: event.target.checked ? prev.sendEmail : false,
-                }))}
-            />
-            <small className="portal-field-help">Recommended. Posts this receipt to Money In immediately.</small>
-          </label>
-          <label>
-            <span className="portal-field-label">Send email now</span>
-            <input
-              type="checkbox"
-              checked={form.sendEmail}
-              disabled={!form.issueNow}
-              onChange={(event) => setForm((prev) => ({ ...prev, sendEmail: event.target.checked }))}
-            />
-            <small className="portal-field-help">Optional. Sends receipt email after issuing.</small>
-          </label>
-          <div className="full-width action-row portal-form-actions">
-            <button className="button button-sm" type="submit" disabled={saving}>
-              {saving ? "Saving..." : form.issueNow ? "Save & Issue Receipt" : "Save Draft Receipt"}
-            </button>
-          </div>
+        <form onSubmit={handleCreate}>
+          <FormPage title="Draft Receipt">
+            <FormSection title="Details">
+              <div className="form-grid portal-form-grid">
+                <FormField label="Contact" required>
+                  <select
+                    value={form.contactId}
+                    required
+                    onChange={(event) => {
+                      const contactId = event.target.value;
+                      const selected = contacts.find((contact) => String(contact.id) === contactId);
+                      setForm((prev) => ({
+                        ...prev,
+                        contactId,
+                        receivedFrom: selected?.name || prev.receivedFrom,
+                      }));
+                    }}
+                  >
+                    <option value="">Select contact</option>
+                    {contacts.map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="Category">
+                  <select
+                    value={form.category}
+                    onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+                  >
+                    {FINANCE_INCOME_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="Received From" required>
+                  <input
+                    value={form.receivedFrom}
+                    required
+                    onChange={(event) => setForm((prev) => ({ ...prev, receivedFrom: event.target.value }))}
+                  />
+                </FormField>
+                <FormField label="Date" required>
+                  <input
+                    type="date"
+                    value={form.receiptDate}
+                    required
+                    onChange={(event) => setForm((prev) => ({ ...prev, receiptDate: event.target.value }))}
+                  />
+                </FormField>
+                <FormField label="Amount" required>
+                  <input
+                    type="number"
+                    min={0.01}
+                    step="0.01"
+                    value={form.amountReceived}
+                    required
+                    onChange={(event) => setForm((prev) => ({ ...prev, amountReceived: event.target.value }))}
+                  />
+                </FormField>
+                <FormField label="Currency">
+                  <select
+                    value={form.currency}
+                    onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value }))}
+                  >
+                    <option value="UGX">UGX</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </FormField>
+                <FormField label="Payment Method">
+                  <select
+                    value={form.paymentMethod}
+                    onChange={(event) => setForm((prev) => ({ ...prev, paymentMethod: event.target.value }))}
+                  >
+                    <option value="cash">cash</option>
+                    <option value="bank_transfer">bank_transfer</option>
+                    <option value="mobile_money">mobile_money</option>
+                    <option value="cheque">cheque</option>
+                    <option value="other">other</option>
+                  </select>
+                </FormField>
+                <FormField label="Reference">
+                  <input
+                    value={form.referenceNo}
+                    onChange={(event) => setForm((prev) => ({ ...prev, referenceNo: event.target.value }))}
+                  />
+                </FormField>
+              </div>
+            </FormSection>
+
+            <FormSection title="Correlation">
+              <div className="form-grid portal-form-grid">
+                <FormField label="Related Invoice (optional)">
+                  <select
+                    value={form.relatedInvoiceId}
+                    onChange={(event) => setForm((prev) => ({ ...prev, relatedInvoiceId: event.target.value }))}
+                  >
+                    <option value="">None</option>
+                    {invoices.map((invoice) => (
+                      <option key={invoice.id} value={invoice.id}>
+                        {invoice.invoiceNumber} ({formatMoney(invoice.currency, invoice.balanceDue)})
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              </div>
+              <FormField
+                label="Description"
+                helperText={
+                  <>
+                    Optional but strongly recommended.<br />
+                    {form.description.length}/1000
+                  </>
+                }
+              >
+                <textarea
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="e.g., Donation towards phonics training in Lango; Sponsorship for teacher workshop; Contract payment for coaching support..."
+                  value={form.description}
+                  style={{ resize: "vertical", minHeight: 96, maxHeight: 192 }}
+                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                />
+              </FormField>
+              <FormField label="Notes / Internal comments">
+                <textarea
+                  rows={3}
+                  value={form.notes}
+                  onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+                />
+              </FormField>
+            </FormSection>
+
+            <FormSection title="Configuration">
+              <div className="portal-filter-grid">
+                <label className="checkbox-align">
+                  <input
+                    type="checkbox"
+                    checked={form.issueNow}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        issueNow: event.target.checked,
+                        sendEmail: event.target.checked ? prev.sendEmail : false,
+                      }))
+                    }
+                  />
+                  Issue now (Recommended. Posts this receipt to Money In immediately.)
+                </label>
+                <label className="checkbox-align">
+                  <input
+                    type="checkbox"
+                    checked={form.sendEmail}
+                    disabled={!form.issueNow}
+                    onChange={(event) => setForm((prev) => ({ ...prev, sendEmail: event.target.checked }))}
+                  />
+                  Send email now (Optional. Sends receipt email after issuing.)
+                </label>
+              </div>
+            </FormSection>
+
+            <FormActions>
+              <button className="button button-sm" type="submit" disabled={saving}>
+                {saving ? "Saving..." : form.issueNow ? "Save & Issue Receipt" : "Save Draft Receipt"}
+              </button>
+            </FormActions>
+          </FormPage>
         </form>
-      </FloatingSurface>
+      </FormModal>
 
       <FinanceDestructiveActionModal
         open={Boolean(destructiveTarget)}

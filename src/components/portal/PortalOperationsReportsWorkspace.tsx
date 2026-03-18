@@ -624,9 +624,14 @@ export function PortalOperationsReportsWorkspace({
             Refresh
           </button>
           {canExport ? (
-            <a className="button" href={exportHref}>
-              Export school summary
-            </a>
+            <>
+              <a className="button" href={exportHref}>
+                Export CSV
+              </a>
+              <a className="button button-ghost" href="/api/portal/reports/operations/pdf" target="_blank" rel="noreferrer">
+                Download PDF Summary
+              </a>
+            </>
           ) : null}
         </div>
       </header>

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { FloatingSurface } from "@/components/FloatingSurface";
+import { FormModal } from "@/components/forms";
 
 type FinanceDestructiveActionModalProps = {
   open: boolean;
@@ -44,7 +44,7 @@ export function FinanceDestructiveActionModal({
   }
 
   return (
-    <FloatingSurface
+    <FormModal
       open={open}
       onClose={onClose}
       title={title}
@@ -75,6 +75,6 @@ export function FinanceDestructiveActionModal({
           </button>
         </div>
       </form>
-    </FloatingSurface>
+    </FormModal>
   );
 }

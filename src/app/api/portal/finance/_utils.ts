@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export type FinanceApiActor = {
+  id: number;
   userId: number;
   userName: string;
   isSuperAdmin: boolean;
@@ -24,6 +25,7 @@ export async function requireFinanceSuperAdmin() {
   return {
     error: null,
     actor: {
+      id: user.id,
       userId: user.id,
       userName: user.fullName,
       isSuperAdmin: user.isSuperAdmin,
@@ -48,6 +50,7 @@ export async function requireFinanceEditor() {
   return {
     error: null,
     actor: {
+      id: user.id,
       userId: user.id,
       userName: user.fullName,
       isSuperAdmin: user.isSuperAdmin,

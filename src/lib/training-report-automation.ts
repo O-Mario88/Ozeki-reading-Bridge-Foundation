@@ -2,15 +2,8 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
-import { PDFDocument, rgb } from "pdf-lib";
-import {
-  drawBrandFooter,
-  drawBrandFrame,
-  drawBrandHeader,
-  drawBrandWatermark,
-  loadBrandLogo,
-} from "@/lib/pdf-branding";
-import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
+import { generateAcademicReportPdf, AcademicReportData } from "@/lib/server/pdf/academic-report-template";
+import { formatReportDate } from "@/lib/server/pdf/finance-pdf-templates";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import {
   isPostgresConfigured,
@@ -637,8 +630,8 @@ function buildHtmlReport(
     ${renderEvidenceGallery(evidencePhotos, "Assessments", "assessment")}
   `;
 
-  return `<!DOCTYPE html>
-<html lang="en">
+  return `
+    <div class="fp-container" style="padding: 0;">
 <head>
   <meta charSet="utf-8" />
   <title>${escapeHtml(reportCode)} - Training Report</title>
@@ -749,9 +742,15 @@ function buildHtmlReport(
       line-height: 1.35;
     }
   </style>
-</head>
-<body>
-  <h1>Training Report</h1>
+      .evidence-card figcaption {
+        font-size: 11pt;
+        color: var(--muted);
+        padding: 8px;
+        line-height: 1.35;
+      }
+    </style>
+    
+    <h1>Training Report</h1>
   <div class="meta">
     <div><strong>Report Code:</strong> ${escapeHtml(reportCode)}</div>
     <div><strong>Scope:</strong> ${escapeHtml(facts.scopeLabel)}</div>
@@ -801,92 +800,7 @@ function buildHtmlReport(
   <h2>Approved Quotes</h2>
   ${quoteRows || "<p>No approved quotes in this scope.</p>"}
   ${evidenceSectionHtml}
-</body>
-</html>`;
-}
-
-function createPdfLines(
-  facts: TrainingReportFacts,
-  narrative: TrainingReportNarrative,
-  reportCode: string,
-  evidencePhotos: TrainingReportEvidencePhoto[],
-) {
-  const countByTag = (tag: TrainingReportEvidenceTag) =>
-    evidencePhotos.filter((photo) => photo.tags.includes(tag)).length;
-  const lines: string[] = [
-    "Training Report",
-    `Report Code: ${reportCode}`,
-    `Scope: ${facts.scopeLabel}`,
-    `Period: ${facts.periodStart} to ${facts.periodEnd}`,
-    `Facts Version: ${facts.factsVersion}`,
-    "",
-    `Summary: ${narrative.sections.summary}`,
-    "",
-    `Participation: ${narrative.sections.participation}`,
-    "",
-    `What Went Well: ${narrative.sections.whatWentWell}`,
-    "",
-    `How Practice Is Changing: ${narrative.sections.practiceChange}`,
-    "",
-    `Challenges And Recommendations: ${narrative.sections.challengesAndRecommendations}`,
-    "",
-    `Follow-up Plan: ${narrative.sections.followUpPlan}`,
-    "",
-    `Next Improvements: ${narrative.sections.nextImprovements}`,
-    "",
-    `Trainings: ${facts.trainingsCount} | Schools: ${facts.schoolsTrainedCount} | Participants: ${facts.participantsTotal} | Teachers: ${facts.teachersTotal} | Leaders: ${facts.leadersTotal}`,
-    "",
-    "Top Feedback Themes:",
-    ...facts.feedback.themes.slice(0, 8).map((theme) => `- ${theme.theme} (${theme.mentions})`),
-    "",
-    "Approved Quotes:",
-    ...facts.approvedQuotes.slice(0, 6).map((quote) => `- "${sentenceClip(quote.quote, 180)}"`),
-    "",
-    "Photo Evidence (best selected images):",
-    `- Training sessions: ${countByTag("training")}`,
-    `- Lesson observation & coaching visits: ${countByTag("lesson_observation_coaching")}`,
-    `- Lesson demo visits: ${countByTag("lesson_demo")}`,
-    `- School leader conversation visits: ${countByTag("school_leader_conversation")}`,
-    `- Assessments: ${countByTag("assessment")}`,
-  ];
-  return lines;
-}
-
-function wrapTextLine(text: string, maxWidth: number, font: { widthOfTextAtSize: (txt: string, size: number) => number }, fontSize: number) {
-  const words = text.split(/\s+/).filter(Boolean);
-  if (words.length === 0) {
-    return [""];
-  }
-  const lines: string[] = [];
-  let current = words[0] ?? "";
-  for (let index = 1; index < words.length; index += 1) {
-    const next = `${current} ${words[index]}`;
-    if (font.widthOfTextAtSize(next, fontSize) <= maxWidth) {
-      current = next;
-    } else {
-      lines.push(current);
-      current = words[index] ?? "";
-    }
-  }
-  lines.push(current);
-  return lines;
-}
-
-async function tryEmbedEvidenceImage(doc: PDFDocument, storedPath: string) {
-  try {
-    const bytes = await fs.readFile(storedPath);
-    try {
-      return await doc.embedJpg(bytes);
-    } catch {
-      try {
-        return await doc.embedPng(bytes);
-      } catch {
-        return null;
-      }
-    }
-  } catch {
-    return null;
-  }
+  </div>`;
 }
 
 async function generatePdfBytes(
@@ -895,198 +809,99 @@ async function generatePdfBytes(
   reportCode: string,
   evidencePhotos: TrainingReportEvidencePhoto[],
 ) {
-  const doc = await PDFDocument.create();
-  const serif = await embedPdfSerifFonts(doc);
-  const sans = await embedPdfSansFonts(doc);
-  const logo = await loadBrandLogo(doc);
+  const section = narrative.sections;
 
-  const pageWidth = 595.28;
-  const pageHeight = 841.89;
-  const marginX = 50;
-  const firstPageTopY = 600;
-  const continuationPageTopY = pageHeight - 72;
-  const marginBottom = 82;
-  const maxWidth = pageWidth - marginX * 2;
+  const geographyRows = facts.geographyBreakdown
+    .map(
+      (row) => `
+      <tr>
+        <td>${escapeHtml(row.region || "N/A")}</td>
+        <td>${escapeHtml(row.subRegion || "N/A")}</td>
+        <td>${escapeHtml(row.district || "N/A")}</td>
+        <td style="text-align: right;">${row.trainingsCount}</td>
+        <td style="text-align: right;">${row.schoolsCount}</td>
+        <td style="text-align: right;">${row.participantsCount}</td>
+      </tr>
+    `,
+    ).join("");
 
-  let page = doc.addPage([pageWidth, pageHeight]);
-  let cursorY = firstPageTopY;
+  const leaderRows = facts.leadersByCategory
+    .map(
+      (row) => `
+      <tr>
+        <td>${escapeHtml(row.category)}</td>
+        <td style="text-align: right;">${row.total}</td>
+        <td style="text-align: right;">${row.female}</td>
+        <td style="text-align: right;">${row.male}</td>
+      </tr>
+    `,
+    ).join("");
 
-  const ensureSpace = (needed: number) => {
-    if (cursorY - needed < marginBottom) {
-      page = doc.addPage([pageWidth, pageHeight]);
-      cursorY = continuationPageTopY;
+  const quoteRows = facts.approvedQuotes
+    .slice(0, 8)
+    .map(
+      (quote) => `
+      <blockquote>
+        <p><em>"${escapeHtml(sentenceClip(quote.quote, 280))}"</em></p>
+        <footer style="color:#666; font-size: 0.9em;">— ${escapeHtml(quote.role ?? "Participant")} • ${escapeHtml(quote.district ?? "District not listed")}</footer>
+      </blockquote>
+    `,
+    ).join("<br/>");
+
+  const evidenceHtml = evidencePhotos.length > 0 
+    ? `<h3>6.3 Photographic Evidence</h3><p><em>${evidencePhotos.length} verified photos appended.</em></p>` 
+    : "";
+
+  const findingsMarkdown = `
+    ### 6.1 Participation & Demographics
+    ${escapeHtml(section.participation)}
+    
+    <table>
+      <thead><tr><th>Leadership Category</th><th>Total</th><th>Female</th><th>Male</th></tr></thead>
+      <tbody>${leaderRows || "<tr><td colspan='4'>No leadership rows in selected scope.</td></tr>"}</tbody>
+    </table>
+
+    ### 6.2 Qualitative Impact
+    **What Went Well:** ${escapeHtml(section.whatWentWell)}
+    
+    **Practice Change:** ${escapeHtml(section.practiceChange)}
+    
+    **Quotes:**
+    ${quoteRows || "<p>No approved quotes in this scope.</p>"}
+    
+    ${evidenceHtml}
+  `;
+
+  const academicData: AcademicReportData = {
+    title: "Training Report",
+    subtitle: `${facts.scopeLabel} | ${formatReportDate(facts.periodStart)} to ${formatReportDate(facts.periodEnd)}`,
+    author: "Oracle Operations AI Engine",
+    date: new Date().toLocaleDateString(),
+    recipient: "Programs Management, Ozeki Reading Bridge Foundation",
+    sections: {
+      executiveSummary: section.summary,
+      introduction: `This comprehensive report details the literacy training operations, coverage, and outcomes for the specified scope (${facts.scopeLabel}).`,
+      methodology: `Data was extracted directly from verified Ozeki internal training logs, participant attendance records, and submitted trainer evaluations.`,
+      findings: findingsMarkdown,
+      conclusion: `**Next Improvements:** ${escapeHtml(section.nextImprovements)}`,
+      recommendations: `**Challenges & Recommendations:** ${escapeHtml(section.challengesAndRecommendations)}\n\n**Follow-up Plan:** ${escapeHtml(section.followUpPlan)}`,
+      references: `Ozeki Secure Database - Report Code: ${escapeHtml(reportCode)}`,
+      appendices: `
+        ### A.1 Geography Breakdown
+        <table>
+          <thead><tr><th>Region</th><th>Sub-region</th><th>District</th><th>Trainings</th><th>Schools</th><th>Participants</th></tr></thead>
+          <tbody>${geographyRows || "<tr><td colspan='6'>No geography rows in selected scope.</td></tr>"}</tbody>
+        </table>
+      `
     }
   };
 
-  const drawTextWrapped = (
-    text: string,
-    options: {
-      size: number;
-      lineHeight: number;
-      bold?: boolean;
-      color?: ReturnType<typeof rgb>;
-    },
-  ) => {
-    const font = options.bold ? sans.bold : serif.regular;
-    const wrapped = wrapTextLine(text, maxWidth, font, options.size);
-    wrapped.forEach((line) => {
-      ensureSpace(options.lineHeight);
-      page.drawText(line, {
-        x: marginX,
-        y: cursorY,
-        size: options.size,
-        font,
-        color: options.color ?? rgb(0.05, 0.05, 0.05),
-      });
-      cursorY -= options.lineHeight;
-    });
-  };
-
-  drawTextWrapped("Training Report", { size: 18, lineHeight: 22, bold: true, color: rgb(0.05, 0.1, 0.2) });
-  drawTextWrapped(`Report Code: ${reportCode}`, { size: 11, lineHeight: 14 });
-  drawTextWrapped(`Scope: ${facts.scopeLabel}`, { size: 11, lineHeight: 14 });
-  drawTextWrapped(`Period: ${facts.periodStart} to ${facts.periodEnd}`, { size: 11, lineHeight: 14 });
-  cursorY -= 4;
-
-  createPdfLines(facts, narrative, reportCode, evidencePhotos).forEach((line) => {
-    const isHeading =
-      line === "Training Report" ||
-      line === "Top Feedback Themes:" ||
-      line === "Approved Quotes:" ||
-      line.startsWith("Summary:") ||
-      line.startsWith("Participation:") ||
-      line.startsWith("What Went Well:") ||
-      line.startsWith("How Practice Is Changing:") ||
-      line.startsWith("Challenges And Recommendations:") ||
-      line.startsWith("Follow-up Plan:") ||
-      line.startsWith("Next Improvements:");
-    drawTextWrapped(line, {
-      size: isHeading ? 11.5 : 10.5,
-      lineHeight: isHeading ? 15 : 13,
-      bold: isHeading,
-    });
-    if (line === "") {
-      cursorY -= 2;
-    }
+  const buffer = await generateAcademicReportPdf(academicData, {
+    documentNumber: reportCode,
+    accentHex: "#1f2a44",
   });
 
-  const topEvidencePhotos = evidencePhotos.slice(0, 8);
-  if (topEvidencePhotos.length > 0) {
-    let galleryPage = doc.addPage([pageWidth, pageHeight]);
-    let galleryCursorY = pageHeight - 76;
-    const headingColor = rgb(0.05, 0.1, 0.2);
-    const captionColor = rgb(0.25, 0.25, 0.25);
-
-    const ensureGallerySpace = (required: number) => {
-      if (galleryCursorY - required < marginBottom) {
-        galleryPage = doc.addPage([pageWidth, pageHeight]);
-        galleryCursorY = continuationPageTopY;
-      }
-    };
-
-    galleryPage.drawText("Photo Evidence (Best Selected Images)", {
-      x: marginX,
-      y: galleryCursorY,
-      size: 14,
-      font: sans.bold,
-      color: headingColor,
-    });
-    galleryCursorY -= 20;
-    galleryPage.drawText(
-      "Selected from uploaded training, visit, and assessment media by quality and recency.",
-      {
-        x: marginX,
-        y: galleryCursorY,
-        size: 9,
-        font: serif.regular,
-        color: captionColor,
-      },
-    );
-    galleryCursorY -= 16;
-
-    for (const photo of topEvidencePhotos) {
-      const embedded = await tryEmbedEvidenceImage(doc, photo.storedPath);
-      if (!embedded) {
-        continue;
-      }
-
-      const maxImageWidth = pageWidth - marginX * 2;
-      const maxImageHeight = 180;
-      const ratio = Math.min(maxImageWidth / embedded.width, maxImageHeight / embedded.height, 1);
-      const drawWidth = embedded.width * ratio;
-      const drawHeight = embedded.height * ratio;
-      const blockHeight = drawHeight + 26;
-      ensureGallerySpace(blockHeight + 12);
-
-      galleryPage.drawImage(embedded, {
-        x: marginX + (maxImageWidth - drawWidth) / 2,
-        y: galleryCursorY - drawHeight,
-        width: drawWidth,
-        height: drawHeight,
-      });
-      galleryCursorY -= drawHeight + 6;
-
-      const tagLabel = photo.tags
-        .map((tag) =>
-          tag === "lesson_observation_coaching"
-            ? "Observation/Coaching"
-            : tag === "lesson_demo"
-              ? "Lesson Demo"
-              : tag === "school_leader_conversation"
-                ? "School Leader Conversation"
-                : tag === "training"
-                  ? "Training"
-                  : "Assessment",
-        )
-        .join(", ");
-      const caption = `${photo.date} • ${photo.schoolName} • ${tagLabel}`;
-      const captionLines = wrapTextLine(caption, maxImageWidth, serif.regular, 8.7).slice(0, 2);
-      captionLines.forEach((line) => {
-        galleryPage.drawText(line, {
-          x: marginX,
-          y: galleryCursorY,
-          size: 8.7,
-          font: serif.regular,
-          color: captionColor,
-        });
-        galleryCursorY -= 10.5;
-      });
-      galleryCursorY -= 8;
-    }
-  }
-
-  const pages = doc.getPages();
-  const totalPages = pages.length;
-  pages.forEach((pdfPage, index) => {
-    drawBrandFrame(pdfPage);
-    drawBrandWatermark(pdfPage, logo);
-    if (index === 0) {
-      drawBrandHeader({
-        page: pdfPage,
-        font: serif.regular,
-        fontBold: sans.bold,
-        logo,
-        title: "TRAINING REPORT",
-        documentNumber: reportCode,
-        subtitle: `${facts.scopeLabel} • ${facts.periodStart} to ${facts.periodEnd}`,
-        titleColor: rgb(0.05, 0.1, 0.2),
-        mutedColor: rgb(0.2, 0.24, 0.3),
-        titleSize: 22,
-        numberSize: 12,
-        subtitleSize: 9,
-      });
-    }
-    drawBrandFooter({
-      page: pdfPage,
-      font: serif.regular,
-      footerNote: "Aggregated, privacy-protected training report.",
-      pageNumber: index + 1,
-      totalPages,
-      mutedColor: rgb(0.2, 0.24, 0.3),
-    });
-  });
-
-  return doc.save();
+  return new Uint8Array(buffer);
 }
 
 async function savePdfToDisk(reportCode: string, pdfBytes: Uint8Array) {

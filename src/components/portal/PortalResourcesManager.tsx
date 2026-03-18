@@ -8,7 +8,7 @@ import {
   ResourceSkill,
   ResourceType,
 } from "@/lib/types";
-import { FloatingSurface } from "@/components/FloatingSurface";
+import { FormModal } from "@/components/forms";
 
 type PortalResourceView = {
   id: number;
@@ -192,7 +192,7 @@ export function PortalResourcesManager({ initialResources }: PortalResourcesMana
         )}
       </section>
 
-      <FloatingSurface
+      <FormModal
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         title="Upload Resource / Configure Download Link"
@@ -323,7 +323,7 @@ export function PortalResourcesManager({ initialResources }: PortalResourcesMana
             </button>
           </div>
         </form>
-      </FloatingSurface>
+      </FormModal>
     </div>
   );
 }

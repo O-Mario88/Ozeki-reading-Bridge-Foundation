@@ -849,6 +849,20 @@ export async function listPublishedStorySchoolIdsForPublicImpactPostgres(
   return result.rows.map((row) => Number(row.schoolId));
 }
 
+export async function getAllGeographyTaxonomyPostgres() {
+  const [regionsRes, subRegionsRes, districtsRes] = await Promise.all([
+    queryPostgres(`SELECT name FROM geo_regions ORDER BY name`),
+    queryPostgres(`SELECT name FROM geo_subregions ORDER BY name`),
+    queryPostgres(`SELECT name FROM geo_districts ORDER BY name`),
+  ]);
+
+  return {
+    regions: regionsRes.rows.map((row) => String(row.name)),
+    subRegions: subRegionsRes.rows.map((row) => String(row.name)),
+    districts: districtsRes.rows.map((row) => String(row.name)),
+  };
+}
+
 export async function buildPublicImpactAggregatePostgres(
   scopeLevel: PublicImpactScopeLevel,
   scopeId: string,
@@ -856,6 +870,11 @@ export async function buildPublicImpactAggregatePostgres(
 ): Promise<PublicImpactAggregate> {
   const scopedSchools = await listScopedSchoolsForPublicImpactPostgres(scopeLevel, scopeId);
   const schoolIds = scopedSchools.map((s) => s.schoolId);
+
+  let fullTaxonomy: { regions: string[]; subRegions: string[]; districts: string[] } | null = null;
+  if (scopeLevel === "country") {
+    fullTaxonomy = await getAllGeographyTaxonomyPostgres();
+  }
 
   const [
     portalRecords,
@@ -976,9 +995,9 @@ export async function buildPublicImpactAggregatePostgres(
       lastUpdated: new Date().toISOString(), dataCompleteness: "Complete", sampleSize: scopedSchools.length
     },
     navigator: {
-      regions: Array.from(new Set(scopedSchools.map(s => s.region).filter(Boolean))),
-      subRegions: Array.from(new Set(scopedSchools.map(s => s.subRegion).filter(Boolean))),
-      districts: Array.from(new Set(scopedSchools.map(s => s.district).filter(Boolean))),
+      regions: fullTaxonomy ? fullTaxonomy.regions : Array.from(new Set(scopedSchools.map(s => s.region).filter(Boolean))),
+      subRegions: fullTaxonomy ? fullTaxonomy.subRegions : Array.from(new Set(scopedSchools.map(s => s.subRegion).filter(Boolean))),
+      districts: fullTaxonomy ? fullTaxonomy.districts : Array.from(new Set(scopedSchools.map(s => s.district).filter(Boolean))),
       schools: scopedSchools.map(s => ({ id: s.schoolId, name: s.schoolName, district: s.district, subRegion: s.subRegion, region: s.region }))
     },
     generatedAt: new Date().toISOString()
