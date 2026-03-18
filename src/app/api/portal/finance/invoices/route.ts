@@ -102,8 +102,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error("[INVOICE POST] Zod validation error:", JSON.stringify(error.issues, null, 2));
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });
     }
+    console.error("[INVOICE POST] Error:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create invoice." },
       { status: 400 },

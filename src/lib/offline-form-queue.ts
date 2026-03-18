@@ -168,6 +168,13 @@ export async function flushOfflineFormQueue() {
           synced += 1;
           continue;
         }
+        // Drop items that received 4xx client errors — they are permanently invalid
+        // and will never succeed on retry (e.g. Zod validation failures).
+        if (response.status >= 400 && response.status < 500) {
+          failed += 1;
+          continue;
+        }
+        // Only retry on 5xx server errors
         failed += 1;
         pending.push({
           ...item,
