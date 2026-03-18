@@ -139,11 +139,10 @@ export async function listFinancePayments(_filters: unknown) {
 export async function recordFinancePayment(_input: unknown, ..._extra: unknown[]) {
     const inputObj = _input as Record<string, unknown>;
     return {
-        id: 0,
-        ...inputObj,
-        invoice: { id: 0, status: 'paid', balanceDue: 0 } as Record<string, unknown>,
+        payment: { id: 0, ...inputObj } as Record<string, unknown> & { id: number },
+        invoice: { id: 0, status: 'paid', balanceDue: 0 } as Record<string, unknown> & { id: number },
         autoReceipt: { relatedInvoiceId: 0, pdfFileId: `pdf-${Date.now()}` } as Record<string, unknown>,
-    } as Record<string, unknown> & { id: number };
+    };
 }
 
 
