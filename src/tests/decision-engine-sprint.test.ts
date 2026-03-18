@@ -144,7 +144,7 @@ test("support requests auto-route and can be converted into activity records", a
       urgency: "this_term",
       message: "Need coaching support.",
     },
-    { createdByUserId: null } as unknown as PortalUser,
+    null as unknown as number,
   );
 
   assert.ok(created.assignedStaffId, "Expected support request to be assigned.");
@@ -203,7 +203,7 @@ test("support requests auto-route and can be converted into activity records", a
         insightsRecommendationsRecIds: ["REC-01"],
       },
     },
-    assignedUser as PortalUser,
+    (assignedUser as PortalUser).id,
   );
 
   assert.equal(activity.module, "visit");
@@ -216,10 +216,10 @@ test("support requests auto-route and can be converted into activity records", a
       followUpStarted: true,
       followUpNotes: `Converted to ${activity.recordCode}`,
     },
-    assignedUser!.id as unknown as number,
-  );
+    assignedUser!.id,
+  ) as Record<string, unknown> | null;
 
   assert.equal(updated?.status, "Scheduled");
   assert.equal(updated?.followUpStarted, true);
-  assert.ok((updated?.followUpNotes ?? "").includes(activity.recordCode));
+  assert.ok((String(updated?.followUpNotes ?? "")).includes(String(activity.recordCode)));
 });

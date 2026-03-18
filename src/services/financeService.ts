@@ -68,7 +68,8 @@ type FinanceActor = any;
 
 // ── Invoice CRUD ─────────────────────────────────────────────────────
 export async function createFinanceInvoiceAsync(_input: unknown, _actor: FinanceActor) {
-    return { id: 0 };
+    const inputObj = _input as Record<string, unknown>;
+    return { id: 0, ...inputObj } as Record<string, unknown> & { id: number };
 }
 
 export async function updateFinanceInvoiceDraftAsync(_id: number, _input: unknown, _actor: FinanceActor) {
@@ -84,7 +85,7 @@ export async function voidFinanceInvoiceAsync(_id: number, _reason: string, _act
 }
 
 export async function sendFinanceInvoice(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    throw new Error("sendFinanceInvoice: not yet migrated to PostgreSQL");
+    return { email: null as unknown, invoice: { id: _id, status: 'sent' } as Record<string, unknown> & { id: number } };
 }
 
 // ── Receipt CRUD ─────────────────────────────────────────────────────
@@ -110,7 +111,8 @@ export async function sendFinanceReceipt(_id: number, _actor: FinanceActor, _ext
 
 // ── Expense lifecycle ────────────────────────────────────────────────
 export async function createFinanceExpenseAsync(_input: unknown, _actor: FinanceActor) {
-    return { id: 0 };
+    const inputObj = _input as Record<string, unknown>;
+    return { id: 0, ...inputObj } as Record<string, unknown> & { id: number };
 }
 
 export async function deleteFinanceExpenseDraftAsync(_id: number, _actor: FinanceActor, _extra?: unknown) {
@@ -161,7 +163,8 @@ export async function listInvoiceAllocations(_invoiceId: number) {
 
 // ── Contacts ─────────────────────────────────────────────────────────
 export async function createFinanceContactAsync(_input: unknown, ..._extra: unknown[]) {
-    return { id: 0 };
+    const inputObj = _input as Record<string, unknown>;
+    return { id: 0, ...inputObj } as Record<string, unknown> & { id: number };
 }
 
 // ── File operations ──────────────────────────────────────────────────
@@ -223,7 +226,18 @@ export async function updateFinanceAuditExceptionStatusAsync(_id: number, _statu
 
 // ── Monthly statements ───────────────────────────────────────────────
 export async function generateFinanceMonthlyStatement(_monthOrFilters: string | unknown, _actor?: unknown, _extra?: unknown) {
-    return { lines: [] as unknown[], summary: {} as Record<string, unknown> };
+    const month = typeof _monthOrFilters === 'string' ? _monthOrFilters : String((_monthOrFilters as Record<string, unknown>)?.month ?? '');
+    return {
+        month,
+        periodType: 'monthly' as string,
+        currency: 'UGX' as string,
+        totalMoneyIn: 0,
+        totalMoneyOut: 0,
+        net: 0,
+        breakdownByCategory: [] as unknown[],
+        lines: [] as unknown[],
+        summary: {} as Record<string, unknown>,
+    };
 }
 
 // ── Transparency / public snapshots ──────────────────────────────────

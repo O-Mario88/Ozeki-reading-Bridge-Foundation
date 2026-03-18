@@ -128,9 +128,9 @@ test("training blocks free-text participants and accepts school roster contact I
         {
           module: "training",
           date: "2026-03-06",
-          district: school.district,
+          district: String(school.district),
           schoolId: school.id,
-          schoolName: school.name,
+          schoolName: String(school.name),
           programType: "Phonics",
           followUpDate: "2026-03-20",
           followUpType: "school_visit",
@@ -155,9 +155,9 @@ test("training blocks free-text participants and accepts school roster contact I
     {
       module: "training",
       date: "2026-03-06",
-      district: school.district,
+      district: String(school.district),
       schoolId: school.id,
-      schoolName: school.name,
+      schoolName: String(school.name),
       programType: "Phonics",
       followUpDate: "2026-03-20",
       followUpType: "school_visit",
@@ -196,9 +196,9 @@ test("assessment blocks free-text learners and accepts school learner IDs", asyn
         {
           module: "assessment",
           date: "2026-03-06",
-          district: school.district,
+          district: String(school.district),
           schoolId: school.id,
-          schoolName: school.name,
+          schoolName: String(school.name),
           programType: "Baseline",
           status: "Draft",
           payload: {
@@ -221,9 +221,9 @@ test("assessment blocks free-text learners and accepts school learner IDs", asyn
     {
       module: "assessment",
       date: "2026-03-06",
-      district: school.district,
+      district: String(school.district),
       schoolId: school.id,
-      schoolName: school.name,
+      schoolName: String(school.name),
       programType: "Baseline",
       status: "Draft",
       payload: {

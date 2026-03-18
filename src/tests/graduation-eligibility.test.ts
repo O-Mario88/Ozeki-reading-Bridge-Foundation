@@ -178,7 +178,7 @@ test("school graduation eligibility is computed from live records and confirmati
     assert.equal(eligibility!.isEligible, true, "School should be eligible under permissive thresholds.");
 
     const checklistAnswers = Object.fromEntries(
-      (await getGraduationSettingsAsync()).sustainabilityChecklistItems.map((item) => [item, true]),
+      (await getGraduationSettingsAsync())!.sustainabilityChecklistItems.map((item: string) => [item, true]),
     );
 
     const reviewed = await reviewSchoolGraduationAsync(
