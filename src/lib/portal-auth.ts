@@ -6,14 +6,18 @@ import { PortalUser } from "@/lib/types";
 export const PORTAL_SESSION_COOKIE = "orbf_portal_session";
 
 export async function getCurrentPortalUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(PORTAL_SESSION_COOKIE)?.value;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(PORTAL_SESSION_COOKIE)?.value;
 
-  if (!token) {
+    if (!token) {
+      return null;
+    }
+
+    return await getPortalUserFromSession(token);
+  } catch {
     return null;
   }
-
-  return await getPortalUserFromSession(token);
 }
 
 export async function requirePortalUser() {
