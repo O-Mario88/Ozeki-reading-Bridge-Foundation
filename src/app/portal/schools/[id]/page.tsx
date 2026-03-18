@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
     params: Promise<{
-        schoolId: string;
+        id: string;
     }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
-    const { schoolId: schoolIdStr } = await params;
+    const { id: schoolIdStr } = await params;
     const schoolId = parseInt(schoolIdStr, 10);
     if (isNaN(schoolId)) return { title: "School Not Found" };
 
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function SchoolProfilePage({ params }: PageProps) {
     const user = await requirePortalStaffUser();
-    const { schoolId: schoolIdStr } = await params;
+    const { id: schoolIdStr } = await params;
     const schoolId = parseInt(schoolIdStr, 10);
 
     if (isNaN(schoolId)) {

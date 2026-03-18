@@ -11,14 +11,14 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{
-    schoolId: string;
+    id: string;
     teacherUid: string;
   }>;
 }
 
 export default async function TeacherImprovementPage({ params }: PageProps) {
   const user = await requirePortalStaffUser();
-  const { schoolId: schoolIdRaw, teacherUid: teacherUidRaw } = await params;
+  const { id: schoolIdRaw, teacherUid: teacherUidRaw } = await params;
   const schoolId = Number(schoolIdRaw);
   if (!Number.isInteger(schoolId) || schoolId <= 0) {
     notFound();
