@@ -3922,18 +3922,7 @@ export async function getNationalReportPdf(reportCode: string) {
       [reportCode, regeneratedPath, new Date().toISOString()],
     );
   } else {
-    getDb().prepare(
-      `
-        UPDATE national_report_packs
-        SET pdf_stored_path = @pdfPath,
-            updated_at = @updatedAt
-        WHERE report_code = @reportCode
-      `,
-    ).run({
-      reportCode,
-      pdfPath: regeneratedPath,
-      updatedAt: new Date().toISOString(),
-    });
+    console.warn("[national-intelligence] Skipping PDF path update — PostgreSQL is not configured.");
   }
 
   return {
