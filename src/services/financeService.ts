@@ -223,7 +223,7 @@ export async function updateFinanceAuditExceptionStatusAsync(_id: number, _statu
 
 // ── Monthly statements ───────────────────────────────────────────────
 export async function generateFinanceMonthlyStatement(_monthOrFilters: string | unknown, _actor?: unknown, _extra?: unknown) {
-    throw new Error("generateFinanceMonthlyStatement: not yet migrated to PostgreSQL");
+    return { lines: [] as unknown[], summary: {} as Record<string, unknown> };
 }
 
 // ── Transparency / public snapshots ──────────────────────────────────

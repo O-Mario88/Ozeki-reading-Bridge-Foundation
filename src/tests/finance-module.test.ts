@@ -84,7 +84,7 @@ test("issuing receipt auto-creates posted money_in ledger entry", async () => {
     category: "Donation",
     postedStatus: "posted",
   });
-  const linked = ledger.find((item) => item.sourceType === "receipt" && item.sourceId === receipt.id);
+  const linked = ledger.find((item: Record<string, unknown>) => item.sourceType === "receipt" && item.sourceId === receipt.id);
   assert.ok(linked, "Expected posted money_in ledger entry for issued receipt.");
   assert.equal(linked?.amount, 500000);
   assert.equal(linked?.category, "Donation");
@@ -179,7 +179,7 @@ test("expense posting requires evidence and creates money_out ledger", async () 
     category: "Expense",
     postedStatus: "posted",
   });
-  const linked = ledger.find((item) => item.sourceType === "expense" && item.sourceId === draft.id);
+  const linked = ledger.find((item: Record<string, unknown>) => item.sourceType === "expense" && item.sourceId === draft.id);
   assert.ok(linked, "Expected posted money_out ledger entry for expense.");
   assert.equal(linked?.amount, 90000);
 });

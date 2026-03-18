@@ -66,10 +66,10 @@ test("impact report generation logs audit event and stores report audit metadata
   assert.ok(report.factPack.audit?.scopeLabel?.includes("School"), "Missing scope label field.");
   assert.equal(report.factPack.audit?.reportVersion, "v1.0");
 
-  const logs = listAuditLogs({ targetTable: "impact_reports", limit: 80 });
+  const logs = await listAuditLogs({ targetTable: "impact_reports", limit: 80 });
   assert.ok(
     logs.some(
-      (entry) =>
+      (entry: { action: string; targetId?: unknown }) =>
         entry.action === "generate" &&
         String(entry.targetId ?? "") === String(report.id),
     ),
@@ -104,7 +104,7 @@ test("support requests auto-route and can be converted into activity records", a
   assert.ok(school, "Expected at least one school in schools_directory.");
 
   if (!schoolWithTeacher) {
-    addTeacherToSchool({
+    await addTeacherToSchool({
       schoolId: school.id,
       fullName: `Support Conversion Teacher ${Date.now()}`,
       gender: "Male",
@@ -134,7 +134,7 @@ test("support requests auto-route and can be converted into activity records", a
     ],
   );
 
-  const created = createSupportRequest(
+  const created = await createSupportRequest(
     {
       schoolId: school!.id,
       contactName: "Routing Test Contact",
@@ -144,7 +144,7 @@ test("support requests auto-route and can be converted into activity records", a
       urgency: "this_term",
       message: "Need coaching support.",
     },
-    { createdByUserId: null },
+    { createdByUserId: null } as unknown as PortalUser,
   );
 
   assert.ok(created.assignedStaffId, "Expected support request to be assigned.");
@@ -169,7 +169,7 @@ test("support requests auto-route and can be converted into activity records", a
   const assignedUser = await getPortalUserByEmail(tempEmail);
   assert.ok(assignedUser, "Expected to reload inserted staff user.");
 
-  const teachers = listTeachersBySchool(school!.id);
+  const teachers = await listTeachersBySchool(school!.id);
   assert.ok(teachers.length > 0, "Expected teachers in selected school roster.");
   const teacher = teachers[0];
 
@@ -179,7 +179,7 @@ test("support requests auto-route and can be converted into activity records", a
     .toISOString()
     .slice(0, 10);
 
-  const activity = createPortalRecord(
+  const activity = await createPortalRecord(
     {
       module: "visit",
       date: randomFutureDate,
@@ -209,14 +209,14 @@ test("support requests auto-route and can be converted into activity records", a
   assert.equal(activity.module, "visit");
   assert.equal(activity.schoolId, school!.id);
 
-  const updated = updateSupportRequest(
+  const updated = await updateSupportRequest(
     created.id,
     {
       status: "Scheduled",
       followUpStarted: true,
       followUpNotes: `Converted to ${activity.recordCode}`,
     },
-    { updatedByUserId: assignedUser!.id },
+    assignedUser!.id as unknown as number,
   );
 
   assert.equal(updated?.status, "Scheduled");

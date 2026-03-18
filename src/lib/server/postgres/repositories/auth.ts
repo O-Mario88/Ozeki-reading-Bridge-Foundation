@@ -154,8 +154,11 @@ export async function authenticatePortalUserPostgres(identifier: string, passwor
   return user;
 }
 
-export async function createPortalSessionPostgres(userId: number, token: string, expiresAt: string) {
-  await insertPortalSessionPostgres(userId, token, expiresAt);
+export async function createPortalSessionPostgres(userId: number, token?: string, expiresAt?: string) {
+  const resolvedToken = token ?? `session-${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const resolvedExpiresAt = expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  await insertPortalSessionPostgres(userId, resolvedToken, resolvedExpiresAt);
+  return { token: resolvedToken, expiresAt: resolvedExpiresAt, userId };
 }
 
 export async function findPortalUserAuthByIdPostgres(userId: number) {
