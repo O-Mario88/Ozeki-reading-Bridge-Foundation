@@ -427,6 +427,8 @@ export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
       usersRes,
       trainingsRes,
       assessmentsRes,
+      recentRes,
+      demoVisitsRes,
     ] = await Promise.all([
       queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records`),
       queryPostgres(`SELECT COUNT(*)::int AS total FROM schools_directory`),
@@ -434,12 +436,23 @@ export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
       queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_users`),
       queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'training'`),
       queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'assessment'`),
+      queryPostgres(`SELECT id, module, status, school_name AS "schoolName", date, created_at AS "createdAt" FROM portal_records ORDER BY created_at DESC LIMIT 10`),
+      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'visit' AND (payload_json->>'demoDelivered' = 'true' OR payload_json->>'demoClass' IS NOT NULL)`),
     ]);
 
     const totalRecords = toNumber(recordsRes.rows[0]?.total);
     const activeSchools = toNumber(schoolsRes.rows[0]?.total);
     const trainings = toNumber(trainingsRes.rows[0]?.total);
     const assessments = toNumber(assessmentsRes.rows[0]?.total);
+    const demoVisitsConducted = toNumber(demoVisitsRes.rows[0]?.total);
+
+    const mappedRecentActivity = recentRes.rows.map(r => ({
+      id: Number(r.id),
+      module: String(r.module),
+      status: String(r.status),
+      schoolName: String(r.schoolName || ""),
+      date: String(r.date || r.createdAt),
+    }));
 
     return {
       ...emptyDashboard,
@@ -447,12 +460,12 @@ export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
         ...emptyDashboard.kpis,
         learnersReached: assessments * 25,
         trainingsLogged: trainings,
-        schoolVisits: 0,
+        schoolVisits: demoVisitsConducted,
         assessments,
         storyActivities: 0,
         schoolsImplementingPercent: activeSchools > 0 ? 100 : 0,
         schoolsNotImplementingPercent: 0,
-        demoVisitsConducted: 0,
+        demoVisitsConducted: demoVisitsConducted,
       },
       stats: {
         totalRecords,
@@ -460,6 +473,8 @@ export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
         openSupport: toNumber(supportRes.rows[0]?.total),
         totalUsers: toNumber(usersRes.rows[0]?.total),
       },
+      recentActivity: mappedRecentActivity,
+      recentActivities: mappedRecentActivity,
       generatedAt: new Date().toISOString(),
     };
   } catch {
