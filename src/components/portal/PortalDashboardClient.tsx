@@ -208,8 +208,8 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
                           </div>
                         </td>
                         <td style={{ color: "#8b92a5" }}>REC-{item.id.toString().padStart(6, '0')}</td>
-                        <td>{moduleLabel[item.module]}</td>
-                        <td style={{ color: "#8b92a5" }}>
+                        <td style={{ whiteSpace: "nowrap" }}>{moduleLabel[item.module]}</td>
+                        <td style={{ color: "#8b92a5", whiteSpace: "nowrap" }}>
                           {formatDay(item.date)}<br/>
                           <span style={{ fontSize: "10px" }}>Active Log</span>
                         </td>
@@ -218,11 +218,11 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
                             Reviewer
                           </div>
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: "nowrap" }}>
                           <span className={`concept-status-dot ${statusProps.color}`}></span>
                           {statusProps.text}
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: "nowrap" }}>
                           <Link href={`${moduleRoute[item.module]}?record=${item.id}`} style={{ color: "#5e72e4", textDecoration: "none", fontSize: "0.8125rem", fontWeight: 600 }}>
                             View
                           </Link>

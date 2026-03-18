@@ -1,5 +1,6 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
 import type { PublicImpactAggregate, PublicImpactDomainAggregate, CostEffectivenessData, CostCategory } from "@/lib/types";
+import { buildPublicImpactAggregatePostgres } from "./public-impact";
 
 function toNumber(value: unknown) {
   return Number(value ?? 0);
@@ -158,132 +159,10 @@ export async function getImpactSummaryPostgres() {
 export async function getPublicImpactAggregatePostgres(
   scopeLevel: string,
   scopeId: string,
-  _periodLabel?: string | null,
+  periodLabel?: string | null,
   _reportScopeOverride: string = "Public",
 ): Promise<PublicImpactAggregate> {
-  // Implementation focused on aggregating from assessment_records, portal_records (training, stories),
-  // and legacy_assessment_records.
-  
-  const [assessmentRes, storiesRes, legacyRes] = await Promise.all([
-    queryPostgres(`
-      SELECT 
-        COUNT(DISTINCT learner_uid)::int AS learners,
-        AVG(story_reading_score) AS avg_reading,
-        AVG(reading_comprehension_score) AS avg_comp
-      FROM assessment_records
-      WHERE ($1 = 'country' OR ($1 = 'region' AND EXISTS (SELECT 1 FROM v_school_hierarchy vh WHERE vh.school_id = assessment_records.school_id AND vh.region_name = $2)))
-    `, [scopeLevel, scopeId]),
-    queryPostgres(`
-      SELECT COALESCE(SUM((payload_json->>'storiesPublished')::int), 0)::int AS stories
-      FROM portal_records
-      WHERE module = 'assessment'
-    `),
-    queryPostgres(`
-      SELECT 
-        COALESCE(SUM(learners_assessed), 0)::int AS learners,
-        COALESCE(SUM(stories_published), 0)::int AS stories
-      FROM legacy_assessment_records
-    `)
-  ]);
-
-  const domainEmpty: PublicImpactDomainAggregate = { baseline: 0, latest: 0, endline: 0, benchmarkPct: 0, n: 0 };
-
-  return {
-    scope: { 
-        level: scopeLevel as any, 
-        id: scopeId, 
-        name: scopeId 
-    },
-    period: { 
-        label: _periodLabel || "All Time",
-        startDate: null,
-        endDate: null
-    },
-    kpis: {
-      schoolsSupported: 0,
-      subCountiesReached: 0,
-      totalBooksRead: (storiesRes.rows[0]?.stories || 0) + (legacyRes.rows[0]?.stories || 0),
-      teachersSupportedMale: 0,
-      teachersSupportedFemale: 0,
-      onlineLiveSessionsCovered: 0,
-      onlineTeachersSupported: 0,
-      learnersDirectlyImpacted: 0,
-      enrollmentEstimatedReach: 0,
-      learnersAssessedUnique: (assessmentRes.rows[0]?.learners || 0) + (legacyRes.rows[0]?.learners || 0),
-      learnersReachedEstimated: 0,
-      coachingVisitsCompleted: 0,
-      assessmentCycleCompletionPct: 0,
-      assessmentsBaselineCount: 0,
-      assessmentsProgressCount: 0,
-      assessmentsEndlineCount: 0,
-    },
-    outcomes: {
-        letterNames: { ...domainEmpty },
-        letterSounds: { ...domainEmpty },
-        realWords: { ...domainEmpty },
-        madeUpWords: { ...domainEmpty },
-        storyReading: { ...domainEmpty, latest: Number(assessmentRes.rows[0]?.avg_reading || 0) },
-        comprehension: { ...domainEmpty, latest: Number(assessmentRes.rows[0]?.avg_comp || 0) },
-    },
-    funnel: {
-        trained: 0,
-        coached: 0,
-        baselineAssessed: 0,
-        endlineAssessed: 0,
-        storyActive: 0
-    },
-    fidelity: {
-        score: 0,
-        band: "Developing",
-        drivers: []
-    },
-    rankings: {
-        mostImproved: [],
-        prioritySupport: [],
-        mostActive: []
-    },
-    teachingQuality: {
-        evaluationsCount: 0,
-        avgOverallScore: 0,
-        deltaOverall: 0,
-        improvedTeachersPercent: 0,
-        schoolsImprovedPercent: 0,
-        levelDistribution: {
-            strong: { count: 0, percent: 0 },
-            good: { count: 0, percent: 0 },
-            developing: { count: 0, percent: 0 },
-            needsSupport: { count: 0, percent: 0 }
-        },
-        domainAverages: { setup: 0, newSound: 0, decoding: 0, readingPractice: 0, trickyWords: 0, checkNext: 0 },
-        domainDeltas: { setup: 0, newSound: 0, decoding: 0, readingPractice: 0, trickyWords: 0, checkNext: 0 },
-        trend: [],
-        topCoachingFocusAreas: [],
-        lastUpdated: new Date().toISOString()
-    },
-    teachingLearningAlignment: {
-        caveat: "",
-        points: [],
-        summary: {
-            teachingDelta: 0,
-            nonReaderReductionPp: 0,
-            cwpm20PlusDeltaPp: 0,
-            storyActiveLatest: false,
-            storySessionsLatest: 0
-        }
-    },
-    meta: {
-        lastUpdated: new Date().toISOString(),
-        dataCompleteness: "Partial" as const,
-        sampleSize: 0
-    },
-    navigator: {
-        regions: [],
-        subRegions: [],
-        districts: [],
-        schools: []
-    },
-    generatedAt: new Date().toISOString()
-  };
+  return buildPublicImpactAggregatePostgres(scopeLevel as any, scopeId, periodLabel || "All Time");
 }
 
 export async function getImpactReportByCodeAsyncPostgres(code: string, _context?: unknown): Promise<any> {

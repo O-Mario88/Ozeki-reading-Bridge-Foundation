@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
-import { PublicStatsBar } from "@/components/impact/PublicStatsBar";
-import { getPublicImpactMetrics } from "@/lib/server/postgres/repositories/public-metrics";
 import { getImpactReportFilterFacetsAsync, listPublicImpactReportsAsync } from "@/services/dataService";
 import {
   ImpactReportOutput,
@@ -169,10 +167,6 @@ export default async function ImpactDashboardPage({
     console.error("[impact] Failed to load report facets/list:", error);
   }
 
-  const liveMetrics = await getPublicImpactMetrics({
-    asOf: new Date().toISOString().split("T")[0]
-  });
-
   const selectedYear = resolveReportYear(selectedYearParam, facets.years);
 
   const topFilteredReport = reports[0] ?? null;
@@ -180,27 +174,18 @@ export default async function ImpactDashboardPage({
 
   return (
     <>
-      <div className="impact-live-compact-zone">
-        {/* ═══ Hero ═══ */}
-        <section className="page-hero impact-page-hero">
-          <div className="container impact-page-hero-container">
-            <div className="impact-page-hero-copy">
-              <p className="kicker">National Literacy Intelligence Platform</p>
-              <h1>Ozeki National Literacy Intelligence Dashboard</h1>
-              <p>
-                Practical Literacy. Strong Teachers. Confident Readers, measured and improved
-                with real classroom data across Uganda.
-              </p>
-            </div>
+      <div className="impact-page-hero">
+        {/* ═══ Impact Hero ═══ */}
+        <section className="section impact-hero-section">
+          <div className="container impact-hero-container">
+            <h1 className="impact-page-title">Evidence-based Reading Impact</h1>
+            <p className="impact-hero-lead">
+              Transforming literacy outcomes through continuous assessment, dedicated coaching, and
+              community alignment. The Reading Bridge Foundation verifies every classroom milestone
+              with real classroom data across Uganda.
+            </p>
           </div>
         </section>
-
-        <PublicStatsBar stats={{
-          totalSchools: liveMetrics.totalSchools,
-          totalLearners: liveMetrics.totalLearners,
-          avgReadingScore: liveMetrics.averageReadingScore,
-          avgCompScore: liveMetrics.averageCompScore
-        }} />
 
         {/* ═══ Interactive Dashboard ═══ */}
         <section className="section impact-dashboard-section">

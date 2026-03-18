@@ -1081,7 +1081,7 @@
   border-bottom: 1px solid #edf1f5;
   vertical-align: middle;
 }
-.concept-table { border-collapse: collapse; width: 100%; }
+.concept-table { border-collapse: collapse; width: 100%; table-layout: auto; }
 
 .concept-icon-box {
   width: 36px;

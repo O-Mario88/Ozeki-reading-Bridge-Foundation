@@ -7,6 +7,12 @@ import type { PublicImpactAggregate } from "@/lib/types";
 import { UgandaImpactMapPro } from "./UgandaImpactMapPro";
 import { HeadlineStatsPanel } from "./HeadlineStatsPanel";
 import { LocationNavigator, PublicMapSelection } from "./LocationNavigator";
+import {
+  READING_LEVELS,
+  getReadingLevelColor,
+  readingLevelFromAverage,
+  readingLevelOrdinal,
+} from "@/lib/reading-assessment-utils";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 type PublicImpactMapExplorerProps = {
@@ -122,13 +128,109 @@ const OUTCOME_DOMAIN_CONFIG: Array<{
   { key: "comprehension", domainKey: "comprehension" },
 ];
 
+function normalizeDomainScoreForReadingLevel(value: number) {
+  return value > 10 ? value / 10 : value;
+}
 
+function formatCompositeScore(value: number | null) {
+  if (value === null) {
+    return "Data not available";
+  }
+  return `${value.toFixed(1)}/10`;
+}
 
+function deriveReadingLevelsFromOutcomes(outcomes?: PublicImpactAggregate["outcomes"] | null) {
+  if (!outcomes) {
+    return null;
+  }
 
+  const domainRows = OUTCOME_DOMAIN_CONFIG.map((item) => {
+    const maybeDomain = outcomes[item.key];
+    const domain =
+      maybeDomain && typeof maybeDomain === "object"
+        ? maybeDomain
+        : {
+            baseline: null,
+            latest: null,
+            endline: null,
+          };
+    return {
+      label: LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short,
+      baseline: domain.baseline,
+      latest: domain.latest ?? domain.endline,
+    };
+  });
 
+  const baselineValues = domainRows
+    .map((row) => row.baseline)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .map(normalizeDomainScoreForReadingLevel);
+  const latestValues = domainRows
+    .map((row) => row.latest)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .map(normalizeDomainScoreForReadingLevel);
+
+  const baselineAverage =
+    baselineValues.length > 0
+      ? baselineValues.reduce((sum, value) => sum + value, 0) / baselineValues.length
+      : null;
+  const latestAverage =
+    latestValues.length > 0
+      ? latestValues.reduce((sum, value) => sum + value, 0) / latestValues.length
+      : null;
+
+  const baselineLevel = baselineAverage !== null ? readingLevelFromAverage(baselineAverage) : null;
+  const latestLevel = latestAverage !== null ? readingLevelFromAverage(latestAverage) : null;
+
+  let movementLabel = "Data not available";
+  if (baselineLevel && latestLevel) {
+    const movement = readingLevelOrdinal(latestLevel) - readingLevelOrdinal(baselineLevel);
+    if (movement > 0) {
+      movementLabel = `Moved up by ${movement} level${movement > 1 ? "s" : ""}`;
+    } else if (movement < 0) {
+      movementLabel = `Moved down by ${Math.abs(movement)} level${Math.abs(movement) > 1 ? "s" : ""}`;
+    } else {
+      movementLabel = "Stayed in the same level";
+    }
+  }
+
+  return {
+    domainRows,
+    baselineAverage,
+    latestAverage,
+    baselineLevel,
+    latestLevel,
+    movementLabel,
+  };
+}
+
+function readingLevelColor(label: string, index: number) {
+  if ((READING_LEVELS as string[]).includes(label)) {
+    return getReadingLevelColor(label as (typeof READING_LEVELS)[number]);
+  }
+  const fallback = ["#c0392b", "#e67e22", "#f1c40f", "#D96A0F", "#1f5fbf", "#6b7280"];
+  return fallback[index % fallback.length];
+}
+
+function formatSignedDelta(
+  value: number | null | undefined,
+  {
+    digits = 1,
+    suffix = "",
+  }: {
+    digits?: number;
+    suffix?: string;
+  } = {},
+) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "Data not available";
+  }
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(digits)}${suffix}`;
+}
 
 export function PublicImpactMapExplorer({
-  compact = true,
+  compact = false,
   syncUrl = false,
   initialPeriod = "FY",
   initialSelection,
@@ -294,9 +396,9 @@ export function PublicImpactMapExplorer({
   };
 
   const onReset = () => {
+    setSelectionHistory([]);
     setSelection({ region: "", subRegion: "", district: "", school: "" });
   };
-
 
   const navigatorSchools = navigatorSnapshot?.schools ?? payload?.navigator?.schools ?? [];
   const selectedSchoolName = selection.school
@@ -334,15 +436,47 @@ export function PublicImpactMapExplorer({
       .sort((left, right) => left[0].localeCompare(right[0]))
       .map(([district, subRegion]) => ({ district, subRegion }));
   }, [navigatorSchools]);
+  const derivedReadingLevels = useMemo(
+    () => deriveReadingLevelsFromOutcomes(payload?.outcomes),
+    [payload?.outcomes],
+  );
+  const readingLevelsBaselineCycle =
+    payload?.readingLevels?.distribution.find((item) => item.cycle === "baseline") ?? null;
   const readingLevelsLatestCycle =
     payload?.readingLevels?.distribution.find((item) => item.cycle === "endline") ??
     payload?.readingLevels?.distribution.find((item) => item.cycle === "latest") ??
     null;
   const masteryDomains = payload?.masteryDomains ?? null;
+  const readingStageDistribution = payload?.readingStageDistribution ?? [];
+  const benchmarkStatus = payload?.benchmarkStatus ?? null;
+  const trafficLightExplanations = payload?.publicExplanation ?? {
+    green: "Green means the learner has mastered the skill.",
+    amber: "Amber means the learner is developing but needs more speed or consistency.",
+    red: "Red means the learner needs targeted support.",
+  };
+  const readingLevelLabels =
+    payload?.readingLevels?.levels?.map((item) => item.label) ??
+    READING_LEVELS;
   const fluentReaderShare =
     readingLevelsLatestCycle?.percents?.Fluent ??
     readingLevelsLatestCycle?.percents?.["Transitional"] ??
     null;
+  const benchmarkShare = benchmarkStatus
+    ? (benchmarkStatus.atExpected.percent ?? 0) + (benchmarkStatus.aboveExpected.percent ?? 0)
+    : null;
+  const movedUpShare = payload?.readingLevels?.movement?.moved_up_1plus_percent ?? null;
+  const masteryDomainRows = Object.entries(masteryDomains ?? {})
+    .map(([key, value]) => ({
+      key,
+      label: LEARNING_DOMAIN_DICTIONARY[key as keyof typeof LEARNING_DOMAIN_DICTIONARY]?.label_short ?? key,
+      green: value.green.percent,
+      amber: value.amber.percent,
+      red: value.red.percent,
+      n: value.n,
+    }))
+    .sort((left, right) => right.green - left.green)
+    .slice(0, 4);
+  const topReadingStages = readingStageDistribution.slice(0, 4);
   const teachingQuality = payload?.teachingQuality;
   const teachingLearningAlignment = payload?.teachingLearningAlignment;
   const teachingLearningAlignmentPoints = teachingLearningAlignment?.points ?? [];
@@ -352,26 +486,143 @@ export function PublicImpactMapExplorer({
   const kpis = payload?.kpis;
   const teachersSupportedTotal =
     (kpis?.teachersSupportedMale ?? 0) + (kpis?.teachersSupportedFemale ?? 0);
+  const alignmentSummary = teachingLearningAlignment?.summary;
+  const latestAlignmentPoint =
+    teachingLearningAlignmentPoints.length > 0
+      ? teachingLearningAlignmentPoints[teachingLearningAlignmentPoints.length - 1]
+      : null;
+  const previousAlignmentPoint =
+    teachingLearningAlignmentPoints.length > 1
+      ? teachingLearningAlignmentPoints[teachingLearningAlignmentPoints.length - 2]
+      : null;
+  const storySessionsDelta =
+    latestAlignmentPoint && previousAlignmentPoint
+      ? latestAlignmentPoint.storySessionsCount - previousAlignmentPoint.storySessionsCount
+      : null;
 
-  const topMasteryDomains = Object.entries(masteryDomains ?? {})
-    .map(([key, value]) => ({
-      key,
-      label: LEARNING_DOMAIN_DICTIONARY[key as keyof typeof LEARNING_DOMAIN_DICTIONARY]?.label_short ?? key,
-      green: value.green.percent,
-      n: value.n,
-    }))
-    .sort((a, b) => b.green - a.green)
-    .slice(0, 3);
+  const momentumCards = [
+    {
+      label: "Schools supported",
+      value: (kpis?.schoolsSupported ?? 0).toLocaleString(),
+      helper: "Current implementation footprint",
+    },
+    {
+      label: "Learners assessed",
+      value: (kpis?.learnersAssessedUnique ?? 0).toLocaleString(),
+      helper: "Directly assessed learners (n)",
+    },
+    {
+      label: "Teachers supported",
+      value: teachersSupportedTotal.toLocaleString(),
+      helper: "Male + female reading teachers",
+    },
+    {
+      label: "Teaching quality change",
+      value: formatSignedDelta(alignmentSummary?.teachingDelta, { digits: 2 }),
+      helper: "Average lesson quality delta",
+    },
+    {
+      label: "Non-reader reduction",
+      value: formatSignedDelta(alignmentSummary?.nonReaderReductionPp, {
+        digits: 1,
+        suffix: " pp",
+      }),
+      helper: "Baseline to latest period",
+    },
+    {
+      label: "20+ CWPM gain",
+      value: formatSignedDelta(alignmentSummary?.cwpm20PlusDeltaPp, {
+        digits: 1,
+        suffix: " pp",
+      }),
+      helper: "Fluency benchmark movement",
+    },
+    {
+      label: "Story sessions change",
+      value:
+        typeof storySessionsDelta === "number"
+          ? formatSignedDelta(storySessionsDelta, { digits: 0 })
+          : "Data not available",
+      helper: previousAlignmentPoint ? "Latest period vs prior period" : "Need at least 2 periods",
+    },
+    {
+      label: "Assessment completion",
+      value: `${(kpis?.assessmentCycleCompletionPct ?? 0).toFixed(1)}%`,
+      helper: "Scope-level cycle completion",
+    },
+    {
+      label: "At / above benchmark",
+      value:
+        typeof benchmarkShare === "number" && Number.isFinite(benchmarkShare)
+          ? `${benchmarkShare.toFixed(1)}%`
+          : "Data not available",
+      helper: "Directly from learner outcome records",
+    },
+    {
+      label: "Moved up 1+ reading level",
+      value:
+        typeof movedUpShare === "number" && Number.isFinite(movedUpShare)
+          ? `${movedUpShare.toFixed(1)}%`
+          : "Data not available",
+      helper: "Matched baseline-to-latest learners",
+    },
+  ];
 
-  const readingStageRows = (payload?.readingStageDistribution ?? [])
-    .sort((a, b) => a.order - b.order);
+  const funnelStages = [
+    {
+      label: "Schools trained",
+      value: payload?.funnel?.trained ?? 0,
+      helper: "Capacity-building entry point",
+    },
+    {
+      label: "Coached / visited",
+      value: payload?.funnel?.coached ?? 0,
+      helper: "Ongoing implementation support",
+    },
+    {
+      label: "Baseline assessed",
+      value: payload?.funnel?.baselineAssessed ?? 0,
+      helper: "Initial learner evidence",
+    },
+    {
+      label: "Endline assessed",
+      value: payload?.funnel?.endlineAssessed ?? 0,
+      helper: "Measured outcome follow-through",
+    },
+    {
+      label: "Story active schools",
+      value: payload?.funnel?.storyActive ?? 0,
+      helper: "Reading culture extension",
+    },
+  ];
+  const funnelBaseline = Math.max(funnelStages[0]?.value ?? 0, 1);
+  const funnelPeak = Math.max(
+    1,
+    ...funnelStages.map((item) => item.value),
+  );
+  const funnelRows = funnelStages.map((stage, index) => {
+    const previous = index === 0 ? stage.value : funnelStages[index - 1]?.value ?? 0;
+    const stepRate = previous > 0 ? (stage.value / previous) * 100 : index === 0 ? 100 : 0;
+    const cumulativeRate = (stage.value / funnelBaseline) * 100;
+    return {
+      ...stage,
+      stepRate,
+      cumulativeRate,
+      widthPct: (stage.value / funnelPeak) * 100,
+    };
+  });
 
-
-
+  const teachingTrendPoints = (payload?.teachingQuality?.trend ?? [])
+    .filter((point) => typeof point.averageScore === "number" && Number.isFinite(point.averageScore))
+    .slice(-8);
+  const teachingTrendMax = Math.max(
+    1,
+    ...teachingTrendPoints.map((point) => point.averageScore ?? 0),
+  );
 
   return (
     <section className={`impact-explorer ${compact ? "impact-explorer--compact" : ""}`}>
-      {compact && (
+      {compact ? (
         <header className="impact-explorer-header">
           <div>
             <h2>Live Literacy Impact Dashboard</h2>
@@ -386,7 +637,7 @@ export function PublicImpactMapExplorer({
             </Link>
           </div>
         </header>
-      )}
+      ) : null}
 
       <div className="impact-explorer-breadcrumbs">
         <div className="impact-explorer-status">
@@ -424,116 +675,238 @@ export function PublicImpactMapExplorer({
         </button>
       </div>
 
-      <section className="compact-dashboard-grid mt-4">
-        <article className="glass-card impact-attract-card compact">
-          <span className="stat-label-compact">Schools Supported</span>
-          <div className="stat-value-compact">{(kpis?.schoolsSupported ?? 0).toLocaleString()}</div>
-        </article>
-        <article className="glass-card impact-attract-card compact">
-          <span className="stat-label-compact">Teachers Supported</span>
-          <div className="stat-value-compact">{teachersSupportedTotal.toLocaleString()}</div>
-        </article>
-        <article className="glass-card impact-attract-card compact">
-          <span className="stat-label-compact">Sub-counties Reached</span>
-          <div className="stat-value-compact">{(kpis?.subCountiesReached ?? 0).toLocaleString()}</div>
-        </article>
-      </section>
-
-      <article className="glass-card horizontal-progress-card mt-4">
-        <div className="horizontal-progress-left">
-          <header className="compact">
-            <h3 className="compact">Reading Progress Tracker</h3>
-            <p className="stat-label-compact mt-2">Total Books Read</p>
-            <div className="stat-value-compact">{(kpis?.totalBooksRead ?? 0).toLocaleString()}</div>
-          </header>
-        </div>
-        <div className="horizontal-progress-right">
-          <span className="stat-label-compact">Fluent Reader Share</span>
-          <div className="progress-bar-sleek">
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${fluentReaderShare ?? 0}%` }}
-            />
-          </div>
-          <span className="progress-pct-badge">
-            {typeof fluentReaderShare === "number" ? `${fluentReaderShare.toFixed(1)}%` : "0%"}
-          </span>
-        </div>
-      </article>
-
-      <article className="glass-card horizontal-progress-card mt-4">
-        <div className="horizontal-progress-left">
-          <header className="compact">
-            <h3 className="compact">Strongest Mastery Domains</h3>
-            <p className="stat-label-compact mt-2">Top Domain Mastery</p>
-            <div className="stat-value-compact">
-              {topMasteryDomains[0] ? `${topMasteryDomains[0].green.toFixed(1)}%` : "N/A"}
+      {!compact ? (
+        <div className="impact-attract-grid">
+          <article className="card impact-attract-card impact-attract-card--momentum">
+            <header>
+              <h3>What Changed This Period</h3>
+              <p>Quick momentum indicators to understand impact movement at a glance.</p>
+            </header>
+            <div className="impact-attract-momentum-grid">
+              {momentumCards.map((item) => (
+                <article key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{loading ? "Loading..." : item.value}</strong>
+                  <small>{item.helper}</small>
+                </article>
+              ))}
             </div>
-          </header>
-        </div>
-        <div className="horizontal-progress-right">
-          <div className="flex flex-col gap-2 w-full">
-            {topMasteryDomains.map((domain) => (
-              <div key={domain.key} className="flex items-center gap-2">
-                <span className="text-[10px] font-bold w-20 truncate">{domain.label}</span>
-                <div className="progress-bar-sleek h-1.5 flex-1">
-                  <div
-                    className="progress-bar-fill bg-green-500"
-                    style={{ width: `${domain.green}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-bold">{domain.green.toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </article>
+          </article>
 
-      <article className="glass-card horizontal-progress-card mt-4">
-        <div className="horizontal-progress-left">
-          <header className="compact">
-            <h3 className="compact">Latest Reading Stage Mix</h3>
-            <p className="stat-label-compact mt-2">Total Sample (n)</p>
-            <div className="stat-value-compact">{(kpis?.learnersAssessedUnique ?? 0).toLocaleString()}</div>
-          </header>
-        </div>
-        <div className="horizontal-progress-right">
-          <div className="flex w-full h-3 rounded overflow-hidden">
-            {readingStageRows.map((stage, i) => (
+          <article className="card impact-attract-card impact-attract-card--funnel">
+            <header>
+              <h3>Implementation Conversion Funnel</h3>
+              <p>From initial training to measured endline outcomes and story activation.</p>
+            </header>
+            <div className="impact-attract-funnel-list">
+              {funnelRows.map((row) => (
+                <article key={row.label}>
+                  <div className="impact-attract-funnel-head">
+                    <strong>{row.label}</strong>
+                    <span>{loading ? "Loading..." : row.value.toLocaleString()}</span>
+                  </div>
+                  <div className="impact-attract-funnel-track" aria-hidden="true">
+                    <i style={{ width: `${Math.max(row.widthPct, row.value > 0 ? 6 : 0)}%` }} />
+                  </div>
+                  <p>
+                    {row.helper} • Step retention:{" "}
+                    <strong>{loading ? "Loading..." : `${row.stepRate.toFixed(1)}%`}</strong> • Cumulative:{" "}
+                    <strong>{loading ? "Loading..." : `${row.cumulativeRate.toFixed(1)}%`}</strong>
+                  </p>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <article className="card impact-attract-card impact-attract-card--trust">
+            <header>
+              <h3>Data Trust & Action Center</h3>
+              <p>Transparency details and next actions for partners and supporters.</p>
+            </header>
+            <div className="impact-attract-trust-stats">
+              <p>
+                Completeness:{" "}
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : payload?.meta?.dataCompleteness === "Complete"
+                      ? "Complete"
+                      : "Partial"}
+                </strong>
+              </p>
+              <p>
+                Sample size (n):{" "}
+                <strong>{loading ? "Loading..." : (payload?.meta?.sampleSize ?? 0).toLocaleString()}</strong>
+              </p>
+              <p>
+                Last updated:{" "}
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : payload?.meta?.lastUpdated
+                      ? new Date(payload.meta.lastUpdated).toLocaleString("en-GB")
+                      : "Data not available"}
+                </strong>
+              </p>
+            </div>
+            {teachingTrendPoints.length > 0 ? (
               <div
-                key={stage.label}
-                title={`${stage.label}: ${stage.percent}%`}
-                style={{
-                  width: `${stage.percent}%`,
-                  backgroundColor: ["#e74c3c", "#f1c40f", "#3498db", "#2ecc71", "#9b59b6"][i % 5]
-                }}
-              />
-            ))}
-          </div>
-          <div className="flex justify-between w-full mt-2">
-             {readingStageRows.slice(0, 3).map((stage, i) => (
-               <div key={stage.label} className="flex items-center gap-1">
-                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ["#e74c3c", "#f1c40f", "#3498db", "#2ecc71", "#9b59b6"][i % 5] }} />
-                 <span className="text-[9px] font-bold truncate max-w-[60px]">{stage.label}</span>
-                 <span className="text-[9px] text-gray-500">{stage.percent.toFixed(0)}%</span>
-               </div>
-             ))}
-          </div>
+                className="impact-attract-trend"
+                role="img"
+                aria-label="Teaching quality trend over recent periods"
+              >
+                {teachingTrendPoints.map((point) => {
+                  const average = point.averageScore ?? 0;
+                  const heightPct = (average / teachingTrendMax) * 100;
+                  return (
+                    <div key={point.period} className="impact-attract-trend-bar">
+                      <i style={{ height: `${Math.max(heightPct, 8)}%` }} />
+                      <span>{point.period}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="impact-mini-footer">Trend data not available for this scope/period.</p>
+            )}
+            <p className="impact-mini-footer">
+              {teachingLearningAlignment?.caveat ?? "Data is aggregated from verified submissions only."}
+            </p>
+            <div className="impact-attract-actions">
+              <Link className="button" href="/sponsor-a-district">
+                Sponsor a District
+              </Link>
+              <Link className="button button-ghost" href="/impact#reports">
+                Download Reports
+              </Link>
+              <Link className="inline-download-link" href="/impact/case-studies">
+                Read Change Stories
+              </Link>
+            </div>
+          </article>
+
+
         </div>
-      </article>
+      ) : null}
 
-      <div className="impact-explorer-layout mt-6">
-        <LocationNavigator
-          period={period}
-          onPeriodChange={setPeriod}
-          selection={selection}
-          navigatorSchools={navigatorSchools}
-          onSelectionChange={onSelectionChange}
-          onReset={onReset}
-          onBack={onBack}
-        />
+      <div className="impact-explorer-layout">
+        <div className="impact-explorer-left-column" style={{ display: 'flex', flexDirection: 'column', gap: '0.52rem' }}>
+          <LocationNavigator
+            period={period}
+            onPeriodChange={setPeriod}
+            selection={selection}
+            navigatorSchools={navigatorSchools}
+            onSelectionChange={onSelectionChange}
+            onReset={onReset}
+            onBack={onBack}
+          />
 
-        <div className="impact-map-column">
+          <HeadlineStatsPanel
+            data={payload}
+            loading={loading}
+            detailHref={detailHref}
+            compact={compact}
+          />
+
+          {error ? (
+            <article className="card impact-error-card">
+              <h3>Stats temporarily unavailable</h3>
+              <p>Please try again. You can still explore using filters.</p>
+            </article>
+          ) : null}
+
+          {payload && payload.kpis.schoolsSupported === 0 ? (
+            <article className="card impact-empty-card">
+              <h3>No published data yet</h3>
+              <p>
+                We don&apos;t have reported activity for {payload.scope.name} in {payload.period.label}. Try
+                another district or check back later.
+              </p>
+            </article>
+          ) : null}
+        </div>
+
+        <div className="impact-map-column" style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem' }}>
+          {!compact ? (
+          <article className="card impact-attract-card impact-attract-card--progress">
+            <header>
+              <h3>Reading Progress Tracker</h3>
+              <p>Assessment-domain evidence tied directly to reading stages and benchmark status.</p>
+            </header>
+            <div className="impact-attract-progress-grid">
+              <article>
+                <span>Fluent reader share</span>
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : typeof fluentReaderShare === "number"
+                      ? `${fluentReaderShare.toFixed(1)}%`
+                      : "Data not available"}
+                </strong>
+                <small>Latest reading-level distribution</small>
+              </article>
+              <article>
+                <span>At / above benchmark</span>
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : typeof benchmarkShare === "number"
+                      ? `${benchmarkShare.toFixed(1)}%`
+                      : "Data not available"}
+                </strong>
+                <small>Expected-vs-actual status from the DB</small>
+              </article>
+              <article>
+                <span>Moved up 1+ level</span>
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : typeof movedUpShare === "number"
+                      ? `${movedUpShare.toFixed(1)}%`
+                      : "Data not available"}
+                </strong>
+                <small>Matched learners only</small>
+              </article>
+              <article>
+                <span>Tracked reading stages</span>
+                <strong>{loading ? "Loading..." : readingStageDistribution.length.toLocaleString()}</strong>
+                <small>Stage bands currently computed</small>
+              </article>
+            </div>
+            <div className="impact-attract-progress-lists">
+              <div>
+                <h4>Strongest Mastery Domains</h4>
+                {masteryDomainRows.length > 0 ? (
+                  masteryDomainRows.map((row) => (
+                    <div key={row.key} className="impact-attract-progress-row">
+                      <strong>{row.label}</strong>
+                      <span>
+                        Green {row.green.toFixed(1)}% • Amber {row.amber.toFixed(1)}% • Red {row.red.toFixed(1)}%
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="impact-mini-footer">Domain mastery data not available for this scope.</p>
+                )}
+              </div>
+              <div>
+                <h4>Latest Reading Stage Mix</h4>
+                {topReadingStages.length > 0 ? (
+                  topReadingStages.map((row) => (
+                    <div key={row.label} className="impact-attract-progress-row">
+                      <strong>{row.label}</strong>
+                      <span>
+                        {row.percent.toFixed(1)}% • n={row.count.toLocaleString()}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="impact-mini-footer">Reading stage distribution is not available yet.</p>
+                )}
+              </div>
+            </div>
+          </article>
+          ) : null}
           <UgandaImpactMapPro
             periodLabel={period}
             selection={{
@@ -553,33 +926,11 @@ export function PublicImpactMapExplorer({
             compact={compact}
           />
         </div>
-
-        <HeadlineStatsPanel
-          data={payload}
-          loading={loading}
-          detailHref={detailHref}
-          compact={compact}
-        />
       </div>
 
-      {error ? (
-        <article className="card impact-error-card">
-          <h3>Stats temporarily unavailable</h3>
-          <p>Please try again. You can still explore using filters.</p>
-        </article>
-      ) : null}
 
-      {payload && payload.kpis.schoolsSupported === 0 ? (
-        <article className="card impact-empty-card">
-          <h3>No published data yet</h3>
-          <p>
-            We don&apos;t have reported activity for {payload.scope.name} in {payload.period.label}. Try
-            another district or check back later.
-          </p>
-        </article>
-      ) : null}
 
-      <div className="impact-tabs mt-8">
+      <div className="impact-tabs">
         <button
           className={activeTab === "outcomes" ? "active" : ""}
           onClick={() => setActiveTab("outcomes")}
@@ -645,7 +996,7 @@ export function PublicImpactMapExplorer({
             <p className="impact-mini-footer">
               Scores reflect average learner performance. Benchmark interpretation follows mastery progression by domain.
             </p>
-            {masteryDomains && (
+            {masteryDomains ? (
               <>
                 <h4 style={{ marginTop: "1rem" }}>Mastery Traffic-Light Distribution</h4>
                 <div className="impact-domain-mini-grid">
@@ -662,53 +1013,167 @@ export function PublicImpactMapExplorer({
                     const mastery = masteryDomains[masteryKey];
                     if (!mastery) return null;
                     return (
-                      <div key={item.key} className="impact-domain-mini-card">
+                      <article className="impact-domain-mini-card" key={`mastery-${item.key}`}>
                         <h4>{LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short}</h4>
-                        <div className="flex gap-1 mt-2 height-4 rounded overflow-hidden">
-                          <div
-                            style={{ width: `${mastery.green.percent}%`, background: "#2ecc71" }}
-                          />
-                          <div
-                            style={{ width: `${mastery.amber.percent}%`, background: "#f1c40f" }}
-                          />
-                          <div style={{ width: `${mastery.red.percent}%`, background: "#e74c3c" }} />
-                        </div>
-                        <div className="flex justify-between text-[10px] mt-1 uppercase font-bold">
-                          <span className="text-green-600">{mastery.green.percent}%</span>
-                          <span className="text-yellow-600">{mastery.amber.percent}%</span>
-                          <span className="text-red-600">{mastery.red.percent}%</span>
-                        </div>
-                      </div>
+                        <p className="impact-domain-mini-meta">
+                          Green: <strong>{mastery.green.percent}%</strong> ({mastery.green.count})
+                        </p>
+                        <p className="impact-domain-mini-meta">
+                          Amber: <strong>{mastery.amber.percent}%</strong> ({mastery.amber.count})
+                        </p>
+                        <p className="impact-domain-mini-meta">
+                          Red: <strong>{mastery.red.percent}%</strong> ({mastery.red.count})
+                        </p>
+                        <p className="impact-domain-mini-meta">n = {mastery.n.toLocaleString()}</p>
+                      </article>
                     );
                   })}
                 </div>
+                {benchmarkStatus ? (
+                  <p className="impact-mini-footer">
+                    Benchmark status: Below expected {benchmarkStatus.belowExpected.percent}%,
+                    At expected {benchmarkStatus.atExpected.percent}%,
+                    Above expected {benchmarkStatus.aboveExpected.percent}% (n={benchmarkStatus.n}).
+                  </p>
+                ) : null}
+                <p className="impact-mini-footer">
+                  {trafficLightExplanations.green} {trafficLightExplanations.amber} {trafficLightExplanations.red}
+                </p>
               </>
-            )}
+            ) : null}
           </article>
         )}
 
         {activeTab === "readingLevels" && (
           <article className="card">
-            <h3>Reading Level Transitions</h3>
-            {payload?.readingLevels ? (
-              <div className="impact-auto-grid">
-                <div className="impact-domain-mini-card">
-                  <h4>Movement (Matched Learners)</h4>
-                  <div className="text-3xl font-bold mt-2">
-                    {payload.readingLevels.movement?.moved_up_1plus_percent}%
+            <h3>Reading Stages & Benchmark Alignment</h3>
+            {loading ? (
+              <p>Loading reading levels...</p>
+            ) : derivedReadingLevels ? (
+              <div className="impact-reading-level-panel">
+                {readingStageDistribution.length > 0 ? (
+                  <div className="impact-reading-level-summary-grid">
+                    {readingStageDistribution.map((row) => (
+                      <article key={`stage-${row.label}`}>
+                        <span>{row.label}</span>
+                        <strong>{row.percent.toFixed(1)}%</strong>
+                        <small>{row.count.toLocaleString()} learners</small>
+                      </article>
+                    ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Learners moved up 1+ levels</p>
+                ) : null}
+                {benchmarkStatus ? (
+                  <p className="impact-mini-footer">
+                    Expected benchmark alignment: Below {benchmarkStatus.belowExpected.percent}%,
+                    At {benchmarkStatus.atExpected.percent}%,
+                    Above {benchmarkStatus.aboveExpected.percent}%.
+                  </p>
+                ) : null}
+                <div className="impact-reading-level-summary-grid">
+                  <article>
+                    <span>Baseline level</span>
+                    <strong>{derivedReadingLevels.baselineLevel ?? "Data not available"}</strong>
+                    <small>{formatCompositeScore(derivedReadingLevels.baselineAverage)}</small>
+                  </article>
+                  <article>
+                    <span>Latest level</span>
+                    <strong>{derivedReadingLevels.latestLevel ?? "Data not available"}</strong>
+                    <small>{formatCompositeScore(derivedReadingLevels.latestAverage)}</small>
+                  </article>
+                  <article>
+                    <span>Movement</span>
+                    <strong>{derivedReadingLevels.movementLabel}</strong>
+                    <small>Derived from baseline vs latest domain profile</small>
+                  </article>
                 </div>
-                <div className="impact-domain-mini-card">
-                  <h4>Fluent reader share</h4>
-                  <div className="text-3xl font-bold mt-2">
-                    {readingLevelsLatestCycle?.percents?.Fluent ?? 0}%
+
+                {readingLevelsBaselineCycle && readingLevelsLatestCycle ? (
+                  <div className="impact-reading-level-distribution">
+                    <div>
+                      <div className="impact-reading-level-distribution-head">
+                        <span>Baseline distribution</span>
+                        <strong>n={readingLevelsBaselineCycle.n.toLocaleString()}</strong>
+                      </div>
+                      <div className="impact-reading-level-stack" role="img" aria-label="Baseline reading-level distribution">
+                        {readingLevelLabels.map((label, index) => {
+                          const percent = readingLevelsBaselineCycle.percents[label] ?? 0;
+                          return (
+                            <i
+                              key={`baseline-${label}`}
+                              style={{
+                                width: `${Math.max(percent, percent > 0 ? 2 : 0)}%`,
+                                background: readingLevelColor(label, index),
+                              }}
+                              title={`${label}: ${percent}%`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="impact-reading-level-distribution-head">
+                        <span>Latest distribution</span>
+                        <strong>n={readingLevelsLatestCycle.n.toLocaleString()}</strong>
+                      </div>
+                      <div className="impact-reading-level-stack" role="img" aria-label="Latest reading-level distribution">
+                        {readingLevelLabels.map((label, index) => {
+                          const percent = readingLevelsLatestCycle.percents[label] ?? 0;
+                          return (
+                            <i
+                              key={`latest-${label}`}
+                              style={{
+                                width: `${Math.max(percent, percent > 0 ? 2 : 0)}%`,
+                                background: readingLevelColor(label, index),
+                              }}
+                              title={`${label}: ${percent}%`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="impact-reading-level-legend">
+                      {readingLevelLabels.map((label, index) => (
+                        <span key={`legend-${label}`}>
+                          <i style={{ background: readingLevelColor(label, index) }} />
+                          {label}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Latest endline cycle</p>
+                ) : null}
+
+                <div className="impact-reading-level-domain-table-wrap">
+                  <table className="impact-reading-level-domain-table">
+                    <thead>
+                      <tr>
+                        <th>Domain</th>
+                        <th>Baseline</th>
+                        <th>Latest</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {derivedReadingLevels.domainRows.map((row) => (
+                        <tr key={row.label}>
+                          <td>{row.label}</td>
+                          <td>{typeof row.baseline === "number" ? row.baseline.toFixed(1) : "Data not available"}</td>
+                          <td>{typeof row.latest === "number" ? row.latest.toFixed(1) : "Data not available"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+
+                <p className="impact-mini-footer">
+                  Reading levels are computed from the six assessment outcome domains:
+                  {" "}
+                  {OUTCOME_DOMAIN_CONFIG.map(
+                    (item) => LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short,
+                  ).join(", ")}
+                  .
+                </p>
               </div>
             ) : (
-              <p>Reading level data not available for this scope.</p>
+              <p>Data not available.</p>
             )}
           </article>
         )}

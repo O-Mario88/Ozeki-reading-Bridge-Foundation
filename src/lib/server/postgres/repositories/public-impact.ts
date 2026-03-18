@@ -848,3 +848,139 @@ export async function listPublishedStorySchoolIdsForPublicImpactPostgres(
   );
   return result.rows.map((row) => Number(row.schoolId));
 }
+
+export async function buildPublicImpactAggregatePostgres(
+  scopeLevel: PublicImpactScopeLevel,
+  scopeId: string,
+  periodLabel: string = "All Time"
+): Promise<PublicImpactAggregate> {
+  const scopedSchools = await listScopedSchoolsForPublicImpactPostgres(scopeLevel, scopeId);
+  const schoolIds = scopedSchools.map((s) => s.schoolId);
+
+  const [
+    portalRecords,
+    assessmentRows,
+    lessonEvals,
+    _attendanceRows,
+    teacherSupport,
+    teachingLearningAlignment
+  ] = await Promise.all([
+    listPortalRecordsForPublicImpactPostgres(schoolIds),
+    listAssessmentRowsForPublicImpactPostgres(schoolIds),
+    listLessonEvaluationRecordsForPublicImpactPostgres({ schoolIds }),
+    listTrainingAttendanceForPublicImpactPostgres(schoolIds),
+    listTeacherSupportRowsForPublicImpactPostgres(schoolIds),
+    getTeachingLearningAlignmentBySchoolIdsPostgres(schoolIds, null, null)
+  ]);
+
+  const uniqueLearners = new Set(assessmentRows.map(r => r.learnerUid).filter(Boolean));
+  
+  let coachingVisitsCompleted = 0;
+  let totalBooksRead = 0;
+  for (const record of portalRecords) {
+    if (record.module === "visit") coachingVisitsCompleted++;
+    if (record.module === "assessment") {
+      try {
+        const p = JSON.parse(record.payloadJson);
+        totalBooksRead += Number(p.storiesPublished || 0);
+      } catch {
+        // ignore JSON parse errors
+      }
+    }
+  }
+
+  const baselineAssessments = assessmentRows.filter(r => r.assessmentType === "baseline");
+  const endlineAssessments = assessmentRows.filter(r => r.assessmentType === "endline");
+  const progressAssessments = assessmentRows.filter(r => r.assessmentType === "progress");
+
+  const calcDomain = (field: keyof PublicImpactAssessmentRow): { baseline: number | null, latest: number | null, endline: number | null, benchmarkPct: number | null, n: number } => {
+    const scores = assessmentRows.map(r => r[field]).filter(v => typeof v === 'number') as number[];
+    const baselineScores = baselineAssessments.map(r => r[field]).filter(v => typeof v === 'number') as number[];
+    const endlineScores = endlineAssessments.map(r => r[field]).filter(v => typeof v === 'number') as number[];
+    
+    return {
+      baseline: baselineScores.length ? Number((baselineScores.reduce((a, b) => a + b, 0) / baselineScores.length).toFixed(2)) : null,
+      latest: scores.length ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)) : null,
+      endline: endlineScores.length ? Number((endlineScores.reduce((a, b) => a + b, 0) / endlineScores.length).toFixed(2)) : null,
+      benchmarkPct: null,
+      n: scores.length
+    };
+  };
+
+  const domainAverages = {
+    setup: null, newSound: null, decoding: null, readingPractice: null, trickyWords: null, checkNext: null
+  };
+
+  return {
+    scope: {
+      level: scopeLevel,
+      id: scopeId,
+      name: scopeId
+    },
+    period: {
+      label: periodLabel,
+      startDate: null,
+      endDate: null
+    },
+    kpis: {
+      schoolsSupported: scopedSchools.length,
+      subCountiesReached: new Set(scopedSchools.map(s => s.subCounty).filter(Boolean)).size,
+      totalBooksRead,
+      teachersSupportedMale: teacherSupport.filter(t => t.gender === "Male").length,
+      teachersSupportedFemale: teacherSupport.filter(t => t.gender === "Female").length,
+      onlineLiveSessionsCovered: 0,
+      onlineTeachersSupported: 0,
+      learnersDirectlyImpacted: scopedSchools.reduce((acc, s) => acc + s.directImpactTotal, 0),
+      enrollmentEstimatedReach: scopedSchools.reduce((acc, s) => acc + s.enrollmentTotal, 0),
+      learnersAssessedUnique: uniqueLearners.size,
+      learnersReachedEstimated: scopedSchools.reduce((acc, s) => acc + s.enrollmentTotal, 0),
+      coachingVisitsCompleted,
+      assessmentCycleCompletionPct: baselineAssessments.length ? Math.round(100 * endlineAssessments.length / baselineAssessments.length) : 0,
+      assessmentsBaselineCount: baselineAssessments.length,
+      assessmentsProgressCount: progressAssessments.length,
+      assessmentsEndlineCount: endlineAssessments.length,
+    },
+    outcomes: {
+      letterNames: calcDomain("letterIdentificationScore"),
+      letterSounds: calcDomain("soundIdentificationScore"),
+      realWords: calcDomain("decodableWordsScore"),
+      madeUpWords: calcDomain("madeUpWordsScore"),
+      storyReading: calcDomain("storyReadingScore"),
+      comprehension: calcDomain("readingComprehensionScore")
+    },
+    funnel: {
+      trained: 0, coached: 0, baselineAssessed: 0, endlineAssessed: 0, storyActive: 0
+    },
+    fidelity: {
+      score: 0, band: "Developing", drivers: []
+    },
+    rankings: {
+      mostImproved: [], prioritySupport: [], mostActive: []
+    },
+    teachingQuality: {
+      evaluationsCount: lessonEvals.length,
+      avgOverallScore: lessonEvals.length ? Number((lessonEvals.reduce((a, b) => a + Number(b.overallScore || 0), 0) / lessonEvals.length).toFixed(2)) : null,
+      deltaOverall: null,
+      improvedTeachersPercent: null,
+      schoolsImprovedPercent: null,
+      levelDistribution: {
+        strong: { count: 0, percent: 0 },
+        good: { count: 0, percent: 0 },
+        developing: { count: 0, percent: 0 },
+        needsSupport: { count: 0, percent: 0 }
+      },
+      domainAverages, domainDeltas: domainAverages, trend: [], topCoachingFocusAreas: [], lastUpdated: new Date().toISOString()
+    },
+    teachingLearningAlignment,
+    meta: {
+      lastUpdated: new Date().toISOString(), dataCompleteness: "Complete", sampleSize: scopedSchools.length
+    },
+    navigator: {
+      regions: Array.from(new Set(scopedSchools.map(s => s.region).filter(Boolean))),
+      subRegions: Array.from(new Set(scopedSchools.map(s => s.subRegion).filter(Boolean))),
+      districts: Array.from(new Set(scopedSchools.map(s => s.district).filter(Boolean))),
+      schools: scopedSchools.map(s => ({ id: s.schoolId, name: s.schoolName, district: s.district, subRegion: s.subRegion, region: s.region }))
+    },
+    generatedAt: new Date().toISOString()
+  };
+}

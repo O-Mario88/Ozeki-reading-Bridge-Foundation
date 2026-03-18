@@ -8546,9 +8546,6 @@ nav[aria-label="Staff navigation"] {
 
 .impact-live-compact-zone .impact-explorer-layout {
   grid-template-columns: minmax(170px, 225px) minmax(0, 1fr);
-  grid-template-areas:
-    "navigator map"
-    "stats map";
   gap: 0.35rem 0.42rem;
   align-items: stretch;
 }
@@ -8556,16 +8553,6 @@ nav[aria-label="Staff navigation"] {
 .impact-live-compact-zone .location-navigator,
 .impact-live-compact-zone .headline-stats-panel {
   padding: 0.5rem;
-}
-
-.impact-live-compact-zone .location-navigator {
-  grid-area: navigator;
-  grid-column: auto;
-}
-
-.impact-live-compact-zone .headline-stats-panel {
-  grid-area: stats;
-  grid-column: auto;
 }
 
 .impact-live-compact-zone .impact-map-column {
@@ -8838,7 +8825,7 @@ nav[aria-label="Staff navigation"] {
 
 .impact-explorer-layout {
   display: grid;
-  grid-template-columns: minmax(150px, 0.46fr) minmax(0, 4.25fr) minmax(160px, 0.64fr);
+  grid-template-columns: minmax(260px, 1.25fr) minmax(0, 4fr);
   gap: 0.52rem;
   align-items: flex-start;
 }
