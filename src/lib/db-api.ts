@@ -90,9 +90,10 @@ export async function updatePortalRecordAsync(
 export async function setPortalRecordStatusAsync(
   recordId: number,
   status: string,
-  actor: PortalUser,
+  _actor?: unknown,
+  _reviewNote?: string,
 ) {
-  return _updatePortalRecord(recordId, { status } as never, actor);
+  return _updatePortalRecord(recordId, { status, reviewNote: _reviewNote } as never);
 }
 
 // ── School / teacher stubs ───────────────────────────────────────────
@@ -332,6 +333,11 @@ export function buildImpactNarrative(
     template: {
       variant: "Public Impact Report" as const,
       sections: [],
+      masterTemplateId: "default",
+      masterTemplateName: "Public Impact Report",
+      aiWritingRules: [] as string[],
+      tableOfContents: [],
+      generatedDate: new Date().toISOString(),
     },
   };
 }

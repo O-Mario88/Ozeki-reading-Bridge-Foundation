@@ -306,3 +306,149 @@ export async function recomputeLearningAutomationSnapshots() {
     const { recomputeLearningAutomationSnapshots: fn } = await import("@/lib/db-api");
     return fn();
 }
+// ═══════════════════════════════════════════════════════════════════════
+// Additional stubs for API routes that import from dataService
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── Auth / Portal User Management ───────────────────────────────────
+export async function authenticatePortalUser(_email: string, _password: string) {
+    // Auth is handled by portal-auth module; this stub prevents compile errors
+    throw new Error("authenticatePortalUser: use portal-auth module instead");
+}
+
+export async function getPortalUserByEmail(email: string) {
+    const result = await queryPostgres(
+        `SELECT id, full_name AS "fullName", email, phone, role, geography_scope AS "geographyScope",
+         is_supervisor AS "isSupervisor", is_me AS "isME", is_admin AS "isAdmin", is_superadmin AS "isSuperAdmin"
+         FROM portal_users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+        [email],
+    );
+    return result.rows[0] ?? null;
+}
+
+export async function createPortalSession(_userId: number) {
+    throw new Error("createPortalSession: not yet migrated to PostgreSQL");
+}
+
+export async function deletePortalSession(_token: string) {
+    throw new Error("deletePortalSession: not yet migrated to PostgreSQL");
+}
+
+export async function createPortalUserAccount(_input: unknown, _actor?: unknown) {
+    const { createPortalUserAccount: fn } = await import("@/lib/db-api");
+    return fn(_input as never, _actor as never);
+}
+
+export async function deletePortalUserAccount(_userId: number, _actor?: unknown) {
+    const { deletePortalUserAccount: fn } = await import("@/lib/db-api");
+    return fn(_userId, _actor as never);
+}
+
+export async function updatePortalUserPermissions(_userId: number, _permissions: unknown, _actor?: unknown) {
+    const { updatePortalUserPermissions: fn } = await import("@/lib/db-api");
+    return fn(_userId, _permissions as never, _actor as never);
+}
+
+// ── Lesson Evaluations ───────────────────────────────────────────────
+export async function createLessonEvaluationAsync(input: unknown, actor: unknown) {
+    const { createLessonEvaluationAsync: fn } = await import("@/lib/db-api");
+    return fn(input, actor as never);
+}
+
+export async function listLessonEvaluationsAsync(filters?: unknown) {
+    const { listLessonEvaluationsAsync: fn } = await import("@/lib/db-api");
+    return fn(filters as never);
+}
+
+export async function getLessonEvaluationByIdAsync(id: number) {
+    const { getLessonEvaluationByIdAsync: fn } = await import("@/lib/db-api");
+    return fn(id);
+}
+
+export async function updateLessonEvaluationAsync(id: number, input: unknown, actor: unknown) {
+    const { updateLessonEvaluationAsync: fn } = await import("@/lib/db-api");
+    return fn(id, input, actor as never);
+}
+
+export async function voidLessonEvaluationAsync(id: number, _reason: string, actor: unknown) {
+    const { voidLessonEvaluationAsync: fn } = await import("@/lib/db-api");
+    return fn(id, actor as never);
+}
+
+// ── Teaching quality improvement ─────────────────────────────────────
+export async function getSchoolTeachingQualityImprovementSummaryAsync(_schoolId: number) {
+    return { comparisons: [], summary: null };
+}
+
+export async function getTeachingImprovementSettingsAsync() {
+    return { minimumEvaluations: 2, improvementThreshold: 0.25 };
+}
+
+export async function listTeacherImprovementComparisonsAsync(filters?: unknown) {
+    const { listTeacherImprovementComparisonsAsync: fn } = await import("@/lib/db-api");
+    return fn(filters);
+}
+
+// ── Graduation ───────────────────────────────────────────────────────
+export async function getGraduationSettingsAsync() {
+    const { getGraduationSettingsPostgres } = await import("@/lib/server/postgres/repositories/graduation");
+    return getGraduationSettingsPostgres();
+}
+
+export async function updateGraduationSettingsAsync(_input: unknown) {
+    const { updateGraduationSettingsAsync: fn } = await import("@/lib/db-api");
+    return fn(_input);
+}
+
+export async function getSchoolGraduationEligibilityAsync(schoolId: number) {
+    const { getSchoolGraduationEligibilityAsync: fn } = await import("@/lib/db-api");
+    return fn(schoolId);
+}
+
+export async function reviewSchoolGraduationAsync(schoolId: number, decision: unknown, actor: unknown) {
+    const { reviewSchoolGraduationAsync: fn } = await import("@/lib/db-api");
+    return fn(schoolId, decision, actor as never);
+}
+
+// ── Evidence ─────────────────────────────────────────────────────────
+export async function savePortalEvidence(_input: unknown, _actor: unknown) {
+    throw new Error("savePortalEvidence: not yet migrated to PostgreSQL");
+}
+
+export async function listPortalEvidence(_filters?: unknown) {
+    return [];
+}
+
+export async function getPortalEvidenceById(_id: number) {
+    return null;
+}
+
+// ── Stories ──────────────────────────────────────────────────────────
+export async function getStoryById(_id: number) {
+    return null;
+}
+
+export async function publishStoryEntry(_id: number, _actor: unknown) {
+    throw new Error("publishStoryEntry: not yet migrated to PostgreSQL");
+}
+
+export async function unpublishStoryEntry(_id: number, _actor: unknown) {
+    throw new Error("unpublishStoryEntry: not yet migrated to PostgreSQL");
+}
+
+export async function deleteStoryEntry(_id: number, _actor: unknown) {
+    throw new Error("deleteStoryEntry: not yet migrated to PostgreSQL");
+}
+
+export async function saveStoryAnthology(_input: unknown, _actor: unknown) {
+    throw new Error("saveStoryAnthology: not yet migrated to PostgreSQL");
+}
+
+// ── School contacts/learners ─────────────────────────────────────────
+export async function addSchoolContactToSchool(_schoolId: number, _input: unknown) {
+    throw new Error("addSchoolContactToSchool: not yet migrated — use createSchoolContactInSchool instead");
+}
+
+export async function addSchoolLearnerToSchool(_schoolId: number, _input: unknown) {
+    throw new Error("addSchoolLearnerToSchool: not yet migrated — use createSchoolLearnerInSchool instead");
+}
