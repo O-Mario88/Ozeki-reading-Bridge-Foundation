@@ -5,7 +5,7 @@ import {
   authenticatePartnerApiKeyAsync,
   listNationalReportPacksAsync,
   logPartnerExportAsync,
-} from "@/lib/national-intelligence";
+} from "@/lib/national-intelligence-async";
 
 export const runtime = "nodejs";
 

@@ -11,6 +11,7 @@ const DB_OPTIONAL_TEST_FILES = new Set([
   "google-oauth-domain.test.ts",
   "import-template-generation.test.ts",
   "online-training-separation.test.ts",
+  "postgres-db-enforcement.test.ts",
   "training-participant-import-helpers.test.ts",
 ]);
 

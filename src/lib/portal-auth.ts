@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getPortalUserFromSession } from "@/lib/db";
+import { getPortalUserFromSession } from "@/services/authService";
 import { PortalUser } from "@/lib/types";
 
 export const PORTAL_SESSION_COOKIE = "orbf_portal_session";

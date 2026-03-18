@@ -8,7 +8,7 @@ import {
     getStoryById,
     listStoryAnthologies,
     saveStoryAnthology,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { getCurrentPortalUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";

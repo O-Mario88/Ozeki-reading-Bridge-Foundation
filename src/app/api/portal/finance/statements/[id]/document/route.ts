@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
 import { z } from "zod";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
-import { getFinanceFileById, listFinanceMonthlyStatements } from "@/lib/finance-db";
+import { getFinanceFileById, listFinanceMonthlyStatements } from "@/services/financeService";
 
 export const runtime = "nodejs";
 

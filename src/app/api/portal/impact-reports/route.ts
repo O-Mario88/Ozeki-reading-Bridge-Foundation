@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createImpactReport, listPortalImpactReportsAsync } from "@/lib/db";
+import { createImpactReport, listPortalImpactReportsAsync } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";

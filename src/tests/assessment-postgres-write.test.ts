@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { saveAssessmentRecordAsync } from "../lib/db";
+import { saveAssessmentRecordAsync } from "../lib/db-api";
 import { isPostgresConfigured, queryPostgres } from "../lib/server/postgres/client";
 
 test(

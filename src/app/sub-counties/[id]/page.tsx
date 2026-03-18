@@ -1,4 +1,4 @@
-import { getImpactDrilldownData, calculateFidelityScore, getLearningGainsData } from "@/lib/db";
+import { getImpactDrilldownData, calculateFidelityScore, getLearningGainsData } from "@/services/dataService";
 import Link from "next/link";
 import type { Metadata } from "next";
 

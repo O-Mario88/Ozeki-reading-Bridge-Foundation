@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
-import { loadFinanceFileForDownload, verifyFinanceFileSignature } from "@/lib/finance-db";
+import { loadFinanceFileForDownload, verifyFinanceFileSignature } from "@/services/financeService";
 
 export const runtime = "nodejs";
 

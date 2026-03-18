@@ -4,7 +4,7 @@ import {
     logAuditEvent,
     getCostEffectivenessData,
     getPublicImpactAggregate,
-} from "@/lib/db";
+} from "@/services/dataService";
 import type { ReadingLevelsBlock } from "@/lib/types";
 import type {
     AggregateFidelityView,

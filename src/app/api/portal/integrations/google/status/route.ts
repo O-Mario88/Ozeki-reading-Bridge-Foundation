@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
-import { getPortalUserFromSession } from "@/lib/db";
+import { getPortalUserFromSession } from "@/services/dataService";
 import { getGoogleWorkspaceDiagnostics } from "@/lib/google-workspace";
 
 export const runtime = "nodejs";

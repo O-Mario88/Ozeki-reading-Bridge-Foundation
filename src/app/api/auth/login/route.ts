@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authenticatePortalUser, createPortalSession } from "@/lib/db";
+import { authenticatePortalUser, createPortalSession } from "@/services/dataService";
 import { getPortalHomePath, PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 import { clearRateLimit, consumeRateLimit } from "@/lib/rate-limit";
 

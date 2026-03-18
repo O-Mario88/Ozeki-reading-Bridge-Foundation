@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listFinancePublicSnapshots, listFinanceAuditedStatements } from "@/lib/finance-db";
+import { listFinancePublicSnapshots, listFinanceAuditedStatements } from "@/services/financeService";
 import fs from "node:fs/promises";
 import path from "node:path";
 

@@ -12,7 +12,6 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const timestamp = new Date().toISOString();
-  const runtimeInfo = getPostgresRuntimeInfo();
   const openAiConfig = getOpenAiServerConfig("gpt-5.2-mini");
   const { searchParams } = new URL(request.url);
   const aiProbeRequested = searchParams.get("aiProbe") === "1";
@@ -117,6 +116,7 @@ export async function GET(request: Request) {
       },
     );
   } catch (error) {
+    const runtimeInfo = getPostgresRuntimeInfo();
     return NextResponse.json(
       {
         status: "degraded",

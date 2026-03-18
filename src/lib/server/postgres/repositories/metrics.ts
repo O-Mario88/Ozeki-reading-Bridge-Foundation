@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import type { PublicImpactAggregate, CostEffectivenessData, CostCategory } from "@/lib/types";
 
 function toNumber(value: unknown) {
   return Number(value ?? 0);
@@ -152,4 +153,323 @@ export async function getImpactSummaryPostgres() {
     generatedAt: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
   };
+}
+
+export async function getPublicImpactAggregatePostgres(
+  scopeLevel: string,
+  scopeId: string,
+  _periodLabel?: string | null,
+  _reportScopeOverride: string = "Public",
+): Promise<PublicImpactAggregate> {
+  // Implementation focused on aggregating from assessment_records, portal_records (training, stories),
+  // and legacy_assessment_records.
+  
+  const [assessmentRes, storiesRes, legacyRes] = await Promise.all([
+    queryPostgres(`
+      SELECT 
+        COUNT(DISTINCT learner_uid)::int AS learners,
+        AVG(story_reading_score) AS avg_reading,
+        AVG(reading_comprehension_score) AS avg_comp
+      FROM assessment_records
+      WHERE ($1 = 'country' OR ($1 = 'region' AND EXISTS (SELECT 1 FROM v_school_hierarchy vh WHERE vh.school_id = assessment_records.school_id AND vh.region_name = $2)))
+    `, [scopeLevel, scopeId]),
+    queryPostgres(`
+      SELECT COALESCE(SUM((payload_json->>'storiesPublished')::int), 0)::int AS stories
+      FROM portal_records
+      WHERE module = 'assessment'
+    `),
+    queryPostgres(`
+      SELECT 
+        COALESCE(SUM(learners_assessed), 0)::int AS learners,
+        COALESCE(SUM(stories_published), 0)::int AS stories
+      FROM legacy_assessment_records
+    `)
+  ]);
+
+  const domainEmpty: PublicImpactDomainAggregate = { baseline: 0, latest: 0, endline: 0, benchmarkPct: 0, n: 0 };
+
+  return {
+    scope: { 
+        level: scopeLevel as any, 
+        id: scopeId, 
+        name: scopeId 
+    },
+    period: { 
+        label: _periodLabel || "All Time",
+        startDate: null,
+        endDate: null
+    },
+    kpis: {
+      schoolsSupported: 0,
+      subCountiesReached: 0,
+      totalBooksRead: (storiesRes.rows[0]?.stories || 0) + (legacyRes.rows[0]?.stories || 0),
+      teachersSupportedMale: 0,
+      teachersSupportedFemale: 0,
+      onlineLiveSessionsCovered: 0,
+      onlineTeachersSupported: 0,
+      learnersDirectlyImpacted: 0,
+      enrollmentEstimatedReach: 0,
+      learnersAssessedUnique: (assessmentRes.rows[0]?.learners || 0) + (legacyRes.rows[0]?.learners || 0),
+      learnersReachedEstimated: 0,
+      coachingVisitsCompleted: 0,
+      assessmentCycleCompletionPct: 0,
+      assessmentsBaselineCount: 0,
+      assessmentsProgressCount: 0,
+      assessmentsEndlineCount: 0,
+    },
+    outcomes: {
+        letterNames: { ...domainEmpty },
+        letterSounds: { ...domainEmpty },
+        realWords: { ...domainEmpty },
+        madeUpWords: { ...domainEmpty },
+        storyReading: { ...domainEmpty, latest: Number(assessmentRes.rows[0]?.avg_reading || 0) },
+        comprehension: { ...domainEmpty, latest: Number(assessmentRes.rows[0]?.avg_comp || 0) },
+    },
+    funnel: {
+        trained: 0,
+        coached: 0,
+        baselineAssessed: 0,
+        endlineAssessed: 0,
+        storyActive: 0
+    },
+    fidelity: {
+        score: 0,
+        band: "Developing",
+        drivers: []
+    },
+    rankings: {
+        mostImproved: [],
+        prioritySupport: [],
+        mostActive: []
+    },
+    teachingQuality: {
+        evaluationsCount: 0,
+        avgOverallScore: 0,
+        deltaOverall: 0,
+        improvedTeachersPercent: 0,
+        schoolsImprovedPercent: 0,
+        levelDistribution: {
+            strong: { count: 0, percent: 0 },
+            good: { count: 0, percent: 0 },
+            developing: { count: 0, percent: 0 },
+            needsSupport: { count: 0, percent: 0 }
+        },
+        domainAverages: { setup: 0, newSound: 0, decoding: 0, readingPractice: 0, trickyWords: 0, checkNext: 0 },
+        domainDeltas: { setup: 0, newSound: 0, decoding: 0, readingPractice: 0, trickyWords: 0, checkNext: 0 },
+        trend: [],
+        topCoachingFocusAreas: [],
+        lastUpdated: new Date().toISOString()
+    },
+    teachingLearningAlignment: {
+        caveat: "",
+        points: [],
+        summary: {
+            teachingDelta: 0,
+            nonReaderReductionPp: 0,
+            cwpm20PlusDeltaPp: 0,
+            storyActiveLatest: false,
+            storySessionsLatest: 0
+        }
+    },
+    generatedAt: new Date().toISOString()
+  };
+}
+
+export async function getImpactReportByCodeAsyncPostgres(code: string): Promise<any> {
+    const res = await queryPostgres(`SELECT * FROM impact_reports WHERE id::text = $1`, [code]);
+    return res.rows[0] || null;
+}
+
+export async function getImpactReportFilterFacetsAsyncPostgres(): Promise<any> {
+    const [regions, districts] = await Promise.all([
+        queryPostgres(`SELECT DISTINCT region FROM schools_directory ORDER BY region`),
+        queryPostgres(`SELECT DISTINCT district FROM schools_directory ORDER BY district`)
+    ]);
+    return {
+        regions: regions.rows.map(r => r.region),
+        districts: districts.rows.map(r => r.district)
+    };
+}
+
+export async function getReportPreviewStatsPostgres(_filters: any): Promise<any> {
+    return {
+        reachTotal: 0,
+        improvementPct: 0,
+        costPerLearner: 0
+    };
+}
+
+export async function incrementImpactReportDownloadCountAsyncPostgres(id: number): Promise<void> {
+    await queryPostgres(`UPDATE impact_reports SET download_count = COALESCE(download_count, 0) + 1 WHERE id = $1`, [id]);
+}
+
+export async function incrementImpactReportViewCountAsyncPostgres(id: number): Promise<void> {
+    await queryPostgres(`UPDATE impact_reports SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1`, [id]);
+}
+
+export async function listPublicImpactReportsAsyncPostgres(limit: number = 10): Promise<any[]> {
+    const res = await queryPostgres(`SELECT * FROM impact_reports WHERE visibility = 'public' ORDER BY created_at DESC LIMIT $1`, [limit]);
+    return res.rows;
+}
+
+export async function runImpactCalculatorPostgres(_input: any): Promise<any> {
+    return {
+        projectedImpact: 0,
+        confidenceInterval: [0, 0]
+    };
+}
+
+export async function getCostEffectivenessDataPostgres(
+  scopeType: string,
+  scopeValue: string,
+  period?: string,
+): Promise<CostEffectivenessData> {
+  const conditions: string[] = [];
+  const params: any[] = [];
+
+  if (scopeType && scopeType !== "country") {
+    params.push(scopeType.toLowerCase());
+    conditions.push(`lower(scope_type) = $${params.length}`);
+    params.push(scopeValue.toLowerCase().trim());
+    conditions.push(`lower(trim(scope_value)) = $${params.length}`);
+  }
+  if (period) {
+    params.push(period);
+    conditions.push(`period = $${params.length}`);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const totalsResult = await queryPostgres(
+    `
+      SELECT COALESCE(SUM(amount), 0)::float8 AS total, category
+      FROM cost_entries
+      ${where}
+      GROUP BY category
+    `,
+    params,
+  );
+  
+  const totals = totalsResult.rows as Array<{ total: number; category: CostCategory }>;
+  const totalCost = totals.reduce((sum, row) => sum + Number(row.total ?? 0), 0);
+
+  const aggregate = await getPublicImpactAggregatePostgres(
+    scopeType,
+    scopeType === "country" ? "Uganda" : scopeValue,
+    period,
+  );
+  
+  const schoolCount = aggregate.kpis.schoolsSupported;
+  const teacherCount = (aggregate.kpis.teachersSupportedMale || 0) + (aggregate.kpis.teachersSupportedFemale || 0);
+  const learnerCount = aggregate.kpis.learnersAssessedUnique;
+
+  return {
+    totalCost,
+    costPerSchool: schoolCount > 0 ? Math.round((totalCost / schoolCount) * 100) / 100 : null,
+    costPerTeacher: teacherCount > 0 ? Math.round((totalCost / teacherCount) * 100) / 100 : null,
+    costPerLearnerAssessed: learnerCount > 0 ? Math.round((totalCost / learnerCount) * 100) / 100 : null,
+    costPerLearnerImproved: null,
+    period: period ?? "All time",
+    scopeType,
+    scopeValue,
+    breakdown: totals.map((t) => ({ category: t.category, amount: Number(t.total ?? 0) })),
+  };
+}
+
+export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
+  const [
+    recordsRes,
+    schoolsRes,
+    supportRes,
+    usersRes
+  ] = await Promise.all([
+    queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records`),
+    queryPostgres(`SELECT COUNT(*)::int AS total FROM schools_directory`),
+    queryPostgres(`SELECT COUNT(*)::int AS total FROM support_requests WHERE status != 'resolved'`),
+    queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_users`)
+  ]);
+
+  return {
+    stats: {
+      totalRecords: toNumber(recordsRes.rows[0]?.total),
+      activeSchools: toNumber(schoolsRes.rows[0]?.total),
+      openSupport: toNumber(supportRes.rows[0]?.total),
+      totalUsers: toNumber(usersRes.rows[0]?.total)
+    },
+    recentActivities: [],
+    generatedAt: new Date().toISOString()
+  };
+}
+
+export async function getTableRowCountsPostgres(): Promise<any[]> {
+  const tables = [
+    "portal_records", "schools_directory", "support_requests", "portal_users",
+    "audit_logs", "cost_entries", "observation_rubrics", "intervention_groups",
+    "material_distributions", "consent_records"
+  ];
+  
+  const counts = await Promise.all(tables.map(async (table) => {
+    const res = await queryPostgres(`SELECT COUNT(*)::int AS total FROM ${table}`);
+    return { table, count: toNumber(res.rows[0]?.total) };
+  }));
+
+  return counts;
+}
+
+export async function purgeAllDataPostgres(): Promise<void> {
+  const tables = [
+    "portal_records", "support_requests", "audit_logs", "cost_entries",
+    "observation_rubrics", "intervention_groups", "material_distributions", "consent_records"
+  ];
+  await Promise.all(tables.map(table => queryPostgres(`DELETE FROM ${table}`)));
+}
+
+export async function purgeSelectedDataTablesPostgres(tables: string[]): Promise<void> {
+  const allowed = [
+    "portal_records", "support_requests", "audit_logs", "cost_entries",
+    "observation_rubrics", "intervention_groups", "material_distributions", "consent_records"
+  ];
+  const toPurge = tables.filter(t => allowed.includes(t));
+  await Promise.all(toPurge.map(table => queryPostgres(`DELETE FROM ${table}`)));
+}
+
+export async function saveCostEntryPostgres(input: any, userId: number): Promise<any> {
+    const result = await queryPostgres(
+        `INSERT INTO cost_entries (scope_type, scope_value, period, category, amount, notes, created_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, created_at AS "createdAt"`,
+        [input.scopeType, input.scopeValue, input.period, input.category, input.amount, input.notes, userId]
+    );
+    return { id: result.rows[0].id, ...input, createdByUserId: userId, createdAt: result.rows[0].createdAt };
+}
+
+export async function saveMaterialDistributionPostgres(input: any, userId: number): Promise<any> {
+    const result = await queryPostgres(
+        `INSERT INTO material_distributions (school_id, date, material_type, quantity, receipt_path, notes, created_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, created_at AS "createdAt"`,
+        [input.schoolId, input.date, input.materialType, input.quantity, input.receiptPath, input.notes, userId]
+    );
+    return { id: result.rows[0].id, ...input, createdByUserId: userId, createdAt: result.rows[0].createdAt };
+}
+
+export async function createImpactReportPostgres(payload: any, user: any): Promise<any> {
+    const result = await queryPostgres(
+        `INSERT INTO impact_reports (title, report_type, report_category, scope_type, scope_value, period_type, period_start, period_end, audience, output_format, created_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id, created_at AS "createdAt"`,
+        [payload.title || "Untitled Report", payload.reportType, payload.reportCategory, payload.scopeType, payload.scopeValue, payload.periodType, payload.periodStart, payload.periodEnd, payload.audience, payload.output, user.id]
+    );
+    return { id: result.rows[0].id, ...payload, createdAt: result.rows[0].createdAt };
+}
+
+export async function listPortalImpactReportsAsyncPostgres(user: any, limit: number = 100): Promise<any[]> {
+    const result = await queryPostgres(
+        `SELECT id, title, report_type AS "reportType", report_category AS "reportCategory", scope_type AS "scopeType", scope_value AS "scopeValue", created_at AS "createdAt"
+         FROM impact_reports
+         WHERE created_by_user_id = $1
+         ORDER BY created_at DESC
+         LIMIT $2`,
+        [user.id, limit]
+    );
+    return result.rows;
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listGraduationQueueAsync } from "@/lib/db";
+import { listGraduationQueueAsync } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";

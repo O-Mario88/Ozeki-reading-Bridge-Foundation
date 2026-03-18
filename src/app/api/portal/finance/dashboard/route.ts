@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFinanceDashboardSummary, listFinanceEmailLogs } from "@/lib/finance-db";
+import { getFinanceDashboardSummary, listFinanceEmailLogs } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";

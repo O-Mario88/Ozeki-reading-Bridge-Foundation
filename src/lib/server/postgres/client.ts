@@ -1,11 +1,12 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
+import { assertPostgres, getPostgresConnectionSummary } from "@/lib/assertPostgres";
 
 const globalForPg = globalThis as typeof globalThis & {
   __orbfPgPool?: Pool;
   __orbfPgConnectionLogged?: boolean;
 };
 
-function getDatabaseUrl() {
+function getDatabaseUrlRaw() {
   return process.env.DATABASE_URL?.trim() || "";
 }
 
@@ -21,57 +22,28 @@ function isProductionRuntime() {
   return (process.env.NODE_ENV ?? "").trim().toLowerCase() === "production";
 }
 
-function shouldUseSsl() {
+function shouldUseSsl(databaseUrl?: string) {
   const value = (process.env.DATABASE_SSL ?? process.env.DB_SSL_REQUIRE)?.trim().toLowerCase();
   if (!value) {
-    return getDatabaseUrl().includes("amazonaws.com");
+    const candidate = databaseUrl ?? getDatabaseUrlRaw();
+    return candidate.includes("amazonaws.com");
   }
   return value === "1" || value === "true" || value === "require" || value === "yes";
 }
 
 export function isPostgresConfigured() {
-  return getDatabaseUrl().length > 0;
+  const raw = getDatabaseUrlRaw();
+  if (!raw) {
+    return false;
+  }
+  assertPostgres(raw);
+  return true;
 }
 
-export type PostgresRuntimeInfo = {
-  activeDb: "postgres";
-  host: string;
-  port: string;
-  database: string;
-  ssl: boolean;
-};
+export type PostgresRuntimeInfo = ReturnType<typeof getPostgresConnectionSummary>;
 
 export function getPostgresRuntimeInfo(): PostgresRuntimeInfo {
-  const databaseUrl = getDatabaseUrl();
-  if (!databaseUrl) {
-    return {
-      activeDb: "postgres",
-      host: "unconfigured",
-      port: "n/a",
-      database: "n/a",
-      ssl: shouldUseSsl(),
-    };
-  }
-
-  try {
-    const parsed = new URL(databaseUrl);
-    const databaseName = parsed.pathname.replace(/^\//, "") || "default";
-    return {
-      activeDb: "postgres",
-      host: parsed.hostname || "unknown",
-      port: parsed.port || "5432",
-      database: databaseName,
-      ssl: shouldUseSsl(),
-    };
-  } catch {
-    return {
-      activeDb: "postgres",
-      host: "invalid-url",
-      port: "n/a",
-      database: "n/a",
-      ssl: shouldUseSsl(),
-    };
-  }
+  return getPostgresConnectionSummary(assertPostgres());
 }
 
 function logPostgresSelectionOnce() {
@@ -86,19 +58,14 @@ function logPostgresSelectionOnce() {
 }
 
 export function requirePostgresConfigured() {
-  if (!isPostgresConfigured()) {
-    throw new Error("DATABASE_URL is not configured. PostgreSQL is required for this backend.");
-  }
+  return assertPostgres();
 }
 
 export function getPostgresPool() {
-  if (isProductionRuntime() && !isPostgresConfigured()) {
-    throw new Error("DATABASE_URL is required in production. SQLite is disabled.");
-  }
+  const databaseUrl = assertPostgres();
 
-  const databaseUrl = getDatabaseUrl();
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not configured.");
+  if (isProductionRuntime() && !databaseUrl) {
+    throw new Error("DATABASE_URL is required in production. PostgreSQL is required.");
   }
 
   if (!globalForPg.__orbfPgPool) {
@@ -107,7 +74,7 @@ export function getPostgresPool() {
       max: Number(process.env.DATABASE_POOL_MAX ?? 10),
       idleTimeoutMillis: Number(process.env.DATABASE_IDLE_TIMEOUT_MS ?? 30_000),
       allowExitOnIdle: true,
-      ssl: shouldUseSsl() ? { rejectUnauthorized: false } : undefined,
+      ssl: shouldUseSsl(databaseUrl) ? { rejectUnauthorized: false } : undefined,
     });
     if (toBooleanFlag(process.env.LOG_ACTIVE_DB, true)) {
       logPostgresSelectionOnce();

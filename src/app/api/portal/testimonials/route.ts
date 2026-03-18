@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   getSchoolDirectoryRecord,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { resolveMimeType } from "@/lib/media-response";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";

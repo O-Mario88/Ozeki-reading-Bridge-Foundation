@@ -1,6 +1,6 @@
 import { PortalDashboardClient } from "@/components/portal/PortalDashboardClient";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getPortalDashboardData, listPortalRecordsAsync } from "@/lib/db";
+import { getPortalDashboardData, listPortalRecordsAsync } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 import { buildPerformanceCascade } from "@/lib/performance-utils";
 

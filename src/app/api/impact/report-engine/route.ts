@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
-import { getPublicImpactAggregate } from "@/lib/db";
+import { getPublicImpactAggregate } from "@/services/dataService";
 import {
   buildPublicDashboardReportModel,
   generatePublicDashboardNarrative,

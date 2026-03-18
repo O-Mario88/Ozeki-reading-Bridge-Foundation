@@ -4,7 +4,7 @@ import {
   createPartnerApiClientAsync,
   listPartnerApiClientsAsync,
   setPartnerApiClientActiveAsync,
-} from "@/lib/national-intelligence";
+} from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canManagePartnerApiClients } from "@/lib/national-intelligence-auth";
 
@@ -26,7 +26,7 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canManagePartnerApiClients(user)) {
+  if (!canManagePartnerApiClients(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canManagePartnerApiClients(user)) {
+  if (!canManagePartnerApiClients(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -80,7 +80,7 @@ export async function PATCH(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canManagePartnerApiClients(user)) {
+  if (!canManagePartnerApiClients(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

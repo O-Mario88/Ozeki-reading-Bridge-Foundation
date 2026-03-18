@@ -8,7 +8,7 @@ import {
     autoSuggestMatches,
     getReconciliationSummary,
     listFinanceLedgerTransactions,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import type { FinanceCurrency, FinanceMatchStatus, FinanceStatementAccountType } from "@/lib/types";
 
 /* GET — list statement lines + unmatched ledger transactions + summary */

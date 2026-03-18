@@ -4,7 +4,7 @@ import {
   listSchoolSupportStatuses,
   listTeacherSupportStatuses,
   recomputeLearningAutomationSnapshots,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  generateNationalReportPack,
+  generateNationalReportPackAsync as generateNationalReportPack,
   listNationalReportPacksAsync,
   listNationalReportPresets,
-} from "@/lib/national-intelligence";
+} from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canAccessNationalIntelligenceInternal } from "@/lib/national-intelligence-auth";
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canAccessNationalIntelligenceInternal(user)) {
+  if (!canAccessNationalIntelligenceInternal(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canAccessNationalIntelligenceInternal(user)) {
+  if (!canAccessNationalIntelligenceInternal(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

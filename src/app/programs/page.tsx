@@ -1,7 +1,7 @@
 import { CtaBand } from "@/components/CtaBand";
 import { PageHero } from "@/components/PageHero";
 import Link from "next/link";
-import { getImpactSummary } from "@/lib/db";
+import { getImpactSummary } from "@/services/dataService";
 import { PROGRAM_DIRECTORY_DETAILS } from "@/lib/home-static-data";
 
 export const metadata = {

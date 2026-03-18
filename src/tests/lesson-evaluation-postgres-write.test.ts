@@ -4,7 +4,7 @@ import {
   createLessonEvaluationAsync,
   updateLessonEvaluationAsync,
   voidLessonEvaluationAsync,
-} from "../lib/db";
+} from "../lib/db-api";
 import { LESSON_EVALUATION_ITEMS } from "../lib/lesson-evaluation";
 import { isPostgresConfigured, queryPostgres } from "../lib/server/postgres/client";
 

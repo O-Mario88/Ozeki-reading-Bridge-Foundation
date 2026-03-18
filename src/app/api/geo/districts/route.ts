@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listGeoDistricts } from "@/lib/db";
+import { listGeoDistricts } from "@/services/dataService";
 
 export async function GET(req: NextRequest) {
     try {

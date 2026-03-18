@@ -3,7 +3,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import {
   getPortalOperationalReportsData,
   listPortalImpactReportsAsync,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { PortalImpactReportsManager } from "@/components/portal/PortalImpactReportsManager";
 import { requirePortalUser, getPortalHomePath } from "@/lib/portal-auth";
 import { redirect } from "next/navigation";

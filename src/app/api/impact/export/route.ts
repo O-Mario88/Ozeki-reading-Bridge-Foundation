@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getGovernmentViewData } from "@/lib/db";
+import { getGovernmentViewData } from "@/services/dataService";
 
 export const runtime = "nodejs";
 

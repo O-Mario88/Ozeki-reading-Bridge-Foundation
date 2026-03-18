@@ -1,6 +1,6 @@
 import { SchoolProfileView } from "@/components/portal/SchoolProfileView";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getSchoolAccountProfile, getSchoolDirectoryRecord } from "@/lib/db";
+import { getSchoolAccountProfile, getSchoolDirectoryRecord } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";

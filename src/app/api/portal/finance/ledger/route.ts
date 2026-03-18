@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
-import { exportFinanceRowsToCsv, listFinanceLedgerTransactions } from "@/lib/finance-db";
+import { exportFinanceRowsToCsv, listFinanceLedgerTransactions } from "@/services/financeService";
 
 export const runtime = "nodejs";
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
-import { runFinanceAuditSweep } from "@/lib/finance-db";
+import { runFinanceAuditSweep } from "@/services/financeService";
 
 export const runtime = "nodejs";
 

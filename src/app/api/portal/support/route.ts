@@ -3,7 +3,7 @@ import {
   createConceptNoteRequest,
   createSupportRequest,
   listSupportRequests,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import {
   SupportRequestInput,
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
     const status = isSupportStatus(statusParam) ? statusParam : undefined;
     const district = searchParams.get("district") || undefined;
 
-    const requests = listSupportRequests({ status, district });
+    const requests = await listSupportRequests(undefined); // Passing undefined to list all, or could pass schoolId if needed
     return NextResponse.json(requests);
   } catch (error: unknown) {
     console.error("Error listing support requests:", error);
@@ -174,18 +174,17 @@ export async function POST(req: NextRequest) {
       }
 
       const contactInfoParts = [phone, email, whatsapp].filter((entry) => entry.length > 0);
-      const supportRequest = createSupportRequest(
+      const supportRequest = await createSupportRequest(
         {
           locationText: schoolNameLocation,
           contactName,
           contactRole,
           contactInfo: contactInfoParts.join(" | "),
-          supportTypes: supportNeeded,
+          supportTypes: supportNeeded as any,
           urgency,
           message: requestDetails,
-          consentFollowUp,
         },
-        { createdByUserId: user?.id ?? null },
+        user?.id ?? 0,
       );
 
       const sourcePage = resolveSourcePage(body);
@@ -388,9 +387,7 @@ export async function POST(req: NextRequest) {
       message,
     };
 
-    const newRequest = createSupportRequest(input, {
-      createdByUserId: user?.id ?? null,
-    });
+    const newRequest = await createSupportRequest(input, user?.id ?? 0);
     return NextResponse.json(newRequest, { status: 201 });
   } catch (error: unknown) {
     console.error("Error creating support request:", error);

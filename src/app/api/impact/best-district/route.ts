@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPublicImpactAggregate } from "@/lib/db";
+import { getPublicImpactAggregate } from "@/services/dataService";
 import {
   getReadingLevelPerformanceSummary,
   type ReadingLevelPerformanceSummary,

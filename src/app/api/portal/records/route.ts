@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createPortalRecordAsync, listPortalRecordsAsync } from "@/lib/db";
+import { createPortalRecord, listPortalRecords } from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { PortalRecordFilters, PortalRecordPayload } from "@/lib/types";
 
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
 
   try {
     const filters = parseFilters(request);
-    const records = await listPortalRecordsAsync(filters, user);
+    const records = await listPortalRecords(filters);
     return NextResponse.json({ records });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = createRecordSchema.parse(await request.json());
-    const reviewer = canReview(user);
+    const reviewer = canReview(user as any);
 
     if (!reviewer && (payload.status === "Returned" || payload.status === "Approved")) {
       return NextResponse.json(
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const record = await createPortalRecordAsync(
+    const record = await createPortalRecord(
       {
         ...payload,
         programType: payload.programType?.trim() || undefined,
@@ -133,13 +133,13 @@ export async function POST(request: Request) {
         followUpOwnerUserId: payload.followUpOwnerUserId,
         payload: cleanPayload(payload.payload),
       },
-      user,
+      user.id,
     );
 
     if (payload.module === "assessment" || payload.module === "story") {
       try {
-        const { runEducationDataQualitySweep } = await import("@/lib/national-intelligence");
-        runEducationDataQualitySweep({
+        const { runEducationDataQualitySweepAsync } = await import("@/lib/national-intelligence-async");
+        runEducationDataQualitySweepAsync({
           user,
           scopeType: "district",
           scopeId: payload.district,

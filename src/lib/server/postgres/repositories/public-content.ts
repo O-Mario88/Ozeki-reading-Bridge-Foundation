@@ -1526,3 +1526,58 @@ export async function listStoryCommentsPostgres(
   );
   return result.rows.map(mapStoryComment);
 }
+
+// Story Management Functions
+export async function getStoryByIdPostgres(id: number): Promise<any> {
+    const result = await queryPostgres(`SELECT * FROM stories WHERE id = $1`, [id]);
+    return result.rows[0];
+}
+
+export async function listStoryEntriesPostgres(filters: any = {}): Promise<any[]> {
+    let query = `SELECT * FROM stories WHERE 1=1`;
+    const params: any[] = [];
+    if (filters.schoolId) {
+        params.push(filters.schoolId);
+        query += ` AND school_id = $${params.length}`;
+    }
+    query += ` ORDER BY created_at DESC`;
+    const result = await queryPostgres(query, params);
+    return result.rows;
+}
+
+export async function saveStoryEntryPostgres(input: any, userId: number): Promise<any> {
+    const result = await queryPostgres(
+        `INSERT INTO stories (title, content, author_name, school_id, created_by_user_id)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, created_at AS "createdAt"`,
+        [input.title, input.content, input.authorName, input.schoolId, userId]
+    );
+    return { id: result.rows[0].id, ...input, createdAt: result.rows[0].createdAt };
+}
+
+export async function deleteStoryEntryPostgres(id: number): Promise<void> {
+    await queryPostgres(`DELETE FROM stories WHERE id = $1`, [id]);
+}
+
+export async function publishStoryEntryPostgres(id: number): Promise<void> {
+    await queryPostgres(`UPDATE stories SET is_published = TRUE, published_at = NOW() WHERE id = $1`, [id]);
+}
+
+export async function unpublishStoryEntryPostgres(id: number): Promise<void> {
+    await queryPostgres(`UPDATE stories SET is_published = FALSE WHERE id = $1`, [id]);
+}
+
+export async function listStoryAnthologiesPostgres(): Promise<any[]> {
+    const result = await queryPostgres(`SELECT * FROM anthologies ORDER BY created_at DESC`);
+    return result.rows;
+}
+
+export async function saveStoryAnthologyPostgres(input: any): Promise<any> {
+    const result = await queryPostgres(
+        `INSERT INTO anthologies (title, slug, scope_type, school_id)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [input.title, input.slug, input.scopeType, input.schoolId]
+    );
+    return { id: result.rows[0].id, ...input };
+}

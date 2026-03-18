@@ -8,7 +8,7 @@ import {
     archivePublicSnapshot,
     publishAuditedStatement,
     archiveAuditedStatement,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import type { FinanceCurrency } from "@/lib/types";
 
 function errorMessage(error: unknown, fallback: string) {

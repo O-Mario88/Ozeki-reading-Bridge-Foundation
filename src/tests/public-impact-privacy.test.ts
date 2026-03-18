@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getPublicImpactAggregate } from "../lib/db";
+import { getPublicImpactAggregate } from "../lib/db-api";
 import { toPublicImpactResponse } from "../app/api/impact/helpers";
 
 const RESTRICTED_KEYS = new Set([

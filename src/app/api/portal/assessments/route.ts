@@ -7,7 +7,7 @@ import {
   logAuditEvent,
   saveAssessmentRecordAsync,
   validateParticipantBelongsToSchool,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1 } from "@/lib/mastery-assessment";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 import { AssessmentRecordInput } from "@/lib/types";

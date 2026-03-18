@@ -4,7 +4,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import {
   getSchoolDirectoryRecord,
   getTeacherImprovementProfileAsync,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";

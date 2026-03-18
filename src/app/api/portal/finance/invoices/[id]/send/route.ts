@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { sendFinanceInvoice } from "@/lib/finance-db";
+import { sendFinanceInvoice } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";

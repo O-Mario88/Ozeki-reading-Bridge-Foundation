@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import {
     logAuditEvent,
-    saveConsentRecordAsync,
-    saveCostEntryAsync,
-    saveInterventionGroupAsync,
-    saveMaterialDistributionAsync,
-    saveObservationRubricAsync,
-} from "@/lib/db";
+    saveConsentRecord,
+    saveCostEntry,
+    saveInterventionGroup,
+    saveMaterialDistribution,
+    saveObservationRubric,
+} from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { RubricIndicator } from "@/lib/types";
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
         switch (formType) {
             case "cost": {
-                result = await saveCostEntryAsync(
+                result = await saveCostEntry(
                     {
                         scopeType: data.scopeType ?? "country",
                         scopeValue: data.scopeValue ?? "Uganda",
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
                         indicators.push({ key: keys[i - 1], label: labels[i - 1], score: Number(data[`score${i}`]), maxScore: 5 });
                     }
                 }
-                result = await saveObservationRubricAsync(
+                result = await saveObservationRubric(
                     {
                         schoolId: Number(data.schoolId),
                         teacherUid: data.teacherUid,
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
             }
 
             case "intervention": {
-                result = await saveInterventionGroupAsync(
+                result = await saveInterventionGroup(
                     {
                         schoolId: Number(data.schoolId),
                         grade: data.grade,
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
             }
 
             case "material": {
-                result = await saveMaterialDistributionAsync(
+                result = await saveMaterialDistribution(
                     {
                         schoolId: Number(data.schoolId),
                         date: data.date,
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
             }
 
             case "consent": {
-                result = await saveConsentRecordAsync(
+                result = await saveConsentRecord(
                     {
                         schoolId: Number(data.schoolId),
                         consentType: data.consentType,

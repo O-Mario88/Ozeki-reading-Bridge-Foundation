@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PortalTestimonialsManager } from "@/components/portal/PortalTestimonialsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listSchoolDirectoryRecords } from "@/lib/db";
+import { listSchoolDirectoryRecords } from "@/services/dataService";
 import { requirePortalUser } from "@/lib/portal-auth";
 import { listPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
 

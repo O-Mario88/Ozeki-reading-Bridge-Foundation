@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listFinanceHighRiskTransactions } from "@/lib/finance-db";
+import { listFinanceHighRiskTransactions } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";

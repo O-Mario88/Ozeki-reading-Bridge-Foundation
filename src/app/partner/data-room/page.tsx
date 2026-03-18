@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listPublicImpactReportsAsync, getImpactSummary } from "@/lib/db";
+import { listPublicImpactReportsAsync, getImpactSummary } from "@/services/dataService";
 
 export const metadata = {
     title: "Partner Data Room — Ozeki Reading Bridge Foundation",

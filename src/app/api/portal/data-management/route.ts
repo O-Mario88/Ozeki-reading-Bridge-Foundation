@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTableRowCounts, purgeAllData, purgeSelectedDataTables } from "@/lib/db";
+import { getTableRowCounts, purgeAllData, purgeSelectedDataTables } from "@/services/dataService";
 import { authorizeSuperAdmin } from "@/app/api/portal/_shared/auth";
 
 export const runtime = "nodejs";

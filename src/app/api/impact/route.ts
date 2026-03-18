@@ -4,7 +4,7 @@ import {
   runImpactCalculator,
   getGovernmentViewData,
   getPublicImpactAggregate,
-} from "@/lib/db";
+} from "@/services/dataService";
 import {
   buildFidelityFromAggregate,
   buildLearningGainsFromAggregate,

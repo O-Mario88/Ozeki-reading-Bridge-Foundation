@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, rgb } from "pdf-lib";
-import { getImpactReportByCodeAsync, incrementImpactReportDownloadCountAsync } from "@/lib/db";
+import { getImpactReportByCodeAsync, incrementImpactReportDownloadCountAsync } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { embedPdfSerifFonts } from "@/lib/pdf-fonts";
 import {

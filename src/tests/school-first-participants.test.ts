@@ -4,7 +4,7 @@ import {
   createPortalRecordAsync,
   createSchoolDirectoryRecord,
   getPortalUserByEmail,
-} from "../lib/db";
+} from "../lib/db-api";
 import { queryPostgres } from "../lib/server/postgres/client";
 import type { PortalUser } from "../lib/types";
 

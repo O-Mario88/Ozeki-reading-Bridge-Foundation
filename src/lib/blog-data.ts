@@ -1,19 +1,9 @@
 import { blogPosts } from "@/lib/content";
 import {
-  getPublishedPortalBlogPostBySlug,
   getPublishedPortalBlogPostBySlugAsync,
-  listPublishedPortalBlogPosts,
   listPublishedPortalBlogPostsAsync,
-} from "@/lib/blog-db";
+} from "@/services/blogService";
 import { BlogPost } from "@/lib/types";
-
-function safeListPublishedPortalPosts() {
-  try {
-    return listPublishedPortalBlogPosts();
-  } catch {
-    return [] as BlogPost[];
-  }
-}
 
 async function safeListPublishedPortalPostsAsync() {
   try {
@@ -23,44 +13,20 @@ async function safeListPublishedPortalPostsAsync() {
   }
 }
 
-export function getMergedPublishedBlogPosts(): BlogPost[] {
-  const mergedBySlug = new Map<string, BlogPost>();
-  blogPosts.forEach((post) => {
-    mergedBySlug.set(post.slug, post);
-  });
-  safeListPublishedPortalPosts().forEach((post) => {
-    mergedBySlug.set(post.slug, post);
-  });
-
-  return [...mergedBySlug.values()].sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-  );
-}
-
 export async function getMergedPublishedBlogPostsAsync(): Promise<BlogPost[]> {
   const mergedBySlug = new Map<string, BlogPost>();
   blogPosts.forEach((post) => {
     mergedBySlug.set(post.slug, post);
   });
-  (await safeListPublishedPortalPostsAsync()).forEach((post) => {
+  
+  const portalPosts = await safeListPublishedPortalPostsAsync();
+  portalPosts.forEach((post) => {
     mergedBySlug.set(post.slug, post);
   });
 
   return [...mergedBySlug.values()].sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
   );
-}
-
-export function getMergedPublishedBlogPostBySlug(slug: string): BlogPost | null {
-  try {
-    const portalPost = getPublishedPortalBlogPostBySlug(slug);
-    if (portalPost) {
-      return portalPost;
-    }
-  } catch {
-    // Fall through to static content for resilience.
-  }
-  return blogPosts.find((post) => post.slug === slug) ?? null;
 }
 
 export async function getMergedPublishedBlogPostBySlugAsync(slug: string): Promise<BlogPost | null> {
@@ -75,10 +41,7 @@ export async function getMergedPublishedBlogPostBySlugAsync(slug: string): Promi
   return blogPosts.find((post) => post.slug === slug) ?? null;
 }
 
-export function getMergedBlogCategories() {
-  return [...new Set(getMergedPublishedBlogPosts().map((post) => post.category))].sort();
-}
-
 export async function getMergedBlogCategoriesAsync() {
-  return [...new Set((await getMergedPublishedBlogPostsAsync()).map((post) => post.category))].sort();
+  const posts = await getMergedPublishedBlogPostsAsync();
+  return [...new Set(posts.map((post) => post.category))].sort();
 }

@@ -5,7 +5,7 @@ import {
   listPortalBlogPostsAsync,
   savePortalBlogPostAsync,
   setPortalBlogPublishStatusAsync,
-} from "@/lib/blog-db";
+} from "@/services/blogService";
 import { getCurrentPortalUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ImpactExplorerProfiles } from "@/lib/db";
+import type { ImpactExplorerProfiles } from "@/services/dataService";
 import { PortalAnalyticsData, PortalRecordModule, PortalRecordStatus, PortalUser } from "@/lib/types";
 
 interface PortalAnalyticsDashboardProps {

@@ -145,6 +145,19 @@ export async function findPortalUserAuthByIdentifierPostgres(identifier: string)
   return result.rows[0] ? mapPortalUserAuthRow(result.rows[0]) : null;
 }
 
+export async function authenticatePortalUserPostgres(identifier: string, passwordHash: string) {
+  const auth = await findPortalUserAuthByIdentifierPostgres(identifier);
+  if (!auth || auth.passwordHash !== passwordHash) {
+    return null;
+  }
+  const { passwordHash: _, ...user } = auth;
+  return user;
+}
+
+export async function createPortalSessionPostgres(userId: number, token: string, expiresAt: string) {
+  await insertPortalSessionPostgres(userId, token, expiresAt);
+}
+
 export async function findPortalUserAuthByIdPostgres(userId: number) {
   const result = await queryPostgres(
     `

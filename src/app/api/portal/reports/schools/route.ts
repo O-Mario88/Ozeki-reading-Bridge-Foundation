@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPortalOperationalReportsData } from "@/lib/db";
+import { getPortalOperationalReportsData } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { PortalSchoolReportRow } from "@/lib/types";
 

@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { ImpactReportFactPack, ImpactReportNarrative, ImpactReportSectionNarrative } from "./types";
-import { buildImpactNarrative } from "./db";
+import { buildImpactNarrative } from "./db-api";
 
 export async function generateImpactNarrativeFromAI(
     factPack: ImpactReportFactPack,

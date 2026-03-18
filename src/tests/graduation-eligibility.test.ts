@@ -13,7 +13,7 @@ import {
   reviewSchoolGraduationAsync,
   saveAssessmentRecordAsync,
   updateGraduationSettingsAsync,
-} from "../lib/db";
+} from "../lib/db-api";
 import { LESSON_EVALUATION_ITEMS } from "../lib/lesson-evaluation";
 import { queryPostgres } from "../lib/server/postgres/client";
 import type { PortalUser } from "../lib/types";

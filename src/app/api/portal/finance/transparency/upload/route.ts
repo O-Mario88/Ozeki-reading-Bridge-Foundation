@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
-import { uploadAuditedStatement } from "@/lib/finance-db";
+import { uploadAuditedStatement } from "@/services/financeService";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import fs from "node:fs/promises";
 import path from "node:path";

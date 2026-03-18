@@ -5,7 +5,7 @@ import {
     deallocatePayment,
     listPaymentAllocations,
     listInvoiceAllocations,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 
 /* GET — list allocations for a payment or invoice */
 export async function GET(request: NextRequest) {

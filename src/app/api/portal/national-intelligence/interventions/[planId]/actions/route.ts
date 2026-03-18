@@ -3,8 +3,8 @@ import { z } from "zod";
 import {
   addInterventionActionAsync,
   listInterventionActionsAsync,
+  listInterventionActionTypes,
 } from "@/lib/national-intelligence-async";
-import { listInterventionActionTypes } from "@/lib/national-intelligence";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canManageNationalInterventions } from "@/lib/national-intelligence-auth";
 
@@ -47,7 +47,7 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canManageNationalInterventions(user)) {
+  if (!canManageNationalInterventions(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -75,7 +75,7 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canManageNationalInterventions(user)) {
+  if (!canManageNationalInterventions(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

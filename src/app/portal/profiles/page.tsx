@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getImpactExplorerProfiles } from "@/lib/db";
+import { getImpactExplorerProfiles } from "@/services/dataService";
 import { requirePortalUser } from "@/lib/portal-auth";
 import { inferSubRegionFromDistrict } from "@/lib/uganda-locations";
 

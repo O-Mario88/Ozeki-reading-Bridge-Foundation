@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { setPortalRecordStatusAsync } from "@/lib/db";
+import { setPortalRecordStatusAsync } from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getNationalReportPdf } from "@/lib/national-intelligence";
+import { getNationalReportPdfAsync } from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { canAccessNationalIntelligenceInternal } from "@/lib/national-intelligence-auth";
 
@@ -13,18 +13,18 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canAccessNationalIntelligenceInternal(user)) {
+  if (!canAccessNationalIntelligenceInternal(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
     const params = await context.params;
-    const report = await getNationalReportPdf(params.reportCode);
+    const report = await getNationalReportPdfAsync(params.reportCode);
     if (!report) {
       return NextResponse.json({ error: "Report PDF not found." }, { status: 404 });
     }
 
-    return new NextResponse(report.bytes, {
+    return new NextResponse(Buffer.from(report.bytes), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

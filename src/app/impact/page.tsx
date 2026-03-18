@@ -4,7 +4,7 @@ import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpact
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
 import { PublicStatsBar } from "@/components/impact/PublicStatsBar";
 import { getPublicImpactMetrics } from "@/lib/server/postgres/repositories/public-metrics";
-import { getImpactReportFilterFacetsAsync, listPublicImpactReportsAsync } from "@/lib/db";
+import { getImpactReportFilterFacetsAsync, listPublicImpactReportsAsync } from "@/services/dataService";
 import {
   ImpactReportOutput,
   ImpactReportPeriodType,

@@ -4,7 +4,7 @@ import {
   createFinanceInvoiceAsync,
   exportFinanceRowsToCsv,
   listFinanceInvoices,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 

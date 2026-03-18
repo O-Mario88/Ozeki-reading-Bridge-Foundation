@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import {
   assertPartnerScopeAllowed,
   authenticatePartnerApiKeyAsync,
-  getNationalReportPdf,
+  getNationalReportPdfAsync,
   listNationalReportPacksAsync,
   logPartnerExportAsync,
-} from "@/lib/national-intelligence";
+} from "@/lib/national-intelligence-async";
 
 export const runtime = "nodejs";
 
@@ -53,7 +53,7 @@ export async function GET(
       scopeId: report.scopeId,
     });
 
-    const pdf = await getNationalReportPdf(reportCode);
+    const pdf = await getNationalReportPdfAsync(reportCode);
     if (!pdf) {
       return NextResponse.json({ error: "Report PDF not found." }, { status: 404 });
     }
@@ -67,7 +67,7 @@ export async function GET(
       format: "pdf",
     });
 
-    return new NextResponse(pdf.bytes, {
+    return new NextResponse(Buffer.from(pdf.bytes), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

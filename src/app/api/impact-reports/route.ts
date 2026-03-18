@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getImpactReportFilterFacetsAsync, listPublicImpactReportsAsync } from "@/lib/db";
+import { getImpactReportFilterFacetsAsync, listPublicImpactReportsAsync } from "@/services/dataService";
 import {
   ImpactReportAudience,
   ImpactReportOutput,

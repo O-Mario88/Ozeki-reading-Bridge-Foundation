@@ -4,7 +4,7 @@ import {
     upsertMonthlyBudget,
     listMonthlyBudgets,
     getBudgetVsActual,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import type { FinanceCurrency } from "@/lib/types";
 
 /* GET — list budgets or budget vs actual for a month */

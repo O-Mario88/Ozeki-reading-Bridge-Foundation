@@ -5,7 +5,7 @@ import {
   listFinanceAuditExceptions,
   listFinanceHighRiskTransactions,
   listFinanceReceiptRegistry,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import { requirePortalFinanceReceiptEditorUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";

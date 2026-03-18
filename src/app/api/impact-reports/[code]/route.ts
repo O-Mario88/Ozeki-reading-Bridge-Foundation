@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from "@/lib/db";
+import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export async function GET(

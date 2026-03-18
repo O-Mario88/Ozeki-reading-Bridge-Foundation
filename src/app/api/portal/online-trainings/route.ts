@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { getPortalUserFromSession } from "@/lib/db";
+import { getPortalUserFromSession } from "@/services/dataService";
 import { listOnlineTrainingEvents, saveOnlineTrainingEvent } from "@/lib/content-db";
 import { workspaceCalendarRecipients } from "@/lib/contact";
 import {

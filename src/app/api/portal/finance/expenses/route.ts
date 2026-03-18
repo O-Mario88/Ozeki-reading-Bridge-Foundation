@@ -10,7 +10,7 @@ import {
   postFinanceExpenseAsync,
   submitFinanceExpenseAsync,
   upsertFinanceExpenseReceiptsAsync,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";

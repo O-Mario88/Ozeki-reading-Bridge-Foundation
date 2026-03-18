@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getGovernmentViewData } from "@/lib/db";
+import { getGovernmentViewData } from "@/services/dataService";
 import {
     UGANDA_GEOGRAPHY,
     UGANDA_REGIONS,

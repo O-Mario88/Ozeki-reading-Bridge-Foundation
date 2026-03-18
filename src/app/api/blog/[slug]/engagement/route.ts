@@ -6,7 +6,7 @@ import {
   getBlogPostEngagementAsync,
   recordBlogPostViewAsync,
   toggleBlogPostLikeAsync,
-} from "@/lib/blog-db";
+} from "@/services/blogService";
 import { getMergedPublishedBlogPostBySlugAsync } from "@/lib/blog-data";
 
 export const dynamic = "force-dynamic";

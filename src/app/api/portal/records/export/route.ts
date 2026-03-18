@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { listPortalRecordsAsync, logAuditEvent } from "@/lib/db";
+import { listPortalRecordsAsync, logAuditEvent } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { PortalRecordFilters } from "@/lib/types";
 

@@ -5,7 +5,7 @@ import {
   exportFinanceRowsToCsv,
   issueFinanceReceipt,
   listFinanceReceipts,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { csvHeaders, requireFinanceReceiptEditor } from "@/app/api/portal/finance/_utils";
 

@@ -10,7 +10,7 @@ import {
   listAuditLogs,
   listTeachersBySchool,
   updateSupportRequest,
-} from "../lib/db";
+} from "../lib/db-api";
 import { buildDataTrustSnapshot, buildPriorityActionsFromPublicAggregate } from "../lib/decision-engine";
 import { RECOMMENDATION_CATALOG } from "../lib/recommendations";
 import { queryPostgres } from "../lib/server/postgres/client";

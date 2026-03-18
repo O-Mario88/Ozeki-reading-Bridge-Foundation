@@ -4,7 +4,7 @@ import {
   createFinanceFileRecord,
   listFinancePayments,
   recordFinancePayment,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";

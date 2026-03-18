@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { deletePortalSession } from "@/lib/db";
+import { deletePortalSession } from "@/services/dataService";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 
 export const runtime = "nodejs";

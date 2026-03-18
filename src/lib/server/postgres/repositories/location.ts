@@ -90,3 +90,69 @@ export async function getFilterLabels(
 
   return labels;
 }
+
+// Geographic Lookup Functions
+import { queryPostgres } from "@/lib/server/postgres/client";
+
+export async function listGeoRegions(): Promise<string[]> {
+    const res = await queryPostgres(`SELECT DISTINCT region FROM schools_directory WHERE region IS NOT NULL ORDER BY region`);
+    return res.rows.map(r => r.region);
+}
+
+export async function listGeoSubregions(): Promise<string[]> {
+    const res = await queryPostgres(`SELECT DISTINCT sub_region FROM schools_directory WHERE sub_region IS NOT NULL ORDER BY sub_region`);
+    return res.rows.map(r => r.sub_region);
+}
+
+export async function listGeoDistricts(): Promise<string[]> {
+    const res = await queryPostgres(`SELECT DISTINCT district FROM schools_directory WHERE district IS NOT NULL ORDER BY district`);
+    return res.rows.map(r => r.district);
+}
+
+export async function searchGeoDistricts(query: string): Promise<string[]> {
+    const res = await queryPostgres(
+        `SELECT DISTINCT district FROM schools_directory WHERE district ILIKE $1 ORDER BY district`,
+        [`%${query}%`]
+    );
+    return res.rows.map(r => r.district);
+}
+
+export async function listGeoSubcounties(district?: string): Promise<string[]> {
+    let sql = `SELECT DISTINCT sub_county FROM schools_directory WHERE sub_county IS NOT NULL`;
+    const params: any[] = [];
+    if (district) {
+        params.push(district);
+        sql += ` AND district = $1`;
+    }
+    sql += ` ORDER BY sub_county`;
+    const res = await queryPostgres(sql, params);
+    return res.rows.map(r => r.sub_county);
+}
+
+export async function listGeoParishes(subCounty?: string): Promise<string[]> {
+    let sql = `SELECT DISTINCT parish FROM schools_directory WHERE parish IS NOT NULL`;
+    const params: any[] = [];
+    if (subCounty) {
+        params.push(subCounty);
+        sql += ` AND sub_county = $1`;
+    }
+    sql += ` ORDER BY parish`;
+    const res = await queryPostgres(sql, params);
+    return res.rows.map(r => r.parish);
+}
+
+export async function listGeoSchools(filters: any = {}): Promise<any[]> {
+    let sql = `SELECT id, name, district, sub_county, parish FROM schools_directory WHERE 1=1`;
+    const params: any[] = [];
+    if (filters.district) {
+        params.push(filters.district);
+        sql += ` AND district = $${params.length}`;
+    }
+    if (filters.subCounty) {
+        params.push(filters.subCounty);
+        sql += ` AND sub_county = $${params.length}`;
+    }
+    sql += ` ORDER BY name`;
+    const res = await queryPostgres(sql, params);
+    return res.rows;
+}

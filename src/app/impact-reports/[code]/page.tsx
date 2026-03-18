@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from "@/lib/db";
+import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from "@/services/dataService";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 export const dynamic = "force-dynamic";

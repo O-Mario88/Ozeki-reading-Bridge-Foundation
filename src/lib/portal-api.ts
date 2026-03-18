@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getPortalUserFromSession } from "@/lib/db";
+import { getPortalUserFromSession } from "@/services/authService";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 
 export async function getAuthenticatedPortalUser() {

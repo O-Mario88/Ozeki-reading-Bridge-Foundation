@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getReportPreviewStats } from "@/lib/db";
+import { getReportPreviewStats } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { REPORT_CATEGORIES, programsFromReportCategory } from "@/lib/report-data-contracts";
 import { ReportCategory } from "@/lib/types";

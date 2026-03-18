@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listFinanceAuditComplianceChecks } from "@/lib/finance-db";
+import { listFinanceAuditComplianceChecks } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";

@@ -15,15 +15,30 @@ import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import {
   isPostgresConfigured,
   queryPostgres,
-  requirePostgresConfigured,
 } from "@/lib/server/postgres/client";
+import { logAuditEventPostgres } from "@/lib/server/postgres/repositories/audit";
 import type {
   PortalUser,
-  TrainingReportArtifactRecord,
   TrainingReportFacts,
   TrainingReportNarrative,
   TrainingReportScopeType,
 } from "@/lib/types";
+
+import {
+  getApprovedQuotesForReportPostgres,
+  getAssessmentCountsForReportPostgres,
+  getCoachingCountsForReportPostgres,
+  getGeographyBreakdownForReportPostgres,
+  getLeadersByCategoryForReportPostgres,
+  getParticipantSummaryForReportPostgres,
+  getTeacherByClassForReportPostgres,
+  getTeacherBySubjectForReportPostgres,
+  getTrainingFeedbackForReportPostgres,
+  getTrainingReportArtifactByCodePostgres,
+  getTrainingSessionsForReportPostgres,
+  insertTrainingReportArtifactPostgres,
+  listTrainingReportArtifactsPostgres,
+} from "@/lib/server/postgres/repositories/training-reports";
 
 const FACTS_VERSION = "TRAINING-FACTS-v1";
 const NARRATIVE_VERSION = "TRAINING-NARRATIVE-v1";
@@ -62,28 +77,6 @@ type TrainingReportEvidencePhoto = {
   tags: TrainingReportEvidenceTag[];
 };
 
-type LegacyStatement<TGet = unknown, TAll = unknown, TRun = { lastInsertRowid?: number | bigint; changes?: number }> = {
-  get(params?: unknown): TGet;
-  all(params?: unknown): TAll[];
-  run(params?: unknown): TRun;
-};
-
-type LegacyDb = {
-  prepare(sql: string): LegacyStatement;
-};
-
-function legacyDatabaseRemoved(functionName: string): never {
-  throw new Error(`${functionName} is no longer available. PostgreSQL is required for training reports.`);
-}
-
-function getDb(): LegacyDb {
-  return legacyDatabaseRemoved("getDb");
-}
-
-function logAuditEvent(..._args: unknown[]): never {
-  return legacyDatabaseRemoved("logAuditEvent");
-}
-
 const FEEDBACK_THEME_RULES: Array<{ theme: string; keywords: string[] }> = [
   { theme: "Phonics and sound routines", keywords: ["phonics", "sound", "letter", "blend", "decod"] },
   { theme: "Fluency and reading practice", keywords: ["fluency", "cwpm", "reading routine", "oral reading"] },
@@ -93,19 +86,6 @@ const FEEDBACK_THEME_RULES: Array<{ theme: string; keywords: string[] }> = [
   { theme: "Coaching and follow-up support", keywords: ["coaching", "follow-up", "follow up", "mentor", "visit"] },
   { theme: "Materials and resources", keywords: ["material", "resource", "book", "story card", "tool"] },
 ];
-
-function buildSqlInClause(values: number[], prefix: string) {
-  const params: Record<string, number> = {};
-  const placeholders = values.map((value, index) => {
-    const key = `${prefix}${index}`;
-    params[key] = value;
-    return `@${key}`;
-  });
-  return {
-    clause: placeholders.length > 0 ? placeholders.join(", ") : "NULL",
-    params,
-  };
-}
 
 function ensureDate(value: string, fallback: string) {
   if (!value) return fallback;
@@ -394,96 +374,6 @@ function extractFeedbackThemes(texts: string[]): FeedbackTheme[] {
     .slice(0, 8);
 }
 
-function isImageMimeType(mimeType: string) {
-  return mimeType.trim().toLowerCase().startsWith("image/");
-}
-
-function parseJsonObject(value: string | null | undefined) {
-  if (!value || !value.trim()) {
-    return {} as Record<string, unknown>;
-  }
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function tagsForVisitPayload(payload: Record<string, unknown>) {
-  const tags = new Set<TrainingReportEvidenceTag>();
-  const visitPathway = String(payload.visitPathway ?? payload.visit_pathway ?? "")
-    .trim()
-    .toLowerCase();
-  const hasObservationSignals =
-    visitPathway === "observation" ||
-    visitPathway === "mixed" ||
-    String(payload.teacherObserved ?? "").trim().length > 0 ||
-    String(payload.coachingProvided ?? "").trim().length > 0;
-  const hasDemoSignals =
-    visitPathway === "demo_and_meeting" ||
-    visitPathway === "mixed" ||
-    String(payload.demoDelivered ?? "").trim().toLowerCase() === "yes" ||
-    String(payload.demoTakeawaysText ?? "").trim().length > 0;
-  const hasLeadershipSignals =
-    String(payload.leadershipMeetingHeld ?? "").trim().toLowerCase() === "yes" ||
-    String(payload.leadershipSummary ?? "").trim().length > 0 ||
-    String(payload.leadershipAgreements ?? "").trim().length > 0;
-
-  if (hasObservationSignals) {
-    tags.add("lesson_observation_coaching");
-  }
-  if (hasDemoSignals) {
-    tags.add("lesson_demo");
-  }
-  if (hasLeadershipSignals) {
-    tags.add("school_leader_conversation");
-  }
-  return [...tags];
-}
-
-function selectBestEvidencePhotos(candidates: TrainingReportEvidencePhoto[], maxPhotos = 12) {
-  const ranked = [...candidates].sort((left, right) => {
-    if (right.sizeBytes !== left.sizeBytes) {
-      return right.sizeBytes - left.sizeBytes;
-    }
-    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-  });
-
-  const selected: TrainingReportEvidencePhoto[] = [];
-  const pickedPaths = new Set<string>();
-  const perTagCount = new Map<TrainingReportEvidenceTag, number>();
-  const perTagLimit = 4;
-
-  for (const candidate of ranked) {
-    if (selected.length >= maxPhotos) {
-      break;
-    }
-    if (pickedPaths.has(candidate.storedPath)) {
-      continue;
-    }
-    const wouldAddByTag = candidate.tags.some((tag) => (perTagCount.get(tag) ?? 0) < perTagLimit);
-    if (!wouldAddByTag) {
-      continue;
-    }
-    selected.push(candidate);
-    pickedPaths.add(candidate.storedPath);
-    candidate.tags.forEach((tag) => {
-      perTagCount.set(tag, (perTagCount.get(tag) ?? 0) + 1);
-    });
-  }
-
-  return selected;
-}
-
-function collectEvidencePhotos(
-  facts: TrainingReportFacts,
-  includeObservedInsights: boolean,
-): TrainingReportEvidencePhoto[] {
-  void facts;
-  void includeObservedInsights;
-  return [];
-}
 
 function renderEvidenceGallery(
   photos: TrainingReportEvidencePhoto[],
@@ -1208,402 +1098,6 @@ async function savePdfToDisk(reportCode: string, pdfBytes: Uint8Array) {
   return storedPath;
 }
 
-function parseArtifactRow(row: {
-  id: number;
-  reportCode: string;
-  scopeType: TrainingReportScopeType;
-  scopeValue: string;
-  periodStart: string;
-  periodEnd: string;
-  factsJson: string;
-  narrativeJson: string;
-  htmlReport: string;
-  pdfStoredPath: string | null;
-  generatedByUserId: number;
-  generatedByName: string;
-  generatedAt: string;
-  updatedAt: string;
-}): TrainingReportArtifactRecord {
-  return {
-    id: Number(row.id),
-    reportCode: row.reportCode,
-    scopeType: row.scopeType,
-    scopeValue: row.scopeValue,
-    periodStart: row.periodStart,
-    periodEnd: row.periodEnd,
-    facts: JSON.parse(row.factsJson) as TrainingReportFacts,
-    narrative: JSON.parse(row.narrativeJson) as TrainingReportNarrative,
-    htmlReport: row.htmlReport,
-    pdfStoredPath: row.pdfStoredPath ?? null,
-    generatedByUserId: Number(row.generatedByUserId),
-    generatedByName: row.generatedByName,
-    generatedAt: row.generatedAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function collectTrainingFacts(input: {
-  scopeType: TrainingReportScopeType;
-  scopeValue?: string;
-  periodStart?: string;
-  periodEnd?: string;
-  includeObservedInsights?: boolean;
-}): TrainingReportFacts {
-  const window = resolvePeriodWindow(input);
-  const db = getDb();
-  const whereClauses = [
-    "pr.module = 'training'",
-    "pr.deleted_at IS NULL",
-    "date(pr.date) >= date(@periodStart)",
-    "date(pr.date) <= date(@periodEnd)",
-  ];
-  const params: Record<string, string | number> = {
-    periodStart: window.periodStart,
-    periodEnd: window.periodEnd,
-  };
-
-  if (input.scopeType === "training_session") {
-    whereClauses.push("pr.id = @trainingRecordId");
-    params.trainingRecordId = Number(window.scopeValue);
-  } else if (input.scopeType === "district") {
-    whereClauses.push("lower(trim(COALESCE(sd.district, pr.district))) = lower(trim(@district))");
-    params.district = window.scopeValue;
-  } else if (input.scopeType === "region") {
-    whereClauses.push("lower(trim(COALESCE(sd.region, ''))) = lower(trim(@region))");
-    params.region = window.scopeValue;
-  } else if (input.scopeType === "sub_region") {
-    whereClauses.push("lower(trim(COALESCE(sd.sub_region, ''))) = lower(trim(@subRegion))");
-    params.subRegion = window.scopeValue;
-  }
-
-  const trainingRows = db
-    .prepare(
-      `
-      SELECT
-        pr.id,
-        pr.date,
-        pr.school_id AS schoolId,
-        COALESCE(sd.name, pr.school_name) AS schoolName,
-        COALESCE(sd.district, pr.district) AS district,
-        COALESCE(sd.region, '') AS region,
-        COALESCE(sd.sub_region, '') AS subRegion,
-        pr.follow_up_date AS followUpDate,
-        pr.follow_up_type AS followUpType,
-        pr.follow_up_owner_user_id AS followUpOwnerUserId,
-        pu.full_name AS followUpOwnerName
-      FROM portal_records pr
-      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
-      LEFT JOIN portal_users pu ON pu.id = pr.follow_up_owner_user_id
-      WHERE ${whereClauses.join(" AND ")}
-      ORDER BY pr.date ASC, pr.id ASC
-      `,
-    )
-    .all(params) as Array<{
-      id: number;
-      date: string;
-      schoolId: number | null;
-      schoolName: string;
-      district: string;
-      region: string;
-      subRegion: string;
-      followUpDate: string | null;
-      followUpType: string | null;
-      followUpOwnerUserId: number | null;
-      followUpOwnerName: string | null;
-    }>;
-
-  if (trainingRows.length === 0) {
-    throw new Error("No training records found in the selected scope and period.");
-  }
-
-  const trainingIds = trainingRows.map((row) => Number(row.id));
-  const { clause: trainingClause, params: trainingParams } = buildSqlInClause(trainingIds, "trainingId");
-
-  const participantSummary = db
-    .prepare(
-      `
-      SELECT
-        COUNT(*) AS participantsTotal,
-        SUM(CASE WHEN lower(trim(pta.participant_role)) = 'classroom teacher' THEN 1 ELSE 0 END) AS teachersTotal,
-        SUM(CASE WHEN lower(trim(pta.participant_role)) = 'school leader' THEN 1 ELSE 0 END) AS leadersTotal,
-        SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'female' THEN 1 ELSE 0 END) AS femaleTotal,
-        SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'male' THEN 1 ELSE 0 END) AS maleTotal
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      WHERE pta.portal_record_id IN (${trainingClause})
-      `,
-    )
-    .get(trainingParams) as {
-      participantsTotal: number | null;
-      teachersTotal: number | null;
-      leadersTotal: number | null;
-      femaleTotal: number | null;
-      maleTotal: number | null;
-    };
-
-  const leadersByCategory = db
-    .prepare(
-      `
-      SELECT
-        COALESCE(sc.category, 'School Leader') AS category,
-        COUNT(*) AS total,
-        SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'female' THEN 1 ELSE 0 END) AS female,
-        SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'male' THEN 1 ELSE 0 END) AS male
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      WHERE pta.portal_record_id IN (${trainingClause})
-        AND lower(trim(pta.participant_role)) = 'school leader'
-      GROUP BY COALESCE(sc.category, 'School Leader')
-      ORDER BY total DESC, category ASC
-      `,
-    )
-    .all(trainingParams) as Array<{
-      category: string;
-      total: number;
-      female: number;
-      male: number;
-    }>;
-
-  const teacherByClass = db
-    .prepare(
-      `
-      SELECT
-        COALESCE(NULLIF(trim(sc.class_taught), ''), 'Not specified') AS classTaught,
-        COUNT(*) AS total
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      WHERE pta.portal_record_id IN (${trainingClause})
-        AND lower(trim(pta.participant_role)) = 'classroom teacher'
-      GROUP BY COALESCE(NULLIF(trim(sc.class_taught), ''), 'Not specified')
-      ORDER BY total DESC, classTaught ASC
-      LIMIT 20
-      `,
-    )
-    .all(trainingParams) as Array<{ classTaught: string; total: number }>;
-
-  const teacherBySubject = db
-    .prepare(
-      `
-      SELECT
-        COALESCE(NULLIF(trim(sc.subject_taught), ''), 'Not specified') AS subjectTaught,
-        COUNT(*) AS total
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      WHERE pta.portal_record_id IN (${trainingClause})
-        AND lower(trim(pta.participant_role)) = 'classroom teacher'
-      GROUP BY COALESCE(NULLIF(trim(sc.subject_taught), ''), 'Not specified')
-      ORDER BY total DESC, subjectTaught ASC
-      LIMIT 20
-      `,
-    )
-    .all(trainingParams) as Array<{ subjectTaught: string; total: number }>;
-
-  const geographyBreakdown = db
-    .prepare(
-      `
-      SELECT
-        COALESCE(sd.region, '') AS region,
-        COALESCE(sd.sub_region, '') AS subRegion,
-        COALESCE(sd.district, pr.district) AS district,
-        COUNT(DISTINCT pr.id) AS trainingsCount,
-        COUNT(DISTINCT pr.school_id) AS schoolsCount,
-        COUNT(pta.id) AS participantsCount
-      FROM portal_records pr
-      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
-      LEFT JOIN portal_training_attendance pta ON pta.portal_record_id = pr.id
-      WHERE pr.id IN (${trainingClause})
-      GROUP BY COALESCE(sd.region, ''), COALESCE(sd.sub_region, ''), COALESCE(sd.district, pr.district)
-      ORDER BY trainingsCount DESC, district ASC
-      `,
-    )
-    .all(trainingParams) as Array<{
-      region: string;
-      subRegion: string;
-      district: string;
-      trainingsCount: number;
-      schoolsCount: number;
-      participantsCount: number;
-    }>;
-
-  const feedbackRows = db
-    .prepare(
-      `
-      SELECT
-        tf.feedback_role AS feedbackRole,
-        tf.what_went_well AS whatWentWell,
-        tf.how_training_changed_teaching AS howTrainingChangedTeaching,
-        tf.what_you_will_do_to_improve_reading_levels AS whatYouWillDoToImproveReadingLevels,
-        tf.challenges,
-        tf.recommendations_next_training AS recommendationsNextTraining
-      FROM training_feedback_entries tf
-      WHERE tf.training_record_id IN (${trainingClause})
-      `,
-    )
-    .all(trainingParams) as Array<{
-      feedbackRole: "participant" | "trainer";
-      whatWentWell: string | null;
-      howTrainingChangedTeaching: string | null;
-      whatYouWillDoToImproveReadingLevels: string | null;
-      challenges: string | null;
-      recommendationsNextTraining: string | null;
-    }>;
-
-  const themeTexts = feedbackRows.flatMap((row) => [
-    row.whatWentWell,
-    row.howTrainingChangedTeaching,
-    row.whatYouWillDoToImproveReadingLevels,
-    row.challenges,
-    row.recommendationsNextTraining,
-  ]).map((text) => stripText(text)).filter(Boolean);
-  const themes = extractFeedbackThemes(themeTexts);
-
-  const approvedQuotes = db
-    .prepare(
-      `
-      SELECT
-        pt.story_text AS quote,
-        pt.storyteller_role AS role,
-        pt.district,
-        pt.school_name AS schoolName
-      FROM portal_testimonials pt
-      WHERE pt.source_training_record_id IN (${trainingClause})
-        AND pt.source_type = 'training_feedback'
-        AND COALESCE(pt.moderation_status, 'approved') = 'approved'
-      ORDER BY pt.created_at DESC, pt.id DESC
-      LIMIT 20
-      `,
-    )
-    .all(trainingParams) as Array<{
-      quote: string;
-      role: string | null;
-      district: string | null;
-      schoolName: string | null;
-    }>;
-
-  const approvedQuoteFallback = approvedQuotes.length > 0
-    ? approvedQuotes
-    : feedbackRows
-      .flatMap((row) => [row.howTrainingChangedTeaching, row.whatYouWillDoToImproveReadingLevels])
-      .map((quote) => stripText(quote))
-      .filter((quote) => quote.length >= 20)
-      .slice(0, 10)
-      .map((quote) => ({
-        quote,
-        role: "Participant",
-        district: null,
-        schoolName: null,
-      }));
-
-  const schoolIds = [...new Set(trainingRows.map((row) => Number(row.schoolId ?? 0)).filter((id) => id > 0))];
-  let observedAfterTraining: { coachingVisitsCount: number; assessmentSessionsCount: number } | null = null;
-  if ((input.includeObservedInsights ?? true) && schoolIds.length > 0) {
-    const { clause: schoolClause, params: schoolParams } = buildSqlInClause(schoolIds, "reportSchoolId");
-    const periodEndDate = new Date(`${window.periodEnd}T00:00:00.000Z`);
-    periodEndDate.setUTCDate(periodEndDate.getUTCDate() + 120);
-    const observedEnd = toIsoDate(periodEndDate);
-
-    const coachingRow = db
-      .prepare(
-        `
-        SELECT COUNT(*) AS total
-        FROM coaching_visits
-        WHERE school_id IN (${schoolClause})
-          AND date(visit_date) >= date(@observedStart)
-          AND date(visit_date) <= date(@observedEnd)
-        `,
-      )
-      .get({
-        ...schoolParams,
-        observedStart: window.periodStart,
-        observedEnd,
-      }) as { total: number | null };
-
-    const assessmentRow = db
-      .prepare(
-        `
-        SELECT COUNT(*) AS total
-        FROM assessment_sessions
-        WHERE school_id IN (${schoolClause})
-          AND date(assessment_date) >= date(@observedStart)
-          AND date(assessment_date) <= date(@observedEnd)
-        `,
-      )
-      .get({
-        ...schoolParams,
-        observedStart: window.periodStart,
-        observedEnd,
-      }) as { total: number | null };
-
-    observedAfterTraining = {
-      coachingVisitsCount: Number(coachingRow?.total ?? 0),
-      assessmentSessionsCount: Number(assessmentRow?.total ?? 0),
-    };
-  }
-
-  return {
-    factsVersion: FACTS_VERSION,
-    scopeType: input.scopeType,
-    scopeValue: window.scopeValue,
-    scopeLabel: window.scopeLabel,
-    periodStart: window.periodStart,
-    periodEnd: window.periodEnd,
-    trainingsCount: trainingRows.length,
-    schoolsTrainedCount: new Set(trainingRows.map((row) => Number(row.schoolId ?? 0)).filter((id) => id > 0)).size,
-    participantsTotal: Number(participantSummary?.participantsTotal ?? 0),
-    teachersTotal: Number(participantSummary?.teachersTotal ?? 0),
-    leadersTotal: Number(participantSummary?.leadersTotal ?? 0),
-    femaleTotal: Number(participantSummary?.femaleTotal ?? 0),
-    maleTotal: Number(participantSummary?.maleTotal ?? 0),
-    teacherByClass: teacherByClass.map((row) => ({
-      classTaught: row.classTaught,
-      total: Number(row.total),
-    })),
-    teacherBySubject: teacherBySubject.map((row) => ({
-      subjectTaught: row.subjectTaught,
-      total: Number(row.total),
-    })),
-    leadersByCategory: leadersByCategory.map((row) => ({
-      category: row.category,
-      total: Number(row.total),
-      female: Number(row.female),
-      male: Number(row.male),
-    })),
-    geographyBreakdown: geographyBreakdown.map((row) => ({
-      region: row.region || "N/A",
-      subRegion: row.subRegion || "N/A",
-      district: row.district || "N/A",
-      trainingsCount: Number(row.trainingsCount),
-      schoolsCount: Number(row.schoolsCount),
-      participantsCount: Number(row.participantsCount),
-    })),
-    followUpPlans: trainingRows.map((row) => ({
-      trainingRecordId: Number(row.id),
-      trainingDate: row.date,
-      schoolName: row.schoolName || "Unknown school",
-      district: row.district || "Unknown district",
-      followUpDate: row.followUpDate ?? null,
-      followUpType: row.followUpType ?? null,
-      followUpOwner: row.followUpOwnerName ?? null,
-    })),
-    feedback: {
-      participantRows: feedbackRows.filter((row) => row.feedbackRole === "participant").length,
-      trainerRows: feedbackRows.filter((row) => row.feedbackRole === "trainer").length,
-      changedTeachingRows: feedbackRows.filter((row) => stripText(row.howTrainingChangedTeaching).length > 0).length,
-      improveReadingRows: feedbackRows.filter((row) => stripText(row.whatYouWillDoToImproveReadingLevels).length > 0).length,
-      challengesRows: feedbackRows.filter((row) => stripText(row.challenges).length > 0).length,
-      recommendationsRows: feedbackRows.filter((row) => stripText(row.recommendationsNextTraining).length > 0).length,
-      themes,
-    },
-    observedAfterTraining,
-    approvedQuotes: approvedQuoteFallback.map((row) => ({
-      quote: stripText(row.quote),
-      role: row.role ?? null,
-      district: row.district ?? null,
-      schoolName: row.schoolName ?? null,
-    })),
-  };
-}
-
 async function collectTrainingFactsAsync(input: {
   scopeType: TrainingReportScopeType;
   scopeValue?: string;
@@ -1634,29 +1128,7 @@ async function collectTrainingFactsAsync(input: {
     whereClauses.push(`lower(trim(COALESCE(sd.sub_region, ''))) = lower(trim($${params.length}))`);
   }
 
-  const trainingResult = await queryPostgres(
-    `
-      SELECT
-        pr.id,
-        pr.date::text AS date,
-        pr.school_id AS "schoolId",
-        COALESCE(sd.name, pr.school_name) AS "schoolName",
-        COALESCE(sd.district, pr.district) AS district,
-        COALESCE(sd.region, '') AS region,
-        COALESCE(sd.sub_region, '') AS "subRegion",
-        pr.follow_up_date::text AS "followUpDate",
-        pr.follow_up_type AS "followUpType",
-        pr.follow_up_owner_user_id AS "followUpOwnerUserId",
-        pu.full_name AS "followUpOwnerName"
-      FROM portal_records pr
-      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
-      LEFT JOIN portal_users pu ON pu.id = pr.follow_up_owner_user_id
-      WHERE ${whereClauses.join(" AND ")}
-      ORDER BY pr.date ASC, pr.id ASC
-    `,
-    params,
-  );
-  const trainingRows = trainingResult.rows as Array<{
+  const trainingRows = await getTrainingSessionsForReportPostgres(whereClauses, params) as Array<{
     id: number;
     date: string;
     schoolId: number | null;
@@ -1675,134 +1147,12 @@ async function collectTrainingFactsAsync(input: {
   }
 
   const trainingIds = trainingRows.map((row) => Number(row.id));
-  const participantSummaryResult = await queryPostgres(
-    `
-      SELECT
-        COUNT(*)::int AS "participantsTotal",
-        COALESCE(SUM(CASE WHEN lower(trim(pta.participant_role)) = 'classroom teacher' THEN 1 ELSE 0 END), 0)::int AS "teachersTotal",
-        COALESCE(SUM(CASE WHEN lower(trim(pta.participant_role)) = 'school leader' THEN 1 ELSE 0 END), 0)::int AS "leadersTotal",
-        COALESCE(SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'female' THEN 1 ELSE 0 END), 0)::int AS "femaleTotal",
-        COALESCE(SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'male' THEN 1 ELSE 0 END), 0)::int AS "maleTotal"
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      WHERE pta.portal_record_id = ANY($1::int[])
-    `,
-    [trainingIds],
-  );
-  const participantSummary = (participantSummaryResult.rows[0] as {
-    participantsTotal: number | null;
-    teachersTotal: number | null;
-    leadersTotal: number | null;
-    femaleTotal: number | null;
-    maleTotal: number | null;
-  } | undefined) ?? undefined;
-
-  const leadersByCategoryResult = await queryPostgres(
-    `
-      SELECT
-        COALESCE(sc.category, 'School Leader') AS category,
-        COUNT(*)::int AS total,
-        COALESCE(SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'female' THEN 1 ELSE 0 END), 0)::int AS female,
-        COALESCE(SUM(CASE WHEN lower(trim(COALESCE(pta.gender, sc.gender, ''))) = 'male' THEN 1 ELSE 0 END), 0)::int AS male
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      WHERE pta.portal_record_id = ANY($1::int[])
-        AND lower(trim(pta.participant_role)) = 'school leader'
-      GROUP BY COALESCE(sc.category, 'School Leader')
-      ORDER BY total DESC, category ASC
-    `,
-    [trainingIds],
-  );
-  const leadersByCategory = leadersByCategoryResult.rows as Array<{
-    category: string;
-    total: number;
-    female: number;
-    male: number;
-  }>;
-
-  const teacherByClassResult = await queryPostgres(
-    `
-      SELECT
-        COALESCE(NULLIF(trim(sc.class_taught), ''), 'Not specified') AS "classTaught",
-        COUNT(*)::int AS total
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      WHERE pta.portal_record_id = ANY($1::int[])
-        AND lower(trim(pta.participant_role)) = 'classroom teacher'
-      GROUP BY COALESCE(NULLIF(trim(sc.class_taught), ''), 'Not specified')
-      ORDER BY total DESC, "classTaught" ASC
-      LIMIT 20
-    `,
-    [trainingIds],
-  );
-  const teacherByClass = teacherByClassResult.rows as Array<{ classTaught: string; total: number }>;
-
-  const teacherBySubjectResult = await queryPostgres(
-    `
-      SELECT
-        COALESCE(NULLIF(trim(sc.subject_taught), ''), 'Not specified') AS "subjectTaught",
-        COUNT(*)::int AS total
-      FROM portal_training_attendance pta
-      LEFT JOIN school_contacts sc ON sc.contact_id = pta.contact_id
-      WHERE pta.portal_record_id = ANY($1::int[])
-        AND lower(trim(pta.participant_role)) = 'classroom teacher'
-      GROUP BY COALESCE(NULLIF(trim(sc.subject_taught), ''), 'Not specified')
-      ORDER BY total DESC, "subjectTaught" ASC
-      LIMIT 20
-    `,
-    [trainingIds],
-  );
-  const teacherBySubject = teacherBySubjectResult.rows as Array<{ subjectTaught: string; total: number }>;
-
-  const geographyBreakdownResult = await queryPostgres(
-    `
-      SELECT
-        COALESCE(sd.region, '') AS region,
-        COALESCE(sd.sub_region, '') AS "subRegion",
-        COALESCE(sd.district, pr.district) AS district,
-        COUNT(DISTINCT pr.id)::int AS "trainingsCount",
-        COUNT(DISTINCT pr.school_id)::int AS "schoolsCount",
-        COUNT(pta.id)::int AS "participantsCount"
-      FROM portal_records pr
-      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
-      LEFT JOIN portal_training_attendance pta ON pta.portal_record_id = pr.id
-      WHERE pr.id = ANY($1::int[])
-      GROUP BY COALESCE(sd.region, ''), COALESCE(sd.sub_region, ''), COALESCE(sd.district, pr.district)
-      ORDER BY "trainingsCount" DESC, district ASC
-    `,
-    [trainingIds],
-  );
-  const geographyBreakdown = geographyBreakdownResult.rows as Array<{
-    region: string;
-    subRegion: string;
-    district: string;
-    trainingsCount: number;
-    schoolsCount: number;
-    participantsCount: number;
-  }>;
-
-  const feedbackResult = await queryPostgres(
-    `
-      SELECT
-        tf.feedback_role AS "feedbackRole",
-        tf.what_went_well AS "whatWentWell",
-        tf.how_training_changed_teaching AS "howTrainingChangedTeaching",
-        tf.what_you_will_do_to_improve_reading_levels AS "whatYouWillDoToImproveReadingLevels",
-        tf.challenges,
-        tf.recommendations_next_training AS "recommendationsNextTraining"
-      FROM training_feedback_entries tf
-      WHERE tf.training_record_id = ANY($1::int[])
-    `,
-    [trainingIds],
-  );
-  const feedbackRows = feedbackResult.rows as Array<{
-    feedbackRole: "participant" | "trainer";
-    whatWentWell: string | null;
-    howTrainingChangedTeaching: string | null;
-    whatYouWillDoToImproveReadingLevels: string | null;
-    challenges: string | null;
-    recommendationsNextTraining: string | null;
-  }>;
+  const participantSummary = await getParticipantSummaryForReportPostgres(trainingIds);
+  const leadersByCategory = await getLeadersByCategoryForReportPostgres(trainingIds);
+  const teacherByClass = await getTeacherByClassForReportPostgres(trainingIds);
+  const teacherBySubject = await getTeacherBySubjectForReportPostgres(trainingIds);
+  const geographyBreakdown = await getGeographyBreakdownForReportPostgres(trainingIds);
+  const feedbackRows = await getTrainingFeedbackForReportPostgres(trainingIds);
 
   const themeTexts = feedbackRows
     .flatMap((row) => [
@@ -1812,27 +1162,12 @@ async function collectTrainingFactsAsync(input: {
       row.challenges,
       row.recommendationsNextTraining,
     ])
-    .map((text) => stripText(text))
+    .map((text) => stripText(text || ""))
     .filter(Boolean);
   const themes = extractFeedbackThemes(themeTexts);
 
-  const approvedQuotesResult = await queryPostgres(
-    `
-      SELECT
-        pt.story_text AS quote,
-        pt.storyteller_role AS role,
-        pt.district,
-        pt.school_name AS "schoolName"
-      FROM portal_testimonials pt
-      WHERE pt.source_training_record_id = ANY($1::int[])
-        AND pt.source_type = 'training_feedback'
-        AND COALESCE(pt.moderation_status, 'approved') = 'approved'
-      ORDER BY pt.created_at DESC, pt.id DESC
-      LIMIT 20
-    `,
-    [trainingIds],
-  );
-  const approvedQuotes = approvedQuotesResult.rows as Array<{
+  const approvedQuotesRaw = await getApprovedQuotesForReportPostgres(trainingIds);
+  const approvedQuotes = approvedQuotesRaw as Array<{
     quote: string;
     role: string | null;
     district: string | null;
@@ -1843,7 +1178,7 @@ async function collectTrainingFactsAsync(input: {
     ? approvedQuotes
     : feedbackRows
         .flatMap((row) => [row.howTrainingChangedTeaching, row.whatYouWillDoToImproveReadingLevels])
-        .map((quote) => stripText(quote))
+        .map((quote) => stripText(quote || ""))
         .filter((quote) => quote.length >= 20)
         .slice(0, 10)
         .map((quote) => ({
@@ -1860,29 +1195,12 @@ async function collectTrainingFactsAsync(input: {
     periodEndDate.setUTCDate(periodEndDate.getUTCDate() + 120);
     const observedEnd = toIsoDate(periodEndDate);
 
-    const coachingResult = await queryPostgres(
-      `
-        SELECT COUNT(*)::int AS total
-        FROM coaching_visits
-        WHERE school_id = ANY($1::int[])
-          AND visit_date >= $2::date
-          AND visit_date <= $3::date
-      `,
-      [schoolIds, window.periodStart, observedEnd],
-    );
-    const assessmentResult = await queryPostgres(
-      `
-        SELECT COUNT(*)::int AS total
-        FROM assessment_sessions
-        WHERE school_id = ANY($1::int[])
-          AND assessment_date >= $2::date
-          AND assessment_date <= $3::date
-      `,
-      [schoolIds, window.periodStart, observedEnd],
-    );
+    const coachingVisitsCount = await getCoachingCountsForReportPostgres(schoolIds, window.periodStart, observedEnd);
+    const assessmentSessionsCount = await getAssessmentCountsForReportPostgres(schoolIds, window.periodStart, observedEnd);
+    
     observedAfterTraining = {
-      coachingVisitsCount: Number((coachingResult.rows[0] as { total?: number } | undefined)?.total ?? 0),
-      assessmentSessionsCount: Number((assessmentResult.rows[0] as { total?: number } | undefined)?.total ?? 0),
+      coachingVisitsCount,
+      assessmentSessionsCount,
     };
   }
 
@@ -1901,11 +1219,11 @@ async function collectTrainingFactsAsync(input: {
     femaleTotal: Number(participantSummary?.femaleTotal ?? 0),
     maleTotal: Number(participantSummary?.maleTotal ?? 0),
     teacherByClass: teacherByClass.map((row) => ({
-      classTaught: row.classTaught,
+      classTaught: row.classTaught || "Not specified",
       total: Number(row.total),
     })),
     teacherBySubject: teacherBySubject.map((row) => ({
-      subjectTaught: row.subjectTaught,
+      subjectTaught: row.subjectTaught || "Not specified",
       total: Number(row.total),
     })),
     leadersByCategory: leadersByCategory.map((row) => ({
@@ -1934,10 +1252,10 @@ async function collectTrainingFactsAsync(input: {
     feedback: {
       participantRows: feedbackRows.filter((row) => row.feedbackRole === "participant").length,
       trainerRows: feedbackRows.filter((row) => row.feedbackRole === "trainer").length,
-      changedTeachingRows: feedbackRows.filter((row) => stripText(row.howTrainingChangedTeaching).length > 0).length,
-      improveReadingRows: feedbackRows.filter((row) => stripText(row.whatYouWillDoToImproveReadingLevels).length > 0).length,
-      challengesRows: feedbackRows.filter((row) => stripText(row.challenges).length > 0).length,
-      recommendationsRows: feedbackRows.filter((row) => stripText(row.recommendationsNextTraining).length > 0).length,
+      changedTeachingRows: feedbackRows.filter((row) => stripText(row.howTrainingChangedTeaching || "").length > 0).length,
+      improveReadingRows: feedbackRows.filter((row) => stripText(row.whatYouWillDoToImproveReadingLevels || "").length > 0).length,
+      challengesRows: feedbackRows.filter((row) => stripText(row.challenges || "").length > 0).length,
+      recommendationsRows: feedbackRows.filter((row) => stripText(row.recommendationsNextTraining || "").length > 0).length,
       themes,
     },
     observedAfterTraining,
@@ -1958,7 +1276,6 @@ export async function generateTrainingReportArtifact(input: {
   periodEnd?: string;
   includeObservedInsights?: boolean;
 }) {
-  requirePostgresConfigured();
   const facts = await collectTrainingFactsAsync({
     scopeType: input.scopeType,
     scopeValue: input.scopeValue,
@@ -1973,69 +1290,38 @@ export async function generateTrainingReportArtifact(input: {
   const pdfBytes = await generatePdfBytes(facts, narrative, reportCode, evidencePhotos);
   const pdfStoredPath = await savePdfToDisk(reportCode, pdfBytes);
 
-  const now = new Date().toISOString();
-  const insertResult = await queryPostgres<{ id: number }>(
-    `
-      INSERT INTO training_report_artifacts (
-        report_code,
-        scope_type,
-        scope_value,
-        period_start,
-        period_end,
-        facts_json,
-        narrative_json,
-        html_report,
-        pdf_stored_path,
-        generated_by_user_id,
-        generated_at,
-        updated_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12::timestamptz
-      )
-      RETURNING id
-    `,
-    [
+  const artifactId = await insertTrainingReportArtifactPostgres({
+    reportCode,
+    scopeType: facts.scopeType,
+    scopeValue: facts.scopeValue,
+    periodStart: facts.periodStart,
+    periodEnd: facts.periodEnd,
+    facts,
+    narrative,
+    htmlReport,
+    pdfStoredPath,
+    userId: input.user.id,
+  });
+
+  await logAuditEventPostgres(
+    input.user.id,
+    input.user.fullName,
+    "generate_training_report",
+    "training_report_artifacts",
+    artifactId,
+    null,
+    JSON.stringify({
       reportCode,
-      facts.scopeType,
-      facts.scopeValue,
-      facts.periodStart,
-      facts.periodEnd,
-      JSON.stringify(facts),
-      JSON.stringify(narrative),
-      htmlReport,
-      pdfStoredPath,
-      input.user.id,
-      now,
-      now,
-    ],
+      scopeType: facts.scopeType,
+      scopeValue: facts.scopeValue,
+      periodStart: facts.periodStart,
+      periodEnd: facts.periodEnd,
+      generatedWithAi: narrative.generatedWithAi,
+    }),
+    "Generated training report artifact."
   );
 
-  const artifactId = Number(insertResult.rows[0]?.id ?? 0);
-  await queryPostgres(
-    `
-      INSERT INTO audit_logs (
-        user_id, user_name, action, target_table, target_id, payload_after, detail
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `,
-    [
-      input.user.id,
-      input.user.fullName,
-      "generate_training_report",
-      "training_report_artifacts",
-      String(artifactId),
-      JSON.stringify({
-        reportCode,
-        scopeType: facts.scopeType,
-        scopeValue: facts.scopeValue,
-        periodStart: facts.periodStart,
-        periodEnd: facts.periodEnd,
-        generatedWithAi: narrative.generatedWithAi,
-      }),
-      "Generated training report artifact.",
-    ],
-  );
-
-  return await getTrainingReportArtifactByCodeAsync(reportCode);
+  return await getTrainingReportArtifactByCodePostgres(reportCode);
 }
 
 export function listTrainingReportArtifacts(filters?: {
@@ -2052,62 +1338,7 @@ export async function listTrainingReportArtifactsAsync(filters?: {
   scopeValue?: string;
   limit?: number;
 }) {
-  requirePostgresConfigured();
-
-  const clauses: string[] = [];
-  const params: unknown[] = [];
-  if (filters?.scopeType) {
-    params.push(filters.scopeType);
-    clauses.push(`tra.scope_type = $${params.length}`);
-  }
-  if (filters?.scopeValue?.trim()) {
-    params.push(filters.scopeValue.trim());
-    clauses.push(`lower(trim(tra.scope_value)) = lower(trim($${params.length}))`);
-  }
-  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
-  const limit = Math.max(1, Math.min(filters?.limit ?? 60, 500));
-  const result = await queryPostgres<{
-    id: number;
-    reportCode: string;
-    scopeType: TrainingReportScopeType;
-    scopeValue: string;
-    periodStart: string;
-    periodEnd: string;
-    factsJson: string;
-    narrativeJson: string;
-    htmlReport: string;
-    pdfStoredPath: string | null;
-    generatedByUserId: number;
-    generatedByName: string;
-    generatedAt: string;
-    updatedAt: string;
-  }>(
-    `
-      SELECT
-        tra.id,
-        tra.report_code AS "reportCode",
-        tra.scope_type AS "scopeType",
-        tra.scope_value AS "scopeValue",
-        tra.period_start AS "periodStart",
-        tra.period_end AS "periodEnd",
-        tra.facts_json AS "factsJson",
-        tra.narrative_json AS "narrativeJson",
-        tra.html_report AS "htmlReport",
-        tra.pdf_stored_path AS "pdfStoredPath",
-        tra.generated_by_user_id AS "generatedByUserId",
-        pu.full_name AS "generatedByName",
-        tra.generated_at::text AS "generatedAt",
-        tra.updated_at::text AS "updatedAt"
-      FROM training_report_artifacts tra
-      JOIN portal_users pu ON pu.id = tra.generated_by_user_id
-      ${whereClause}
-      ORDER BY tra.generated_at DESC, tra.id DESC
-      LIMIT ${limit}
-    `,
-    params,
-  );
-
-  return result.rows.map((row) => parseArtifactRow(row));
+  return await listTrainingReportArtifactsPostgres(filters);
 }
 
 export function getTrainingReportArtifactByCode(reportCode: string) {
@@ -2116,49 +1347,7 @@ export function getTrainingReportArtifactByCode(reportCode: string) {
 }
 
 export async function getTrainingReportArtifactByCodeAsync(reportCode: string) {
-  requirePostgresConfigured();
-
-  const result = await queryPostgres<{
-    id: number;
-    reportCode: string;
-    scopeType: TrainingReportScopeType;
-    scopeValue: string;
-    periodStart: string;
-    periodEnd: string;
-    factsJson: string;
-    narrativeJson: string;
-    htmlReport: string;
-    pdfStoredPath: string | null;
-    generatedByUserId: number;
-    generatedByName: string;
-    generatedAt: string;
-    updatedAt: string;
-  }>(
-    `
-      SELECT
-        tra.id,
-        tra.report_code AS "reportCode",
-        tra.scope_type AS "scopeType",
-        tra.scope_value AS "scopeValue",
-        tra.period_start AS "periodStart",
-        tra.period_end AS "periodEnd",
-        tra.facts_json AS "factsJson",
-        tra.narrative_json AS "narrativeJson",
-        tra.html_report AS "htmlReport",
-        tra.pdf_stored_path AS "pdfStoredPath",
-        tra.generated_by_user_id AS "generatedByUserId",
-        pu.full_name AS "generatedByName",
-        tra.generated_at::text AS "generatedAt",
-        tra.updated_at::text AS "updatedAt"
-      FROM training_report_artifacts tra
-      JOIN portal_users pu ON pu.id = tra.generated_by_user_id
-      WHERE tra.report_code = $1
-      LIMIT 1
-    `,
-    [reportCode.trim()],
-  );
-
-  return result.rows[0] ? parseArtifactRow(result.rows[0]) : null;
+  return await getTrainingReportArtifactByCodePostgres(reportCode);
 }
 
 export async function readTrainingReportPdf(reportCode: string) {
@@ -2186,22 +1375,23 @@ export async function readTrainingReportPdf(reportCode: string) {
     [],
   );
   const regeneratedPath = await savePdfToDisk(reportCode, regeneratedBytes);
-  const updatedAt = new Date().toISOString();
+  
+  // Update artifact with new PDF path
   await queryPostgres(
     `
       UPDATE training_report_artifacts
       SET pdf_stored_path = $2,
-          updated_at = $3::timestamptz
+          updated_at = NOW()
       WHERE report_code = $1
     `,
-    [reportCode, regeneratedPath, updatedAt],
+    [reportCode, regeneratedPath]
   );
 
   return {
     artifact: {
       ...artifact,
       pdfStoredPath: regeneratedPath,
-      updatedAt,
+      updatedAt: new Date().toISOString(),
     },
     bytes: Buffer.from(regeneratedBytes),
   };

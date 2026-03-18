@@ -1,4 +1,4 @@
-import { getPublicImpactAggregate } from "@/lib/db";
+import { getPublicImpactAggregate } from "@/services/dataService";
 import { cachedImpactJson, parsePeriod } from "@/app/api/impact/helpers";
 
 export const runtime = "nodejs";

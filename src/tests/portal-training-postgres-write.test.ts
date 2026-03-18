@@ -4,7 +4,7 @@ import {
   createPortalRecordAsync,
   setPortalRecordStatusAsync,
   updatePortalRecordAsync,
-} from "../lib/db";
+} from "../lib/db-api";
 import { isPostgresConfigured, queryPostgres } from "../lib/server/postgres/client";
 import type { PortalUser } from "../lib/types";
 

@@ -1,6 +1,6 @@
 import {
     getPublicImpactAggregate,
-} from "@/lib/db";
+} from "@/services/dataService";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { TeacherEvaluationPerformanceCards } from "@/components/impact/TeacherEvaluationPerformanceCards";

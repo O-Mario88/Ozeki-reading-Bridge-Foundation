@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getPublicImpactAggregate } from "@/lib/db";
+import { getPublicImpactAggregate } from "@/services/dataService";
 
 export const metadata = {
   title: "Methodology",

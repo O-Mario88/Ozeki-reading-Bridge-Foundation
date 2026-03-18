@@ -1,6 +1,6 @@
 import { PortalFinanceInvoicesManager } from "@/components/portal/finance/PortalFinanceInvoicesManager";
 import { FinanceShell } from "@/components/portal/finance/FinanceShell";
-import { listFinanceContacts, listFinanceInvoices } from "@/lib/finance-db";
+import { listFinanceContacts, listFinanceInvoices } from "@/services/financeService";
 import { requirePortalFinanceReceiptEditorUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";

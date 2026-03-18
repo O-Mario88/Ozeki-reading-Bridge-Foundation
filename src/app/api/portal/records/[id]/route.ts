@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  getPortalRecordByIdAsync,
-  updatePortalRecordAsync,
-} from "@/lib/db";
+  getPortalRecordById,
+  updatePortalRecord,
+} from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { PortalRecordPayload } from "@/lib/types";
 
@@ -85,7 +85,7 @@ export async function GET(
   try {
     const params = await context.params;
     const id = toId(params.id);
-    const record = await getPortalRecordByIdAsync(id, user);
+    const record = await getPortalRecordById(id);
 
     if (!record) {
       return NextResponse.json({ error: "Record not found." }, { status: 404 });
@@ -113,7 +113,7 @@ export async function PUT(
     const params = await context.params;
     const id = toId(params.id);
     const payload = updateSchema.parse(await request.json());
-    const reviewer = canReview(user);
+    const reviewer = canReview(user as any);
 
     if (!reviewer && (payload.status === "Returned" || payload.status === "Approved")) {
       return NextResponse.json(
@@ -122,7 +122,7 @@ export async function PUT(
       );
     }
 
-    const record = await updatePortalRecordAsync(
+    const record = await updatePortalRecord(
       id,
       {
         ...payload,
@@ -131,14 +131,13 @@ export async function PUT(
         followUpType: payload.followUpType,
         followUpOwnerUserId: payload.followUpOwnerUserId,
         payload: cleanPayload(payload.payload),
-      },
-      user,
+      }
     );
 
     if (payload.module === "assessment" || payload.module === "story") {
       try {
-        const { runEducationDataQualitySweep } = await import("@/lib/national-intelligence");
-        runEducationDataQualitySweep({
+        const { runEducationDataQualitySweepAsync } = await import("@/lib/national-intelligence-async");
+        runEducationDataQualitySweepAsync({
           user,
           scopeType: "district",
           scopeId: payload.district,
@@ -178,8 +177,8 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const reason = searchParams.get("reason") || "User requested deletion via API";
 
-    const { softDeletePortalRecord } = await import("@/lib/db");
-    softDeletePortalRecord(id, user, reason);
+    const { softDeletePortalRecord } = await import("@/services/dataService");
+    softDeletePortalRecord(id, user.id, reason);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

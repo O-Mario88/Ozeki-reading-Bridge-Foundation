@@ -3794,3 +3794,278 @@ export interface SchoolHierarchyView {
   countryId: number | null;
   countryName: string | null;
 }
+/* ─── National Literacy Intelligence System (NLIS) ──────────────── */
+
+export type NlisGeoScopeType =
+  | "country"
+  | "region"
+  | "sub_region"
+  | "district"
+  | "sub_county"
+  | "parish"
+  | "school";
+
+export type BenchmarkGrade =
+  | "ALL"
+  | "P1"
+  | "P2"
+  | "P3"
+  | "P4"
+  | "P5"
+  | "P6"
+  | "P7";
+
+export interface BenchmarkProfileRecord {
+  benchmarkId: number;
+  name: string;
+  effectiveFromDate: string;
+  effectiveToDate: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdBy: number;
+  createdAt: string;
+  rulesCount: number;
+}
+
+export interface BenchmarkRuleRecord {
+  ruleId: number;
+  benchmarkId: number;
+  grade: BenchmarkGrade;
+  language: string;
+  cwpmBands: {
+    non_reader: number;
+    emergent: [number, number];
+    minimum: [number, number];
+    competent: [number, number];
+    strong: [number, number];
+  };
+  comprehensionProficientRule:
+    | { type: "percent"; threshold: number }
+    | { type: "count"; correct: number; total: number };
+  optionalAccuracyFloor: number | null;
+  domainProficiencyThresholds: Record<string, number>;
+  createdAt: string;
+}
+
+export interface BenchmarkRuleInput {
+  benchmarkId: number;
+  grade: BenchmarkGrade;
+  language: string;
+  cwpmBands: BenchmarkRuleRecord["cwpmBands"];
+  comprehensionProficientRule: BenchmarkRuleRecord["comprehensionProficientRule"];
+  optionalAccuracyFloor?: number | null;
+  domainProficiencyThresholds?: Record<string, number>;
+}
+
+export interface EducationAuditExceptionRecord {
+  exceptionId: number;
+  entityType:
+    | "assessment"
+    | "assessment_result"
+    | "teacher_evaluation"
+    | "story"
+    | "school"
+    | "district"
+    | "other";
+  entityId: string;
+  ruleCode: string;
+  severity: "low" | "medium" | "high";
+  message: string;
+  status: "open" | "resolved" | "overridden";
+  scopeType: NlisGeoScopeType;
+  scopeId: string;
+  periodKey: string;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolvedBy: number | null;
+  resolutionNotes: string | null;
+}
+
+export interface DataQualityCenterSummaryRecord {
+  scopeType: NlisGeoScopeType;
+  scopeId: string;
+  periodKey: string;
+  completenessPct: number;
+  coverageIndicators: {
+    schoolsTotal: number;
+    schoolsWithBaseline: number;
+    schoolsWithEndline: number;
+    schoolsMissingEndline: number;
+    districtsLowCoverage: number;
+  };
+  exceptionCounts: {
+    open: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  lastUpdated: string;
+}
+
+export interface NationalPriorityQueueItem {
+  schoolId: number;
+  schoolName: string;
+  district: string;
+  subRegion: string;
+  region: string;
+  periodKey: string;
+  riskScore: number;
+  priorityLevel: "high" | "medium" | "low";
+  recommendedIntervention:
+    | "Remedial & Catch-up"
+    | "Coaching"
+    | "Training"
+    | "Leadership support";
+  evidenceSummary: string;
+  metrics: {
+    nonReadersPct: number;
+    at20PlusDeltaPct: number;
+    teachingQualityPct: number;
+    coachingCoveragePct: number;
+    completenessPct: number;
+  };
+  assignedOwnerUserId: number | null;
+  assignedOwnerName: string | null;
+  assignedAt: string | null;
+  assignmentNotes: string | null;
+}
+
+export interface NationalInsightWidgetData {
+  scopeType: NlisGeoScopeType;
+  scopeId: string;
+  periodStart: string;
+  periodEnd: string;
+  movement: {
+    nonReaderReductionPct: number;
+    movedTo20PlusPct: number;
+    movedTo40PlusPct: number;
+    movedTo60PlusPct: number;
+    comprehensionProficientDeltaPct: number;
+    sampleSize: number;
+  };
+  cohortTracking: Array<{
+    schoolId: number;
+    schoolName: string;
+    baselineAt20PlusPct: number;
+    latestAt20PlusPct: number;
+    deltaPct: number;
+  }>;
+  alignedDrivers: {
+    coachingFrequencyPerSchool: number;
+    teachingQualityLatestPct: number;
+    teachingQualityDeltaPct: number;
+    materialsCoveragePct: number;
+    storyParticipationPct: number;
+    disclaimer: string;
+  };
+  priorityQueue: NationalPriorityQueueItem[];
+}
+
+export interface InterventionPlanRecord {
+  planId: number;
+  scopeType: "school" | "district";
+  scopeId: string;
+  schoolId: number | null;
+  district: string | null;
+  title: string;
+  status: "draft" | "planned" | "in_progress" | "completed" | "paused";
+  targetMetrics: Record<string, number | string>;
+  startDate: string | null;
+  endDate: string | null;
+  notes: string | null;
+  createdBy: number;
+  createdByName: string | null;
+  createdAt: string;
+  completedActions: number;
+  totalActions: number;
+}
+
+export interface InterventionActionRecord {
+  actionId: number;
+  planId: number;
+  actionType:
+    | "Remedial & Catch-up program"
+    | "Teacher coaching cycle"
+    | "Teacher catch-up training"
+    | "Leadership mentoring"
+    | "Assessment support"
+    | "1001 Story activation/publishing support";
+  ownerUserId: number;
+  ownerUserName: string | null;
+  dueDate: string | null;
+  status: "draft" | "planned" | "in_progress" | "completed" | "paused";
+  visitId: number | null;
+  trainingId: number | null;
+  assessmentId: number | null;
+  storyActivityId: number | null;
+  outcomeNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type NationalReportPreset =
+  | "National Quarterly Snapshot"
+  | "District Literacy Brief"
+  | "School Coaching Pack"
+  | "Annual National Report";
+
+export interface NationalReportPackRecord {
+  reportId: number;
+  reportCode: string;
+  preset: NationalReportPreset;
+  scopeType: NlisGeoScopeType;
+  scopeId: string;
+  periodStart: string;
+  periodEnd: string;
+  facts: Record<string, unknown>;
+  narrative: {
+    summary: string;
+    movement: string;
+    priorityActions: string;
+    interventions: string;
+    methodology: string;
+    references: string[];
+    generatedWithAi: boolean;
+  };
+  htmlReport: string;
+  pdfPath: string | null;
+  generatedByUserId: number;
+  generatedByName: string;
+  generatedAt: string;
+  updatedAt: string;
+}
+
+export interface PartnerApiClientRecord {
+  clientId: number;
+  partnerName: string;
+  allowedScopeType: NlisGeoScopeType;
+  allowedScopeIds: string[];
+  active: boolean;
+  createdBy: number;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+export interface NationalInsights {
+  scopeType: NlisGeoScopeType;
+  scopeId: string;
+  periodStart: string;
+  periodEnd: string;
+  movement: {
+    nonReaderReductionPct: number;
+    movedTo20PlusPct: number;
+    movedTo40PlusPct: number;
+    movedTo60PlusPct: number;
+    comprehensionProficientDeltaPct: number;
+    sampleSize: number;
+  };
+  alignedDrivers: {
+    coachingFrequencyPerSchool: number;
+    teachingQualityLatestPct: number;
+    teachingQualityDeltaPct: number;
+    materialsCoveragePct: number;
+    storyParticipationPct: number;
+    disclaimer: string;
+  };
+  priorityQueue: NationalPriorityQueueItem[];
+}

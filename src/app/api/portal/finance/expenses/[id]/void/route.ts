@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
-import { voidFinanceExpenseAsync } from "@/lib/finance-db";
+import { voidFinanceExpenseAsync } from "@/services/financeService";
 
 export const runtime = "nodejs";
 

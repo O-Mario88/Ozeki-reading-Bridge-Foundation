@@ -38,6 +38,9 @@ async function verifyProductionDatabaseReadiness() {
   }
 
   const databaseUrl = process.env.DATABASE_URL?.trim() || "";
+  if (/sqlite|\.db(?:$|[?#])|^file:/i.test(databaseUrl)) {
+    throw new Error("SQLite detected. This system is PostgreSQL-only.");
+  }
   if (!databaseUrl) {
     const message = "[startup] DATABASE_URL is not configured. PostgreSQL-backed features will be unavailable.";
     if (strictStartup) {

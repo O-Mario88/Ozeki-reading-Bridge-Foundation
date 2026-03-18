@@ -11,7 +11,7 @@ import {
   logAuditEvent,
   updateLessonEvaluationAsync,
   voidLessonEvaluationAsync,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";

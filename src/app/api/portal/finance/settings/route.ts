@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getFinanceSettings, updateFinanceSettingsAsync } from "@/lib/finance-db";
+import { getFinanceSettings, updateFinanceSettingsAsync } from "@/services/financeService";
 import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
 
 export const runtime = "nodejs";

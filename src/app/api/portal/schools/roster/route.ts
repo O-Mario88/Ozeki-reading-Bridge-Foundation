@@ -9,7 +9,7 @@ import {
   listSchoolLearnersBySchool,
   updateSchoolContactInSchool,
   updateSchoolLearnerInSchool,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { isPostgresConfigured } from "@/lib/server/postgres/client";
 import {

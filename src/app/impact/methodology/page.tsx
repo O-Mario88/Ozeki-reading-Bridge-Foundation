@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getImpactSummary, listPublicImpactReportsAsync } from "@/lib/db";
+import { getImpactSummary, listPublicImpactReportsAsync } from "@/services/dataService";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
 
 export const metadata = {

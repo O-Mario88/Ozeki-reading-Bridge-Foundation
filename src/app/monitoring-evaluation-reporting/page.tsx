@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import merPhoto from "../../../assets/photos/Literacy Training in Loro - Oyam District.jpg";
-import { listPublicImpactReportsAsync } from "@/lib/db";
+import { listPublicImpactReportsAsync } from "@/services/dataService";
 
 export const metadata = {
   title: "Monitoring, Evaluation & Reporting",

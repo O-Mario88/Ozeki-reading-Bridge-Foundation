@@ -5,7 +5,7 @@ import {
   listPortalRecordsAsync,
   listPortalUsersForFilters,
   listSchoolDirectoryRecords,
-} from "@/lib/db";
+} from "@/services/dataService";
 import { portalModuleConfigByModule } from "@/lib/portal-config";
 import { requirePortalUser } from "@/lib/portal-auth";
 import type { PortalRecordModule } from "@/lib/types";

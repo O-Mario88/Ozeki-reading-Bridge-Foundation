@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
-import { getRestrictedFundsSummary } from "@/lib/finance-db";
+import { getRestrictedFundsSummary } from "@/services/financeService";
 import type { FinanceCurrency } from "@/lib/types";
 
 /* GET — restricted funds balance summary */

@@ -5,7 +5,7 @@ import {
   exportFinanceRowsToCsv,
   generateFinanceMonthlyStatement,
   listFinanceMonthlyStatements,
-} from "@/lib/finance-db";
+} from "@/services/financeService";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 
 export const runtime = "nodejs";
