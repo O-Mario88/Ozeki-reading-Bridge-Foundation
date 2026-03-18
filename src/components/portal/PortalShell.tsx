@@ -1,27 +1,41 @@
+"use client";
+
 import Link from "next/link";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { PortalLogoutButton } from "@/components/PortalLogoutButton";
 import { PortalUser, PortalUserRole } from "@/lib/types";
+import "@/app/portal-dashboard.css";
 
 type PortalNavItem = {
   href: string;
   label: string;
+  icon: string;
   staffOnly?: boolean;
   superAdminOnly?: boolean;
   roles?: PortalUserRole[];
+  section: "menu" | "features" | "system";
 };
 
 const primaryNavItems: PortalNavItem[] = [
-  { href: "/portal/dashboard", label: "Dashboard", staffOnly: true },
-  { href: "/portal/national-intelligence", label: "Insights", staffOnly: true },
-  { href: "/portal/schools", label: "Schools", staffOnly: true },
-  { href: "/portal/assessments", label: "Assessments", staffOnly: true },
-  { href: "/portal/visits", label: "Visits/Coaching", staffOnly: true },
-  { href: "/portal/trainings", label: "Trainings", staffOnly: true },
-  { href: "/portal/interventions", label: "Interventions", staffOnly: true },
-  { href: "/portal/reports", label: "Reports", roles: ["Staff", "Volunteer", "Admin"] },
-  { href: "/portal/admin/settings", label: "Admin/Settings", superAdminOnly: true },
+  { href: "/portal/dashboard", label: "Dashboard", icon: "📊", staffOnly: true, section: "menu" },
+  { href: "/portal/national-intelligence", label: "Insights", icon: "💡", staffOnly: true, section: "menu" },
+  { href: "/portal/schools", label: "Schools", icon: "🏫", staffOnly: true, section: "menu" },
+  { href: "/portal/assessments", label: "Assessments", icon: "📝", staffOnly: true, section: "menu" },
+  { href: "/portal/visits", label: "Visits/Coaching", icon: "🚶", staffOnly: true, section: "features" },
+  { href: "/portal/trainings", label: "Trainings", icon: "🎓", staffOnly: true, section: "features" },
+  { href: "/portal/interventions", label: "Interventions", icon: "🎯", staffOnly: true, section: "features" },
+  { href: "/portal/reports", label: "Reports", icon: "📄", roles: ["Staff", "Volunteer", "Admin"], section: "features" },
+  { href: "/portal/admin/settings", label: "Admin/Settings", icon: "⚙️", superAdminOnly: true, section: "system" },
 ];
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 interface PortalShellProps {
   user: PortalUser;
@@ -42,94 +56,171 @@ export function PortalShell({
   shellClassName,
   children,
 }: PortalShellProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const navItems = primaryNavItems.filter((item) => {
-    if (item.superAdminOnly && !user.isSuperAdmin) {
-      return false;
-    }
-    if (item.staffOnly && user.role === "Volunteer") {
-      return false;
-    }
-    if (item.roles && !item.roles.includes(user.role) && !user.isSuperAdmin) {
-      return false;
-    }
+    if (item.superAdminOnly && !user.isSuperAdmin) return false;
+    if (item.staffOnly && user.role === "Volunteer") return false;
+    if (item.roles && !item.roles.includes(user.role) && !user.isSuperAdmin) return false;
     return true;
   });
 
+  const menuItems = navItems.filter((i) => i.section === "menu");
+  const featureItems = navItems.filter((i) => i.section === "features");
+  const systemItems = navItems.filter((i) => i.section === "system");
+
+  const roleLabel = [
+    user.role,
+    user.isSupervisor ? "Supervisor" : "",
+    user.isME ? "M&E" : "",
+    user.isAdmin ? "Admin" : "",
+    user.isSuperAdmin ? "Super Admin" : "",
+  ]
+    .filter(Boolean)
+    .join(" • ");
+
   return (
-    <section className="section portal-section">
-      <div className={`container portal-shell portal-shell-layout ${shellClassName ?? ""}`.trim()}>
-        <aside className="portal-sidebar card">
-          <p className="portal-overline">NLIP Workspace</p>
-          <h2 className="portal-sidebar-title">Navigation</h2>
-          <nav className="portal-nav portal-nav-vertical" aria-label="Portal navigation">
-            {navItems.map((item) => (
+    <div className={`ds-portal-shell ${shellClassName ?? ""}`.trim()}>
+      {/* Dark Sidebar */}
+      <aside className={`ds-sidebar${sidebarOpen ? " open" : ""}`}>
+        <div className="ds-sidebar-brand">
+          <div className="ds-sidebar-brand-icon">ORB</div>
+          <span className="ds-sidebar-brand-name">ORBF Portal</span>
+        </div>
+
+        {menuItems.length > 0 && (
+          <nav className="ds-sidebar-section">
+            <p className="ds-sidebar-section-label">Menu</p>
+            {menuItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={activeHref === item.href ? "portal-nav-item active" : "portal-nav-item"}
+                className={`ds-nav-item${activeHref === item.href ? " active" : ""}`}
+                onClick={() => setSidebarOpen(false)}
               >
+                <span className="ds-nav-icon">{item.icon}</span>
                 {item.label}
               </Link>
             ))}
           </nav>
-        </aside>
+        )}
 
-        <div className="portal-main-column">
-          <header className="portal-topbar card">
-            <form action="/portal/schools" method="get" className="portal-topbar-search">
-              <input
-                name="query"
-                placeholder="Search schools, reports, records..."
-                aria-label="Global search"
-              />
-            </form>
-            <div className="portal-topbar-actions">
-              <details className="portal-create-menu">
-                <summary className="button">Create</summary>
-                <div className="portal-create-menu-list">
-                  <Link href="/portal/visits?new=1">Visit</Link>
-                  <Link href="/portal/assessments?new=1">Assessment</Link>
-                  <Link href="/portal/trainings?new=1">Training</Link>
-                  <Link href="/portal/national-intelligence">Intervention</Link>
-                  <Link href="/portal/resources">Evidence</Link>
-                </div>
-              </details>
-              <Link href="/portal/support" className="button button-ghost">
-                Notifications
+        {featureItems.length > 0 && (
+          <nav className="ds-sidebar-section">
+            <p className="ds-sidebar-section-label">Features</p>
+            {featureItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`ds-nav-item${activeHref === item.href ? " active" : ""}`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <span className="ds-nav-icon">{item.icon}</span>
+                {item.label}
               </Link>
-              <Link href="/portal/profiles" className="button button-ghost">
-                {user.fullName}
+            ))}
+          </nav>
+        )}
+
+        {systemItems.length > 0 && (
+          <nav className="ds-sidebar-section">
+            <p className="ds-sidebar-section-label">System</p>
+            {systemItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`ds-nav-item${activeHref === item.href ? " active" : ""}`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <span className="ds-nav-icon">{item.icon}</span>
+                {item.label}
               </Link>
-              <PortalLogoutButton />
-            </div>
-          </header>
+            ))}
+          </nav>
+        )}
 
-          <header className="portal-header card">
-            <div className="portal-header-top">
-              <div>
-                <p className="portal-overline">Ozeki Staff Portal</p>
-                <h1>{title}</h1>
-                {description ? <p>{description}</p> : null}
-              </div>
-              <div className="portal-user-box">
-                <p>
-                  <strong>{user.fullName}</strong>
-                </p>
-                <p>
-                  {user.role}
-                  {user.isSupervisor ? " • Supervisor" : ""}
-                  {user.isME ? " • M&E" : ""}
-                  {user.isAdmin ? " • Admin" : ""}
-                  {user.isSuperAdmin ? " • Super Admin" : ""}
-                </p>
-              </div>
-            </div>
-          </header>
+        <div className="ds-sidebar-user">
+          <div className="ds-sidebar-avatar-sm">{getInitials(user.fullName)}</div>
+          <div className="ds-sidebar-user-info">
+            <p className="ds-sidebar-user-name">{user.fullName}</p>
+            <p className="ds-sidebar-user-role">{roleLabel}</p>
+          </div>
+          <PortalLogoutButton />
+        </div>
+      </aside>
 
-          {actions ? <div className="portal-page-actions">{actions}</div> : null}
+      {sidebarOpen && (
+        <div
+          className="ds-overlay"
+          onClick={() => setSidebarOpen(false)}
+          onKeyDown={(e) => e.key === "Escape" && setSidebarOpen(false)}
+          role="button"
+          tabIndex={-1}
+          aria-label="Close sidebar"
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="ds-main">
+        {/* Top Navbar */}
+        <header className="ds-topbar">
+          <button
+            type="button"
+            className="ds-hamburger"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle menu"
+          >
+            ☰
+          </button>
+
+          <form action="/portal/schools" method="get" className="ds-topbar-search">
+            <input
+              name="query"
+              placeholder="Search schools, reports, records..."
+              aria-label="Global search"
+            />
+          </form>
+
+          <div className="ds-topbar-actions">
+            <details className="ds-create-menu">
+              <summary className="ds-topbar-icon-btn" title="Create new">✚</summary>
+              <div className="ds-create-menu-list">
+                <Link href="/portal/visits?new=1">New Visit</Link>
+                <Link href="/portal/assessments?new=1">New Assessment</Link>
+                <Link href="/portal/trainings?new=1">New Training</Link>
+                <Link href="/portal/national-intelligence">New Intervention</Link>
+                <Link href="/portal/resources">Upload Evidence</Link>
+              </div>
+            </details>
+
+            <Link href="/portal/support" className="ds-topbar-icon-btn" title="Notifications">
+              🔔
+              <span className="ds-topbar-badge" />
+            </Link>
+
+            <Link href="/portal/profiles" className="ds-topbar-avatar" title={user.fullName}>
+              {getInitials(user.fullName)}
+            </Link>
+          </div>
+        </header>
+
+        {/* Page Header + Content */}
+        <div className="ds-content">
+          <div className="ds-page-header">
+            <h1 className="ds-page-title">{title}</h1>
+            {description && <p className="ds-page-subtitle">{description}</p>}
+            <p className="ds-breadcrumb">
+              <Link href="/portal/dashboard">Dashboard</Link>
+              {title !== "Staff Dashboard" && title !== "Dashboard" && (
+                <>{" / "}{title}</>
+              )}
+            </p>
+          </div>
+
+          {actions && <div style={{ marginBottom: "1rem" }}>{actions}</div>}
           {children}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
