@@ -241,7 +241,38 @@ export async function getPortalAnalyticsData(_user: unknown) {
 }
 
 export async function getPortalOperationalReportsData(_user: unknown) {
-    return { reports: [], generatedAt: '', totals: {}, districts: [], schools: [], training: {}, visits: {}, finance: {}, stories: {}, assessments: {} } as unknown as import("@/lib/types").PortalOperationalReportsData;
+    return {
+        generatedAt: new Date().toISOString(),
+        totals: {
+            totalRecords: 0,
+            totalSchools: 0,
+            totalEnrollment: 0,
+            totalDistricts: 0,
+            trainings: 0,
+            schoolVisits: 0,
+            storyActivities: 0,
+            resourcesDistributed: 0,
+            lessonEvaluations: 0,
+            teacherAssessments: 0,
+            learnerAssessments: 0,
+            schoolsWithContacts: 0,
+            teacherObservationCount: 0,
+            schoolsImplementingPercent: 0,
+            schoolsNotImplementingPercent: 0,
+            schoolsWithImplementationData: 0,
+            implementationStartedVisits: 0,
+            implementationNotStartedVisits: 0,
+            implementationPartialVisits: 0,
+            demoVisitsConducted: 0,
+        },
+        districts: [],
+        schools: [],
+        observationEvents: [],
+        trainingActivities: [],
+        visitActivities: [],
+        evaluationActivities: [],
+        assessmentActivities: [],
+    } as import("@/lib/types").PortalOperationalReportsData;
 }
 
 export async function getDistrictStats(districtName: string) {
