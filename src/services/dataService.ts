@@ -405,30 +405,13 @@ export async function updatePortalUserPermissions(_userId: number, _permissions:
 }
 
 // ── Lesson Evaluations ───────────────────────────────────────────────
-export async function createLessonEvaluationAsync(input: unknown, actor: unknown) {
-    const { createLessonEvaluationAsync: fn } = await import("@/lib/db-api");
-    return fn(input, actor as never);
-}
-
-export async function listLessonEvaluationsAsync(filters?: unknown) {
-    const { listLessonEvaluationsAsync: fn } = await import("@/lib/db-api");
-    return fn(filters as never);
-}
-
-export async function getLessonEvaluationByIdAsync(id: number) {
-    const { getLessonEvaluationByIdAsync: fn } = await import("@/lib/db-api");
-    return fn(id);
-}
-
-export async function updateLessonEvaluationAsync(id: number, input: unknown, actor: unknown) {
-    const { updateLessonEvaluationAsync: fn } = await import("@/lib/db-api");
-    return fn(id, input, actor as never);
-}
-
-export async function voidLessonEvaluationAsync(id: number, actorOrUserId: unknown, _reason?: string) {
-    const { voidLessonEvaluationAsync: fn } = await import("@/lib/db-api");
-    return fn(id, actorOrUserId as number, _reason);
-}
+export {
+    createLessonEvaluationPostgres as createLessonEvaluationAsync,
+    listLessonEvaluationsPostgres as listLessonEvaluationsAsync,
+    getLessonEvaluationByIdPostgres as getLessonEvaluationByIdAsync,
+    updateLessonEvaluationPostgres as updateLessonEvaluationAsync,
+    voidLessonEvaluationPostgres as voidLessonEvaluationAsync,
+} from "@/lib/server/postgres/repositories/lesson-evaluations";
 
 // ── Teaching quality improvement ─────────────────────────────────────
 export async function getSchoolTeachingQualityImprovementSummaryAsync(_schoolIdOrFilters: number | { schoolId?: number; grade?: string; startDate?: string; endDate?: string }) {

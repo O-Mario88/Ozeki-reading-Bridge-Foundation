@@ -189,6 +189,22 @@ export async function POST(request: Request) {
       }
     }
 
+    if (payload.module === "visit") {
+      try {
+        const { extractAndSaveCoachingVisitAsync } = await import("@/lib/server/postgres/repositories/coaching-visits");
+        await extractAndSaveCoachingVisitAsync({
+          recordId: record.id,
+          schoolId: payload.schoolId,
+          date: payload.date || new Date().toISOString().split("T")[0],
+          visitType: payload.followUpType || "school_visit",
+          coachUserId: user.id,
+          payloadObj: payload.payload as Record<string, unknown>,
+        });
+      } catch (e) {
+        console.error("Failed to extract coaching visit cleanly:", e);
+      }
+    }
+
     return NextResponse.json({ ok: true, record });
   } catch (error) {
     if (error instanceof z.ZodError) {

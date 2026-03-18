@@ -143,62 +143,13 @@ export async function refreshSchoolGraduationEligibilityCacheAsync(_schoolId?: n
 }
 
 // ── Lesson evaluation stubs ──────────────────────────────────────────
-export async function createLessonEvaluationAsync(input: unknown, actor: PortalUser | number) {
-  const userId = typeof actor === 'number' ? actor : actor.id;
-  const inputObj = input as Record<string, unknown>;
-  const result = await queryPostgres(
-    `INSERT INTO lesson_evaluations (data, created_by_user_id, created_at)
-     VALUES ($1::jsonb, $2, NOW()) RETURNING id`,
-    [JSON.stringify(input), userId],
-  );
-  const id = Number(result.rows[0]?.id ?? 0);
-  return { id, ...inputObj, status: 'active', createdByUserId: userId, createdAt: new Date().toISOString() } as Record<string, unknown> & { id: number };
-}
-
-export async function updateLessonEvaluationAsync(id: number, input: unknown, actor: PortalUser | number) {
-  const actorObj = typeof actor === 'number' ? { id: actor } as PortalUser : actor;
-  const inputObj = input as Record<string, unknown>;
-  await queryPostgres(
-    `UPDATE lesson_evaluations SET data = $1::jsonb, updated_by_user_id = $2, updated_at = NOW() WHERE id = $3`,
-    [JSON.stringify(input), actorObj.id, id],
-  );
-  return { id, ...inputObj, status: 'active', updatedByUserId: actorObj.id, updatedAt: new Date().toISOString() } as Record<string, unknown> & { id: number };
-}
-
-export async function voidLessonEvaluationAsync(id: number, actorOrUserId: PortalUser | number, _reason?: string) {
-  const userId = typeof actorOrUserId === 'number' ? actorOrUserId : actorOrUserId.id;
-  await queryPostgres(
-    `UPDATE lesson_evaluations SET voided = TRUE, voided_by_user_id = $1, voided_at = NOW() WHERE id = $2`,
-    [userId, id],
-  );
-  return { id, status: 'voided' as const };
-}
-
-export async function getLessonEvaluationByIdAsync(id: number) {
-  const result = await queryPostgres(
-    `SELECT id, data, created_by_user_id AS "createdByUserId", created_at AS "createdAt"
-     FROM lesson_evaluations WHERE id = $1 LIMIT 1`,
-    [id],
-  );
-  return result.rows[0] ?? null;
-}
-
-export async function listLessonEvaluationsAsync(filters?: { userId?: number; limit?: number }) {
-  const limit = Math.min(filters?.limit ?? 200, 2000);
-  const params: unknown[] = [limit];
-  const clauses: string[] = [];
-  if (filters?.userId) {
-    params.push(filters.userId);
-    clauses.push(`created_by_user_id = $${params.length}`);
-  }
-  const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
-  const result = await queryPostgres(
-    `SELECT id, data, created_by_user_id AS "createdByUserId", created_at AS "createdAt"
-     FROM lesson_evaluations ${where} ORDER BY created_at DESC LIMIT $1`,
-    params,
-  );
-  return result.rows;
-}
+export {
+  createLessonEvaluationAsync,
+  updateLessonEvaluationAsync,
+  voidLessonEvaluationAsync,
+  getLessonEvaluationByIdAsync,
+  listLessonEvaluationsAsync,
+} from "@/services/dataService";
 
 export type TeacherImprovementProfileResult = {
   teacherUid: string;
