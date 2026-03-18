@@ -328,6 +328,7 @@ export async function updateSupportRequest(id: number, updates: Record<string, u
     `UPDATE support_requests SET ${setClauses.join(", ")}, updated_at = NOW() WHERE id = $${params.length}`,
     params,
   );
+  return { id, ...updates } as Record<string, unknown> & { id: number };
 }
 
 // ── Impact narrative builder ─────────────────────────────────────────

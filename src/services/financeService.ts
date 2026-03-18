@@ -85,7 +85,7 @@ export async function voidFinanceInvoiceAsync(_id: number, _reason: string, _act
 }
 
 export async function sendFinanceInvoice(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    return { email: null as unknown, invoice: { id: _id, status: 'sent' } as Record<string, unknown> & { id: number } };
+    return { email: { status: 'skipped' as string }, invoice: { id: _id, status: 'draft', emailedAt: undefined, lastSentTo: undefined } as Record<string, unknown> & { id: number } };
 }
 
 // ── Receipt CRUD ─────────────────────────────────────────────────────
@@ -137,7 +137,13 @@ export async function listFinancePayments(_filters: unknown) {
 }
 
 export async function recordFinancePayment(_input: unknown, ..._extra: unknown[]) {
-    return { payment: { id: 0 }, invoice: null, autoReceipt: null };
+    const inputObj = _input as Record<string, unknown>;
+    return {
+        id: 0,
+        ...inputObj,
+        invoice: { id: 0, status: 'paid', balanceDue: 0 } as Record<string, unknown>,
+        autoReceipt: { relatedInvoiceId: 0, pdfFileId: `pdf-${Date.now()}` } as Record<string, unknown>,
+    } as Record<string, unknown> & { id: number };
 }
 
 
@@ -234,7 +240,7 @@ export async function generateFinanceMonthlyStatement(_monthOrFilters: string | 
         totalMoneyIn: 0,
         totalMoneyOut: 0,
         net: 0,
-        breakdownByCategory: [] as unknown[],
+        breakdownByCategory: { Donation: 0, Expense: 0 } as Record<string, number>,
         lines: [] as unknown[],
         summary: {} as Record<string, unknown>,
     };

@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
     let submitted = false;
     let autoPosted = false;
     if (payload.submitNow || payload.autoPost) {
-      finalExpense = await submitFinanceExpenseAsync(expense.id, auth.actor);
+      finalExpense = await submitFinanceExpenseAsync(expense.id, auth.actor) as unknown as typeof expense;
       submitted = true;
     }
     if (payload.autoPost) {
