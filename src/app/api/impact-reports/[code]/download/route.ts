@@ -129,11 +129,11 @@ export async function GET(
   drawSection("Executive Summary", wrapText(report.narrative.executiveSummary));
   drawSection(
     "Table of Contents",
-    report.narrative.template.tableOfContents.slice(0, 12).map((item) => `- ${item}`),
+    report.narrative.template.tableOfContents.slice(0, 12).map((item: string) => `- ${item}`),
   );
   drawSection(
     "AI Writing Rules",
-    report.narrative.template.aiWritingRules.map((item) => `- ${item}`),
+    report.narrative.template.aiWritingRules.map((item: string) => `- ${item}`),
   );
 
   const coverage = report.factPack.coverageDelivery;
@@ -151,7 +151,7 @@ export async function GET(
     drawSection("Sponsorship Attribution", [
       `Attributed activities: ${report.factPack.sponsorship.totalAttributedActivities.toLocaleString()}`,
       `Unique sponsors: ${report.factPack.sponsorship.uniqueSponsors.toLocaleString()}`,
-      ...report.factPack.sponsorship.topSponsors.slice(0, 8).map((entry) =>
+      ...report.factPack.sponsorship.topSponsors.slice(0, 8).map((entry: Record<string, unknown>) =>
         `${entry.sponsoredBy} (${entry.sponsorType}) - ${entry.activities} activities [${entry.modules.join(", ")}]`,
       ),
     ]);
@@ -263,7 +263,7 @@ export async function GET(
       `Average overall delta: ${summary.averageOverallDelta ?? "Data not available"}`,
       `Schools improving (%): ${summary.schoolImprovedPercent ?? "Data not available"}`,
       `Top improving domains: ${summary.topImprovingDomains.length > 0
-        ? summary.topImprovingDomains.map((entry) => `${entry.domain} (+${entry.avgDelta})`).join(", ")
+        ? summary.topImprovingDomains.map((entry: Record<string, unknown>) => `${entry.domain} (+${entry.avgDelta})`).join(", ")
         : "Data not available"
       }`,
       `Note: ${summary.disclaimer}`,

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const mode = url.searchParams.get("mode");
 
     if (mode === "variance") {
-        const lines = getBudgetVsActual(month, currency);
+        const lines = getBudgetVsActual(Number(month), Number(currency));
         return NextResponse.json({ month, currency, lines });
     }
 

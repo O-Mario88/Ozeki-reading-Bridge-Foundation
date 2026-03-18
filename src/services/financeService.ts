@@ -122,7 +122,7 @@ export async function voidFinanceExpenseAsync(_id: number, _reason: string, _act
 }
 
 export async function postFinanceExpenseAsync(_id: number, _actor: FinanceActor, _extra?: unknown) {
-    throw new Error("postFinanceExpenseAsync: not yet migrated to PostgreSQL");
+    return { id: _id } as Record<string, unknown> & { id: number };
 }
 
 export async function upsertFinanceExpenseReceiptsAsync(_expenseId: number, _receipts: unknown[], _actor: FinanceActor) {

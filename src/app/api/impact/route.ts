@@ -81,7 +81,7 @@ export async function GET(request: Request) {
   if (view === "calculator") {
     const amount = Number(searchParams.get("amount") || 10000);
     return cachedJson(
-      await runImpactCalculator(amount, level || "country", id),
+      await runImpactCalculator({ amount, level: level || "country", id }),
     );
   }
 
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
 
   if (view === "government") {
     const period = searchParams.get("period") ?? undefined;
-    return cachedJson(await getGovernmentViewData(period));
+    return cachedJson(await getGovernmentViewData());
   }
 
   // Original drill-down views

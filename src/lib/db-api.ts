@@ -153,12 +153,13 @@ export async function updateLessonEvaluationAsync(id: number, input: unknown, ac
   return { id, ...inputObj, status: 'active', updatedByUserId: actor.id, updatedAt: new Date().toISOString() } as Record<string, unknown> & { id: number };
 }
 
-export async function voidLessonEvaluationAsync(id: number, actor: PortalUser) {
+export async function voidLessonEvaluationAsync(id: number, actorOrUserId: PortalUser | number, _reason?: string) {
+  const userId = typeof actorOrUserId === 'number' ? actorOrUserId : actorOrUserId.id;
   await queryPostgres(
     `UPDATE lesson_evaluations SET voided = TRUE, voided_by_user_id = $1, voided_at = NOW() WHERE id = $2`,
-    [actor.id, id],
+    [userId, id],
   );
-  return { id };
+  return { id, status: 'voided' as const };
 }
 
 export async function getLessonEvaluationByIdAsync(id: number) {

@@ -258,7 +258,7 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h2>Table of Contents</h2>
             <ul>
-              {report.narrative.template.tableOfContents.map((item) => (
+              {report.narrative.template.tableOfContents.map((item: string) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
@@ -266,7 +266,7 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h2>AI Writing Rules</h2>
             <ul>
-              {report.narrative.template.aiWritingRules.map((rule) => (
+              {report.narrative.template.aiWritingRules.map((rule: string) => (
                 <li key={rule}>{rule}</li>
               ))}
             </ul>
@@ -279,7 +279,7 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h2>Biggest Improvements</h2>
             <ul>
-              {report.narrative.biggestImprovements.map((item) => (
+              {report.narrative.biggestImprovements.map((item: string) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
@@ -287,7 +287,7 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h2>Key Challenges</h2>
             <ul>
-              {report.narrative.keyChallenges.map((item) => (
+              {report.narrative.keyChallenges.map((item: string) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
@@ -323,7 +323,7 @@ export default async function ImpactReportDetailPage({
         <div className="container card">
           <h2>Section Narratives</h2>
           <div className="cards-grid">
-            {report.narrative.sectionNarratives.map((section) => (
+            {report.narrative.sectionNarratives.map((section: Record<string, unknown> & { sectionId: string; title: string; summary: string }) => (
               <article className="card" key={section.sectionId}>
                 <h3>{section.title}</h3>
                 <p>{section.summary}</p>
