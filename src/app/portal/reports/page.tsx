@@ -76,7 +76,7 @@ export default async function PortalReportsPage({
 
   const reportsData =
     activeTab === "operations"
-      ? getPortalOperationalReportsData(user)
+      ? await getPortalOperationalReportsData(user)
       : null;
   const impactReports =
     activeTab === "impact-reports" || activeTab === "school-reading-performance"

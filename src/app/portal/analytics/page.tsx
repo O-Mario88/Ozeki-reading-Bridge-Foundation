@@ -13,8 +13,8 @@ export const metadata = {
 
 export default async function PortalAnalyticsPage() {
   const user = await requirePortalUser();
-  const analytics = getPortalAnalyticsData(user);
-  const explorer = getImpactExplorerProfiles();
+  const analytics = await getPortalAnalyticsData(user);
+  const explorer = await getImpactExplorerProfiles();
 
   return (
     <PortalShell

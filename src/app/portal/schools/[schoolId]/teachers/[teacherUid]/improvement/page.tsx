@@ -35,7 +35,7 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
     teacherUid,
   });
 
-  const comparison = profile.teacherComparison;
+  const comparison = profile?.teacherComparison;
 
   return (
     <PortalShell

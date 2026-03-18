@@ -16,8 +16,8 @@ export const metadata = {
 
 export default async function PortalStoriesPage() {
     const user = await requirePortalStaffUser();
-    const stories = listStoryEntries();
-    const anthologies = listStoryAnthologies();
+    const stories = await listStoryEntries();
+    const anthologies = await listStoryAnthologies();
     const schools = await listSchoolDirectoryRecords();
 
     return (

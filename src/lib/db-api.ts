@@ -354,7 +354,7 @@ export async function listPortalUsersForAdmin(_actor: PortalUser) {
             created_at AS "createdAt"
      FROM portal_users ORDER BY full_name`,
   );
-  return result.rows;
+  return result.rows as Array<{ id: number; fullName: string; email: string; phone: string; role: string; isSupervisor: boolean; isME: boolean; isAdmin: boolean; isSuperAdmin: boolean; createdAt: string }>;
 }
 
 export async function listPortalUsersForFilters(_actor: PortalUser) {
@@ -362,7 +362,7 @@ export async function listPortalUsersForFilters(_actor: PortalUser) {
     `SELECT id, full_name AS "fullName", email, role
      FROM portal_users ORDER BY full_name`,
   );
-  return result.rows;
+  return result.rows as Array<{ id: number; fullName: string; email: string; role: string }>;
 }
 
 export async function createPortalUserAccount(payload: {

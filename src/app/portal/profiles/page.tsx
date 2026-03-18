@@ -206,7 +206,7 @@ export default async function PortalProfilesPage({
   const user = await requirePortalUser();
   const filters = await searchParams;
   const level = resolveLevel(normalizeValue(filters.level));
-  const explorer = getImpactExplorerProfiles();
+  const explorer = await getImpactExplorerProfiles();
 
   const schools: SchoolWithGeo[] = explorer.schools.map((school) => {
     const district = school.district.trim();

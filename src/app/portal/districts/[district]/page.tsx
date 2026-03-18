@@ -9,12 +9,12 @@ export default async function DistrictProfilePage({ params }: { params: Promise<
     const { district } = await params;
     const decodedDistrict = decodeURIComponent(district);
 
-    const stats = getDistrictStats(decodedDistrict);
-    const supportStatuses = listSchoolSupportStatuses({
+    const stats = await getDistrictStats(decodedDistrict);
+    const supportStatuses = await listSchoolSupportStatuses({
         district: decodedDistrict,
         limit: 300,
     });
-    const schools = listSchoolsByDistrict(decodedDistrict);
+    const schools = await listSchoolsByDistrict(decodedDistrict);
 
     if (!stats) {
         notFound();

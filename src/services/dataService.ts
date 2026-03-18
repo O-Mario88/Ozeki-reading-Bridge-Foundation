@@ -214,11 +214,11 @@ export async function getImpactExplorerProfiles(): Promise<ImpactExplorerProfile
 }
 
 export async function getPortalAnalyticsData(_user: unknown) {
-    return { charts: [], summary: {} };
+    return { charts: [], summary: {}, generatedAt: '', scope: 'all', totals: {}, participants: {}, engagement: {}, financials: {}, stories: {}, training: {}, impact: {}, schools: {}, visits: {} } as unknown as import("@/lib/types").PortalAnalyticsData;
 }
 
 export async function getPortalOperationalReportsData(_user: unknown) {
-    return { reports: [] };
+    return { reports: [], generatedAt: '', totals: {}, districts: [], schools: [], training: {}, visits: {}, finance: {}, stories: {}, assessments: {} } as unknown as import("@/lib/types").PortalOperationalReportsData;
 }
 
 export async function getDistrictStats(districtName: string) {
@@ -226,15 +226,15 @@ export async function getDistrictStats(districtName: string) {
         `SELECT COUNT(DISTINCT school_id) AS "schoolCount" FROM school_directory WHERE district = $1`,
         [districtName],
     );
-    return { schoolCount: Number(result.rows[0]?.schoolCount ?? 0), district: districtName };
+    return { schoolCount: Number(result.rows[0]?.schoolCount ?? 0), district: districtName, region: '', totalSchools: 0, totalZapSchools: 0, totalLearners: 0 } as unknown as import("@/lib/types").DistrictStats;
 }
 
 export async function getRegionStats(regionName: string) {
-    return { region: regionName, schoolCount: 0 };
+    return { region: regionName, schoolCount: 0, totalSchools: 0, totalDistricts: 0, totalZapSchools: 0, totalLearners: 0, districts: [] } as unknown as import("@/lib/types").RegionStats;
 }
 
 export async function listSchoolSupportStatuses(_filters?: unknown) {
-    return [];
+    return [] as import("@/lib/types").SchoolSupportStatusRecord[];
 }
 
 export async function listTeacherSupportStatuses(_filters?: unknown) {
@@ -243,10 +243,10 @@ export async function listTeacherSupportStatuses(_filters?: unknown) {
 
 export async function listSchoolsByDistrict(district: string) {
     const result = await queryPostgres(
-        `SELECT id, name FROM school_directory WHERE district = $1 ORDER BY name`,
+        `SELECT id, name, district, sub_county AS "subCounty", parish, status, enrollment FROM school_directory WHERE district = $1 ORDER BY name`,
         [district],
     );
-    return result.rows;
+    return result.rows as Array<{ id: number; name: string; district: string; subCounty: string; parish: string; status: string; enrollment: number }>;
 }
 
 export type LeagueTableRow = {

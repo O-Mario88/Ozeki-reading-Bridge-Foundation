@@ -11,8 +11,8 @@ export default async function SupportPage() {
     }
 
     // Fetch initial data
-    const initialRequests = listSupportRequests();
-    const staffMembers = listPortalUsersForAdmin(user);
+    const initialRequests = await listSupportRequests();
+    const staffMembers = await listPortalUsersForAdmin(user);
 
     return (
         <PortalShell

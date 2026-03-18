@@ -25,7 +25,7 @@ export async function PortalModuleWorkspacePage({
   const config = portalModuleConfigByModule[module];
   const records = await listPortalRecordsAsync({ module }, user);
   const schools = await listSchoolDirectoryRecords();
-  const users = listPortalUsersForFilters(user);
+  const users = await listPortalUsersForFilters(user);
 
   return (
     <PortalShell

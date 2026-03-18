@@ -9,8 +9,8 @@ export default async function RegionProfilePage({ params }: { params: Promise<{ 
     const { region } = await params;
     const decodedRegion = decodeURIComponent(region);
 
-    const stats = getRegionStats(decodedRegion);
-    const supportStatuses = listSchoolSupportStatuses({
+    const stats = await getRegionStats(decodedRegion);
+    const supportStatuses = await listSchoolSupportStatuses({
         region: decodedRegion,
         limit: 600,
     });
