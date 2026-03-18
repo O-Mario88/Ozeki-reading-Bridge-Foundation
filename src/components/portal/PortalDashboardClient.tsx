@@ -84,6 +84,15 @@ function ConceptDoughnutChart({ implement, notImplement }: { implement: number, 
 export function PortalDashboardClient({ dashboard, performanceData }: PortalDashboardClientProps) {
   const [graduationEligibleCount, setGraduationEligibleCount] = useState(0);
 
+  const quickActions = useMemo(() => [
+    { href: "/portal/trainings?new=1", label: "New Training", icon: "🎓" },
+    { href: "/portal/visits?new=1", label: "New School Visit", icon: "🚶" },
+    { href: "/portal/assessments?new=1", label: "New Assessment", icon: "📝" },
+    { href: "/portal/story?new=1", label: "New 1001 Story", icon: "📖" },
+    { href: "/portal/blog?new=1", label: "New Blog Post", icon: "✏️" },
+    { href: "/portal/resources", label: "Upload Resource", icon: "📎" },
+  ], []);
+
   useEffect(() => {
     let active = true;
     async function loadGraduationAlerts() {
@@ -131,7 +140,7 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
       )}
 
       {/* Concept KPI Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem" }}>
+      <div className="concept-kpi-grid">
         {kpiCards.map((item, idx) => (
           <article className="concept-kpi" key={item.label}>
             <div className="concept-kpi-header">
@@ -155,7 +164,7 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
       </div>
 
       {/* Dashboard Main layout: Table & Pie Chart */}
-      <div className="ds-dashboard-layout" style={{ gridTemplateColumns: "1fr 340px", gap: "1.5rem" }}>
+      <div className="concept-layout">
         
         {/* Left Table Section */}
         <section className="concept-card" style={{ minWidth: 0 }}>
@@ -244,6 +253,23 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
             </div>
             <div style={{ fontSize: "0.8125rem", color: "#8b92a5", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#8b92a5", display: "inline-block" }}></span> Not Started
+            </div>
+          </div>
+        </section>
+
+        {/* Quick Actions Restored */}
+        <section className="concept-card" style={{ minWidth: 0 }}>
+          <div className="concept-card-header" style={{ paddingBottom: "1rem" }}>
+            <h2 className="concept-card-title">Quick Actions</h2>
+          </div>
+          <div style={{ padding: "0 1.5rem 1.5rem 1.5rem" }}>
+            <div className="concept-quick-actions">
+              {quickActions.map((item) => (
+                <Link key={item.href} href={item.href} className="concept-quick-action-link">
+                  <span style={{ fontSize: "1.2rem" }}>{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
