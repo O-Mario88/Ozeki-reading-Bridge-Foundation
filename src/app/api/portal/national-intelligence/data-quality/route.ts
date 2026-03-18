@@ -97,8 +97,8 @@ export async function POST(request: Request) {
     const payload = sweepSchema.parse(await request.json());
     const result = await runEducationDataQualitySweepAsync({
       user,
-      scopeType: payload.scopeType,
-      scopeId: payload.scopeId,
+      scopeType: payload.scopeType ?? 'country',
+      scopeId: payload.scopeId ?? '',
     });
 
     return NextResponse.json({ result });

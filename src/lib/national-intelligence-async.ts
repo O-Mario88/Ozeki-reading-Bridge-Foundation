@@ -17,7 +17,7 @@ export async function listBenchmarkRulesAsync(benchmarkId: number) {
 }
 
 export async function createBenchmarkProfileAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   profile: Partial<BenchmarkProfileRecord>;
   [key: string]: unknown;
 }) {
@@ -28,7 +28,7 @@ export async function createBenchmarkProfileAsync(args: {
 }
 
 export async function updateBenchmarkProfileAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   profile: Partial<BenchmarkProfileRecord>;
   [key: string]: unknown;
 }) {
@@ -39,7 +39,7 @@ export async function updateBenchmarkProfileAsync(args: {
 }
 
 export async function upsertBenchmarkRuleAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   rule: BenchmarkRuleInput;
   [key: string]: unknown;
 }) {
@@ -65,7 +65,7 @@ export async function listEducationAuditExceptionsAsync(filters: {
 }
 
 export async function resolveEducationAuditExceptionAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   exceptionId: number;
   resolutionNotes: string;
   [key: string]: unknown;
@@ -93,7 +93,7 @@ export async function listDataQualitySummariesAsync(filters: {
 }
 
 export async function runEducationDataQualitySweepAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   scopeType: NlisGeoScopeType | string;
   scopeId: string;
 }) {
@@ -105,7 +105,7 @@ export async function listPortalUsersForAssignmentsAsync() {
 }
 
 export async function assignPriorityQueueItemAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   schoolId: number;
   periodKey?: string;
   ownerUserId: number;
@@ -152,7 +152,7 @@ export async function getPartnerImpactDatasetAsync(args: {
 }
 
 export async function runNationalNightlyJobsAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
 }) {
   return service.runNationalNightlyJobs(args);
 }
@@ -176,7 +176,7 @@ export async function getInterventionPlanByIdAsync(planId: number) {
 }
 
 export async function upsertInterventionPlanAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   plan: any;
   actions: any[];
 }) {
@@ -184,14 +184,14 @@ export async function upsertInterventionPlanAsync(args: {
 }
 
 export async function addInterventionActionAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   input: any;
 }) {
   return service.addInterventionAction(args);
 }
 
 export async function updateInterventionActionAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   actionId: number;
   input: any;
 }) {
@@ -242,7 +242,7 @@ export async function listNationalReportPacksAsync(filters: any) {
 }
 
 export async function generateNationalReportPackAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   preset: NationalReportPreset;
   scopeType: NlisGeoScopeType;
   scopeId: string;
@@ -261,7 +261,7 @@ export async function listPartnerApiClientsAsync() {
 }
 
 export async function createPartnerApiClientAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   input: {
     partnerName: string;
     allowedScopeType: string;
@@ -272,7 +272,7 @@ export async function createPartnerApiClientAsync(args: {
 }
 
 export async function setPartnerApiClientActiveAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   clientId: number;
   active: boolean;
 }) {
@@ -280,7 +280,7 @@ export async function setPartnerApiClientActiveAsync(args: {
 }
 
 export async function createInterventionPlanAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   input: {
     scopeType: "school" | "district";
     scopeId: string;
@@ -298,7 +298,7 @@ export async function createInterventionPlanAsync(args: {
 }
 
 export async function createInterventionPlanFromPriorityAsync(args: {
-  user: Pick<PortalUser, "id" | "fullName">;
+  user: { id: number; fullName: string; [key: string]: unknown };
   item: {
     schoolId: number;
     schoolName: string;

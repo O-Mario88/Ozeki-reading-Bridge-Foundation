@@ -142,7 +142,7 @@ export async function GET(request: Request) {
   const village = searchParams.get("village");
   const search = searchParams.get("search");
 
-  const payload = getPortalOperationalReportsData(user);
+  const payload = await getPortalOperationalReportsData(user);
   const schools = filterSchools(
     payload.schools,
     { country, region, subRegion, district, subCounty, parish, village, module: moduleFilter },
