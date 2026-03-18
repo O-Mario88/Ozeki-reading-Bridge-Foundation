@@ -36,8 +36,12 @@ export function isPostgresConfigured() {
   if (!raw) {
     return false;
   }
-  assertPostgres(raw);
-  return true;
+  try {
+    assertPostgres(raw);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export type PostgresRuntimeInfo = ReturnType<typeof getPostgresConnectionSummary>;
