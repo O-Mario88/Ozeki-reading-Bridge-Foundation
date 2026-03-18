@@ -134,20 +134,23 @@ export async function refreshSchoolGraduationEligibilityCacheAsync() {
 
 // ── Lesson evaluation stubs ──────────────────────────────────────────
 export async function createLessonEvaluationAsync(input: unknown, actor: PortalUser) {
+  const inputObj = input as Record<string, unknown>;
   const result = await queryPostgres(
     `INSERT INTO lesson_evaluations (data, created_by_user_id, created_at)
      VALUES ($1::jsonb, $2, NOW()) RETURNING id`,
     [JSON.stringify(input), actor.id],
   );
-  return { id: Number(result.rows[0]?.id ?? 0) };
+  const id = Number(result.rows[0]?.id ?? 0);
+  return { id, ...inputObj, status: 'active', createdByUserId: actor.id, createdAt: new Date().toISOString() } as Record<string, unknown> & { id: number };
 }
 
 export async function updateLessonEvaluationAsync(id: number, input: unknown, actor: PortalUser) {
+  const inputObj = input as Record<string, unknown>;
   await queryPostgres(
     `UPDATE lesson_evaluations SET data = $1::jsonb, updated_by_user_id = $2, updated_at = NOW() WHERE id = $3`,
     [JSON.stringify(input), actor.id, id],
   );
-  return { id };
+  return { id, ...inputObj, status: 'active', updatedByUserId: actor.id, updatedAt: new Date().toISOString() } as Record<string, unknown> & { id: number };
 }
 
 export async function voidLessonEvaluationAsync(id: number, actor: PortalUser) {
@@ -284,7 +287,7 @@ export async function updateGraduationSettingsAsync(settings: unknown) {
 }
 
 export async function listGraduationQueueAsync(_filters?: unknown) {
-  return [];
+  return { eligibleCount: 0, updatedAt: new Date().toISOString(), items: [] as Array<{ schoolId: number; schoolName: string; district: string; [key: string]: unknown }> };
 }
 
 export async function listGraduationReviewSupervisorsAsync() {

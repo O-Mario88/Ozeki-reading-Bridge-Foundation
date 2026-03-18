@@ -124,7 +124,7 @@ export async function GET(request: Request) {
       });
     }
     return NextResponse.json({
-      roster: listSchoolLearnersBySchool(schoolId).map((entry) => ({
+      roster: (await listSchoolLearnersBySchool(schoolId)).map((entry) => ({
         ...entry,
         fullName: entry.learnerName,
       })),
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
             classGrade: data.classGrade,
             internalChildId: data.internalChildId,
           })
-        : addSchoolLearnerToSchool({
+        : await addSchoolLearnerToSchool({
             schoolId: data.schoolId,
             learnerName: data.fullName,
             gender: data.gender,
@@ -214,7 +214,7 @@ export async function POST(request: Request) {
           trainer: data.trainer,
           notes: data.notes,
         })
-      : addSchoolContactToSchool({
+      : await addSchoolContactToSchool({
           schoolId: data.schoolId,
           fullName: data.fullName,
           gender: data.gender,
@@ -264,7 +264,7 @@ export async function PATCH(request: Request) {
       const data = updateLearnerSchema.parse(body);
       const existing = isPostgresConfigured()
         ? await getSchoolLearnerByUidPostgres(data.uid)
-        : getSchoolLearnerByUid(data.uid);
+        : await getSchoolLearnerByUid(data.uid);
       if (!existing) {
         return NextResponse.json({ error: "Learner not found." }, { status: 404 });
       }
@@ -276,7 +276,7 @@ export async function PATCH(request: Request) {
             classGrade: data.classGrade,
             internalChildId: data.internalChildId ?? undefined,
           })
-        : updateSchoolLearnerInSchool(existing.learnerId, {
+        : await updateSchoolLearnerInSchool(existing.learnerId, {
             learnerName: data.fullName,
             gender: data.gender,
             age: data.age,
@@ -295,7 +295,7 @@ export async function PATCH(request: Request) {
     const data = updateContactSchema.parse(body);
     const existing = isPostgresConfigured()
       ? await getSchoolContactByUidPostgres(data.uid)
-      : getSchoolContactByUid(data.uid);
+      : await getSchoolContactByUid(data.uid);
     if (!existing) {
       return NextResponse.json({ error: "Contact not found." }, { status: 404 });
     }
@@ -328,7 +328,7 @@ export async function PATCH(request: Request) {
           trainer: data.trainer,
           notes: data.notes ?? undefined,
         })
-      : updateSchoolContactInSchool(existing.contactId, {
+      : await updateSchoolContactInSchool(existing.contactId, {
           fullName: data.fullName,
           gender: data.gender,
           phone: data.phone ?? undefined,

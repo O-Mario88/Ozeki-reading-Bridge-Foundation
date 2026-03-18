@@ -19,6 +19,7 @@ export async function listBenchmarkRulesAsync(benchmarkId: number) {
 export async function createBenchmarkProfileAsync(args: {
   user: Pick<PortalUser, "id" | "fullName">;
   profile: Partial<BenchmarkProfileRecord>;
+  [key: string]: unknown;
 }) {
   return service.upsertBenchmarkProfile({
     user: args.user,
@@ -29,6 +30,7 @@ export async function createBenchmarkProfileAsync(args: {
 export async function updateBenchmarkProfileAsync(args: {
   user: Pick<PortalUser, "id" | "fullName">;
   profile: Partial<BenchmarkProfileRecord>;
+  [key: string]: unknown;
 }) {
   return service.upsertBenchmarkProfile({
     user: args.user,
@@ -39,6 +41,7 @@ export async function updateBenchmarkProfileAsync(args: {
 export async function upsertBenchmarkRuleAsync(args: {
   user: Pick<PortalUser, "id" | "fullName">;
   rule: BenchmarkRuleInput;
+  [key: string]: unknown;
 }) {
   return service.upsertBenchmarkRule({
     user: args.user,
@@ -51,6 +54,7 @@ export async function listEducationAuditExceptionsAsync(filters: {
   scopeId?: string;
   status?: string;
   limit?: number;
+  [key: string]: unknown;
 }) {
   return service.listEducationAuditExceptions({
     scopeType: filters.scopeType as NlisGeoScopeType,
@@ -64,6 +68,7 @@ export async function resolveEducationAuditExceptionAsync(args: {
   user: Pick<PortalUser, "id" | "fullName">;
   exceptionId: number;
   resolutionNotes: string;
+  [key: string]: unknown;
 }) {
   return service.resolveEducationAuditException({
     user: { ...args.user, isSuperAdmin: false },
@@ -89,10 +94,10 @@ export async function listDataQualitySummariesAsync(filters: {
 
 export async function runEducationDataQualitySweepAsync(args: {
   user: Pick<PortalUser, "id" | "fullName">;
-  scopeType: NlisGeoScopeType;
+  scopeType: NlisGeoScopeType | string;
   scopeId: string;
 }) {
-  return service.runEducationDataQualitySweep(args);
+  return service.runEducationDataQualitySweep({ ...args, scopeType: args.scopeType as NlisGeoScopeType });
 }
 
 export async function listPortalUsersForAssignmentsAsync() {
@@ -110,12 +115,12 @@ export async function assignPriorityQueueItemAsync(args: {
 }
 
 export async function getNationalInsightsAsync(args: {
-  scopeType: NlisGeoScopeType;
-  scopeId: string;
-  periodStart: string;
-  periodEnd: string;
+  scopeType: NlisGeoScopeType | string;
+  scopeId?: string;
+  periodStart?: string;
+  periodEnd?: string;
 }) {
-  return service.getNationalInsights(args);
+  return service.getNationalInsights({ ...args, scopeType: args.scopeType as NlisGeoScopeType, scopeId: args.scopeId ?? '', periodStart: args.periodStart, periodEnd: args.periodEnd });
 }
 
 export async function computeInterventionCoverageAsync(args: {

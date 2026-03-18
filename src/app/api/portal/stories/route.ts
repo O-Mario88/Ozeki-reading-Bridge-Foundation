@@ -19,8 +19,8 @@ export async function GET() {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const stories = listStoryEntries();
-    const anthologies = listStoryAnthologies();
+    const stories = await listStoryEntries();
+    const anthologies = await listStoryAnthologies();
     return NextResponse.json({ stories, anthologies });
 }
 
@@ -66,11 +66,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "publish") {
-        const result = publishStoryEntry(body.storyId, user.id, user.fullName);
+        const result = await publishStoryEntry(body.storyId, user.id, user.fullName);
         if (!result.success) {
             return NextResponse.json({ error: result.error }, { status: 403 });
         }
-        const story = getStoryById(body.storyId);
+        const story = await getStoryById(body.storyId);
         return NextResponse.json({ story });
     }
 
@@ -78,13 +78,13 @@ export async function POST(request: NextRequest) {
         if (!user?.isSuperAdmin) {
             return NextResponse.json({ error: "Only Super Admin can unpublish stories." }, { status: 403 });
         }
-        unpublishStoryEntry(body.storyId, user.id, user.fullName);
-        const story = getStoryById(body.storyId);
+        await unpublishStoryEntry(body.storyId, user.id, user.fullName);
+        const story = await getStoryById(body.storyId);
         return NextResponse.json({ story });
     }
 
     if (action === "delete") {
-        deleteStoryEntry(body.storyId, user.id, user.fullName);
+        await deleteStoryEntry(body.storyId, user.id, user.fullName);
         return NextResponse.json({ success: true });
     }
 

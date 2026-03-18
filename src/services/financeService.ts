@@ -89,7 +89,7 @@ export async function sendFinanceInvoice(_id: number, _actor: FinanceActor, _ext
 
 // ── Receipt CRUD ─────────────────────────────────────────────────────
 export async function createFinanceReceiptAsync(_input: unknown, _actor: FinanceActor) {
-    return { id: 0 };
+    return { receipt: { id: 0 }, email: null as unknown };
 }
 
 export async function deleteFinanceReceiptDraftAsync(_id: number, _actor: FinanceActor, _extra?: unknown) {
@@ -194,8 +194,12 @@ export async function autoSuggestMatches(_statementLineId: number) {
     return [];
 }
 
-export async function getReconciliationSummary(_month?: string) {
+export async function getReconciliationSummary(_month?: string, _currency?: string) {
     return { matched: 0, unmatched: 0, total: 0 };
+}
+
+export async function createStatementLineAsync(_actor: unknown, _input: unknown) {
+    return { id: 0 };
 }
 
 // ── Budgets ──────────────────────────────────────────────────────────

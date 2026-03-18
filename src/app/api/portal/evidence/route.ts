@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       recordId: searchParams.get("recordId") || undefined,
     });
 
-    const evidence = listPortalEvidence(filters, user).map((item) => ({
+    const evidence = (await listPortalEvidence(filters, user)).map((item) => ({
       ...item,
       downloadUrl: `/api/portal/evidence/${item.id}/download`,
     }));
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     const bytes = Buffer.from(await file.arrayBuffer());
     await fs.writeFile(storedPath, bytes);
 
-    const evidence = savePortalEvidence({
+    const evidence = await savePortalEvidence({
       recordId: meta.recordId,
       module: meta.module,
       date: meta.date,

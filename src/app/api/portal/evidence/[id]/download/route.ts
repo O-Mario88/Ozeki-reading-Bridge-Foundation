@@ -27,7 +27,7 @@ export async function GET(
   try {
     const params = await context.params;
     const id = toId(params.id);
-    const evidence = getPortalEvidenceById(id, user);
+    const evidence = await getPortalEvidenceById(id, user);
     if (!evidence) {
       return NextResponse.json({ error: "Evidence not found." }, { status: 404 });
     }
