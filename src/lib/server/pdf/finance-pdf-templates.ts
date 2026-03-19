@@ -79,11 +79,6 @@ export function buildInvoiceHtml(
 
   const amountPaid = invoice.paidAmount;
 
-  let statusBadge = "sent";
-  if (invoice.status === "paid" || invoice.status === "partially_paid") statusBadge = "paid";
-  if (invoice.status === "overdue") statusBadge = "overdue";
-  if (invoice.status === "draft") statusBadge = "draft";
-
   // Build Billed To details from contact record
   const billedToName = contact?.name || invoice.contactName || "No Name";
   const billedToLines: string[] = [];
@@ -108,17 +103,6 @@ export function buildInvoiceHtml(
           <p style="margin: 2px 0;"><strong>Email:</strong> amos@ozekiread.org</p>
           <p style="margin: 2px 0;"><strong>Phone Number:</strong> +256 773 397375</p>
         </div>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 8px 12px; background: #f8fafc; border-radius: 4px;">
-        <div>
-          <strong>Invoice #:</strong> ${invoice.invoiceNumber}
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-          <strong>Issue Date:</strong> ${formatReportDate(invoice.issueDate)}
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-          <strong>Due Date:</strong> ${formatReportDate(invoice.dueDate)}
-        </div>
-        <span class="fp-badge ${statusBadge}">${invoice.status.replace("_", " ")}</span>
       </div>
 
       <table class="fp-table">
