@@ -39,7 +39,7 @@ export function formatReportDate(isoString: string | null | undefined): string {
 }
 
 const financePdfStyles = `
-  .fp-container { width: 100%; font-family: var(--pdf-font-family), sans-serif; font-size: 10.5pt; color: #1e293b; }
+  .fp-container { width: 100%; font-family: var(--pdf-font-family), sans-serif; font-size: 10.5pt; color: #1e293b; padding: 0 12px; }
   .fp-header-grid { display: flex; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0; }
   .fp-header-col h3 { margin: 0 0 6px 0; font-size: 11pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
   .fp-header-col p { margin: 0 0 4px 0; }
@@ -60,15 +60,20 @@ const financePdfStyles = `
   .fp-badge.overdue { background: #fee2e2; color: #991b1b; }
 `;
 
-export function buildInvoiceHtml(invoice: FinanceInvoiceRecord, lines: FinanceInvoiceLineItemRecord[], settings?: { paymentInstructions?: string }): { html: string; css: string } {
+export function buildInvoiceHtml(
+  invoice: FinanceInvoiceRecord,
+  lines: FinanceInvoiceLineItemRecord[],
+  settings?: { paymentInstructions?: string },
+  contact?: { name: string; emails?: string[]; phone?: string; address?: string },
+): { html: string; css: string } {
   const lineHtml = lines.map(line => `
     <tr>
       <td>
         <div style="font-weight: 500; color: #0f172a; margin-bottom: 4px;">${line.description}</div>
       </td>
       <td class="num">${line.qty}</td>
-      <td class="num">${formatMoney(invoice.currency, line.unitPrice)}</td>
-      <td class="num" style="font-weight: 500;">${formatMoney(invoice.currency, line.qty * line.unitPrice)}</td>
+      <td class="num" style="white-space: nowrap;">${formatMoney(invoice.currency, line.unitPrice)}</td>
+      <td class="num" style="font-weight: 500; white-space: nowrap;">${formatMoney(invoice.currency, line.qty * line.unitPrice)}</td>
     </tr>
   `).join("");
 
@@ -79,32 +84,50 @@ export function buildInvoiceHtml(invoice: FinanceInvoiceRecord, lines: FinanceIn
   if (invoice.status === "overdue") statusBadge = "overdue";
   if (invoice.status === "draft") statusBadge = "draft";
 
-  const paymentText = settings?.paymentInstructions || "Payments can be made via bank transfer or mobile money.\nBank Name: Equity Bank.\nAccount Number: 1007203565985.\nAccount Name: Ozeki Reading Bridge Foundation.\nContact support@ozekiread.org for account";
+  // Build Billed To details from contact record
+  const billedToName = contact?.name || invoice.contactName || "No Name";
+  const billedToLines: string[] = [];
+  if (contact?.address) billedToLines.push(contact.address);
+  if (contact?.emails?.length) billedToLines.push(contact.emails.join(", "));
+  if (contact?.phone) billedToLines.push(contact.phone);
+  const billedToExtra = billedToLines.map(l => `<p style="margin: 2px 0; color: #475569;">${l}</p>`).join("");
 
   const html = `
     <div class="fp-container">
       <div class="fp-header-grid">
         <div class="fp-header-col">
           <h3>Billed To</h3>
-          <p style="font-size: 11pt; font-weight: 600; color: #0f172a;">${invoice.contactName || "No Name"}</p>
+          <p style="font-size: 11pt; font-weight: 600; color: #0f172a; margin-bottom: 4px;">${billedToName}</p>
+          ${billedToExtra}
         </div>
         <div class="fp-header-col" style="text-align: right;">
-          <p><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
-          <p><strong>Issue Date:</strong> ${formatReportDate(invoice.issueDate)}</p>
-          <p><strong>Due Date:</strong> ${formatReportDate(invoice.dueDate)}</p>
-          <p style="margin-top: 8px;">
-            <span class="fp-badge ${statusBadge}">${invoice.status.replace("_", " ")}</span>
-          </p>
+          <h3>Payment Details</h3>
+          <p style="margin: 2px 0;"><strong>Bank Name:</strong> Equity Bank Limited</p>
+          <p style="margin: 2px 0;"><strong>Bank Account:</strong> 1007203565985</p>
+          <p style="margin: 2px 0;"><strong>Account Name:</strong> Ozeki Reading Bridge Foundation Limited</p>
+          <p style="margin: 2px 0;"><strong>Email:</strong> amos@ozekiread.org</p>
+          <p style="margin: 2px 0;"><strong>Phone Number:</strong> +256 773 397375</p>
         </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 8px 12px; background: #f8fafc; border-radius: 4px;">
+        <div>
+          <strong>Invoice #:</strong> ${invoice.invoiceNumber}
+          &nbsp;&nbsp;|&nbsp;&nbsp;
+          <strong>Issue Date:</strong> ${formatReportDate(invoice.issueDate)}
+          &nbsp;&nbsp;|&nbsp;&nbsp;
+          <strong>Due Date:</strong> ${formatReportDate(invoice.dueDate)}
+        </div>
+        <span class="fp-badge ${statusBadge}">${invoice.status.replace("_", " ")}</span>
       </div>
 
       <table class="fp-table">
         <thead>
           <tr>
             <th style="width: 75%;">Description</th>
-            <th class="num" style="width: 8%;">Qty</th>
-            <th class="num" style="width: 8%;">Unit Price</th>
-            <th class="num" style="width: 9%;">Amount</th>
+            <th class="num" style="width: 8%; white-space: nowrap;">Qty</th>
+            <th class="num" style="width: 8%; white-space: nowrap;">Unit Price</th>
+            <th class="num" style="width: 9%; white-space: nowrap;">Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -129,10 +152,8 @@ export function buildInvoiceHtml(invoice: FinanceInvoiceRecord, lines: FinanceIn
 
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
         <div class="fp-notes" style="margin-top: 0; margin-bottom: 0; width: 320px; text-align: left;">
-          <strong>Payment Instructions:</strong><br/>
-          ${paymentText.replace(/\n/g, "<br/>")}
-          ${invoice.notes ? `<br/><br/><strong>Notes:</strong><br/>${invoice.notes.replace(/\n/g, "<br/>")}` : ""}
-          <br/><br/><strong>Note:</strong><br/>
+          ${invoice.notes ? `<strong>Notes:</strong><br/>${invoice.notes.replace(/\n/g, "<br/>")}<br/><br/>` : ""}
+          <strong>Note:</strong><br/>
           Thank You for supporting Literacy in Uganda
         </div>
 

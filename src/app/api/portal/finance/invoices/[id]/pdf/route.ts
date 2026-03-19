@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPortalUserOrRedirect } from "@/lib/auth-server";
 import { getFinanceInvoiceByIdPostgres, getFinanceSettingsPostgres } from "@/lib/server/postgres/repositories/finance";
+import { queryPostgres } from "@/lib/server/postgres/client";
 import { buildInvoiceHtml, formatReportDate } from "@/lib/server/pdf/finance-pdf-templates";
 import { renderBrandedPdf } from "@/lib/server/pdf/render";
 
@@ -29,7 +30,27 @@ export async function GET(
       return new NextResponse("Invoice not found", { status: 404 });
     }
 
-    const { html, css } = buildInvoiceHtml(invoice, invoice.lineItems, settings);
+    // Fetch contact details for the Billed To section
+    let contact: { name: string; emails?: string[]; phone?: string; address?: string } | undefined;
+    try {
+      const contactResult = await queryPostgres(
+        `SELECT name, emails_json AS "emailsJson", phone, address FROM finance_contacts WHERE id = $1 LIMIT 1`,
+        [invoice.contactId],
+      );
+      const row = contactResult.rows[0] as Record<string, unknown> | undefined;
+      if (row) {
+        let emails: string[] = [];
+        try { emails = JSON.parse(String(row.emailsJson || "[]")); } catch { /* ignore */ }
+        contact = {
+          name: String(row.name || ""),
+          emails: Array.isArray(emails) ? emails : [],
+          phone: row.phone ? String(row.phone) : undefined,
+          address: row.address ? String(row.address) : undefined,
+        };
+      }
+    } catch { /* proceed without contact details */ }
+
+    const { html, css } = buildInvoiceHtml(invoice, invoice.lineItems, settings, contact);
 
     const pdfBuffer = await renderBrandedPdf({
       title: "INVOICE",
