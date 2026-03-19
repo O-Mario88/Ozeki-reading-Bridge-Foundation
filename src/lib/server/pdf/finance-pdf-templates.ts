@@ -101,10 +101,10 @@ export function buildInvoiceHtml(invoice: FinanceInvoiceRecord, lines: FinanceIn
       <table class="fp-table">
         <thead>
           <tr>
-            <th>Description</th>
-            <th class="num" style="width: 100px;">Qty</th>
-            <th class="num" style="width: 120px;">Unit Price</th>
-            <th class="num" style="width: 140px;">Amount</th>
+            <th style="width: 75%;">Description</th>
+            <th class="num" style="width: 8%;">Qty</th>
+            <th class="num" style="width: 8%;">Unit Price</th>
+            <th class="num" style="width: 9%;">Amount</th>
           </tr>
         </thead>
         <tbody>
