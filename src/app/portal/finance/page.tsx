@@ -1,10 +1,7 @@
 import { Suspense } from "react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { getPortalUserOrRedirect } from "@/lib/auth-server";
-import { 
-  getStatementOfFinancialPosition, 
-  getStatementOfActivities 
-} from "@/lib/server/postgres/repositories/finance-reports";
+import { queryPostgres } from "@/lib/server/postgres/client";
 import { 
   getFinanceDashboardSummaryPostgres,
   listFinanceInvoicesPostgres,
@@ -15,44 +12,61 @@ import { PortalFinanceDashboard } from "@/components/portal/finance/PortalFinanc
 
 async function FinanceDashboardContent() {
   const fy = new Date().getFullYear();
-  const today = new Date().toISOString().split("T")[0];
   const firstDayOfYear = `${fy}-01-01`;
+  const today = new Date().toISOString().split("T")[0];
   
-  // Fetch high-level stats AND layout tables concurrently
+  // Fetch everything concurrently
   const [
-    balanceSheet, 
-    pnl,
     dbSummary,
+    ytdTotals,
     recentInvoices,
     recentReceipts,
     recentExpenses
   ] = await Promise.all([
-    getStatementOfFinancialPosition(today),
-    getStatementOfActivities(firstDayOfYear, today),
     getFinanceDashboardSummaryPostgres(new Date().toISOString().slice(0, 7), "UGX"),
+
+    // YTD income & expenses from the actual ledger
+    queryPostgres(
+      `SELECT
+        COALESCE(SUM(CASE WHEN txn_type = 'money_in' THEN amount ELSE 0 END), 0) AS "incomeYtd",
+        COALESCE(SUM(CASE WHEN txn_type = 'money_out' THEN amount ELSE 0 END), 0) AS "expensesYtd"
+      FROM finance_transactions_ledger
+      WHERE posted_status = 'posted'
+        AND currency = 'UGX'
+        AND date >= $1
+        AND date <= $2`,
+      [firstDayOfYear, today],
+    ),
+
     listFinanceInvoicesPostgres(),
     listFinanceReceiptsPostgres(),
     listFinanceExpensesPostgres()
   ]);
 
-  const totalAssets = balanceSheet
-    .filter(r => r.account_type === 'asset')
-    .reduce((sum, r) => sum + Number(r.balance), 0);
-    
-  const totalIncome = pnl
-    .filter(r => r.account_type === 'income')
-    .reduce((sum, r) => sum + Number(r.net_amount), 0);
-    
-  const totalExpenses = pnl
-    .filter(r => r.account_type === 'expense')
-    .reduce((sum, r) => sum + Math.abs(Number(r.net_amount)), 0);
+  const ytdRow = ytdTotals.rows[0] as Record<string, unknown> | undefined;
+  const incomeYtd = Number(ytdRow?.incomeYtd ?? 0);
+  const expensesYtd = Number(ytdRow?.expensesYtd ?? 0);
 
-  // Rebuild the summary injecting the live strict YTD numbers from the GL
+  // Total Assets = all-time net cash position (total money in - total money out)
+  let totalAssets = 0;
+  try {
+    const assetsResult = await queryPostgres(
+      `SELECT
+        COALESCE(SUM(CASE WHEN txn_type = 'money_in' THEN amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN txn_type = 'money_out' THEN amount ELSE 0 END), 0) AS "netAssets"
+      FROM finance_transactions_ledger
+      WHERE posted_status = 'posted'
+        AND currency = 'UGX'`,
+    );
+    totalAssets = Number((assetsResult.rows[0] as Record<string, unknown>)?.netAssets ?? 0);
+  } catch { /* fallback to 0 */ }
+
+  // Inject the YTD numbers so the dashboard shows real data
   const injectedSummary = {
     ...dbSummary,
-    moneyIn: totalIncome,
-    moneyOut: totalExpenses,
-    net: totalIncome - totalExpenses
+    moneyIn: incomeYtd,
+    moneyOut: expensesYtd,
+    net: incomeYtd - expensesYtd
   };
 
   return (
