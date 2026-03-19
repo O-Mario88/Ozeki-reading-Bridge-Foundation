@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://ozekireadingbridge.org/sitemap.xml",
+    sitemap: "https://www.ozekiread.org/sitemap.xml",
   };
 }

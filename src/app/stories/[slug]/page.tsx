@@ -56,7 +56,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
         publisher: {
             "@type": "Organization",
             name: "Ozeki Reading Bridge Foundation",
-            url: "https://ozekireadingbridge.org",
+            url: "https://www.ozekiread.org",
         },
         datePublished: story.publishedAt,
     };

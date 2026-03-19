@@ -5,7 +5,7 @@ import { listPublishedStoriesPostgres } from "@/lib/server/postgres/repositories
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = "https://ozekireadingbridge.org";
+  const base = "https://www.ozekiread.org";
   const routes = [
     "",
     "/about",

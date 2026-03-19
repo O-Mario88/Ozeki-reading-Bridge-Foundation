@@ -62,7 +62,7 @@ export function EditorialArticleLayout({
     if (typeof window !== "undefined") {
       return `${window.location.origin}/blog/${post.slug}`;
     }
-    return `https://ozekireadingbridge.org/blog/${post.slug}`;
+    return `https://www.ozekiread.org/blog/${post.slug}`;
   }, [post.slug]);
 
   const spotlightPosts = useMemo(() => selectSpotlightPosts(post, allPosts, 5), [allPosts, post]);

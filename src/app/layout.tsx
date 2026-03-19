@@ -16,7 +16,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ozekireadingbridge.org"),
+  metadataBase: new URL("https://www.ozekiread.org"),
   title: {
     default: `${organizationName} | Practical Phonics and Literacy Support`,
     template: `%s | ${organizationName}`,

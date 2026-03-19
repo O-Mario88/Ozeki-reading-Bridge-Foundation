@@ -59,7 +59,7 @@ export default async function HomePage() {
     "@type": "NonProfit",
     name: organizationName,
     description: tagline,
-    url: "https://ozekireadingbridge.org",
+    url: "https://www.ozekiread.org",
     areaServed: "Uganda",
   };
 
