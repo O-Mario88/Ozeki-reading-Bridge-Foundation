@@ -32,14 +32,28 @@ export function PortalLoginForm() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
-        throw new Error(data.error ?? "Could not sign in.");
+      let data: Record<string, unknown> = {};
+      try {
+        const text = await response.text();
+        if (text) {
+          data = JSON.parse(text);
+        }
+      } catch {
+        // response body was empty or not valid JSON
       }
 
-      const data = (await response.json()) as { redirectTo?: string };
+      if (!response.ok) {
+        const errorMsg =
+          typeof data.error === "string"
+            ? data.error
+            : response.status === 502 || response.status === 504
+              ? "The server is taking too long to respond. The database may be temporarily unreachable — please try again in a moment."
+              : "Could not sign in. Please try again.";
+        throw new Error(errorMsg);
+      }
+
       setState({ status: "success", message: "Sign-in successful. Redirecting..." });
-      window.location.href = data.redirectTo ?? "/portal/dashboard";
+      window.location.href = (data.redirectTo as string) ?? "/portal/dashboard";
     } catch (error) {
       const message = error instanceof Error ? error.message : "Sign-in failed.";
       setState({ status: "error", message });

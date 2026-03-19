@@ -77,6 +77,8 @@ export function getPostgresPool() {
       connectionString: databaseUrl,
       max: Number(process.env.DATABASE_POOL_MAX ?? 10),
       idleTimeoutMillis: Number(process.env.DATABASE_IDLE_TIMEOUT_MS ?? 30_000),
+      connectionTimeoutMillis: Number(process.env.DATABASE_CONNECT_TIMEOUT_MS ?? 5_000),
+      statement_timeout: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS ?? 10_000),
       allowExitOnIdle: true,
       ssl: shouldUseSsl(databaseUrl) ? { rejectUnauthorized: false } : undefined,
       options: "-c search_path=public",
