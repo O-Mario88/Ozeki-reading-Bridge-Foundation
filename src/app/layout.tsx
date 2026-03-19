@@ -52,7 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${roboto.variable} bg-brand-background text-brand-text antialiased`}>
+      <body className={`${roboto.variable} bg-brand-background text-brand-text antialiased`} suppressHydrationWarning>
         <ModalAccessibilityManager />
         <ServiceWorkerRegister />
         <SiteHeader />

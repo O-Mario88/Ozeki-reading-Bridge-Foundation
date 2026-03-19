@@ -11,7 +11,7 @@ import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_util
 export const runtime = "nodejs";
 
 const lineItemSchema = z.object({
-  description: z.string().trim().min(1).max(300),
+  description: z.string().trim().min(1, "Line item description is required.").max(1000, "Line item description must be 1000 characters or fewer."),
   qty: z.coerce.number().positive(),
   unitPrice: z.coerce.number().min(0),
 });
@@ -102,8 +102,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error("[INVOICE POST] Zod validation error:", JSON.stringify(error.issues, null, 2));
-      return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });
+      const issue = error.issues[0];
+      const field = issue?.path?.join(" → ") || "unknown";
+      const msg = `${field}: ${issue?.message || "Invalid value"}`;
+      console.error("[INVOICE POST] Zod validation error:", msg);
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
     console.error("[INVOICE POST] Error:", error instanceof Error ? error.message : error);
     return NextResponse.json(
