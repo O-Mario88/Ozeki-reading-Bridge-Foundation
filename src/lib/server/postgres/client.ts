@@ -64,7 +64,7 @@ export function isPostgresConfigured() {
 export type PostgresRuntimeInfo = ReturnType<typeof getPostgresConnectionSummary>;
 
 export function getPostgresRuntimeInfo(): PostgresRuntimeInfo {
-  return getPostgresConnectionSummary(assertPostgres());
+  return getPostgresConnectionSummary(assertPostgres(getDatabaseUrlRaw()));
 }
 
 function logPostgresSelectionOnce() {
@@ -79,11 +79,11 @@ function logPostgresSelectionOnce() {
 }
 
 export function requirePostgresConfigured() {
-  return assertPostgres();
+  return assertPostgres(getDatabaseUrlRaw());
 }
 
 export function getPostgresPool() {
-  const databaseUrl = assertPostgres();
+  const databaseUrl = assertPostgres(getDatabaseUrlRaw());
 
   if (isProductionRuntime() && !databaseUrl) {
     throw new Error("DATABASE_URL is required in production. PostgreSQL is required.");
