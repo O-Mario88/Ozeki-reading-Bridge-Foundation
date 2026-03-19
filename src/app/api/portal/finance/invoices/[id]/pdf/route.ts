@@ -60,6 +60,8 @@ export async function GET(
       accentHex: "#1f2a44",
       contentHtml: html,
       additionalCss: css,
+      marginLeft: "22mm",
+      marginRight: "22mm",
       marginBottom: "8mm",
     });
 

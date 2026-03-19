@@ -39,7 +39,7 @@ export function formatReportDate(isoString: string | null | undefined): string {
 }
 
 const financePdfStyles = `
-  .fp-container { width: 100%; font-family: var(--pdf-font-family), sans-serif; font-size: 10.5pt; color: #1e293b; padding: 0 12px; }
+  .fp-container { width: 100%; font-family: var(--pdf-font-family), sans-serif; font-size: 10.5pt; color: #1e293b; }
   .fp-header-grid { display: flex; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0; }
   .fp-header-col h3 { margin: 0 0 6px 0; font-size: 11pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
   .fp-header-col p { margin: 0 0 4px 0; }
