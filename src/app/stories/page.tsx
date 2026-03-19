@@ -22,10 +22,21 @@ export const metadata: Metadata = {
 };
 
 export default async function StoriesPage() {
-    const { stories, total } = await listPublishedStoriesPostgres({ limit: 24 });
-    const anthologies = await listPublishedAnthologiesPostgres({ limit: 24 });
-    const languages = await listStoryLanguagesPostgres();
-    const tags = await listStoryTagsPostgres();
+    let stories: Awaited<ReturnType<typeof listPublishedStoriesPostgres>>["stories"] = [];
+    let total = 0;
+    let anthologies: Awaited<ReturnType<typeof listPublishedAnthologiesPostgres>> = [];
+    let languages: string[] = [];
+    let tags: string[] = [];
+    try {
+        const result = await listPublishedStoriesPostgres({ limit: 24 });
+        stories = result.stories;
+        total = result.total;
+        anthologies = await listPublishedAnthologiesPostgres({ limit: 24 });
+        languages = await listStoryLanguagesPostgres();
+        tags = await listStoryTagsPostgres();
+    } catch (error) {
+        console.error("Failed to load stories data.", error);
+    }
 
     return (
         <>

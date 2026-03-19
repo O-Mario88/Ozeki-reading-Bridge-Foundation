@@ -241,7 +241,7 @@ export function PortalGraduationSettingsManager({
           <legend className="portal-field-label">Required learner domains</legend>
           <div className="action-row">
             {domainOptions.map((domain) => {
-              const checked = settings.requiredDomains.includes(domain.key);
+              const checked = (settings.requiredDomains ?? []).includes(domain.key);
               return (
                 <label key={domain.key} className="search-chip">
                   <input
@@ -286,7 +286,7 @@ export function PortalGraduationSettingsManager({
         <label>
           <span className="portal-field-label">Target grades (comma-separated)</span>
           <input
-            value={settings.targetGrades.join(", ")}
+            value={(settings.targetGrades ?? []).join(", ")}
             onChange={(event) =>
               setSettings((previous) => ({
                 ...previous,
@@ -361,7 +361,7 @@ export function PortalGraduationSettingsManager({
           <span className="portal-field-label">Sustainability checklist items (one per line)</span>
           <textarea
             rows={6}
-            value={settings.sustainabilityChecklistItems.join("\n")}
+            value={(settings.sustainabilityChecklistItems ?? []).join("\n")}
             onChange={(event) =>
               setSettings((previous) => ({
                 ...previous,

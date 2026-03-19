@@ -452,12 +452,12 @@ export function PortalAnalyticsDashboard({ data, explorer, user }: PortalAnalyti
                 </tr>
               </thead>
               <tbody>
-                {data.districtStats.length === 0 ? (
+                {(data.districtStats ?? []).length === 0 ? (
                   <tr>
                     <td colSpan={4}>No district activity found.</td>
                   </tr>
                 ) : (
-                  data.districtStats.slice(0, 8).map((item) => (
+                  (data.districtStats ?? []).slice(0, 8).map((item) => (
                     <tr key={item.district}>
                       <td>{item.district}</td>
                       <td>{formatNumber(item.records)}</td>
@@ -488,12 +488,12 @@ export function PortalAnalyticsDashboard({ data, explorer, user }: PortalAnalyti
                 </tr>
               </thead>
               <tbody>
-                {data.recentRecords.length === 0 ? (
+                {(data.recentRecords ?? []).length === 0 ? (
                   <tr>
                     <td colSpan={5}>No recent records found.</td>
                   </tr>
                 ) : (
-                  data.recentRecords.slice(0, 8).map((item) => (
+                  (data.recentRecords ?? []).slice(0, 8).map((item) => (
                     <tr key={item.id}>
                       <td>{item.recordCode}</td>
                       <td>{formatDate(item.date)}</td>
