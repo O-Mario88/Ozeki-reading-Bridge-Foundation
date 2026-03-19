@@ -13,7 +13,12 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AboutPage() {
-  const coreValues = await listPortalCoreValuesPostgres();
+  let coreValues: Awaited<ReturnType<typeof listPortalCoreValuesPostgres>> = [];
+  try {
+    coreValues = await listPortalCoreValuesPostgres();
+  } catch {
+    // Table may not exist yet — show fallback
+  }
 
   return (
     <>

@@ -54,7 +54,12 @@ function ProfileCard({ profile }: { profile: Profile }) {
 }
 
 export default async function LeadershipTeamPage() {
-  const profiles = await listPortalLeadershipTeamMembersPostgres();
+  let profiles: Profile[] = [];
+  try {
+    profiles = await listPortalLeadershipTeamMembersPostgres();
+  } catch {
+    // Table may not exist yet — show fallback
+  }
   const boardMembers = profiles.filter((profile) => profile.section === "board");
   const staffTeam = profiles.filter((profile) => profile.section === "staff");
   const volunteerTeam = profiles.filter((profile) => profile.section === "volunteer");
