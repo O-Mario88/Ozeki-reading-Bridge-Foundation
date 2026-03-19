@@ -5,10 +5,16 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   images: { unoptimized: true },
-  // NOTE: Do NOT put DATABASE_URL or other server-side secrets here.
-  // The `env` block bakes values into the JS bundle at build time.
-  // Server-side env vars are provided at runtime by Amplify Lambda.
-  env: {},
+  // Amplify SSR does NOT auto-pass env vars to Lambda. This block inlines
+  // them at build time — the only mechanism that works on Amplify.
+  // The client.ts getDatabaseUrlRaw() auto-corrects missing database names.
+  env: {
+    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_SSL: process.env.DATABASE_SSL,
+    GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    GOOGLE_OAUTH_REDIRECT_URI: process.env.GOOGLE_OAUTH_REDIRECT_URI,
+  },
   outputFileTracingExcludes: {
     "*": [
       "node_modules/puppeteer-core/lib/esm/puppeteer/node/install.js",
