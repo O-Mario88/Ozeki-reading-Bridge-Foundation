@@ -136,9 +136,7 @@ export function buildInvoiceHtml(
 
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
         <div class="fp-notes" style="margin-top: 0; margin-bottom: 0; width: 320px; text-align: left;">
-          ${invoice.notes ? `<strong>Notes:</strong><br/>${invoice.notes.replace(/\n/g, "<br/>")}<br/><br/>` : ""}
-          <strong>Note:</strong><br/>
-          Thank You for supporting Literacy in Uganda
+          ${invoice.notes ? `<strong>Notes:</strong><br/>${invoice.notes.replace(/\n/g, "<br/>")}` : ""}
         </div>
 
         <div style="width: 250px; border-top: 1px dashed #cbd5e1; padding-top: 8px; text-align: center; position: relative;">
