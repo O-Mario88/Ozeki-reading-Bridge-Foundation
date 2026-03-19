@@ -103,6 +103,8 @@ export function PortalFinanceInvoicesManager({
         item.invoiceNumber,
         item.category,
         item.status,
+        item.contactName || "",
+        item.contactType || "",
         item.createdByName || "",
         item.lastSentTo || "",
         item.linkedReceipt?.receiptNumber || "",
@@ -506,6 +508,7 @@ export function PortalFinanceInvoicesManager({
               <thead>
                 <tr>
                   <th>Invoice</th>
+                  <th>Contact</th>
                   <th>Dates</th>
                   <th>Category</th>
                   <th>Total</th>
@@ -524,6 +527,12 @@ export function PortalFinanceInvoicesManager({
                         <div className="portal-muted">
                           Receipt {item.linkedReceipt.receiptNumber} ({item.linkedReceipt.status})
                         </div>
+                      ) : null}
+                    </td>
+                    <td>
+                      <strong>{item.contactName || "—"}</strong>
+                      {item.contactType ? (
+                        <div className="portal-muted" style={{ textTransform: "capitalize" }}>{item.contactType}</div>
                       ) : null}
                     </td>
                     <td>

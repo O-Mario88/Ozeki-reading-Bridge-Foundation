@@ -472,6 +472,8 @@ const INVOICE_SELECT = `
     i.void_reason AS "voidReason",
     i.created_by_user_id AS "createdBy",
     u.full_name AS "createdByName",
+    c.name AS "contactName",
+    c.contact_type AS "contactType",
     i.created_at AS "createdAt",
     i.updated_at AS "updatedAt"
   FROM finance_invoices i
@@ -586,6 +588,8 @@ function mapFinanceInvoiceRecord(
     emailedAt: row.emailedAt ? String(row.emailedAt) : undefined,
     lastSentTo: row.lastSentTo ? String(row.lastSentTo) : undefined,
     voidReason: row.voidReason ? String(row.voidReason) : undefined,
+    contactName: row.contactName ? String(row.contactName) : undefined,
+    contactType: row.contactType ? String(row.contactType) as FinanceContactRecord["contactType"] : undefined,
     createdBy: Number(row.createdBy),
     createdByName: row.createdByName ? String(row.createdByName) : undefined,
     createdAt: String(row.createdAt),

@@ -1755,6 +1755,7 @@ export interface FinanceInvoiceRecord extends FinanceInvoiceInput {
   id: number;
   invoiceNumber: string;
   contactName?: string;
+  contactType?: FinanceContactType;
   subtotal: number;
   total: number;
   paidAmount: number;
