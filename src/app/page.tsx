@@ -13,7 +13,7 @@ import { listPublishedPortalTestimonialsPostgres } from "@/lib/server/postgres/r
 import type { PortalTestimonialRecord } from "@/lib/types";
 import styles from "./homepage.module.css";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 const TESTIMONIAL_FIELDS = new Set([
   "how_training_changed_teaching",
