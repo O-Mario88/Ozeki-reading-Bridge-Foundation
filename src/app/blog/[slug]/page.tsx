@@ -7,17 +7,7 @@ import {
 } from "@/lib/blog-data";
 
 type Params = Promise<{ slug: string }>;
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  try {
-    const posts = await getMergedPublishedBlogPostsAsync();
-    return posts.map((post) => ({ slug: post.slug }));
-  } catch (err) {
-    console.error("[blog] Failed to generate static params:", err);
-    return [];
-  }
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { slug } = await params;
