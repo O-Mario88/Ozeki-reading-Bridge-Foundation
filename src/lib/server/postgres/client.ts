@@ -10,13 +10,13 @@ function getDatabaseUrlRaw() {
   const raw = process.env.DATABASE_URL?.trim() || "";
   if (!raw) return "";
   // If URL has no database name path, pg defaults to the username — which usually fails.
-  // Auto-append /default to match the RDS configuration.
+  // AWS RDS creates "postgres" as the initial database by default.
   try {
     const url = new URL(raw);
     const dbName = url.pathname.replace(/^\//, "").trim();
     if (!dbName) {
-      const fixed = raw.replace(/\/?$/, "/default");
-      console.warn("[db] DATABASE_URL has no database name — auto-appending /default");
+      const fixed = raw.replace(/\/?$/, "/postgres");
+      console.warn("[db] DATABASE_URL has no database name — auto-appending /postgres");
       return fixed;
     }
   } catch {
