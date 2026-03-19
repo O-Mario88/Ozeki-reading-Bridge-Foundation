@@ -7,7 +7,22 @@ const globalForPg = globalThis as typeof globalThis & {
 };
 
 function getDatabaseUrlRaw() {
-  return process.env.DATABASE_URL?.trim() || "";
+  const raw = process.env.DATABASE_URL?.trim() || "";
+  if (!raw) return "";
+  // If URL has no database name path, pg defaults to the username — which usually fails.
+  // Auto-append /default to match the RDS configuration.
+  try {
+    const url = new URL(raw);
+    const dbName = url.pathname.replace(/^\//, "").trim();
+    if (!dbName) {
+      const fixed = raw.replace(/\/?$/, "/default");
+      console.warn("[db] DATABASE_URL has no database name — auto-appending /default");
+      return fixed;
+    }
+  } catch {
+    // not a valid URL — let downstream validation handle it
+  }
+  return raw;
 }
 
 function toBooleanFlag(value: string | undefined, fallback = false) {
