@@ -9,14 +9,16 @@ const globalForPg = globalThis as typeof globalThis & {
 function getDatabaseUrlRaw() {
   const raw = process.env.DATABASE_URL?.trim() || "";
   if (!raw) return "";
-  // If URL has no database name path, pg defaults to the username — which usually fails.
-  // AWS RDS creates "postgres" as the initial database by default.
+  // Fix common DATABASE_URL issues:
+  // 1. No database name path → pg defaults to username, which fails
+  // 2. Database name "default" → the actual RDS database is "postgres"
   try {
     const url = new URL(raw);
     const dbName = url.pathname.replace(/^\//, "").trim();
-    if (!dbName) {
-      const fixed = raw.replace(/\/?$/, "/postgres");
-      console.warn("[db] DATABASE_URL has no database name — auto-appending /postgres");
+    if (!dbName || dbName === "default") {
+      url.pathname = "/postgres";
+      const fixed = url.toString();
+      console.warn("[db] DATABASE_URL database=" + (dbName || "(empty)") + " corrected to postgres");
       return fixed;
     }
   } catch {
