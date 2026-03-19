@@ -108,10 +108,10 @@ export function buildInvoiceHtml(
       <table class="fp-table">
         <thead>
           <tr>
-            <th style="width: 75%;">Description</th>
-            <th class="num" style="width: 8%; white-space: nowrap;">Qty</th>
-            <th class="num" style="width: 8%; white-space: nowrap;">Unit Price</th>
-            <th class="num" style="width: 9%; white-space: nowrap;">Amount</th>
+            <th style="width: 70%;">Description</th>
+            <th class="num" style="width: 6%; white-space: nowrap;">Qty</th>
+            <th class="num" style="width: 12%; white-space: nowrap;">Unit Price</th>
+            <th class="num" style="width: 12%; white-space: nowrap;">Amount</th>
           </tr>
         </thead>
         <tbody>
