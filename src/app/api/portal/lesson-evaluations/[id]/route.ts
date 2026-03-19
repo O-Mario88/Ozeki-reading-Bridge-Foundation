@@ -140,13 +140,13 @@ export async function PATCH(
         schoolId: before.schoolId,
         teacherUid: before.teacherUid,
         lessonDate: before.lessonDate,
-        visitId: before.visitId,
+        visitId: (before as Record<string, unknown>).visitId,
       }),
       JSON.stringify({
         schoolId: evaluation.schoolId,
         teacherUid: evaluation.teacherUid,
         lessonDate: evaluation.lessonDate,
-        visitId: evaluation.visitId,
+        visitId: (evaluation as Record<string, unknown>).visitId,
       }),
       "Lesson evaluation updated.",
     );
@@ -199,10 +199,10 @@ export async function DELETE(
       "lesson_evaluations",
       evaluation.id,
       JSON.stringify({
-        status: before.status,
+        status: (before as Record<string, unknown>).status,
       }),
       JSON.stringify({
-        status: evaluation.status,
+        status: (evaluation as Record<string, unknown>).status,
         reason: parsed.reason,
       }),
       "Lesson evaluation voided.",
