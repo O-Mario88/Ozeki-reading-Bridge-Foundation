@@ -50,66 +50,73 @@ async function getScopedAggregate(level: string | null, id: string, period?: str
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const view = searchParams.get("view");
-  const level = searchParams.get("level");
-  const id = searchParams.get("id") || "Uganda";
-  const period = searchParams.get("period") ?? undefined;
-
-  // NLIS views — all return aggregated data only (no child-level identifiers)
-  if (view === "fidelity") {
-    const aggregate = await getScopedAggregate(level, id, period);
-    if (aggregate) {
-      return cachedJson(buildFidelityFromAggregate(aggregate, level || "country", id));
-    }
-  }
-
-  if (view === "gains") {
-    const aggregate = await getScopedAggregate(level, id, period);
-    if (aggregate) {
-      return cachedJson(buildLearningGainsFromAggregate(aggregate, level || "country", id));
-    }
-  }
-
-  if (view === "cost") {
+  try {
+    const { searchParams } = new URL(request.url);
+    const view = searchParams.get("view");
+    const level = searchParams.get("level");
+    const id = searchParams.get("id") || "Uganda";
     const period = searchParams.get("period") ?? undefined;
-    return cachedJson(
-      await getCostEffectivenessData(level || "country", id, period),
+
+    // NLIS views — all return aggregated data only (no child-level identifiers)
+    if (view === "fidelity") {
+      const aggregate = await getScopedAggregate(level, id, period);
+      if (aggregate) {
+        return cachedJson(buildFidelityFromAggregate(aggregate, level || "country", id));
+      }
+    }
+
+    if (view === "gains") {
+      const aggregate = await getScopedAggregate(level, id, period);
+      if (aggregate) {
+        return cachedJson(buildLearningGainsFromAggregate(aggregate, level || "country", id));
+      }
+    }
+
+    if (view === "cost") {
+      const period = searchParams.get("period") ?? undefined;
+      return cachedJson(
+        await getCostEffectivenessData(level || "country", id, period),
+      );
+    }
+
+    if (view === "calculator") {
+      const amount = Number(searchParams.get("amount") || 10000);
+      return cachedJson(
+        await runImpactCalculator({ amount, level: level || "country", id }),
+      );
+    }
+
+    if (view === "quality") {
+      const aggregate = await getScopedAggregate(level, id, period);
+      if (aggregate) {
+        return cachedJson(buildQualitySummaryFromAggregate(aggregate, level || "country", id));
+      }
+    }
+
+    if (view === "government") {
+      return cachedJson(await getGovernmentViewData());
+    }
+
+    // Original drill-down views
+    if (
+      level === "country" ||
+      level === "region" ||
+      level === "sub_region" ||
+      level === "district" ||
+      level === "school"
+    ) {
+      const aggregate = await getScopedAggregate(level, id, period);
+      if (aggregate) {
+        return cachedJson(aggregate);
+      }
+    }
+
+    return cachedJson(await getPublicImpactAggregate("country", "Uganda", period || "FY"));
+  } catch (error) {
+    console.error("[api/impact] Error:", error);
+    return NextResponse.json(
+      { error: "Data temporarily unavailable", lastUpdated: new Date().toISOString() },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
-
-  if (view === "calculator") {
-    const amount = Number(searchParams.get("amount") || 10000);
-    return cachedJson(
-      await runImpactCalculator({ amount, level: level || "country", id }),
-    );
-  }
-
-  if (view === "quality") {
-    const aggregate = await getScopedAggregate(level, id, period);
-    if (aggregate) {
-      return cachedJson(buildQualitySummaryFromAggregate(aggregate, level || "country", id));
-    }
-  }
-
-  if (view === "government") {
-    const period = searchParams.get("period") ?? undefined;
-    return cachedJson(await getGovernmentViewData());
-  }
-
-  // Original drill-down views
-  if (
-    level === "country" ||
-    level === "region" ||
-    level === "sub_region" ||
-    level === "district" ||
-    level === "school"
-  ) {
-    const aggregate = await getScopedAggregate(level, id, period);
-    if (aggregate) {
-      return cachedJson(aggregate);
-    }
-  }
-
-  return cachedJson(await getPublicImpactAggregate("country", "Uganda", period || "FY"));
 }
