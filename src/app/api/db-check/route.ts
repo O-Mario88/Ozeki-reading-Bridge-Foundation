@@ -10,6 +10,9 @@ export async function GET() {
     hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
     databaseUrlPrefix: (process.env.DATABASE_URL ?? "").slice(0, 30) + "...",
     databaseSsl: process.env.DATABASE_SSL ?? process.env.DB_SSL_REQUIRE ?? "(not set)",
+    envVarKeys: Object.keys(process.env).filter(k =>
+      k.startsWith("DATABASE") || k.startsWith("DB_") || k.startsWith("GOOGLE") || k.startsWith("AMPLIFY")
+    ).sort(),
     isPostgresConfigured: false,
     canConnect: false,
     tableCheck: null as string | null,

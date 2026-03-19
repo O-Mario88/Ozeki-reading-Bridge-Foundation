@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   images: { unoptimized: true },
+  env: {
+    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_SSL: process.env.DATABASE_SSL,
+    GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    GOOGLE_OAUTH_REDIRECT_URI: process.env.GOOGLE_OAUTH_REDIRECT_URI,
+  },
   outputFileTracingExcludes: {
     "*": [
       "node_modules/puppeteer-core/lib/esm/puppeteer/node/install.js",
@@ -17,7 +24,6 @@ const nextConfig: NextConfig = {
       ".next_stale_local_*/**/*",
       ".next_tmp_*/**/*",
       "backend/**/*",
-      "database/**/*",
       "docs/**/*",
       "frontend/**/*",
       "public/assets 3/**/*",
