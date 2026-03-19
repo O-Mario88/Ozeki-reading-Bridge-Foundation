@@ -548,9 +548,48 @@ export function PortalFinanceInvoicesManager({
                         <button
                           type="button"
                           className="button button-ghost button-sm"
-                          onClick={() => setPaymentOpenFor(item)}
+                          onClick={async () => {
+                            if (saving) return;
+                            const balance = Number(item.balanceDue || item.total || 0);
+                            if (balance <= 0) {
+                              setStatusMessage("Nothing to pay — balance is zero.");
+                              return;
+                            }
+                            setSaving(true);
+                            setStatusMessage("");
+                            try {
+                              const formData = new FormData();
+                              formData.set("date", todayIsoDate());
+                              formData.set("amount", String(balance));
+                              formData.set("method", "bank_transfer");
+                              formData.set("reference", "");
+                              formData.set("notes", "");
+                              const response = await fetch(`/api/portal/finance/invoices/${item.id}/payments`, {
+                                method: "POST",
+                                body: formData,
+                              });
+                              const data = await response.json();
+                              if (!response.ok) {
+                                throw new Error(data.error || "Failed to record payment.");
+                              }
+                              if (data.invoice) {
+                                setInvoices((prev) =>
+                                  prev.map((inv) => (inv.id === item.id ? (data.invoice as FinanceInvoiceRecord) : inv)),
+                                );
+                              }
+                              setStatusMessage(
+                                data.autoReceipt
+                                  ? `Payment of ${formatMoney(item.currency, balance)} recorded. Receipt PDF is ready.`
+                                  : `Payment of ${formatMoney(item.currency, balance)} recorded.`,
+                              );
+                            } catch (error) {
+                              setStatusMessage(error instanceof Error ? error.message : "Failed to record payment.");
+                            } finally {
+                              setSaving(false);
+                            }
+                          }}
                           disabled={saving || item.status === "void" || item.status === "paid"}
-                          title="Record payment"
+                          title="Record full balance as paid"
                         >
                           Record Payment
                         </button>

@@ -11,7 +11,7 @@ import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_util
 export const runtime = "nodejs";
 
 const lineItemSchema = z.object({
-  description: z.string().trim().min(1, "Line item description is required.").max(1000, "Line item description must be 1000 characters or fewer."),
+  description: z.string().trim().min(1, "Line item description is required.").max(5000, "Line item description must be 5000 characters or fewer."),
   qty: z.coerce.number().positive(),
   unitPrice: z.coerce.number().min(0),
 });
