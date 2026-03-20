@@ -943,7 +943,6 @@ const assessmentConfig: PortalModuleConfig = {
           type: "text",
           helperText: "Optional manual identifier. If blank, the system will generate one.",
         },
-        { key: "emisCode", label: "EMIS Code", type: "text", required: true },
         { key: "subCounty", label: "Sub-county", type: "text", required: true },
         { key: "parish", label: "Parish", type: "text", required: true },
         {

@@ -233,7 +233,6 @@ async function loadSchoolWriteRow(client: PoolClient, schoolId: number) {
         s.sub_county AS "subCounty",
         s.parish,
         s.parish_id AS "parishId",
-        s.emis_code AS "emisCode",
         s.school_level AS "schoolLevel",
         s.ownership,
         s.denomination,

@@ -14,7 +14,6 @@ export const SCHOOL_IMPORT_HEADERS = [
   "sub_region",
   "district",
   "parish",
-  "emis_code",
   "school_level",
   "ownership",
   "denomination",
@@ -112,7 +111,6 @@ export interface SchoolsTemplateRow {
   sub_region: string;
   district: string;
   parish: string;
-  emis_code: string;
   school_level: string;
   ownership: string;
   denomination: string;

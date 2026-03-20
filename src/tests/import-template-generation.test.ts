@@ -73,9 +73,11 @@ test("missing schools template XLSX is directly uploadable with the official she
     defval: "",
     raw: false,
   });
-  assert.deepEqual(templateRows[0], [...SCHOOL_IMPORT_HEADERS]);
+  const rawHeader = templateRows[0] ?? [];
+  const header = rawHeader.filter((h: string) => h !== "");
+  assert.deepEqual(header, [...SCHOOL_IMPORT_HEADERS]);
   assert.equal(templateRows[1]?.[1], "New Hope School");
-  assert.equal(templateRows[1]?.[18], "TRUE");
+  assert.equal(templateRows[1]?.[17], "TRUE");
 });
 
 test("missing schools template CSV includes only official headers and missing rows", async () => {

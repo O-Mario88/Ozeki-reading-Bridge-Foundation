@@ -60,7 +60,7 @@ export default async function GovernmentViewPage() {
                     </p>
                     <div className="action-row">
                         <Link className="inline-download-link" href="/api/impact/export?format=csv">
-                            ⬇ Export CSV (EMIS-ready)
+                            ⬇ Export CSV
                         </Link>
                         <Link className="button button-ghost" href="/impact/dashboard">
                             Full Dashboard
