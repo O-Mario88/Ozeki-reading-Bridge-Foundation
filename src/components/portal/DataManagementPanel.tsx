@@ -88,8 +88,9 @@ export function DataManagementPanel() {
     await clearTables();
   }
 
-  const totalRows = useMemo(() => tables.reduce((sum, table) => sum + table.count, 0), [tables]);
-  const tablesWithData = useMemo(() => tables.filter((table) => table.count > 0), [tables]);
+  const safeTables = Array.isArray(tables) ? tables : [];
+  const totalRows = useMemo(() => safeTables.reduce((sum, table) => sum + table.count, 0), [safeTables]);
+  const tablesWithData = useMemo(() => safeTables.filter((table) => table.count > 0), [safeTables]);
 
   return (
     <section className="card portal-data-management-card" style={{ marginTop: "1rem" }}>
@@ -117,7 +118,7 @@ export function DataManagementPanel() {
       <div className="portal-data-management-summary">
         <article className="card">
           <span>Tracked tables</span>
-          <strong>{tables.length.toLocaleString()}</strong>
+          <strong>{safeTables.length.toLocaleString()}</strong>
         </article>
         <article className="card">
           <span>Tables with data</span>
@@ -143,7 +144,7 @@ export function DataManagementPanel() {
               </tr>
             </thead>
             <tbody>
-              {tables.map((table) => {
+              {safeTables.map((table) => {
                 const isBusy = busyTarget === table.table;
                 return (
                   <tr key={table.table}>

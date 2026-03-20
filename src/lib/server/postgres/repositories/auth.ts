@@ -1,4 +1,4 @@
-import type { PortalUserRole } from "@/lib/types";
+import type { PortalUserRole, PortalUserStatus } from "@/lib/types";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 
 export type PortalUserAuthRow = {
@@ -8,6 +8,9 @@ export type PortalUserAuthRow = {
   phone: string | null;
   role: PortalUserRole;
   geographyScope: string | null;
+  department: string | null;
+  status: PortalUserStatus;
+  mustChangePassword: boolean;
   isSupervisor: boolean;
   isME: boolean;
   isAdmin: boolean;
@@ -37,6 +40,9 @@ function mapPortalUserAuthRow(row: Record<string, unknown>): PortalUserAuthRow {
     phone: row.phone ? String(row.phone) : null,
     role: String(row.role ?? "Volunteer") as PortalUserRole,
     geographyScope: row.geographyScope ? String(row.geographyScope) : null,
+    department: row.department ? String(row.department) : null,
+    status: (String(row.status ?? "active") as PortalUserStatus),
+    mustChangePassword: Boolean(row.mustChangePassword),
     isSupervisor: Boolean(row.isSupervisor),
     isME: Boolean(row.isME),
     isAdmin: Boolean(row.isAdmin),
@@ -131,6 +137,9 @@ export async function findPortalUserAuthByIdentifierPostgres(identifier: string)
         phone,
         role,
         geography_scope AS "geographyScope",
+        department,
+        status,
+        must_change_password AS "mustChangePassword",
         is_supervisor AS "isSupervisor",
         is_me AS "isME",
         is_admin AS "isAdmin",
@@ -150,6 +159,14 @@ export async function authenticatePortalUserPostgres(identifier: string, passwor
   if (!auth || auth.passwordHash !== passwordHash) {
     return null;
   }
+  if (auth.status === "deactivated") {
+    return null;
+  }
+  // Update last_login_at
+  await queryPostgres(
+    `UPDATE portal_users SET last_login_at = NOW() WHERE id = $1`,
+    [auth.id],
+  );
   const { passwordHash: _, ...user } = auth;
   return user;
 }
@@ -171,6 +188,9 @@ export async function findPortalUserAuthByIdPostgres(userId: number) {
         phone,
         role,
         geography_scope AS "geographyScope",
+        department,
+        status,
+        must_change_password AS "mustChangePassword",
         is_supervisor AS "isSupervisor",
         is_me AS "isME",
         is_admin AS "isAdmin",
@@ -196,6 +216,9 @@ export async function findPortalUserByEmailPostgres(email: string) {
         phone,
         role,
         geography_scope AS "geographyScope",
+        department,
+        status,
+        must_change_password AS "mustChangePassword",
         is_supervisor AS "isSupervisor",
         is_me AS "isME",
         is_admin AS "isAdmin",
@@ -236,6 +259,9 @@ export async function findPortalUserBySessionTokenPostgres(token: string) {
         u.phone,
         u.role,
         u.geography_scope AS "geographyScope",
+        u.department,
+        u.status,
+        u.must_change_password AS "mustChangePassword",
         u.is_supervisor AS "isSupervisor",
         u.is_me AS "isME",
         u.is_admin AS "isAdmin",
@@ -244,6 +270,7 @@ export async function findPortalUserBySessionTokenPostgres(token: string) {
       JOIN portal_users u ON u.id = s.user_id
       WHERE s.token = $1
         AND s.expires_at > NOW()
+        AND u.status != 'deactivated'
       LIMIT 1
     `,
     [token],

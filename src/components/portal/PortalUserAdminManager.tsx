@@ -1,8 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { PortalUserAdminRecord, PortalUserRole } from "@/lib/types";
+import { PortalUserAdminRecord, PortalUserRole, PortalUserStatus } from "@/lib/types";
 import { FormModal } from "@/components/forms";
+
+const ALL_ROLES: PortalUserRole[] = [
+  "Staff", "Volunteer", "Admin", "Coach", "DataClerk", "SchoolLeader", "Partner", "Government",
+];
 
 interface PortalUserAdminManagerProps {
   initialUsers: PortalUserAdminRecord[];
@@ -13,17 +17,30 @@ type UserStatus = {
   message: string;
 };
 
-function formatDate(value: string) {
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
+  if (Number.isNaN(parsed.getTime())) return value;
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
     timeZone: "UTC",
   }).format(parsed);
+}
+
+function statusBadge(status: PortalUserStatus) {
+  const map: Record<PortalUserStatus, { icon: string; label: string; color: string }> = {
+    active: { icon: "🟢", label: "Active", color: "#16a34a" },
+    invited: { icon: "🟡", label: "Invited", color: "#ca8a04" },
+    deactivated: { icon: "🔴", label: "Deactivated", color: "#dc2626" },
+  };
+  const info = map[status] ?? map.active;
+  return (
+    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: info.color }}>
+      {info.icon} {info.label}
+    </span>
+  );
 }
 
 async function parseApiResponse(response: Response) {
@@ -43,7 +60,7 @@ async function parseApiResponse(response: Response) {
 export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerProps) {
   const [users, setUsers] = useState(initialUsers);
   const [saving, setSaving] = useState(false);
-  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [togglingUserId, setTogglingUserId] = useState<number | null>(null);
   const [status, setStatus] = useState<UserStatus | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -53,17 +70,20 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
     setSaving(true);
     setStatus(null);
     const formData = new FormData(event.currentTarget);
-    const volunteerAccount = formData.get("isVolunteer") === "on";
+    const role = String(formData.get("role") ?? "Staff") as PortalUserRole;
     const payload = {
       fullName: String(formData.get("fullName") ?? "").trim(),
       email: String(formData.get("email") ?? "").trim(),
       phone: String(formData.get("phone") ?? "").trim(),
-      role: (volunteerAccount ? "Volunteer" : "Staff") as PortalUserRole,
+      role,
+      department: String(formData.get("department") ?? "").trim() || undefined,
+      geographyScope: String(formData.get("geographyScope") ?? "").trim() || undefined,
       password: String(formData.get("password") ?? ""),
-      isSupervisor: !volunteerAccount && formData.get("isSupervisor") === "on",
-      isME: !volunteerAccount && formData.get("isME") === "on",
-      isAdmin: !volunteerAccount && formData.get("isAdmin") === "on",
-      isSuperAdmin: !volunteerAccount && formData.get("isSuperAdmin") === "on",
+      sendInviteEmail: formData.get("sendInviteEmail") === "on",
+      isSupervisor: formData.get("isSupervisor") === "on",
+      isME: formData.get("isME") === "on",
+      isAdmin: formData.get("isAdmin") === "on",
+      isSuperAdmin: formData.get("isSuperAdmin") === "on",
     };
 
     try {
@@ -92,16 +112,18 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
     setSaving(true);
     setStatus(null);
     const formData = new FormData(event.currentTarget);
-    const volunteerAccount = formData.get("isVolunteer") === "on";
+    const role = String(formData.get("role") ?? "Staff") as PortalUserRole;
     const payload = {
       userId,
       fullName: String(formData.get("fullName") ?? "").trim(),
       phone: String(formData.get("phone") ?? "").trim(),
-      role: (volunteerAccount ? "Volunteer" : "Staff") as PortalUserRole,
-      isSupervisor: !volunteerAccount && formData.get("isSupervisor") === "on",
-      isME: !volunteerAccount && formData.get("isME") === "on",
-      isAdmin: !volunteerAccount && formData.get("isAdmin") === "on",
-      isSuperAdmin: !volunteerAccount && formData.get("isSuperAdmin") === "on",
+      role,
+      department: String(formData.get("department") ?? "").trim() || null,
+      geographyScope: String(formData.get("geographyScope") ?? "").trim() || null,
+      isSupervisor: formData.get("isSupervisor") === "on",
+      isME: formData.get("isME") === "on",
+      isAdmin: formData.get("isAdmin") === "on",
+      isSuperAdmin: formData.get("isSuperAdmin") === "on",
       password: String(formData.get("password") ?? "").trim() || undefined,
     };
 
@@ -119,7 +141,7 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
       if (passwordField) {
         passwordField.value = "";
       }
-      setStatus({ tone: "success", message: "Permissions updated successfully." });
+      setStatus({ tone: "success", message: "User updated successfully." });
       setEditingUserId(null);
     } catch (error) {
       setStatus({
@@ -131,32 +153,32 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
     }
   }
 
-  async function handleDeleteUser(userId: number, fullName: string) {
+  async function handleToggleStatus(userId: number, currentStatus: PortalUserStatus, fullName: string) {
+    const nextStatus: PortalUserStatus = currentStatus === "deactivated" ? "active" : "deactivated";
+    const action = nextStatus === "deactivated" ? "deactivate" : "reactivate";
     const confirmed = window.confirm(
-      `Delete ${fullName}'s account? This action cannot be undone.`,
+      `${action.charAt(0).toUpperCase() + action.slice(1)} ${fullName}'s account?`,
     );
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    setDeletingUserId(userId);
+    setTogglingUserId(userId);
     setStatus(null);
     try {
       const response = await fetch("/api/portal/users", {
-        method: "DELETE",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, status: nextStatus }),
       });
       const nextUsers = await parseApiResponse(response);
       setUsers(nextUsers);
-      setStatus({ tone: "success", message: "User deleted successfully." });
+      setStatus({ tone: "success", message: `User ${action}d successfully.` });
     } catch (error) {
       setStatus({
         tone: "error",
-        message: error instanceof Error ? error.message : "Could not delete user.",
+        message: error instanceof Error ? error.message : `Could not ${action} user.`,
       });
     } finally {
-      setDeletingUserId(null);
+      setTogglingUserId(null);
     }
   }
 
@@ -169,15 +191,15 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
         </p>
         <div className="action-row portal-form-actions">
           <button className="button" type="button" onClick={() => setIsCreateOpen(true)}>
-            + New Staff Account
+            + New Account
           </button>
         </div>
       </section>
 
       <section className="card">
-        <h2>Permission Matrix</h2>
+        <h2>User Directory ({users.length})</h2>
         <p>
-          Volunteers should remain data-entry only. Staff can access dashboard tools.
+          Manage accounts, permission flags, and user status.
         </p>
         {users.length === 0 ? (
           <p>No users found.</p>
@@ -189,15 +211,25 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
                   <div>
                     <strong>{user.fullName}</strong>
                     <p className="portal-muted">{user.email}</p>
-                    <p className="portal-muted">Created: {formatDate(user.createdAt)}</p>
+                    <p className="portal-muted" style={{ marginTop: 4 }}>
+                      {statusBadge(user.status ?? "active")}
+                      {" · "}
+                      {user.role}
+                      {user.department ? ` · ${user.department}` : ""}
+                    </p>
                   </div>
                 </div>
 
-                <p className="portal-muted">
-                  Role: {user.role} | Flags:{" "}
+                <p className="portal-muted" style={{ fontSize: "0.8rem" }}>
+                  Flags:{" "}
                   {[user.isSupervisor && "Supervisor", user.isME && "M&E", user.isAdmin && "Admin", user.isSuperAdmin && "Super Admin"]
                     .filter(Boolean)
                     .join(", ") || "None"}
+                </p>
+                <p className="portal-muted" style={{ fontSize: "0.78rem" }}>
+                  Created: {formatDate(user.createdAt)}
+                  {user.invitedAt ? ` · Invited: ${formatDate(user.invitedAt)}` : ""}
+                  {user.lastLoginAt ? ` · Last login: ${formatDate(user.lastLoginAt)}` : ""}
                 </p>
 
                 <div className="action-row portal-form-actions">
@@ -207,15 +239,19 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
                     disabled={saving}
                     onClick={() => setEditingUserId(user.id)}
                   >
-                    Edit permissions
+                    Edit
                   </button>
                   <button
                     className="button button-ghost"
                     type="button"
-                    disabled={deletingUserId === user.id || saving}
-                    onClick={() => void handleDeleteUser(user.id, user.fullName)}
+                    disabled={togglingUserId === user.id || saving}
+                    onClick={() => void handleToggleStatus(user.id, user.status ?? "active", user.fullName)}
                   >
-                    {deletingUserId === user.id ? "Deleting..." : "Delete staff"}
+                    {togglingUserId === user.id
+                      ? "Updating..."
+                      : (user.status ?? "active") === "deactivated"
+                        ? "Reactivate"
+                        : "Deactivate"}
                   </button>
                 </div>
               </article>
@@ -230,10 +266,11 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
         </p>
       ) : null}
 
+      {/* ─── Create Modal ──────────────────────────────── */}
       <FormModal
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title="Create Staff / Volunteer Account"
+        title="Create Portal Account"
         description="Onboard portal users and assign role permissions."
         closeLabel="Close"
         maxWidth="900px"
@@ -252,18 +289,34 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
             <input name="phone" />
           </label>
           <label>
-            <span className="portal-field-label">Account Type</span>
-            <span className="portal-inline-check">
-              <input name="isVolunteer" type="checkbox" />
-              Volunteer account
-            </span>
-            <small className="portal-field-help">
-              Leave unchecked for Staff account.
-            </small>
+            <span className="portal-field-label">Role</span>
+            <select name="role" defaultValue="Staff">
+              {ALL_ROLES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
           </label>
           <label>
-            <span className="portal-field-label">Password</span>
+            <span className="portal-field-label">Department (optional)</span>
+            <input name="department" placeholder="e.g. Programs, Finance, M&E" />
+          </label>
+          <label>
+            <span className="portal-field-label">Geography Scope (optional)</span>
+            <input name="geographyScope" placeholder="e.g. Central Region" />
+          </label>
+          <label>
+            <span className="portal-field-label">Temporary Password</span>
             <input name="password" type="text" minLength={8} required />
+          </label>
+          <label>
+            <span className="portal-field-label">Onboarding</span>
+            <span className="portal-inline-check">
+              <input name="sendInviteEmail" type="checkbox" defaultChecked />
+              Send onboarding email with credentials
+            </span>
+            <small className="portal-field-help">
+              User will be required to change their password on first sign-in.
+            </small>
           </label>
           <fieldset className="card">
             <legend>Permission Flags</legend>
@@ -302,11 +355,12 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
         </form>
       </FormModal>
 
+      {/* ─── Edit Modal ──────────────────────────────── */}
       {editingUserId ? (
         <FormModal
           open={Boolean(editingUserId)}
           onClose={() => setEditingUserId(null)}
-          title="Edit User Permissions"
+          title="Edit User"
           description="Update profile details and role access flags."
           closeLabel="Close"
           maxWidth="900px"
@@ -332,18 +386,20 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
                   <input name="phone" defaultValue={user.phone ?? ""} />
                 </label>
                 <label>
-                  <span className="portal-field-label">Account Type</span>
-                  <span className="portal-inline-check">
-                    <input
-                      name="isVolunteer"
-                      type="checkbox"
-                      defaultChecked={user.role === "Volunteer"}
-                    />
-                    Volunteer account
-                  </span>
-                  <small className="portal-field-help">
-                    Leave unchecked for Staff account.
-                  </small>
+                  <span className="portal-field-label">Role</span>
+                  <select name="role" defaultValue={user.role}>
+                    {ALL_ROLES.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="portal-field-label">Department</span>
+                  <input name="department" defaultValue={user.department ?? ""} placeholder="e.g. Programs, Finance" />
+                </label>
+                <label>
+                  <span className="portal-field-label">Geography Scope</span>
+                  <input name="geographyScope" defaultValue={user.geographyScope ?? ""} placeholder="e.g. Central Region" />
                 </label>
                 <label>
                   <span className="portal-field-label">Reset Password (optional)</span>
@@ -376,7 +432,7 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
 
                 <div className="full-width action-row portal-form-actions">
                   <button className="button" type="submit" disabled={saving}>
-                    {saving ? "Saving..." : "Save permissions"}
+                    {saving ? "Saving..." : "Save changes"}
                   </button>
                   <button
                     className="button button-ghost"

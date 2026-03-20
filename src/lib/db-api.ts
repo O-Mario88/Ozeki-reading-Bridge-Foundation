@@ -318,12 +318,18 @@ export function buildImpactNarrative(
 export async function listPortalUsersForAdmin(_actor: PortalUser) {
   const result = await queryPostgres(
     `SELECT id, full_name AS "fullName", email, phone, role,
+            geography_scope AS "geographyScope",
+            department,
+            status,
+            must_change_password AS "mustChangePassword",
             is_supervisor AS "isSupervisor", is_me AS "isME",
             is_admin AS "isAdmin", is_superadmin AS "isSuperAdmin",
-            created_at AS "createdAt"
+            created_at AS "createdAt",
+            invited_at AS "invitedAt",
+            last_login_at AS "lastLoginAt"
      FROM portal_users ORDER BY full_name`,
   );
-  return result.rows as Array<{ id: number; fullName: string; email: string; phone: string; role: string; isSupervisor: boolean; isME: boolean; isAdmin: boolean; isSuperAdmin: boolean; createdAt: string }>;
+  return result.rows as Array<{ id: number; fullName: string; email: string; phone: string; role: string; geographyScope: string | null; department: string | null; status: string; mustChangePassword: boolean; isSupervisor: boolean; isME: boolean; isAdmin: boolean; isSuperAdmin: boolean; createdAt: string; invitedAt: string | null; lastLoginAt: string | null }>;
 }
 
 export async function listPortalUsersForFilters(_actor: PortalUser) {
@@ -340,6 +346,10 @@ export async function createPortalUserAccount(payload: {
   phone?: string;
   role: string;
   password: string;
+  department?: string;
+  geographyScope?: string;
+  status?: string;
+  mustChangePassword?: boolean;
   isSupervisor?: boolean;
   isME?: boolean;
   isAdmin?: boolean;
@@ -347,15 +357,23 @@ export async function createPortalUserAccount(payload: {
 }, _actor: PortalUser) {
   const crypto = await import("node:crypto");
   const passwordHash = crypto.createHash("sha256").update(payload.password).digest("hex");
+  const status = payload.status ?? "active";
+  const mustChangePassword = payload.mustChangePassword ?? false;
+  const invitedAt = status === "invited" ? new Date().toISOString() : null;
   await queryPostgres(
-    `INSERT INTO portal_users (full_name, email, phone, role, password_hash, is_supervisor, is_me, is_admin, is_superadmin)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    `INSERT INTO portal_users (full_name, email, phone, role, password_hash, department, geography_scope, status, must_change_password, invited_at, is_supervisor, is_me, is_admin, is_superadmin)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::timestamptz, $11, $12, $13, $14)`,
     [
       payload.fullName,
       payload.email.toLowerCase(),
       payload.phone ?? null,
       payload.role,
       passwordHash,
+      payload.department ?? null,
+      payload.geographyScope ?? null,
+      status,
+      mustChangePassword,
+      invitedAt,
       payload.isSupervisor ?? false,
       payload.isME ?? false,
       payload.isAdmin ?? false,
@@ -369,11 +387,15 @@ export async function updatePortalUserPermissions(
   updates: Record<string, unknown>,
   _actor: PortalUser,
 ) {
-  const allowedFields = ["fullName", "phone", "role", "isSupervisor", "isME", "isAdmin", "isSuperAdmin", "password"];
+  const allowedFields = ["fullName", "phone", "role", "department", "geographyScope", "status", "mustChangePassword", "isSupervisor", "isME", "isAdmin", "isSuperAdmin", "password"];
   const fieldMap: Record<string, string> = {
     fullName: "full_name",
     phone: "phone",
     role: "role",
+    department: "department",
+    geographyScope: "geography_scope",
+    status: "status",
+    mustChangePassword: "must_change_password",
     isSupervisor: "is_supervisor",
     isME: "is_me",
     isAdmin: "is_admin",

@@ -43,12 +43,14 @@ export async function POST(request: Request) {
 
     const session = await createPortalSession(user.id);
     clearRateLimit(rateLimitKey);
+    const redirectTo = user.mustChangePassword ? "/portal/change-password" : getPortalHomePath(user);
     const response = NextResponse.json({
       ok: true,
-      redirectTo: getPortalHomePath(user),
+      redirectTo,
       user: {
         fullName: user.fullName,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     });
 

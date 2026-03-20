@@ -294,6 +294,8 @@ export type PortalUserRole =
   | "Partner"
   | "Government";
 
+export type PortalUserStatus = "active" | "invited" | "deactivated";
+
 export interface PortalUser {
   id: number;
   fullName: string;
@@ -301,6 +303,9 @@ export interface PortalUser {
   phone: string | null;
   role: PortalUserRole;
   geographyScope: string | null;
+  department: string | null;
+  status: PortalUserStatus;
+  mustChangePassword: boolean;
   isSupervisor: boolean;
   isME: boolean;
   isAdmin: boolean;
@@ -1478,6 +1483,8 @@ export interface EventParticipantRecord {
 
 export interface PortalUserAdminRecord extends PortalUser {
   createdAt: string;
+  invitedAt: string | null;
+  lastLoginAt: string | null;
 }
 
 export type PortalRecordModule = "training" | "visit" | "assessment" | "story" | "story_activity";

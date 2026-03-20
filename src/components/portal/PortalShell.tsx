@@ -41,6 +41,7 @@ const primaryNavItems: PortalNavItem[] = [
   { href: "/portal/about", label: "About Page", icon: "ℹ️", staffOnly: true, section: "cms" },
 
   // System
+  { href: "/portal/superadmin", label: "User Management", icon: "👤", superAdminOnly: true, section: "system" },
   { href: "/portal/data-quality", label: "Data Quality", icon: "🛡️", staffOnly: true, section: "system" },
   { href: "/portal/support", label: "Support Requests", icon: "🎧", staffOnly: true, section: "system" },
   { href: "/portal/admin/settings", label: "Admin/Settings", icon: "⚙️", superAdminOnly: true, section: "system" },
