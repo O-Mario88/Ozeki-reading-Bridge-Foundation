@@ -903,6 +903,44 @@ export async function getAllGeographyTaxonomyPostgres() {
   };
 }
 
+export async function listOnlineSessionStatsForPublicImpactPostgres(
+  schoolIds: number[],
+  year?: string,
+): Promise<{ sessionsCount: number; participantsCount: number; schoolsReachedCount: number; teachersTrained: number }> {
+  if (schoolIds.length === 0) {
+    return { sessionsCount: 0, participantsCount: 0, schoolsReachedCount: 0, teachersTrained: 0 };
+  }
+  const params: unknown[] = [schoolIds];
+  let yearClause = "";
+  if (year) {
+    params.push(`${year}-%`);
+    yearClause = `AND ots.start_time::text LIKE $${params.length}`;
+  }
+  const result = await queryPostgres(
+    `
+      SELECT
+        COUNT(DISTINCT ots.id)::int AS "sessionsCount",
+        COUNT(DISTINCT otp.id)::int AS "participantsCount",
+        COUNT(DISTINCT otp.school_id)::int AS "schoolsReachedCount",
+        COALESCE(SUM(DISTINCT ots.online_teachers_trained), 0)::int AS "teachersTrained"
+      FROM online_training_sessions ots
+      JOIN online_training_participants otp ON otp.session_id = ots.id
+      WHERE ots.status IN ('scheduled', 'live', 'completed')
+        AND otp.school_id = ANY($1::int[])
+        AND otp.attendance_status IN ('joined', 'attended')
+        ${yearClause}
+    `,
+    params,
+  );
+  const row = result.rows[0];
+  return {
+    sessionsCount: Number(row?.sessionsCount ?? 0),
+    participantsCount: Number(row?.participantsCount ?? 0),
+    schoolsReachedCount: Number(row?.schoolsReachedCount ?? 0),
+    teachersTrained: Number(row?.teachersTrained ?? 0),
+  };
+}
+
 export async function buildPublicImpactAggregatePostgres(
   scopeLevel: PublicImpactScopeLevel,
   scopeId: string,
@@ -930,14 +968,16 @@ export async function buildPublicImpactAggregatePostgres(
     lessonEvals,
     _attendanceRows,
     teacherSupport,
-    teachingLearningAlignment
+    teachingLearningAlignment,
+    onlineSessionStats
   ] = await Promise.all([
     listPortalRecordsForPublicImpactPostgres(schoolIds, year),
     listAssessmentRowsForPublicImpactPostgres(schoolIds, year),
     listLessonEvaluationRecordsForPublicImpactPostgres({ schoolIds, startDate, endDate }),
     listTrainingAttendanceForPublicImpactPostgres(schoolIds, year),
     listTeacherSupportRowsForPublicImpactPostgres(schoolIds),
-    getTeachingLearningAlignmentBySchoolIdsPostgres(schoolIds, startDate, endDate)
+    getTeachingLearningAlignmentBySchoolIdsPostgres(schoolIds, startDate, endDate),
+    listOnlineSessionStatsForPublicImpactPostgres(schoolIds, year)
   ]);
 
   const uniqueLearners = new Set(assessmentRows.map(r => r.learnerUid).filter(Boolean));
@@ -995,8 +1035,9 @@ export async function buildPublicImpactAggregatePostgres(
       totalBooksRead,
       teachersSupportedMale: teacherSupport.filter(t => t.gender === "Male").length,
       teachersSupportedFemale: teacherSupport.filter(t => t.gender === "Female").length,
-      onlineLiveSessionsCovered: 0,
-      onlineTeachersSupported: 0,
+      onlineLiveSessionsCovered: onlineSessionStats.sessionsCount,
+      onlineTeachersSupported: onlineSessionStats.teachersTrained,
+      onlineSchoolsReachedCount: onlineSessionStats.schoolsReachedCount,
       learnersDirectlyImpacted: scopedSchools.reduce((acc, s) => acc + s.directImpactTotal, 0),
       enrollmentEstimatedReach: scopedSchools.reduce((acc, s) => acc + s.enrollmentTotal, 0),
       learnersAssessedUnique: uniqueLearners.size,

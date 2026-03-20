@@ -566,6 +566,11 @@ export function PublicImpactMapExplorer({
           : "Data not available",
       helper: "Matched baseline-to-latest learners",
     },
+    {
+      label: "Online sessions",
+      value: (kpis?.onlineLiveSessionsCovered ?? 0).toLocaleString(),
+      helper: "Live & completed virtual sessions",
+    },
   ];
 
   const funnelStages = [
@@ -593,6 +598,11 @@ export function PublicImpactMapExplorer({
       label: "Story active schools",
       value: payload?.funnel?.storyActive ?? 0,
       helper: "Reading culture extension",
+    },
+    {
+      label: "Online sessions reached",
+      value: payload?.kpis?.onlineSchoolsReachedCount ?? 0,
+      helper: "Schools reached via virtual sessions",
     },
   ];
   const funnelBaseline = Math.max(funnelStages[0]?.value ?? 0, 1);
@@ -1218,6 +1228,13 @@ export function PublicImpactMapExplorer({
                   {loading ? "Loading..." : (payload?.funnel?.storyActive ?? 0).toLocaleString()}
                 </strong>
                 <span>Creative literacy extension</span>
+              </div>
+              <div>
+                <span>Online Sessions</span>
+                <strong>
+                  {loading ? "Loading..." : (payload?.kpis?.onlineLiveSessionsCovered ?? 0).toLocaleString()}
+                </strong>
+                <span>Virtual training sessions held</span>
               </div>
             </div>
           </article>

@@ -1316,6 +1316,7 @@ export interface PublicImpactAggregate {
     teachersSupportedFemale: number;
     onlineLiveSessionsCovered: number;
     onlineTeachersSupported: number;
+    onlineSchoolsReachedCount: number;
     learnersDirectlyImpacted: number;
     enrollmentEstimatedReach: number;
     learnersAssessedUnique: number;
@@ -1446,6 +1447,33 @@ export interface OnlineTrainingEventRecord {
   chatSummary: string | null;
   attendanceCapturedAt: string | null;
   createdAt: string;
+}
+
+export interface EventRegistrationContactInput {
+  fullName: string;
+  role: string;
+  gender: "Male" | "Female" | "";
+  phone?: string;
+  email?: string;
+}
+
+export interface EventRegistrationInput {
+  eventId: number;
+  schoolName: string;
+  district: string;
+  region?: string;
+  subRegion?: string;
+  subCounty?: string;
+  parish?: string;
+  contacts: EventRegistrationContactInput[];
+}
+
+export interface EventParticipantRecord {
+  id: number;
+  sessionId: number;
+  schoolId: number;
+  schoolName: string;
+  contactsRegistered: number;
 }
 
 export interface PortalUserAdminRecord extends PortalUser {

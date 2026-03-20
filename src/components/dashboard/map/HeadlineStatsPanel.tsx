@@ -115,6 +115,30 @@ export function HeadlineStatsPanel({
         </div>
       </div>
 
+      <div className="headline-stats-subsection">
+        <h4>Online Training</h4>
+        <div className="headline-stats-grid">
+          <MetricCard
+            label="Online sessions held"
+            value={(kpis?.onlineLiveSessionsCovered ?? 0).toLocaleString()}
+            helper="Live & completed virtual sessions"
+            loading={loading}
+          />
+          <MetricCard
+            label="Online participants"
+            value={(kpis?.onlineTeachersSupported ?? 0).toLocaleString()}
+            helper="Teachers trained online"
+            loading={loading}
+          />
+          <MetricCard
+            label="Schools reached online"
+            value={(kpis?.onlineSchoolsReachedCount ?? 0).toLocaleString()}
+            helper="Unique schools with online participants"
+            loading={loading}
+          />
+        </div>
+      </div>
+
       <div className="headline-stats-actions">
         <Link className="button" href={detailHref}>
           View Detailed Analysis
