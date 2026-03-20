@@ -233,9 +233,10 @@ function drawThreeColumns(
   col3: { heading: string; bigValue: string; color?: ReturnType<typeof rgb> },
 ): number {
   const sectionY = y - 14;
-  // 32% / 40% / 28% split — gives TO plenty of room for long text
-  const col1W = CW * 0.32;
-  const col2W = CW * 0.40;
+  // When col2 is empty, shift col3 left by using a narrower middle column
+  const col2IsEmpty = col2.lines.length === 0 && !col2.heading;
+  const col1W = CW * (col2IsEmpty ? 0.36 : 0.32);
+  const col2W = CW * (col2IsEmpty ? 0.30 : 0.40);
   const lineH = 13;
   const headSize = 8;
   const textSize = 9;
@@ -647,21 +648,13 @@ export async function renderReceiptPdf(
     { label: "Payment Method", value: (receipt.paymentMethod || "Other").toUpperCase() },
   ]);
 
-  // 3. Three-column section: FROM / Payment Details / Amount
-  const profile = getCurrentPdfBrandProfile();
+  // 3. Three-column section: FROM / (blank) / Amount
   const fromLines = [receipt.receivedFrom || "No Name"];
-
-  const paymentDetails = [
-    `Bank: Equity Bank Limited`,
-    `Account: 1007203565985`,
-    profile.name,
-    `Email: ${profile.email}`,
-  ];
 
   const afterCols = drawThreeColumns(
     page, afterStrip, font, fontBold,
     { heading: "Received From", lines: fromLines },
-    { heading: "Payment Details", lines: paymentDetails },
+    { heading: "", lines: [] },
     { heading: "Amount Received", bigValue: fmtMoney(receipt.currency, receipt.amountReceived), color: GREEN },
   );
 
