@@ -910,121 +910,101 @@ export async function writeSchoolDirectoryRecord(args: {
         const insertResult = await client.query<{ id: number }>(
           `
             INSERT INTO schools_directory (
-              school_uid,
-              school_code,
-              school_external_id,
-              name,
-              alternate_school_names,
-              country,
-              region,
-              sub_region,
-              district,
-              sub_county,
-              parish,
-              parish_id,
-
-              contact_phone,
-              contact_email,
-              gps_lat,
-              gps_lng,
-              year_founded,
-              school_status,
-              school_status_date,
-              current_partner_type,
-              account_record_type,
-              school_type,
-              parent_account_label,
-              school_relationship_status,
-              school_relationship_status_date,
-              protestant_denomination,
-              client_school_number,
-              first_metric_date,
-              metric_count,
-              running_total_max_enrollment,
-              partner_type,
-              current_partner_school,
-              school_active,
-              website,
-              description,
-              enrollment_total,
-              enrollment_by_grade,
-              enrolled_boys,
-              enrolled_girls,
-              enrolled_baby,
-              enrolled_middle,
-              enrolled_top,
-              enrolled_p1,
-              enrolled_p2,
-              enrolled_p3,
-              enrolled_p4,
-              enrolled_p5,
-              enrolled_p6,
-              enrolled_p7,
-              enrolled_learners,
-              notes,
-              village,
-              contact_name,
+              school_uid, school_code, school_external_id,
+              name, alternate_school_names,
+              country, region, sub_region, district, sub_county, parish, parish_id,
+              contact_name, contact_phone, contact_email,
+              gps_lat, gps_lng, year_founded,
+              school_status, school_status_date,
+              current_partner_type, account_record_type, school_type, parent_account_label,
+              school_relationship_status, school_relationship_status_date,
+              denomination, protestant_denomination,
+              client_school_number, first_metric_date, metric_count,
+              running_total_max_enrollment, partner_type,
+              current_partner_school, school_active,
+              website, description,
+              enrollment_total, enrollment_by_grade,
+              enrolled_boys, enrolled_girls, enrolled_learners,
+              enrolled_baby, enrolled_middle, enrolled_top,
+              enrolled_p1, enrolled_p2, enrolled_p3, enrolled_p4, enrolled_p5, enrolled_p6, enrolled_p7,
+              notes, village,
               created_at
             ) VALUES (
-              $1, 'S-PENDING', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $15,
-              $16, $17, $19, $20, $21, $22, $23::date, $24, $25, $26, $27, $28, $29::date,
-              $30, $31, $32::date, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44,
-              $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, NOW()
+              $1, 'S-PENDING', $2,
+              $3, $4,
+              $5, $6, $7, $8, $9, $10, $11,
+              $12, $13, $14,
+              $15, $16, $17,
+              $18, $19::date,
+              $20, $21, $22, $23,
+              $24, $25::date,
+              $26, $27,
+              $28, $29::date, $30,
+              $31, $32,
+              $33, $34,
+              $35, $36,
+              $37, $38,
+              $39, $40, $41,
+              $42, $43, $44,
+              $45, $46, $47, $48, $49, $50, $51,
+              $52, $53,
+              NOW()
             ) RETURNING id
           `,
           [
-            resolved.schoolUid,
-            resolved.schoolExternalId,
-            resolved.name,
-            resolved.alternativeSchoolNames,
-            resolved.country,
-            resolved.region,
-            resolved.subRegion,
-            resolved.district,
-            resolved.subCounty,
-            resolved.parish,
-            resolved.parishId,
-
-            resolved.schoolEmail,
-            resolved.gpsLat,
-            resolved.gpsLng,
-            resolved.yearFounded,
-            resolved.schoolStatus,
-            resolved.schoolStatusDate,
-            resolved.currentPartnerType,
-            resolved.accountRecordType,
-            resolved.schoolType,
-            resolved.parentAccountLabel,
-            resolved.schoolRelationshipStatus,
-            resolved.schoolRelationshipStatusDate,
-            resolved.protestantDenomination,
-            resolved.clientSchoolNumber,
-            resolved.firstMetricDate,
-            resolved.metricCount,
-            resolved.runningTotalMaxEnrollment,
-            resolved.partnerType,
-            resolved.currentPartnerSchool,
-            resolved.schoolActive,
-            resolved.website,
-            resolved.description,
-            enrollmentTotal,
-            resolved.enrollmentByGrade,
-            resolved.enrolledBoys,
-            resolved.enrolledGirls,
-            resolved.enrolledBaby,
-            resolved.enrolledMiddle,
-            resolved.enrolledTop,
-            resolved.enrolledP1,
-            resolved.enrolledP2,
-            resolved.enrolledP3,
-            resolved.enrolledP4,
-            resolved.enrolledP5,
-            resolved.enrolledP6,
-            resolved.enrolledP7,
-            enrollmentTotal,
-            resolved.notes,
-            resolved.village,
-            resolved.primaryContactName,
+            resolved.schoolUid,                        // $1
+            resolved.schoolExternalId,                  // $2
+            resolved.name,                              // $3
+            resolved.alternativeSchoolNames,             // $4
+            resolved.country,                           // $5
+            resolved.region,                            // $6
+            resolved.subRegion,                         // $7
+            resolved.district,                          // $8
+            resolved.subCounty,                         // $9
+            resolved.parish,                            // $10
+            resolved.parishId,                          // $11
+            resolved.primaryContactName,                // $12
+            resolved.schoolPhone,                       // $13
+            resolved.schoolEmail,                       // $14
+            resolved.gpsLat,                            // $15
+            resolved.gpsLng,                            // $16
+            resolved.yearFounded,                       // $17
+            resolved.schoolStatus,                      // $18
+            resolved.schoolStatusDate,                  // $19
+            resolved.currentPartnerType,                // $20
+            resolved.accountRecordType,                 // $21
+            resolved.schoolType,                        // $22
+            resolved.parentAccountLabel,                // $23
+            resolved.schoolRelationshipStatus,          // $24
+            resolved.schoolRelationshipStatusDate,      // $25
+            resolved.denomination,                      // $26
+            resolved.protestantDenomination,            // $27
+            resolved.clientSchoolNumber,                // $28
+            resolved.firstMetricDate,                   // $29
+            resolved.metricCount,                       // $30
+            resolved.runningTotalMaxEnrollment,          // $31
+            resolved.partnerType,                       // $32
+            resolved.currentPartnerSchool,              // $33
+            resolved.schoolActive,                      // $34
+            resolved.website,                           // $35
+            resolved.description,                       // $36
+            enrollmentTotal,                            // $37
+            resolved.enrollmentByGrade,                 // $38
+            resolved.enrolledBoys,                      // $39
+            resolved.enrolledGirls,                     // $40
+            enrollmentTotal,                            // $41 (enrolled_learners)
+            resolved.enrolledBaby,                      // $42
+            resolved.enrolledMiddle,                    // $43
+            resolved.enrolledTop,                       // $44
+            resolved.enrolledP1,                        // $45
+            resolved.enrolledP2,                        // $46
+            resolved.enrolledP3,                        // $47
+            resolved.enrolledP4,                        // $48
+            resolved.enrolledP5,                        // $49
+            resolved.enrolledP6,                        // $50
+            resolved.enrolledP7,                        // $51
+            resolved.notes,                             // $52
+            resolved.village,                           // $53
           ],
         );
         schoolId = Number(insertResult.rows[0]?.id ?? 0);
@@ -1047,103 +1027,104 @@ export async function writeSchoolDirectoryRecord(args: {
               sub_county = $9,
               parish = $10,
               parish_id = $11,
-              denomination = $15,
-              contact_phone = $16,
-              contact_email = $17,
-              gps_lat = $19,
-              gps_lng = $20,
-              year_founded = $21,
-              school_status = $22,
-              school_status_date = $23::date,
-              current_partner_type = $24,
-              account_record_type = $25,
-              school_type = $26,
-              parent_account_label = $27,
-              school_relationship_status = $28,
-              school_relationship_status_date = $29::date,
-              protestant_denomination = $30,
-              client_school_number = $31,
-              first_metric_date = $32::date,
-              metric_count = $33,
-              running_total_max_enrollment = $34,
-              partner_type = $35,
-              current_partner_school = $36,
-              school_active = $37,
-              website = $38,
-              description = $39,
-              enrollment_total = $40,
-              enrollment_by_grade = $41,
-              enrolled_boys = $42,
-              enrolled_girls = $43,
-              enrolled_baby = $44,
-              enrolled_middle = $45,
-              enrolled_top = $46,
-              enrolled_p1 = $47,
-              enrolled_p2 = $48,
-              enrolled_p3 = $49,
-              enrolled_p4 = $50,
-              enrolled_p5 = $51,
-              enrolled_p6 = $52,
-              enrolled_p7 = $53,
-              enrolled_learners = $40,
-              notes = $54,
-              village = $55,
-              contact_name = $56,
-              updated_at = NOW()
+              contact_name = $12,
+              contact_phone = $13,
+              contact_email = $14,
+              gps_lat = $15,
+              gps_lng = $16,
+              year_founded = $17,
+              school_status = $18,
+              school_status_date = $19::date,
+              current_partner_type = $20,
+              account_record_type = $21,
+              school_type = $22,
+              parent_account_label = $23,
+              school_relationship_status = $24,
+              school_relationship_status_date = $25::date,
+              denomination = $26,
+              protestant_denomination = $27,
+              client_school_number = $28,
+              first_metric_date = $29::date,
+              metric_count = $30,
+              running_total_max_enrollment = $31,
+              partner_type = $32,
+              current_partner_school = $33,
+              school_active = $34,
+              website = $35,
+              description = $36,
+              enrollment_total = $37,
+              enrollment_by_grade = $38,
+              enrolled_boys = $39,
+              enrolled_girls = $40,
+              enrolled_learners = $41,
+              enrolled_baby = $42,
+              enrolled_middle = $43,
+              enrolled_top = $44,
+              enrolled_p1 = $45,
+              enrolled_p2 = $46,
+              enrolled_p3 = $47,
+              enrolled_p4 = $48,
+              enrolled_p5 = $49,
+              enrolled_p6 = $50,
+              enrolled_p7 = $51,
+              notes = $52,
+              village = $53
             WHERE id = $1
           `,
           [
-            schoolId,
-            resolved.schoolExternalId,
-            resolved.name,
-            resolved.alternativeSchoolNames,
-            resolved.country,
-            resolved.region,
-            resolved.subRegion,
-            resolved.district,
-            resolved.subCounty,
-            resolved.parish,
-            resolved.parishId,
-
-            resolved.schoolEmail,
-            resolved.gpsLat,
-            resolved.gpsLng,
-            resolved.yearFounded,
-            resolved.schoolStatus,
-            resolved.schoolStatusDate,
-            resolved.currentPartnerType,
-            resolved.accountRecordType,
-            resolved.schoolType,
-            resolved.parentAccountLabel,
-            resolved.schoolRelationshipStatus,
-            resolved.schoolRelationshipStatusDate,
-            resolved.protestantDenomination,
-            resolved.clientSchoolNumber,
-            resolved.firstMetricDate,
-            resolved.metricCount,
-            resolved.runningTotalMaxEnrollment,
-            resolved.partnerType,
-            resolved.currentPartnerSchool,
-            resolved.schoolActive,
-            resolved.website,
-            resolved.description,
-            enrollmentTotal,
-            resolved.enrollmentByGrade,
-            resolved.enrolledBoys,
-            resolved.enrolledGirls,
-            resolved.enrolledBaby,
-            resolved.enrolledMiddle,
-            resolved.enrolledTop,
-            resolved.enrolledP1,
-            resolved.enrolledP2,
-            resolved.enrolledP3,
-            resolved.enrolledP4,
-            resolved.enrolledP5,
-            resolved.enrolledP6,
-            resolved.enrolledP7,
-            resolved.notes,
-            resolved.village,
-            resolved.primaryContactName,
+            schoolId,                                   // $1
+            resolved.schoolExternalId,                  // $2
+            resolved.name,                              // $3
+            resolved.alternativeSchoolNames,             // $4
+            resolved.country,                           // $5
+            resolved.region,                            // $6
+            resolved.subRegion,                         // $7
+            resolved.district,                          // $8
+            resolved.subCounty,                         // $9
+            resolved.parish,                            // $10
+            resolved.parishId,                          // $11
+            resolved.primaryContactName,                // $12
+            resolved.schoolPhone,                       // $13
+            resolved.schoolEmail,                       // $14
+            resolved.gpsLat,                            // $15
+            resolved.gpsLng,                            // $16
+            resolved.yearFounded,                       // $17
+            resolved.schoolStatus,                      // $18
+            resolved.schoolStatusDate,                  // $19
+            resolved.currentPartnerType,                // $20
+            resolved.accountRecordType,                 // $21
+            resolved.schoolType,                        // $22
+            resolved.parentAccountLabel,                // $23
+            resolved.schoolRelationshipStatus,          // $24
+            resolved.schoolRelationshipStatusDate,      // $25
+            resolved.denomination,                      // $26
+            resolved.protestantDenomination,            // $27
+            resolved.clientSchoolNumber,                // $28
+            resolved.firstMetricDate,                   // $29
+            resolved.metricCount,                       // $30
+            resolved.runningTotalMaxEnrollment,          // $31
+            resolved.partnerType,                       // $32
+            resolved.currentPartnerSchool,              // $33
+            resolved.schoolActive,                      // $34
+            resolved.website,                           // $35
+            resolved.description,                       // $36
+            enrollmentTotal,                            // $37
+            resolved.enrollmentByGrade,                 // $38
+            resolved.enrolledBoys,                      // $39
+            resolved.enrolledGirls,                     // $40
+            enrollmentTotal,                            // $41 (enrolled_learners)
+            resolved.enrolledBaby,                      // $42
+            resolved.enrolledMiddle,                    // $43
+            resolved.enrolledTop,                       // $44
+            resolved.enrolledP1,                        // $45
+            resolved.enrolledP2,                        // $46
+            resolved.enrolledP3,                        // $47
+            resolved.enrolledP4,                        // $48
+            resolved.enrolledP5,                        // $49
+            resolved.enrolledP6,                        // $50
+            resolved.enrolledP7,                        // $51
+            resolved.notes,                             // $52
+            resolved.village,                           // $53
           ],
         );
       }
