@@ -45,13 +45,14 @@ type MapSelection = {
   region: string;
   subRegion: string;
   district: string;
+  school?: string;
 };
 
 type MapTarget = {
-  level: "country" | "region" | "subregion" | "district";
+  level: "country" | "region" | "subregion" | "district" | "school";
   id: string;
   label: string;
-  chip: "Country" | "Region" | "Sub-region" | "District";
+  chip: "Country" | "Region" | "Sub-region" | "District" | "School";
   profileHref?: string;
 };
 
@@ -63,6 +64,7 @@ type BestDistrictReadingPerformance = {
 type UgandaImpactMapProProps = {
   periodLabel: string;
   selection: MapSelection;
+  activeSchoolName?: string;
   onSelectionChange: (next: MapSelection) => void;
   districtSearchOptions?: Array<{ district: string; subRegion: string }>;
   compact?: boolean;
@@ -79,6 +81,9 @@ function pathForTarget(target: MapTarget, periodLabel: string) {
   }
   if (target.level === "subregion") {
     return `/api/impact/subregion/${encodeURIComponent(target.id)}?period=${period}`;
+  }
+  if (target.level === "school") {
+    return `/api/impact/school/${encodeURIComponent(target.id)}?period=${period}`;
   }
   return `/api/impact/district/${encodeURIComponent(target.id)}?period=${period}`;
 }
@@ -251,6 +256,7 @@ function getTargetFromSelection(selection: MapSelection): MapTarget {
 export function UgandaImpactMapPro({
   periodLabel,
   selection,
+  activeSchoolName,
   onSelectionChange,
   districtSearchOptions = [],
   compact = false,
@@ -784,13 +790,22 @@ export function UgandaImpactMapPro({
               {districtPaths.map((districtShape) => {
                 const dId = stableDistrictId(districtShape.name);
                 const srId = stableSubRegionId(districtShape.subRegion);
-                const markerTarget: MapTarget = {
-                  level: "district",
-                  id: districtShape.name,
-                  label: districtShape.name,
-                  chip: "District",
-                  profileHref: `/districts/${encodeURIComponent(districtShape.name)}`,
-                };
+                const isSelectedSchoolMarker = Boolean(selection.school && selectedDistrictId === dId);
+                const markerTarget: MapTarget = isSelectedSchoolMarker
+                  ? {
+                      level: "school",
+                      id: selection.school as string,
+                      label: activeSchoolName ?? "Selected School",
+                      chip: "School",
+                      profileHref: `/schools/${encodeURIComponent(selection.school as string)}`,
+                    }
+                  : {
+                      level: "district",
+                      id: districtShape.name,
+                      label: districtShape.name,
+                      chip: "District",
+                      profileHref: `/districts/${encodeURIComponent(districtShape.name)}`,
+                    };
                 const selected = selectedDistrictId === dId;
                 const hiddenBySubRegion =
                   !hasDistrictSelection &&
@@ -855,7 +870,7 @@ export function UgandaImpactMapPro({
                       }}
                     />
                     {/* District label */}
-                    {inFocusedSubRegion && (
+                    {inFocusedSubRegion && !isSelectedSchoolMarker && (
                       <text
                         x={districtShape.centroidX}
                         y={districtShape.centroidY}
@@ -866,6 +881,27 @@ export function UgandaImpactMapPro({
                       >
                         {districtShape.name}
                       </text>
+                    )}
+                    {/* Virtual School Marker Popup Target */}
+                    {isSelectedSchoolMarker && (
+                      <g className="impact-map-school-marker-group" style={{ pointerEvents: "none" }}>
+                        <circle
+                          cx={districtShape.centroidX}
+                          cy={districtShape.centroidY - (selection.subRegion ? 4 : 2)}
+                          r={selection.subRegion ? 4 : 1.5}
+                          style={{ fill: "var(--md-sys-color-primary)", stroke: "#fff", strokeWidth: 1 }}
+                        />
+                        <text
+                          x={districtShape.centroidX}
+                          y={districtShape.centroidY + (selection.subRegion ? 5 : 2.5)}
+                          className="impact-map-district-label"
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          style={{ fontSize: selection.subRegion ? districtLabelSize * 0.9 : 4.5, fill: "var(--md-sys-color-primary)", fontWeight: "bold" }}
+                        >
+                          {activeSchoolName}
+                        </text>
+                      </g>
                     )}
                   </g>
                 );

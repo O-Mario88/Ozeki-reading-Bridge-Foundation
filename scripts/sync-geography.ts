@@ -1,5 +1,10 @@
+import fs from 'fs';
 import { queryPostgres } from "../src/lib/server/postgres/client";
 import { ugandaRegions } from "../src/lib/uganda-locations";
+
+const envFile = fs.readFileSync('.env.local', 'utf8');
+const dbUrlMatch = envFile.match(/DATABASE_URL=(.*)/);
+if (dbUrlMatch) process.env.DATABASE_URL = dbUrlMatch[1].trim();
 
 async function main() {
   console.log("Starting geography synchronization...");

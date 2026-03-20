@@ -9,7 +9,8 @@ export async function GET(req: NextRequest) {
             searchParams.get("subregionId") ||
             undefined;
         const year = searchParams.get("year");
-        const districts = listGeoDistricts(subregionId, year);
+        const districtStrings = await listGeoDistricts(subregionId, year);
+        const districts = districtStrings.map(r => ({ id: r, name: r }));
         return NextResponse.json(
             { ok: true, districts },
             { headers: { "Cache-Control": "public, max-age=0, s-maxage=600, stale-while-revalidate=900" } },

@@ -59,15 +59,21 @@ export interface SchoolDirectoryWriteInput {
   enrolledP5?: number | null;
   enrolledP6?: number | null;
   enrolledP7?: number | null;
-  primaryContact?: {
-    fullName?: string | null;
-    gender?: "Male" | "Female" | "Other" | null;
+  headTeacher?: {
+    fullName: string;
+    gender: "Male" | "Female" | "Other";
     phone?: string | null;
     email?: string | null;
     whatsapp?: string | null;
-    category?: SchoolContactCategory | null;
-    roleTitle?: string | null;
   } | null;
+  director?: {
+    fullName: string;
+    gender: "Male" | "Female" | "Other";
+    phone?: string | null;
+    email?: string | null;
+    whatsapp?: string | null;
+  } | null;
+  classesJson?: string | null;
 }
 
 interface SchoolWriteRow {
@@ -124,6 +130,7 @@ interface SchoolWriteRow {
   enrolledP5: number;
   enrolledP6: number;
   enrolledP7: number;
+  classesJson: string | null;
   notes: string | null;
   village: string | null;
   primaryContactId: number | null;
@@ -189,16 +196,7 @@ function wholeNumber(value: number | null | undefined, fallback = 0) {
   return Math.max(0, Math.trunc(parsed));
 }
 
-function normalizeContactCategory(value: SchoolContactCategory | string | null | undefined): SchoolContactCategory {
-  const normalized = normalizeText(value);
-  if (normalized === "proprietor" || normalized === "director") return "Proprietor";
-  if (normalized === "head teacher" || normalized === "headteacher") return "Head Teacher";
-  if (normalized === "deputy head teacher" || normalized === "deputy") return "Deputy Head Teacher";
-  if (normalized === "administrator" || normalized === "admin") return "Administrator";
-  if (normalized === "accountant" || normalized === "bursar") return "Accountant";
-  if (normalized === "dos") return "DOS";
-  return "Teacher";
-}
+
 
 const CANONICAL_REGIONS = ["Northern", "Central", "Eastern", "Western"] as const;
 
@@ -277,6 +275,7 @@ async function loadSchoolWriteRow(client: PoolClient, schoolId: number) {
         COALESCE(s.enrolled_p5, 0) AS "enrolledP5",
         COALESCE(s.enrolled_p6, 0) AS "enrolledP6",
         COALESCE(s.enrolled_p7, 0) AS "enrolledP7",
+        s.classes_json AS "classesJson",
         s.notes,
         s.village,
         s.primary_contact_id AS "primaryContactId",
@@ -552,7 +551,7 @@ async function ensureTeacherRoster(client: PoolClient, args: {
   return teacherUid;
 }
 
-async function upsertPrimaryContact(client: PoolClient, args: {
+async function upsertSchoolContact(client: PoolClient, args: {
   schoolId: number;
   currentContactId?: number | null;
   fullName: string;
@@ -562,6 +561,7 @@ async function upsertPrimaryContact(client: PoolClient, args: {
   whatsapp: string | null;
   category: SchoolContactCategory;
   roleTitle: string | null;
+  isPrimaryContact: boolean;
 }) {
   const teacherUid =
     args.category === "Teacher"
@@ -588,7 +588,7 @@ async function upsertPrimaryContact(client: PoolClient, args: {
           whatsapp = $7,
           category = $8,
           role_title = $9,
-          is_primary_contact = TRUE,
+          is_primary_contact = $11,
           teacher_uid = $10,
           updated_at = NOW()
         WHERE contact_id = $1
@@ -604,12 +604,15 @@ async function upsertPrimaryContact(client: PoolClient, args: {
         args.category,
         args.roleTitle,
         teacherUid,
+        args.isPrimaryContact,
       ],
     );
-    await client.query(
-      `UPDATE school_contacts SET is_primary_contact = FALSE, updated_at = NOW() WHERE school_id = $1 AND contact_id != $2`,
-      [args.schoolId, args.currentContactId],
-    );
+    if (args.isPrimaryContact) {
+      await client.query(
+        `UPDATE school_contacts SET is_primary_contact = FALSE, updated_at = NOW() WHERE school_id = $1 AND contact_id != $2`,
+        [args.schoolId, args.currentContactId],
+      );
+    }
     return args.currentContactId;
   }
 
@@ -630,7 +633,7 @@ async function upsertPrimaryContact(client: PoolClient, args: {
         created_at,
         updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10, NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $11, $10, NOW(), NOW()
       )
       RETURNING contact_id AS "contactId"
     `,
@@ -648,10 +651,12 @@ async function upsertPrimaryContact(client: PoolClient, args: {
     ],
   );
   const contactId = Number(insertResult.rows[0]?.contactId ?? 0);
-  await client.query(
-    `UPDATE school_contacts SET is_primary_contact = FALSE, updated_at = NOW() WHERE school_id = $1 AND contact_id != $2`,
-    [args.schoolId, contactId],
-  );
+  if (args.isPrimaryContact) {
+    await client.query(
+      `UPDATE school_contacts SET is_primary_contact = FALSE, updated_at = NOW() WHERE school_id = $1 AND contact_id != $2`,
+      [args.schoolId, contactId],
+    );
+  }
   return contactId;
 }
 
@@ -788,19 +793,14 @@ export async function writeSchoolDirectoryRecord(args: {
       const schoolPhone = nullableText(args.input.schoolPhone) ?? current?.schoolPhone ?? null;
       const schoolEmail = nullableText(args.input.schoolEmail) ?? current?.schoolEmail ?? null;
       const primaryContactName =
-        nullableText(args.input.primaryContact?.fullName) ??
+        nullableText(args.input.headTeacher?.fullName) ??
         current?.primaryContactName ??
         `${name} School Account`;
-      const primaryContactGender = args.input.primaryContact?.gender ?? current?.primaryContactGender ?? "Other";
-      const primaryContactPhone = nullableText(args.input.primaryContact?.phone) ?? current?.primaryContactPhone ?? schoolPhone;
-      const primaryContactEmail = nullableText(args.input.primaryContact?.email) ?? current?.primaryContactEmail ?? schoolEmail;
-      const primaryContactCategory = normalizeContactCategory(
-        args.input.primaryContact?.category ?? current?.primaryContactCategory ?? "Administrator",
-      );
-      const primaryContactRoleTitle =
-        nullableText(args.input.primaryContact?.roleTitle) ??
-        current?.primaryContactRoleTitle ??
-        (primaryContactCategory === "Teacher" ? "Teacher" : "School Account");
+      const primaryContactGender = args.input.headTeacher?.gender ?? current?.primaryContactGender ?? "Other";
+      const primaryContactPhone = nullableText(args.input.headTeacher?.phone) ?? current?.primaryContactPhone ?? schoolPhone;
+      const primaryContactEmail = nullableText(args.input.headTeacher?.email) ?? current?.primaryContactEmail ?? schoolEmail;
+      const primaryContactCategory: SchoolContactCategory = "Head Teacher";
+      const primaryContactRoleTitle = "Head Teacher";
 
       const resolved = {
         schoolUid: current?.schoolUid ?? createUid("sch"),
@@ -872,7 +872,8 @@ export async function writeSchoolDirectoryRecord(args: {
         primaryContactEmail,
         primaryContactCategory,
         primaryContactRoleTitle,
-        primaryContactWhatsapp: nullableText(args.input.primaryContact?.whatsapp),
+        primaryContactWhatsapp: nullableText(args.input.headTeacher?.whatsapp),
+        classesJson: nullableText(args.input.classesJson) ?? current?.classesJson ?? null,
       };
 
       const providedEnrollment =
@@ -947,6 +948,7 @@ export async function writeSchoolDirectoryRecord(args: {
               enrolled_baby, enrolled_middle, enrolled_top,
               enrolled_p1, enrolled_p2, enrolled_p3, enrolled_p4, enrolled_p5, enrolled_p6, enrolled_p7,
               notes, village,
+              classes_json,
               created_at
             ) VALUES (
               (SELECT COALESCE(MAX(id),0)+1 FROM schools_directory),
@@ -968,6 +970,7 @@ export async function writeSchoolDirectoryRecord(args: {
               $42, $43, $44,
               $45, $46, $47, $48, $49, $50, $51,
               $52, $53,
+              $54,
               NOW()
             ) RETURNING id
           `,
@@ -1025,6 +1028,7 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.enrolledP7,                        // $51
             resolved.notes,                             // $52
             resolved.village,                           // $53
+            resolved.classesJson,                       // $54
           ],
         );
         schoolId = Number(insertResult.rows[0]?.id ?? 0);
@@ -1088,7 +1092,8 @@ export async function writeSchoolDirectoryRecord(args: {
               enrolled_p6 = $50,
               enrolled_p7 = $51,
               notes = $52,
-              village = $53
+              village = $53,
+              classes_json = $54
             WHERE id = $1
           `,
           [
@@ -1145,34 +1150,53 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.enrolledP7,                        // $51
             resolved.notes,                             // $52
             resolved.village,                           // $53
+            resolved.classesJson,                       // $54
           ],
         );
       }
 
-      const primaryContactId = await upsertPrimaryContact(client, {
-        schoolId,
-        currentContactId: current?.primaryContactId ?? null,
-        fullName: resolved.primaryContactName,
-        gender: primaryContactGender,
-        phone: resolved.primaryContactPhone,
-        email: resolved.primaryContactEmail,
-        whatsapp: resolved.primaryContactWhatsapp,
-        category: resolved.primaryContactCategory,
-        roleTitle: resolved.primaryContactRoleTitle,
-      });
+      if (args.input.director) {
+        await upsertSchoolContact(client, {
+          schoolId,
+          fullName: args.input.director.fullName,
+          gender: args.input.director.gender,
+          phone: args.input.director.phone || null,
+          email: args.input.director.email || null,
+          whatsapp: args.input.director.whatsapp || null,
+          category: "Proprietor",
+          roleTitle: "Director",
+          isPrimaryContact: false,
+        });
+      }
 
-      await client.query(
-        `
-          UPDATE schools_directory
-          SET
-            primary_contact_id = $2,
-            contact_name = $3,
-            contact_phone = $4,
-            contact_email = $5
-          WHERE id = $1
-        `,
-        [schoolId, primaryContactId, resolved.primaryContactName, resolved.primaryContactPhone, resolved.primaryContactEmail],
-      );
+      let primaryContactId = current?.primaryContactId ?? null;
+      if (args.input.headTeacher) {
+        primaryContactId = await upsertSchoolContact(client, {
+          schoolId,
+          currentContactId: current?.primaryContactId ?? null,
+          fullName: resolved.primaryContactName,
+          gender: primaryContactGender,
+          phone: resolved.primaryContactPhone,
+          email: resolved.primaryContactEmail,
+          whatsapp: resolved.primaryContactWhatsapp,
+          category: resolved.primaryContactCategory,
+          roleTitle: resolved.primaryContactRoleTitle,
+          isPrimaryContact: true,
+        });
+
+        await client.query(
+          `
+            UPDATE schools_directory
+            SET
+              primary_contact_id = $2,
+              contact_name = $3,
+              contact_phone = $4,
+              contact_email = $5
+            WHERE id = $1
+          `,
+          [schoolId, primaryContactId, resolved.primaryContactName, resolved.primaryContactPhone, resolved.primaryContactEmail],
+        );
+      }
 
       await insertAuditLog(client, {
         userId: args.actor.id,

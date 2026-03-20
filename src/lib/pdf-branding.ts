@@ -20,6 +20,7 @@ type DrawBrandHeaderOptions = {
   titleSize?: number;
   numberSize?: number;
   subtitleSize?: number;
+  includeBiodata?: boolean;
 };
 
 type DrawBrandFooterOptions = {
@@ -178,51 +179,75 @@ export function drawBrandHeader({
   titleSize = 28,
   numberSize = 17,
   subtitleSize = 10,
+  includeBiodata = true,
 }: DrawBrandHeaderOptions) {
   const profile = getBrandProfile();
   const headerTopY = page.getHeight() - 98;
 
-  if (logo) {
-    const logoWidth = 72;
-    const logoHeight = (logo.height / logo.width) * logoWidth;
-    page.drawImage(logo, {
-      x: (page.getWidth() - logoWidth) / 2,
-      y: headerTopY,
-      width: logoWidth,
-      height: logoHeight,
-    });
-  }
+  if (includeBiodata) {
+    if (logo) {
+      const logoWidth = 72;
+      const logoHeight = (logo.height / logo.width) * logoWidth;
+      page.drawImage(logo, {
+        x: (page.getWidth() - logoWidth) / 2,
+        y: headerTopY,
+        width: logoWidth,
+        height: logoHeight,
+      });
+    }
 
-  drawCenteredText(page, fontBold, profile.name, headerTopY - 20, 16, titleColor);
-  drawCenteredText(page, font, profile.address, headerTopY - 34, 8.6, mutedColor);
-  drawCenteredText(
-    page,
-    font,
-    `${profile.poBox} • ${profile.telephone} • ${profile.email}`,
-    headerTopY - 46,
-    8.4,
-    mutedColor,
-  );
-  drawCenteredText(
-    page,
-    font,
-    `TIN ${profile.tin} • REG ${profile.registrationNumber}`,
-    headerTopY - 58,
-    8,
-    mutedColor,
-  );
+    drawCenteredText(page, fontBold, profile.name, headerTopY - 20, 16, titleColor);
+    drawCenteredText(page, font, profile.address, headerTopY - 34, 8.6, mutedColor);
+    drawCenteredText(
+      page,
+      font,
+      `${profile.poBox} • ${profile.telephone} • ${profile.email}`,
+      headerTopY - 46,
+      8.4,
+      mutedColor,
+    );
+    drawCenteredText(
+      page,
+      font,
+      `TIN ${profile.tin} • REG ${profile.registrationNumber}`,
+      headerTopY - 58,
+      8,
+      mutedColor,
+    );
 
-  const titleY = headerTopY - 90;
-  drawCenteredText(page, fontBold, title, titleY, titleSize, titleColor);
-  let nextLineY = titleY - 24;
+    const titleY = headerTopY - 90;
+    if (titleSize > 0) {
+      drawCenteredText(page, fontBold, title, titleY, titleSize, titleColor);
+    }
+    
+    let nextLineY = titleY - 24;
 
-  if (documentNumber && documentNumber.trim().length > 0) {
-    drawCenteredText(page, fontBold, documentNumber, nextLineY, numberSize, titleColor);
-    nextLineY -= 15;
-  }
+    if (documentNumber && documentNumber.trim().length > 0) {
+      drawCenteredText(page, fontBold, documentNumber, nextLineY, numberSize, titleColor);
+      nextLineY -= 15;
+    }
 
-  if (subtitle && subtitle.trim().length > 0) {
-    drawCenteredText(page, font, subtitle, nextLineY, subtitleSize, mutedColor);
+    if (subtitle && subtitle.trim().length > 0) {
+      drawCenteredText(page, font, subtitle, nextLineY, subtitleSize, mutedColor);
+    }
+  } else {
+    // For subsequent pages without biodata
+    const topMarginY = page.getHeight() - 60;
+    let nextLineY = topMarginY;
+    
+    if (titleSize > 0 && title.trim().length > 0) {
+      drawCenteredText(page, fontBold, title, nextLineY, titleSize, titleColor);
+      nextLineY -= 16;
+    }
+    
+    if (documentNumber && documentNumber.trim().length > 0) {
+      drawCenteredText(page, fontBold, documentNumber, nextLineY, numberSize, titleColor);
+      nextLineY -= 12;
+    }
+
+    if (subtitle && subtitle.trim().length > 0) {
+      drawCenteredText(page, font, subtitle, nextLineY, subtitleSize, mutedColor);
+    }
   }
 }
 

@@ -431,7 +431,7 @@ export function PortalFinanceReceiptsManager({
                           href={`/api/portal/finance/receipts/${item.id}/pdf`}
                           target="_blank"
                           rel="noreferrer"
-                          title="Download latest A4 PDF"
+                          title="Download latest PDF"
                         >
                           Download PDF
                         </a>

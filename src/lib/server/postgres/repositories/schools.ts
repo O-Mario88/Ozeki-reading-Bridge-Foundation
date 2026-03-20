@@ -86,6 +86,7 @@ function normalizeSchoolRecord(row: Record<string, unknown>): SchoolDirectoryRec
     enrolledGirls: Number(row.enrolledGirls ?? 0),
     enrolledLearners: Number(row.enrolledLearners ?? 0),
     directImpactLearners: Number(row.directImpactLearners ?? 0),
+    classesJson: asNullableString(row.classesJson),
     enrolledBaby: Number(row.enrolledBaby ?? 0),
     enrolledMiddle: Number(row.enrolledMiddle ?? 0),
     enrolledTop: Number(row.enrolledTop ?? 0),
@@ -254,6 +255,7 @@ const SCHOOL_SELECT = `
       COALESCE(s.enrolled_p2, 0) +
       COALESCE(s.enrolled_p3, 0)
     ) AS "directImpactLearners",
+    s.classes_json AS "classesJson",
     s.gps_lat AS "gpsLat",
     s.gps_lng AS "gpsLng",
     s.contact_name AS "contactName",
@@ -351,6 +353,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
     trainingRowsResult,
     onlineRowsResult,
     interactionRowsResult,
+    contactsList,
   ] = await Promise.all([
     queryPostgres<{ total: number }>(`SELECT COUNT(*)::int AS total FROM school_contacts WHERE school_id = $1`, [id]),
     queryPostgres<{ total: number }>(
@@ -566,6 +569,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
       `,
       [id],
     ),
+    listSchoolContactsBySchoolPostgres(id),
   ]);
 
   const counts = {
@@ -581,6 +585,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
   const progressRow = progressResult.rows[0];
   return {
     school,
+    contacts: contactsList,
     counts,
     recentTrainings: [...trainingRowsResult.rows, ...onlineRowsResult.rows]
       .map((row) => mapRecentItem(row))

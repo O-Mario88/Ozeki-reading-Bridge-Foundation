@@ -570,7 +570,12 @@ CREATE TABLE IF NOT EXISTS public.coaching_visits (
     visit_pathway text DEFAULT 'observation'::text NOT NULL,
     classes_implementing_json text,
     classes_not_implementing_json text,
-    visit_reason text DEFAULT 'lesson_evaluation_coaching'::text NOT NULL
+    visit_reason text DEFAULT 'lesson_evaluation_coaching'::text NOT NULL,
+    visit_reasons_json text DEFAULT '[]'::text NOT NULL,
+    time_from text,
+    time_to text,
+    sponsorship_type text,
+    sponsored_by_contact_id integer
 );
 
 

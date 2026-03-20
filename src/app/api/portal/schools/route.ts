@@ -42,6 +42,7 @@ const schoolSchema = z.object({
   enrollmentByGrade: z.string().trim().optional(),
   enrolledBoys: z.coerce.number().int().min(0).optional(),
   enrolledGirls: z.coerce.number().int().min(0).optional(),
+  classesJson: z.string().trim().nullable().optional(),
   enrolledBaby: z.coerce.number().int().min(0).optional(),
   enrolledMiddle: z.coerce.number().int().min(0).optional(),
   enrolledTop: z.coerce.number().int().min(0).optional(),
@@ -54,27 +55,16 @@ const schoolSchema = z.object({
   enrolledP7: z.coerce.number().int().min(0).optional(),
   gpsLat: z.string().trim().optional(),
   gpsLng: z.string().trim().optional(),
-  contactName: z.string().trim().optional(),
-  contactPhone: z.string().trim().optional(),
-  proprietor: z.object({
-    fullName: z.string().trim().min(2, "Primary contact full name is required."),
-    gender: z.enum(["Male", "Female", "Other"]),
-    phone: z.string().trim().optional(),
-    email: z.string().trim().email().optional().or(z.literal("")),
-    whatsapp: z.string().trim().optional(),
-    category: z
-      .enum([
-        "Proprietor",
-        "Head Teacher",
-        "DOS",
-        "Teacher",
-        "Administrator",
-        "Deputy Head Teacher",
-        "Accountant",
-      ])
-      .optional(),
-    roleTitle: z.string().trim().optional(),
-  }),
+  headTeacherName: z.string().trim().min(1, "Head Teacher Name is required."),
+  headTeacherGender: z.enum(["Male", "Female", "Other"]),
+  headTeacherPhone: z.string().trim().optional(),
+  headTeacherEmail: z.string().trim().email().optional().or(z.literal("")),
+  headTeacherWhatsapp: z.string().trim().optional(),
+  directorName: z.string().trim().optional(),
+  directorGender: z.enum(["Male", "Female", "Other"]).optional(),
+  directorPhone: z.string().trim().optional(),
+  directorEmail: z.string().trim().email().optional().or(z.literal("")),
+  directorWhatsapp: z.string().trim().optional(),
 });
 
 const schoolUpdateSchema = z.object({
@@ -114,6 +104,7 @@ const schoolUpdateSchema = z.object({
   enrollmentByGrade: z.string().trim().nullable().optional(),
   enrolledBoys: z.coerce.number().int().min(0).optional(),
   enrolledGirls: z.coerce.number().int().min(0).optional(),
+  classesJson: z.string().trim().nullable().optional(),
   enrolledBaby: z.coerce.number().int().min(0).optional(),
   enrolledMiddle: z.coerce.number().int().min(0).optional(),
   enrolledTop: z.coerce.number().int().min(0).optional(),
@@ -126,8 +117,16 @@ const schoolUpdateSchema = z.object({
   enrolledP7: z.coerce.number().int().min(0).optional(),
   gpsLat: z.string().trim().nullable().optional(),
   gpsLng: z.string().trim().nullable().optional(),
-  contactName: z.string().trim().nullable().optional(),
-  contactPhone: z.string().trim().nullable().optional(),
+  headTeacherName: z.string().trim().min(1, "Head Teacher Name is required."),
+  headTeacherGender: z.enum(["Male", "Female", "Other"]),
+  headTeacherPhone: z.string().trim().nullable().optional(),
+  headTeacherEmail: z.string().trim().nullable().optional(),
+  headTeacherWhatsapp: z.string().trim().nullable().optional(),
+  directorName: z.string().trim().nullable().optional(),
+  directorGender: z.enum(["Male", "Female", "Other"]).nullable().optional(),
+  directorPhone: z.string().trim().nullable().optional(),
+  directorEmail: z.string().trim().nullable().optional(),
+  directorWhatsapp: z.string().trim().nullable().optional(),
 });
 
 export async function GET(request: Request) {
@@ -197,6 +196,7 @@ export async function POST(request: Request) {
         enrollmentByGrade: payload.enrollmentByGrade?.trim() || undefined,
         enrolledBoys: payload.enrolledBoys ?? 0,
         enrolledGirls: payload.enrolledGirls ?? 0,
+        classesJson: payload.classesJson ?? undefined,
         enrolledBaby: payload.enrolledBaby ?? 0,
         enrolledMiddle: payload.enrolledMiddle ?? 0,
         enrolledTop: payload.enrolledTop ?? 0,
@@ -209,17 +209,24 @@ export async function POST(request: Request) {
         enrolledP7: payload.enrolledP7 ?? 0,
         latitude: payload.gpsLat?.trim() || undefined,
         longitude: payload.gpsLng?.trim() || undefined,
-        schoolPhone: payload.contactPhone?.trim() || payload.proprietor.phone?.trim() || undefined,
-        schoolEmail: payload.proprietor.email?.trim() || undefined,
-        primaryContact: {
-          fullName: payload.proprietor.fullName.trim(),
-          gender: payload.proprietor.gender,
-          phone: payload.proprietor.phone?.trim() || payload.contactPhone?.trim() || undefined,
-          email: payload.proprietor.email?.trim() || undefined,
-          whatsapp: payload.proprietor.whatsapp?.trim() || undefined,
-          category: payload.proprietor.category,
-          roleTitle: payload.proprietor.roleTitle?.trim() || undefined,
+        schoolPhone: payload.headTeacherPhone?.trim() || undefined,
+        schoolEmail: payload.headTeacherEmail?.trim() || undefined,
+        headTeacher: {
+          fullName: payload.headTeacherName.trim(),
+          gender: payload.headTeacherGender,
+          phone: payload.headTeacherPhone?.trim() || undefined,
+          email: payload.headTeacherEmail?.trim() || undefined,
+          whatsapp: payload.headTeacherWhatsapp?.trim() || undefined,
         },
+        director: payload.directorName?.trim()
+          ? {
+              fullName: payload.directorName.trim(),
+              gender: payload.directorGender || "Other",
+              phone: payload.directorPhone?.trim() || undefined,
+              email: payload.directorEmail?.trim() || undefined,
+              whatsapp: payload.directorWhatsapp?.trim() || undefined,
+            }
+          : undefined,
       },
     });
     return NextResponse.json({ ok: true, school: result.school });
@@ -287,6 +294,7 @@ export async function PATCH(request: Request) {
         enrollmentByGrade: payload.enrollmentByGrade,
         enrolledBoys: payload.enrolledBoys,
         enrolledGirls: payload.enrolledGirls,
+        classesJson: payload.classesJson === null ? null : payload.classesJson,
         enrolledBaby: payload.enrolledBaby,
         enrolledMiddle: payload.enrolledMiddle,
         enrolledTop: payload.enrolledTop,
@@ -299,14 +307,24 @@ export async function PATCH(request: Request) {
         enrolledP7: payload.enrolledP7,
         latitude: payload.gpsLat,
         longitude: payload.gpsLng,
-        schoolPhone: payload.contactPhone,
-        primaryContact:
-          payload.contactName || payload.contactPhone
-            ? {
-                fullName: payload.contactName ?? undefined,
-                phone: payload.contactPhone ?? undefined,
-              }
-            : undefined,
+        schoolPhone: payload.headTeacherPhone,
+        schoolEmail: payload.headTeacherEmail || undefined,
+        headTeacher: {
+          fullName: payload.headTeacherName.trim(),
+          gender: payload.headTeacherGender,
+          phone: payload.headTeacherPhone || undefined,
+          email: payload.headTeacherEmail || undefined,
+          whatsapp: payload.headTeacherWhatsapp?.trim() || undefined,
+        },
+        director: payload.directorName?.trim()
+          ? {
+              fullName: payload.directorName.trim(),
+              gender: payload.directorGender || "Other",
+              phone: payload.directorPhone || undefined,
+              email: payload.directorEmail || undefined,
+              whatsapp: payload.directorWhatsapp?.trim() || undefined,
+            }
+          : undefined,
       },
     });
 

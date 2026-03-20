@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS impact_reports (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE impact_reports ADD COLUMN IF NOT EXISTS generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE INDEX IF NOT EXISTS idx_impact_reports_generated_at
   ON impact_reports(generated_at DESC);
 

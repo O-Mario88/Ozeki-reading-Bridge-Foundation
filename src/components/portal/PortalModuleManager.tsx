@@ -6654,30 +6654,46 @@ export function PortalModuleManager({
                                       Suggested REC
                                     </button>
                                   </div>
+                                ) : field.key === "visitContacts" ? (
+                                  <div className="action-row" style={{ marginBottom: "0.5rem" }}>
+                                    <a
+                                      className="button button-ghost"
+                                      href={`/portal/contacts?new=1&schoolId=${formState.schoolId}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      + Add New Contact
+                                    </a>
+                                  </div>
                                 ) : null}
                                 <div className="portal-multiselect">
-                                  {(field.options ?? []).map((option) => {
-                                    const checked = selected.includes(option.value);
-                                    return (
-                                      <label key={option.value}>
-                                        <input
-                                          type="checkbox"
-                                          checked={checked}
-                                          disabled={isTrainingScheduledLockedField}
-                                          onChange={(event) => {
-                                            const next = new Set(selected);
-                                            if (event.target.checked) {
-                                              next.add(option.value);
-                                            } else {
-                                              next.delete(option.value);
-                                            }
-                                            updatePayloadField(field.key, Array.from(next));
-                                          }}
-                                        />
-                                        <span>{option.label}</span>
-                                      </label>
-                                    );
-                                  })}
+                                  {(() => {
+                                    const optionsToRender = field.key === "visitContacts"
+                                      ? schoolContacts.map(c => ({ value: String(c.contactId), label: `${c.fullName} (${c.category})` }))
+                                      : (field.options ?? []);
+                                    return optionsToRender.map((option) => {
+                                      const checked = selected.includes(option.value);
+                                      return (
+                                        <label key={option.value}>
+                                          <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            disabled={isTrainingScheduledLockedField}
+                                            onChange={(event) => {
+                                              const next = new Set(selected);
+                                              if (event.target.checked) {
+                                                next.add(option.value);
+                                              } else {
+                                                next.delete(option.value);
+                                              }
+                                              updatePayloadField(field.key, Array.from(next));
+                                            }}
+                                          />
+                                          <span>{option.label}</span>
+                                        </label>
+                                      );
+                                    });
+                                  })()}
                                 </div>
                                 {isInsightRecommendationField && selected.length > 0 ? (
                                   <div className="table-wrap" style={{ marginTop: "0.75rem" }}>

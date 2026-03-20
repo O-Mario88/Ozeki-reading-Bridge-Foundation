@@ -8,6 +8,7 @@ import type {
   SchoolSupportStatusRecord,
 } from "@/lib/types";
 import { GraduationReviewModal } from "./GraduationReviewModal";
+import { UpdateEnrollmentDialog } from "./UpdateEnrollmentDialog";
 
 type SupervisorOption = {
   id: number;
@@ -65,10 +66,11 @@ function mapUrl(value: string | null | undefined) {
 
 export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
   const { school, counts, recentTrainings, recentInteractions, summary, progress } = profile;
-  const [activeTab, setActiveTab] = useState<"details" | "related" | "trainings" | "interactions">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "contacts" | "related" | "trainings" | "interactions">("details");
   const [graduationLoading, setGraduationLoading] = useState(false);
   const [graduationError, setGraduationError] = useState("");
   const [graduationOpen, setGraduationOpen] = useState(false);
+  const [enrollmentOpen, setEnrollmentOpen] = useState(false);
   const [graduationEligibility, setGraduationEligibility] = useState<GraduationEligibilityRecord | null>(null);
   const [graduationSupervisors, setGraduationSupervisors] = useState<SupervisorOption[]>([]);
   const [supportStatusLoading, setSupportStatusLoading] = useState(false);
@@ -162,6 +164,17 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
       ["District", school.district],
       ["GPS Coordinates", school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"],
       ["Year Founded", school.yearFounded ? String(school.yearFounded) : "-"],
+      [
+        "Classes Offered",
+        (() => {
+          try {
+            const parsed = JSON.parse(school.classesJson || "[]");
+            return Array.isArray(parsed) && parsed.length > 0 ? parsed.join(", ") : "-";
+          } catch {
+            return "-";
+          }
+        })(),
+      ],
       ["Client School Number", String(school.clientSchoolNumber ?? 0)],
       ["First Metric Date", formatDate(school.firstMetricDate)],
       ["Metric Count", formatNumber(school.metricCount)],
@@ -238,6 +251,9 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           <Link className="school-crm-button school-crm-button-ghost" href="/portal/schools">
             Back to Accounts
           </Link>
+          <button className="school-crm-button" onClick={() => setEnrollmentOpen(true)}>
+            Update Enrollment
+          </button>
           <Link className="school-crm-button" href={`/portal/trainings?new=1&schoolId=${school.id}`}>
             New Training
           </Link>
@@ -333,6 +349,13 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                 Details
               </button>
               <button
+                className={activeTab === "contacts" ? "is-active" : ""}
+                type="button"
+                onClick={() => setActiveTab("contacts")}
+              >
+                Contacts
+              </button>
+              <button
                 className={activeTab === "related" ? "is-active" : ""}
                 type="button"
                 onClick={() => setActiveTab("related")}
@@ -384,14 +407,35 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
               </div>
             ) : null}
 
+            {activeTab === "contacts" ? (
+              <div className="school-crm-list">
+                {profile.contacts.length === 0 ? (
+                  <p className="school-crm-empty">No contacts have been linked to this school yet.</p>
+                ) : (
+                  profile.contacts.map((contact) => (
+                    <div key={contact.contactId} className="school-crm-list-row" style={{ alignItems: "start" }}>
+                      <div>
+                        <strong>{contact.fullName}</strong>
+                        <span>{contact.roleTitle || contact.category} {contact.isPrimaryContact ? " (Primary)" : ""}</span>
+                      </div>
+                      <div className="school-crm-list-meta" style={{ textAlign: "right" }}>
+                        <span>{contact.phone || "No phone"}</span>
+                        <span>{contact.email || "No email"}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+
             {activeTab === "related" ? (
               <div className="school-crm-related-grid">
                 <article id="school-contacts" className="school-crm-related-card">
                   <h3>Contacts</h3>
                   <p>{counts.contacts} contacts linked to this school account.</p>
-                  <strong>
-                    {school.primaryContactName || school.contactName || "No primary contact linked yet"}
-                  </strong>
+                  <button type="button" onClick={() => setActiveTab("contacts")}>
+                    View {counts.contacts} contacts
+                  </button>
                 </article>
                 <article className="school-crm-related-card">
                   <h3>Trainings</h3>
@@ -573,6 +617,23 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
         onClose={() => setGraduationOpen(false)}
         eligibility={graduationEligibility}
         supervisors={graduationSupervisors}
+      />
+
+      <UpdateEnrollmentDialog
+        open={enrollmentOpen}
+        onClose={() => setEnrollmentOpen(false)}
+        schoolId={school.id}
+        schoolName={school.name}
+        initialData={{
+          enrolledBaby: school.enrolledBaby ?? 0,
+          enrolledMiddle: school.enrolledMiddle ?? 0,
+          enrolledTop: school.enrolledTop ?? 0,
+          enrolledP1: school.enrolledP1 ?? 0,
+          enrolledP2: school.enrolledP2 ?? 0,
+          enrolledP3: school.enrolledP3 ?? 0,
+          enrolledBoys: school.enrolledBoys ?? 0,
+          enrolledGirls: school.enrolledGirls ?? 0,
+        }}
       />
 
       <style jsx>{`

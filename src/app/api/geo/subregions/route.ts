@@ -9,7 +9,8 @@ export async function GET(req: NextRequest) {
             searchParams.get("regionId") ||
             undefined;
         const year = searchParams.get("year");
-        const subregions = listGeoSubregions(regionId, year);
+        const subregionStrings = await listGeoSubregions(regionId, year);
+        const subregions = subregionStrings.map(r => ({ id: r, name: r }));
         return NextResponse.json(
             { ok: true, subregions },
             { headers: { "Cache-Control": "public, max-age=0, s-maxage=600, stale-while-revalidate=900" } },

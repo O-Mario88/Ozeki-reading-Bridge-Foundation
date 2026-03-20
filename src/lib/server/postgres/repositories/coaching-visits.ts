@@ -40,10 +40,12 @@ export async function extractAndSaveCoachingVisitAsync(
        visit_uid, portal_record_id, school_id, visit_date, visit_type,
        coaching_cycle_number, coach_user_id, focus_areas_json,
        implementation_status, visit_pathway, classes_implementing_json,
-       classes_not_implementing_json, visit_reason, created_at, updated_at
+       classes_not_implementing_json, visit_reason, 
+       visit_reasons_json, time_from, time_to, sponsorship_type, sponsored_by_contact_id,
+       created_at, updated_at
      ) VALUES (
        $1, $2, $3, $4, $5, $6, $7, $8,
-       $9, $10, $11, $12, $13, NOW(), NOW()
+       $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
      )
      ON CONFLICT (portal_record_id) DO UPDATE SET
        visit_date = EXCLUDED.visit_date,
@@ -56,6 +58,11 @@ export async function extractAndSaveCoachingVisitAsync(
        classes_implementing_json = EXCLUDED.classes_implementing_json,
        classes_not_implementing_json = EXCLUDED.classes_not_implementing_json,
        visit_reason = EXCLUDED.visit_reason,
+       visit_reasons_json = EXCLUDED.visit_reasons_json,
+       time_from = EXCLUDED.time_from,
+       time_to = EXCLUDED.time_to,
+       sponsorship_type = EXCLUDED.sponsorship_type,
+       sponsored_by_contact_id = EXCLUDED.sponsored_by_contact_id,
        updated_at = NOW()
      RETURNING id`,
     [
@@ -72,6 +79,11 @@ export async function extractAndSaveCoachingVisitAsync(
       JSON.stringify(classesImplementing),
       JSON.stringify(classesNotImplementing),
       visitReason,
+      JSON.stringify(Array.isArray(payloadObj.visitReasons) ? payloadObj.visitReasons : []),
+      payloadObj.startTime ? String(payloadObj.startTime) : null,
+      payloadObj.endTime ? String(payloadObj.endTime) : null,
+      payloadObj.sponsorshipType ? String(payloadObj.sponsorshipType) : null,
+      payloadObj.sponsoredByContactId ? Number(payloadObj.sponsoredByContactId) : null,
     ],
   );
 
@@ -156,7 +168,7 @@ export async function extractAndSaveCoachingVisitAsync(
     if (typeof payloadObj.leadershipNextActionsJson === 'string') {
       try {
         nextActions = JSON.parse(payloadObj.leadershipNextActionsJson);
-      } catch (e) {
+      } catch (_e) {
         nextActions = [];
       }
     } else if (Array.isArray(payloadObj.leadershipNextActionsJson)) {

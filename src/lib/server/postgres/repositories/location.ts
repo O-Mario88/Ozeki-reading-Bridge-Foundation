@@ -100,12 +100,26 @@ export async function listGeoRegions(_year?: string | null): Promise<string[]> {
 }
 
 export async function listGeoSubregions(_regionId?: string | null, _year?: string | null): Promise<string[]> {
-    const res = await queryPostgres(`SELECT DISTINCT sub_region FROM schools_directory WHERE sub_region IS NOT NULL ORDER BY sub_region`);
+    let sql = `SELECT DISTINCT sub_region FROM schools_directory WHERE sub_region IS NOT NULL`;
+    const params: string[] = [];
+    if (_regionId) {
+        params.push(_regionId);
+        sql += ` AND region = $1`;
+    }
+    sql += ` ORDER BY sub_region`;
+    const res = await queryPostgres(sql, params);
     return res.rows.map(r => r.sub_region);
 }
 
 export async function listGeoDistricts(_subRegionId?: string | null, _year?: string | null): Promise<string[]> {
-    const res = await queryPostgres(`SELECT DISTINCT district FROM schools_directory WHERE district IS NOT NULL ORDER BY district`);
+    let sql = `SELECT DISTINCT district FROM schools_directory WHERE district IS NOT NULL`;
+    const params: string[] = [];
+    if (_subRegionId) {
+        params.push(_subRegionId);
+        sql += ` AND sub_region = $1`;
+    }
+    sql += ` ORDER BY district`;
+    const res = await queryPostgres(sql, params);
     return res.rows.map(r => r.district);
 }
 

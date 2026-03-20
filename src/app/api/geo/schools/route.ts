@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
       request.nextUrl.searchParams.get("districtId") ||
       undefined;
     const year = request.nextUrl.searchParams.get("year");
-    const schools = listGeoSchools(districtId, year);
+    const schools = await listGeoSchools(districtId, year);
     return NextResponse.json(
       { ok: true, schools },
       { headers: { "Cache-Control": "public, max-age=0, s-maxage=600, stale-while-revalidate=900" } },

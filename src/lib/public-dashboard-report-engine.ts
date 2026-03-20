@@ -858,13 +858,13 @@ export function renderPublicDashboardReportHtml(args: {
 <body>
   <main class="wrap">
     <section class="no-print">
-      <button class="btn" onclick="window.print()">Print A4</button>
-      <a class="btn primary" href="${escapeHtml(pdfHref)}">Download A4 PDF</a>
+      <button class="btn" onclick="window.print()">Print</button>
+      <a class="btn primary" href="${escapeHtml(pdfHref)}">Download PDF</a>
       <a class="btn" href="${escapeHtml(dashboardHref)}">Back to dashboard</a>
     </section>
 
     <section class="hero">
-      <h1>Public Dashboard Report (A4)</h1>
+      <h1>Public Dashboard Report</h1>
       <p>${escapeHtml(report.scope.name)} | Period: ${escapeHtml(report.period.label)} | Generated ${escapeHtml(
     new Date(report.generatedAt).toLocaleString(),
   )}</p>

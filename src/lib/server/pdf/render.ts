@@ -250,7 +250,7 @@ function addNewPage(ctx: RenderContext, logo: ReturnType<typeof loadBrandLogo> e
   const page = ctx.doc.addPage([A4_WIDTH, A4_HEIGHT]);
   ctx.pages.push(page);
   ctx.currentPage = page;
-  ctx.y = CONTENT_START_Y;
+  ctx.y = A4_HEIGHT - 100; // smaller top margin for subsequent pages since no huge header
   ctx.pageCount++;
   drawBrandFrame(page);
   drawBrandWatermark(page, logo);
@@ -345,10 +345,14 @@ function drawTable(
   const colWidth = CONTENT_WIDTH / colCount;
   const fontSize = 8;
   const cellPadding = 5;
-  const rowHeight = fontSize * LINE_HEIGHT + cellPadding * 2;
+  const contentWidthPerCol = colWidth - cellPadding * 2;
 
   // Draw header row
   if (headers.length > 0) {
+    const headerLines = headers.map(h => wrapText(sanitizeForPdf(h), ctx.fontBold, fontSize, contentWidthPerCol));
+    const maxLines = Math.max(1, ...headerLines.map(lines => lines.length));
+    const rowHeight = maxLines * (fontSize * LINE_HEIGHT) + cellPadding * 2;
+
     ensureSpace(ctx, rowHeight + 4, logo);
     // Header background
     ctx.currentPage.drawRectangle({
@@ -366,23 +370,31 @@ function drawTable(
       color: COLOR_TABLE_BORDER,
     });
     for (let i = 0; i < headers.length; i++) {
-      const headerText = sanitizeForPdf(headers[i]).slice(0, 50);
+      const lines = headerLines[i];
       const x = MARGIN_LEFT + i * colWidth + cellPadding;
-      try {
-        ctx.currentPage.drawText(headerText, {
-          x: numericCols?.has(i) ? x + colWidth - cellPadding * 2 - ctx.fontBold.widthOfTextAtSize(headerText, fontSize) : x,
-          y: ctx.y - fontSize,
-          size: fontSize,
-          font: ctx.fontBold,
-          color: COLOR_HEADING,
-        });
-      } catch { /* skip */ }
+      for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+        const lineText = lines[lineIdx];
+        const lineY = ctx.y - fontSize - (lineIdx * fontSize * LINE_HEIGHT);
+        try {
+          ctx.currentPage.drawText(lineText, {
+            x: numericCols?.has(i) ? x + contentWidthPerCol - ctx.fontBold.widthOfTextAtSize(lineText, fontSize) : x,
+            y: lineY,
+            size: fontSize,
+            font: ctx.fontBold,
+            color: COLOR_HEADING,
+          });
+        } catch { /* skip */ }
+      }
     }
     ctx.y -= rowHeight;
   }
 
   // Draw data rows
   for (const row of rows) {
+    const rowLines = row.map(c => wrapText(sanitizeForPdf(c), ctx.font, fontSize, contentWidthPerCol));
+    const maxLines = Math.max(1, ...rowLines.map(lines => lines.length));
+    const rowHeight = maxLines * (fontSize * LINE_HEIGHT) + cellPadding * 2;
+
     ensureSpace(ctx, rowHeight, logo);
     // Row border bottom
     ctx.currentPage.drawLine({
@@ -392,18 +404,22 @@ function drawTable(
       color: COLOR_TABLE_BORDER,
     });
     for (let i = 0; i < Math.min(row.length, colCount); i++) {
-      const cellText = sanitizeForPdf(row[i]).slice(0, 80);
+      const lines = rowLines[i];
       const x = MARGIN_LEFT + i * colWidth + cellPadding;
-      try {
-        const textWidth = ctx.font.widthOfTextAtSize(cellText, fontSize);
-        ctx.currentPage.drawText(cellText, {
-          x: numericCols?.has(i) ? x + colWidth - cellPadding * 2 - textWidth : x,
-          y: ctx.y - fontSize,
-          size: fontSize,
-          font: ctx.font,
-          color: COLOR_TEXT,
-        });
-      } catch { /* skip unsupported chars */ }
+      for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+        const lineText = lines[lineIdx];
+        const lineY = ctx.y - fontSize - (lineIdx * fontSize * LINE_HEIGHT);
+        try {
+          const textWidth = ctx.font.widthOfTextAtSize(lineText, fontSize);
+          ctx.currentPage.drawText(lineText, {
+            x: numericCols?.has(i) ? x + contentWidthPerCol - textWidth : x,
+            y: lineY,
+            size: fontSize,
+            font: ctx.font,
+            color: COLOR_TEXT,
+          });
+        } catch { /* skip unsupported chars */ }
+      }
     }
     ctx.y -= rowHeight;
   }
@@ -480,9 +496,8 @@ export async function renderBrandedPdf(input: RenderBrandedPdfInput): Promise<Bu
     pageCount: 1,
   };
 
-  // Draw frame and watermark on first page
+  // Draw frame on first page (no watermark on first page as it has the main logo)
   drawBrandFrame(firstPage);
-  drawBrandWatermark(firstPage, logo);
 
   // Draw branded header on first page
   drawBrandHeader({
@@ -591,6 +606,7 @@ export async function renderBrandedPdf(input: RenderBrandedPdfInput): Promise<Bu
         titleSize: 0,
         numberSize: 10,
         subtitleSize: 8,
+        includeBiodata: false,
       });
     }
     drawBrandFooter({

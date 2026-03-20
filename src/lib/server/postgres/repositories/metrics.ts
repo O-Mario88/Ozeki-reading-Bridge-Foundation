@@ -161,8 +161,9 @@ export async function getPublicImpactAggregatePostgres(
   scopeId: string,
   periodLabel?: string | null,
   _reportScopeOverride: string = "Public",
+  year?: string
 ): Promise<PublicImpactAggregate> {
-  return buildPublicImpactAggregatePostgres(scopeLevel as any, scopeId, periodLabel || "All Time");
+  return buildPublicImpactAggregatePostgres(scopeLevel as any, scopeId, periodLabel || "All Time", year);
 }
 
 export async function getImpactReportByCodeAsyncPostgres(code: string, _context?: unknown): Promise<any> {

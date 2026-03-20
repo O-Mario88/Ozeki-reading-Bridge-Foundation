@@ -234,9 +234,16 @@ export async function listScopedSchoolsForPublicImpactPostgres(
 
 export async function listPortalRecordsForPublicImpactPostgres(
   schoolIds: number[],
+  year?: string,
 ): Promise<PublicImpactPortalRecordRow[]> {
   if (schoolIds.length === 0) {
     return [];
+  }
+  const params: unknown[] = [schoolIds];
+  let yearClause = "";
+  if (year) {
+    params.push(`${year}-%`);
+    yearClause = "AND (date::text LIKE $2 OR updated_at::text LIKE $2)";
   }
   const result = await queryPostgres(
     `
@@ -252,8 +259,9 @@ export async function listPortalRecordsForPublicImpactPostgres(
       FROM portal_records
       WHERE school_id = ANY($1::int[])
         AND module IN ('training', 'visit', 'assessment', 'story', 'story_activity')
+        ${yearClause}
     `,
-    [schoolIds],
+    params,
   );
   return result.rows.map((row) => ({
     id: Number(row.id),
@@ -269,9 +277,16 @@ export async function listPortalRecordsForPublicImpactPostgres(
 
 export async function listTrainingAttendanceForPublicImpactPostgres(
   schoolIds: number[],
+  year?: string,
 ): Promise<PublicImpactAttendanceRow[]> {
   if (schoolIds.length === 0) {
     return [];
+  }
+  const params: unknown[] = [schoolIds];
+  let yearClause = "";
+  if (year) {
+    params.push(`${year}-%`);
+    yearClause = "AND pr.date::text LIKE $2";
   }
   const result = await queryPostgres(
     `
@@ -287,8 +302,9 @@ export async function listTrainingAttendanceForPublicImpactPostgres(
       LEFT JOIN portal_records pr ON pr.id = pta.portal_record_id
       WHERE pta.school_id = ANY($1::int[])
         AND pta.attended IS TRUE
+        ${yearClause}
     `,
-    [schoolIds],
+    params,
   );
   return result.rows.map((row) => ({
     portalRecordId: Number(row.portalRecordId),
@@ -327,9 +343,16 @@ export async function listTeacherSupportRowsForPublicImpactPostgres(
 
 export async function listAssessmentRowsForPublicImpactPostgres(
   schoolIds: number[],
+  year?: string,
 ): Promise<PublicImpactAssessmentRow[]> {
   if (schoolIds.length === 0) {
     return [];
+  }
+  const params: unknown[] = [schoolIds];
+  let yearClause = "";
+  if (year) {
+    params.push(`${year}-%`);
+    yearClause = "AND (assessment_date::text LIKE $2 OR created_at::text LIKE $2)";
   }
   const result = await queryPostgres(
     `
@@ -365,8 +388,9 @@ export async function listAssessmentRowsForPublicImpactPostgres(
         created_at::text AS "createdAt"
       FROM assessment_records
       WHERE school_id = ANY($1::int[])
+        ${yearClause}
     `,
-    [schoolIds],
+    params,
   );
   return result.rows.map((row) => ({
     id: Number(row.id),
@@ -445,9 +469,16 @@ export async function listAssessmentRowsForPublicImpactPostgres(
 
 export async function listAssessmentSessionsForPublicImpactPostgres(
   schoolIds: number[],
+  year?: string,
 ): Promise<PublicImpactAssessmentSessionRow[]> {
   if (schoolIds.length === 0) {
     return [];
+  }
+  const params: unknown[] = [schoolIds];
+  let yearClause = "";
+  if (year) {
+    params.push(`${year}-%`);
+    yearClause = "AND assessment_date::text LIKE $2";
   }
   const result = await queryPostgres(
     `
@@ -458,8 +489,9 @@ export async function listAssessmentSessionsForPublicImpactPostgres(
         assessment_type AS "assessmentType"
       FROM assessment_sessions
       WHERE school_id = ANY($1::int[])
+        ${yearClause}
     `,
-    [schoolIds],
+    params,
   );
   return result.rows.map((row) => ({
     id: Number(row.id),
@@ -474,9 +506,16 @@ export async function listAssessmentSessionsForPublicImpactPostgres(
 
 export async function listLessonEvaluationRowsForPublicImpactPostgres(
   schoolIds: number[],
+  year?: string,
 ): Promise<PublicImpactLessonEvaluationRow[]> {
   if (schoolIds.length === 0) {
     return [];
+  }
+  const params: unknown[] = [schoolIds];
+  let yearClause = "";
+  if (year) {
+    params.push(`${year}-%`);
+    yearClause = "AND (lesson_date::text LIKE $2 OR updated_at::text LIKE $2)";
   }
   const result = await queryPostgres(
     `
@@ -491,8 +530,9 @@ export async function listLessonEvaluationRowsForPublicImpactPostgres(
       FROM lesson_evaluations
       WHERE status = 'active'
         AND school_id = ANY($1::int[])
+        ${yearClause}
     `,
-    [schoolIds],
+    params,
   );
   return result.rows.map((row) => ({
     id: Number(row.id),
@@ -866,7 +906,8 @@ export async function getAllGeographyTaxonomyPostgres() {
 export async function buildPublicImpactAggregatePostgres(
   scopeLevel: PublicImpactScopeLevel,
   scopeId: string,
-  periodLabel: string = "All Time"
+  periodLabel: string = "All Time",
+  year?: string
 ): Promise<PublicImpactAggregate> {
   const scopedSchools = await listScopedSchoolsForPublicImpactPostgres(scopeLevel, scopeId);
   const schoolIds = scopedSchools.map((s) => s.schoolId);
@@ -874,6 +915,13 @@ export async function buildPublicImpactAggregatePostgres(
   let fullTaxonomy: { regions: string[]; subRegions: string[]; districts: string[] } | null = null;
   if (scopeLevel === "country") {
     fullTaxonomy = await getAllGeographyTaxonomyPostgres();
+  }
+
+  let startDate: string | null = null;
+  let endDate: string | null = null;
+  if (year) {
+    startDate = `${year}-01-01`;
+    endDate = `${year}-12-31`;
   }
 
   const [
@@ -884,12 +932,12 @@ export async function buildPublicImpactAggregatePostgres(
     teacherSupport,
     teachingLearningAlignment
   ] = await Promise.all([
-    listPortalRecordsForPublicImpactPostgres(schoolIds),
-    listAssessmentRowsForPublicImpactPostgres(schoolIds),
-    listLessonEvaluationRecordsForPublicImpactPostgres({ schoolIds }),
-    listTrainingAttendanceForPublicImpactPostgres(schoolIds),
+    listPortalRecordsForPublicImpactPostgres(schoolIds, year),
+    listAssessmentRowsForPublicImpactPostgres(schoolIds, year),
+    listLessonEvaluationRecordsForPublicImpactPostgres({ schoolIds, startDate, endDate }),
+    listTrainingAttendanceForPublicImpactPostgres(schoolIds, year),
     listTeacherSupportRowsForPublicImpactPostgres(schoolIds),
-    getTeachingLearningAlignmentBySchoolIdsPostgres(schoolIds, null, null)
+    getTeachingLearningAlignmentBySchoolIdsPostgres(schoolIds, startDate, endDate)
   ]);
 
   const uniqueLearners = new Set(assessmentRows.map(r => r.learnerUid).filter(Boolean));
@@ -968,7 +1016,11 @@ export async function buildPublicImpactAggregatePostgres(
       comprehension: calcDomain("readingComprehensionScore")
     },
     funnel: {
-      trained: 0, coached: 0, baselineAssessed: 0, endlineAssessed: 0, storyActive: 0
+      trained: new Set(portalRecords.filter(r => r.module === "training").map(r => r.schoolId)).size,
+      coached: new Set(portalRecords.filter(r => r.module === "visit").map(r => r.schoolId)).size,
+      baselineAssessed: new Set(baselineAssessments.map(r => r.schoolId)).size,
+      endlineAssessed: new Set(endlineAssessments.map(r => r.schoolId)).size,
+      storyActive: new Set(portalRecords.filter(r => r.module === "story" || r.module === "story_activity").map(r => r.schoolId)).size,
     },
     fidelity: {
       score: 0, band: "Developing", drivers: []

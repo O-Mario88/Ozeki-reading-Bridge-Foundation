@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
   }
 
   const period = String(request.nextUrl.searchParams.get("period") ?? "FY").trim() || "FY";
+  const year = request.nextUrl.searchParams.get("year")?.trim() || undefined;
   const format = normalizeFormat(request.nextUrl.searchParams.get("format"));
 
   // 1. Resolve Authentication and Permissions
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // 3. Fetch Data with Scope Awareness
-    const aggregate = await getPublicImpactAggregate(scopeLevel, scopeId, period, reportScope);
+    const aggregate = await getPublicImpactAggregate(scopeLevel, scopeId, period, reportScope, year);
     
     // 4. Generate Narrative with Scope Awareness
     const narrative = await generatePublicDashboardNarrative(aggregate, reportScope);

@@ -61,13 +61,7 @@ function normalizeContactValue(value: string | null | undefined) {
     .toLowerCase();
 }
 
-function toWholeNumber(value: string) {
-  const parsed = value.trim() ? Number(value.trim()) : 0;
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    return Number.NaN;
-  }
-  return parsed;
-}
+
 
 function toGpsInputValue(value: string | null | undefined) {
   return value?.trim() ?? "";
@@ -132,7 +126,6 @@ export function PortalSchoolsManager({
   const [createContactGender, setCreateContactGender] = useState<"Male" | "Female" | "Other" | "">("");
   const [createContactEmail, setCreateContactEmail] = useState("");
   const [createContactWhatsapp, setCreateContactWhatsapp] = useState("");
-  const [createContactRoleTitle, setCreateContactRoleTitle] = useState<PrimaryContactRole>("Proprietor");
   const [editContactName, setEditContactName] = useState("");
   const [editContactPhone, setEditContactPhone] = useState("");
 
@@ -330,14 +323,7 @@ export function PortalSchoolsManager({
       partnerType: String(formData.get("partnerType") ?? ""),
       currentPartnerSchool: formData.get("currentPartnerSchool") === "on",
       schoolActive: formData.get("schoolActive") !== null ? formData.get("schoolActive") === "on" : true,
-      enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
-      enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
-      enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
-      enrolledMiddle: String(formData.get("enrolledMiddle") ?? "0"),
-      enrolledTop: String(formData.get("enrolledTop") ?? "0"),
-      enrolledP1: String(formData.get("enrolledP1") ?? "0"),
-      enrolledP2: String(formData.get("enrolledP2") ?? "0"),
-      enrolledP3: String(formData.get("enrolledP3") ?? "0"),
+      classesJson: JSON.stringify(Array.from(formData.getAll("classes")).map(String)),
       gpsLat: String(formData.get("gpsLat") ?? ""),
       gpsLng: String(formData.get("gpsLng") ?? ""),
       contactName: String(formData.get("contactName") ?? ""),
@@ -411,43 +397,7 @@ export function PortalSchoolsManager({
       setSavingSchool(false);
       return;
     }
-    const enrolledBoys = toWholeNumber(payload.enrolledBoys);
-    const enrolledGirls = toWholeNumber(payload.enrolledGirls);
-    const enrolledBaby = toWholeNumber(payload.enrolledBaby);
-    const enrolledMiddle = toWholeNumber(payload.enrolledMiddle);
-    const enrolledTop = toWholeNumber(payload.enrolledTop);
-    const enrolledP1 = toWholeNumber(payload.enrolledP1);
-    const enrolledP2 = toWholeNumber(payload.enrolledP2);
-    const enrolledP3 = toWholeNumber(payload.enrolledP3);
-    if (
-      [enrolledBaby, enrolledMiddle, enrolledTop, enrolledP1, enrolledP2, enrolledP3].some((value) =>
-        Number.isNaN(value),
-      )
-    ) {
-      setCreateFeedback({
-        kind: "error",
-        message: "New enrollment counts must be whole numbers greater than or equal to 0.",
-      });
-      setSavingSchool(false);
-      return;
-    }
-    if (Number.isNaN(enrolledBoys)) {
-      setCreateFeedback({
-        kind: "error",
-        message: "Enrolled boys must be a whole number greater than or equal to 0.",
-      });
-      setSavingSchool(false);
-      return;
-    }
-    if (Number.isNaN(enrolledGirls)) {
-      setCreateFeedback({
-        kind: "error",
-        message: "Enrolled girls must be a whole number greater than or equal to 0.",
-      });
-      setSavingSchool(false);
-      return;
-    }
-    const enrollmentTotal = enrolledBoys + enrolledGirls;
+
 
     try {
       const response = await fetch("/api/portal/schools", {
@@ -463,16 +413,17 @@ export function PortalSchoolsManager({
           schoolRelationshipStatusDate: payload.schoolStatusDate.trim() || undefined,
           clientSchoolNumber: 0,
           metricCount: 0,
-          runningTotalMaxEnrollment: enrollmentTotal,
-          enrollmentTotal,
-          enrolledBoys,
-          enrolledGirls,
-          enrolledBaby,
-          enrolledMiddle,
-          enrolledTop,
-          enrolledP1,
-          enrolledP2,
-          enrolledP3,
+          runningTotalMaxEnrollment: 0,
+          enrollmentTotal: 0,
+          classesJson: payload.classesJson,
+          enrolledBoys: 0,
+          enrolledGirls: 0,
+          enrolledBaby: 0,
+          enrolledMiddle: 0,
+          enrolledTop: 0,
+          enrolledP1: 0,
+          enrolledP2: 0,
+          enrolledP3: 0,
           enrolledP4: 0,
           enrolledP5: 0,
           enrolledP6: 0,
@@ -507,7 +458,6 @@ export function PortalSchoolsManager({
       setCreateContactGender("");
       setCreateContactEmail("");
       setCreateContactWhatsapp("");
-      setCreateContactRoleTitle("Proprietor");
       setIsCreateFormOpen(false);
       setCreateFeedback({
         kind: "success",
@@ -559,18 +509,20 @@ export function PortalSchoolsManager({
       partnerType: String(formData.get("partnerType") ?? ""),
       currentPartnerSchool: formData.get("currentPartnerSchool") === "on",
       schoolActive: formData.get("schoolActive") !== null ? formData.get("schoolActive") === "on" : true,
-      enrolledBoys: String(formData.get("enrolledBoys") ?? "0"),
-      enrolledGirls: String(formData.get("enrolledGirls") ?? "0"),
-      enrolledBaby: String(formData.get("enrolledBaby") ?? "0"),
-      enrolledMiddle: String(formData.get("enrolledMiddle") ?? "0"),
-      enrolledTop: String(formData.get("enrolledTop") ?? "0"),
-      enrolledP1: String(formData.get("enrolledP1") ?? "0"),
-      enrolledP2: String(formData.get("enrolledP2") ?? "0"),
-      enrolledP3: String(formData.get("enrolledP3") ?? "0"),
+      classesJson: JSON.stringify(Array.from(formData.getAll("classes")).map(String)),
+
       gpsLat: String(formData.get("gpsLat") ?? ""),
       gpsLng: String(formData.get("gpsLng") ?? ""),
-      contactName: String(formData.get("contactName") ?? ""),
-      contactPhone: String(formData.get("contactPhone") ?? ""),
+      headTeacherName: String(formData.get("headTeacherName") ?? ""),
+      headTeacherPhone: String(formData.get("headTeacherPhone") ?? ""),
+      headTeacherGender: String(formData.get("headTeacherGender") ?? ""),
+      headTeacherEmail: String(formData.get("headTeacherEmail") ?? ""),
+      headTeacherWhatsapp: String(formData.get("headTeacherWhatsapp") ?? ""),
+      directorName: String(formData.get("directorName") ?? ""),
+      directorPhone: String(formData.get("directorPhone") ?? ""),
+      directorGender: String(formData.get("directorGender") ?? ""),
+      directorEmail: String(formData.get("directorEmail") ?? ""),
+      directorWhatsapp: String(formData.get("directorWhatsapp") ?? ""),
     };
 
     const lat = parseOptionalNumber(payload.gpsLat);
@@ -591,44 +543,35 @@ export function PortalSchoolsManager({
       setSavingProfile(false);
       return;
     }
-    if (!isValidPhone(payload.contactPhone)) {
+    if (!isValidPhone(payload.headTeacherPhone)) {
       setProfileFeedback({
         kind: "error",
-        message: "Contact phone format is invalid. Use digits and optional +, space, (), or -.",
+        message: "Head Teacher phone format is invalid. Use digits and optional +, space, (), or -.",
       });
       setSavingProfile(false);
       return;
     }
-
-    const enrolledBoys = toWholeNumber(payload.enrolledBoys);
-    const enrolledGirls = toWholeNumber(payload.enrolledGirls);
-    const enrolledBaby = toWholeNumber(payload.enrolledBaby);
-    const enrolledMiddle = toWholeNumber(payload.enrolledMiddle);
-    const enrolledTop = toWholeNumber(payload.enrolledTop);
-    const enrolledP1 = toWholeNumber(payload.enrolledP1);
-    const enrolledP2 = toWholeNumber(payload.enrolledP2);
-    const enrolledP3 = toWholeNumber(payload.enrolledP3);
-    if (Number.isNaN(enrolledBoys) || Number.isNaN(enrolledGirls)) {
+    if (!payload.headTeacherName.trim()) {
       setProfileFeedback({
         kind: "error",
-        message: "Enrollment values must be whole numbers greater than or equal to 0.",
+        message: "Head Teacher full name is required.",
       });
       setSavingProfile(false);
       return;
     }
     if (
-      [enrolledBaby, enrolledMiddle, enrolledTop, enrolledP1, enrolledP2, enrolledP3].some((value) =>
-        Number.isNaN(value),
-      )
+      payload.headTeacherGender !== "Male" &&
+      payload.headTeacherGender !== "Female" &&
+      payload.headTeacherGender !== "Other"
     ) {
       setProfileFeedback({
         kind: "error",
-        message: "New enrollment counts must be whole numbers greater than or equal to 0.",
+        message: "Head Teacher gender is required.",
       });
       setSavingProfile(false);
       return;
     }
-    const enrollmentTotal = enrolledBoys + enrolledGirls;
+
 
     try {
       const response = await fetch("/api/portal/schools", {
@@ -656,29 +599,38 @@ export function PortalSchoolsManager({
           denomination: payload.denomination.trim() || null,
           clientSchoolNumber: selectedSchool.clientSchoolNumber,
           metricCount: selectedSchool.metricCount,
-          runningTotalMaxEnrollment: Math.max(selectedSchool.runningTotalMaxEnrollment, enrollmentTotal),
+          runningTotalMaxEnrollment: selectedSchool.runningTotalMaxEnrollment,
           partnerType: payload.partnerType.trim() || null,
           currentPartnerSchool: payload.currentPartnerSchool,
           schoolActive: payload.schoolActive,
           website: payload.website.trim() || null,
           description: payload.description.trim() || null,
-          enrollmentTotal,
-          enrolledBoys,
-          enrolledGirls,
-          enrolledBaby,
-          enrolledMiddle,
-          enrolledTop,
-          enrolledP1,
-          enrolledP2,
-          enrolledP3,
+          enrollmentTotal: selectedSchool.enrollmentTotal ?? 0,
+          classesJson: payload.classesJson,
+          enrolledBoys: selectedSchool.enrolledBoys ?? 0,
+          enrolledGirls: selectedSchool.enrolledGirls ?? 0,
+          enrolledBaby: selectedSchool.enrolledBaby ?? 0,
+          enrolledMiddle: selectedSchool.enrolledMiddle ?? 0,
+          enrolledTop: selectedSchool.enrolledTop ?? 0,
+          enrolledP1: selectedSchool.enrolledP1 ?? 0,
+          enrolledP2: selectedSchool.enrolledP2 ?? 0,
+          enrolledP3: selectedSchool.enrolledP3 ?? 0,
           enrolledP4: selectedSchool.enrolledP4 ?? 0,
           enrolledP5: selectedSchool.enrolledP5 ?? 0,
           enrolledP6: selectedSchool.enrolledP6 ?? 0,
           enrolledP7: selectedSchool.enrolledP7 ?? 0,
           gpsLat: payload.gpsLat.trim() || null,
           gpsLng: payload.gpsLng.trim() || null,
-          contactName: payload.contactName.trim() || null,
-          contactPhone: payload.contactPhone.trim() || null,
+          headTeacherName: payload.headTeacherName.trim(),
+          headTeacherGender: payload.headTeacherGender as "Male" | "Female" | "Other",
+          headTeacherPhone: payload.headTeacherPhone.trim() || undefined,
+          headTeacherEmail: payload.headTeacherEmail.trim() || undefined,
+          headTeacherWhatsapp: payload.headTeacherWhatsapp.trim() || undefined,
+          directorName: payload.directorName.trim() || undefined,
+          directorGender: payload.directorGender ? (payload.directorGender as "Male" | "Female" | "Other") : undefined,
+          directorPhone: payload.directorPhone.trim() || undefined,
+          directorEmail: payload.directorEmail.trim() || undefined,
+          directorWhatsapp: payload.directorWhatsapp.trim() || undefined,
         }),
       });
 
@@ -918,6 +870,34 @@ export function PortalSchoolsManager({
                   placeholder="School metadata notes, access details, or additional context."
                 />
               </label>
+              <fieldset className="portal-fieldset full-width">
+                <legend>Classes Offered</legend>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                  {[
+                    "Baby Class",
+                    "Middle Class",
+                    "Top Class",
+                    "P1",
+                    "P2",
+                    "P3",
+                    "P4",
+                    "P5",
+                    "P6",
+                    "P7",
+                  ].map((cls) => (
+                    <label key={cls} className="flex items-center gap-2 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        name="classes"
+                        value={cls}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      {cls}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               <fieldset className="portal-fieldset">
                 <legend>New Enrollment (Immediate Ozeki Impact)</legend>
                 <div className="form-grid-3">
@@ -983,15 +963,18 @@ export function PortalSchoolsManager({
                 <span className="portal-field-label">GPS Longitude (optional)</span>
                 <input name="gpsLng" placeholder="e.g. 32.2990" inputMode="decimal" />
               </label>
+              <div className="full-width mt-4 mb-2">
+                <h3 className="text-lg font-semibold border-b pb-1">Head Teacher (Primary Contact)</h3>
+              </div>
               <label>
                 <span className="portal-field-label">
-                  <span>Primary Contact Name</span>
+                  <span>Head Teacher Name</span>
                   <span className="portal-required-indicator">
                     *<span className="visually-hidden">required</span>
                   </span>
                 </span>
                 <input
-                  name="contactName"
+                  name="headTeacherName"
                   placeholder="e.g. Sarah Akello"
                   autoComplete="name"
                   value={createContactName}
@@ -1000,9 +983,9 @@ export function PortalSchoolsManager({
                 />
               </label>
               <label>
-                <span className="portal-field-label">Primary Contact Phone (optional)</span>
+                <span className="portal-field-label">Head Teacher Phone (optional)</span>
                 <input
-                  name="contactPhone"
+                  name="headTeacherPhone"
                   placeholder="+2567xxxxxxxx"
                   inputMode="tel"
                   autoComplete="tel"
@@ -1012,13 +995,13 @@ export function PortalSchoolsManager({
               </label>
               <label>
                 <span className="portal-field-label">
-                  <span>Primary Contact Gender</span>
+                  <span>Head Teacher Gender</span>
                   <span className="portal-required-indicator">
                     *<span className="visually-hidden">required</span>
                   </span>
                 </span>
                 <select
-                  name="proprietorGender"
+                  name="headTeacherGender"
                   value={createContactGender}
                   onChange={(event) =>
                     setCreateContactGender(event.target.value as "Male" | "Female" | "Other" | "")
@@ -1032,9 +1015,9 @@ export function PortalSchoolsManager({
                 </select>
               </label>
               <label>
-                <span className="portal-field-label">Primary Contact Email (optional)</span>
+                <span className="portal-field-label">Head Teacher Email (optional)</span>
                 <input
-                  name="proprietorEmail"
+                  name="headTeacherEmail"
                   type="email"
                   placeholder="name@school.org"
                   autoComplete="email"
@@ -1042,31 +1025,62 @@ export function PortalSchoolsManager({
                   onChange={(event) => setCreateContactEmail(event.target.value)}
                 />
               </label>
-              <label>
-                <span className="portal-field-label">Primary Contact WhatsApp (optional)</span>
+              <label className="full-width">
+                <span className="portal-field-label">Head Teacher WhatsApp (optional)</span>
                 <input
-                  name="proprietorWhatsapp"
+                  name="headTeacherWhatsapp"
                   placeholder="+2567xxxxxxxx"
                   inputMode="tel"
                   value={createContactWhatsapp}
                   onChange={(event) => setCreateContactWhatsapp(event.target.value)}
                 />
               </label>
+
+              <div className="full-width mt-4 mb-2">
+                <h3 className="text-lg font-semibold border-b pb-1">Director / Proprietor (Secondary Contact)</h3>
+              </div>
               <label>
-                <span className="portal-field-label">Primary Contact Role</span>
-                <select
-                  name="primaryContactRole"
-                  value={createContactRoleTitle}
-                  onChange={(event) =>
-                    setCreateContactRoleTitle(event.target.value as PrimaryContactRole)
-                  }
-                >
-                  {primaryContactRoleOptions.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
+                <span className="portal-field-label">Director Name (optional)</span>
+                <input
+                  name="directorName"
+                  placeholder="e.g. John Bosco"
+                  autoComplete="name"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Director Phone (optional)</span>
+                <input
+                  name="directorPhone"
+                  placeholder="+2567xxxxxxxx"
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Director Gender (optional)</span>
+                <select name="directorGender">
+                  <option value="">Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
+              </label>
+              <label>
+                <span className="portal-field-label">Director Email (optional)</span>
+                <input
+                  name="directorEmail"
+                  type="email"
+                  placeholder="director@school.org"
+                  autoComplete="email"
+                />
+              </label>
+              <label className="full-width">
+                <span className="portal-field-label">Director WhatsApp (optional)</span>
+                <input
+                  name="directorWhatsapp"
+                  placeholder="+2567xxxxxxxx"
+                  inputMode="tel"
+                />
               </label>
               {createDuplicateContactMatches.length > 0 ? (
                 <p className="full-width portal-warning-note" role="status">
@@ -1295,6 +1309,44 @@ export function PortalSchoolsManager({
                   </label>
 
                   <fieldset className="portal-fieldset full-width">
+                    <legend>Classes Offered</legend>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                      {[
+                        "Baby Class",
+                        "Middle Class",
+                        "Top Class",
+                        "P1",
+                        "P2",
+                        "P3",
+                        "P4",
+                        "P5",
+                        "P6",
+                        "P7",
+                      ].map((cls) => {
+                        const selectedClasses = (() => {
+                          try {
+                            return (JSON.parse(selectedSchool.classesJson || "[]") as string[]) || [];
+                          } catch {
+                            return [];
+                          }
+                        })();
+                        return (
+                          <label key={cls} className="flex items-center gap-2 text-sm text-gray-600">
+                            <input
+                              type="checkbox"
+                              name="classes"
+                              value={cls}
+                              defaultChecked={selectedClasses.includes(cls)}
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            {cls}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="portal-fieldset full-width">
                     <legend>New Enrollment (Immediate Ozeki Impact)</legend>
                     <div className="form-grid-3">
                       <label>
@@ -1465,19 +1517,45 @@ export function PortalSchoolsManager({
                     <input name="gpsLng" defaultValue={toGpsInputValue(selectedSchool.gpsLng)} />
                   </label>
                   <label>
-                    <span className="portal-field-label">Contact Name</span>
+                    <span className="portal-field-label">Head Teacher Name</span>
                     <input
-                      name="contactName"
+                      name="headTeacherName"
                       value={editContactName}
                       onChange={(event) => setEditContactName(event.target.value)}
                     />
                   </label>
                   <label>
-                    <span className="portal-field-label">Contact Phone</span>
+                    <span className="portal-field-label">Head Teacher Phone</span>
                     <input
-                      name="contactPhone"
+                      name="headTeacherPhone"
                       value={editContactPhone}
                       onChange={(event) => setEditContactPhone(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Head Teacher Gender</span>
+                    <select
+                      name="headTeacherGender"
+                      defaultValue="Other"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className="portal-field-label">Head Teacher Email</span>
+                    <input
+                      name="headTeacherEmail"
+                      type="email"
+                      defaultValue={selectedSchool.contactEmail ?? ""}
+                    />
+                  </label>
+                  <label className="full-width">
+                    <span className="portal-field-label">Head Teacher WhatsApp</span>
+                    <input
+                      name="headTeacherWhatsapp"
+                      defaultValue=""
                     />
                   </label>
                   {editDuplicateContactMatches.length > 0 ? (

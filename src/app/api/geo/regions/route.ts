@@ -4,7 +4,8 @@ import { listGeoRegions } from "@/services/dataService";
 export async function GET(request: NextRequest) {
     try {
         const year = request.nextUrl.searchParams.get("year");
-        const regions = listGeoRegions(year);
+        const regionStrings = await listGeoRegions(year);
+        const regions = regionStrings.map(r => ({ id: r, name: r }));
         return NextResponse.json(
             { ok: true, regions },
             { headers: { "Cache-Control": "public, max-age=0, s-maxage=600, stale-while-revalidate=900" } },

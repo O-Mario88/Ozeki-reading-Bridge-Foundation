@@ -5,18 +5,27 @@ export async function createPortalRecordPostgres(input: PortalRecordInput, userI
   const result = await queryPostgres(
     `
     INSERT INTO portal_records (
-      school_id, module, status, payload_json, created_by_user_id, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, NOW())
-    RETURNING id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt"
+      school_id, module, status, payload_json, created_by_user_id, updated_at, follow_up_date, follow_up_type, follow_up_owner_user_id
+    ) VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, $8)
+    RETURNING id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt", follow_up_date::text AS "followUpDate", follow_up_type AS "followUpType", follow_up_owner_user_id AS "followUpOwnerUserId"
     `,
-    [input.schoolId, input.module, input.status, JSON.stringify(input.payload), userId]
+    [
+      input.schoolId,
+      input.module,
+      input.status,
+      JSON.stringify(input.payload),
+      userId,
+      input.followUpDate || null,
+      input.followUpType || null,
+      input.followUpOwnerUserId || null,
+    ]
   );
   return result.rows[0] as unknown as PortalRecord;
 }
 
 export async function listPortalRecordsPostgres(filters: PortalRecordFilters, _user?: unknown): Promise<PortalRecord[]> {
-  const params: any[] = [];
-  let query = `SELECT id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt" FROM portal_records WHERE 1=1`;
+  const params: unknown[] = [];
+  let query = `SELECT id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt", follow_up_date::text AS "followUpDate", follow_up_type AS "followUpType", follow_up_owner_user_id AS "followUpOwnerUserId" FROM portal_records WHERE 1=1`;
   
   if (filters.module) {
     params.push(filters.module);
@@ -36,6 +45,7 @@ export async function listPortalRecordsPostgres(filters: PortalRecordFilters, _u
   return result.rows as unknown as PortalRecord[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveObservationRubricPostgres(input: any, userId: number): Promise<any> {
     const result = await queryPostgres(
         `INSERT INTO observation_rubrics (school_id, teacher_uid, date, lesson_type, indicators_json, overall_score, strengths, gaps, coaching_actions, created_by_user_id)
@@ -46,6 +56,7 @@ export async function saveObservationRubricPostgres(input: any, userId: number):
     return { id: result.rows[0].id, ...input, createdByUserId: userId, createdAt: result.rows[0].createdAt };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveInterventionGroupPostgres(input: any, userId: number): Promise<any> {
     const result = await queryPostgres(
         `INSERT INTO intervention_groups (school_id, grade, target_skill, learners_json, schedule, start_date, end_date, created_by_user_id)
@@ -56,6 +67,7 @@ export async function saveInterventionGroupPostgres(input: any, userId: number):
     return { id: result.rows[0].id, ...input, createdByUserId: userId, createdAt: result.rows[0].createdAt };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveConsentRecordPostgres(input: any, userId: number): Promise<any> {
     const result = await queryPostgres(
         `INSERT INTO consent_records (school_id, consent_type, source, date, allowed_usage, linked_files, expiry_date, created_by_user_id)
@@ -68,14 +80,14 @@ export async function saveConsentRecordPostgres(input: any, userId: number): Pro
 
 export async function getPortalRecordByIdPostgres(id: number): Promise<PortalRecord | null> {
   const result = await queryPostgres(
-    `SELECT id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt" FROM portal_records WHERE id = $1`,
+    `SELECT id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt", follow_up_date::text AS "followUpDate", follow_up_type AS "followUpType", follow_up_owner_user_id AS "followUpOwnerUserId" FROM portal_records WHERE id = $1`,
     [id]
   );
   return (result.rows[0] as unknown as PortalRecord) || null;
 }
 
 export async function updatePortalRecordPostgres(id: number, input: Partial<PortalRecordInput>): Promise<PortalRecord> {
-  const params: any[] = [];
+  const params: unknown[] = [];
   let query = `UPDATE portal_records SET updated_at = NOW()`;
   
   if (input.status) {
@@ -90,9 +102,21 @@ export async function updatePortalRecordPostgres(id: number, input: Partial<Port
     params.push(input.schoolId);
     query += `, school_id = $${params.length}`;
   }
+  if (input.followUpDate !== undefined) {
+    params.push(input.followUpDate || null);
+    query += `, follow_up_date = $${params.length}`;
+  }
+  if (input.followUpType !== undefined) {
+    params.push(input.followUpType || null);
+    query += `, follow_up_type = $${params.length}`;
+  }
+  if (input.followUpOwnerUserId !== undefined) {
+    params.push(input.followUpOwnerUserId || null);
+    query += `, follow_up_owner_user_id = $${params.length}`;
+  }
 
   params.push(id);
-  query += ` WHERE id = $${params.length} RETURNING id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt"`;
+  query += ` WHERE id = $${params.length} RETURNING id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt", follow_up_date::text AS "followUpDate", follow_up_type AS "followUpType", follow_up_owner_user_id AS "followUpOwnerUserId"`;
   
   const result = await queryPostgres(query, params);
   return result.rows[0] as unknown as PortalRecord;

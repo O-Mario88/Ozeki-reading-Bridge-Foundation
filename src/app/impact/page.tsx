@@ -2,14 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
-import { getImpactReportFilterFacetsAsync, listPublicImpactReportsAsync } from "@/services/dataService";
-import {
-  ImpactReportOutput,
-  ImpactReportPeriodType,
-  ImpactReportScopeType,
-  ImpactReportType,
-  ReportCategory,
-} from "@/lib/types";
+import { getImpactReportFilterFacetsAsync } from "@/services/dataService";
 
 export const metadata: Metadata = {
   title: "Impact",
@@ -28,60 +21,7 @@ function firstValue(value: string | string[] | undefined) {
   return value ?? "";
 }
 
-function parseReportType(value: string): ImpactReportType | undefined {
-  const allowed: ImpactReportType[] = [
-    "FY Impact Report",
-    "Regional Impact Report",
-    "Sub-region Report",
-    "District Report",
-    "School Report",
-    "School Coaching Pack",
-    "Headteacher Summary",
-    "Partner Snapshot Report",
-  ];
-  return (allowed as string[]).includes(value) ? (value as ImpactReportType) : undefined;
-}
 
-function parseReportCategory(value: string): ReportCategory | undefined {
-  const allowed: ReportCategory[] = [
-    "Assessment Report",
-    "Training Report",
-    "School Coaching Visit Report",
-    "Teaching Quality Report (Lesson Evaluations)",
-    "Remedial & Catch-Up Intervention Report",
-    "1001 Story Project Report",
-    "Implementation Fidelity & Coverage Report",
-    "District Literacy Brief",
-    "Graduation Readiness & Alumni Monitoring Report",
-    "Partner/Donor Report (Scoped)",
-    "Data Quality & Credibility Report",
-    "School Profile Report (Headteacher Pack)",
-  ];
-  return (allowed as string[]).includes(value) ? (value as ReportCategory) : undefined;
-}
-
-function parsePeriodType(value: string): ImpactReportPeriodType | undefined {
-  const allowed: ImpactReportPeriodType[] = ["FY", "Term", "Quarter", "Custom"];
-  return (allowed as string[]).includes(value) ? (value as ImpactReportPeriodType) : undefined;
-}
-
-function parseOutput(value: string): ImpactReportOutput | undefined {
-  const allowed: ImpactReportOutput[] = ["PDF", "HTML preview"];
-  return (allowed as string[]).includes(value) ? (value as ImpactReportOutput) : undefined;
-}
-
-function parseScopeType(value: string): ImpactReportScopeType | undefined {
-  const allowed: ImpactReportScopeType[] = [
-    "National",
-    "Region",
-    "Sub-region",
-    "District",
-    "Sub-county",
-    "Parish",
-    "School",
-  ];
-  return (allowed as string[]).includes(value) ? (value as ImpactReportScopeType) : undefined;
-}
 
 function resolveReportYear(rawYear: string, availableYears: string[]) {
   const parsed = Number(rawYear);
@@ -133,8 +73,6 @@ export default async function ImpactDashboardPage({
   const selectedCategory = firstValue(params.reportCategory);
   const selectedPeriodType = firstValue(params.periodType);
   const selectedOutput = firstValue(params.output);
-  const selectedScopeType = firstValue(params.scopeType);
-  const selectedScopeValue = firstValue(params.scopeValue);
   const selectedRegion = firstValue(params.region);
   const selectedSubRegion = firstValue(params.subRegion);
   const selectedDistrict = firstValue(params.district);
@@ -142,26 +80,23 @@ export default async function ImpactDashboardPage({
 
   let reportDataWarning = false;
   let facets = buildFallbackReportFacets();
-  let reports: Awaited<ReturnType<typeof listPublicImpactReportsAsync>> = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let aggregate: any = null;
+
+  const activeScopeLevel = selectedSchoolId ? "school" : selectedDistrict ? "district" : selectedSubRegion ? "subregion" : selectedRegion ? "region" : "country";
+  const activeScopeId = selectedSchoolId || selectedDistrict || selectedSubRegion || selectedRegion || "Uganda";
 
   try {
     facets = await getImpactReportFilterFacetsAsync();
     const selectedYear = resolveReportYear(selectedYearParam, facets.years);
-    reports = await listPublicImpactReportsAsync({
-      year: selectedYear,
-      reportType: parseReportType(selectedType),
-      reportCategory: parseReportCategory(selectedCategory),
-      periodType: parsePeriodType(selectedPeriodType),
-      audience: "Public-safe",
-      output: parseOutput(selectedOutput),
-      scopeType: parseScopeType(selectedScopeType),
-      scopeValue: selectedScopeValue || undefined,
-      region: selectedRegion || undefined,
-      subRegion: selectedSubRegion || undefined,
-      district: selectedDistrict || undefined,
-      schoolId: selectedSchoolId ? parseInt(selectedSchoolId, 10) : undefined,
-      limit: 200,
-    });
+    const { getPublicImpactAggregate } = await import("@/services/dataService");
+    aggregate = await getPublicImpactAggregate(
+      activeScopeLevel,
+      activeScopeId,
+      selectedPeriodType || "FY",
+      "Public",
+      selectedYear
+    );
   } catch (error) {
     reportDataWarning = true;
     console.error("[impact] Failed to load report facets/list:", error);
@@ -169,8 +104,8 @@ export default async function ImpactDashboardPage({
 
   const selectedYear = resolveReportYear(selectedYearParam, facets.years);
 
-  const topFilteredReport = reports[0] ?? null;
-  const hasMultipleFilteredReports = reports.length > 1;
+  const hasData = aggregate && aggregate.kpis.schoolsSupported > 0;
+  const pdfDownloadUrl = `/api/impact/report-engine?scopeLevel=${activeScopeLevel}&scopeId=${encodeURIComponent(activeScopeId)}&period=${encodeURIComponent(selectedPeriodType || "FY")}&year=${selectedYear}&format=pdf`;
 
   return (
     <>
@@ -247,81 +182,19 @@ export default async function ImpactDashboardPage({
               period={firstValue(params.period) || undefined}
             />
             <div className="action-row" style={{ marginTop: "0.9rem", alignItems: "center", gap: "0.9rem" }}>
-              {topFilteredReport ? (
+              {hasData ? (
                 <>
-                  <a className="button" href={`/api/impact-reports/${topFilteredReport.reportCode}/download`}>
-                    {hasMultipleFilteredReports
-                      ? "Download Top Filtered Report (PDF)"
-                      : "Download Filtered Report (PDF)"}
+                  <a className="button" href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer">
+                    Download AI Impact Report (PDF)
                   </a>
-                  <Link className="button button-ghost" href={`/impact-reports/${topFilteredReport.reportCode}`}>
-                    View Selected Report
-                  </Link>
-                  {hasMultipleFilteredReports ? (
-                    <span className="meta-line">
-                      {reports.length.toLocaleString()} reports match current filters. Download targets the latest match.
-                    </span>
-                  ) : null}
+                  <span className="meta-line">
+                    Report generated in real-time using current live data and AI synthesis.
+                  </span>
                 </>
               ) : (
-                <span className="meta-line">No report matches the current filters yet.</span>
+                <span className="meta-line">No data is available for the currently selected filters.</span>
               )}
             </div>
-          </div>
-
-          {/* Report cards */}
-          <div className="cards-grid">
-            {reports.map((report) => {
-              const schoolsImpacted = Number(report.factPack?.coverageDelivery?.schoolsImpacted ?? 0);
-              const teachersTrained = Number(report.factPack?.coverageDelivery?.teachersTrained ?? 0);
-              const learnersAssessed = Number(
-                report.factPack?.coverageDelivery?.assessmentsConducted?.endline ?? 0,
-              );
-              const resourcesDownloaded = Number(report.factPack?.engagement?.resourcesDownloaded ?? 0);
-              const readingChange =
-                report.factPack?.learningOutcomes?.readingComprehension?.change ?? "Data not available";
-
-              return (
-                <article className="card" key={report.reportCode}>
-                  <p className="meta-pill">{report.reportType}</p>
-                  <h3>{report.title}</h3>
-                  <p className="meta-line">
-                    Category: {report.reportCategory ?? "Not specified"}
-                    <br />
-                    Scope: {report.scopeType} - {report.scopeValue}
-                    <br />
-                    Period ({report.periodType ?? "FY"}): {report.periodStart} to {report.periodEnd}
-                  </p>
-                  <ul>
-                    <li>Schools impacted: {schoolsImpacted.toLocaleString()}</li>
-                    <li>Teachers trained: {teachersTrained.toLocaleString()}</li>
-                    <li>Learners assessed: {learnersAssessed.toLocaleString()}</li>
-                    <li>Resources downloaded: {resourcesDownloaded.toLocaleString()}</li>
-                    <li>Key learning change: {readingChange}</li>
-                  </ul>
-                  <p className="meta-line">
-                    Version {report.version} | Generated {new Date(report.generatedAt).toLocaleDateString()}
-                  </p>
-                  <p>
-                    <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
-                      Download PDF
-                    </a>
-                  </p>
-                  <p>
-                    <Link className="inline-download-link" href={`/impact-reports/${report.reportCode}`}>
-                      View Web Version
-                    </Link>
-                  </p>
-                </article>
-              );
-            })}
-
-            {reports.length === 0 ? (
-              <article className="card">
-                <h3>No reports found</h3>
-                <p>Adjust the filter options and try again, or check back later as new reports are generated.</p>
-              </article>
-            ) : null}
           </div>
         </div>
       </section>

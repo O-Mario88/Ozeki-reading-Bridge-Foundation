@@ -100,7 +100,7 @@ test(
       }
     });
 
-    assert.ok(visitId > 0, "Expected a persisted coaching visit id.");
+    assert.ok(visitId !== null && visitId > 0, "Expected a persisted coaching visit id.");
 
     const queryCoachingVisit = await queryPostgres<{ id: number, pathway: string }>(
       `

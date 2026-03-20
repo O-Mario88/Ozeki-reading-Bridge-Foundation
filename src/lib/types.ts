@@ -2551,6 +2551,7 @@ export interface SchoolDirectoryRecord {
   enrolledGirls: number;
   enrolledLearners: number;
   directImpactLearners: number;
+  classesJson: string | null;
   enrolledBaby: number;
   enrolledMiddle: number;
   enrolledTop: number;
@@ -2623,6 +2624,7 @@ export interface SchoolAccountProgressSnapshot {
 
 export interface SchoolAccountProfile {
   school: SchoolDirectoryRecord;
+  contacts: SchoolContactRecord[];
   counts: SchoolAccountRelatedCounts;
   recentTrainings: SchoolAccountRecentItem[];
   recentInteractions: SchoolAccountRecentItem[];

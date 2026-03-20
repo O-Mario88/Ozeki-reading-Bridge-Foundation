@@ -723,6 +723,8 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
       { label: "Role", value: text(row.roleTitle ?? row.category) },
     ],
     primaryActions: [
+      { label: "Edit Contact", href: `/portal/contacts/${id}/edit` },
+      { label: "Add to Training", href: `/portal/trainings/new?contactId=${id}&schoolId=${row.schoolId}` },
       ...(isTeacher ? [
         { label: "New Evaluation", href: `/portal/evaluations/new?teacherId=${id}&schoolId=${row.schoolId}` },
         { label: "New Coaching", href: `/portal/visits/new?type=Coaching&teacherId=${id}&schoolId=${row.schoolId}` },
@@ -769,7 +771,7 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
         id: "activity",
         label: "Most Recent Interactions",
         emptyLabel: "No linked activities yet.",
-        items: (linkedRows.rows as any[]).map((item) =>
+        items: (linkedRows.rows as Array<Record<string, unknown>>).map((item) =>
           activity(
             Number(item.id),
             text(item.title),
@@ -1731,7 +1733,7 @@ export async function getEvaluationCrmProfile(id: number): Promise<PortalCrmProf
   };
 }
 
-export async function listPublishedPortalTestimonialsPostgres(limit = 180): Promise<any[]> {
+export async function listPublishedPortalTestimonialsPostgres(limit = 180): Promise<Record<string, unknown>[]> {
   const result = await queryPostgres(
     `
       SELECT
@@ -1782,7 +1784,7 @@ export async function listPublishedPortalTestimonialsPostgres(limit = 180): Prom
   }));
 }
 
-export async function getPublishedPortalTestimonialByIdPostgres(id: number): Promise<any | null> {
+export async function getPublishedPortalTestimonialByIdPostgres(id: number): Promise<Record<string, unknown> | null> {
   const result = await queryPostgres(
     `
       SELECT

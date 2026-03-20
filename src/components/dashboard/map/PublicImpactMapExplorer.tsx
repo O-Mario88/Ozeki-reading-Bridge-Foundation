@@ -659,7 +659,7 @@ export function PublicImpactMapExplorer({
             target="_blank"
             rel="noopener noreferrer"
           >
-            Open A4 Report
+            Open Report
           </a>
           <a
             className="button"
@@ -667,7 +667,7 @@ export function PublicImpactMapExplorer({
             target="_blank"
             rel="noopener noreferrer"
           >
-            Download A4 PDF
+            Download PDF
           </a>
         </div>
         <button type="button" className="impact-map-clear-link" onClick={onReset}>
@@ -913,13 +913,15 @@ export function PublicImpactMapExplorer({
               region: selection.region,
               subRegion: selection.subRegion,
               district: selection.district,
+              school: selection.school,
             }}
+            activeSchoolName={navigatorSchools.find((s) => s.id.toString() === selection.school)?.name}
             onSelectionChange={(next) =>
               onSelectionChange({
                 region: next.region,
                 subRegion: next.subRegion,
                 district: next.district,
-                school: "",
+                school: next.school ?? "",
               })
             }
             districtSearchOptions={districtSearchOptions}
