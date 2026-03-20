@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import { renderBrandedPdf } from "@/lib/server/pdf/render";
 import { getPublicImpactAggregate } from "@/services/dataService";
 import {
   buildPublicDashboardReportModel,
@@ -139,48 +139,27 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
-    try {
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-      const page = await browser.newPage();
-      await page.setContent(html, {
-        waitUntil: "networkidle0",
-        timeout: 45_000,
-      });
-      await page.emulateMediaType("print");
+    // Generate PDF using pdf-lib (no Chromium required)
+    const scopeLabel = scopeLevel === "country" ? "Uganda" : scopeId;
+    const pdfBuffer = await renderBrandedPdf({
+      title: "Public Impact Dashboard Report",
+      subtitle: `${scopeLabel} | Period: ${period}`,
+      documentNumber: `IMPACT-${scopeLevel.toUpperCase()}`,
+      footerNote: "Ozeki Reading Bridge Foundation - Public Impact Report",
+      accentHex: "#1f2a44",
+      contentHtml: html,
+    });
 
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        displayHeaderFooter: true,
-        headerTemplate: "<div></div>",
-        footerTemplate:
-          '<div style="width:100%;padding:0 12mm;font-size:9px;color:#475569;text-align:center;font-family:Times New Roman, serif;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
-        margin: {
-          top: "12mm",
-          right: "12mm",
-          bottom: "18mm",
-          left: "12mm",
-        },
-      });
-
-      const filename = `public-dashboard-${scopeLevel}-${toFilenameSafe(scopeId)}-${toFilenameSafe(period)}.pdf`;
-      return new NextResponse(Buffer.from(pdfBuffer), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="${filename}"`,
-          "Cache-Control": "no-store",
-        },
-      });
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
-    }
+    const filename = `public-dashboard-${scopeLevel}-${toFilenameSafe(scopeId)}-${toFilenameSafe(period)}.pdf`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new NextResponse(pdfBuffer as any, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="${filename}"`,
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Could not generate report from dashboard data.";
