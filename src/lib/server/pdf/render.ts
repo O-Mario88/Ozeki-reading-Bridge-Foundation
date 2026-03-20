@@ -49,6 +49,8 @@ const COLOR_TABLE_BORDER = rgb(0.80, 0.83, 0.87);
 const COLOR_SURFACE = rgb(0.95, 0.97, 0.98);
 
 /* ───────── lightweight HTML → content blocks parser ────────── */
+type ColumnEntry = { heading?: string; lines: string[] };
+
 type ContentBlock =
   | { type: "heading"; level: number; text: string }
   | { type: "paragraph"; text: string; bold?: boolean }
@@ -57,7 +59,9 @@ type ContentBlock =
   | { type: "kpi"; items: { label: string; value: string }[] }
   | { type: "divider" }
   | { type: "blockquote"; text: string; attribution?: string }
-  | { type: "list"; items: string[]; ordered?: boolean };
+  | { type: "list"; items: string[]; ordered?: boolean }
+  | { type: "image"; dataUri: string; altText?: string }
+  | { type: "columns"; cols: ColumnEntry[] };
 
 function stripTags(html: string): string {
   return html
@@ -80,156 +84,287 @@ function extractText(html: string): string {
   return stripTags(html).replace(/\s+/g, " ").trim();
 }
 
-function parseHtmlToBlocks(html: string): ContentBlock[] {
-  const blocks: ContentBlock[] = [];
-  let remaining = html;
+/* ---- sub-parsers for individual element types ---- */
 
-  // Remove <head>...</head>, <style>...</style>, and <meta> tags
-  remaining = remaining.replace(/<head[\s\S]*?<\/head>/gi, "");
-  remaining = remaining.replace(/<style[\s\S]*?<\/style>/gi, "");
-  remaining = remaining.replace(/<meta[^>]*>/gi, "");
-  remaining = remaining.replace(/<link[^>]*>/gi, "");
-  remaining = remaining.replace(/<base[^>]*>/gi, "");
+function parseTable(tableHtml: string): ContentBlock | null {
+  const inner = tableHtml.match(/<table[^>]*>([\s\S]*?)<\/table>/i)?.[1];
+  if (!inner) return null;
 
-  // Extract KPI grids
-  const kpiGridRe = /<div[^>]*class="[^"]*fp-kpi-grid[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
-  remaining = remaining.replace(kpiGridRe, (_match, inner: string) => {
-    const items: { label: string; value: string }[] = [];
-    const boxRe = /<span[^>]*class="[^"]*fp-kpi-label[^"]*"[^>]*>([\s\S]*?)<\/span>\s*<span[^>]*class="[^"]*fp-kpi-val[^"]*"[^>]*>([\s\S]*?)<\/span>/gi;
-    let boxMatch;
-    while ((boxMatch = boxRe.exec(inner)) !== null) {
-      items.push({ label: extractText(boxMatch[1]), value: extractText(boxMatch[2]) });
-    }
-    if (items.length > 0) {
-      blocks.push({ type: "kpi", items });
-    }
-    return "";
-  });
+  const headers: string[] = [];
+  const rows: string[][] = [];
+  const numericCols = new Set<number>();
 
-  // Also catch <article> based KPI grids (training reports)
-  const kpiArticleRe = /<div[^>]*class="[^"]*kpis[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
-  remaining = remaining.replace(kpiArticleRe, (_match, inner: string) => {
-    const items: { label: string; value: string }[] = [];
-    const articleRe = /<article[^>]*>([\s\S]*?)<\/article>/gi;
-    let artMatch;
-    while ((artMatch = articleRe.exec(inner)) !== null) {
-      const spanRe = /<span>([\s\S]*?)<\/span>\s*<strong>([\s\S]*?)<\/strong>/i;
-      const sm = artMatch[1].match(spanRe);
-      if (sm) {
-        items.push({ label: extractText(sm[1]), value: extractText(sm[2]) });
-      }
-    }
-    if (items.length > 0) {
-      blocks.push({ type: "kpi", items });
-    }
-    return "";
-  });
-
-  // Extract tables
-  const tableRe = /<table[^>]*>([\s\S]*?)<\/table>/gi;
-  remaining = remaining.replace(tableRe, (_match, inner: string) => {
-    const headers: string[] = [];
-    const rows: string[][] = [];
-    const numericCols = new Set<number>();
-
-    const theadMatch = inner.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i);
-    if (theadMatch) {
-      const thRe = /<th[^>]*>([\s\S]*?)<\/th>/gi;
-      let thMatch;
-      let colIdx = 0;
-      while ((thMatch = thRe.exec(theadMatch[1])) !== null) {
-        const thTag = theadMatch[1].slice(thMatch.index, thMatch.index + thMatch[0].indexOf(">"));
-        if (thTag.includes("num")) numericCols.add(colIdx);
-        headers.push(extractText(thMatch[1]));
-        colIdx++;
-      }
-    }
-
-    const tbodyMatch = inner.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
-    const bodyContent = tbodyMatch ? tbodyMatch[1] : inner;
-    const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    let trMatch;
-    while ((trMatch = trRe.exec(bodyContent)) !== null) {
-      if (theadMatch && trMatch.index < (theadMatch.index ?? 0) + theadMatch[0].length) continue;
-      const cells: string[] = [];
-      const tdRe = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
-      let tdMatch;
-      let ci = 0;
-      while ((tdMatch = tdRe.exec(trMatch[1])) !== null) {
-        const tdTag = trMatch[1].slice(tdMatch.index, tdMatch.index + tdMatch[0].indexOf(">"));
-        if (tdTag.includes("num")) numericCols.add(ci);
-        cells.push(extractText(tdMatch[1]));
-        ci++;
-      }
-      if (cells.length > 0) rows.push(cells);
-    }
-
-    if (headers.length > 0 || rows.length > 0) {
-      blocks.push({ type: "table", headers, rows, numericCols });
-    }
-    return "";
-  });
-
-  // Extract blockquotes
-  const bqRe = /<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi;
-  remaining = remaining.replace(bqRe, (_match, inner: string) => {
-    const pMatch = inner.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-    const footerMatch = inner.match(/<footer[^>]*>([\s\S]*?)<\/footer>/i);
-    blocks.push({
-      type: "blockquote",
-      text: pMatch ? extractText(pMatch[1]) : extractText(inner),
-      attribution: footerMatch ? extractText(footerMatch[1]) : undefined,
-    });
-    return "";
-  });
-
-  // Extract lists
-  const listRe = /<(ul|ol)[^>]*>([\s\S]*?)<\/\1>/gi;
-  remaining = remaining.replace(listRe, (_match, tag: string, inner: string) => {
-    const items: string[] = [];
-    const liRe = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-    let liMatch;
-    while ((liMatch = liRe.exec(inner)) !== null) {
-      const text = extractText(liMatch[1]);
-      if (text) items.push(text);
-    }
-    if (items.length > 0) {
-      blocks.push({ type: "list", items, ordered: tag.toLowerCase() === "ol" });
-    }
-    return "";
-  });
-
-  // Extract headings
-  const headingRe = /<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi;
-  remaining = remaining.replace(headingRe, (_match, level: string, inner: string) => {
-    const text = extractText(inner);
-    if (text) {
-      blocks.push({ type: "heading", level: parseInt(level, 10), text });
-    }
-    return "";
-  });
-
-  // Extract dividers
-  remaining = remaining.replace(/<hr[^>]*\/?>/gi, () => {
-    blocks.push({ type: "divider" });
-    return "";
-  });
-
-  // Remaining meaningful text becomes paragraphs
-  const divParagraphRe = /<(?:div|p|section)[^>]*>([\s\S]*?)<\/(?:div|p|section)>/gi;
-  let dpMatch;
-  while ((dpMatch = divParagraphRe.exec(remaining)) !== null) {
-    const text = extractText(dpMatch[1]);
-    if (text && text.length > 2) {
-      const isBold = /<strong|font-weight:\s*[67]00|font-weight:\s*bold/i.test(dpMatch[0]);
-      blocks.push({ type: "paragraph", text, bold: isBold });
+  const theadMatch = inner.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i);
+  if (theadMatch) {
+    const thRe = /<th[^>]*>([\s\S]*?)<\/th>/gi;
+    let thMatch;
+    let colIdx = 0;
+    while ((thMatch = thRe.exec(theadMatch[1])) !== null) {
+      const thTag = theadMatch[1].slice(thMatch.index, thMatch.index + thMatch[0].indexOf(">"));
+      if (thTag.includes("num")) numericCols.add(colIdx);
+      headers.push(extractText(thMatch[1]));
+      colIdx++;
     }
   }
 
-  // Final cleanup: any remaining text not yet captured
-  const leftover = extractText(remaining);
-  if (leftover && leftover.length > 5 && blocks.length === 0) {
-    blocks.push({ type: "paragraph", text: leftover });
+  const tbodyMatch = inner.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
+  const bodyContent = tbodyMatch ? tbodyMatch[1] : inner;
+  const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let trMatch;
+  while ((trMatch = trRe.exec(bodyContent)) !== null) {
+    if (theadMatch && trMatch.index < (theadMatch.index ?? 0) + theadMatch[0].length) continue;
+    const cells: string[] = [];
+    const tdRe = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
+    let tdMatch;
+    let ci = 0;
+    while ((tdMatch = tdRe.exec(trMatch[1])) !== null) {
+      const tdTag = trMatch[1].slice(tdMatch.index, tdMatch.index + tdMatch[0].indexOf(">"));
+      if (tdTag.includes("num")) numericCols.add(ci);
+      cells.push(extractText(tdMatch[1]));
+      ci++;
+    }
+    if (cells.length > 0) rows.push(cells);
+  }
+
+  if (headers.length > 0 || rows.length > 0) {
+    return { type: "table", headers, rows, numericCols };
+  }
+  return null;
+}
+
+function parseKpiGrid(divHtml: string): ContentBlock | null {
+  const items: { label: string; value: string }[] = [];
+  const boxRe = /<span[^>]*class="[^"]*fp-kpi-label[^"]*"[^>]*>([\s\S]*?)<\/span>\s*<span[^>]*class="[^"]*fp-kpi-val[^"]*"[^>]*>([\s\S]*?)<\/span>/gi;
+  let boxMatch;
+  while ((boxMatch = boxRe.exec(divHtml)) !== null) {
+    items.push({ label: extractText(boxMatch[1]), value: extractText(boxMatch[2]) });
+  }
+  if (items.length === 0) {
+    // Try <article>-based layout (training reports)
+    const articleRe = /<article[^>]*>([\s\S]*?)<\/article>/gi;
+    let artMatch;
+    while ((artMatch = articleRe.exec(divHtml)) !== null) {
+      const spanRe = /<span>([\s\S]*?)<\/span>\s*<strong>([\s\S]*?)<\/strong>/i;
+      const sm = artMatch[1].match(spanRe);
+      if (sm) items.push({ label: extractText(sm[1]), value: extractText(sm[2]) });
+    }
+  }
+  return items.length > 0 ? { type: "kpi", items } : null;
+}
+
+/**
+ * Position-aware HTML → ContentBlock parser.
+ *
+ * Instead of extracting each block type in separate passes (which scrambles
+ * document order), this searches for ALL top-level elements, records their
+ * positions, sorts by position, and parses each in document order.
+ */
+function parseHtmlToBlocks(html: string): ContentBlock[] {
+  // Strip <head>, <style>, <meta>, <link>, <base>
+  let cleaned = html;
+  cleaned = cleaned.replace(/<head[\s\S]*?<\/head>/gi, "");
+  cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/gi, "");
+  cleaned = cleaned.replace(/<meta[^>]*>/gi, "");
+  cleaned = cleaned.replace(/<link[^>]*>/gi, "");
+  cleaned = cleaned.replace(/<base[^>]*>/gi, "");
+
+  // Collect every top-level element with its position
+  type TagHit = { index: number; fullMatch: string; tag: string; inner: string };
+  const hits: TagHit[] = [];
+
+  let m: RegExpExecArray | null;
+
+  // Column grids (fp-header-grid with fp-header-col children — must be before other patterns)
+  const colGridRe = /<div[^>]*class="[^"]*fp-header-grid[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
+  while ((m = colGridRe.exec(cleaned)) !== null) {
+    hits.push({ index: m.index, fullMatch: m[0], tag: "columns", inner: m[0] });
+  }
+
+  // Tables
+  const tableRe = /<table[^>]*>[\s\S]*?<\/table>/gi;
+  while ((m = tableRe.exec(cleaned)) !== null) {
+    hits.push({ index: m.index, fullMatch: m[0], tag: "table", inner: m[0] });
+  }
+
+  // Headings
+  const headingRe = /<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi;
+  while ((m = headingRe.exec(cleaned)) !== null) {
+    hits.push({ index: m.index, fullMatch: m[0], tag: `h${m[1]}`, inner: m[2] });
+  }
+
+  // Blockquotes
+  const bqRe = /<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi;
+  while ((m = bqRe.exec(cleaned)) !== null) {
+    hits.push({ index: m.index, fullMatch: m[0], tag: "blockquote", inner: m[1] });
+  }
+
+  // Lists
+  const listRe = /<(ul|ol)[^>]*>([\s\S]*?)<\/\1>/gi;
+  while ((m = listRe.exec(cleaned)) !== null) {
+    hits.push({ index: m.index, fullMatch: m[0], tag: m[1].toLowerCase(), inner: m[2] });
+  }
+
+  // Horizontal rules
+  const hrRe = /<hr[^>]*\/?>/gi;
+  while ((m = hrRe.exec(cleaned)) !== null) {
+    hits.push({ index: m.index, fullMatch: m[0], tag: "hr", inner: "" });
+  }
+
+  // Images (base64 data URIs only — for embedded signatures)
+  const imgRe = /<img[^>]*\bsrc="(data:image\/[^"]+)"[^>]*>/gi;
+  while ((m = imgRe.exec(cleaned)) !== null) {
+    const altMatch = m[0].match(/\balt="([^"]*)"/i);
+    hits.push({ index: m.index, fullMatch: m[0], tag: "img", inner: m[1] + (altMatch ? `\n${altMatch[1]}` : "") });
+  }
+
+  // Paragraphs (<p> tags as top-level text containers)
+  const pRe = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  while ((m = pRe.exec(cleaned)) !== null) {
+    hits.push({ index: m.index, fullMatch: m[0], tag: "p", inner: m[1] });
+  }
+
+  // KPI grids (special class-based divs)
+  const kpiRe = /<div[^>]*class="[^"]*(?:fp-kpi-grid|kpis)[^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/gi;
+  while ((m = kpiRe.exec(cleaned)) !== null) {
+    hits.push({ index: m.index, fullMatch: m[0], tag: "kpi", inner: m[0] });
+  }
+
+  // Sort by document position
+  hits.sort((a, b) => a.index - b.index);
+
+  // Remove hits that are nested inside earlier, larger hits
+  const used = new Set<number>();
+  const topLevel: TagHit[] = [];
+  for (const hit of hits) {
+    const end = hit.index + hit.fullMatch.length;
+    let nested = false;
+    for (const prev of topLevel) {
+      const prevEnd = prev.index + prev.fullMatch.length;
+      if (hit.index > prev.index && end <= prevEnd) {
+        nested = true;
+        break;
+      }
+    }
+    if (!nested && !used.has(hit.index)) {
+      topLevel.push(hit);
+      used.add(hit.index);
+    }
+  }
+
+  // Parse each hit into a ContentBlock
+  const blocks: ContentBlock[] = [];
+
+  for (const hit of topLevel) {
+    if (hit.tag === "columns") {
+      // Parse fp-header-col children into column entries
+      const colRe = /<div[^>]*class="[^"]*fp-header-col[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+      const cols: ColumnEntry[] = [];
+      let colMatch;
+      while ((colMatch = colRe.exec(hit.fullMatch)) !== null) {
+        const colHtml = colMatch[1];
+        const headingMatch = colHtml.match(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i);
+        const lines: string[] = [];
+        const pTagRe = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+        let pMatch;
+        while ((pMatch = pTagRe.exec(colHtml)) !== null) {
+          const text = extractText(pMatch[1]);
+          if (text) lines.push(text);
+        }
+        cols.push({
+          heading: headingMatch ? extractText(headingMatch[1]) : undefined,
+          lines,
+        });
+      }
+      if (cols.length > 0) {
+        blocks.push({ type: "columns", cols });
+      }
+      continue;
+    }
+
+    if (hit.tag === "table") {
+      const block = parseTable(hit.fullMatch);
+      if (block) blocks.push(block);
+      continue;
+    }
+
+    if (hit.tag === "kpi") {
+      const block = parseKpiGrid(hit.fullMatch);
+      if (block) blocks.push(block);
+      continue;
+    }
+
+    if (/^h[1-6]$/.test(hit.tag)) {
+      const text = extractText(hit.inner);
+      if (text) {
+        blocks.push({ type: "heading", level: parseInt(hit.tag[1], 10), text });
+      }
+      continue;
+    }
+
+    if (hit.tag === "blockquote") {
+      const pMatch = hit.inner.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+      const footerMatch = hit.inner.match(/<footer[^>]*>([\s\S]*?)<\/footer>/i);
+      blocks.push({
+        type: "blockquote",
+        text: pMatch ? extractText(pMatch[1]) : extractText(hit.inner),
+        attribution: footerMatch ? extractText(footerMatch[1]) : undefined,
+      });
+      continue;
+    }
+
+    if (hit.tag === "ul" || hit.tag === "ol") {
+      const items: string[] = [];
+      const liRe = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+      let liMatch;
+      while ((liMatch = liRe.exec(hit.inner)) !== null) {
+        const text = extractText(liMatch[1]);
+        if (text) items.push(text);
+      }
+      if (items.length > 0) {
+        blocks.push({ type: "list", items, ordered: hit.tag === "ol" });
+      }
+      continue;
+    }
+
+    if (hit.tag === "hr") {
+      blocks.push({ type: "divider" });
+      continue;
+    }
+
+    if (hit.tag === "img") {
+      const parts = hit.inner.split("\n");
+      blocks.push({ type: "image", dataUri: parts[0], altText: parts[1] || undefined });
+      continue;
+    }
+
+    if (hit.tag === "p") {
+      const text = extractText(hit.inner);
+      if (text && text.length > 2) {
+        const isBold = /<strong|font-weight:\s*[67]00|font-weight:\s*bold/i.test(hit.fullMatch);
+        blocks.push({ type: "paragraph", text, bold: isBold });
+      }
+      continue;
+    }
+  }
+
+  // Fallback: if we extracted nothing, grab all remaining text
+  if (blocks.length === 0) {
+    // Try to pick up div/section-level text
+    const divRe = /<(?:div|section)[^>]*>([\s\S]*?)<\/(?:div|section)>/gi;
+    let dMatch;
+    while ((dMatch = divRe.exec(cleaned)) !== null) {
+      const text = extractText(dMatch[1]);
+      if (text && text.length > 2) {
+        blocks.push({ type: "paragraph", text });
+      }
+    }
+  }
+
+  if (blocks.length === 0) {
+    const leftover = extractText(cleaned);
+    if (leftover && leftover.length > 5) {
+      blocks.push({ type: "paragraph", text: leftover });
+    }
   }
 
   return blocks;
@@ -476,6 +611,75 @@ function drawKpiGrid(
   }
 }
 
+function drawColumns(
+  ctx: RenderContext,
+  cols: ColumnEntry[],
+  logo: Parameters<typeof addNewPage>[1],
+): void {
+  if (cols.length === 0) return;
+
+  const gap = 16;
+  const colCount = cols.length;
+  const colWidth = (CONTENT_WIDTH - (colCount - 1) * gap) / colCount;
+  const headingSize = 11;
+  const textSize = 9;
+  const lineSpacing = textSize * LINE_HEIGHT;
+
+  // Pre-compute wrapped lines for each column to determine total height
+  const colData = cols.map(col => {
+    const wrappedLines: string[][] = [];
+    for (const line of col.lines) {
+      wrappedLines.push(wrapText(sanitizeForPdf(line), ctx.font, textSize, colWidth));
+    }
+    const lineCount = wrappedLines.reduce((sum, wl) => sum + wl.length, 0);
+    const height = (col.heading ? headingSize * LINE_HEIGHT + 6 : 0) + lineCount * lineSpacing;
+    return { heading: col.heading, wrappedLines, height };
+  });
+
+  const maxHeight = Math.max(...colData.map(c => c.height));
+  ensureSpace(ctx, maxHeight + 10, logo);
+
+  const startY = ctx.y;
+
+  for (let i = 0; i < colData.length; i++) {
+    const x = MARGIN_LEFT + i * (colWidth + gap);
+    let colY = startY;
+    const col = colData[i];
+
+    // Draw heading
+    if (col.heading) {
+      try {
+        ctx.currentPage.drawText(sanitizeForPdf(col.heading), {
+          x,
+          y: colY,
+          size: headingSize,
+          font: ctx.fontBold,
+          color: COLOR_HEADING,
+        });
+      } catch { /* skip */ }
+      colY -= headingSize * LINE_HEIGHT + 6;
+    }
+
+    // Draw text lines
+    for (const wrappedGroup of col.wrappedLines) {
+      for (const line of wrappedGroup) {
+        try {
+          ctx.currentPage.drawText(line, {
+            x,
+            y: colY,
+            size: textSize,
+            font: ctx.font,
+            color: COLOR_TEXT,
+          });
+        } catch { /* skip */ }
+        colY -= lineSpacing;
+      }
+    }
+  }
+
+  ctx.y = startY - maxHeight - 8;
+}
+
 /* ─────────── main render function ─────────── */
 
 export async function renderBrandedPdf(input: RenderBrandedPdfInput): Promise<Buffer> {
@@ -523,6 +727,12 @@ export async function renderBrandedPdf(input: RenderBrandedPdfInput): Promise<Bu
         ensureSpace(ctx, size * LINE_HEIGHT + 8, logo);
         drawWrappedText(ctx, block.text, size, COLOR_HEADING, fontBold, logo);
         ctx.y -= 2;
+        break;
+      }
+
+      case "columns": {
+        ctx.y -= 4;
+        drawColumns(ctx, block.cols, logo);
         break;
       }
 
@@ -584,6 +794,45 @@ export async function renderBrandedPdf(input: RenderBrandedPdfInput): Promise<Bu
 
       case "spacer": {
         ctx.y -= block.height;
+        break;
+      }
+
+      case "image": {
+        try {
+          const dataMatch = block.dataUri.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
+          if (dataMatch) {
+            const format = dataMatch[1].toLowerCase();
+            const rawBytes = Uint8Array.from(atob(dataMatch[2]), c => c.charCodeAt(0));
+            const img = format === "png"
+              ? await ctx.doc.embedPng(rawBytes)
+              : await ctx.doc.embedJpg(rawBytes);
+            const maxW = Math.min(180, CONTENT_WIDTH * 0.4);
+            const scale = maxW / img.width;
+            const drawW = img.width * scale;
+            const drawH = img.height * scale;
+            ensureSpace(ctx, drawH + 10, logo);
+            // Right-align (signature style)
+            const imgX = MARGIN_LEFT + CONTENT_WIDTH - drawW;
+            ctx.currentPage.drawImage(img, { x: imgX, y: ctx.y - drawH, width: drawW, height: drawH });
+            ctx.y -= drawH + 6;
+            if (block.altText) {
+              const altSafe = sanitizeForPdf(block.altText);
+              try {
+                const altW = ctx.font.widthOfTextAtSize(altSafe, 7);
+                ctx.currentPage.drawText(altSafe, {
+                  x: imgX + (drawW - altW) / 2,
+                  y: ctx.y,
+                  size: 7,
+                  font: ctx.font,
+                  color: COLOR_MUTED,
+                });
+              } catch { /* skip */ }
+              ctx.y -= 10;
+            }
+          }
+        } catch {
+          // Skip image if decode/embed fails
+        }
         break;
       }
     }

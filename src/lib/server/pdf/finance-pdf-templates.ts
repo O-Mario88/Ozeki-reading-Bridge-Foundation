@@ -1,11 +1,11 @@
 import type { FinanceCurrency, FinanceInvoiceRecord, FinanceInvoiceLineItemRecord, FinanceReceiptRecord, FinancePaymentAllocationRecord } from "@/lib/types";
-import fs from "node:fs";
+import fs from "node:fs/promises";
 import path from "node:path";
 
-function getSignatureDataUri(): string {
+async function getSignatureDataUri(): Promise<string> {
   try {
     const sigPath = path.join(process.cwd(), "assets", "photos", "Signature.png");
-    const bytes = fs.readFileSync(sigPath);
+    const bytes = await fs.readFile(sigPath);
     return `data:image/png;base64,${bytes.toString("base64")}`;
   } catch (_e) {
     return "";
@@ -60,12 +60,13 @@ const financePdfStyles = `
   .fp-badge.overdue { background: #fee2e2; color: #991b1b; }
 `;
 
-export function buildInvoiceHtml(
+export async function buildInvoiceHtml(
   invoice: FinanceInvoiceRecord,
   lines: FinanceInvoiceLineItemRecord[],
   settings?: { paymentInstructions?: string },
   contact?: { name: string; emails?: string[]; phone?: string; address?: string },
-): { html: string; css: string } {
+): Promise<{ html: string; css: string }> {
+  const signatureDataUri = await getSignatureDataUri();
   const lineHtml = lines.map(line => `
     <tr>
       <td>
@@ -140,7 +141,7 @@ export function buildInvoiceHtml(
         </div>
 
         <div style="width: 250px; border-top: 1px dashed #cbd5e1; padding-top: 8px; text-align: center; position: relative;">
-          ${getSignatureDataUri() ? `<img src="${getSignatureDataUri()}" style="max-height: 80px; width: 100%; object-fit: contain; position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);" alt="Signature" />` : ""}
+          ${signatureDataUri ? `<img src="${signatureDataUri}" style="max-height: 80px; width: 100%; object-fit: contain; position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);" alt="Signature" />` : ""}
           <span style="font-size: 9pt; color: #64748b; font-weight: 600; text-transform: uppercase;">Authorized Digital Signature</span>
         </div>
       </div>
@@ -150,7 +151,8 @@ export function buildInvoiceHtml(
   return { html, css: financePdfStyles };
 }
 
-export function buildReceiptHtml(receipt: FinanceReceiptRecord, allocations: FinancePaymentAllocationRecord[]): { html: string; css: string } {
+export async function buildReceiptHtml(receipt: FinanceReceiptRecord, allocations: FinancePaymentAllocationRecord[]): Promise<{ html: string; css: string }> {
+  const signatureDataUri = await getSignatureDataUri();
   const allocationHtml = allocations.length > 0 ? `
     <h4 style="margin: 16px 0 8px; color: #334155; font-size: 11pt; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px;">Payment Allocations</h4>
     <table class="fp-table">
@@ -203,7 +205,7 @@ export function buildReceiptHtml(receipt: FinanceReceiptRecord, allocations: Fin
         </div>
 
         <div style="width: 250px; border-top: 1px dashed #cbd5e1; padding-top: 8px; text-align: center; position: relative;">
-          ${getSignatureDataUri() ? `<img src="${getSignatureDataUri()}" style="max-height: 80px; width: 100%; object-fit: contain; position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);" alt="Signature" />` : ""}
+          ${signatureDataUri ? `<img src="${signatureDataUri}" style="max-height: 80px; width: 100%; object-fit: contain; position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);" alt="Signature" />` : ""}
           <span style="font-size: 9pt; color: #64748b; font-weight: 600; text-transform: uppercase;">Authorized Digital Signature</span>
         </div>
       </div>

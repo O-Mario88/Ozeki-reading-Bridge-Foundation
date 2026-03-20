@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { getPortalUserOrRedirect } from "@/lib/auth-server";
 import { getFinanceInvoiceByIdPostgres, getFinanceSettingsPostgres } from "@/lib/server/postgres/repositories/finance";
 import { queryPostgres } from "@/lib/server/postgres/client";
-import { buildInvoiceHtml, formatReportDate } from "@/lib/server/pdf/finance-pdf-templates";
-import { renderBrandedPdf } from "@/lib/server/pdf/render";
+import { renderInvoicePdf } from "@/lib/server/pdf/finance-pdf-direct";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,21 +49,7 @@ export async function GET(
       }
     } catch { /* proceed without contact details */ }
 
-    const { html, css } = buildInvoiceHtml(invoice, invoice.lineItems, settings, contact);
-
-    const pdfBuffer = await renderBrandedPdf({
-      title: "INVOICE",
-      subtitle: `Invoice #${invoice.invoiceNumber} | Issued: ${formatReportDate(invoice.issueDate)}`,
-      documentNumber: invoice.invoiceNumber,
-      footerNote: "Ozeki Financial Systems - Verified Invoice Document",
-      accentHex: "#1f2a44",
-      contentHtml: html,
-      additionalCss: css,
-      marginTop: "8mm",
-      marginLeft: "8mm",
-      marginRight: "8mm",
-      marginBottom: "8mm",
-    });
+    const pdfBuffer = await renderInvoicePdf(invoice, invoice.lineItems, settings, contact);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return new NextResponse(pdfBuffer as any, {
@@ -79,3 +64,4 @@ export async function GET(
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }
 }
+

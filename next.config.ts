@@ -54,6 +54,9 @@ const nextConfig: NextConfig = {
       "data/finance/**/*",
     ],
   },
+  outputFileTracingIncludes: {
+    "/api/*": ["assets/photos/**/*"],
+  },
   async headers() {
     return [
       {

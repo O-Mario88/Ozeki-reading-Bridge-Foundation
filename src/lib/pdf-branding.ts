@@ -7,6 +7,20 @@ import { getActiveOrganizationProfile } from "@/lib/server/postgres/repositories
 
 type HeaderColor = ReturnType<typeof rgb>;
 
+/** Convert text to ASCII-safe characters for pdf-lib standard fonts (WinAnsi). */
+function sanitizeForPdf(text: string): string {
+  return text
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u2014/g, " - ")
+    .replace(/\u2013/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[\u2022\u2024\u2027\u00B7]/g, "|")
+    .replace(/[\u2192\u2794\u279C]/g, "->")
+    .replace(/[^\x20-\x7E\n]/g, " ")
+    .trim();
+}
+
 type DrawBrandHeaderOptions = {
   page: PDFPage;
   font: PDFFont;
@@ -95,9 +109,14 @@ function drawCenteredText(
   size: number,
   color: HeaderColor,
 ) {
-  const textWidth = font.widthOfTextAtSize(text, size);
-  const x = Math.max(24, (page.getWidth() - textWidth) / 2);
-  page.drawText(text, { x, y, size, font, color });
+  try {
+    const safe = sanitizeForPdf(text);
+    const textWidth = font.widthOfTextAtSize(safe, size);
+    const x = Math.max(24, (page.getWidth() - textWidth) / 2);
+    page.drawText(safe, { x, y, size, font, color });
+  } catch {
+    // Skip line rather than crash entire PDF
+  }
 }
 
 async function readLogoBytes(logoSource: string | null) {
@@ -201,7 +220,7 @@ export function drawBrandHeader({
     drawCenteredText(
       page,
       font,
-      `${profile.poBox} • ${profile.telephone} • ${profile.email}`,
+      `${profile.poBox} | ${profile.telephone} | ${profile.email}`,
       headerTopY - 46,
       8.4,
       mutedColor,
@@ -209,7 +228,7 @@ export function drawBrandHeader({
     drawCenteredText(
       page,
       font,
-      `TIN ${profile.tin} • REG ${profile.registrationNumber}`,
+      `TIN ${profile.tin} | REG ${profile.registrationNumber}`,
       headerTopY - 58,
       8,
       mutedColor,
@@ -268,8 +287,8 @@ export function drawBrandFooter({
     Number.isFinite(pageNumber) && Number.isFinite(totalPages) && Number(pageNumber) > 0
       ? `Page ${Number(pageNumber)} of ${Number(totalPages)}`
       : "";
-  const metaLineTwoCore = `${profile.poBox} • TIN ${profile.tin} • REG ${profile.registrationNumber}`;
-  const metaLineTwo = pageLabel ? `${metaLineTwoCore} • ${pageLabel}` : metaLineTwoCore;
+  const metaLineTwoCore = `${profile.poBox} | TIN ${profile.tin} | REG ${profile.registrationNumber}`;
+  const metaLineTwo = pageLabel ? `${metaLineTwoCore} | ${pageLabel}` : metaLineTwoCore;
 
   page.drawLine({
     start: { x: lineLeft, y: lineY },
@@ -281,7 +300,7 @@ export function drawBrandFooter({
   drawCenteredText(
     page,
     font,
-    `${profile.address} • ${profile.telephone} • ${profile.email}`,
+    `${profile.address} | ${profile.telephone} | ${profile.email}`,
     lineY - 12,
     8,
     mutedColor,

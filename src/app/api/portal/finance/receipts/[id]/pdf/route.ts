@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPortalUserOrRedirect } from "@/lib/auth-server";
 import { getFinanceReceiptByIdPostgres, getFinanceInvoiceByIdPostgres } from "@/lib/server/postgres/repositories/finance";
-import { buildReceiptHtml, formatReportDate } from "@/lib/server/pdf/finance-pdf-templates";
-import { renderBrandedPdf } from "@/lib/server/pdf/render";
+import { renderReceiptPdf } from "@/lib/server/pdf/finance-pdf-direct";
 import type { FinancePaymentAllocationRecord } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -44,18 +43,7 @@ export async function GET(
       }
     }
 
-    const { html, css } = buildReceiptHtml(receipt, allocations);
-
-    const pdfBuffer = await renderBrandedPdf({
-      title: "RECEIPT OF PAYMENT",
-      subtitle: `Receipt #${receipt.receiptNumber} | Date: ${formatReportDate(receipt.receiptDate)}`,
-      documentNumber: receipt.receiptNumber,
-      footerNote: "Ozeki Financial Systems - Official Receipt Document",
-      accentHex: "#1f2a44",
-      contentHtml: html,
-      additionalCss: css,
-      marginBottom: "8mm",
-    });
+    const pdfBuffer = await renderReceiptPdf(receipt, allocations);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return new NextResponse(pdfBuffer as any, {
@@ -70,3 +58,4 @@ export async function GET(
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }
 }
+
