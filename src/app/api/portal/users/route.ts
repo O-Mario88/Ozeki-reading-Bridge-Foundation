@@ -53,12 +53,12 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({
-      users: listPortalUsersForAdmin(user),
+      users: await listPortalUsersForAdmin(user),
     });
   }
 
   return NextResponse.json({
-    users: listPortalUsersForFilters(user),
+    users: await listPortalUsersForFilters(user),
   });
 }
 
@@ -73,10 +73,10 @@ export async function POST(request: Request) {
 
   try {
     const payload = createUserSchema.parse(await request.json());
-    createPortalUserAccount(payload, user);
+    await createPortalUserAccount(payload, user);
     return NextResponse.json({
       ok: true,
-      users: listPortalUsersForAdmin(user),
+      users: await listPortalUsersForAdmin(user),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -103,10 +103,10 @@ export async function PATCH(request: Request) {
 
   try {
     const payload = updateUserSchema.parse(await request.json());
-    updatePortalUserPermissions(payload.userId, payload, user);
+    await updatePortalUserPermissions(payload.userId, payload, user);
     return NextResponse.json({
       ok: true,
-      users: listPortalUsersForAdmin(user),
+      users: await listPortalUsersForAdmin(user),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -133,10 +133,10 @@ export async function DELETE(request: Request) {
 
   try {
     const payload = deleteUserSchema.parse(await request.json());
-    deletePortalUserAccount(payload.userId, user);
+    await deletePortalUserAccount(payload.userId, user);
     return NextResponse.json({
       ok: true,
-      users: listPortalUsersForAdmin(user),
+      users: await listPortalUsersForAdmin(user),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -123,7 +123,7 @@ export async function POST(request: Request) {
       user.id,
     );
 
-    logAuditEvent(
+    await logAuditEvent(
       user.id,
       user.fullName,
       "create",

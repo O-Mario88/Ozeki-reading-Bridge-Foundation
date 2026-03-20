@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
 
       const sourcePage = resolveSourcePage(body);
       const timestamp = asString(body.timestamp) || new Date().toISOString();
-      const conceptRequest = createConceptNoteRequest(
+      const conceptRequest = await createConceptNoteRequest(
         {
           requesterType,
           sourcePage,
@@ -311,7 +311,7 @@ export async function POST(req: NextRequest) {
 
       const sourcePage = resolveSourcePage(body);
       const timestamp = asString(body.timestamp) || new Date().toISOString();
-      const conceptRequest = createConceptNoteRequest(
+      const conceptRequest = await createConceptNoteRequest(
         {
           requesterType,
           sourcePage,

@@ -72,7 +72,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  logAuditEvent(
+  await logAuditEvent(
     user.id,
     user.fullName,
     "view_learner_details",

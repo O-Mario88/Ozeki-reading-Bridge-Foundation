@@ -47,7 +47,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({ sessions: listTrainingSessions(20) });
+  return NextResponse.json({ sessions: await listTrainingSessions(20) });
 }
 
 export async function POST(request: Request) {

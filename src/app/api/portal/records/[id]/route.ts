@@ -178,7 +178,7 @@ export async function DELETE(
     const reason = searchParams.get("reason") || "User requested deletion via API";
 
     const { softDeletePortalRecord } = await import("@/services/dataService");
-    softDeletePortalRecord(id, user.id, reason);
+    await softDeletePortalRecord(id, user.id, reason);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
