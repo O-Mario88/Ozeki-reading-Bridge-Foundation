@@ -462,28 +462,39 @@ export async function getPortalEvidenceById(_id: number, _extra?: unknown) {
 }
 
 // ── Stories ──────────────────────────────────────────────────────────
-export async function getStoryById(_id: number) {
-    return { id: 0, title: "", content: "", status: "draft", createdAt: "", authorId: 0 };
+export async function getStoryById(id: number) {
+    const { getStoryByIdPostgres } = await import("@/lib/server/postgres/repositories/public-content");
+    return getStoryByIdPostgres(id);
 }
 
-export function saveStoryEntry(_input: unknown) {
-    return { id: 0 } as Record<string, unknown> & { id: number };
+export async function saveStoryEntry(input: unknown) {
+    const { saveStoryEntryPostgres } = await import("@/lib/server/postgres/repositories/public-content");
+    return saveStoryEntryPostgres(input as any, 0);
 }
 
-export async function publishStoryEntry(_id: number, _actorId?: unknown, _actorName?: unknown) {
-    return { success: true, error: null };
+export async function publishStoryEntry(id: number, _actorId?: unknown, _actorName?: unknown) {
+    try {
+        const { publishStoryEntryPostgres } = await import("@/lib/server/postgres/repositories/public-content");
+        await publishStoryEntryPostgres(id);
+        return { success: true, error: null };
+    } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : "Could not publish story." };
+    }
 }
 
-export async function unpublishStoryEntry(_id: number, _actorId?: unknown, _actorName?: unknown) {
-    throw new Error("unpublishStoryEntry: not yet migrated to PostgreSQL");
+export async function unpublishStoryEntry(id: number, _actorId?: unknown, _actorName?: unknown) {
+    const { unpublishStoryEntryPostgres } = await import("@/lib/server/postgres/repositories/public-content");
+    return unpublishStoryEntryPostgres(id);
 }
 
-export async function deleteStoryEntry(_id: number, _actorId?: unknown, _actorName?: unknown) {
-    throw new Error("deleteStoryEntry: not yet migrated to PostgreSQL");
+export async function deleteStoryEntry(id: number, _actorId?: unknown, _actorName?: unknown) {
+    const { deleteStoryEntryPostgres } = await import("@/lib/server/postgres/repositories/public-content");
+    return deleteStoryEntryPostgres(id);
 }
 
-export function saveStoryAnthology(_input: unknown) {
-    return { id: 0 } as Record<string, unknown> & { id: number };
+export async function saveStoryAnthology(input: unknown) {
+    const { saveStoryAnthologyPostgres } = await import("@/lib/server/postgres/repositories/public-content");
+    return saveStoryAnthologyPostgres(input as any);
 }
 
 // ── School contacts/learners ─────────────────────────────────────────

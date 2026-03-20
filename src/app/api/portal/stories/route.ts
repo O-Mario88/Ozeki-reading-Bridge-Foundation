@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const { action } = body;
 
     if (action === "save-story") {
-        const story = saveStoryEntry({
+        const story = await saveStoryEntry({
             id: body.id || undefined,
             schoolId: body.schoolId,
             anthologyId: body.anthologyId || null,
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "save-anthology") {
-        const anthology = saveStoryAnthology({
+        const anthology = await saveStoryAnthology({
             id: body.id || undefined,
             title: body.title,
             scopeType: body.scopeType || "school",
