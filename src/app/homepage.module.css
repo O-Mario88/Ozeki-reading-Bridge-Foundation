@@ -1,13 +1,6 @@
 .hero {
-  background:
-    radial-gradient(circle at 92% 12%, color-mix(in oklab, var(--color-brand-orange), transparent 76%), transparent 44%),
-    linear-gradient(
-      160deg,
-      color-mix(in oklab, var(--color-brand-blue), white 92%) 0%,
-      color-mix(in oklab, var(--color-brand-blue), white 97%) 62%,
-      #ffffff 100%
-    );
-  border-bottom: 1px solid color-mix(in oklab, var(--color-brand-blue), white 76%);
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .heroInner {
@@ -133,8 +126,9 @@
 }
 
 .problemSection {
-  background: color-mix(in oklab, var(--color-brand-blue), white 96%);
-  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 82%);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border-block: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .problemSection .sectionHeading h2 {
@@ -205,7 +199,8 @@
 }
 
 .loopCard {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -266,10 +261,9 @@
 }
 
 .insightSection {
-  background:
-    radial-gradient(circle at 2% 90%, color-mix(in oklab, var(--color-brand-orange), transparent 82%), transparent 36%),
-    linear-gradient(180deg, color-mix(in oklab, var(--color-brand-blue), white 95%), #ffffff 56%);
-  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border-block: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .insightLead {
@@ -284,7 +278,8 @@
 }
 
 .insightTile {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -316,7 +311,8 @@
 }
 
 .partnerCard {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -349,8 +345,9 @@
 }
 
 .testimonialSection {
-  background: color-mix(in oklab, var(--color-brand-blue), white 96%);
-  border-block: 1px solid color-mix(in oklab, var(--color-brand-blue), white 84%);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border-block: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .testimonialGrid {
@@ -360,7 +357,8 @@
 }
 
 .testimonialCard {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -406,9 +404,7 @@
 
 .supportCard {
   align-items: start;
-  background:
-    radial-gradient(circle at 90% 16%, color-mix(in oklab, var(--color-brand-orange), transparent 66%), transparent 36%),
-    linear-gradient(132deg, var(--color-brand-blue), color-mix(in oklab, var(--color-brand-blue), black 18%));
+  background: var(--color-brand-blue);
   border: 1px solid color-mix(in oklab, var(--color-brand-blue), white 48%);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);

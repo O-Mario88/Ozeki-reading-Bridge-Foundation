@@ -7,7 +7,7 @@
   --md-sys-color-on-primary: #ffffff;
   --md-sys-color-secondary: #fe8b5c;
   --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-background: #eaecf0;
+  --md-sys-color-background: transparent;
   --md-sys-color-surface: #ffffff;
   --md-sys-color-surface-container: #f9dccf;
   --md-sys-color-surface-container-high: #f9dccf;
@@ -110,7 +110,7 @@ h5,
 h6 {
   font-family: inherit;
   line-height: 1.2;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
   color: var(--md-sys-color-on-surface);
   margin: 0 0 0.65rem;
 }
@@ -136,6 +136,8 @@ h6 {
 p {
   color: var(--md-sys-color-on-surface-variant);
   margin: 0 0 1rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
 }
 
 .kicker,
@@ -823,33 +825,37 @@ main {
 .button {
   border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  font-weight: 700;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 0.72rem 1.4rem;
+  background: var(--md-sys-color-on-surface);
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  padding: 0.65rem 1.6rem;
   cursor: pointer;
-  transition: transform 170ms ease, box-shadow 170ms ease, filter 170ms ease;
-  box-shadow: var(--elevation-1);
+  transition: all 170ms var(--transition-out-smooth, ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .button:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--elevation-2);
-  filter: saturate(1.08);
+  background: color-mix(in oklab, var(--md-sys-color-on-surface), white 15%);
 }
 
 .button:disabled {
-  opacity: 0.65;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .button-ghost {
-  background: var(--md-sys-color-secondary);
-  color: #ffffff;
-  border-color: #d76609;
+  background: #ffffff;
+  color: var(--md-sys-color-on-surface);
+  border-color: var(--md-sys-color-outline);
+}
+
+.button-ghost:hover {
+  background: var(--md-sys-color-outline-variant);
 }
 
 .action-row {
@@ -874,23 +880,19 @@ main {
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow:
-    0 4px 12px rgba(13, 51, 48, 0.04),
-    0 1px 2px rgba(13, 51, 48, 0.02);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.03);
   position: relative;
-  transition: transform 180ms ease, box-shadow 220ms ease, border-color 220ms ease;
+  transition: transform 180ms ease, box-shadow 220ms ease;
 }
 
 .card:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in oklab, var(--md-sys-color-secondary), white 70%);
-  box-shadow:
-    0 8px 24px rgba(13, 51, 48, 0.06),
-    0 2px 8px rgba(13, 51, 48, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.06);
 }
 
 .card h3 {
@@ -8185,8 +8187,8 @@ nav[aria-label="Staff navigation"] {
 .impact-dash-charts {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
 }
 
 @media (max-width: 768px) {
@@ -8209,10 +8211,10 @@ nav[aria-label="Staff navigation"] {
 
 .impact-dash-panel {
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: 1.75rem;
   background: var(--md-sys-color-surface);
   border: 1px solid var(--md-sys-color-outline-variant);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
 }
 
 .impact-dash-panel--funnel {
@@ -8221,8 +8223,8 @@ nav[aria-label="Staff navigation"] {
 }
 
 .impact-dash-panel-title {
-  margin: 0 0 1.25rem 0;
-  font-size: 1.1rem;
+  margin: 0 0 1.5rem 0;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--md-sys-color-on-surface);
 }
@@ -8235,12 +8237,12 @@ nav[aria-label="Staff navigation"] {
 .impact-dash-domain-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .impact-dash-domain {
-  padding: 0.75rem;
-  border-radius: 10px;
+  padding: 1rem;
+  border-radius: 12px;
   background: var(--md-sys-color-surface-container, #f5f5f5);
 }
 
@@ -8696,8 +8698,8 @@ nav[aria-label="Staff navigation"] {
 
 .impact-report-heading {
   display: grid;
-  gap: 0.38rem;
-  margin-bottom: 2rem;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
   text-align: left;
 }
 

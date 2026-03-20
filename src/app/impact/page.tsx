@@ -156,14 +156,14 @@ export default async function ImpactDashboardPage({
           </div>
 
           {reportDataWarning ? (
-            <div className="card" style={{ marginBottom: "1rem" }}>
+            <div className="card" style={{ marginBottom: "1.5rem" }}>
               <p className="meta-line">
                 Report data is temporarily unavailable in this deployment environment. Dashboard visualization remains available.
               </p>
             </div>
           ) : null}
 
-          <div className="card impact-filter-card" style={{ marginBottom: "2rem" }}>
+          <div className="card impact-filter-card" style={{ marginBottom: "2.5rem" }}>
             <h2>Filter Reports</h2>
             <ImpactReportFilters
               initialYear={selectedYear}
@@ -181,7 +181,7 @@ export default async function ImpactDashboardPage({
               outputs={facets.outputs}
               period={firstValue(params.period) || undefined}
             />
-            <div className="action-row" style={{ marginTop: "0.9rem", alignItems: "center", gap: "0.9rem" }}>
+            <div className="action-row" style={{ marginTop: "1.25rem", alignItems: "center", gap: "1rem" }}>
               {hasData ? (
                 <>
                   <a className="button" href={pdfDownloadUrl} target="_blank" rel="noopener noreferrer">

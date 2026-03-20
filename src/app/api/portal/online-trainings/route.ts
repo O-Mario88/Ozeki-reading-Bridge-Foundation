@@ -75,40 +75,31 @@ export async function POST(request: Request) {
     let calendarWarning: string | undefined;
 
     if (!isGoogleCalendarConfigured()) {
-      return NextResponse.json(
-        {
-          error:
-            "Google Calendar integration is not configured. Online events require Google Meet.",
-        },
-        { status: 503 },
-      );
-    }
+      calendarWarning =
+        "Google Calendar is not configured. Event saved without Calendar invite or Meet link.";
+    } else {
+      try {
+        const calendarResult = await createGoogleCalendarEvent({
+          summary: payload.title,
+          description: payload.description,
+          startDateTime: dateRange.startDateTime,
+          endDateTime: dateRange.endDateTime,
+          attendeeEmails,
+          createMeet: true,
+        });
 
-    try {
-      const event = await createGoogleCalendarEvent({
-        summary: payload.title,
-        description: payload.description,
-        startDateTime: dateRange.startDateTime,
-        endDateTime: dateRange.endDateTime,
-        attendeeEmails,
-        createMeet: true,
-      });
+        calendarEventId = calendarResult.eventId;
+        calendarLink = calendarResult.htmlLink;
+        meetLink = calendarResult.meetLink;
 
-      calendarEventId = event.eventId;
-      calendarLink = event.htmlLink;
-      meetLink = event.meetLink;
-
-      if (!meetLink) {
-        return NextResponse.json(
-          { error: "Google Meet link was not generated. Please retry scheduling." },
-          { status: 502 },
-        );
+        if (!meetLink) {
+          calendarWarning =
+            "Calendar event created but Google Meet link was not generated. You can retry from the event row.";
+        }
+      } catch {
+        calendarWarning =
+          "Could not create Google Calendar event. Event saved without Calendar or Meet links.";
       }
-    } catch {
-      return NextResponse.json(
-        { error: "Could not create Google Calendar event and Google Meet link." },
-        { status: 502 },
-      );
     }
 
     const event = await saveOnlineTrainingEvent(

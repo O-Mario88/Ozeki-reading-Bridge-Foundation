@@ -4,6 +4,9 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-inter)", "sans-serif"],
+      },
       colors: {
         brand: {
           primary: "var(--md-sys-color-primary)",
@@ -16,6 +19,7 @@ const config: Config = {
       },
       boxShadow: {
         panel: "var(--elevation-2)",
+        soft: "0 4px 20px -2px rgba(0, 0, 0, 0.04)",
       },
       borderRadius: {
         brand: "var(--shape-md)",

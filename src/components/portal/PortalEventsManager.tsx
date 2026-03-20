@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
-import { OnlineTrainingEventRecord } from "@/lib/types";
+import type { OnlineTrainingEventRecord } from "@/lib/types";
 import { FormModal } from "@/components/forms";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
+import { EventSignUpForm } from "@/components/portal/EventSignUpForm";
 
 interface PortalEventsManagerProps {
   initialEvents: OnlineTrainingEventRecord[];
@@ -45,6 +46,8 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
   const [status, setStatus] = useState("");
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
+  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+  const [signUpEventId, setSignUpEventId] = useState<number | null>(null);
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -187,6 +190,7 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
                   <th>Teachers</th>
                   <th>Leaders</th>
                   <th>Links</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -211,9 +215,24 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
                           <a href={item.meetLink} target="_blank" rel="noreferrer">
                             Meet
                           </a>
-                        ) : null}
+                        ) : (
+                          <span className="badge badge-warning" title="Google Meet link not available">No Meet</span>
+                        )}
                         <Link href={`/portal/events/${item.id}/live`}>In-app room</Link>
                       </div>
+                    </td>
+                    <td>
+                      <button
+                        className="button button-ghost"
+                        type="button"
+                        style={{ fontSize: "0.8rem", padding: "0.2rem 0.5rem" }}
+                        onClick={() => {
+                          setSignUpEventId(item.id);
+                          setIsSignUpOpen(true);
+                        }}
+                      >
+                        Sign Up School
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -369,6 +388,16 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
           </div>
         </form>
       </FormModal>
+
+      <EventSignUpForm
+        events={events}
+        open={isSignUpOpen}
+        onClose={() => setIsSignUpOpen(false)}
+        preselectedEventId={signUpEventId}
+        onRegistered={() => {
+          setStatus("School registered for event successfully.");
+        }}
+      />
     </div>
   );
 }

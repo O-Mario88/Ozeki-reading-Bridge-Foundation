@@ -317,3 +317,35 @@ export async function upsertTrainingNotes(input: {
   requirePostgresConfigured();
   return upsertOnlineTrainingNotesPostgres(input);
 }
+
+/**
+ * Register a school (and optionally individual contacts) as participants of an
+ * online training session.  One row per contactId is inserted; if no contacts
+ * are provided a single school-level row is created.
+ */
+export async function addEventParticipants(
+  sessionId: number,
+  schoolId: number,
+  contactIds: number[] = [],
+): Promise<{ inserted: number }> {
+  requirePostgresConfigured();
+
+  if (contactIds.length === 0) {
+    // School-level registration (no individual contacts specified)
+    await queryPostgres(
+      `INSERT INTO online_training_participants (session_id, school_id, role, attendance_status)
+       VALUES ($1, $2, 'attendee', 'invited')`,
+      [sessionId, schoolId],
+    );
+    return { inserted: 1 };
+  }
+
+  for (const contactId of contactIds) {
+    await queryPostgres(
+      `INSERT INTO online_training_participants (session_id, school_id, teacher_user_id, role, attendance_status)
+       VALUES ($1, $2, $3, 'attendee', 'invited')`,
+      [sessionId, schoolId, contactId],
+    );
+  }
+  return { inserted: contactIds.length };
+}

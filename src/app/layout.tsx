@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
+
 import "./globals.css";
 import "@/styles/finance-theme.css";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -7,12 +7,13 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { ModalAccessibilityManager } from "@/components/ModalAccessibilityManager";
 import { organizationName, tagline } from "@/lib/content";
+import { GradientBackground } from "@/components/ui/GradientBackground";
+import { Inter } from "next/font/google";
 
-const roboto = Roboto({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["100", "300", "400", "500", "700", "900"],
   display: "swap",
-  variable: "--font-roboto",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -52,7 +53,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${roboto.variable} bg-brand-background text-brand-text antialiased`} suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans text-brand-text antialiased`} suppressHydrationWarning>
+        <GradientBackground />
         <ModalAccessibilityManager />
         <ServiceWorkerRegister />
         <SiteHeader />
