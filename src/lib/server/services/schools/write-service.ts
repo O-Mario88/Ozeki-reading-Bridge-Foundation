@@ -1150,8 +1150,7 @@ export async function writeSchoolDirectoryRecord(args: {
             primary_contact_id = $2,
             contact_name = $3,
             contact_phone = $4,
-            contact_email = $5,
-            updated_at = NOW()
+            contact_email = $5
           WHERE id = $1
         `,
         [schoolId, primaryContactId, resolved.primaryContactName, resolved.primaryContactPhone, resolved.primaryContactEmail],
