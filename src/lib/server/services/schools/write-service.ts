@@ -964,7 +964,7 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.district,                          // $8
             resolved.subCounty,                         // $9
             resolved.parish,                            // $10
-            resolved.parishId,                          // $11
+            resolved.parishId || null,                  // $11 (null when geo_parishes empty)
             resolved.primaryContactName,                // $12
             resolved.schoolPhone,                       // $13
             resolved.schoolEmail,                       // $14
@@ -1084,7 +1084,7 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.district,                          // $8
             resolved.subCounty,                         // $9
             resolved.parish,                            // $10
-            resolved.parishId,                          // $11
+            resolved.parishId || null,                  // $11 (null when geo_parishes empty)
             resolved.primaryContactName,                // $12
             resolved.schoolPhone,                       // $13
             resolved.schoolEmail,                       // $14
