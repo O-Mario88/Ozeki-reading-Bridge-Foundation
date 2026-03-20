@@ -245,7 +245,7 @@ export default function ImpactCalculatorPage() {
   const [activeAccordion, setActiveAccordion] =
     useState<CostAccordionKey | null>("visit-details");
   const [selectedRegion, setSelectedRegion] = useState<string>(
-    ugandaRegions[0]?.region ?? "Northern Region",
+    ugandaRegions[0]?.region ?? "Northern",
   );
   const [selectedDistrict, setSelectedDistrict] = useState<string>(
     allUgandaDistricts[0] ?? "Gulu",

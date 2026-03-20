@@ -35,7 +35,7 @@ async function findSubRegionIdByName(name: string, regionId: string) {
 }
 
 test("Northern region sub-regions do not include Eastern sub-regions", async () => {
-  const northernRegionId = await findRegionIdByName("Northern Region");
+  const northernRegionId = await findRegionIdByName("Northern");
   const result = await queryPostgres<{ name: string }>(
     `
       SELECT gs.name
@@ -60,7 +60,7 @@ test("Northern region sub-regions do not include Eastern sub-regions", async () 
 });
 
 test("Lango selection returns only Lango districts (and excludes Acholi examples)", async () => {
-  const northernRegionId = await findRegionIdByName("Northern Region");
+  const northernRegionId = await findRegionIdByName("Northern");
   const langoSubRegionId = await findSubRegionIdByName("Lango", northernRegionId);
   const result = await queryPostgres<{ name: string }>(
     `

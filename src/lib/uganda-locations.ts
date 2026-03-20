@@ -14,7 +14,7 @@ const regionSeed: {
   subRegions: SubRegionEntry[];
 }[] = [
     {
-      region: "Central Region",
+      region: "Central",
       subRegions: [
         {
           subRegion: "Buganda",
@@ -30,7 +30,7 @@ const regionSeed: {
       ],
     },
     {
-      region: "Eastern Region",
+      region: "Eastern",
       subRegions: [
         {
           subRegion: "Busoga",
@@ -66,7 +66,7 @@ const regionSeed: {
       ],
     },
     {
-      region: "Northern Region",
+      region: "Northern",
       subRegions: [
         {
           subRegion: "Acholi",
@@ -100,7 +100,7 @@ const regionSeed: {
       ],
     },
     {
-      region: "Western Region",
+      region: "Western",
       subRegions: [
         {
           subRegion: "Ankole",

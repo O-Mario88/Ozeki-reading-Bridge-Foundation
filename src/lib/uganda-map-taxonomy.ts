@@ -13,10 +13,10 @@ export type UgandaMapSubRegionName =
   | "Western";
 
 export type UgandaMapRegionName =
-  | "Central Region"
-  | "Eastern Region"
-  | "Northern Region"
-  | "Western Region";
+  | "Central"
+  | "Eastern"
+  | "Northern"
+  | "Western";
 
 export type UgandaMapSubRegionEntry = {
   subRegion: UgandaMapSubRegionName;
@@ -25,16 +25,16 @@ export type UgandaMapSubRegionEntry = {
 };
 
 const REGION_FOR_SUB_REGION: Record<UgandaMapSubRegionName, UgandaMapRegionName> = {
-  Acholi: "Northern Region",
-  Central: "Central Region",
-  "East Central": "Eastern Region",
-  Elgon: "Eastern Region",
-  Karamoja: "Northern Region",
-  Lango: "Northern Region",
-  "South Western": "Western Region",
-  Teso: "Eastern Region",
-  "West Nile": "Northern Region",
-  Western: "Western Region",
+  Acholi: "Northern",
+  Central: "Central",
+  "East Central": "Eastern",
+  Elgon: "Eastern",
+  Karamoja: "Northern",
+  Lango: "Northern",
+  "South Western": "Western",
+  Teso: "Eastern",
+  "West Nile": "Northern",
+  Western: "Western",
 };
 
 const LEGACY_TO_MAP_SUB_REGION: Record<string, UgandaMapSubRegionName> = {

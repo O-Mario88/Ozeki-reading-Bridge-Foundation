@@ -200,6 +200,24 @@ function normalizeContactCategory(value: SchoolContactCategory | string | null |
   return "Teacher";
 }
 
+const CANONICAL_REGIONS = ["Northern", "Central", "Eastern", "Western"] as const;
+
+/**
+ * Normalize any region name variant to the canonical short form.
+ * Handles: "Northern Region" → "Northern", "northern" → "Northern", etc.
+ */
+function normalizeRegionName(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  // Strip " Region" suffix if present
+  const stripped = trimmed.replace(/\s+Region$/i, "").trim();
+  // Case-insensitive match against canonical names
+  const match = CANONICAL_REGIONS.find(r => r.toLowerCase() === stripped.toLowerCase());
+  return match ?? trimmed; // return original if no match (pass-through for unknown)
+}
+
+
 async function loadSchoolWriteRow(client: PoolClient, schoolId: number) {
   const result = await client.query<SchoolWriteRow>(
     `
@@ -741,7 +759,7 @@ export async function writeSchoolDirectoryRecord(args: {
 
       const name = nullableText(args.input.name) ?? current?.name ?? null;
       const country = nullableText(args.input.country) ?? current?.country ?? "Uganda";
-      const region = nullableText(args.input.region) ?? current?.region ?? null;
+      const region = normalizeRegionName(nullableText(args.input.region) ?? current?.region);
       const subRegion = nullableText(args.input.subRegion) ?? current?.subRegion ?? null;
       const district = nullableText(args.input.district) ?? current?.district ?? null;
       const parish = nullableText(args.input.parish) ?? current?.parish ?? null;
