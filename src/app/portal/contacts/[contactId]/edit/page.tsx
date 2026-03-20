@@ -89,7 +89,10 @@ export default async function EditContactPage(props: {
     <div className="crm-workspace" style={{ padding: "1.5rem 2rem", maxWidth: 900, margin: "0 auto" }}>
       <header className="crm-workspace-header" style={{ marginBottom: "2rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <Link href={`/portal/contacts/${contactId}`} className="crm-back-button">
+          <Link
+            href={`/portal/contacts/${contactId}`}
+            style={{ color: "#4b5563", textDecoration: "none", fontWeight: 500 }}
+          >
             &larr; Back to Contact
           </Link>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 600, margin: 0 }}>
@@ -101,17 +104,6 @@ export default async function EditContactPage(props: {
       <main>
         <EditContactForm initialData={initialData} />
       </main>
-      
-      <style jsx>{`
-        .crm-back-button {
-          color: #4b5563;
-          text-decoration: none;
-          font-weight: 500;
-        }
-        .crm-back-button:hover {
-          color: #111827;
-        }
-      `}</style>
     </div>
   );
 }
