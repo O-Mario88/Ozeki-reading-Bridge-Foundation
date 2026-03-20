@@ -143,6 +143,19 @@ async function readLogoBytes(logoSource: string | null) {
 export async function loadBrandLogo(doc: PDFDocument): Promise<PDFImage | null> {
   const profile = await resolveBrandProfile();
 
+  // Try compressed PDF-specific logo first (keeps PDF under Lambda 6MB limit)
+  try {
+    const { BRAND_LOGO_PDF_PATH } = await import("@/lib/brand-identity");
+    const pdfLogoBytes = await fs.readFile(BRAND_LOGO_PDF_PATH);
+    try {
+      return await doc.embedPng(pdfLogoBytes);
+    } catch {
+      return await doc.embedJpg(pdfLogoBytes);
+    }
+  } catch {
+    // Fall back to full-size logo or org profile logo
+  }
+
   try {
     const logoBytes = await readLogoBytes(profile.logoSource);
     try {
