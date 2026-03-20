@@ -329,6 +329,14 @@ export async function getSchoolDirectoryRecordPostgres(id: number) {
   return row ? normalizeSchoolRecord(row) : null;
 }
 
+async function safeQuery<T>(fn: () => Promise<{ rows: T[] }>): Promise<{ rows: T[] }> {
+  try {
+    return await fn();
+  } catch {
+    return { rows: [] };
+  }
+}
+
 export async function getSchoolAccountProfilePostgres(id: number): Promise<SchoolAccountProfile | null> {
   const school = await getSchoolDirectoryRecordPostgres(id);
   if (!school) {
@@ -360,7 +368,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
       `SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'training' AND school_id = $1`,
       [id],
     ),
-    queryPostgres<{ total: number }>(
+    safeQuery(() => queryPostgres<{ total: number }>(
       `
         SELECT COUNT(*)::int AS total
         FROM (
@@ -372,7 +380,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
         ) scoped
       `,
       [id, schoolIdText],
-    ),
+    )),
     queryPostgres<{ total: number }>(
       `SELECT COUNT(*)::int AS total FROM coaching_visits WHERE school_id = $1`,
       [id],
@@ -398,12 +406,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
             COALESCE((SELECT MAX(pr.date)::text FROM portal_records pr WHERE pr.school_id = $1), ''),
             COALESCE((SELECT MAX(cv.visit_date)::text FROM coaching_visits cv WHERE cv.school_id = $1), ''),
             COALESCE((SELECT MAX(ses.assessment_date)::text FROM assessment_sessions ses WHERE ses.school_id = $1), ''),
-            COALESCE((SELECT MAX(le.lesson_date)::text FROM lesson_evaluations le WHERE le.school_id = $1 AND le.status != 'void'), ''),
-            COALESCE((SELECT MAX(ots.start_time)::date::text
-              FROM online_training_sessions ots
-              LEFT JOIN online_training_participants otp ON otp.session_id = ots.id
-              WHERE otp.school_id = $1 OR (ots.scope_type = 'school' AND COALESCE(ots.scope_id, '') = $2)
-            ), '')
+            COALESCE((SELECT MAX(le.lesson_date)::text FROM lesson_evaluations le WHERE le.school_id = $1 AND le.status != 'void'), '')
           ) AS "dateOfLastActivity",
           (
             SELECT MAX(cv.visit_date)::text
@@ -489,7 +492,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
       `,
       [id],
     ),
-    queryPostgres(
+    safeQuery(() => queryPostgres(
       `
         SELECT
           scoped.id,
@@ -515,7 +518,7 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
         LIMIT 6
       `,
       [id, schoolIdText],
-    ),
+    )),
     queryPostgres(
       `
         SELECT *
