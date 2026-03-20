@@ -7,7 +7,7 @@
  * The function parses the HTML content produced by the finance/program templates
  * and renders it using pdf-lib drawing primitives with branded headers/footers.
  */
-import { PDFDocument, PDFPage, PDFFont, rgb } from "pdf-lib";
+import { PDFDocument, PDFPage, PDFFont, rgb, StandardFonts } from "pdf-lib";
 import {
   drawBrandHeader,
   drawBrandFooter,
@@ -15,7 +15,6 @@ import {
   drawBrandFrame,
   loadBrandLogo,
 } from "@/lib/pdf-branding";
-import { embedPdfSansFonts } from "@/lib/pdf-fonts";
 
 export type RenderBrandedPdfInput = {
   title: string;
@@ -465,7 +464,8 @@ function drawKpiGrid(
 
 export async function renderBrandedPdf(input: RenderBrandedPdfInput): Promise<Buffer> {
   const doc = await PDFDocument.create();
-  const { regular: font, bold: fontBold } = await embedPdfSansFonts(doc);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const logo = await loadBrandLogo(doc);
 
   // Create initial page
