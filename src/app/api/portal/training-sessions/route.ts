@@ -23,7 +23,7 @@ const sessionSchema = z.object({
   schoolName: z.string().min(2),
   district: z.string().min(2),
   subCounty: z.string().min(2),
-  parish: z.string().min(2),
+  parish: z.string().optional(),
   village: z.string().optional(),
   sessionDate: z.string().min(6),
   participants: z.array(participantSchema).min(1),
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = sessionSchema.parse(await request.json());
-    const session = saveTrainingSession(payload, user.id);
+    const session = await saveTrainingSession(payload, user.id);
 
     return NextResponse.json({ ok: true, session });
   } catch (error) {

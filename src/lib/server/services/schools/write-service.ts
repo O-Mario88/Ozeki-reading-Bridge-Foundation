@@ -294,10 +294,20 @@ export async function resolveSchoolLocationHierarchy(client: PoolClient, input: 
   }
   const country = countryResult.rows[0];
 
-  const regionResult = await client.query<{ id: number; name: string }>(
+  // Try exact match first, then try stripping " Region" suffix for frontend compatibility
+  let regionResult = await client.query<{ id: number; name: string }>(
     `SELECT id, name FROM geo_regions WHERE country_id = $1 AND lower(name) = lower($2) LIMIT 2`,
     [country.id, input.region],
   );
+  if (regionResult.rows.length === 0) {
+    const stripped = input.region.replace(/\s+Region$/i, "").trim();
+    if (stripped !== input.region) {
+      regionResult = await client.query<{ id: number; name: string }>(
+        `SELECT id, name FROM geo_regions WHERE country_id = $1 AND lower(name) = lower($2) LIMIT 2`,
+        [country.id, stripped],
+      );
+    }
+  }
   if (regionResult.rows.length === 0) {
     throw new Error(`Region ${input.region} does not belong to ${country.name}.`);
   }
@@ -356,20 +366,37 @@ export async function resolveSchoolLocationHierarchy(client: PoolClient, input: 
   }
   const district = districtResult.rows[0];
 
-  const parishResult = await client.query<{ id: number; name: string }>(
-    `
-      SELECT id, name
-      FROM geo_parishes
-      WHERE district_id_direct = $1
-        AND lower(name) = lower($2)
-      LIMIT 2
-    `,
-    [district.id, input.parish],
-  );
-  if (parishResult.rows.length === 0) {
-    throw new Error(`Parish ${input.parish} does not belong to selected district.`);
+  // Parish is optional — try to match if provided, otherwise fall back to first parish in district
+  let parish: { id: number; name: string };
+  if (input.parish.trim()) {
+    const parishResult = await client.query<{ id: number; name: string }>(
+      `
+        SELECT id, name
+        FROM geo_parishes
+        WHERE district_id_direct = $1
+          AND lower(name) = lower($2)
+        LIMIT 2
+      `,
+      [district.id, input.parish],
+    );
+    if (parishResult.rows.length > 0) {
+      parish = parishResult.rows[0];
+    } else {
+      // Fall back to first parish in district
+      const fallbackResult = await client.query<{ id: number; name: string }>(
+        `SELECT id, name FROM geo_parishes WHERE district_id_direct = $1 ORDER BY name LIMIT 1`,
+        [district.id],
+      );
+      parish = fallbackResult.rows[0] ?? { id: 0, name: input.parish.trim() || "Unspecified" };
+    }
+  } else {
+    // No parish provided — use first parish in district
+    const fallbackResult = await client.query<{ id: number; name: string }>(
+      `SELECT id, name FROM geo_parishes WHERE district_id_direct = $1 ORDER BY name LIMIT 1`,
+      [district.id],
+    );
+    parish = fallbackResult.rows[0] ?? { id: 0, name: "Unspecified" };
   }
-  const parish = parishResult.rows[0];
 
   return {
     countryId: country.id,
@@ -654,8 +681,8 @@ export async function writeSchoolDirectoryRecord(args: {
       if (!name) {
         throw new Error("School name is required.");
       }
-      if (!country || !region || !district || !parish) {
-        throw new Error("Country, region, district, and parish are required.");
+      if (!country || !region || !district) {
+        throw new Error("Country, region, and district are required.");
       }
 
       const hierarchy = await resolveSchoolLocationHierarchy(client, {
@@ -663,7 +690,7 @@ export async function writeSchoolDirectoryRecord(args: {
         region,
         subRegion: subRegion ?? "",
         district,
-        parish,
+        parish: parish ?? "",
       });
       assertImportScope(args.actor, {
         country: hierarchy.countryName,
