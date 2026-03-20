@@ -285,6 +285,74 @@ export async function resolveSchoolLocationHierarchy(client: PoolClient, input: 
   district: string;
   parish: string;
 }): Promise<LocationHierarchy> {
+  // ── Step 1: Try full DB-based resolution ──────────────────────────
+  try {
+    return await resolveLocationFromDB(client, input);
+  } catch {
+    // DB lookup failed — fall through to fallback
+  }
+
+  // ── Step 2: Fallback — validate against uganda-locations.ts ───────
+  // This ensures school creation works even when geo_* tables are empty.
+  const { ugandaRegions, inferSubRegionFromDistrict } = await import("@/lib/uganda-locations");
+
+  const normalizedRegion = input.region.trim();
+  const normalizedDistrict = input.district.trim();
+
+  // Find region (try exact match, then try with/without "Region" suffix)
+  let regionEntry = ugandaRegions.find(
+    (r) => r.region.toLowerCase() === normalizedRegion.toLowerCase(),
+  );
+  if (!regionEntry) {
+    const stripped = normalizedRegion.replace(/\s+Region$/i, "").trim();
+    regionEntry = ugandaRegions.find(
+      (r) => r.region.toLowerCase() === stripped.toLowerCase(),
+    );
+  }
+  if (!regionEntry) {
+    const withSuffix = normalizedRegion + " Region";
+    regionEntry = ugandaRegions.find(
+      (r) => r.region.toLowerCase() === withSuffix.toLowerCase(),
+    );
+  }
+  if (!regionEntry) {
+    throw new Error(`Region ${input.region} is not a recognized Uganda region.`);
+  }
+
+  // Validate district belongs to region
+  if (!regionEntry.districts.some((d) => d.toLowerCase() === normalizedDistrict.toLowerCase())) {
+    throw new Error(`District ${input.district} does not belong to ${regionEntry.region}.`);
+  }
+
+  // Infer sub-region from district
+  const subRegionName = input.subRegion.trim() || inferSubRegionFromDistrict(normalizedDistrict) || "Unspecified";
+  const parishName = input.parish.trim() || "Unspecified";
+
+  return {
+    countryId: 0,
+    countryName: input.country || "Uganda",
+    regionId: 0,
+    regionName: regionEntry.region,
+    subRegionId: 0,
+    subRegionName: subRegionName,
+    districtId: 0,
+    districtName: normalizedDistrict,
+    parishId: 0,
+    parishName: parishName,
+  };
+}
+
+/**
+ * Internal: resolve location hierarchy from geo_* DB tables.
+ * Throws if any lookup fails so the caller can fall back.
+ */
+async function resolveLocationFromDB(client: PoolClient, input: {
+  country: string;
+  region: string;
+  subRegion: string;
+  district: string;
+  parish: string;
+}): Promise<LocationHierarchy> {
   const countryResult = await client.query<{ id: number; name: string }>(
     `SELECT id, name FROM geo_countries WHERE lower(name) = lower($1) LIMIT 2`,
     [input.country],
