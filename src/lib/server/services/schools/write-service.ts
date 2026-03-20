@@ -910,6 +910,7 @@ export async function writeSchoolDirectoryRecord(args: {
         const insertResult = await client.query<{ id: number }>(
           `
             INSERT INTO schools_directory (
+              id,
               school_uid, school_code, school_external_id,
               name, alternate_school_names,
               country, region, sub_region, district, sub_county, parish, parish_id,
@@ -930,6 +931,7 @@ export async function writeSchoolDirectoryRecord(args: {
               notes, village,
               created_at
             ) VALUES (
+              (SELECT COALESCE(MAX(id),0)+1 FROM schools_directory),
               $1, 'S-PENDING', $2,
               $3, $4,
               $5, $6, $7, $8, $9, $10, $11,
