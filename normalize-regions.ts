@@ -1,0 +1,1 @@
+import { queryPostgres } from './src/lib/server/postgres/postgres.ts'; async function main() { await queryPostgres(`UPDATE schools_directory SET region = REPLACE(region, ' Region', '') WHERE region LIKE '% Region';`, []); console.log('Done!'); } main();
