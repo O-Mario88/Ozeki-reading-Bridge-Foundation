@@ -255,7 +255,7 @@ const SCHOOL_SELECT = `
       COALESCE(s.enrolled_p2, 0) +
       COALESCE(s.enrolled_p3, 0)
     ) AS "directImpactLearners",
-    NULL AS "classesJson",
+    s.classes_json AS "classesJson",
     s.gps_lat AS "gpsLat",
     s.gps_lng AS "gpsLng",
     s.contact_name AS "contactName",
