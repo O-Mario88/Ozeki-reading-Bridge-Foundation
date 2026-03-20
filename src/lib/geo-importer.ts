@@ -239,6 +239,45 @@ export async function importUgandaGeoData(data: UgandaGeoUnit[]): Promise<GeoImp
               AND lower(trim(gp.name)) = lower(trim(schools_directory.parish))
             `,
         );
+
+        // ── Backfill text columns (region, sub_region) from geo hierarchy ──
+        // The map/dashboard uses these text columns for drill-down, not the geo_*_id columns.
+        await client.query(
+            `
+            UPDATE schools_directory
+            SET region = gr.name
+            FROM geo_districts gd
+            JOIN geo_subregions gs ON gs.id = gd.subregion_id
+            JOIN geo_regions gr ON gr.id = gs.region_id
+            WHERE schools_directory.geo_district_id = gd.district_id
+              AND (schools_directory.region IS NULL OR trim(schools_directory.region) = '')
+            `,
+        );
+        await client.query(
+            `
+            UPDATE schools_directory
+            SET sub_region = gs.name
+            FROM geo_districts gd
+            JOIN geo_subregions gs ON gs.id = gd.subregion_id
+            WHERE schools_directory.geo_district_id = gd.district_id
+              AND (schools_directory.sub_region IS NULL OR trim(schools_directory.sub_region) = '')
+            `,
+        );
+        // Also set the legacy text-based IDs (region_id, subregion_id, district_id) for views
+        await client.query(
+            `
+            UPDATE schools_directory
+            SET
+              region_id = gr.region_id,
+              subregion_id = gs.subregion_id,
+              district_id = gd.district_id
+            FROM geo_districts gd
+            JOIN geo_subregions gs ON gs.id = gd.subregion_id
+            JOIN geo_regions gr ON gr.id = gs.region_id
+            WHERE schools_directory.geo_district_id = gd.district_id
+              AND (schools_directory.region_id IS NULL OR schools_directory.subregion_id IS NULL OR schools_directory.district_id IS NULL)
+            `,
+        );
         await client.query("COMMIT");
         } catch (error) {
             await client.query("ROLLBACK");
