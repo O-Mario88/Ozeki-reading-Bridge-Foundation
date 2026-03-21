@@ -5,6 +5,7 @@ import type {
   PortalCrmProfileViewModel,
 } from "@/lib/portal-crm-types";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { displayRegion } from "@/lib/uganda-locations";
 
 function text(value: unknown, fallback = "-") {
   const normalized = String(value ?? "").trim();
@@ -228,6 +229,7 @@ export async function listTrainingCrmRows(): Promise<PortalCrmListViewModel> {
       { key: "date", label: "Session Date" },
       { key: "presenter", label: "Training Presenter" },
       { key: "country", label: "Country" },
+      { key: "region", label: "Region" },
       { key: "type", label: "Training Type" },
       { key: "invited", label: "Total Invited" },
     ],
@@ -241,6 +243,7 @@ export async function listTrainingCrmRows(): Promise<PortalCrmListViewModel> {
       const trainingType = payloadText(payload, "deliveryMode") ?? "In Person";
       const totalInvited =
         payloadInt(payload, "totalInvited", "numberAttended") ?? 0;
+      const trainingRegion = payloadText(payload, "trainingRegion") ?? displayRegion(row.region as string | undefined) ?? "-";
       return {
         id: Number(row.id),
         href: `/portal/trainings/${row.id}`,
@@ -250,6 +253,7 @@ export async function listTrainingCrmRows(): Promise<PortalCrmListViewModel> {
           date: buildCell(formatDate(row.date)),
           presenter: buildCell(presenter),
           country: buildCell(row.country ?? "Uganda"),
+          region: buildCell(trainingRegion),
           type: buildCell(trainingType),
           invited: buildCell(String(totalInvited)),
         },
@@ -271,6 +275,7 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
     relatedCountsResult,
     linkedActivityResult,
     schoolProgressResult,
+    feedbackResult,
   ] = await Promise.all([
     queryPostgres(
       `
@@ -381,6 +386,25 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
       `,
       [row.schoolId ?? -1],
     ),
+    queryPostgres(
+      `
+        SELECT
+          ptf.id,
+          ptf.effectiveness_rating AS "effectivenessRating",
+          ptf.feedback_text AS "feedbackText",
+          ptf.follow_up_recommendations AS "followUpRecommendations",
+          pta.participant_name AS "participantName",
+          pu.full_name AS "createdByName",
+          ptf.created_at::text AS "createdAt"
+        FROM portal_training_feedback ptf
+        LEFT JOIN portal_training_attendance pta ON pta.id = ptf.participant_id
+        LEFT JOIN portal_users pu ON pu.id = ptf.created_by_user_id
+        WHERE ptf.portal_record_id = $1
+        ORDER BY ptf.created_at DESC
+        LIMIT 50
+      `,
+      [id],
+    ).catch(() => ({ rows: [] as Array<Record<string, unknown>> })),
   ]);
 
   const attended = whole(attendanceResult.rows[0]?.attended);
@@ -395,6 +419,10 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
   const audience = payloadText(payload, "audience") ?? "Both";
   const objectives = listFromValue(payload.objectivesCovered).join(", ") || "-";
   const modulesDelivered = listFromValue(payload.modulesDelivered).join(", ") || "-";
+  const trainerRecommendations = listFromValue(payload.trainerRecommendations).join(", ") || "-";
+  const trainingRegion = payloadText(payload, "trainingRegion") ?? displayRegion(row.region as string | undefined) ?? "-";
+  const trainingSubRegion = payloadText(payload, "trainingSubRegion") ?? text(row.subRegion);
+  const trainingDistrict = payloadText(payload, "trainingDistrict") ?? text(row.district);
   const totalInvited =
     payloadInt(payload, "totalInvited") ??
     (invited > 0 ? invited : whole(attendanceResult.rows[0]?.total));
@@ -427,6 +455,9 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
     detailsLeft: [
       { label: "Training Session Name", value: trainingName },
       { label: "Country", value: text(row.country, "Uganda") },
+      { label: "Region", value: trainingRegion },
+      { label: "Sub-Region", value: trainingSubRegion },
+      { label: "District", value: trainingDistrict },
       { label: "School Account", value: text(row.schoolName), href: row.schoolId ? `/portal/schools/${row.schoolId}` : null },
       { label: "Session Date", value: formatDate(row.date) },
       { label: "Start Time", value: payloadText(payload, "startTime") ?? "-" },
@@ -450,6 +481,7 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
       { label: "Male Attended", value: formatNumber(attendanceResult.rows[0]?.male) },
       { label: "Teachers Trained", value: formatNumber(attendanceResult.rows[0]?.teachers) },
       { label: "School Leaders Trained", value: formatNumber(attendanceResult.rows[0]?.leaders) },
+      { label: "Trainer Recommendations", value: trainerRecommendations },
       { label: "Follow-up Date", value: formatDate(row.followUpDate) },
       { label: "Follow-up Type", value: text(row.followUpType) },
       { label: "Workflow Status", value: text(row.status) },
@@ -531,6 +563,30 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
             text(row.status),
           ),
         ].filter((item) => item.title !== "Follow-up plan" || item.subtitle),
+      },
+      {
+        id: "feedback",
+        label: "Training Feedback",
+        emptyLabel: "No participant feedback has been submitted for this training yet.",
+        columns: [
+          { key: "participant", label: "Participant" },
+          { key: "rating", label: "Effectiveness Rating" },
+          { key: "feedback", label: "Feedback" },
+          { key: "recommendations", label: "Follow-up Recommendations" },
+          { key: "submittedBy", label: "Submitted By" },
+          { key: "date", label: "Date" },
+        ],
+        rows: (feedbackResult.rows as Array<Record<string, unknown>>).map((item) => ({
+          id: Number(item.id),
+          cells: {
+            participant: buildCell(item.participantName ?? "Session-level"),
+            rating: buildCell(item.effectivenessRating ? `${item.effectivenessRating}/5` : "-"),
+            feedback: buildCell(item.feedbackText),
+            recommendations: buildCell(item.followUpRecommendations),
+            submittedBy: buildCell(item.createdByName),
+            date: buildCell(formatDate(item.createdAt)),
+          },
+        })),
       },
     ],
     sidebarCards: [
@@ -724,7 +780,7 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
     ],
     primaryActions: [
       { label: "Edit Contact", href: `/portal/contacts/${id}/edit` },
-      { label: "Add to Training", href: `/portal/trainings/new?contactId=${id}&schoolId=${row.schoolId}` },
+      { label: "Add Contact to Training Session", href: `#add-to-training` },
       ...(isTeacher ? [
         { label: "New Evaluation", href: `/portal/evaluations/new?teacherId=${id}&schoolId=${row.schoolId}` },
         { label: "New Coaching", href: `/portal/visits/new?type=Coaching&teacherId=${id}&schoolId=${row.schoolId}` },

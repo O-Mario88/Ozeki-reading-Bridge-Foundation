@@ -188,7 +188,7 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
               </thead>
               <tbody>
                 {dashboard.recentActivity.length === 0 ? (
-                  <tr><td colSpan={8}>No recent activity found.</td></tr>
+                  <tr><td colSpan={9}>No recent activity found.</td></tr>
                 ) : (
                   dashboard.recentActivity.slice(0, 10).map((item, idx) => {
                     const iconSettings = moduleIconColor[item.module.split('_')[0]] || moduleIconColor.training;

@@ -4727,12 +4727,12 @@ export function PortalModuleManager({
                   .map((record) => (
                     <tr key={record.id}>
                       <td>{record.recordCode}</td>
-                      <td>{new Date(record.date).toLocaleDateString("en-GB")}</td>
+                      <td>{record.date ? new Date(record.date).toLocaleDateString("en-GB") : "-"}</td>
                       <td>{record.district}</td>
                       <td>{record.schoolName}</td>
                       <td>{record.programType ?? "-"}</td>
                       <td>{record.status}</td>
-                      <td>{new Date(record.updatedAt).toLocaleString()}</td>
+                      <td>{record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "-"}</td>
                       <td>
                         <button
                           className="button button-ghost"
@@ -5121,22 +5121,6 @@ export function PortalModuleManager({
                                 </option>
                               ))}
                             </select>
-                            <div className="portal-inline-actions">
-                              <button
-                                type="button"
-                                className="button button-ghost button-compact"
-                                onClick={() => {
-                                  if (typeof window !== "undefined") {
-                                    window.open("/portal/schools?new=1", "_blank", "noopener,noreferrer");
-                                  }
-                                }}
-                              >
-                                Create new school
-                              </button>
-                              <small className="portal-field-help">
-                                If the school is missing, create it first in School Accounts, then refresh and select it here.
-                              </small>
-                            </div>
                             {hideTrainingPhysicalLocationContext ? (
                               <small className="portal-field-help">
                                 Online sessions use virtual follow-up and hide physical location fields.

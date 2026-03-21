@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { PortalCrmProfileViewModel } from "@/lib/portal-crm-types";
+import { AddContactToTrainingModal } from "./AddContactToTrainingModal";
 
 interface PortalCrmProfileViewProps {
   profile: PortalCrmProfileViewModel;
+  contactId?: number;
 }
 
 function renderDetail(item: { label: string; value: string; href?: string | null }) {
@@ -17,7 +19,7 @@ function renderDetail(item: { label: string; value: string; href?: string | null
   );
 }
 
-export function PortalCrmProfileView({ profile }: PortalCrmProfileViewProps) {
+export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileViewProps) {
   const [activeTab, setActiveTab] = useState(profile.tabs[0]?.id ?? "details");
   const active = profile.tabs.find((tab) => tab.id === activeTab) ?? profile.tabs[0] ?? null;
 
@@ -39,15 +41,19 @@ export function PortalCrmProfileView({ profile }: PortalCrmProfileViewProps) {
         </div>
         {profile.primaryActions?.length ? (
           <div className="portal-crm-hero-actions">
-            {profile.primaryActions.map((action) => (
-              <Link
-                key={action.label}
-                className={`portal-crm-button${action.tone === "ghost" ? " portal-crm-button--ghost" : ""}`}
-                href={action.href}
-              >
-                {action.label}
-              </Link>
-            ))}
+            {profile.primaryActions.map((action) =>
+              action.href === "#add-to-training" && contactId ? (
+                <AddContactToTrainingModal key={action.label} contactId={contactId} />
+              ) : (
+                <Link
+                  key={action.label}
+                  className={`portal-crm-button${action.tone === "ghost" ? " portal-crm-button--ghost" : ""}`}
+                  href={action.href}
+                >
+                  {action.label}
+                </Link>
+              ),
+            )}
           </div>
         ) : null}
       </section>

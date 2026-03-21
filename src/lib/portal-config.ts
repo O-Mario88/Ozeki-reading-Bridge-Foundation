@@ -1,5 +1,6 @@
 import { EXTENDED_RECOMMENDATION_CATALOG } from "@/lib/recommendations";
 import { PortalRecordModule } from "@/lib/types";
+import { approvedRegionLabels, ugandaRegions } from "@/lib/uganda-locations";
 
 export type PortalFieldType =
   | "text"
@@ -200,7 +201,7 @@ const trainingConfig: PortalModuleConfig = {
   sections: [
     {
       id: "basics",
-      title: "Section 1: Training Metadata",
+      title: "Training Info",
       fields: [
         {
           key: "trainingStatus",
@@ -211,95 +212,24 @@ const trainingConfig: PortalModuleConfig = {
             { value: "Scheduled", label: "Scheduled" },
             { value: "In Progress", label: "In Progress" },
             { value: "Completed", label: "Completed" },
-            { value: "Canceled", label: "Canceled" },
+            { value: "Postponed", label: "Postponed" },
+            { value: "Cancelled", label: "Cancelled" },
           ],
         },
         { key: "trainingName", label: "Training name", type: "text", required: true },
         {
-          key: "trainingOrganization",
-          label: "Training organization",
-          type: "text",
-          required: true,
-          placeholder: "e.g. Ozeki Reading Bridge Foundation",
-        },
-        {
-          key: "trainingPresenter",
-          label: "Training presenter",
-          type: "text",
-          required: true,
-          placeholder: "Lead presenter or facilitator",
-        },
-        {
-          key: "deliveryMode",
-          label: "Training type",
+          key: "trainingRegion",
+          label: "Region",
           type: "select",
           required: true,
-          options: [
-            { value: "Grouped", label: "Grouped" },
-            { value: "Cluster-based", label: "Cluster-based" },
-            { value: "In-school", label: "In-school" },
-            { value: "Online", label: "Online" },
-          ],
+          options: approvedRegionLabels.map((r) => ({ value: r, label: r })),
         },
-        { key: "startTime", label: "Start time", type: "time", required: true },
-        { key: "endTime", label: "End time", type: "time", required: true },
-      ],
-    },
-    {
-      id: "location",
-      title: "Section 2: Location & Venue",
-      fields: [
-        { key: "trainingVenue", label: "Training venue", type: "text", required: true },
-        {
-          key: "clusterName",
-          label: "Cluster name (required for Cluster-based)",
-          type: "text",
-          helperText: "Only required when Training type is Cluster-based.",
-        },
-        { key: "village", label: "Village (optional)", type: "text" },
-        { key: "gpsLocation", label: "GPS (optional)", type: "text" },
-        ...sponsorshipFields,
       ],
     },
     {
       id: "program",
-      title: "Section 3: Training Details",
+      title: "Participants",
       fields: [
-        {
-          key: "audience",
-          label: "Audience",
-          type: "select",
-          required: true,
-          options: [
-            { value: "Teachers", label: "Teachers" },
-            { value: "Leaders", label: "Leaders" },
-            { value: "Both", label: "Both" },
-          ],
-        },
-        {
-          key: "objectivesCovered",
-          label: "Objectives covered",
-          type: "multiselect",
-          options: [
-            { value: "Phonemic awareness", label: "Phonemic awareness" },
-            { value: "Letter sounds", label: "Letter sounds" },
-            { value: "Blending and segmenting", label: "Blending and segmenting" },
-            { value: "Decoding and encoding", label: "Decoding and encoding" },
-            { value: "Fluency routines", label: "Fluency routines" },
-            { value: "Vocabulary and comprehension", label: "Vocabulary and comprehension" },
-          ],
-        },
-        {
-          key: "modulesDelivered",
-          label: "Modules delivered",
-          type: "multiselect",
-          options: [
-            { value: "Demo lesson", label: "Demo lesson" },
-            { value: "Co-teaching", label: "Co-teaching" },
-            { value: "Practice routine", label: "Practice routine" },
-            { value: "Assessment routine", label: "Assessment routine" },
-          ],
-        },
         {
           key: "participants",
           label: "Participants",
@@ -308,12 +238,112 @@ const trainingConfig: PortalModuleConfig = {
           helperText:
             "Capture participant name, school attached to, role (Teacher or Leader), gender, and phone contact.",
         },
-        { key: "facilitators", label: "Facilitators", type: "text", required: true },
+        {
+          key: "numberAttended",
+          label: "Number attended (auto)",
+          type: "number",
+          required: true,
+          min: 0,
+          helperText: "Auto-calculated from participant list.",
+        },
+      ],
+    },
+    {
+      id: "details",
+      title: "Additional Details (optional)",
+      collapsible: true,
+      fields: [
+        {
+          key: "trainingOrganization",
+          label: "Training organization",
+          type: "text",
+          placeholder: "e.g. Ozeki Reading Bridge Foundation",
+        },
+        {
+          key: "trainingPresenter",
+          label: "Training presenter",
+          type: "text",
+          placeholder: "Lead presenter or facilitator",
+        },
+        {
+          key: "deliveryMode",
+          label: "Training type",
+          type: "select",
+          options: [
+            { value: "In-Person", label: "In-Person" },
+            { value: "Virtual (Online)", label: "Virtual (Online)" },
+            { value: "Hybrid", label: "Hybrid" },
+            { value: "Field-Based", label: "Field-Based" },
+          ],
+        },
+        { key: "startTime", label: "Start time", type: "time" },
+        { key: "endTime", label: "End time", type: "time" },
+        {
+          key: "trainingSubRegion",
+          label: "Sub-Region",
+          type: "select",
+          options: ugandaRegions.flatMap((r) =>
+            r.subRegions.map((sr) => ({ value: sr.subRegion, label: sr.subRegion })),
+          ),
+        },
+        {
+          key: "trainingDistrict",
+          label: "District",
+          type: "select",
+          options: ugandaRegions.flatMap((r) =>
+            r.districts.map((d) => ({ value: d, label: d })),
+          ),
+        },
+        { key: "trainingVenue", label: "Training venue", type: "text" },
+        {
+          key: "audience",
+          label: "Audience",
+          type: "select",
+          options: [
+            { value: "Teachers Only", label: "Teachers Only" },
+            { value: "Head Teachers Only", label: "Head Teachers Only" },
+            { value: "Teachers & Head Teachers", label: "Teachers & Head Teachers" },
+            { value: "Community Members", label: "Community Members" },
+            { value: "Mixed Audience", label: "Mixed Audience" },
+          ],
+        },
+        {
+          key: "objectivesCovered",
+          label: "Objectives covered",
+          type: "multiselect",
+          options: [
+            { value: "Phonics Instruction", label: "Phonics Instruction" },
+            { value: "Reading Fluency", label: "Reading Fluency" },
+            { value: "Comprehension Strategies", label: "Comprehension Strategies" },
+            { value: "Lesson Planning", label: "Lesson Planning" },
+            { value: "Classroom Management", label: "Classroom Management" },
+            { value: "Use of Teaching Aids", label: "Use of Teaching Aids" },
+            { value: "Learner Assessment Techniques", label: "Learner Assessment Techniques" },
+            { value: "Storybook Integration", label: "Storybook Integration" },
+            { value: "Community Engagement", label: "Community Engagement" },
+            { value: "Inclusive Education Practices", label: "Inclusive Education Practices" },
+          ],
+        },
+        {
+          key: "modulesDelivered",
+          label: "Modules delivered",
+          type: "multiselect",
+          options: [
+            { value: "Module 1: Foundation Literacy", label: "Module 1: Foundation Literacy" },
+            { value: "Module 2: Phonics & Decoding", label: "Module 2: Phonics & Decoding" },
+            { value: "Module 3: Reading Practice", label: "Module 3: Reading Practice" },
+            { value: "Module 4: Story Writing", label: "Module 4: Story Writing" },
+            { value: "Module 5: Assessment Tools", label: "Module 5: Assessment Tools" },
+            { value: "Module 6: Coaching & Mentoring", label: "Module 6: Coaching & Mentoring" },
+            { value: "Module 7: School Leadership", label: "Module 7: School Leadership" },
+            { value: "Module 8: Community Reading Clubs", label: "Module 8: Community Reading Clubs" },
+          ],
+        },
+        { key: "facilitators", label: "Facilitators", type: "text" },
         {
           key: "trainingLanguage",
           label: "Training language",
           type: "select",
-          required: true,
           options: [
             { value: "English", label: "English" },
             { value: "Luganda", label: "Luganda" },
@@ -323,32 +353,32 @@ const trainingConfig: PortalModuleConfig = {
             { value: "Other", label: "Other" },
           ],
         },
-      ],
-    },
-    {
-      id: "results",
-      title: "Section 4: Results / Scores",
-      fields: [
         {
-          key: "numberAttended",
-          label: "Number attended (auto)",
-          type: "number",
-          required: true,
-          min: 0,
+          key: "trainerRecommendations",
+          label: "Trainer recommendations",
+          type: "multiselect",
+          options: [
+            { value: "Schedule follow-up coaching visit", label: "Schedule follow-up coaching visit" },
+            { value: "Provide additional teaching aids", label: "Provide additional teaching aids" },
+            { value: "Pair with mentor teacher", label: "Pair with mentor teacher" },
+            { value: "Recommend for advanced training", label: "Recommend for advanced training" },
+            { value: "Monitor classroom implementation", label: "Monitor classroom implementation" },
+            { value: "Refer to school leadership for support", label: "Refer to school leadership for support" },
+            { value: "No immediate action needed", label: "No immediate action needed" },
+          ],
         },
         {
-          key: "totalInvited",
-          label: "Total invited",
-          type: "number",
-          min: 0,
-          helperText: "Capture the invited group size even when actual attendance is lower.",
+          key: "trainingFeedbackBundleJson",
+          label: "Participants & Facilitator Feedback",
+          type: "text",
+          helperText:
+            "Capture participant feedback and facilitator observations.",
         },
-        { key: "femaleCount", label: "Female attended (auto)", type: "number", min: 0 },
-        { key: "maleCount", label: "Male attended (auto)", type: "number", min: 0 },
-        { key: "teachersFemale", label: "Teachers (Female, auto)", type: "number", min: 0 },
-        { key: "teachersMale", label: "Teachers (Male, auto)", type: "number", min: 0 },
-        { key: "schoolLeadersFemale", label: "School leaders (Female, auto)", type: "number", min: 0 },
-        { key: "schoolLeadersMale", label: "School leaders (Male, auto)", type: "number", min: 0 },
+        {
+          key: "followUpDate",
+          label: "Follow-up date",
+          type: "date",
+        },
         {
           key: "preTestAverage",
           label: "Pre-test average (%)",
@@ -356,22 +386,9 @@ const trainingConfig: PortalModuleConfig = {
           min: 0,
           max: 100,
         },
+        ...sponsorshipFields.map((f) => ({ ...f, required: false })),
       ],
     },
-    {
-      id: "actions",
-      title: "Section 5: Actions & Follow-up",
-      fields: [
-        {
-          key: "trainingFeedbackBundleJson",
-          label: "Participants & Facilitator Feedback",
-          type: "text",
-          helperText:
-            "Capture participant feedback once and facilitator observations once using the button form.",
-        },
-      ],
-    },
-    standardizedInsightSection,
   ],
 };
 
@@ -408,33 +425,8 @@ const visitConfig: PortalModuleConfig = {
   sections: [
     {
       id: "visitContext",
-      title: "Step 1: Visit Context",
+      title: "Visit Context",
       fields: [
-        {
-          key: "visitName",
-          label: "Visit Name",
-          type: "text",
-        },
-        {
-          key: "visitedBy",
-          label: "Visited By",
-          type: "text",
-          required: true,
-          helperText: "Auto-filled from the signed-in user or manually entered.",
-        },
-        {
-          key: "visitReasons",
-          label: "Reason for visit",
-          type: "multiselect",
-          required: true,
-          options: [
-            { value: "Meeting with Leadership", label: "Meeting with Leadership" },
-            { value: "Assessment", label: "Assessment" },
-            { value: "Coaching", label: "Coaching" },
-            { value: "Support", label: "Support" },
-            { value: "Classroom Observation", label: "Classroom Observation" },
-          ],
-        },
         {
           key: "visitStatus",
           label: "Visit status",
@@ -445,25 +437,10 @@ const visitConfig: PortalModuleConfig = {
             { value: "completed", label: "Completed" },
           ],
         },
-        { key: "startTime", label: "Time from", type: "time", required: true },
-        { key: "endTime", label: "Time to", type: "time", required: true },
-        {
-          key: "visitContacts",
-          label: "Visit Contacts",
-          type: "multiselect",
-          required: true,
-        },
-        ...sponsorshipFields,
-      ],
-    },
-    {
-      id: "implementationGate",
-      title: "Step 2: Implementation Check",
-      fields: [
         {
           key: "implementationStatus",
           label:
-            "Has the school started implementing the reading method learned from training (structured phonics routines)?",
+            "Has the school started implementing the reading method?",
           type: "select",
           required: true,
           options: [
@@ -471,6 +448,58 @@ const visitConfig: PortalModuleConfig = {
             { value: "not_started", label: "No — Not yet started" },
             { value: "partial", label: "Partially — Started in some classes only" },
           ],
+        },
+      ],
+    },
+    {
+      id: "lessonDemo",
+      title: "Demo Lesson",
+      fields: [
+        {
+          key: "demoDelivered",
+          label: "Demo delivered?",
+          type: "select",
+          required: true,
+          options: [
+            { value: "yes", label: "Yes" },
+            { value: "no", label: "No" },
+          ],
+        },
+        { key: "demoClass", label: "Class for demo (grade/stream)", type: "text", required: true },
+        { key: "demoFocus", label: "Demo focus", type: "text" },
+        { key: "demoMinutes", label: "Period length (minutes)", type: "number", min: 1 },
+      ],
+    },
+    {
+      id: "visitDetails",
+      title: "Detailed Visit Data (optional)",
+      collapsible: true,
+      fields: [
+        { key: "visitName", label: "Visit name", type: "text" },
+        {
+          key: "visitedBy",
+          label: "Visited by",
+          type: "text",
+          helperText: "Auto-filled from the signed-in user.",
+        },
+        {
+          key: "visitReasons",
+          label: "Reason for visit",
+          type: "multiselect",
+          options: [
+            { value: "Meeting with Leadership", label: "Meeting with Leadership" },
+            { value: "Assessment", label: "Assessment" },
+            { value: "Coaching", label: "Coaching" },
+            { value: "Support", label: "Support" },
+            { value: "Classroom Observation", label: "Classroom Observation" },
+          ],
+        },
+        { key: "startTime", label: "Time from", type: "time" },
+        { key: "endTime", label: "Time to", type: "time" },
+        {
+          key: "visitContacts",
+          label: "Visit contacts",
+          type: "multiselect",
         },
         {
           key: "classesImplementing",
@@ -488,45 +517,12 @@ const visitConfig: PortalModuleConfig = {
             { value: "P6", label: "P6" },
             { value: "P7", label: "P7" },
           ],
-          helperText:
-            "Required when implementation status is Partial.",
         },
-        {
-          key: "classesNotImplementing",
-          label: "Classes not implementing",
-          type: "multiselect",
-          options: [
-            { value: "Baby Class", label: "Baby Class" },
-            { value: "Middle Class", label: "Middle Class" },
-            { value: "Top Class", label: "Top Class" },
-            { value: "P1", label: "P1" },
-            { value: "P2", label: "P2" },
-            { value: "P3", label: "P3" },
-            { value: "P4", label: "P4" },
-            { value: "P5", label: "P5" },
-            { value: "P6", label: "P6" },
-            { value: "P7", label: "P7" },
-          ],
-          helperText: "Date is captured in the visit metadata above.",
-        },
-      ],
-    },
-    {
-      id: "observationContext",
-      title: "Step 3A: Classroom Observation & Coaching",
-      fields: [
-        {
-          key: "teacherObserved",
-          label: "Teacher observed",
-          type: "text",
-          required: true,
-          helperText: "Select a teacher from the school roster.",
-        },
+        { key: "teacherObserved", label: "Teacher observed", type: "text" },
         {
           key: "classLevel",
           label: "Class observed",
           type: "select",
-          required: true,
           options: [
             { value: "P1", label: "P1" },
             { value: "P2", label: "P2" },
@@ -539,213 +535,110 @@ const visitConfig: PortalModuleConfig = {
         },
         { key: "classSize", label: "Class size", type: "number", min: 0 },
         {
-          key: "lessonFocusAreas",
-          label: "Lesson focus",
-          type: "multiselect",
-          options: [
-            { value: "sounds", label: "Sounds" },
-            { value: "decoding", label: "Decoding" },
-            { value: "blending", label: "Blending" },
-            { value: "segmenting", label: "Segmenting" },
-            { value: "fluency", label: "Fluency" },
-            { value: "comprehension", label: "Comprehension" },
-            { value: "tricky_words", label: "Tricky words" },
-          ],
-        },
-        {
-          key: "learnerSpotCheckCount",
-          label: "Quick learner spot-check count (optional)",
-          type: "number",
-          min: 0,
-        },
-        {
-          key: "learnerSpotCheckNote",
-          label: "Quick learner spot-check note (optional)",
-          type: "textarea",
-        },
-      ],
-    },
-    {
-      id: "generalTeaching",
-      title: "1) General teaching",
-      fields: [
-        {
           key: "general_revisedSoundsQuickly",
-          label: "Children revised sounds quickly at the start of the lesson.",
+          label: "Revised sounds quickly",
           type: "select",
-          required: true,
           options: observationRatingOptions,
-          helperText: "Rating scale: Very Good | Good | Fair | Can Improve.",
         },
         {
           key: "general_qualityLessonPlanning",
-          label:
-            "Quality lesson planning was evident and the teacher was well prepared.",
+          label: "Quality lesson planning",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "general_choiceOfWords",
-          label:
-            "Good choice of words used in the lesson, at pupils’ level and covered sounds already learnt.",
+          label: "Good choice of words",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "general_soundKnowledge",
-          label: "Teacher displayed a good knowledge of sounds during the lesson.",
+          label: "Sound knowledge",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "general_followsSoundOrder",
-          label: "Teacher follows the sounds in order.",
+          label: "Follows sound order",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "general_usesRangeOfResources",
-          label: "The teacher used a range of resources in the lesson to engage learners.",
+          label: "Uses range of resources",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
-      ],
-    },
-    {
-      id: "teacherNewSound",
-      title: "2) Teacher new sound",
-      fields: [
         {
           key: "newSound_clearPronunciation",
-          label: "Teacher models clear pronunciation.",
+          label: "Clear pronunciation",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "newSound_handwritingFormation",
-          label: "Teacher models handwriting/letter formation.",
+          label: "Handwriting/letter formation",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "newSound_childrenSayWrite",
-          label: "Children had opportunities to say and write the new sound.",
+          label: "Children say and write new sound",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
-      ],
-    },
-    {
-      id: "readingActivities",
-      title: "3) Reading activities",
-      fields: [
         {
           key: "readingActivities_soundOutWords",
-          label: "Pupils given opportunities to sound out word.",
+          label: "Sound out words",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "readingActivities_pairGroupReading",
-          label: "Pupils given opportunities to read in pairs/groups.",
+          label: "Pair/group reading",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "readingActivities_teacherEncouragedDecoding",
-          label:
-            "Teacher did not read for children but encouraged learners to sound out words.",
+          label: "Encouraged decoding",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "readingActivities_activeEngagement",
-          label:
-            "All pupils actively engaged in sounding and reading sounds, words and sentences.",
+          label: "Active engagement",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
         {
           key: "readingActivities_resourceVariety",
-          label:
-            "Teacher used a range of different resources to engage learners in reading activities.",
+          label: "Resource variety",
           type: "select",
-          required: true,
           options: observationRatingOptions,
         },
-      ],
-    },
-    {
-      id: "trickyWords",
-      title: "4) Tricky (non-decodable) words",
-      fields: [
         {
           key: "trickyWords_taughtOrRevised",
-          label: "Pupils were taught a new tricky word or revised tricky words in the lesson.",
+          label: "Tricky words taught/revised",
           type: "select",
-          required: true,
           options: trickyWordDefaultOptions,
         },
         {
           key: "trickyWords_sightWordSpeed",
-          label: "Pupils are beginning to say tricky words by sight quickly.",
+          label: "Tricky words by sight",
           type: "select",
-          required: true,
           options: trickyWordDefaultOptions,
-          helperText:
-            "Scoring note: Very Good = 5 marks; Good = 3 marks; Fair = 1 mark. Satisfactory phonics lesson = 60% or above.",
         },
-      ],
-    },
-    {
-      id: "observationCoaching",
-      title: "Observation coaching notes",
-      fields: [
         { key: "strengthsObserved", label: "Key findings", type: "textarea" },
         { key: "gapsIdentified", label: "What went well", type: "textarea" },
         { key: "coachingProvided", label: "Challenges", type: "textarea" },
-        {
-          key: "teacherActions",
-          label: "Recommendations / action points",
-          type: "textarea",
-        },
+        { key: "teacherActions", label: "Recommendations / action points", type: "textarea" },
         { key: "nextVisitFocus", label: "Conclusions / next steps", type: "text" },
-      ],
-    },
-    {
-      id: "lessonDemo",
-      title: "Step 3B: Lesson Demonstration",
-      fields: [
-        {
-          key: "demoDelivered",
-          label: "Demo delivered?",
-          type: "select",
-          required: true,
-          options: [
-            { value: "yes", label: "Yes" },
-            { value: "no", label: "No" },
-          ],
-        },
-        { key: "demoClass", label: "Class for demo (grade/stream)", type: "text", required: true },
-        { key: "demoFocus", label: "Demo focus", type: "text", required: true },
-        { key: "demoMinutes", label: "Period length (minutes)", type: "number", required: true, min: 1 },
         {
           key: "demoComponents",
           label: "Demo approach used",
           type: "multiselect",
-          required: true,
           options: [
             { value: "sound review routine", label: "Sound review routine" },
             { value: "new sound modeling", label: "New sound modeling" },
@@ -757,154 +650,28 @@ const visitConfig: PortalModuleConfig = {
           ],
         },
         {
-          key: "demoMaterialsUsed",
-          label: "Materials used",
-          type: "multiselect",
-          options: [
-            { value: "teacher guide", label: "Teacher guide" },
-            { value: "learner books", label: "Learner books" },
-            { value: "flash cards", label: "Flash cards" },
-            { value: "sound chart", label: "Sound chart" },
-            { value: "board/chalk", label: "Board/chalk" },
-            { value: "other", label: "Other" },
-          ],
-        },
-        {
           key: "demoTeachersPresentContactIds",
-          label: "Teacher(s) present",
+          label: "Teacher(s) present for demo",
           type: "multiselect",
-          required: true,
-          helperText: "Select from school contacts.",
         },
-        {
-          key: "demoTakeawaysText",
-          label: "Key demonstration takeaways",
-          type: "textarea",
-          required: true,
-        },
-      ],
-    },
-    {
-      id: "implementationStartPlan",
-      title: "Implementation start plan",
-      fields: [
-        { key: "implementationStartDate", label: "Start date", type: "date", required: true },
-        {
-          key: "dailyReadingTimeMinutes",
-          label: "Daily reading time agreed (minutes)",
-          type: "number",
-          required: true,
-          min: 0,
-        },
-        {
-          key: "classesToStartFirst",
-          label: "Classes to start first",
-          type: "multiselect",
-          required: true,
-          options: [
-            { value: "P1", label: "P1" },
-            { value: "P2", label: "P2" },
-            { value: "P3", label: "P3" },
-            { value: "P4", label: "P4" },
-            { value: "P5", label: "P5" },
-            { value: "P6", label: "P6" },
-            { value: "P7", label: "P7" },
-          ],
-        },
-        {
-          key: "implementationResponsibleContactId",
-          label: "Responsible person at school",
-          type: "select",
-          required: true,
-          helperText: "Default recommendation: Headteacher or DOS.",
-        },
-        {
-          key: "supportNeededFromOzeki",
-          label: "Support needed from Ozeki",
-          type: "multiselect",
-          required: true,
-          options: [
-            { value: "refresher training", label: "Refresher training" },
-            { value: "materials", label: "Materials" },
-            { value: "coaching follow-up", label: "Coaching follow-up" },
-            { value: "assessment setup", label: "Assessment setup" },
-          ],
-        },
-        {
-          key: "visitAssessmentPlan",
-          label: "Assessment actions agreed",
-          type: "textarea",
-          helperText:
-            "Capture any baseline/progress/endline assessment actions linked to this visit.",
-        },
-      ],
-    },
-    {
-      id: "leadershipMeeting",
-      title: "Headteacher / DOS meeting summary",
-      fields: [
+        { key: "demoTakeawaysText", label: "Demo takeaways", type: "textarea" },
         {
           key: "leadershipMeetingHeld",
-          label: "Meeting held?",
+          label: "Leadership meeting held?",
           type: "select",
-          required: true,
           options: [
             { value: "yes", label: "Yes" },
             { value: "no", label: "No" },
           ],
         },
-        {
-          key: "leadershipAttendeesContactIds",
-          label: "Attendees",
-          type: "multiselect",
-          options: [],
-          helperText:
-            "Select from school contacts (Proprietor, Head Teacher, DOS, Teacher, Administrator, Deputy Head Teacher, Accountant).",
-        },
-        {
-          key: "leadershipSummary",
-          label: "Summary of conversation",
-          type: "textarea",
-          required: true,
-        },
-        {
-          key: "leadershipAgreements",
-          label: "Agreements made",
-          type: "textarea",
-          required: true,
-        },
-        {
-          key: "leadershipRisks",
-          label: "Risks/barriers discussed",
-          type: "textarea",
-          required: true,
-        },
-        {
-          key: "leadershipNextActionsJson",
-          label: "Next actions + owner + due date",
-          type: "text",
-          required: true,
-        },
-        {
-          key: "leadershipNextVisitDate",
-          label: "Next visit date",
-          type: "date",
-          required: true,
-        },
-      ],
-    },
-    {
-      id: "visitInsights",
-      title: "Step 4: Submit & Follow-up",
-      fields: [
-        {
-          key: "visitPathway",
-          label: "Visit pathway (auto)",
-          type: "text",
-          helperText: "Auto-calculated from implementation status.",
-        },
-        ...standardizedInsightSection.fields,
+        { key: "leadershipSummary", label: "Leadership summary", type: "textarea" },
+        { key: "leadershipAgreements", label: "Agreements made", type: "textarea" },
+        { key: "leadershipRisks", label: "Risks/barriers", type: "textarea" },
+        { key: "leadershipNextVisitDate", label: "Next visit date", type: "date" },
+        { key: "implementationStartDate", label: "Implementation start date", type: "date" },
+        { key: "visitAssessmentPlan", label: "Assessment actions agreed", type: "textarea" },
         { key: "evidenceNotes", label: "Evidence notes", type: "textarea" },
+        ...sponsorshipFields.map((f) => ({ ...f, required: false })),
       ],
     },
   ],
@@ -1136,22 +903,28 @@ const storyConfig: PortalModuleConfig = {
   sections: [
     {
       id: "basics",
-      title: "Section 1: Basics",
+      title: "Story Info",
       fields: [
         { key: "storyProjectName", label: "Project session name", type: "text", required: true },
-        { key: "subCounty", label: "Sub-county", type: "text", required: true },
-        { key: "parish", label: "Parish", type: "text", required: true },
-        { key: "village", label: "Village (optional)", type: "text" },
-        ...sponsorshipFields,
-        { key: "grades", label: "Grade(s)", type: "text" },
-        { key: "learnersInvolved", label: "# learners involved", type: "number", min: 0 },
+        { key: "learnersInvolved", label: "# learners involved", type: "number", min: 0, required: true },
         { key: "storiesDrafted", label: "# stories drafted", type: "number", min: 0 },
+        {
+          key: "storiesApproved",
+          label: "Stories approved for anthology",
+          type: "number",
+          min: 0,
+          required: true,
+        },
       ],
     },
     {
-      id: "program",
-      title: "Section 2: Program Details",
+      id: "details",
+      title: "Additional Details (optional)",
+      collapsible: true,
       fields: [
+        { key: "subCounty", label: "Sub-county", type: "text" },
+        { key: "parish", label: "Parish", type: "text" },
+        { key: "grades", label: "Grade(s)", type: "text" },
         {
           key: "theme",
           label: "Theme used",
@@ -1168,20 +941,8 @@ const storyConfig: PortalModuleConfig = {
         { key: "projectLead", label: "Project lead", type: "text" },
         { key: "mentorContacts", label: "Mentor / teacher contacts", type: "text" },
         { key: "teacherSupportGiven", label: "Teacher support given", type: "textarea" },
-      ],
-    },
-    {
-      id: "results",
-      title: "Section 3: Results / Scores",
-      fields: [
         { key: "structureScore", label: "Structure score (1-5)", type: "number", min: 1, max: 5 },
-        {
-          key: "vocabularyScore",
-          label: "Vocabulary score (1-5)",
-          type: "number",
-          min: 1,
-          max: 5,
-        },
+        { key: "vocabularyScore", label: "Vocabulary score (1-5)", type: "number", min: 1, max: 5 },
         { key: "spellingScore", label: "Spelling score (1-5)", type: "number", min: 1, max: 5 },
         { key: "clarityScore", label: "Clarity score (1-5)", type: "number", min: 1, max: 5 },
         {
@@ -1195,20 +956,8 @@ const storyConfig: PortalModuleConfig = {
             { value: "Vocabulary depth", label: "Vocabulary depth" },
           ],
         },
-      ],
-    },
-    {
-      id: "actions",
-      title: "Section 4: Actions & Follow-up",
-      fields: [
         { key: "nextSteps", label: "Next steps", type: "textarea" },
         { key: "storiesReceived", label: "Stories received", type: "number", min: 0 },
-        {
-          key: "storiesApproved",
-          label: "Stories approved for anthology",
-          type: "number",
-          min: 0,
-        },
         {
           key: "editingStatus",
           label: "Editing status",
@@ -1243,17 +992,13 @@ const storyConfig: PortalModuleConfig = {
             { value: "Published", label: "Published" },
           ],
         },
+        { key: "evidenceNotes", label: "Evidence notes", type: "textarea" },
       ],
     },
     {
       ...standardizedInsightSection,
       id: "storyInsights",
-      title: "Section 5: Key Findings & Next Steps",
-    },
-    {
-      id: "evidence",
-      title: "Section 6: Evidence Uploads",
-      fields: [{ key: "evidenceNotes", label: "Evidence notes", type: "textarea" }],
+      title: "Key Findings & Next Steps",
     },
   ],
 };

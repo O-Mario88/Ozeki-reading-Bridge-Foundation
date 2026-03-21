@@ -25,7 +25,7 @@ export default async function PortalContactProfilePage({ params }: PageProps) {
 
   return (
     <PortalShell user={user} activeHref="/portal/contacts" title={profile.title} description={profile.subtitle ?? undefined}>
-      <PortalCrmProfileView profile={profile} />
+      <PortalCrmProfileView profile={profile} contactId={id} />
     </PortalShell>
   );
 }

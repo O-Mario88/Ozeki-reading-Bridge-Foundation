@@ -186,3 +186,31 @@ export function getSubRegionsByRegion(region: string) {
   const entry = ugandaRegions.find((r) => r.region === region);
   return entry?.subRegions ?? [];
 }
+
+/**
+ * Map a short internal region name to the approved display label.
+ * e.g. "Northern" → "Northern Region", "Eastern" → "Eastern Region"
+ * If the value already contains "Region" it is returned as-is.
+ */
+export function displayRegion(region: string | null | undefined): string {
+  const normalized = (region ?? "").trim();
+  if (!normalized) return "";
+  if (normalized.endsWith("Region")) return normalized;
+  return `${normalized} Region`;
+}
+
+/**
+ * Reverse map: strip " Region" suffix to get the short internal name
+ * used in the DB and `ugandaRegions` seed.
+ */
+export function internalRegion(displayLabel: string): string {
+  return displayLabel.replace(/\s+Region$/i, "").trim();
+}
+
+/** Approved region labels for form dropdowns and filters. */
+export const approvedRegionLabels = [
+  "Northern Region",
+  "Central Region",
+  "Eastern Region",
+  "Western Region",
+] as const;

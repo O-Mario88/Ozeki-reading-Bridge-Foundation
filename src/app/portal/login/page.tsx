@@ -17,20 +17,8 @@ export default async function PortalLoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-white">
-      {/* Subtle Grid Background */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm1 1h38v38H1V1z' fill='%23000' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-          backgroundSize: "40px 40px"
-        }}
-      />
-      {/* Soft gradient accent from Ozeki system colors */}
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-teal-500/10 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-orange-500/10 blur-[100px] pointer-events-none" />
-      
-      <div className="w-full max-w-[440px] px-6 relative z-10">
+    <div className="portal-login-page">
+      <div className="portal-login-page-inner">
         <PortalLoginForm />
       </div>
     </div>
