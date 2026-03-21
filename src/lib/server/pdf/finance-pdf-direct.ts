@@ -263,14 +263,16 @@ function drawThreeColumns(
     lineY -= lineH;
   }
 
-  // Vertical separator between col 1 and col 2
-  const sep1X = ML + col1W - 6;
-  page.drawLine({
-    start: { x: sep1X, y: sepTopY },
-    end: { x: sep1X, y: sepBotY },
-    thickness: 0.5,
-    color: BORDER_GRAY,
-  });
+  // Vertical separator between col 1 and col 2 (skip when col2 is empty — receipt layout)
+  if (!col2IsEmpty) {
+    const sep1X = ML + col1W - 6;
+    page.drawLine({
+      start: { x: sep1X, y: sepTopY },
+      end: { x: sep1X, y: sepBotY },
+      thickness: 0.5,
+      color: BORDER_GRAY,
+    });
+  }
 
   // Column 2 — TO
   const c2x = ML + col1W + 4;

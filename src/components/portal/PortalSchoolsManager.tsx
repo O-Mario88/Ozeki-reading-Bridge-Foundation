@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   allUgandaDistricts,
   getDistrictsByRegion,
+  getSubRegionsByRegion,
   inferRegionFromDistrict,
   ugandaRegions,
 } from "@/lib/uganda-locations";
@@ -27,17 +28,7 @@ type Feedback = {
   message: string;
 };
 
-const primaryContactRoleOptions = [
-  "Proprietor",
-  "Head Teacher",
-  "DOS",
-  "Teacher",
-  "Administrator",
-  "Deputy Head Teacher",
-  "Accountant",
-] as const;
 
-type PrimaryContactRole = (typeof primaryContactRoleOptions)[number];
 
 function parseOptionalNumber(value: string) {
   const trimmed = value.trim();
@@ -111,6 +102,7 @@ export function PortalSchoolsManager({
   );
 
   const [createRegion, setCreateRegion] = useState(ugandaRegions[0]?.region ?? "");
+  const [createSubRegion, setCreateSubRegion] = useState("");
   const [createDistrict, setCreateDistrict] = useState("");
   const [filterRegion, setFilterRegion] = useState("");
   const [districtFilter, setDistrictFilter] = useState("");
@@ -294,11 +286,13 @@ export function PortalSchoolsManager({
 
     const formData = new FormData(form);
     const region = String(formData.get("region") ?? "").trim();
+    const subRegion = String(formData.get("subRegion") ?? "").trim();
     const district = String(formData.get("district") ?? "").trim();
     const payload = {
       name: String(formData.get("name") ?? ""),
       country: String(formData.get("country") ?? "Uganda"),
       region,
+      subRegion,
       district,
       subCounty: String(formData.get("subCounty") ?? ""),
       parish: String(formData.get("parish") ?? ""),
@@ -326,12 +320,11 @@ export function PortalSchoolsManager({
       classesJson: JSON.stringify(Array.from(formData.getAll("classes")).map(String)),
       gpsLat: String(formData.get("gpsLat") ?? ""),
       gpsLng: String(formData.get("gpsLng") ?? ""),
-      contactName: String(formData.get("contactName") ?? ""),
-      contactPhone: String(formData.get("contactPhone") ?? ""),
-      proprietorGender: String(formData.get("proprietorGender") ?? ""),
-      proprietorEmail: String(formData.get("proprietorEmail") ?? ""),
-      proprietorWhatsapp: String(formData.get("proprietorWhatsapp") ?? ""),
-      primaryContactRole: String(formData.get("primaryContactRole") ?? "Proprietor"),
+      headTeacherName: String(formData.get("headTeacherName") ?? ""),
+      headTeacherPhone: String(formData.get("headTeacherPhone") ?? ""),
+      headTeacherGender: String(formData.get("headTeacherGender") ?? ""),
+      headTeacherEmail: String(formData.get("headTeacherEmail") ?? ""),
+      headTeacherWhatsapp: String(formData.get("headTeacherWhatsapp") ?? ""),
     };
 
     if (!region || !district) {
@@ -361,38 +354,10 @@ export function PortalSchoolsManager({
       setSavingSchool(false);
       return;
     }
-    if (!isValidPhone(payload.contactPhone)) {
+    if (payload.headTeacherPhone && !isValidPhone(payload.headTeacherPhone)) {
       setCreateFeedback({
         kind: "error",
-        message: "Primary contact phone format is invalid. Use digits and optional +, space, (), or -.",
-      });
-      setSavingSchool(false);
-      return;
-    }
-    if (!payload.contactName.trim()) {
-      setCreateFeedback({
-        kind: "error",
-        message: "Primary contact full name is required.",
-      });
-      setSavingSchool(false);
-      return;
-    }
-    if (
-      payload.proprietorGender !== "Male" &&
-      payload.proprietorGender !== "Female" &&
-      payload.proprietorGender !== "Other"
-    ) {
-      setCreateFeedback({
-        kind: "error",
-        message: "Primary contact gender is required.",
-      });
-      setSavingSchool(false);
-      return;
-    }
-    if (!primaryContactRoleOptions.includes(payload.primaryContactRole as PrimaryContactRole)) {
-      setCreateFeedback({
-        kind: "error",
-        message: "Select a valid primary contact role.",
+        message: "Head Teacher phone format is invalid. Use digits and optional +, space, (), or -.",
       });
       setSavingSchool(false);
       return;
@@ -404,8 +369,22 @@ export function PortalSchoolsManager({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...payload,
+          name: payload.name,
+          country: payload.country.trim() || "Uganda",
+          region: payload.region,
+          subRegion: payload.subRegion || undefined,
+          district: payload.district,
+          subCounty: payload.subCounty.trim() || undefined,
+          parish: payload.parish.trim() || undefined,
+          village: payload.village.trim() || undefined,
+          notes: payload.notes.trim() || undefined,
+          alternateSchoolNames: payload.alternateSchoolNames.trim() || undefined,
+          schoolStatus: payload.schoolStatus || "Open",
+          schoolStatusDate: payload.schoolStatusDate.trim() || undefined,
+          currentPartnerType: payload.currentPartnerType || "NA",
           yearFounded: payload.yearFounded.trim() ? Number(payload.yearFounded) : undefined,
+          denomination: payload.denomination.trim() || undefined,
+          protestantDenomination: payload.protestantDenomination.trim() || undefined,
           accountRecordType: "School",
           schoolType: "School",
           parentAccountLabel: payload.country.trim() || "Uganda",
@@ -428,15 +407,16 @@ export function PortalSchoolsManager({
           enrolledP5: 0,
           enrolledP6: 0,
           enrolledP7: 0,
-          proprietor: {
-            fullName: payload.contactName.trim(),
-            gender: payload.proprietorGender as "Male" | "Female" | "Other",
-            phone: payload.contactPhone.trim() || undefined,
-            email: payload.proprietorEmail.trim() || undefined,
-            whatsapp: payload.proprietorWhatsapp.trim() || undefined,
-            category: payload.primaryContactRole as PrimaryContactRole,
-            roleTitle: payload.primaryContactRole as PrimaryContactRole,
-          },
+          gpsLat: payload.gpsLat.trim() || undefined,
+          gpsLng: payload.gpsLng.trim() || undefined,
+          headTeacherName: payload.headTeacherName.trim() || undefined,
+          headTeacherGender: payload.headTeacherGender || undefined,
+          headTeacherPhone: payload.headTeacherPhone.trim() || undefined,
+          headTeacherEmail: payload.headTeacherEmail.trim() || undefined,
+          headTeacherWhatsapp: payload.headTeacherWhatsapp.trim() || undefined,
+          website: payload.website.trim() || undefined,
+          description: payload.description.trim() || undefined,
+          partnerType: payload.partnerType.trim() || undefined,
         }),
       });
 
@@ -452,6 +432,7 @@ export function PortalSchoolsManager({
       setEditingProfile(false);
       form.reset();
       setCreateRegion(ugandaRegions[0]?.region ?? "");
+      setCreateSubRegion("");
       setCreateDistrict("");
       setCreateContactName("");
       setCreateContactPhone("");
@@ -730,9 +711,6 @@ export function PortalSchoolsManager({
               <label>
                 <span className="portal-field-label">
                   <span>Region</span>
-                  <span className="portal-required-indicator">
-                    *<span className="visually-hidden">required</span>
-                  </span>
                 </span>
                 <select
                   name="region"
@@ -740,10 +718,11 @@ export function PortalSchoolsManager({
                   onChange={(event) => {
                     const nextRegion = event.target.value;
                     const options = getDistrictsByRegion(nextRegion);
+                    const subRegions = getSubRegionsByRegion(nextRegion);
                     setCreateRegion(nextRegion);
+                    setCreateSubRegion(subRegions.length > 0 ? "" : "");
                     setCreateDistrict((current) => (options.includes(current) ? current : ""));
                   }}
-                  required
                 >
                   <option value="">Select region</option>
                   {ugandaRegions.map((entry) => (
@@ -755,16 +734,31 @@ export function PortalSchoolsManager({
               </label>
               <label>
                 <span className="portal-field-label">
+                  <span>Sub-Region</span>
+                </span>
+                <select
+                  name="subRegion"
+                  value={createSubRegion}
+                  onChange={(event) => {
+                    setCreateSubRegion(event.target.value);
+                  }}
+                >
+                  <option value="">Select sub-region</option>
+                  {getSubRegionsByRegion(createRegion).map((sr) => (
+                    <option key={sr.subRegion} value={sr.subRegion}>
+                      {sr.subRegion}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="portal-field-label">
                   <span>District</span>
-                  <span className="portal-required-indicator">
-                    *<span className="visually-hidden">required</span>
-                  </span>
                 </span>
                 <select
                   name="district"
                   value={createDistrict}
                   onChange={(event) => setCreateDistrict(event.target.value)}
-                  required
                 >
                   <option value="">Select district</option>
                   {createDistrictOptions.map((district) => (
@@ -969,9 +963,6 @@ export function PortalSchoolsManager({
               <label>
                 <span className="portal-field-label">
                   <span>Head Teacher Name</span>
-                  <span className="portal-required-indicator">
-                    *<span className="visually-hidden">required</span>
-                  </span>
                 </span>
                 <input
                   name="headTeacherName"
@@ -979,7 +970,6 @@ export function PortalSchoolsManager({
                   autoComplete="name"
                   value={createContactName}
                   onChange={(event) => setCreateContactName(event.target.value)}
-                  required
                 />
               </label>
               <label>
@@ -996,9 +986,6 @@ export function PortalSchoolsManager({
               <label>
                 <span className="portal-field-label">
                   <span>Head Teacher Gender</span>
-                  <span className="portal-required-indicator">
-                    *<span className="visually-hidden">required</span>
-                  </span>
                 </span>
                 <select
                   name="headTeacherGender"
@@ -1006,7 +993,6 @@ export function PortalSchoolsManager({
                   onChange={(event) =>
                     setCreateContactGender(event.target.value as "Male" | "Female" | "Other" | "")
                   }
-                  required
                 >
                   <option value="">Select gender</option>
                   <option value="Male">Male</option>
