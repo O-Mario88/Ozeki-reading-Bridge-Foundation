@@ -12,7 +12,7 @@ import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 
 export const runtime = "nodejs";
 
-const allRoles = ["Staff", "Volunteer", "Admin", "Coach", "DataClerk", "SchoolLeader", "Partner", "Government"] as const;
+const allRoles = ["Staff", "Volunteer", "Admin", "Accountant", "Coach", "DataClerk", "SchoolLeader", "Partner", "Government"] as const;
 
 const createUserSchema = z.object({
   fullName: z.string().min(2),

@@ -288,6 +288,7 @@ export type PortalUserRole =
   | "Staff"
   | "Volunteer"
   | "Admin"
+  | "Accountant"
   | "Coach"
   | "DataClerk"
   | "SchoolLeader"

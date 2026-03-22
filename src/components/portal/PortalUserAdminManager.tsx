@@ -5,7 +5,7 @@ import { PortalUserAdminRecord, PortalUserRole, PortalUserStatus } from "@/lib/t
 import { FormModal } from "@/components/forms";
 
 const ALL_ROLES: PortalUserRole[] = [
-  "Staff", "Volunteer", "Admin", "Coach", "DataClerk", "SchoolLeader", "Partner", "Government",
+  "Staff", "Volunteer", "Admin", "Accountant", "Coach", "DataClerk", "SchoolLeader", "Partner", "Government",
 ];
 
 interface PortalUserAdminManagerProps {
@@ -182,6 +182,33 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
     }
   }
 
+  async function handleDeleteUser(userId: number, fullName: string) {
+    const confirmed = window.confirm(
+      `⚠️ Permanently delete ${fullName}'s account?\n\nThis action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setSaving(true);
+    setStatus(null);
+    try {
+      const response = await fetch("/api/portal/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const nextUsers = await parseApiResponse(response);
+      setUsers(nextUsers);
+      setStatus({ tone: "success", message: `${fullName}'s account has been deleted.` });
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Could not delete user.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="portal-grid">
       <section className="card">
@@ -253,6 +280,17 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
                         ? "Reactivate"
                         : "Deactivate"}
                   </button>
+                  {!user.isSuperAdmin && (
+                    <button
+                      className="button"
+                      type="button"
+                      disabled={saving}
+                      style={{ backgroundColor: "#dc2626", color: "#fff" }}
+                      onClick={() => void handleDeleteUser(user.id, user.fullName)}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
