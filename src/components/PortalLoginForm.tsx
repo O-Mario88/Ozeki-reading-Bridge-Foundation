@@ -77,7 +77,7 @@ export function PortalLoginForm() {
           <input
             name="identifier"
             required
-            placeholder="edwin@ozekiread.org or +2567xxxxxxx"
+            placeholder="support@ozekiread.org or +2567xxxxxxx"
             className="portal-login-input"
             autoComplete="username"
           />

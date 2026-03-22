@@ -18,8 +18,8 @@ export async function POST(request: Request) {
     const loginIdentifier = payload.identifier.trim().toLowerCase();
     const rateLimitKey = `portal-login:${ipAddress}:${loginIdentifier}`;
     const rateLimit = consumeRateLimit(rateLimitKey, {
-      maxRequests: 8,
-      windowMs: 10 * 60 * 1000,
+      maxRequests: 5,
+      windowMs: 15 * 60 * 1000,
     });
 
     if (!rateLimit.allowed) {
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid email/phone or password." },
+        { error: "Invalid email/phone or password.", remaining: rateLimit.remaining },
         { status: 401 },
       );
     }

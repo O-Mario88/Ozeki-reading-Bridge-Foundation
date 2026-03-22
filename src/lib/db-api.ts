@@ -15,6 +15,7 @@ import type {
   ImpactReportNarrative,
 } from "@/lib/types";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { hashPassword } from "@/lib/server/postgres/repositories/auth";
 
 // ── dataService re-exports (already PostgreSQL-backed) ───────────────
 export {
@@ -355,8 +356,7 @@ export async function createPortalUserAccount(payload: {
   isAdmin?: boolean;
   isSuperAdmin?: boolean;
 }, _actor: PortalUser) {
-  const crypto = await import("node:crypto");
-  const passwordHash = crypto.createHash("sha256").update(payload.password).digest("hex");
+  const passwordHash = await hashPassword(payload.password);
   const status = payload.status ?? "active";
   const mustChangePassword = payload.mustChangePassword ?? false;
   const invitedAt = status === "invited" ? new Date().toISOString() : null;
@@ -408,8 +408,7 @@ export async function updatePortalUserPermissions(
   for (const [key, value] of Object.entries(updates)) {
     if (!allowedFields.includes(key) || key === "userId") continue;
     if (key === "password" && typeof value === "string") {
-      const crypto = await import("node:crypto");
-      params.push(crypto.createHash("sha256").update(value).digest("hex"));
+      params.push(await hashPassword(value));
       setClauses.push(`password_hash = $${params.length}`);
     } else if (fieldMap[key]) {
       params.push(value);

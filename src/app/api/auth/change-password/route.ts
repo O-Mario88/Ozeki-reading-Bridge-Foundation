@@ -2,13 +2,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { queryPostgres } from "@/lib/server/postgres/client";
-import { findPortalUserAuthByIdPostgres } from "@/lib/server/postgres/repositories/auth";
+import { findPortalUserAuthByIdPostgres, verifyPassword, hashPassword } from "@/lib/server/postgres/repositories/auth";
 
 export const runtime = "nodejs";
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required."),
-  newPassword: z.string().min(8, "New password must be at least 8 characters."),
+  newPassword: z
+    .string()
+    .min(8, "New password must be at least 8 characters.")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter.")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter.")
+    .regex(/[0-9]/, "Password must contain at least one number.")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character."),
 });
 
 export async function POST(request: Request) {
@@ -19,7 +25,6 @@ export async function POST(request: Request) {
 
   try {
     const payload = changePasswordSchema.parse(await request.json());
-    const crypto = await import("node:crypto");
 
     // Verify current password
     const authRow = await findPortalUserAuthByIdPostgres(user.id);
@@ -27,16 +32,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    const currentHash = crypto.createHash("sha256").update(payload.currentPassword).digest("hex");
-    if (currentHash !== authRow.passwordHash) {
+    const currentValid = await verifyPassword(payload.currentPassword, authRow.passwordHash);
+    if (!currentValid) {
       return NextResponse.json({ error: "Current password is incorrect." }, { status: 401 });
     }
 
     // Prevent reusing the same password
-    const newHash = crypto.createHash("sha256").update(payload.newPassword).digest("hex");
-    if (newHash === currentHash) {
+    const sameAsOld = await verifyPassword(payload.newPassword, authRow.passwordHash);
+    if (sameAsOld) {
       return NextResponse.json({ error: "New password must be different from the current password." }, { status: 400 });
     }
+
+    // Hash new password with bcrypt
+    const newHash = await hashPassword(payload.newPassword);
 
     // Update password and clear must_change_password flag, set status to active
     await queryPostgres(

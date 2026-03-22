@@ -56,8 +56,8 @@ INSERT INTO portal_users (
 )
 VALUES (
   900002,
-  'ORB Super Admin',
-  'edwin@ozekiread.org',
+  'ORBF Support',
+  'support@ozekiread.org',
   'Staff',
   '86bd0b133592076cd6afe3e46d8d7d38d43e49783d8f590a0faf722dea664dfc',
   '+256773397375',

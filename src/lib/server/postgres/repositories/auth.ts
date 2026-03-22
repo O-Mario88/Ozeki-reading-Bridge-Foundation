@@ -1,5 +1,29 @@
 import type { PortalUserRole, PortalUserStatus } from "@/lib/types";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
+
+const BCRYPT_ROUNDS = 12;
+
+/** Detect whether a stored hash is bcrypt ($2a$/$2b$ prefix, 60 chars). */
+function isBcryptHash(hash: string): boolean {
+  return /^\$2[aby]?\$\d{2}\$.{53}$/.test(hash);
+}
+
+/** Hash a raw password with bcrypt. */
+export async function hashPassword(plain: string): Promise<string> {
+  return bcrypt.hash(plain, BCRYPT_ROUNDS);
+}
+
+/** Verify a raw password against a stored hash (bcrypt or legacy SHA256). */
+export async function verifyPassword(plain: string, storedHash: string): Promise<boolean> {
+  if (isBcryptHash(storedHash)) {
+    return bcrypt.compare(plain, storedHash);
+  }
+  // Legacy SHA256 fallback
+  const sha256 = crypto.createHash("sha256").update(plain).digest("hex");
+  return sha256 === storedHash;
+}
 
 export type PortalUserAuthRow = {
   id: number;
@@ -154,14 +178,24 @@ export async function findPortalUserAuthByIdentifierPostgres(identifier: string)
   return result.rows[0] ? mapPortalUserAuthRow(result.rows[0]) : null;
 }
 
-export async function authenticatePortalUserPostgres(identifier: string, passwordHash: string) {
+export async function authenticatePortalUserPostgres(identifier: string, rawPassword: string) {
   const auth = await findPortalUserAuthByIdentifierPostgres(identifier);
-  if (!auth || auth.passwordHash !== passwordHash) {
-    return null;
+  if (!auth) return null;
+  if (auth.status === "deactivated") return null;
+
+  // Verify password (bcrypt or legacy SHA256)
+  const valid = await verifyPassword(rawPassword, auth.passwordHash);
+  if (!valid) return null;
+
+  // Transparent migration: upgrade SHA256 → bcrypt on successful login
+  if (!isBcryptHash(auth.passwordHash)) {
+    const upgraded = await hashPassword(rawPassword);
+    await queryPostgres(
+      `UPDATE portal_users SET password_hash = $1 WHERE id = $2`,
+      [upgraded, auth.id],
+    );
   }
-  if (auth.status === "deactivated") {
-    return null;
-  }
+
   // Update last_login_at
   await queryPostgres(
     `UPDATE portal_users SET last_login_at = NOW() WHERE id = $1`,
@@ -172,10 +206,11 @@ export async function authenticatePortalUserPostgres(identifier: string, passwor
 }
 
 export async function createPortalSessionPostgres(userId: number, token?: string, expiresAt?: string) {
-  const resolvedToken = token ?? `session-${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const resolvedExpiresAt = expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const resolvedToken = token ?? crypto.randomBytes(32).toString("hex");
+  const maxAgeSec = 7 * 24 * 60 * 60; // 7 days
+  const resolvedExpiresAt = expiresAt ?? new Date(Date.now() + maxAgeSec * 1000).toISOString();
   await insertPortalSessionPostgres(userId, resolvedToken, resolvedExpiresAt);
-  return { token: resolvedToken, expiresAt: resolvedExpiresAt, userId };
+  return { token: resolvedToken, expiresAt: resolvedExpiresAt, userId, maxAge: maxAgeSec };
 }
 
 export async function findPortalUserAuthByIdPostgres(userId: number) {
