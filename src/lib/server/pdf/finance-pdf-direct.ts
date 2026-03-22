@@ -707,8 +707,6 @@ export async function renderReceiptPdf(
         width: CW,
         height: boxHeight,
         color: rgb(0.97, 0.98, 0.99),
-        borderColor: BORDER_GRAY,
-        borderWidth: 0.5,
       });
 
       // Render each invoice line item inside the box
