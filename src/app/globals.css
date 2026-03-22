@@ -13155,27 +13155,51 @@ label:has(> span + :is(input, select, textarea))>:is(input, select, textarea),
   --form-overlay-color: rgba(15, 23, 42, 0.48);
   --form-overlay-blur: 16px;
   --form-modal-padding: 1rem;
-  --form-modal-width-standard: 840px;
-  --form-modal-width-complex: 1040px;
+  --form-modal-width-standard: 800px; /* Reduced slightly for tighter focus */
+  --form-modal-width-complex: 960px;
+  
+  /* Core Colors - JotForm inspired clean look */
   --form-surface: #ffffff;
-  --form-border: rgba(148, 163, 184, 0.34);
-  --form-separator: rgba(148, 163, 184, 0.3);
-  --form-shadow: 0 30px 60px rgba(2, 8, 23, 0.3), 0 8px 24px rgba(2, 8, 23, 0.16);
-  --form-radius: 20px;
-  --form-title-color: #0f172a;
-  --form-subtle-text: #475569;
-  --form-label-color: #1e293b;
-  --form-help-color: #64748b;
-  --form-error-color: #b42318;
-  --form-success-color: #0f766e;
-  --form-field-height: 46px;
-  --form-field-radius: 12px;
-  --form-field-border: #cbd5e1;
-  --form-field-border-hover: #94a3b8;
-  --form-focus-border: #2563eb;
-  --form-focus-ring: rgba(37, 99, 235, 0.16);
-  --form-field-gap: 1rem;
-  --form-section-gap: 1.5rem;
+  --form-page-bg: #f3f3f5; /* Light grey backdrop common in pro forms */
+  --form-border: #e6e6eb;
+  --form-separator: #e6e6eb;
+  
+  /* Elevated Shadows */
+  --form-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --form-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --form-shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.05);
+  
+  /* Border Radii */
+  --form-radius-lg: 12px;
+  --form-radius-md: 8px;
+  --form-radius-sm: 6px;
+  --form-radius: var(--form-radius-md); /* Default to 8px for sharper, pro look */
+  
+  /* Typography Colors */
+  --form-title-color: #2c3345;
+  --form-subtle-text: #6f768b;
+  --form-label-color: #1a1e2e;
+  --form-help-color: #6f768b;
+  
+  /* State Colors */
+  --form-error-color: #c92a2a;
+  --form-error-bg: #fff5f5;
+  --form-success-color: #2b8a3e;
+  
+  /* Field Variables */
+  --form-field-height: 48px; /* Taller fields for better touch targets/readability */
+  --form-field-radius: var(--form-radius-sm);
+  --form-field-border: #d2d4da;
+  --form-field-border-hover: #a3a6b5;
+  --form-focus-border: #3b82f6;
+  --form-focus-ring: rgba(59, 130, 246, 0.2);
+  --form-field-bg: #ffffff;
+  --form-field-bg-hover: #fafafa;
+  
+  /* Spacing */
+  --form-field-gap: 1.25rem;
+  --form-section-gap: 2rem;
+  --form-inner-padding: 2.5rem; /* Generous padding for sections */
 }
 
 @media (min-width: 1280px) {
@@ -13235,8 +13259,8 @@ body.app-has-modal {
 .roster-modal {
   background: var(--form-surface) !important;
   border: 1px solid var(--form-border) !important;
-  border-radius: var(--form-radius) !important;
-  box-shadow: var(--form-shadow) !important;
+  border-radius: var(--form-radius-lg) !important;
+  box-shadow: var(--form-shadow-modal) !important;
   animation: formSurfaceScaleIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -13425,9 +13449,9 @@ body.app-has-modal {
 .required-label,
 .portal-field-label {
   color: var(--form-label-color) !important;
-  font-size: 0.84rem !important;
-  font-weight: 600 !important;
-  line-height: 1.35;
+  font-size: 0.95rem !important; /* Slightly larger, more readable labels */
+  font-weight: 500 !important; /* Medium weight instead of semibold for cleaner look */
+  line-height: 1.4;
 }
 
 .required-label {
@@ -13450,17 +13474,19 @@ body.app-has-modal {
   min-height: var(--form-field-height) !important;
   border: 1px solid var(--form-field-border) !important;
   border-radius: var(--form-field-radius) !important;
-  background: #ffffff !important;
-  color: #0f172a !important;
-  font-size: 0.94rem !important;
-  padding: 0 0.85rem !important;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  background: var(--form-field-bg) !important;
+  color: #1a1e2e !important;
+  font-size: 1rem !important; /* 16px is standard for preventing iOS zoom and looks robust */
+  padding: 0 1rem !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.01) inset; /* Subtle inset shadow */
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):hover,
 .portal-form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):hover,
 .form-field-control :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):hover {
   border-color: var(--form-field-border-hover) !important;
+  background: var(--form-field-bg-hover) !important;
 }
 
 .form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus,
@@ -13534,37 +13560,65 @@ body.app-has-modal {
 .portal-form-grid .action-row > :is(.button, button),
 .form-actions > :is(.button, button),
 .portal-form-actions > :is(.button, button) {
-  min-height: 40px;
-  border-radius: 10px;
-  padding-inline: 0.95rem;
+  min-height: 46px; /* Taller form buttons */
+  border-radius: var(--form-radius-sm);
+  padding: 0 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+
+.form-grid .action-row > :is(.button, button):hover,
+.portal-form-grid .action-row > :is(.button, button):hover,
+.form-actions > :is(.button, button):hover,
+.portal-form-actions > :is(.button, button):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
 }
 
 .form-page {
   display: grid;
   gap: var(--form-section-gap);
+  background: var(--form-page-bg);
+  padding: var(--form-inner-padding);
+  border-radius: var(--form-radius-lg);
 }
 
 .form-page-header {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--form-separator);
 }
 
 .form-page-header h2 {
   margin: 0;
-  font-size: clamp(1.2rem, 1vw + 1rem, 1.6rem);
+  font-size: clamp(1.4rem, 1.5vw + 1rem, 1.8rem); /* Slightly larger, bolder */
+  font-weight: 700;
   color: var(--form-title-color);
+  letter-spacing: -0.02em;
 }
 
 .form-page-header p {
   margin: 0;
   color: var(--form-subtle-text);
+  font-size: 1.05rem;
+  line-height: 1.5;
 }
 
 .form-section {
-  border: 1px solid var(--form-separator);
-  border-radius: 16px;
-  padding: 1.05rem 1.15rem;
-  background: #ffffff;
+  border: 1px solid var(--form-border);
+  border-radius: var(--form-radius-lg);
+  padding: 2rem 2.25rem; /* Copious Jotform-style padding */
+  background: var(--form-surface);
+  box-shadow: var(--form-shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+
+.form-section:hover {
+  box-shadow: var(--form-shadow);
 }
 
 .form-section + .form-section {
@@ -13573,20 +13627,23 @@ body.app-has-modal {
 
 .form-section-header {
   display: grid;
-  gap: 0.35rem;
-  margin-bottom: 0.8rem;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem; /* More breathing room before fields */
 }
 
 .form-section-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.15rem;
+  font-weight: 600;
   color: var(--form-title-color);
+  letter-spacing: -0.01em;
 }
 
 .form-section-header p {
   margin: 0;
   color: var(--form-subtle-text);
-  font-size: 0.84rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .form-section-body {
