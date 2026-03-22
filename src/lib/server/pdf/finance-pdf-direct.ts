@@ -678,16 +678,31 @@ export async function renderReceiptPdf(
   // 4. Description — prefer invoice line descriptions, then invoice description, then receipt description
   let curY = afterCols - 6;
   const invoiceLineDescs = relatedInvoice?.lines?.map(l => l.description).filter(Boolean) || [];
-  const descriptionText = invoiceLineDescs.length > 0
-    ? invoiceLineDescs.join("; ")
-    : relatedInvoice?.description || receipt.description || receipt.notes || "";
-  if (descriptionText) {
+  const hasSeparateLines = invoiceLineDescs.length > 0;
+  const fallbackText = relatedInvoice?.description || receipt.description || receipt.notes || "";
+
+  if (hasSeparateLines || fallbackText) {
     drawText(page, "BEING PAYMENT FOR", ML, curY, fontBold, 8, MUTED);
     curY -= 16;
-    const descLines = wrapText(descriptionText, font, 9.5, CW);
-    for (const line of descLines) {
-      drawText(page, line, ML, curY, font, 9.5, BLACK);
-      curY -= 13;
+
+    if (hasSeparateLines) {
+      // Render each invoice line item on its own line with a bullet
+      for (let i = 0; i < invoiceLineDescs.length; i++) {
+        const itemText = `${i + 1}. ${invoiceLineDescs[i]}`;
+        const wrapped = wrapText(itemText, font, 9.5, CW - 10);
+        for (const wl of wrapped) {
+          if (curY < 90) break; // safety margin
+          drawText(page, wl, ML, curY, font, 9.5, BLACK);
+          curY -= 13;
+        }
+      }
+    } else {
+      // Fallback: single description block
+      const descLines = wrapText(fallbackText, font, 9.5, CW);
+      for (const line of descLines) {
+        drawText(page, line, ML, curY, font, 9.5, BLACK);
+        curY -= 13;
+      }
     }
     curY -= 6;
   }
