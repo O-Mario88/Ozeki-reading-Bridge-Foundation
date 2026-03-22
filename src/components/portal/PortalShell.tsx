@@ -19,16 +19,16 @@ const primaryNavItems: PortalNavItem[] = [
   // Menu
   { href: "/portal/dashboard", label: "Dashboard", icon: "📊", roles: ["Staff", "Admin", "Accountant"], section: "menu" },
   { href: "/portal/national-intelligence", label: "Insights", icon: "💡", roles: ["Staff", "Admin"], section: "menu" },
-  { href: "/portal/schools", label: "Schools", icon: "🏫", roles: ["Staff", "Admin"], section: "menu" },
+  { href: "/portal/schools", label: "Schools", icon: "🏫", roles: ["Staff", "Admin", "Volunteer"], section: "menu" },
   { href: "/portal/crm", label: "CRM", icon: "👥", roles: ["Staff", "Admin"], section: "menu" },
   { href: "/portal/finance", label: "Finance", icon: "💰", roles: ["Accountant", "Admin"], section: "menu" },
 
   // Features
-  { href: "/portal/assessments", label: "Assessments", icon: "📝", roles: ["Staff", "Admin"], section: "features" },
-  { href: "/portal/visits", label: "Visits/Coaching", icon: "🚶", roles: ["Staff", "Admin", "Accountant"], section: "features" },
-  { href: "/portal/trainings", label: "Trainings", icon: "🎓", roles: ["Staff", "Admin", "Accountant"], section: "features" },
+  { href: "/portal/assessments", label: "Assessments", icon: "📝", roles: ["Staff", "Admin", "Volunteer"], section: "features" },
+  { href: "/portal/visits", label: "Visits/Coaching", icon: "🚶", roles: ["Staff", "Admin", "Accountant", "Volunteer"], section: "features" },
+  { href: "/portal/trainings", label: "Trainings", icon: "🎓", roles: ["Staff", "Admin", "Accountant", "Volunteer"], section: "features" },
   { href: "/portal/interventions", label: "Interventions", icon: "🎯", roles: ["Staff", "Admin"], section: "features" },
-  { href: "/portal/stories", label: "1001 Story", icon: "📖", roles: ["Staff", "Admin"], section: "features" },
+  { href: "/portal/stories", label: "1001 Story", icon: "📖", roles: ["Staff", "Admin", "Volunteer"], section: "features" },
   { href: "/portal/reports", label: "Reports", icon: "📄", roles: ["Staff", "Volunteer", "Admin", "Accountant"], section: "features" },
   { href: "/portal/graduation-queue", label: "Graduation Queue", icon: "🎓", roles: ["Staff", "Admin"], section: "features" },
 
