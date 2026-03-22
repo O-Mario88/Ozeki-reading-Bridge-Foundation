@@ -8,14 +8,6 @@ interface Props {
     staffMembers: PortalUserAdminRecord[];
 }
 
-const STATUS_COLORS: Record<SupportRequestStatus, string> = {
-    New: "#2196f3",
-    Contacted: "#ff9800",
-    Scheduled: "#9c27b0",
-    Delivered: "#F8A05A",
-    Closed: "#757575"
-};
-
 const FILTER_STATUSES: Array<SupportRequestStatus | "All"> = [
     "All",
     "New",
@@ -24,21 +16,6 @@ const FILTER_STATUSES: Array<SupportRequestStatus | "All"> = [
     "Delivered",
     "Closed",
 ];
-
-function Badge({ label, color }: { label: string; color: string }) {
-    return (
-        <span
-            className="inline-block px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-            style={{
-                backgroundColor: `${color}15`,
-                color: color,
-                border: `1px solid ${color}30`
-            }}
-        >
-            {label}
-        </span>
-    );
-}
 
 export default function SupportManager({ initialRequests, staffMembers }: Props) {
     const [requests, setRequests] = useState(initialRequests);
@@ -74,88 +51,92 @@ export default function SupportManager({ initialRequests, staffMembers }: Props)
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div>
+            <div className="ds-card-header" style={{ marginBottom: "1.5rem", display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900">Support Tickets</h2>
-                    <p className="text-sm text-gray-500">Manage school support requests and assignments.</p>
+                    <h2 className="ds-card-title" style={{ fontSize: "1.25rem" }}>Support Tickets</h2>
+                    <p className="ds-metric-sub" style={{ marginTop: "0.25rem" }}>Manage school support requests and assignments.</p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                    {FILTER_STATUSES.map(status => (
-                        <button
-                            key={status}
-                            onClick={() => setFilterStatus(status)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filterStatus === status
-                                ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
-                                : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                                }`}
-                        >
-                            {status}
-                        </button>
-                    ))}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                    {FILTER_STATUSES.map(status => {
+                        const isActive = filterStatus === status;
+                        return (
+                            <button
+                                key={status}
+                                onClick={() => setFilterStatus(status)}
+                                style={{
+                                    padding: "0.4rem 0.8rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 700, border: "none", cursor: "pointer", transition: "all 0.15s ease",
+                                    background: isActive ? "var(--ds-accent-blue)" : "#f8f9fa",
+                                    color: isActive ? "#fff" : "var(--ds-text-secondary)"
+                                }}
+                            >
+                                {status}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-50 bg-gray-50/50">
-                    <input
-                        type="text"
-                        placeholder="Search by contact, location or message..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full max-w-md px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                </div>
+            <div style={{ marginBottom: "1rem" }}>
+                <input
+                    type="text"
+                    placeholder="Search by contact, location or message..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ width: "100%", maxWidth: "400px", padding: "0.6rem 0.85rem", borderRadius: "8px", border: "1px solid #e4e6ef", fontSize: "0.85rem", color: "var(--ds-text-primary)", outline: "none" }}
+                />
+            </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-50/50 text-gray-400 font-medium uppercase text-[10px] tracking-wider">
+            <div className="ds-table-wrap">
+                <table className="ds-table">
+                    <thead>
                             <tr>
-                                <th className="px-6 py-4">Submitted</th>
-                                <th className="px-6 py-4">Contact / School</th>
-                                <th className="px-6 py-4">Support Types</th>
-                                <th className="px-6 py-4">Urgency</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Assigned To</th>
-                                <th className="px-6 py-4">Actions</th>
+                                <th>Submitted</th>
+                                <th>Contact / School</th>
+                                <th>Support Types</th>
+                                <th>Urgency</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody>
                             {filteredRequests.map(req => (
-                                <tr key={req.id} className="hover:bg-gray-50/30 transition-colors group">
-                                    <td className="px-6 py-4 text-gray-400 text-xs">
+                                <tr key={req.id}>
+                                    <td style={{ color: "var(--ds-text-secondary)", fontSize: "0.8rem" }}>
                                         {new Date(req.createdAt).toLocaleDateString("en-GB")}
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="font-bold text-gray-900">{req.contactName}</div>
-                                        <div className="text-xs text-gray-500">{req.locationText || "Internal School"}</div>
-                                        <div className="text-[10px] text-indigo-500 italic mt-0.5">{req.contactInfo}</div>
+                                    <td>
+                                        <div style={{ fontWeight: 700, color: "var(--ds-text-primary)" }}>{req.contactName}</div>
+                                        <div style={{ fontSize: "0.75rem", color: "var(--ds-text-secondary)" }}>{req.locationText || "Internal School"}</div>
+                                        <div style={{ fontSize: "0.7rem", color: "var(--ds-accent-blue)", fontStyle: "italic", marginTop: "0.2rem" }}>{req.contactInfo}</div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-wrap gap-1">
+                                    <td>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
                                             {req.supportTypes.map(t => (
-                                                <span key={t} className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">
+                                                <span key={t} style={{ background: "#f8f9fa", color: "var(--ds-text-secondary)", padding: "0.15rem 0.4rem", borderRadius: "4px", fontSize: "10px", fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
                                                     {t}
                                                 </span>
                                             ))}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`text-[10px] font-bold uppercase ${req.urgency === 'high' ? 'text-red-500' : req.urgency === 'medium' ? 'text-orange-500' : 'text-blue-500'
-                                            }`}>
+                                    <td>
+                                        <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", color: req.urgency === 'high' ? 'var(--ds-accent-red)' : req.urgency === 'medium' ? 'var(--ds-accent-orange)' : 'var(--ds-accent-blue)' }}>
                                             {req.urgency}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <Badge label={req.status} color={STATUS_COLORS[req.status]} />
+                                    <td>
+                                        <span className={`ds-badge ds-badge-${req.status === 'New' ? 'info' : req.status === 'Closed' ? 'default' : req.status === 'Scheduled' ? 'success' : 'warning'}`}>
+                                            {req.status}
+                                        </span>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td>
                                         <select
                                             value={req.assignedStaffId || ""}
                                             onChange={(e) => handleUpdate(req.id, { assignedStaffId: e.target.value ? Number(e.target.value) : undefined })}
                                             disabled={updatingId === req.id}
-                                            className="bg-transparent text-xs border-none focus:ring-0 p-0 cursor-pointer text-indigo-600 font-medium underline decoration-indigo-200"
+                                            style={{ background: "transparent", border: "none", fontSize: "0.8rem", color: "var(--ds-accent-blue)", fontWeight: 600, textDecoration: "underline", cursor: "pointer", outline: "none" }}
                                         >
                                             <option value="">Unassigned</option>
                                             {staffMembers.map(staff => (
@@ -163,24 +144,24 @@ export default function SupportManager({ initialRequests, staffMembers }: Props)
                                             ))}
                                         </select>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
+                                    <td>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                             <select
                                                 value={req.status}
                                                 onChange={(e) => handleUpdate(req.id, { status: e.target.value as SupportRequestStatus })}
                                                 disabled={updatingId === req.id}
-                                                className="bg-indigo-600 text-white text-[10px] font-bold uppercase rounded-lg border-none px-2 py-1 cursor-pointer hover:bg-indigo-700 transition-colors"
+                                                style={{ background: "var(--ds-accent-blue)", color: "white", fontSize: "10px", fontWeight: 700, textTransform: "uppercase", padding: "0.3rem 0.5rem", borderRadius: "6px", border: "none", cursor: "pointer", outline: "none" }}
                                             >
                                                 {["New", "Contacted", "Scheduled", "Delivered", "Closed"].map(s => (
                                                     <option key={s} value={s}>{s}</option>
                                                 ))}
                                             </select>
 
-                                            <div className="relative group/menu">
-                                                <button className="p-1 px-2 rounded-lg bg-gray-100 text-gray-400 hover:bg-gray-200 transition-colors text-[10px] font-black">
+                                            <div className="relative group" style={{ position: "relative" }}>
+                                                <button style={{ padding: "0.2rem 0.5rem", borderRadius: "6px", background: "#f8f9fa", border: "1px solid #e4e6ef", cursor: "pointer", fontSize: "10px", fontWeight: 800, color: "var(--ds-text-secondary)" }}>
                                                     •••
                                                 </button>
-                                                <div className="absolute right-0 bottom-full mb-2 w-48 bg-white border border-gray-100 rounded-xl shadow-2xl p-1 hidden group-hover/menu:block z-20">
+                                                <div className="hidden group-hover:block" style={{ position: "absolute", right: 0, bottom: "100%", marginBottom: "0.5rem", width: "160px", background: "white", border: "1px solid #e4e6ef", borderRadius: "8px", boxShadow: "0 4px 14px rgba(0,0,0,0.1)", zIndex: 20, padding: "0.25rem" }}>
                                                     <button
                                                         onClick={() => {
                                                             const params = new URLSearchParams();
@@ -188,7 +169,9 @@ export default function SupportManager({ initialRequests, staffMembers }: Props)
                                                             params.set("notes", `Converted from Support Ticket #${req.id}: ${req.message}`);
                                                             window.location.href = `/portal/visits?new=true&${params.toString()}`;
                                                         }}
-                                                        className="w-full text-left px-3 py-2 hover:bg-indigo-50 rounded-lg text-xs text-gray-700 font-medium"
+                                                        style={{ display: "block", width: "100%", textAlign: "left", padding: "0.5rem", fontSize: "0.75rem", background: "transparent", border: "none", cursor: "pointer", color: "var(--ds-text-primary)", borderRadius: "4px" }}
+                                                        onMouseOver={e => e.currentTarget.style.background = "#f4f5f8"}
+                                                        onMouseOut={e => e.currentTarget.style.background = "transparent"}
                                                     >
                                                         Convert to Visit
                                                     </button>
@@ -199,7 +182,9 @@ export default function SupportManager({ initialRequests, staffMembers }: Props)
                                                             params.set("notes", `Converted from Support Ticket #${req.id}: ${req.message}`);
                                                             window.location.href = `/portal/trainings?new=true&${params.toString()}`;
                                                         }}
-                                                        className="w-full text-left px-3 py-2 hover:bg-indigo-50 rounded-lg text-xs text-gray-700 font-medium"
+                                                        style={{ display: "block", width: "100%", textAlign: "left", padding: "0.5rem", fontSize: "0.75rem", background: "transparent", border: "none", cursor: "pointer", color: "var(--ds-text-primary)", borderRadius: "4px" }}
+                                                        onMouseOver={e => e.currentTarget.style.background = "#f4f5f8"}
+                                                        onMouseOut={e => e.currentTarget.style.background = "transparent"}
                                                     >
                                                         Convert to Training
                                                     </button>
@@ -213,12 +198,11 @@ export default function SupportManager({ initialRequests, staffMembers }: Props)
                     </table>
 
                     {filteredRequests.length === 0 && (
-                        <div className="p-12 text-center text-gray-400">
+                        <div style={{ padding: "3rem 1rem", textAlign: "center", color: "var(--ds-text-muted)", fontSize: "0.85rem" }}>
                             No matching support requests found.
                         </div>
                     )}
                 </div>
-            </div>
         </div>
     );
 }

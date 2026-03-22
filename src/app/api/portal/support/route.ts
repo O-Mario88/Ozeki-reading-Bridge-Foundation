@@ -7,13 +7,11 @@ import {
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import {
   SupportRequestInput,
-  SupportRequestStatus,
   SupportRequestUrgency,
   SupportType,
   ConceptNoteRequesterType,
 } from "@/lib/types";
 
-const SUPPORT_STATUSES = ["New", "Contacted", "Scheduled", "Delivered", "Closed"] as const;
 const SUPPORT_TYPES = [
   "phonics training",
   "coaching visit",
@@ -59,10 +57,6 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function isSupportStatus(value: unknown): value is SupportRequestStatus {
-  return typeof value === "string" && SUPPORT_STATUSES.includes(value as SupportRequestStatus);
-}
-
 function isSupportType(value: unknown): value is SupportType {
   return typeof value === "string" && SUPPORT_TYPES.includes(value as SupportType);
 }
@@ -100,19 +94,16 @@ function resolveSourcePage(body: Record<string, unknown>) {
   return sourcePage || "/";
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const user = await getAuthenticatedPortalUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const statusParam = searchParams.get("status");
-    const status = isSupportStatus(statusParam) ? statusParam : undefined;
-    const district = searchParams.get("district") || undefined;
-
-    const requests = await listSupportRequests(undefined); // Passing undefined to list all, or could pass schoolId if needed
+    const isStaff = user.isAdmin || user.isSuperAdmin || user.role === "Staff";
+    const filters = isStaff ? undefined : { createdByUserId: user.id };
+    const requests = await listSupportRequests(filters);
     return NextResponse.json(requests);
   } catch (error: unknown) {
     console.error("Error listing support requests:", error);
@@ -180,7 +171,7 @@ export async function POST(req: NextRequest) {
           contactName,
           contactRole,
           contactInfo: contactInfoParts.join(" | "),
-          supportTypes: supportNeeded as any,
+          supportTypes: supportNeeded as SupportType[],
           urgency,
           message: requestDetails,
         },
