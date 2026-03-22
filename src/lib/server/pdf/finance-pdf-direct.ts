@@ -682,29 +682,62 @@ export async function renderReceiptPdf(
   const fallbackText = relatedInvoice?.description || receipt.description || receipt.notes || "";
 
   if (hasSeparateLines || fallbackText) {
-    drawText(page, "BEING PAYMENT FOR", ML, curY, fontBold, 8, MUTED);
-    curY -= 16;
+    // Section divider
+    page.drawLine({
+      start: { x: ML, y: curY + 4 },
+      end: { x: A4_W - MR, y: curY + 4 },
+      thickness: 0.5,
+      color: BORDER_GRAY,
+    });
+
+    drawText(page, "BEING PAYMENT FOR", ML, curY - 8, fontBold, 7.5, MUTED);
+    curY -= 22;
 
     if (hasSeparateLines) {
-      // Render each invoice line item on its own line with a bullet
+      // Calculate box height based on item count
+      const itemLineH = 14;
+      const boxPadding = 8;
+      const boxHeight = (invoiceLineDescs.length * itemLineH) + (boxPadding * 2);
+      const boxY = curY - boxHeight + boxPadding;
+
+      // Light background box for items
+      page.drawRectangle({
+        x: ML,
+        y: boxY,
+        width: CW,
+        height: boxHeight,
+        color: rgb(0.97, 0.98, 0.99),
+        borderColor: BORDER_GRAY,
+        borderWidth: 0.5,
+      });
+
+      // Render each invoice line item inside the box
+      let itemY = curY;
       for (let i = 0; i < invoiceLineDescs.length; i++) {
-        const itemText = `${i + 1}. ${invoiceLineDescs[i]}`;
-        const wrapped = wrapText(itemText, font, 9.5, CW - 10);
+        if (itemY < 90) break; // safety margin
+        // Item number in bold
+        const numLabel = `${i + 1}.`;
+        drawText(page, numLabel, ML + 8, itemY, fontBold, 8.5, MUTED);
+        // Description text
+        const descX = ML + 26;
+        const maxDescW = CW - 34;
+        const wrapped = wrapText(invoiceLineDescs[i], font, 8.5, maxDescW);
         for (const wl of wrapped) {
-          if (curY < 90) break; // safety margin
-          drawText(page, wl, ML, curY, font, 9.5, BLACK);
-          curY -= 13;
+          if (itemY < 90) break;
+          drawText(page, wl, descX, itemY, font, 8.5, BLACK);
+          itemY -= itemLineH;
         }
       }
+      curY = Math.min(itemY, boxY) - 6;
     } else {
       // Fallback: single description block
-      const descLines = wrapText(fallbackText, font, 9.5, CW);
+      const descLines = wrapText(fallbackText, font, 9, CW);
       for (const line of descLines) {
-        drawText(page, line, ML, curY, font, 9.5, BLACK);
+        drawText(page, line, ML, curY, font, 9, BLACK);
         curY -= 13;
       }
+      curY -= 4;
     }
-    curY -= 6;
   }
 
   // 5. Allocations table (if any)
