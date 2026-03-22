@@ -22,15 +22,6 @@ function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function FinanceKpi({ label, value, helper }: { label: string; value: string; helper?: string }) {
-  return (
-    <article className="finance-kpi-card finance-kpi-card-compact">
-      <p className="finance-kpi-label">{label}</p>
-      <p className="finance-kpi-value finance-kpi-value-compact">{value}</p>
-      {helper ? <p className="finance-kpi-sub">{helper}</p> : null}
-    </article>
-  );
-}
 
 export function PortalFinanceDashboard({
   summary,
@@ -122,32 +113,73 @@ export function PortalFinanceDashboard({
   }, [recentExpenses, recentInvoices, recentReceipts]);
 
   return (
-    <div className="finance-dashboard-grid finance-dashboard-compact">
-      <section className="finance-head-compact">
+    <div style={{ minWidth: 0 }}>
+      {/* Sleek Header */}
+      <div style={{ marginBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h2>Finance</h2>
-          <p>Compact finance workspace with immutable posting rules and audit-safe actions.</p>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1f2937", margin: 0, letterSpacing: "-0.02em" }}>Finance Workspace</h1>
+          <p style={{ fontSize: "0.85rem", color: "#6b7280", margin: "0.25rem 0 0" }}>Compact finance workspace with immutable posting rules and audit-safe actions.</p>
         </div>
-        <div className="action-row finance-head-actions">
+        <div style={{ display: "flex", gap: "0.75rem" }}>
           <Link href="/portal/finance/invoices" className="button button-sm">+ New Invoice</Link>
           <Link href="/portal/finance/receipts" className="button button-sm">+ New Receipt</Link>
-          <Link href="/portal/finance/invoices" className="button button-ghost button-sm">Record Payment</Link>
           <Link href="/portal/finance/money-out" className="button button-ghost button-sm">New Expense</Link>
         </div>
-      </section>
+      </div>
 
-      <section className="finance-kpis finance-kpis-compact">
-        <FinanceKpi label="Total Assets" value={formatMoney(summary.currency, totalAssets)} />
-        <FinanceKpi label="Income (YTD)" value={formatMoney(summary.currency, summary.moneyIn)} />
-        <FinanceKpi label="Expenses (YTD)" value={formatMoney(summary.currency, summary.moneyOut)} />
-        <FinanceKpi label="Surplus/Deficit" value={formatMoney(summary.currency, summary.net)} />
-        <FinanceKpi
-          label="Outstanding invoices"
-          value={summary.outstandingInvoiceCount.toLocaleString()}
-          helper={formatMoney(summary.currency, summary.outstandingInvoiceTotal)}
-        />
-        <FinanceKpi label="Overdue invoices" value={overdue.length.toLocaleString()} />
-      </section>
+      <div style={{ marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1f2937", margin: "0 0 1rem" }}>Financial Overview</h2>
+        <div className="ds-metric-grid">
+          <div className="ds-metric-card pink">
+            <div className="ds-metric-content">
+              <span className="ds-metric-title">Total Assets</span>
+              <span className="ds-metric-value">{formatMoney(summary.currency, totalAssets)}</span>
+              <span className="ds-metric-sub">Current Balance</span>
+            </div>
+            <div className="ds-metric-icon">🏦</div>
+          </div>
+          <div className="ds-metric-card blue">
+            <div className="ds-metric-content">
+              <span className="ds-metric-title">Income (YTD)</span>
+              <span className="ds-metric-value">{formatMoney(summary.currency, summary.moneyIn)}</span>
+              <span className="ds-metric-sub">Total earned</span>
+            </div>
+            <div className="ds-metric-icon">📈</div>
+          </div>
+          <div className="ds-metric-card purple">
+            <div className="ds-metric-content">
+              <span className="ds-metric-title">Expenses (YTD)</span>
+              <span className="ds-metric-value">{formatMoney(summary.currency, summary.moneyOut)}</span>
+              <span className="ds-metric-sub">Total spent</span>
+            </div>
+            <div className="ds-metric-icon">📉</div>
+          </div>
+          <div className="ds-metric-card green">
+            <div className="ds-metric-content">
+              <span className="ds-metric-title">Net (YTD)</span>
+              <span className="ds-metric-value">{formatMoney(summary.currency, summary.net)}</span>
+              <span className="ds-metric-sub">Surplus/Deficit</span>
+            </div>
+            <div className="ds-metric-icon">💰</div>
+          </div>
+          <div className="ds-metric-card">
+            <div className="ds-metric-content">
+              <span className="ds-metric-title">Outstanding</span>
+              <span className="ds-metric-value">{formatMoney(summary.currency, summary.outstandingInvoiceTotal)}</span>
+              <span className="ds-metric-sub">{summary.outstandingInvoiceCount} invoices</span>
+            </div>
+            <div className="ds-metric-icon">⏳</div>
+          </div>
+          <div className="ds-metric-card">
+            <div className="ds-metric-content">
+              <span className="ds-metric-title">Overdue</span>
+              <span className="ds-metric-value">{overdue.length.toLocaleString()}</span>
+              <span className="ds-metric-sub">Invoices past due</span>
+            </div>
+            <div className="ds-metric-icon">⚠️</div>
+          </div>
+        </div>
+      </div>
 
       <section className="finance-dashboard-two-column">
         <article className="finance-table-card">

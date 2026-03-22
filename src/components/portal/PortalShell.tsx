@@ -100,8 +100,9 @@ export function PortalShell({
 
   return (
     <div className={`ds-portal-shell ${shellClassName ?? ""}`.trim()}>
-      {/* Dark Sidebar */}
-      <aside className={`ds-sidebar${sidebarOpen ? " open" : ""}`}>
+      <div className="ds-shell-container">
+        {/* Light Sidebar */}
+        <aside className={`ds-sidebar${sidebarOpen ? " open" : ""}`}>
         <div className="ds-sidebar-brand">
           <div className="ds-sidebar-brand-icon">ORB</div>
           <span className="ds-sidebar-brand-name">ORBF Portal</span>
@@ -256,6 +257,7 @@ export function PortalShell({
           {actions && <div style={{ marginBottom: "1rem" }}>{actions}</div>}
           {children}
         </div>
+      </div>
       </div>
     </div>
   );
