@@ -694,31 +694,15 @@ export async function renderReceiptPdf(
     curY -= 22;
 
     if (hasSeparateLines) {
-      // Calculate box height based on item count
-      const itemLineH = 14;
-      const boxPadding = 8;
-      const boxHeight = (invoiceLineDescs.length * itemLineH) + (boxPadding * 2);
-      const boxY = curY - boxHeight + boxPadding;
-
-      // Light background box for items
-      page.drawRectangle({
-        x: ML,
-        y: boxY,
-        width: CW,
-        height: boxHeight,
-        color: rgb(0.97, 0.98, 0.99),
-      });
-
-      // Render each invoice line item inside the box
+      // Render each invoice line item directly (no box)
       let itemY = curY;
+      const itemLineH = 14;
       for (let i = 0; i < invoiceLineDescs.length; i++) {
-        if (itemY < 90) break; // safety margin
-        // Item number in bold
+        if (itemY < 90) break;
         const numLabel = `${i + 1}.`;
-        drawText(page, numLabel, ML + 8, itemY, fontBold, 8.5, MUTED);
-        // Description text
-        const descX = ML + 26;
-        const maxDescW = CW - 34;
+        drawText(page, numLabel, ML, itemY, fontBold, 8.5, MUTED);
+        const descX = ML + 20;
+        const maxDescW = CW - 28;
         const wrapped = wrapText(invoiceLineDescs[i], font, 8.5, maxDescW);
         for (const wl of wrapped) {
           if (itemY < 90) break;
@@ -726,7 +710,7 @@ export async function renderReceiptPdf(
           itemY -= itemLineH;
         }
       }
-      curY = Math.min(itemY, boxY) - 6;
+      curY = itemY - 4;
     } else {
       // Fallback: single description block
       const descLines = wrapText(fallbackText, font, 9, CW);
