@@ -735,7 +735,7 @@ export async function renderReceiptPdf(
 
     const allocHeaders = ["Invoice / Reference", `Amount Applied (${receipt.currency})`];
     const allocRows = allocations.map(a => [
-      a.invoiceNumber || `INV-${a.invoiceId}`,
+      a.invoiceNumber || `ORBF-INV-${a.invoiceId}`,
       fmtMoney(receipt.currency, a.allocatedAmount),
     ]);
     curY = drawTable(page, curY, font, fontBold, allocHeaders, allocRows, [0.65, 0.35], new Set([1]));

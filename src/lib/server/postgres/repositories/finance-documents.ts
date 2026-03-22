@@ -22,9 +22,9 @@ export async function createFinanceInvoicePostgres(
   return await withPostgresClient(async (client) => {
     await client.query("BEGIN");
     try {
-      // 1. Generate Invoice Number (Format: INV-YYYY-XXXXX)
+      // 1. Generate Invoice Number (Format: ORBF-INV-YYYY-XXXXX)
       const year = new Date(input.issueDate).getFullYear().toString();
-      const prefix = `INV-${year}-`;
+      const prefix = `ORBF-INV-${year}-`;
       const seqResult = await client.query(
         "SELECT COUNT(*) FROM finance_invoices WHERE invoice_number LIKE $1",
         [`${prefix}%`],
@@ -129,9 +129,9 @@ export async function createFinanceReceiptPostgres(
   return await withPostgresClient(async (client) => {
     await client.query("BEGIN");
     try {
-      // 1. Generate Receipt Number
+      // 1. Generate Receipt Number (Format: ORBF-RCT-YYYY-XXXXX)
       const year = new Date(input.receiptDate).getFullYear().toString();
-      const prefix = `RCT-${year}-`;
+      const prefix = `ORBF-RCT-${year}-`;
       const seqResult = await client.query(
         "SELECT COUNT(*) FROM finance_receipts WHERE receipt_number LIKE $1",
         [`${prefix}%`],
@@ -361,7 +361,7 @@ export async function recordFinancePaymentPostgres(
 
       // 1. Create a Receipt out of this payment so it appears in Ledger!
       const year = new Date(input.date).getFullYear().toString();
-      const prefix = `RCT-${year}-`;
+      const prefix = `ORBF-RCT-${year}-`;
       const seqResult = await client.query(
         "SELECT COUNT(*) FROM finance_receipts WHERE receipt_number LIKE $1",
         [`${prefix}%`],
