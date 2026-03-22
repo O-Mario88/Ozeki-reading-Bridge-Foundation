@@ -635,6 +635,7 @@ export async function renderInvoicePdf(
 export async function renderReceiptPdf(
   receipt: FinanceReceiptRecord,
   allocations: FinancePaymentAllocationRecord[],
+  relatedInvoice?: { invoiceNumber: string; description?: string; lines?: { description: string }[] } | null,
 ): Promise<Buffer> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -649,12 +650,20 @@ export async function renderReceiptPdf(
   // 1. Dark header bar
   const afterHeader = drawHeaderBar(page, logo, font, fontBold, "Receipt", "Payment Receipt");
 
-  // 2. Info strip
-  const afterStrip = drawInfoStrip(page, afterHeader, font, fontBold, [
+  // 2. Info strip — include invoice reference if available
+  const infoItems = [
     { label: "Receipt No.", value: receipt.receiptNumber },
+  ];
+  if (relatedInvoice?.invoiceNumber) {
+    infoItems.push({ label: "Invoice Ref.", value: relatedInvoice.invoiceNumber });
+  } else if (receipt.referenceNo) {
+    infoItems.push({ label: "Reference", value: receipt.referenceNo });
+  }
+  infoItems.push(
     { label: "Payment Date", value: formatReportDate(receipt.receiptDate) },
     { label: "Payment Method", value: (receipt.paymentMethod || "Other").toUpperCase() },
-  ]);
+  );
+  const afterStrip = drawInfoStrip(page, afterHeader, font, fontBold, infoItems);
 
   // 3. Three-column section: FROM / (blank) / Amount
   const fromLines = [receipt.receivedFrom || "No Name"];
@@ -666,13 +675,16 @@ export async function renderReceiptPdf(
     { heading: "Amount Received", bigValue: fmtMoney(receipt.currency, receipt.amountReceived), color: GREEN },
   );
 
-  // 4. Description
+  // 4. Description — prefer invoice line descriptions, then invoice description, then receipt description
   let curY = afterCols - 6;
-  if (receipt.description || receipt.notes) {
+  const invoiceLineDescs = relatedInvoice?.lines?.map(l => l.description).filter(Boolean) || [];
+  const descriptionText = invoiceLineDescs.length > 0
+    ? invoiceLineDescs.join("; ")
+    : relatedInvoice?.description || receipt.description || receipt.notes || "";
+  if (descriptionText) {
     drawText(page, "BEING PAYMENT FOR", ML, curY, fontBold, 8, MUTED);
     curY -= 16;
-    const desc = receipt.description || receipt.notes || "";
-    const descLines = wrapText(desc, font, 9.5, CW);
+    const descLines = wrapText(descriptionText, font, 9.5, CW);
     for (const line of descLines) {
       drawText(page, line, ML, curY, font, 9.5, BLACK);
       curY -= 13;

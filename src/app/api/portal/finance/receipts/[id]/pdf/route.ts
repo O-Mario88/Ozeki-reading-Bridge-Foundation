@@ -28,23 +28,29 @@ export async function GET(
     }
 
     const allocations: FinancePaymentAllocationRecord[] = [];
+    let relatedInvoice: { invoiceNumber: string; description?: string; lines?: { description: string }[] } | null = null;
     if (receipt.relatedInvoiceId) {
-      // Look up the related invoice to get its number
-      const relatedInvoice = await getFinanceInvoiceByIdPostgres(receipt.relatedInvoiceId);
-      if (relatedInvoice) {
+      // Look up the related invoice to get its number and line item descriptions
+      const inv = await getFinanceInvoiceByIdPostgres(receipt.relatedInvoiceId);
+      if (inv) {
         allocations.push({
           id: 0,
           paymentId: receipt.id,
-          invoiceId: relatedInvoice.id,
+          invoiceId: inv.id,
           allocatedAmount: receipt.amountReceived,
-          invoiceNumber: relatedInvoice.invoiceNumber,
+          invoiceNumber: inv.invoiceNumber,
           createdBy: receipt.createdBy,
           createdAt: receipt.createdAt
         });
+        relatedInvoice = {
+          invoiceNumber: inv.invoiceNumber,
+          description: inv.notes,
+          lines: inv.lineItems?.map(li => ({ description: li.description })) || [],
+        };
       }
     }
 
-    const pdfBuffer = await renderReceiptPdf(receipt, allocations);
+    const pdfBuffer = await renderReceiptPdf(receipt, allocations, relatedInvoice);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return new NextResponse(pdfBuffer as any, {
