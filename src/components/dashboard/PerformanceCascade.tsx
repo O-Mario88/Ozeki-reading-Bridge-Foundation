@@ -59,29 +59,29 @@ function NodeCard({ node, expanded, onToggle }: { node: PerformanceNode; expande
                         {node.level}
                     </span>
                     <span className="font-semibold text-slate-800">{node.name}</span>
-                    {!isSchool && <span className="text-xs text-slate-500">({node.schoolCount} schools)</span>}
+                    {!isSchool && <span className="text-xs text-slate-500 whitespace-nowrap">({node.schoolCount} schools)</span>}
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="flex gap-2 text-xs text-slate-600">
-                        <div className="flex flex-col items-center">
-                            <span className="mb-1">Instr.</span>
+                <div className="flex items-center gap-5 ml-4">
+                    <div className="flex gap-3 text-xs text-slate-600">
+                        <div className="flex flex-col items-center w-12">
+                            <span className="mb-1 whitespace-nowrap">Instr.</span>
                             <ScoreBadge score={node.scores.instruction} />
                         </div>
-                        <div className="flex flex-col items-center">
-                            <span className="mb-1">Outc.</span>
+                        <div className="flex flex-col items-center w-12">
+                            <span className="mb-1 whitespace-nowrap">Outc.</span>
                             <ScoreBadge score={node.scores.outcomes} />
                         </div>
-                        <div className="flex flex-col items-center">
-                            <span className="mb-1">Lead.</span>
+                        <div className="flex flex-col items-center w-12">
+                            <span className="mb-1 whitespace-nowrap">Lead.</span>
                             <ScoreBadge score={node.scores.leadership} />
                         </div>
-                        <div className="flex flex-col items-center">
-                            <span className="mb-1">Comm.</span>
+                        <div className="flex flex-col items-center w-12">
+                            <span className="mb-1 whitespace-nowrap">Comm.</span>
                             <ScoreBadge score={node.scores.community} />
                         </div>
-                        <div className="flex flex-col items-center">
-                            <span className="mb-1">Env.</span>
+                        <div className="flex flex-col items-center w-12">
+                            <span className="mb-1 whitespace-nowrap">Env.</span>
                             <ScoreBadge score={node.scores.environment} />
                         </div>
                     </div>
@@ -148,7 +148,7 @@ export function PerformanceCascade({ data }: PerformanceCascadeProps) {
                 <NodeCard node={data} expanded={expanded} onToggle={() => setExpanded(!expanded)} />
             </div>
 
-            <div className="mt-4 text-xs text-slate-400 flex gap-4 border-t pt-2">
+            <div className="mt-5 text-xs text-slate-500 flex flex-wrap gap-x-6 gap-y-3 border-t pt-4">
                 <span><strong>Instr.</strong> = Instruction Quality</span>
                 <span><strong>Outc.</strong> = Learner Outcomes</span>
                 <span><strong>Lead.</strong> = Leadership & Governance</span>

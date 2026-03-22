@@ -227,28 +227,6 @@ const trainingConfig: PortalModuleConfig = {
       ],
     },
     {
-      id: "program",
-      title: "Participants",
-      fields: [
-        {
-          key: "participants",
-          label: "Participants",
-          type: "participants",
-          required: true,
-          helperText:
-            "Capture participant name, school attached to, role (Teacher or Leader), gender, and phone contact.",
-        },
-        {
-          key: "numberAttended",
-          label: "Number attended (auto)",
-          type: "number",
-          required: true,
-          min: 0,
-          helperText: "Auto-calculated from participant list.",
-        },
-      ],
-    },
-    {
       id: "details",
       title: "Additional Details (optional)",
       collapsible: true,

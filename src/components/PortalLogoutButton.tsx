@@ -6,14 +6,19 @@ export function PortalLogoutButton() {
   const [loading, setLoading] = useState(false);
 
   async function logout() {
-    setLoading(true);
-
     try {
-      await fetch("/api/auth/logout", {
+      setLoading(true);
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
       });
-    } finally {
+      if (!response.ok) {
+        throw new Error("Server failed to log out. Please check your connection or try again later.");
+      }
       window.location.href = "/portal/login";
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not sign out completely.");
+    } finally {
+      setLoading(false);
     }
   }
 

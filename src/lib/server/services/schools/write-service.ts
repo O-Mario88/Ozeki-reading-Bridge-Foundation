@@ -647,6 +647,7 @@ async function upsertSchoolContact(client: PoolClient, args: {
       args.category,
       args.roleTitle,
       teacherUid,
+      args.isPrimaryContact,
     ],
   );
   const contactId = Number(insertResult.rows[0]?.contactId ?? 0);

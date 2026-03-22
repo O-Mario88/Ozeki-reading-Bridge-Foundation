@@ -46,7 +46,10 @@ export default async function PortalTrainingsPage({ searchParams }: PageProps) {
       description={view.subtitle}
       actions={
         <div className="action-row">
-          <Link href="/portal/trainings/participants/new" className="button">
+          <Link href="/portal/trainings/manage?action=new" className="button">
+            New Training Session
+          </Link>
+          <Link href="/portal/trainings/participants/new" className="button button-ghost">
             Add Participant
           </Link>
           <Link href="/portal/trainings/import-participants" className="button button-ghost">

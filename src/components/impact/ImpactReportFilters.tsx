@@ -310,7 +310,9 @@ export function ImpactReportFilters({
         <span>Report Type</span>
         <select value={reportType} onChange={(event) => setReportType(event.target.value)}>
           <option value="">All report types</option>
-          {(reportTypes ?? []).map((type) => (
+          {(reportTypes ?? [])
+            .filter((type) => type !== "School Report")
+            .map((type) => (
             <option value={type} key={type}>
               {type}
             </option>

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createImpactReport, listPortalImpactReportsAsync } from "@/services/dataService";
+import { createImpactReport, listPortalImpactReportsAsync, getPublicImpactAggregate } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { generatePublicDashboardNarrative } from "@/lib/public-dashboard-report-engine";
 
 export const runtime = "nodejs";
 
@@ -115,7 +116,35 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     }
-    const report = await createImpactReport(payload, user);
+    
+    let scopeLevel: "country" | "region" | "subregion" | "district" | "school" = "country";
+    if (payload.scopeType === "National") scopeLevel = "country";
+    else if (payload.scopeType === "Region") scopeLevel = "region";
+    else if (payload.scopeType === "Sub-region") scopeLevel = "subregion";
+    else if (payload.scopeType === "District") scopeLevel = "district";
+    else if (payload.scopeType === "School") scopeLevel = "school";
+    else scopeLevel = "district";
+
+    const scopeId = scopeLevel === "country" ? "Uganda" : (payload.scopeValue || "Uganda");
+    const reportScope = payload.audience === "Staff-only" ? "Internal_School" : "Public";
+
+    const factPackJson = await getPublicImpactAggregate(
+      scopeLevel,
+      scopeId,
+      payload.periodType,
+      reportScope,
+      undefined
+    );
+
+    const narrativeJson = await generatePublicDashboardNarrative(
+      factPackJson,
+      reportScope,
+      payload.reportType
+    );
+
+    const fullPayload = { ...payload, factPackJson, narrativeJson };
+    const report = await createImpactReport(fullPayload, user);
+    
     return NextResponse.json({ ok: true, report });
   } catch (error) {
     if (error instanceof z.ZodError) {

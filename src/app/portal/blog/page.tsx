@@ -14,7 +14,6 @@ export const metadata = {
 type SearchParams = Promise<{
   new?: string;
 }>;
-
 export default async function PortalBlogPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requirePortalStaffUser();
   const query = await searchParams;

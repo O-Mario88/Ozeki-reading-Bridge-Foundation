@@ -191,6 +191,7 @@ export async function getImpactReportFilterFacetsAsyncPostgres(): Promise<any> {
         "Reading Levels",
         "Implementation Funnel",
         "Teaching Quality",
+        "School Report",
     ];
 
     const reportCategories = [
@@ -467,15 +468,46 @@ export async function saveMaterialDistributionPostgres(input: any, userId: numbe
 
 export async function createImpactReportPostgres(payload: any, user: any): Promise<any> {
     try {
+        const crypto = await import("crypto");
+        const reportCode = `IMP-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+        
         const result = await queryPostgres(
-            `INSERT INTO impact_reports (title, report_type, report_category, scope_type, scope_value, period_type, period_start, period_end, audience, output_format, created_by_user_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            `INSERT INTO impact_reports (
+                report_code, title, report_type, report_category, scope_type, 
+                scope_value, period_type, period_start, period_end, audience, 
+                output, created_by_user_id, is_public, version, 
+                fact_pack_json, narrative_json
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
              RETURNING id, created_at AS "createdAt"`,
-            [payload.title || "Untitled Report", payload.reportType, payload.reportCategory, payload.scopeType, payload.scopeValue, payload.periodType, payload.periodStart, payload.periodEnd, payload.audience, payload.output, user.id]
+            [
+                reportCode, 
+                payload.title || "Untitled Report", 
+                payload.reportType, 
+                payload.reportCategory, 
+                payload.scopeType, 
+                payload.scopeValue, 
+                payload.periodType, 
+                payload.periodStart, 
+                payload.periodEnd, 
+                payload.audience, 
+                payload.output, 
+                user.id,
+                payload.isPublic ?? false,
+                payload.version ?? "v1.0",
+                payload.factPackJson ? JSON.stringify(payload.factPackJson) : '{}',
+                payload.narrativeJson ? JSON.stringify(payload.narrativeJson) : '{}'
+            ]
         );
-        return { id: result.rows[0].id, ...payload, createdAt: result.rows[0].createdAt };
-    } catch {
-        return { id: 0, ...payload, createdAt: new Date().toISOString() };
+        return { 
+            id: result.rows[0].id, 
+            ...payload, 
+            reportCode,
+            createdAt: result.rows[0].createdAt 
+        };
+    } catch (e) {
+        console.error("Failed to insert impact report:", e);
+        throw new Error("Failed to insert impact report into the database.");
     }
 }
 

@@ -340,10 +340,15 @@ export async function getBlogPostBySlugPostgres(slug: string): Promise<BlogPost 
 
 export async function listPortalBlogPostsAsyncPostgres(includeDrafts = true): Promise<PortalBlogPostRecord[]> {
   requirePostgresConfigured();
-  const result = await queryPostgres<any>(
-    `SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts ${includeDrafts ? "" : "WHERE publish_status = 'published'"} ORDER BY published_at DESC, id DESC`
-  );
-  return result.rows.map(mapPortalBlogPostRow);
+  try {
+    const result = await queryPostgres<any>(
+      `SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts ${includeDrafts ? "" : "WHERE publish_status = 'published'"} ORDER BY published_at DESC, id DESC`
+    );
+    return result.rows.map(mapPortalBlogPostRow);
+  } catch (error) {
+    console.error("[BlogRepository] Failed to list blog posts (schema might be missing):", error);
+    return [];
+  }
 }
 
 export async function getPublishedPortalBlogPostBySlugAsyncPostgres(slug: string): Promise<BlogPost | null> {

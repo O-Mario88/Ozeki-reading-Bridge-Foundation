@@ -2501,22 +2501,11 @@ export interface SchoolDirectoryInput {
   schoolStatusDate?: string;
   currentPartnerType?: string;
   yearFounded?: number;
-  accountRecordType?: string;
-  schoolType?: string;
-  parentAccountLabel?: string;
-  schoolRelationshipStatus?: string;
-  schoolRelationshipStatusDate?: string;
-  denomination?: string;
-  protestantDenomination?: string;
   clientSchoolNumber?: number;
-  firstMetricDate?: string;
   metricCount?: number;
   runningTotalMaxEnrollment?: number;
-  partnerType?: string;
   currentPartnerSchool?: boolean;
   schoolActive?: boolean;
-  website?: string;
-  description?: string;
   enrollmentTotal?: number;
   enrollmentByGrade?: string;
   enrolledBoys?: number;
@@ -2531,19 +2520,8 @@ export interface SchoolDirectoryInput {
   enrolledP5?: number;
   enrolledP6?: number;
   enrolledP7?: number;
-  gpsLat?: string;
-  gpsLng?: string;
   contactName?: string;
   contactPhone?: string;
-  proprietor: {
-    fullName: string;
-    gender: "Male" | "Female" | "Other";
-    phone?: string;
-    email?: string;
-    whatsapp?: string;
-    category?: SchoolContactCategory;
-    roleTitle?: string;
-  };
 }
 
 export interface SchoolDirectoryRecord {
@@ -2558,29 +2536,17 @@ export interface SchoolDirectoryRecord {
   subCounty: string;
   parish: string;
   village: string | null;
-  notes: string | null;
   alternateSchoolNames: string | null;
   schoolStatus: string;
   schoolStatusDate: string | null;
   currentPartnerType: string;
   yearFounded: number | null;
 
-  accountRecordType: string;
-  schoolType: string;
-  parentAccountLabel: string;
-  schoolRelationshipStatus: string | null;
-  schoolRelationshipStatusDate: string | null;
-  denomination: string | null;
-  protestantDenomination: string | null;
   clientSchoolNumber: number;
-  firstMetricDate: string | null;
   metricCount: number;
   runningTotalMaxEnrollment: number;
-  partnerType: string | null;
   currentPartnerSchool: boolean;
   schoolActive: boolean;
-  website: string | null;
-  description: string | null;
   enrollmentTotal: number;
   enrollmentByGrade: string | null;
   enrolledBoys: number;
@@ -2598,8 +2564,6 @@ export interface SchoolDirectoryRecord {
   enrolledP5: number;
   enrolledP6: number;
   enrolledP7: number;
-  gpsLat: string | null;
-  gpsLng: string | null;
   contactName: string | null;
   contactPhone: string | null;
   contactEmail: string | null;

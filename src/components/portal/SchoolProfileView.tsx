@@ -57,12 +57,6 @@ function formatYesNo(value: boolean) {
   return value ? "Yes" : "No";
 }
 
-function mapUrl(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-  return value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`;
-}
 
 export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
   const { school, counts, recentTrainings, recentInteractions, summary, progress } = profile;
@@ -155,14 +149,11 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
     () => [
       ["Account Name", school.name],
       ["Alternate School Names", school.alternateSchoolNames || "-"],
-      ["Account Record Type", school.accountRecordType],
-      ["Type", school.schoolType],
       ["School ID", school.schoolCode || String(school.id)],
       ["Primary Contact", school.primaryContactName || school.contactName || "-"],
       ["Country", school.country],
       ["Region", school.region || "-"],
       ["District", school.district],
-      ["GPS Coordinates", school.gpsLat && school.gpsLng ? `${school.gpsLat}, ${school.gpsLng}` : "-"],
       ["Year Founded", school.yearFounded ? String(school.yearFounded) : "-"],
       [
         "Classes Offered",
@@ -176,10 +167,8 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
         })(),
       ],
       ["Client School Number", String(school.clientSchoolNumber ?? 0)],
-      ["First Metric Date", formatDate(school.firstMetricDate)],
       ["Metric Count", formatNumber(school.metricCount)],
       ["Running Total Max Enrollment", formatNumber(school.runningTotalMaxEnrollment)],
-      ["Partner Type", school.partnerType || "-"],
       ["School Visits this FY", formatNumber(summary.schoolVisitsThisFy)],
       ["School Visits last FY", formatNumber(summary.schoolVisitsLastFy)],
       ["Date of Last Staff Visit", formatDate(summary.dateOfLastStaffVisit)],
@@ -189,38 +178,26 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
 
   const detailsRight = useMemo(
     () => [
-      ["Parent Account", school.parentAccountLabel],
       ["School Status", school.schoolStatus],
       ["School Status Date", formatDate(school.schoolStatusDate)],
-      ["School Relationship Status", school.schoolRelationshipStatus || "-"],
-      ["Relationship Status Date", formatDate(school.schoolRelationshipStatusDate)],
       ["School is Active?", formatYesNo(school.schoolActive)],
       ["Current Partner School", formatYesNo(school.currentPartnerSchool)],
       ["Current Partner Type", school.currentPartnerType],
-      ["Denomination", school.denomination || "-"],
-      ["Protestant Denomination", school.protestantDenomination || "-"],
       ["Phone", school.contactPhone || "-"],
       ["Email", school.contactEmail || "-"],
-      ["Website", school.website || "-"],
       ["Last Metrics Date", formatDate(summary.lastMetricsDate)],
       ["Date of Last Activity", formatDate(summary.dateOfLastActivity)],
-      ["Description", school.description || school.notes || "-"],
     ],
     [school, summary],
   );
 
-  const openMapsUrl =
-    school.gpsLat && school.gpsLng
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${school.gpsLat},${school.gpsLng}`)}`
-      : null;
-
   return (
-    <div className="school-crm-page">
-      <section className="school-crm-hero">
-        <div className="school-crm-hero-main">
-          <div className="school-crm-badge">Account</div>
+    <div className="ds-metric-grid" style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(320px, 1fr)" }}>
+      <section className="ds-card ds-card-flat" style={{ gridColumn: "1 / -1", display: "flex", flexWrap: "wrap", gap: "1.5rem", alignItems: "flex-start", justifyItems: "space-between" }}>
+        <div className="ds-hero-main" style={{ flex: 1 }}>
+          <div className="ds-badge ds-badge-default">Account</div>
           <h1>{school.name}</h1>
-          <div className="school-crm-overview">
+          <div className="ds-action-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", marginTop: "1rem" }}>
             <div>
               <span>Country</span>
               <strong>{school.country}</strong>
@@ -248,28 +225,28 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           </div>
         </div>
         <div className="school-crm-hero-actions">
-          <Link className="school-crm-button school-crm-button-ghost" href="/portal/schools">
+          <Link className="button button-ghost" href="/portal/schools">
             Back to Accounts
           </Link>
-          <button className="school-crm-button" onClick={() => setEnrollmentOpen(true)}>
+          <button className="button" onClick={() => setEnrollmentOpen(true)}>
             Update Enrollment
           </button>
-          <Link className="school-crm-button" href={`/portal/trainings?new=1&schoolId=${school.id}`}>
+          <Link className="button" href={`/portal/trainings?new=1&schoolId=${school.id}`}>
             New Training
           </Link>
-          <Link className="school-crm-button" href={`/portal/events`}>
+          <Link className="button" href={`/portal/events`}>
             Online Training
           </Link>
-          <Link className="school-crm-button" href={`/portal/visits?new=1&schoolId=${school.id}`}>
+          <Link className="button" href={`/portal/visits?new=1&schoolId=${school.id}`}>
             New Visit
           </Link>
-          <Link className="school-crm-button" href={`/portal/assessments?new=1&schoolId=${school.id}`}>
+          <Link className="button" href={`/portal/assessments?new=1&schoolId=${school.id}`}>
             New Assessment
           </Link>
         </div>
       </section>
 
-      <section className="school-crm-notice">
+      <section className="ds-alert-banner" style={{ gridColumn: "1 / -1", padding: "1rem" }}>
         <strong>School account is active.</strong>
         <span>
           Profile-linked records for trainings, online trainings, visits, assessments, and teacher
@@ -278,14 +255,14 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
       </section>
 
       {graduationEligibility?.isEligible ? (
-        <section className="school-crm-banner school-crm-banner-accent">
+        <section className="ds-alert-banner" style={{ gridColumn: "1 / -1", background: "var(--ds-accent-blue)", color: "white" }}>
           <div>
             <h3>Graduation Eligible</h3>
             <p>
               This school meets the configured graduation criteria. Review the evidence before final
               confirmation.
             </p>
-            <p className="school-crm-muted">
+            <p className="ds-text-secondary">
               {graduationEligibility.eligibilityScorecard.readingSampleSize.toLocaleString()} assessed learners •{" "}
               {graduationEligibility.eligibilityScorecard.teachingEvaluationsCount.toLocaleString()} teacher
               evaluations • {graduationEligibility.eligibilityScorecard.publishedStoryCount.toLocaleString()}{" "}
@@ -293,54 +270,54 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             </p>
           </div>
           <div className="school-crm-banner-actions">
-            <button className="school-crm-button" onClick={() => setGraduationOpen(true)}>
+            <button className="button" onClick={() => setGraduationOpen(true)}>
               Review Graduation
             </button>
-            <Link href="/portal/graduation-queue" className="school-crm-button school-crm-button-ghost">
+            <Link href="/portal/graduation-queue" className="button button-ghost">
               Open Queue
             </Link>
           </div>
         </section>
       ) : null}
-      {graduationLoading ? <p className="school-crm-muted">Checking graduation eligibility…</p> : null}
-      {!graduationLoading && graduationError ? <p className="school-crm-muted">{graduationError}</p> : null}
+      {graduationLoading ? <p className="ds-text-secondary">Checking graduation eligibility…</p> : null}
+      {!graduationLoading && graduationError ? <p className="ds-text-secondary">{graduationError}</p> : null}
 
       <div className="school-crm-layout">
         <div className="school-crm-main">
-          <section className="school-crm-card">
-            <div className="school-crm-card-header">
+          <section className="ds-card">
+            <div className="ds-card-header">
               <h2>Related List Quick Links</h2>
             </div>
-            <div className="school-crm-links-grid">
-              <Link className="school-crm-link-card" href="/portal/contacts">
+            <div className="ds-action-grid" style={{ padding: "1rem" }}>
+              <Link className="ds-card ds-card-flat" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem", textDecoration: "none" }} href="/portal/contacts">
                 <span className="school-crm-link-title">Contacts</span>
                 <strong>{counts.contacts}</strong>
               </Link>
-              <Link className="school-crm-link-card" href="/portal/trainings">
+              <Link className="ds-card ds-card-flat" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem", textDecoration: "none" }} href="/portal/trainings">
                 <span className="school-crm-link-title">Trainings</span>
                 <strong>{counts.trainings}</strong>
               </Link>
-              <Link className="school-crm-link-card" href="/portal/events">
+              <Link className="ds-card ds-card-flat" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem", textDecoration: "none" }} href="/portal/events">
                 <span className="school-crm-link-title">Online Trainings</span>
                 <strong>{counts.onlineTrainings}</strong>
               </Link>
-              <Link className="school-crm-link-card" href="/portal/visits">
+              <Link className="ds-card ds-card-flat" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem", textDecoration: "none" }} href="/portal/visits">
                 <span className="school-crm-link-title">School Visits</span>
                 <strong>{counts.visits}</strong>
               </Link>
-              <Link className="school-crm-link-card" href="/portal/assessments">
+              <Link className="ds-card ds-card-flat" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem", textDecoration: "none" }} href="/portal/assessments">
                 <span className="school-crm-link-title">Assessments</span>
                 <strong>{counts.assessments}</strong>
               </Link>
-              <button className="school-crm-link-card" type="button" onClick={() => setActiveTab("interactions")}>
+              <button className="ds-card ds-card-flat" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem", textDecoration: "none" }} type="button" onClick={() => setActiveTab("interactions")}>
                 <span className="school-crm-link-title">Teacher Evaluations</span>
                 <strong>{counts.teacherEvaluations}</strong>
               </button>
             </div>
           </section>
 
-          <section className="school-crm-card">
-            <div className="school-crm-tabs">
+          <section className="ds-card">
+            <div className="ds-tabs" style={{ display: "flex", gap: "1rem", borderBottom: "1px solid #d1d5db", padding: "0 1rem" }}>
               <button
                 className={activeTab === "details" ? "is-active" : ""}
                 type="button"
@@ -379,10 +356,10 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             </div>
 
             {activeTab === "details" ? (
-              <div className="school-crm-details-grid">
+              <div className="ds-action-grid" style={{ padding: "1rem" }}>
                 <div className="school-crm-details-column">
                   {detailsLeft.map(([label, value]) => (
-                    <div key={label} className="school-crm-detail-row">
+                    <div key={label} className="ds-detail-row" style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px dashed #e5e7eb" }}>
                       <span>{label}</span>
                       <strong>{value}</strong>
                     </div>
@@ -390,13 +367,9 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                 </div>
                 <div className="school-crm-details-column">
                   {detailsRight.map(([label, value]) => (
-                    <div key={label} className="school-crm-detail-row">
+                    <div key={label} className="ds-detail-row" style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px dashed #e5e7eb" }}>
                       <span>{label}</span>
-                      {label === "Website" && school.website ? (
-                        <a href={mapUrl(school.website) ?? "#"} target="_blank" rel="noreferrer">
-                          {value}
-                        </a>
-                      ) : label === "Email" && school.contactEmail ? (
+                      {label === "Email" && school.contactEmail ? (
                         <a href={`mailto:${school.contactEmail}`}>{value}</a>
                       ) : (
                         <strong>{value}</strong>
@@ -408,12 +381,12 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             ) : null}
 
             {activeTab === "contacts" ? (
-              <div className="school-crm-list">
+              <div className="ds-list" style={{ display: "flex", flexDirection: "column" }}>
                 {profile.contacts.length === 0 ? (
-                  <p className="school-crm-empty">No contacts have been linked to this school yet.</p>
+                  <p className="ds-text-muted" style={{ padding: "2rem", textAlign: "center" }}>No contacts have been linked to this school yet.</p>
                 ) : (
                   profile.contacts.map((contact) => (
-                    <div key={contact.contactId} className="school-crm-list-row" style={{ alignItems: "start" }}>
+                    <div key={contact.contactId} className="ds-list-row" style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", borderBottom: "1px solid #f3f4f6", textDecoration: "none", alignItems: "start" }}>
                       <div>
                         <strong>{contact.fullName}</strong>
                         <span>{contact.roleTitle || contact.category} {contact.isPrimaryContact ? " (Primary)" : ""}</span>
@@ -429,35 +402,35 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             ) : null}
 
             {activeTab === "related" ? (
-              <div className="school-crm-related-grid">
-                <article id="school-contacts" className="school-crm-related-card">
+              <div className="ds-action-grid" style={{ padding: "1rem" }}>
+                <article id="school-contacts" className="ds-card ds-card-flat" style={{ padding: "1rem" }}>
                   <h3>Contacts</h3>
                   <p>{counts.contacts} contacts linked to this school account.</p>
                   <button type="button" onClick={() => setActiveTab("contacts")}>
                     View {counts.contacts} contacts
                   </button>
                 </article>
-                <article className="school-crm-related-card">
+                <article className="ds-card ds-card-flat" style={{ padding: "1rem" }}>
                   <h3>Trainings</h3>
                   <p>{counts.trainings} historical training records linked to this school.</p>
                   <Link href="/portal/trainings">Open trainings workspace</Link>
                 </article>
-                <article className="school-crm-related-card">
+                <article className="ds-card ds-card-flat" style={{ padding: "1rem" }}>
                   <h3>Online Trainings</h3>
                   <p>{counts.onlineTrainings} scheduled or completed online sessions linked to this school.</p>
                   <Link href="/portal/events">Open online trainings</Link>
                 </article>
-                <article className="school-crm-related-card">
+                <article className="ds-card ds-card-flat" style={{ padding: "1rem" }}>
                   <h3>Visits</h3>
                   <p>{counts.visits} school visits recorded for this school profile.</p>
                   <Link href="/portal/visits">Open visits workspace</Link>
                 </article>
-                <article className="school-crm-related-card">
+                <article className="ds-card ds-card-flat" style={{ padding: "1rem" }}>
                   <h3>Assessments</h3>
                   <p>{counts.assessments} assessment sessions linked to this school.</p>
                   <Link href="/portal/assessments">Open assessments workspace</Link>
                 </article>
-                <article className="school-crm-related-card">
+                <article className="ds-card ds-card-flat" style={{ padding: "1rem" }}>
                   <h3>Teacher Evaluations</h3>
                   <p>{counts.teacherEvaluations} lesson evaluation records linked to this school.</p>
                   <button type="button" onClick={() => setActiveTab("interactions")}>
@@ -468,12 +441,12 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             ) : null}
 
             {activeTab === "trainings" ? (
-              <div className="school-crm-list">
+              <div className="ds-list" style={{ display: "flex", flexDirection: "column" }}>
                 {recentTrainings.length === 0 ? (
-                  <p className="school-crm-empty">No training activity has been linked to this school yet.</p>
+                  <p className="ds-text-muted" style={{ padding: "2rem", textAlign: "center" }}>No training activity has been linked to this school yet.</p>
                 ) : (
                   recentTrainings.map((item) => (
-                    <Link key={`${item.module}-${item.id}`} href={item.href} target="_blank" className="school-crm-list-row">
+                    <Link key={`${item.module}-${item.id}`} href={item.href} target="_blank" className="ds-list-row" style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", borderBottom: "1px solid #f3f4f6", textDecoration: "none" }}>
                       <div>
                         <strong>{item.title}</strong>
                         <span>{item.subtitle || item.module}</span>
@@ -489,12 +462,12 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             ) : null}
 
             {activeTab === "interactions" ? (
-              <div id="recent-interactions" className="school-crm-list">
+              <div id="recent-interactions" className="ds-list" style={{ display: "flex", flexDirection: "column" }}>
                 {recentInteractions.length === 0 ? (
-                  <p className="school-crm-empty">No recent interactions have been linked to this school yet.</p>
+                  <p className="ds-text-muted" style={{ padding: "2rem", textAlign: "center" }}>No recent interactions have been linked to this school yet.</p>
                 ) : (
                   recentInteractions.map((item) => (
-                    <Link key={`${item.module}-${item.id}`} href={item.href} target="_blank" className="school-crm-list-row">
+                    <Link key={`${item.module}-${item.id}`} href={item.href} target="_blank" className="ds-list-row" style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", borderBottom: "1px solid #f3f4f6", textDecoration: "none" }}>
                       <div>
                         <strong>{item.title}</strong>
                         <span>{item.subtitle || item.module}</span>
@@ -512,8 +485,8 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
         </div>
 
         <aside className="school-crm-side">
-          <section className="school-crm-card">
-            <div className="school-crm-card-header">
+          <section className="ds-card">
+            <div className="ds-card-header">
               <h2>Knowledge</h2>
             </div>
             <div className="school-crm-search-box">
@@ -521,31 +494,11 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             </div>
           </section>
 
-          <section className="school-crm-card">
-            <div className="school-crm-card-header">
-              <h2>Map</h2>
-            </div>
-            <div className="school-crm-map">
-              {school.gpsLat && school.gpsLng ? (
-                <>
-                  <strong>{school.gpsLat}, {school.gpsLng}</strong>
-                  {openMapsUrl ? (
-                    <a href={openMapsUrl} target="_blank" rel="noreferrer">
-                      Open in Google Maps
-                    </a>
-                  ) : null}
-                </>
-              ) : (
-                <span>GPS coordinates have not been logged for this school.</span>
-              )}
-            </div>
-          </section>
-
-          <section className="school-crm-card">
-            <div className="school-crm-card-header">
+          <section className="ds-card">
+            <div className="ds-card-header">
               <h2>Activity</h2>
             </div>
-            <div className="school-crm-side-stack">
+            <div className="ds-side-stack" style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: "1rem" }}>
               <div>
                 <span>Last activity</span>
                 <strong>{formatDate(summary.dateOfLastActivity)}</strong>
@@ -566,15 +519,15 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                     : schoolSupportStatus?.status || "No snapshot"}
                 </strong>
               </div>
-              {supportStatusError ? <p className="school-crm-muted">{supportStatusError}</p> : null}
+              {supportStatusError ? <p className="ds-text-secondary">{supportStatusError}</p> : null}
             </div>
           </section>
 
-          <section className="school-crm-card">
-            <div className="school-crm-card-header">
+          <section className="ds-card">
+            <div className="ds-card-header">
               <h2>Literacy Progress</h2>
             </div>
-            <div className="school-crm-side-stack">
+            <div className="ds-side-stack" style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: "1rem" }}>
               <div>
                 <span>Learners Assessed</span>
                 <strong>{formatNumber(progress?.learnersAssessed)}</strong>
@@ -636,382 +589,7 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
         }}
       />
 
-      <style jsx>{`
-        .school-crm-page {
-          display: grid;
-          gap: 1rem;
-        }
-
-        .school-crm-hero,
-        .school-crm-notice,
-        .school-crm-card,
-        .school-crm-banner {
-          background: #f8f8f8;
-          border: 1px solid #d1d5db;
-          border-radius: 0.65rem;
-          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-        }
-
-        .school-crm-hero {
-          align-items: start;
-          display: grid;
-          gap: 1rem;
-          grid-template-columns: minmax(0, 1fr) auto;
-          padding: 1.2rem;
-        }
-
-        .school-crm-badge {
-          color: #4b5563;
-          font-size: 0.85rem;
-          margin-bottom: 0.2rem;
-        }
-
-        .school-crm-hero h1 {
-          font-size: clamp(1.6rem, 2.3vw, 2.3rem);
-          line-height: 1.1;
-          margin: 0 0 1rem;
-        }
-
-        .school-crm-overview {
-          display: grid;
-          gap: 0.9rem;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
-        }
-
-        .school-crm-overview div {
-          display: grid;
-          gap: 0.18rem;
-        }
-
-        .school-crm-overview span,
-        .school-crm-side-stack span,
-        .school-crm-detail-row span,
-        .school-crm-list-row span,
-        .school-crm-link-title {
-          color: #4b5563;
-          font-size: 0.85rem;
-        }
-
-        .school-crm-overview strong,
-        .school-crm-side-stack strong {
-          color: #111827;
-          font-size: 1.05rem;
-        }
-
-        .school-crm-hero-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.55rem;
-          justify-content: flex-end;
-        }
-
-        .school-crm-button {
-          align-items: center;
-          background: #14532d;
-          border: 1px solid #14532d;
-          border-radius: 0.5rem;
-          color: #ffffff;
-          display: inline-flex;
-          font-size: 0.88rem;
-          font-weight: 600;
-          justify-content: center;
-          min-height: 42px;
-          padding: 0.65rem 0.9rem;
-          text-decoration: none;
-        }
-
-        .school-crm-button-ghost {
-          background: #ffffff;
-          color: #14532d;
-        }
-
-        .school-crm-notice {
-          align-items: center;
-          display: flex;
-          gap: 0.8rem;
-          padding: 1rem 1.1rem;
-        }
-
-        .school-crm-notice strong {
-          color: #111827;
-          flex: 0 0 auto;
-        }
-
-        .school-crm-notice span,
-        .school-crm-muted,
-        .school-crm-empty {
-          color: #4b5563;
-          font-size: 0.9rem;
-        }
-
-        .school-crm-banner {
-          align-items: start;
-          display: flex;
-          gap: 1rem;
-          justify-content: space-between;
-          padding: 1rem 1.1rem;
-        }
-
-        .school-crm-banner h3 {
-          margin: 0 0 0.25rem;
-        }
-
-        .school-crm-banner p {
-          margin: 0.15rem 0;
-        }
-
-        .school-crm-banner-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-        }
-
-        .school-crm-layout {
-          display: grid;
-          gap: 1rem;
-          grid-template-columns: minmax(0, 2.1fr) minmax(320px, 0.95fr);
-        }
-
-        .school-crm-main,
-        .school-crm-side {
-          display: grid;
-          gap: 1rem;
-        }
-
-        .school-crm-card-header {
-          align-items: center;
-          border-bottom: 1px solid #d1d5db;
-          display: flex;
-          justify-content: space-between;
-          padding: 1rem 1rem 0.9rem;
-        }
-
-        .school-crm-card-header h2 {
-          font-size: 1.05rem;
-          margin: 0;
-        }
-
-        .school-crm-links-grid {
-          display: grid;
-          gap: 0.8rem;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          padding: 1rem;
-        }
-
-        .school-crm-link-card {
-          align-items: start;
-          background: #ffffff;
-          border: 1px solid #d1d5db;
-          border-radius: 0.5rem;
-          color: #0f172a;
-          cursor: pointer;
-          display: grid;
-          gap: 0.4rem;
-          min-height: 92px;
-          padding: 0.85rem;
-          text-align: left;
-          text-decoration: none;
-        }
-
-        .school-crm-link-card strong {
-          color: #14532d;
-          font-size: 1.3rem;
-        }
-
-        .school-crm-tabs {
-          border-bottom: 1px solid #d1d5db;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.35rem;
-          padding: 0 1rem;
-        }
-
-        .school-crm-tabs button {
-          background: transparent;
-          border: 0;
-          border-bottom: 2px solid transparent;
-          color: #374151;
-          cursor: pointer;
-          font-size: 1rem;
-          font-weight: 600;
-          padding: 1rem 0.85rem 0.9rem;
-        }
-
-        .school-crm-tabs button.is-active {
-          border-bottom-color: #2563eb;
-          color: #111827;
-        }
-
-        .school-crm-details-grid {
-          display: grid;
-          gap: 1.5rem;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          padding: 1rem;
-        }
-
-        .school-crm-details-column {
-          display: grid;
-        }
-
-        .school-crm-detail-row {
-          border-bottom: 1px solid #d1d5db;
-          display: grid;
-          gap: 0.28rem;
-          padding: 0.85rem 0;
-        }
-
-        .school-crm-detail-row strong,
-        .school-crm-detail-row a {
-          color: #111827;
-          font-size: 1rem;
-          text-decoration: none;
-          word-break: break-word;
-        }
-
-        .school-crm-detail-row a:hover {
-          color: #2563eb;
-        }
-
-        .school-crm-related-grid {
-          display: grid;
-          gap: 0.85rem;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          padding: 1rem;
-        }
-
-        .school-crm-related-card {
-          background: #ffffff;
-          border: 1px solid #d1d5db;
-          border-radius: 0.5rem;
-          display: grid;
-          gap: 0.35rem;
-          padding: 0.9rem;
-        }
-
-        .school-crm-related-card h3 {
-          margin: 0;
-        }
-
-        .school-crm-related-card p {
-          color: #4b5563;
-          font-size: 0.9rem;
-          margin: 0;
-        }
-
-        .school-crm-related-card a,
-        .school-crm-related-card button {
-          background: transparent;
-          border: 0;
-          color: #2563eb;
-          cursor: pointer;
-          font-size: 0.95rem;
-          font-weight: 600;
-          padding: 0;
-          text-align: left;
-          text-decoration: none;
-        }
-
-        .school-crm-list {
-          display: grid;
-          gap: 0.75rem;
-          padding: 1rem;
-        }
-
-        .school-crm-list-row {
-          align-items: center;
-          background: #ffffff;
-          border: 1px solid #d1d5db;
-          border-radius: 0.5rem;
-          color: inherit;
-          display: grid;
-          gap: 0.5rem;
-          grid-template-columns: minmax(0, 1fr) auto;
-          padding: 0.85rem 0.95rem;
-          text-decoration: none;
-        }
-
-        .school-crm-list-row strong {
-          color: #111827;
-          display: block;
-          margin-bottom: 0.2rem;
-        }
-
-        .school-crm-list-meta {
-          display: grid;
-          gap: 0.2rem;
-          justify-items: end;
-          min-width: 120px;
-        }
-
-        .school-crm-search-box,
-        .school-crm-side-stack,
-        .school-crm-map {
-          padding: 1rem;
-        }
-
-        .school-crm-search-box input {
-          background: #ffffff;
-          border: 1px solid #cbd5e1;
-          border-radius: 0.5rem;
-          min-height: 46px;
-          padding: 0 0.85rem;
-          width: 100%;
-        }
-
-        .school-crm-map {
-          align-items: center;
-          background: #d9f2ff;
-          display: grid;
-          justify-items: center;
-          min-height: 220px;
-          text-align: center;
-        }
-
-        .school-crm-map a {
-          color: #14532d;
-          font-weight: 700;
-          text-decoration: none;
-        }
-
-        .school-crm-side-stack {
-          display: grid;
-          gap: 0.85rem;
-        }
-
-        .school-crm-side-stack div {
-          display: grid;
-          gap: 0.2rem;
-        }
-
-        @media (max-width: 1200px) {
-          .school-crm-hero,
-          .school-crm-layout {
-            grid-template-columns: 1fr;
-          }
-
-          .school-crm-overview,
-          .school-crm-links-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-        }
-
-        @media (max-width: 900px) {
-          .school-crm-overview,
-          .school-crm-links-grid,
-          .school-crm-details-grid,
-          .school-crm-related-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .school-crm-list-row {
-            grid-template-columns: 1fr;
-          }
-
-          .school-crm-list-meta {
-            justify-items: start;
-          }
-        }
-      `}</style>
+      
     </div>
   );
 }

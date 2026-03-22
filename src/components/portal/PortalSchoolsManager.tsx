@@ -29,16 +29,6 @@ type Feedback = {
 };
 
 
-
-function parseOptionalNumber(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : Number.NaN;
-}
-
 function isValidPhone(value: string) {
   if (!value.trim()) {
     return true;
@@ -50,47 +40,6 @@ function normalizeContactValue(value: string | null | undefined) {
   return String(value ?? "")
     .trim()
     .toLowerCase();
-}
-
-
-
-function toGpsInputValue(value: string | null | undefined) {
-  return value?.trim() ?? "";
-}
-
-function setFormInputValue(form: HTMLFormElement | null, name: string, value: string) {
-  if (!form) {
-    return;
-  }
-  const input = form.elements.namedItem(name) as HTMLInputElement | null;
-  if (input) {
-    input.value = value;
-  }
-}
-
-async function getBrowserCoordinates() {
-  if (typeof window === "undefined" || !navigator.geolocation) {
-    throw new Error("Geolocation is not available on this device.");
-  }
-
-  return new Promise<{ lat: string; lng: string }>((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude.toFixed(6),
-          lng: position.coords.longitude.toFixed(6),
-        });
-      },
-      (error) => {
-        reject(new Error(error.message || "Could not detect current location."));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      },
-    );
-  });
 }
 
 export function PortalSchoolsManager({
@@ -226,26 +175,6 @@ export function PortalSchoolsManager({
     });
   }
 
-  async function autofillGps(target: "create" | "edit") {
-    const setFeedback = target === "create" ? setCreateFeedback : setProfileFeedback;
-    try {
-      setFeedback({ kind: "success", message: "Detecting current location..." });
-      const coords = await getBrowserCoordinates();
-      const form = target === "create" ? createFormRef.current : editFormRef.current;
-      setFormInputValue(form, "gpsLat", coords.lat);
-      setFormInputValue(form, "gpsLng", coords.lng);
-      setFeedback({
-        kind: "success",
-        message: `GPS coordinates captured (${coords.lat}, ${coords.lng}).`,
-      });
-    } catch (error) {
-      setFeedback({
-        kind: "error",
-        message: error instanceof Error ? error.message : "Could not detect GPS coordinates.",
-      });
-    }
-  }
-
   async function fetchSchools(district: string, query: string) {
     setLoading(true);
     setDirectoryFeedback({ kind: "idle", message: "" });
@@ -297,29 +226,15 @@ export function PortalSchoolsManager({
       subCounty: String(formData.get("subCounty") ?? ""),
       parish: String(formData.get("parish") ?? ""),
       village: String(formData.get("village") ?? ""),
-      notes: String(formData.get("notes") ?? ""),
       alternateSchoolNames: String(formData.get("alternateSchoolNames") ?? ""),
       schoolStatus: String(formData.get("schoolStatus") ?? "Open"),
       schoolStatusDate: String(formData.get("schoolStatusDate") ?? ""),
       currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
       yearFounded: String(formData.get("yearFounded") ?? ""),
-      denomination: String(formData.get("denomination") ?? ""),
-      protestantDenomination: String(formData.get("protestantDenomination") ?? ""),
-      accountRecordType: String(formData.get("accountRecordType") ?? "School"),
-      schoolType: String(formData.get("schoolType") ?? "School"),
-      parentAccountLabel: String(formData.get("parentAccountLabel") ?? "Uganda"),
-      schoolRelationshipStatus: String(formData.get("schoolRelationshipStatus") ?? ""),
-      schoolRelationshipStatusDate: String(formData.get("schoolRelationshipStatusDate") ?? ""),
-      clientSchoolNumber: Number(formData.get("clientSchoolNumber")) || 0,
-      firstMetricDate: String(formData.get("firstMetricDate") ?? ""),
-      website: String(formData.get("website") ?? ""),
-      description: String(formData.get("description") ?? ""),
-      partnerType: String(formData.get("partnerType") ?? ""),
       currentPartnerSchool: formData.get("currentPartnerSchool") === "on",
       schoolActive: formData.get("schoolActive") !== null ? formData.get("schoolActive") === "on" : true,
       classesJson: JSON.stringify(Array.from(formData.getAll("classes")).map(String)),
-      gpsLat: String(formData.get("gpsLat") ?? ""),
-      gpsLng: String(formData.get("gpsLng") ?? ""),
+
       headTeacherName: String(formData.get("headTeacherName") ?? ""),
       headTeacherPhone: String(formData.get("headTeacherPhone") ?? ""),
       headTeacherGender: String(formData.get("headTeacherGender") ?? ""),
@@ -336,24 +251,7 @@ export function PortalSchoolsManager({
       return;
     }
 
-    const lat = parseOptionalNumber(payload.gpsLat);
-    if (lat !== null && (Number.isNaN(lat) || lat < -90 || lat > 90)) {
-      setCreateFeedback({
-        kind: "error",
-        message: "GPS latitude must be a valid number between -90 and 90.",
-      });
-      setSavingSchool(false);
-      return;
-    }
-    const lng = parseOptionalNumber(payload.gpsLng);
-    if (lng !== null && (Number.isNaN(lng) || lng < -180 || lng > 180)) {
-      setCreateFeedback({
-        kind: "error",
-        message: "GPS longitude must be a valid number between -180 and 180.",
-      });
-      setSavingSchool(false);
-      return;
-    }
+
     if (payload.headTeacherPhone && !isValidPhone(payload.headTeacherPhone)) {
       setCreateFeedback({
         kind: "error",
@@ -377,20 +275,10 @@ export function PortalSchoolsManager({
           subCounty: payload.subCounty.trim() || undefined,
           parish: payload.parish.trim() || undefined,
           village: payload.village.trim() || undefined,
-          notes: payload.notes.trim() || undefined,
           alternateSchoolNames: payload.alternateSchoolNames.trim() || undefined,
           schoolStatus: payload.schoolStatus || "Open",
           schoolStatusDate: payload.schoolStatusDate.trim() || undefined,
           currentPartnerType: payload.currentPartnerType || "NA",
-          yearFounded: payload.yearFounded.trim() ? Number(payload.yearFounded) : undefined,
-          denomination: payload.denomination.trim() || undefined,
-          protestantDenomination: payload.protestantDenomination.trim() || undefined,
-          accountRecordType: "School",
-          schoolType: "School",
-          parentAccountLabel: payload.country.trim() || "Uganda",
-          schoolRelationshipStatus: payload.currentPartnerType.trim() ? "Pre-partner" : undefined,
-          schoolRelationshipStatusDate: payload.schoolStatusDate.trim() || undefined,
-          clientSchoolNumber: 0,
           metricCount: 0,
           runningTotalMaxEnrollment: 0,
           enrollmentTotal: 0,
@@ -407,16 +295,11 @@ export function PortalSchoolsManager({
           enrolledP5: 0,
           enrolledP6: 0,
           enrolledP7: 0,
-          gpsLat: payload.gpsLat.trim() || undefined,
-          gpsLng: payload.gpsLng.trim() || undefined,
           headTeacherName: payload.headTeacherName.trim() || undefined,
           headTeacherGender: payload.headTeacherGender || undefined,
           headTeacherPhone: payload.headTeacherPhone.trim() || undefined,
           headTeacherEmail: payload.headTeacherEmail.trim() || undefined,
           headTeacherWhatsapp: payload.headTeacherWhatsapp.trim() || undefined,
-          website: payload.website.trim() || undefined,
-          description: payload.description.trim() || undefined,
-          partnerType: payload.partnerType.trim() || undefined,
         }),
       });
 
@@ -470,60 +353,22 @@ export function PortalSchoolsManager({
       subCounty: String(formData.get("subCounty") ?? ""),
       parish: String(formData.get("parish") ?? ""),
       village: String(formData.get("village") ?? ""),
-      notes: String(formData.get("notes") ?? ""),
       alternateSchoolNames: String(formData.get("alternateSchoolNames") ?? ""),
       schoolStatus: String(formData.get("schoolStatus") ?? "Open"),
       schoolStatusDate: String(formData.get("schoolStatusDate") ?? ""),
       currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
       yearFounded: String(formData.get("yearFounded") ?? ""),
-      denomination: String(formData.get("denomination") ?? ""),
-      protestantDenomination: String(formData.get("protestantDenomination") ?? ""),
-      accountRecordType: String(formData.get("accountRecordType") ?? "School"),
-      schoolType: String(formData.get("schoolType") ?? "School"),
-      parentAccountLabel: String(formData.get("parentAccountLabel") ?? "Uganda"),
-      schoolRelationshipStatus: String(formData.get("schoolRelationshipStatus") ?? ""),
-      schoolRelationshipStatusDate: String(formData.get("schoolRelationshipStatusDate") ?? ""),
-      clientSchoolNumber: Number(formData.get("clientSchoolNumber")) || 0,
-      firstMetricDate: String(formData.get("firstMetricDate") ?? ""),
-      website: String(formData.get("website") ?? ""),
-      description: String(formData.get("description") ?? ""),
-      partnerType: String(formData.get("partnerType") ?? ""),
       currentPartnerSchool: formData.get("currentPartnerSchool") === "on",
       schoolActive: formData.get("schoolActive") !== null ? formData.get("schoolActive") === "on" : true,
       classesJson: JSON.stringify(Array.from(formData.getAll("classes")).map(String)),
 
-      gpsLat: String(formData.get("gpsLat") ?? ""),
-      gpsLng: String(formData.get("gpsLng") ?? ""),
       headTeacherName: String(formData.get("headTeacherName") ?? ""),
       headTeacherPhone: String(formData.get("headTeacherPhone") ?? ""),
       headTeacherGender: String(formData.get("headTeacherGender") ?? ""),
       headTeacherEmail: String(formData.get("headTeacherEmail") ?? ""),
       headTeacherWhatsapp: String(formData.get("headTeacherWhatsapp") ?? ""),
-      directorName: String(formData.get("directorName") ?? ""),
-      directorPhone: String(formData.get("directorPhone") ?? ""),
-      directorGender: String(formData.get("directorGender") ?? ""),
-      directorEmail: String(formData.get("directorEmail") ?? ""),
-      directorWhatsapp: String(formData.get("directorWhatsapp") ?? ""),
     };
 
-    const lat = parseOptionalNumber(payload.gpsLat);
-    if (lat !== null && (Number.isNaN(lat) || lat < -90 || lat > 90)) {
-      setProfileFeedback({
-        kind: "error",
-        message: "GPS latitude must be a valid number between -90 and 90.",
-      });
-      setSavingProfile(false);
-      return;
-    }
-    const lng = parseOptionalNumber(payload.gpsLng);
-    if (lng !== null && (Number.isNaN(lng) || lng < -180 || lng > 180)) {
-      setProfileFeedback({
-        kind: "error",
-        message: "GPS longitude must be a valid number between -180 and 180.",
-      });
-      setSavingProfile(false);
-      return;
-    }
     if (!isValidPhone(payload.headTeacherPhone)) {
       setProfileFeedback({
         kind: "error",
@@ -566,26 +411,13 @@ export function PortalSchoolsManager({
           subCounty: payload.subCounty.trim(),
           parish: payload.parish.trim(),
           village: payload.village.trim() || null,
-          notes: payload.notes.trim() || null,
           alternateSchoolNames: payload.alternateSchoolNames.trim() || null,
           schoolStatus: payload.schoolStatus.trim() || "Open",
           schoolStatusDate: payload.schoolStatusDate.trim() || null,
           currentPartnerType: payload.currentPartnerType.trim() || "NA",
           yearFounded: payload.yearFounded.trim() ? Number(payload.yearFounded) : null,
-          accountRecordType: selectedSchool.accountRecordType,
-          schoolType: selectedSchool.schoolType,
-          parentAccountLabel: selectedSchool.parentAccountLabel,
-          schoolRelationshipStatus: selectedSchool.schoolRelationshipStatus,
-          schoolRelationshipStatusDate: selectedSchool.schoolRelationshipStatusDate,
-          denomination: payload.denomination.trim() || null,
-          clientSchoolNumber: selectedSchool.clientSchoolNumber,
-          metricCount: selectedSchool.metricCount,
-          runningTotalMaxEnrollment: selectedSchool.runningTotalMaxEnrollment,
-          partnerType: payload.partnerType.trim() || null,
           currentPartnerSchool: payload.currentPartnerSchool,
           schoolActive: payload.schoolActive,
-          website: payload.website.trim() || null,
-          description: payload.description.trim() || null,
           enrollmentTotal: selectedSchool.enrollmentTotal ?? 0,
           classesJson: payload.classesJson,
           enrolledBoys: selectedSchool.enrolledBoys ?? 0,
@@ -600,18 +432,11 @@ export function PortalSchoolsManager({
           enrolledP5: selectedSchool.enrolledP5 ?? 0,
           enrolledP6: selectedSchool.enrolledP6 ?? 0,
           enrolledP7: selectedSchool.enrolledP7 ?? 0,
-          gpsLat: payload.gpsLat.trim() || null,
-          gpsLng: payload.gpsLng.trim() || null,
           headTeacherName: payload.headTeacherName.trim(),
           headTeacherGender: payload.headTeacherGender as "Male" | "Female" | "Other",
           headTeacherPhone: payload.headTeacherPhone.trim() || undefined,
           headTeacherEmail: payload.headTeacherEmail.trim() || undefined,
           headTeacherWhatsapp: payload.headTeacherWhatsapp.trim() || undefined,
-          directorName: payload.directorName.trim() || undefined,
-          directorGender: payload.directorGender ? (payload.directorGender as "Male" | "Female" | "Other") : undefined,
-          directorPhone: payload.directorPhone.trim() || undefined,
-          directorEmail: payload.directorEmail.trim() || undefined,
-          directorWhatsapp: payload.directorWhatsapp.trim() || undefined,
         }),
       });
 
@@ -639,7 +464,7 @@ export function PortalSchoolsManager({
 
   return (
     <div className="portal-grid">
-      <section className="card">
+      <section className="ds-card">
         <div className="portal-school-create-header">
           <h2>New School Entry</h2>
           <button
@@ -663,7 +488,7 @@ export function PortalSchoolsManager({
             closeLabel="Close"
             maxWidth="1080px"
           >
-            <form ref={createFormRef} className="form-grid portal-form-grid" onSubmit={handleCreateSchool}>
+            <form ref={createFormRef} className="form-grid portal-form-grid portal-form-grid-side" onSubmit={handleCreateSchool}>
               <label>
                 <span className="portal-field-label">
                   <span>School Name</span>
@@ -792,81 +617,9 @@ export function PortalSchoolsManager({
                 <span className="portal-field-label">Village (optional)</span>
                 <input name="village" placeholder="e.g. Lukole" autoComplete="address-level4" />
               </label>
-              <label>
-                <span className="portal-field-label">Alternate School Names</span>
-                <input name="alternateSchoolNames" placeholder="Optional aliases or former names" />
-              </label>
-              <label>
-                <span className="portal-field-label">Denomination</span>
-                <input name="denomination" placeholder="e.g. Catholic" />
-              </label>
-              <label>
-                <span className="portal-field-label">Protestant Denomination</span>
-                <input name="protestantDenomination" placeholder="e.g. Anglican" />
-              </label>
-              <label>
-                <span className="portal-field-label">Account Record Type</span>
-                <input name="accountRecordType" defaultValue="School" />
-              </label>
-              <label>
-                <span className="portal-field-label">School Type</span>
-                <input name="schoolType" defaultValue="School" />
-              </label>
-              <label>
-                <span className="portal-field-label">Parent Account Label</span>
-                <input name="parentAccountLabel" defaultValue="Uganda" />
-              </label>
-              <label>
-                <span className="portal-field-label">Relationship Status</span>
-                <input name="schoolRelationshipStatus" placeholder="e.g. Active" />
-              </label>
-              <label>
-                <span className="portal-field-label">Relationship Status Date</span>
-                <input name="schoolRelationshipStatusDate" type="date" />
-              </label>
-              <label>
-                <span className="portal-field-label">Client School Number</span>
-                <input name="clientSchoolNumber" type="number" defaultValue={0} />
-              </label>
-              <label>
-                <span className="portal-field-label">First Metric Date</span>
-                <input name="firstMetricDate" type="date" />
-              </label>
-              <label>
-                <span className="portal-field-label">Partner Type</span>
-                <input name="partnerType" placeholder="Optional internal partner label" />
-              </label>
-              <label>
-                <span className="portal-field-label">Website</span>
-                <input name="website" placeholder="school.example.org" />
-              </label>
-              <label className="portal-inline-check">
-                <input name="currentPartnerSchool" type="checkbox" />
-                <span>Current partner school</span>
-              </label>
-              <label className="portal-inline-check">
-                <input name="schoolActive" type="checkbox" defaultChecked />
-                <span>School is active</span>
-              </label>
-              <label className="full-width">
-                <span className="portal-field-label">Description</span>
-                <textarea
-                  name="description"
-                  rows={2}
-                  placeholder="Short account summary for this school profile."
-                />
-              </label>
-              <label className="full-width">
-                <span className="portal-field-label">Notes</span>
-                <textarea
-                  name="notes"
-                  rows={3}
-                  placeholder="School metadata notes, access details, or additional context."
-                />
-              </label>
               <fieldset className="portal-fieldset full-width">
                 <legend>Classes Offered</legend>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-5 portal-multiselect">
                   {[
                     "Baby Class",
                     "Middle Class",
@@ -879,86 +632,19 @@ export function PortalSchoolsManager({
                     "P6",
                     "P7",
                   ].map((cls) => (
-                    <label key={cls} className="flex items-center gap-2 text-sm text-gray-600">
+                    <label key={cls}>
                       <input
                         type="checkbox"
                         name="classes"
                         value={cls}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      {cls}
+                      <span>{cls}</span>
                     </label>
                   ))}
                 </div>
               </fieldset>
-
-              <fieldset className="portal-fieldset">
-                <legend>New Enrollment (Immediate Ozeki Impact)</legend>
-                <div className="form-grid-3">
-                  <label>
-                    <span className="portal-field-label">Baby</span>
-                    <input name="enrolledBaby" type="number" min={0} defaultValue={0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Middle</span>
-                    <input name="enrolledMiddle" type="number" min={0} defaultValue={0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Top</span>
-                    <input name="enrolledTop" type="number" min={0} defaultValue={0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">P1</span>
-                    <input name="enrolledP1" type="number" min={0} defaultValue={0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">P2</span>
-                    <input name="enrolledP2" type="number" min={0} defaultValue={0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">P3</span>
-                    <input name="enrolledP3" type="number" min={0} defaultValue={0} />
-                  </label>
-                </div>
-              </fieldset>
-              <p className="full-width portal-muted">
-                Directly impacted learners are auto-calculated as Baby + Middle + Top + P1 + P2 + P3.
-              </p>
-              <label>
-                <span className="portal-field-label">Total Boys</span>
-                <input
-                  name="enrolledBoys"
-                  type="number"
-                  min={0}
-                  step={1}
-                  defaultValue={0}
-                  inputMode="numeric"
-                />
-              </label>
-              <label>
-                <span className="portal-field-label">Total Girls</span>
-                <input
-                  name="enrolledGirls"
-                  type="number"
-                  min={0}
-                  step={1}
-                  defaultValue={0}
-                  inputMode="numeric"
-                />
-              </label>
-              <p className="full-width portal-muted">
-                General enrollment impact is auto-calculated from Total Boys + Total Girls.
-              </p>
-              <label>
-                <span className="portal-field-label">GPS Latitude (optional)</span>
-                <input name="gpsLat" placeholder="e.g. 2.7746" inputMode="decimal" />
-              </label>
-              <label>
-                <span className="portal-field-label">GPS Longitude (optional)</span>
-                <input name="gpsLng" placeholder="e.g. 32.2990" inputMode="decimal" />
-              </label>
               <div className="full-width mt-4 mb-2">
-                <h3 className="text-lg font-semibold border-b pb-1">Head Teacher (Primary Contact)</h3>
+                <h3 className="text-lg font-semibold border-b pb-1">Primary Contact</h3>
               </div>
               <label>
                 <span className="portal-field-label">
@@ -1021,53 +707,6 @@ export function PortalSchoolsManager({
                   onChange={(event) => setCreateContactWhatsapp(event.target.value)}
                 />
               </label>
-
-              <div className="full-width mt-4 mb-2">
-                <h3 className="text-lg font-semibold border-b pb-1">Director / Proprietor (Secondary Contact)</h3>
-              </div>
-              <label>
-                <span className="portal-field-label">Director Name (optional)</span>
-                <input
-                  name="directorName"
-                  placeholder="e.g. John Bosco"
-                  autoComplete="name"
-                />
-              </label>
-              <label>
-                <span className="portal-field-label">Director Phone (optional)</span>
-                <input
-                  name="directorPhone"
-                  placeholder="+2567xxxxxxxx"
-                  inputMode="tel"
-                  autoComplete="tel"
-                />
-              </label>
-              <label>
-                <span className="portal-field-label">Director Gender (optional)</span>
-                <select name="directorGender">
-                  <option value="">Select gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </label>
-              <label>
-                <span className="portal-field-label">Director Email (optional)</span>
-                <input
-                  name="directorEmail"
-                  type="email"
-                  placeholder="director@school.org"
-                  autoComplete="email"
-                />
-              </label>
-              <label className="full-width">
-                <span className="portal-field-label">Director WhatsApp (optional)</span>
-                <input
-                  name="directorWhatsapp"
-                  placeholder="+2567xxxxxxxx"
-                  inputMode="tel"
-                />
-              </label>
               {createDuplicateContactMatches.length > 0 ? (
                 <p className="full-width portal-warning-note" role="status">
                   Warning: Duplicate contact found in{" "}
@@ -1081,14 +720,6 @@ export function PortalSchoolsManager({
               <div className="full-width action-row portal-form-actions">
                 <button className="button" type="submit" disabled={savingSchool}>
                   {savingSchool ? "Saving..." : "Save School"}
-                </button>
-                <button
-                  className="button button-ghost"
-                  type="button"
-                  disabled={savingSchool}
-                  onClick={() => void autofillGps("create")}
-                >
-                  Use Current GPS
                 </button>
               </div>
 
@@ -1106,7 +737,7 @@ export function PortalSchoolsManager({
         ) : null}
       </section>
 
-      <section className="card">
+      <section className="ds-card">
         <h2>School Profile</h2>
         {!selectedSchool ? (
           <p>Select a school from the directory below to manage profile-linked activities.</p>
@@ -1122,9 +753,6 @@ export function PortalSchoolsManager({
                   {selectedSchool.country} • {selectedSchool.region || selectedSchool.district} • {selectedSchool.district}
                   {selectedSchool.village ? ` • ${selectedSchool.village}` : ""}
                 </p>
-                {selectedSchool.notes ? (
-                  <p className="portal-muted">{selectedSchool.notes}</p>
-                ) : null}
               </div>
               <div className="portal-school-profile-actions">
                 <button
@@ -1168,14 +796,6 @@ export function PortalSchoolsManager({
               <article>
                 <strong>{Number(selectedSchool.enrolledLearners ?? 0).toLocaleString()}</strong>
                 <span>Overall Enrollment</span>
-              </article>
-              <article>
-                <strong>
-                  {selectedSchool.gpsLat && selectedSchool.gpsLng
-                    ? `${selectedSchool.gpsLat}, ${selectedSchool.gpsLng}`
-                    : "Not logged"}
-                </strong>
-                <span>School GPS</span>
               </article>
             </div>
 
@@ -1227,7 +847,7 @@ export function PortalSchoolsManager({
               >
                 <form
                   ref={editFormRef}
-                  className="form-grid portal-form-grid"
+                  className="form-grid portal-form-grid portal-form-grid-side"
                   onSubmit={handleUpdateSchoolProfile}
                 >
                   <label>
@@ -1296,7 +916,7 @@ export function PortalSchoolsManager({
 
                   <fieldset className="portal-fieldset full-width">
                     <legend>Classes Offered</legend>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-5 portal-multiselect">
                       {[
                         "Baby Class",
                         "Middle Class",
@@ -1317,67 +937,21 @@ export function PortalSchoolsManager({
                           }
                         })();
                         return (
-                          <label key={cls} className="flex items-center gap-2 text-sm text-gray-600">
+                          <label key={cls}>
                             <input
                               type="checkbox"
                               name="classes"
                               value={cls}
                               defaultChecked={selectedClasses.includes(cls)}
-                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
-                            {cls}
+                            <span>{cls}</span>
                           </label>
                         );
                       })}
                     </div>
                   </fieldset>
 
-                  <fieldset className="portal-fieldset full-width">
-                    <legend>New Enrollment (Immediate Ozeki Impact)</legend>
-                    <div className="form-grid-3">
-                      <label>
-                        <span className="portal-field-label">Baby</span>
-                        <input name="enrolledBaby" type="number" min={0} defaultValue={selectedSchool.enrolledBaby ?? 0} />
-                      </label>
-                      <label>
-                        <span className="portal-field-label">Middle</span>
-                        <input name="enrolledMiddle" type="number" min={0} defaultValue={selectedSchool.enrolledMiddle ?? 0} />
-                      </label>
-                      <label>
-                        <span className="portal-field-label">Top</span>
-                        <input name="enrolledTop" type="number" min={0} defaultValue={selectedSchool.enrolledTop ?? 0} />
-                      </label>
-                      <label>
-                        <span className="portal-field-label">P1</span>
-                        <input name="enrolledP1" type="number" min={0} defaultValue={selectedSchool.enrolledP1 ?? 0} />
-                      </label>
-                      <label>
-                        <span className="portal-field-label">P2</span>
-                        <input name="enrolledP2" type="number" min={0} defaultValue={selectedSchool.enrolledP2 ?? 0} />
-                      </label>
-                      <label>
-                        <span className="portal-field-label">P3</span>
-                        <input name="enrolledP3" type="number" min={0} defaultValue={selectedSchool.enrolledP3 ?? 0} />
-                      </label>
-                    </div>
-                  </fieldset>
-                  <p className="full-width portal-muted">
-                    Directly impacted learners are auto-calculated as Baby + Middle + Top + P1 + P2 + P3.
-                  </p>
 
-                  <div className="form-grid-2 full-width">
-                    <label>
-                      <span className="portal-field-label">Total Boys</span>
-                      <input name="enrolledBoys" type="number" defaultValue={selectedSchool.enrolledBoys ?? 0} />
-                    </label>
-                    <label>
-                      <span className="portal-field-label">Total Girls</span>
-                      <input name="enrolledGirls" type="number" defaultValue={selectedSchool.enrolledGirls ?? 0} />
-                    </label>
-                  </div>
-                  <p className="full-width portal-muted">
-                    General enrollment impact is auto-calculated from Total Boys + Total Girls.
-                  </p>
                   <label>
                     <span className="portal-field-label">District</span>
                     <select
@@ -1417,50 +991,6 @@ export function PortalSchoolsManager({
                       defaultValue={selectedSchool.alternateSchoolNames ?? ""}
                     />
                   </label>
-                  <label>
-                    <span className="portal-field-label">Denomination</span>
-                    <input name="denomination" defaultValue={selectedSchool.denomination ?? ""} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Protestant Denomination</span>
-                    <input name="protestantDenomination" defaultValue={selectedSchool.protestantDenomination ?? ""} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Account Record Type</span>
-                    <input name="accountRecordType" defaultValue={selectedSchool.accountRecordType ?? "School"} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">School Type</span>
-                    <input name="schoolType" defaultValue={selectedSchool.schoolType ?? "School"} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Parent Account Label</span>
-                    <input name="parentAccountLabel" defaultValue={selectedSchool.parentAccountLabel ?? "Uganda"} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Relationship Status</span>
-                    <input name="schoolRelationshipStatus" defaultValue={selectedSchool.schoolRelationshipStatus ?? ""} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Relationship Status Date</span>
-                    <input name="schoolRelationshipStatusDate" type="date" defaultValue={selectedSchool.schoolRelationshipStatusDate?.slice(0, 10) ?? ""} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Client School Number</span>
-                    <input name="clientSchoolNumber" type="number" defaultValue={selectedSchool.clientSchoolNumber ?? 0} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">First Metric Date</span>
-                    <input name="firstMetricDate" type="date" defaultValue={selectedSchool.firstMetricDate?.slice(0, 10) ?? ""} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Partner Type</span>
-                    <input name="partnerType" defaultValue={selectedSchool.partnerType ?? ""} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">Website</span>
-                    <input name="website" defaultValue={selectedSchool.website ?? ""} />
-                  </label>
                   <label className="portal-inline-check">
                     <input
                       name="currentPartnerSchool"
@@ -1476,31 +1006,6 @@ export function PortalSchoolsManager({
                       defaultChecked={selectedSchool.schoolActive}
                     />
                     <span>School is active</span>
-                  </label>
-                  <label className="full-width">
-                    <span className="portal-field-label">Description</span>
-                    <textarea
-                      name="description"
-                      rows={2}
-                      defaultValue={selectedSchool.description ?? ""}
-                    />
-                  </label>
-                  <label className="full-width">
-                    <span className="portal-field-label">Notes</span>
-                    <textarea
-                      name="notes"
-                      rows={3}
-                      defaultValue={selectedSchool.notes ?? ""}
-                      placeholder="School metadata notes, access details, or additional context."
-                    />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">GPS Latitude</span>
-                    <input name="gpsLat" defaultValue={toGpsInputValue(selectedSchool.gpsLat)} />
-                  </label>
-                  <label>
-                    <span className="portal-field-label">GPS Longitude</span>
-                    <input name="gpsLng" defaultValue={toGpsInputValue(selectedSchool.gpsLng)} />
                   </label>
                   <label>
                     <span className="portal-field-label">Head Teacher Name</span>
@@ -1561,14 +1066,6 @@ export function PortalSchoolsManager({
                       className="button button-ghost"
                       type="button"
                       disabled={savingProfile}
-                      onClick={() => void autofillGps("edit")}
-                    >
-                      Use Current GPS
-                    </button>
-                    <button
-                      className="button button-ghost"
-                      type="button"
-                      disabled={savingProfile}
                       onClick={() => {
                         setEditingProfile(false);
                         setProfileFeedback({ kind: "idle", message: "" });
@@ -1594,7 +1091,7 @@ export function PortalSchoolsManager({
         )}
       </section>
 
-      <section className="card">
+      <section className="ds-card">
         <h2>Schools Directory</h2>
         <form className="portal-filter-grid" onSubmit={handleFilterSubmit}>
           <label>
@@ -1664,16 +1161,14 @@ export function PortalSchoolsManager({
           </p>
         ) : null}
 
-        <div className="table-wrap portal-table-compact portal-schools-directory-table">
-          <table>
+        <div className="ds-table-wrap">
+          <table className="ds-table">
             <thead>
               <tr>
                 <th>Account Name</th>
                 <th>School ID</th>
                 <th>Current Partner Type</th>
                 <th>Country</th>
-                <th>Account Record Type</th>
-                <th>Type</th>
                 <th>Primary Contact</th>
                 <th>Phone</th>
                 <th>School Status</th>
@@ -1683,7 +1178,7 @@ export function PortalSchoolsManager({
             <tbody>
               {schools.length === 0 ? (
                 <tr>
-                  <td colSpan={10}>No schools available.</td>
+                  <td colSpan={8}>No schools available.</td>
                 </tr>
               ) : (
                 schools.map((school) => (
@@ -1701,12 +1196,6 @@ export function PortalSchoolsManager({
                     </td>
                     <td title={school.country}>
                       <span className="portal-table-cell-ellipsis">{school.country}</span>
-                    </td>
-                    <td title={school.accountRecordType}>
-                      <span className="portal-table-cell-ellipsis">{school.accountRecordType}</span>
-                    </td>
-                    <td title={school.schoolType}>
-                      <span className="portal-table-cell-ellipsis">{school.schoolType}</span>
                     </td>
                     <td title={school.primaryContactName ?? school.contactName ?? "-"}>
                       <span className="portal-table-cell-ellipsis is-contact">

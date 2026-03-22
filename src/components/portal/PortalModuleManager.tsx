@@ -4111,11 +4111,6 @@ export function PortalModuleManager({
 
       if (config.module === "visit") {
         payload.visitPathway = visitPathway;
-        if (selectedSchool?.gpsLat?.trim() && selectedSchool?.gpsLng?.trim()) {
-          payload.schoolGpsLat = selectedSchool.gpsLat.trim();
-          payload.schoolGpsLng = selectedSchool.gpsLng.trim();
-          payload.schoolGpsSource = "school_profile";
-        }
 
         if (!String(payload.nextVisitFocus ?? "").trim()) {
           payload.nextVisitFocus =
@@ -4227,19 +4222,6 @@ export function PortalModuleManager({
       }
 
       const payload = { ...inputBody.payload };
-      const schoolHasGps = Boolean(
-        selectedSchool.gpsLat?.trim() && selectedSchool.gpsLng?.trim(),
-      );
-
-      if (schoolHasGps) {
-        payload.schoolGpsLat = selectedSchool.gpsLat?.trim() || "";
-        payload.schoolGpsLng = selectedSchool.gpsLng?.trim() || "";
-        payload.schoolGpsSource = "school_profile";
-        return {
-          ...inputBody,
-          payload,
-        };
-      }
 
       if (gpsSeededSchoolIds.includes(schoolId)) {
         return {
@@ -4918,22 +4900,6 @@ export function PortalModuleManager({
                                 </option>
                               ))}
                             </select>
-                            <div className="portal-inline-actions">
-                              <button
-                                type="button"
-                                className="button button-ghost button-compact"
-                                onClick={() => {
-                                  if (typeof window !== "undefined") {
-                                    window.open("/portal/schools?new=1", "_blank", "noopener,noreferrer");
-                                  }
-                                }}
-                              >
-                                Create new school
-                              </button>
-                              <small className="portal-field-help">
-                                If the school is missing, create it first in School Accounts, then refresh and select it here.
-                              </small>
-                            </div>
                           </label>
                           <label>
                             {renderLabel("Region", true)}
@@ -4970,7 +4936,7 @@ export function PortalModuleManager({
                         </>
                       ) : (
                         <>
-                          {hideTrainingPhysicalLocationContext ? null : (
+                          {hideTrainingPhysicalLocationContext || config.module === "training" ? null : (
                             <>
                               <label>
                                 {renderLabel("Region", true)}
@@ -5047,8 +5013,9 @@ export function PortalModuleManager({
                               </label>
                             </>
                           )}
-                          <label>
-                            {renderLabel("School Account", true)}
+                          {config.module === "training" ? null : (
+                            <label>
+                              {renderLabel("School Account", true)}
                             <select
                               value={formState.schoolId}
                               onChange={(event) => {
@@ -5127,7 +5094,8 @@ export function PortalModuleManager({
                               </small>
                             ) : null}
                           </label>
-                          {hideTrainingPhysicalLocationContext ? null : (
+                          )}
+                          {hideTrainingPhysicalLocationContext || config.module === "training" ? null : (
                             <>
                               <label>
                                 {renderLabel("Sub-region", true)}
