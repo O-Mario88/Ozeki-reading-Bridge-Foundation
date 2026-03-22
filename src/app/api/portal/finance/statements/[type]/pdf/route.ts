@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getPortalUserOrRedirect } from "@/lib/auth-server";
 import { 
   getStatementOfFinancialPosition, 
@@ -100,6 +101,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
       },
     });
   } catch (error) {
+    if (isRedirectError(error)) throw error;
     console.error("Error generating AI financial report:", error);
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }

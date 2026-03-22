@@ -20,7 +20,7 @@
  *   └──────────────────────────────────────────────┘
  */
 import { PDFDocument, PDFFont, PDFImage, PDFPage, rgb, StandardFonts } from "pdf-lib";
-import { loadBrandLogo, getCurrentPdfBrandProfile } from "@/lib/pdf-branding";
+import { loadBrandLogo, getCurrentPdfBrandProfile, drawBrandWatermark } from "@/lib/pdf-branding";
 import type {
   FinanceInvoiceRecord,
   FinanceInvoiceLineItemRecord,
@@ -565,6 +565,9 @@ export async function renderInvoicePdf(
 
   const page = doc.addPage([A4_W, A4_H]);
 
+  // Logo watermark behind all content
+  drawBrandWatermark(page, logo);
+
   // 1. Dark header bar
   const afterHeader = drawHeaderBar(page, logo, font, fontBold, "Invoice", "Tax Invoice");
 
@@ -639,6 +642,9 @@ export async function renderReceiptPdf(
   const logo = await loadBrandLogo(doc);
 
   const page = doc.addPage([A4_W, A4_H]);
+
+  // Logo watermark behind all content
+  drawBrandWatermark(page, logo);
 
   // 1. Dark header bar
   const afterHeader = drawHeaderBar(page, logo, font, fontBold, "Receipt", "Payment Receipt");

@@ -151,7 +151,8 @@ function normalizeStringList(value: unknown, max = 5) {
 
 export async function generatePublicDashboardNarrative(
   aggregate: PublicImpactAggregate,
-  reportScope: ReportScope = "Public"
+  reportScope: ReportScope = "Public",
+  reportType: string = "General Literacy Report"
 ): Promise<PublicDashboardNarrative> {
   const fallback = summarizeFallbackNarrative(aggregate);
   const openAiConfig = getOpenAiServerConfig("gpt-5.2-mini");
@@ -180,6 +181,21 @@ export async function generatePublicDashboardNarrative(
     ? "\n\nABSOLUTE RULE: You are generating a public-facing report. You must not mention, reference, or deduce any specific student names, student ages, or teacher personal/contact information. Discuss operations, staffing, and beneficiaries only in aggregate numbers and high-level trends."
     : "";
 
+  const reportTypeFocus: Record<string, string> = {
+    "Visit Report": "Focus primarily on school coaching visits, observations conducted, lessons observed, school-level findings, and coaching follow-up recommendations.",
+    "Training Report": "Focus primarily on teacher training sessions completed, attendance figures, participant demographics, feedback themes, and training follow-up plans.",
+    "Assessment Report": "Focus primarily on learner assessment data: domain scores, baseline-to-endline gains, sample sizes, assessment cycle completion rates, and benchmark attainment.",
+    "General Literacy Report": "Provide a broad overview of the literacy program covering implementation, teaching quality, learning outcomes, and program coverage.",
+    "Teacher Evaluation Report": "Focus primarily on lesson evaluation scores, teaching quality distribution, domain-level teacher performance, coaching gaps, and teacher improvement trends.",
+    "Learning Outcomes": "Focus exclusively on learner outcome metrics: domain scores (letter names, letter sounds, real words, made-up words, story reading, comprehension), gains, benchmark attainment, and mastery distribution.",
+    "Reading Levels": "Focus exclusively on reading level distribution (Non-Reader, Emerging, Developing, Transitional, Fluent), movement between levels, and matched-learner tracking.",
+    "Implementation Funnel": "Focus on the implementation pipeline: schools trained → coached → baseline assessed → endline assessed → story active. Identify bottlenecks and drop-off points.",
+    "Teaching Quality": "Focus on teaching quality evaluations: overall scores, level distribution, domain averages, top coaching focus areas, and teacher improvement percentages.",
+    "School Report": "Provide a detailed school-level profile covering learner outcomes, teaching quality, coaching history, implementation status, and priority actions for the head teacher.",
+  };
+
+  const typeInstruction = reportTypeFocus[reportType] || reportTypeFocus["General Literacy Report"];
+
   try {
     const response = await client.chat.completions.create({
       model,
@@ -188,13 +204,13 @@ export async function generatePublicDashboardNarrative(
         {
           role: "system",
           content:
-            "You are a senior literacy impact analyst and report writer. Use only the provided evidence. Return JSON with keys: executiveSummary (string), keyHighlights (string[] up to 4), priorityActions (string[] up to 4), methodsNote (string), limitations (string). Write with executive-quality clarity, public-safe language, and professional donor-facing tone. Do not invent numbers or causal claims. Avoid learner identifiers. If evidence is missing, state Data not available." +
+            `You are a senior literacy impact analyst and report writer. You are generating a "${reportType}" report. ${typeInstruction} Use only the provided evidence. Return JSON with keys: executiveSummary (string), keyHighlights (string[] up to 4), priorityActions (string[] up to 4), methodsNote (string), limitations (string). Write with executive-quality clarity, public-safe language, and professional donor-facing tone. Do not invent numbers or causal claims. Avoid learner identifiers. If evidence is missing, state Data not available.` +
             publicGuardrail +
             ` Keep each narrative field under ${AI_GUARDRAILS.maxWordsPerSection} words and avoid these phrases: ${AI_GUARDRAILS.bannedPhrases.join(", ")}.`,
         },
         {
           role: "user",
-          content: `Create a professional literacy dashboard narrative grounded strictly in this evidence JSON:\n${JSON.stringify(
+          content: `Create a professional "${reportType}" narrative grounded strictly in this evidence JSON:\n${JSON.stringify(
             evidencePayload,
           )}`,
         },

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getPortalUserOrRedirect } from "@/lib/auth-server";
 import { getFinanceInvoiceByIdPostgres, getFinanceSettingsPostgres } from "@/lib/server/postgres/repositories/finance";
 import { queryPostgres } from "@/lib/server/postgres/client";
@@ -60,6 +61,7 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (isRedirectError(error)) throw error;
     console.error("Error generating invoice PDF:", error);
     return new NextResponse("Failed to generate PDF", { status: 500 });
   }

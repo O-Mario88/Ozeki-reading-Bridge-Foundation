@@ -84,9 +84,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const period = String(request.nextUrl.searchParams.get("period") ?? "FY").trim() || "FY";
+  const period = String(request.nextUrl.searchParams.get("period") ?? "This Fiscal Year").trim() || "This Fiscal Year";
   const year = request.nextUrl.searchParams.get("year")?.trim() || undefined;
   const format = normalizeFormat(request.nextUrl.searchParams.get("format"));
+  const reportType = String(request.nextUrl.searchParams.get("reportType") ?? "General Literacy Report").trim();
+  const reportCategory = String(request.nextUrl.searchParams.get("reportCategory") ?? "").trim();
 
   // 1. Resolve Authentication and Permissions
   const token = request.cookies.get("portal_session")?.value ?? request.headers.get("authorization")?.replace("Bearer ", "");
@@ -109,7 +111,7 @@ export async function GET(request: NextRequest) {
     const aggregate = await getPublicImpactAggregate(scopeLevel, scopeId, period, reportScope, year);
     
     // 4. Generate Narrative with Scope Awareness
-    const narrative = await generatePublicDashboardNarrative(aggregate, reportScope);
+    const narrative = await generatePublicDashboardNarrative(aggregate, reportScope, reportType);
     
     const report = buildPublicDashboardReportModel(aggregate, narrative);
 
@@ -142,9 +144,10 @@ export async function GET(request: NextRequest) {
 
     // Generate PDF using pdf-lib (no Chromium required)
     const scopeLabel = scopeLevel === "country" ? "Uganda" : scopeId;
+    const reportTitle = reportType !== "General Literacy Report" ? `${reportType} - ${scopeLabel}` : `Public Impact Dashboard Report - ${scopeLabel}`;
     const pdfBuffer = await renderBrandedPdf({
-      title: "Public Impact Dashboard Report",
-      subtitle: `${scopeLabel} | Period: ${period}`,
+      title: reportTitle,
+      subtitle: `${scopeLabel} | Period: ${period}${reportCategory ? ` | ${reportCategory}` : ""}`,
       documentNumber: `IMPACT-${scopeLevel.toUpperCase()}`,
       footerNote: "Ozeki Reading Bridge Foundation - Public Impact Report",
       accentHex: "#1f2a44",

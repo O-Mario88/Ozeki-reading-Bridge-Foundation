@@ -61,7 +61,7 @@ export function ImpactReportFilters({
   const [year, setYear] = useState(initialYear);
   const [reportType, setReportType] = useState(initialReportType);
   const [reportCategory, setReportCategory] = useState(initialReportCategory);
-  const [periodType, setPeriodType] = useState(initialPeriodType || "FY");
+  const [periodType, setPeriodType] = useState(initialPeriodType || "This Fiscal Year");
   const [output, setOutput] = useState(initialOutput || "PDF");
   const [region, setRegion] = useState(initialRegion);
   const [subRegion, setSubRegion] = useState(initialSubRegion);
@@ -81,7 +81,7 @@ export function ImpactReportFilters({
     setYear(initialYear);
     setReportType(initialReportType);
     setReportCategory(initialReportCategory);
-    setPeriodType(initialPeriodType || "FY");
+    setPeriodType("This Fiscal Year");
     setOutput(initialOutput || "PDF");
     setRegion(initialRegion);
     setSubRegion(initialSubRegion);
@@ -284,7 +284,7 @@ export function ImpactReportFilters({
     setYear(initialYear);
     setReportType("");
     setReportCategory("");
-    setPeriodType("FY");
+    setPeriodType("This Fiscal Year");
     setOutput("PDF");
     setRegion("");
     setSubRegion("");

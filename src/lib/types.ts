@@ -2869,14 +2869,16 @@ export interface PortalCoreValueRecord {
 }
 
 export type ImpactReportType =
-  | "FY Impact Report"
-  | "Regional Impact Report"
-  | "Sub-region Report"
-  | "District Report"
-  | "School Report"
-  | "School Coaching Pack"
-  | "Headteacher Summary"
-  | "Partner Snapshot Report";
+  | "Visit Report"
+  | "Training Report"
+  | "Assessment Report"
+  | "General Literacy Report"
+  | "Teacher Evaluation Report"
+  | "Learning Outcomes"
+  | "Reading Levels"
+  | "Implementation Funnel"
+  | "Teaching Quality"
+  | "School Report";
 
 export type ReportCategory =
   | "Assessment Report"
@@ -2893,7 +2895,7 @@ export type ReportCategory =
   | "School Profile Report (Headteacher Pack)";
 
 export type ImpactReportScopeType = "National" | "Region" | "Sub-region" | "District" | "Sub-county" | "Parish" | "School";
-export type ImpactReportPeriodType = "FY" | "Term" | "Quarter" | "Custom";
+export type ImpactReportPeriodType = "Term One" | "Term Two" | "Term Three" | "This Fiscal Year" | "Last Fiscal Year" | "Monthly";
 export type ImpactReportAudience = "Public-safe" | "Staff-only";
 export type ImpactReportOutput = "PDF" | "HTML preview";
 

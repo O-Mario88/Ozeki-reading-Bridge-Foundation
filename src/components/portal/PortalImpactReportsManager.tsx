@@ -19,14 +19,16 @@ interface PortalImpactReportsManagerProps {
 }
 
 const reportTypeOptions: ImpactReportType[] = [
-  "FY Impact Report",
-  "Regional Impact Report",
-  "Sub-region Report",
-  "District Report",
+  "Visit Report",
+  "Training Report",
+  "Assessment Report",
+  "General Literacy Report",
+  "Teacher Evaluation Report",
+  "Learning Outcomes",
+  "Reading Levels",
+  "Implementation Funnel",
+  "Teaching Quality",
   "School Report",
-  "School Coaching Pack",
-  "Headteacher Summary",
-  "Partner Snapshot Report",
 ];
 
 const scopeTypeOptions: ImpactReportScopeType[] = [
@@ -68,8 +70,8 @@ export function PortalImpactReportsManager({
   const [selectedPrograms, setSelectedPrograms] = useState<ImpactReportProgramType[]>(
     programsFromReportCategory("Implementation Fidelity & Coverage Report"),
   );
-  const [selectedReportType, setSelectedReportType] = useState<ImpactReportType>("FY Impact Report");
-  const [selectedPeriodType, setSelectedPeriodType] = useState<ImpactReportPeriodType>("FY");
+  const [selectedReportType, setSelectedReportType] = useState<ImpactReportType>("General Literacy Report");
+  const [selectedPeriodType, setSelectedPeriodType] = useState<ImpactReportPeriodType>("This Fiscal Year");
   const [selectedOutput, setSelectedOutput] = useState<ImpactReportOutput>("PDF");
   const [selectedAudience, setSelectedAudience] = useState<ImpactReportAudience>("Public-safe");
   const [selectedYear, setSelectedYear] = useState(
@@ -321,8 +323,8 @@ export function PortalImpactReportsManager({
       form.reset();
       setSelectedReportCategory("Implementation Fidelity & Coverage Report");
       setSelectedPrograms(programsFromReportCategory("Implementation Fidelity & Coverage Report"));
-      setSelectedReportType("FY Impact Report");
-      setSelectedPeriodType("FY");
+      setSelectedReportType("General Literacy Report");
+      setSelectedPeriodType("This Fiscal Year");
       setSelectedOutput("PDF");
       setSelectedAudience("Public-safe");
       setSelectedYear(Math.min(Math.max(new Date().getFullYear(), 2025), 2050));
@@ -399,7 +401,7 @@ export function PortalImpactReportsManager({
               onChange={(event) => {
                 const nextType = event.currentTarget.value as ImpactReportType;
                 setSelectedReportType(nextType);
-                if (nextType === "FY Impact Report") {
+                if (nextType === "General Literacy Report") {
                   applyUgandaSchoolFyDates(periodStart || periodEnd);
                 }
               }}
@@ -444,10 +446,12 @@ export function PortalImpactReportsManager({
               value={selectedPeriodType}
               onChange={(event) => setSelectedPeriodType(event.currentTarget.value as ImpactReportPeriodType)}
             >
-              <option value="FY">FY</option>
-              <option value="Term">Term</option>
-              <option value="Quarter">Quarter</option>
-              <option value="Custom">Custom range</option>
+              <option value="Term One">Term One</option>
+              <option value="Term Two">Term Two</option>
+              <option value="Term Three">Term Three</option>
+              <option value="This Fiscal Year">This Fiscal Year</option>
+              <option value="Last Fiscal Year">Last Fiscal Year</option>
+              <option value="Monthly">Monthly</option>
             </select>
           </label>
 

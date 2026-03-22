@@ -46,7 +46,7 @@ function buildFallbackReportFacets() {
   return {
     reportTypes: [] as string[],
     reportCategories: [] as string[],
-    periodTypes: ["FY", "Term", "Quarter", "Custom"] as string[],
+    periodTypes: ["Term One", "Term Two", "Term Three", "This Fiscal Year", "Last Fiscal Year", "Monthly"] as string[],
     audiences: ["Public-safe", "Staff-only"] as string[],
     outputs: ["PDF", "HTML preview"] as string[],
     scopeTypes: [] as string[],
@@ -105,7 +105,7 @@ export default async function ImpactDashboardPage({
   const selectedYear = resolveReportYear(selectedYearParam, facets.years);
 
   const hasData = aggregate && aggregate.kpis.schoolsSupported > 0;
-  const pdfDownloadUrl = `/api/impact/report-engine?scopeLevel=${activeScopeLevel}&scopeId=${encodeURIComponent(activeScopeId)}&period=${encodeURIComponent(selectedPeriodType || "FY")}&year=${selectedYear}&format=pdf`;
+  const pdfDownloadUrl = `/api/impact/report-engine?scopeLevel=${activeScopeLevel}&scopeId=${encodeURIComponent(activeScopeId)}&period=${encodeURIComponent(selectedPeriodType || "This Fiscal Year")}&year=${selectedYear}&format=pdf&reportType=${encodeURIComponent(selectedType || "General Literacy Report")}&reportCategory=${encodeURIComponent(selectedCategory)}`;
 
   return (
     <>

@@ -6,14 +6,16 @@ import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 export const runtime = "nodejs";
 
 const reportTypeSchema = z.enum([
-  "FY Impact Report",
-  "Regional Impact Report",
-  "Sub-region Report",
-  "District Report",
+  "Visit Report",
+  "Training Report",
+  "Assessment Report",
+  "General Literacy Report",
+  "Teacher Evaluation Report",
+  "Learning Outcomes",
+  "Reading Levels",
+  "Implementation Funnel",
+  "Teaching Quality",
   "School Report",
-  "School Coaching Pack",
-  "Headteacher Summary",
-  "Partner Snapshot Report",
 ]);
 
 const scopeTypeSchema = z.enum(["National", "Region", "Sub-region", "District", "Sub-county", "Parish", "School"]);
@@ -39,7 +41,7 @@ const reportCategorySchema = z.enum([
   "Data Quality & Credibility Report",
   "School Profile Report (Headteacher Pack)",
 ]);
-const periodTypeSchema = z.enum(["FY", "Term", "Quarter", "Custom"]);
+const periodTypeSchema = z.enum(["Term One", "Term Two", "Term Three", "This Fiscal Year", "Last Fiscal Year", "Monthly"]);
 const audienceSchema = z.enum(["Public-safe", "Staff-only"]);
 const outputSchema = z.enum(["PDF", "HTML preview"]);
 
@@ -55,7 +57,7 @@ const payloadSchema = z
     subRegionId: z.string().trim().max(120).optional(),
     districtId: z.string().trim().max(120).optional(),
     schoolId: z.coerce.number().int().positive().optional(),
-    periodType: periodTypeSchema.default("FY"),
+    periodType: periodTypeSchema.default("This Fiscal Year"),
     periodStart: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
     periodEnd: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
     programsIncluded: z.array(programSchema).min(1).max(12).optional(),

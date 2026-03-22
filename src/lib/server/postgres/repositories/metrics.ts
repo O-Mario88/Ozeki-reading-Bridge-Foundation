@@ -180,9 +180,60 @@ export async function getImpactReportFilterFacetsAsyncPostgres(): Promise<any> {
         queryPostgres(`SELECT DISTINCT region FROM schools_directory ORDER BY region`),
         queryPostgres(`SELECT DISTINCT district FROM schools_directory ORDER BY district`)
     ]);
+
+    const reportTypes = [
+        "Visit Report",
+        "Training Report",
+        "Assessment Report",
+        "General Literacy Report",
+        "Teacher Evaluation Report",
+        "Learning Outcomes",
+        "Reading Levels",
+        "Implementation Funnel",
+        "Teaching Quality",
+    ];
+
+    const reportCategories = [
+        "Assessment Report",
+        "Training Report",
+        "School Coaching Visit Report",
+        "Teaching Quality Report (Lesson Evaluations)",
+        "Remedial & Catch-Up Intervention Report",
+        "1001 Story Project Report",
+        "Implementation Fidelity & Coverage Report",
+        "District Literacy Brief",
+        "Graduation Readiness & Alumni Monitoring Report",
+        "Partner/Donor Report (Scoped)",
+        "Data Quality & Credibility Report",
+        "School Profile Report (Headteacher Pack)",
+    ];
+
+    const periodTypes = [
+        "Term One",
+        "Term Two",
+        "Term Three",
+        "This Fiscal Year",
+        "Last Fiscal Year",
+        "Monthly",
+    ];
+
+    const outputs = ["PDF", "HTML preview"];
+
+    const years = Array.from({ length: 2050 - 2025 + 1 }, (_, i) => String(2025 + i));
+
     return {
+        reportTypes,
+        reportCategories,
+        periodTypes,
+        outputs,
+        years,
+        dataYears: years,
         regions: regions.rows.map(r => r.region),
-        districts: districts.rows.map(r => r.district)
+        districts: districts.rows.map(r => r.district),
+        scopeTypes: ["National", "Region", "Sub-region", "District", "Sub-county", "Parish", "School"],
+        scopeValues: [],
+        subRegions: [],
+        schools: [],
     };
 }
 
