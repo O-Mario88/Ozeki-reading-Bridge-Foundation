@@ -64,7 +64,10 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
     const payload = {
       title: String(formData.get("title") ?? ""),
       description: String(formData.get("description") ?? ""),
+      agenda: String(formData.get("agenda") ?? ""),
       audience: String(formData.get("audience") ?? ""),
+      topic: String(formData.get("topic") ?? ""),
+      resourceUrl: String(formData.get("resourceUrl") ?? ""),
       startDate: String(formData.get("startDate") ?? ""),
       startTime: String(formData.get("startTime") ?? ""),
       durationMinutes: Number(formData.get("durationMinutes") ?? 60),
@@ -282,6 +285,14 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
             />
           </label>
           <label>
+            <span className="portal-field-label">Topic / Program Tags</span>
+            <input name="topic" placeholder="e.g. Phonics, Leadership, Tech" />
+          </label>
+          <label className="full-width">
+            <span className="portal-field-label">Training Resource Link (Downloads)</span>
+            <input name="resourceUrl" type="url" placeholder="https://drive.google.com/... (Unlocked after signup)" />
+          </label>
+          <label>
             <span className="portal-field-label">Date</span>
             <input name="startDate" type="date" defaultValue={today} required />
           </label>
@@ -294,11 +305,20 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
             <input name="durationMinutes" type="number" min={15} max={720} defaultValue={90} required />
           </label>
           <label className="full-width">
-            <span className="portal-field-label">Description</span>
+            <span className="portal-field-label">Description & Objectives</span>
             <textarea
               name="description"
-              rows={4}
-              placeholder="Objectives, agenda, and any joining notes."
+              rows={2}
+              placeholder="Primary objectives or summary for the discovery card."
+              required
+            />
+          </label>
+          <label className="full-width">
+            <span className="portal-field-label">Full Agenda / Schedule Notes</span>
+            <textarea
+              name="agenda"
+              rows={3}
+              placeholder="10:00 AM - Introductions..."
             />
           </label>
           <label className="full-width">

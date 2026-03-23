@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { getPortalUserFromSession } from "@/services/dataService";
-import { listOnlineTrainingEvents, saveOnlineTrainingEvent } from "@/lib/content-db";
 import { workspaceCalendarRecipients } from "@/lib/contact";
 import {
   buildDateRangeFromDateAndTime,
@@ -10,13 +9,18 @@ import {
   isGoogleCalendarConfigured,
 } from "@/lib/google-calendar";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { createOnlineTrainingSessionPostgres, listOnlineTrainingSessionsPostgres } from "@/lib/server/postgres/repositories/training";
+import { queryPostgres } from "@/lib/server/postgres/client";
 
 export const runtime = "nodejs";
 
 const onlineTrainingSchema = z.object({
   title: z.string().min(3),
   description: z.string().optional(),
+  agenda: z.string().optional(),
   audience: z.string().min(2),
+  topic: z.string().optional(),
+  resourceUrl: z.string().optional().or(z.literal("")),
   startDate: z.string().min(6),
   startTime: z.string().min(3),
   durationMinutes: z.coerce.number().int().min(15).max(720),
@@ -44,7 +48,23 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return NextResponse.json({ events: await listOnlineTrainingEvents(20) });
+  const sessions = await listOnlineTrainingSessionsPostgres({ includeDrafts: true });
+  
+  // Format to match what PortalEventsManager expects currently
+  const events = sessions.map(s => ({
+    id: s.id,
+    title: s.title,
+    audience: s.audience,
+    startDateTime: s.startTime,
+    endDateTime: s.endTime,
+    attendeeCount: s.attendeeCount,
+    onlineTeachersTrained: s.onlineTeachersTrained,
+    onlineSchoolLeadersTrained: s.onlineSchoolLeadersTrained,
+    calendarLink: s.calendarLink,
+    meetLink: s.meetJoinUrl,
+  }));
+
+  return NextResponse.json({ events });
 }
 
 export async function POST(request: Request) {
@@ -102,22 +122,48 @@ export async function POST(request: Request) {
       }
     }
 
-    const event = await saveOnlineTrainingEvent(
-      {
-        ...payload,
-        attendeeEmails,
-        startDateTime: dateRange.startDateTime,
-        endDateTime: dateRange.endDateTime,
-        calendarEventId,
-        calendarLink,
-        meetLink,
-      },
-      user.id,
-    );
+    const sessionId = await createOnlineTrainingSessionPostgres({
+      title: payload.title,
+      description: payload.description,
+      agenda: payload.agenda || 'TBD',
+      audience: payload.audience,
+      programTags: payload.topic ? [payload.topic] : [],
+      attendeeEmails,
+      startTime: dateRange.startDateTime,
+      endTime: dateRange.endDateTime,
+      hostUserId: user.id,
+      calendarEventId,
+      calendarLink,
+      meetJoinUrl: meetLink,
+      createdByUserId: user.id,
+      status: 'scheduled',
+      visibility: 'public'
+    });
+    
+    // Attach the locked resource link if the admin provided one
+    if (payload.resourceUrl && payload.resourceUrl.trim() !== '') {
+       await queryPostgres(
+         `INSERT INTO online_training_resources (session_id, title, external_url, visibility, uploaded_by_user_id) VALUES ($1, $2, $3, 'public', $4)`,
+         [sessionId, "Training Materials (External Link)", payload.resourceUrl, user.id]
+       );
+    }
+
+    const eventResponse = {
+      id: sessionId,
+      title: payload.title,
+      audience: payload.audience,
+      startDateTime: dateRange.startDateTime,
+      endDateTime: dateRange.endDateTime,
+      attendeeCount: 0,
+      onlineTeachersTrained: 0,
+      onlineSchoolLeadersTrained: 0,
+      calendarLink,
+      meetLink,
+    };
 
     return NextResponse.json({
       ok: true,
-      event,
+      event: eventResponse,
       calendarWarning,
     });
   } catch (error) {
