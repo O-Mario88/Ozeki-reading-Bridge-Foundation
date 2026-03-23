@@ -234,6 +234,8 @@ export default function SchoolSystemsRoutinesPage() {
         primaryButtonHref="/phonics-training"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
+        primaryButtonColor="bg-[#FA7D15]"
+        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Open school profiles"
         secondaryButtonHref="/portal/schools"
         theme="brand"

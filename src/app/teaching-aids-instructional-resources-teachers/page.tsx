@@ -23,7 +23,7 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             
             <div className="flex flex-col items-start">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-brand-primary font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Program Spotlight
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
@@ -79,7 +79,7 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center mb-6 text-brand-primary font-bold text-xl">1</div>
+            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Structured Teaching Aids</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Ozeki provides a package of tools aligned to the same phonics sequence and lesson routines used in training and coaching:
@@ -101,7 +101,7 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center mb-6 text-brand-primary font-bold text-xl">2</div>
+            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Accurate Delivery Guides</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Teacher guides provide step-by-step delivery notes, sample scripts,
@@ -115,7 +115,7 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center mb-6 text-brand-primary font-bold text-xl">3</div>
+            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Built for Constraints</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Resources are built for typical school realities: large class sizes,
@@ -181,6 +181,8 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
         subheading="Partner to provide practical teacher tools with tracked usage and verified links to instructional quality and reading progress."
         primaryButtonText="Partner With Us"
         primaryButtonHref="/partner-with-us"
+        primaryButtonColor="bg-[#FA7D15]"
+        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Open School Profiles"
         secondaryButtonHref="/portal/schools"
         theme="brand"

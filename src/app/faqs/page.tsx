@@ -83,6 +83,8 @@ export default function FaqPage() {
           primaryButtonHref="/contact"
           primaryButtonColor="bg-[#FA7D15]"
           primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
+          primaryButtonColor="bg-[#FA7D15]"
+          primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
           secondaryButtonText="Back to About"
           secondaryButtonHref="/about"
           theme="light"

@@ -284,6 +284,8 @@ export default async function HomePage() {
         subheading="Join our live training sessions or explore evidence-based interventions for your school."
         primaryButtonText="Request School Support"
         primaryButtonHref="/contact"
+        primaryButtonColor="bg-[#FA7D15]"
+        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="View Impact Hub"
         secondaryButtonHref="/impact"
         theme="brand"
