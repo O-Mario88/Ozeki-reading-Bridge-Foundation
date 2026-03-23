@@ -7,7 +7,7 @@ export const metadata = {
         "Methodology documentation, data codebook, program evidence, and downloadable reports for funding and implementation partners.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function PartnerDataRoomPage() {
     const reports = await listPublicImpactReportsAsync({ limit: 20 });

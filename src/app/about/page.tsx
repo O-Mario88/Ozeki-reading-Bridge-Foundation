@@ -12,7 +12,7 @@ export const metadata = {
     "Learn about Ozeki Reading Bridge Foundation's vision, mission, and practical literacy implementation model.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function AboutPage() {
   let coreValues: Awaited<ReturnType<typeof listPortalCoreValuesPostgres>> = [];

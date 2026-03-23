@@ -2,7 +2,7 @@ import { MetadataRoute } from "next";
 import { listPublishedChangeStories } from "@/lib/change-stories";
 import { listPublishedStoriesPostgres } from "@/lib/server/postgres/repositories/public-content";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://www.ozekiread.org";

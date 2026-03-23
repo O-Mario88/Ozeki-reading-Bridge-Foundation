@@ -9,7 +9,7 @@ export const metadata = {
   description: "Feedback from teachers, headteachers, and school leaders.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function TestimonialsPage() {
   const dbItems = await listImpactGalleryEntriesPostgres(12);

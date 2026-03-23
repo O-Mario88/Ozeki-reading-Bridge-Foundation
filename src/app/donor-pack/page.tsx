@@ -7,7 +7,7 @@ export const metadata = {
     "Download a complete due-diligence-ready donor pack with governance, safeguarding, data ethics, controls, and impact reporting samples.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const donorPackContents = [
   "1-page organization profile",

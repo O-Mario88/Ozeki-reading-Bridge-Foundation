@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getNewsletterIssueBySlug } from "@/lib/content-db";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type NewsletterIssuePageProps = {
   params: Promise<{ slug: string }>;

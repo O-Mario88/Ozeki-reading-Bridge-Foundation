@@ -14,7 +14,7 @@ import {
     listStoryCommentsPostgres,
 } from "@/lib/server/postgres/repositories/public-content";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type Params = Promise<{ slug: string }>;
 

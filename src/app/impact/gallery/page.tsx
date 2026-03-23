@@ -12,7 +12,7 @@ export const metadata = {
     "Explore beautiful, authentic moments of change spanning classrooms, communities, and coaching sessions across Uganda.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 function normalizeValue(value: string | string[] | undefined) {
   if (Array.isArray(value)) {

@@ -17,7 +17,7 @@ import { CTAStrip } from "@/components/public/CTAStrip";
 import { PlayCircle, ArrowRight, Quote } from "lucide-react";
 import { getImpactSummary } from "@/services/dataService";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const TESTIMONIAL_FIELDS = new Set([
   "how_training_changed_teaching",

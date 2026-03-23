@@ -14,7 +14,7 @@ export const metadata = {
     "Meet the board, staff, and volunteers guiding literacy implementation at Ozeki Reading Bridge Foundation.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type Profile = PortalLeadershipTeamMemberRecord;
 

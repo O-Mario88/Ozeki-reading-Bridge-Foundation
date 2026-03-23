@@ -12,7 +12,7 @@ import type { FinanceCurrency, FinancePublicSnapshotRecord, FinanceAuditedStatem
 
 import { queryPostgres } from "@/lib/server/postgres/client";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata = {
   title: "Financial Transparency | Ozeki Reading Bridge Foundation",

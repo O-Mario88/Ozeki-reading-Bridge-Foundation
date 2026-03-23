@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BookOpen, Calendar as CalendarIcon, CheckCircle2, Video } from "lucide-react";
 import { listOnlineTrainingSessions } from "@/lib/training-db";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata = {
   title: "Our Courses | Ozeki Reading Bridge",

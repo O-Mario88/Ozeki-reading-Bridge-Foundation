@@ -2,7 +2,7 @@ import { PortalNationalIntelligenceManager } from "@/components/portal/PortalNat
 import { PortalShell } from "@/components/portal/PortalShell";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function DistrictInsightsPage(
   context: { params: Promise<{ id: string }> },

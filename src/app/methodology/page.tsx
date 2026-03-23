@@ -7,7 +7,7 @@ export const metadata = {
     "Indicator definitions, reading-level rules, data quality, and privacy safeguards for Ozeki public impact reporting.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "Data not available";

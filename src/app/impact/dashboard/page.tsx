@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "Explore live aggregated literacy impact and download reports by region, district, and school.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

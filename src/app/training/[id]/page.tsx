@@ -6,7 +6,7 @@ import { SessionTabs } from "@/components/training/SessionTabs";
 import { UpNextPanel } from "@/components/training/UpNextPanel";
 import { DiscussionPanel } from "@/components/training/DiscussionPanel";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata = {
     title: "Session Room | Ozeki Online Training",
