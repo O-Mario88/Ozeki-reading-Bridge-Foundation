@@ -101,7 +101,7 @@ const aboutGroup: NavGroup = {
 
 const navItems: NavItem[] = [
   { type: "link", label: "Home", href: "/" },
-  { type: "link", label: "Live Dashboard", href: "/impact" },
+  { type: "link", label: "Live Dashboard", href: "/impact/dashboard" },
   { type: "group", key: "programs", group: programsGroup },
   { type: "link", label: "Online Training", href: "/events" },
   { type: "group", key: "impact", group: impactGroup },
