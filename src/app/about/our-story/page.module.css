@@ -1,6 +1,5 @@
 .problemSection {
-  background:
-    linear-gradient(180deg, color-mix(in oklab, var(--color-brand-blue), black 24%), color-mix(in oklab, var(--color-brand-blue), black 10%));
+  background: transparent;
 }
 
 .problemSurface {
