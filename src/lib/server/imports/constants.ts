@@ -13,17 +13,23 @@ export const SCHOOL_IMPORT_HEADERS = [
   "region",
   "sub_region",
   "district",
+  "sub_county",
   "parish",
-  "school_level",
-  "ownership",
-  "denomination",
-  "school_phone",
-  "school_email",
-  "school_shipping_address",
+  "village",
   "latitude",
   "longitude",
   "year_founded",
+  "school_status",
+  "school_status_date",
+  "current_partner_type",
+  "current_partner_school",
   "is_active",
+  "classes_offered",
+  "head_teacher_name",
+  "head_teacher_gender",
+  "head_teacher_phone",
+  "head_teacher_email",
+  "head_teacher_whatsapp",
 ] as const;
 
 export const TRAINING_PARTICIPANT_IMPORT_HEADERS = [
@@ -110,17 +116,23 @@ export interface SchoolsTemplateRow {
   region: string;
   sub_region: string;
   district: string;
+  sub_county: string;
   parish: string;
-  school_level: string;
-  ownership: string;
-  denomination: string;
-  school_phone: string;
-  school_email: string;
-  school_shipping_address: string;
+  village: string;
   latitude: string;
   longitude: string;
   year_founded: string;
+  school_status: string;
+  school_status_date: string;
+  current_partner_type: string;
+  current_partner_school: string;
   is_active: string;
+  classes_offered: string;
+  head_teacher_name: string;
+  head_teacher_gender: string;
+  head_teacher_phone: string;
+  head_teacher_email: string;
+  head_teacher_whatsapp: string;
 }
 
 export interface TrainingParticipantTemplateRow {

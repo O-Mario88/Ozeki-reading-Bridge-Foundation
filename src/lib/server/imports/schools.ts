@@ -69,6 +69,33 @@ function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
   if (row.is_active && isActive === null) {
     throw new Error("is_active must be TRUE/FALSE, YES/NO, or 1/0.");
   }
+  const currentPartnerSchool = row.current_partner_school ? normalizeBooleanString(row.current_partner_school) : false;
+  if (row.current_partner_school && currentPartnerSchool === null) {
+    throw new Error("current_partner_school must be TRUE/FALSE, YES/NO, or 1/0.");
+  }
+
+  let headTeacher: SchoolDirectoryWriteInput["headTeacher"] = null;
+  const hName = collapseWhitespace(row.head_teacher_name);
+  if (hName) {
+    const rawGender = collapseWhitespace(row.head_teacher_gender);
+    const gender = (rawGender === "Male" || rawGender === "Female") ? rawGender : "Other";
+    headTeacher = {
+      fullName: hName,
+      gender,
+      phone: collapseWhitespace(row.head_teacher_phone) || null,
+      email: collapseWhitespace(row.head_teacher_email) || null,
+      whatsapp: collapseWhitespace(row.head_teacher_whatsapp) || null,
+    };
+  }
+
+  let classesJson: string | null = null;
+  const classesRaw = collapseWhitespace(row.classes_offered);
+  if (classesRaw) {
+    const classes = classesRaw.split(",").map(c => c.trim()).filter(Boolean);
+    if (classes.length > 0) {
+      classesJson = JSON.stringify(classes);
+    }
+  }
 
   return {
     schoolExternalId: collapseWhitespace(row.school_external_id) || null,
@@ -78,17 +105,23 @@ function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
     region: requiredValue(row.region, "region"),
     subRegion: requiredValue(row.sub_region, "sub_region"),
     district: requiredValue(row.district, "district"),
+    subCounty: collapseWhitespace(row.sub_county) || null,
     parish: requiredValue(row.parish, "parish"),
-
-    denomination: collapseWhitespace(row.denomination) || null,
-    schoolPhone: collapseWhitespace(row.school_phone) || null,
-    schoolEmail: collapseWhitespace(row.school_email) || null,
+    village: collapseWhitespace(row.village) || null,
 
     latitude: latitude === null ? null : String(latitude),
     longitude: longitude === null ? null : String(longitude),
     yearFounded,
+
+    schoolStatus: collapseWhitespace(row.school_status) || "Open",
+    schoolStatusDate: collapseWhitespace(row.school_status_date) || null,
+    currentPartnerType: collapseWhitespace(row.current_partner_type) || "NA",
+    currentPartnerSchool: currentPartnerSchool ?? false,
+
     isActive,
     schoolActive: isActive,
+    classesJson,
+    headTeacher,
   };
 }
 

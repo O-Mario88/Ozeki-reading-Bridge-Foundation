@@ -243,17 +243,23 @@ function buildSchoolsExampleRows(): SchoolsTemplateRow[] {
       region: "Northern",
       sub_region: "Acholi",
       district: "Gulu",
+      sub_county: "Layibi",
       parish: "Layibi",
-      school_level: "Primary",
-      ownership: "Private",
-      denomination: "Catholic",
-      school_phone: "+256700000001",
-      school_email: "brightfuture@example.org",
-      school_shipping_address: "P.O. Box 12, Gulu",
+      village: "Koro",
       latitude: "2.772404",
       longitude: "32.298987",
       year_founded: "2014",
+      school_status: "Open",
+      school_status_date: "2024-01-01",
+      current_partner_type: "Partner",
+      current_partner_school: "TRUE",
       is_active: "TRUE",
+      classes_offered: "P1, P2, P3",
+      head_teacher_name: "Sarah Akello",
+      head_teacher_gender: "Female",
+      head_teacher_phone: "+256700000001",
+      head_teacher_email: "brightfuture@example.org",
+      head_teacher_whatsapp: "+256700000001",
     },
     {
       school_external_id: "SCH-LIR-014",
@@ -263,17 +269,23 @@ function buildSchoolsExampleRows(): SchoolsTemplateRow[] {
       region: "Northern",
       sub_region: "Lango",
       district: "Lira",
+      sub_county: "Lira Central",
       parish: "Adyel",
-      school_level: "Primary",
-      ownership: "Government",
-      denomination: "",
-      school_phone: "+256700000014",
-      school_email: "",
-      school_shipping_address: "Lira Municipality",
+      village: "",
       latitude: "2.249900",
       longitude: "32.899800",
       year_founded: "1998",
+      school_status: "Open",
+      school_status_date: "",
+      current_partner_type: "Sponsor District",
+      current_partner_school: "FALSE",
       is_active: "YES",
+      classes_offered: "Baby Class, Middle Class, Top Class, P1, P2, P3, P4, P5, P6, P7",
+      head_teacher_name: "John Okello",
+      head_teacher_gender: "Male",
+      head_teacher_phone: "+256700000014",
+      head_teacher_email: "",
+      head_teacher_whatsapp: "",
     },
   ];
 }
@@ -346,17 +358,23 @@ export function mapMissingSchoolsToTemplateRows(missingSchools: MissingSchoolCan
     region: normalizeCell(row.region),
     sub_region: normalizeCell(row.sub_region),
     district: normalizeCell(row.district),
+    sub_county: "",
     parish: normalizeCell(row.parish),
-    school_level: "",
-    ownership: "",
-    denomination: "",
-    school_phone: "",
-    school_email: "",
-    school_shipping_address: "",
+    village: "",
     latitude: "",
     longitude: "",
     year_founded: "",
+    school_status: "Open",
+    school_status_date: "",
+    current_partner_type: "NA",
+    current_partner_school: "FALSE",
     is_active: "TRUE",
+    classes_offered: "",
+    head_teacher_name: "",
+    head_teacher_gender: "",
+    head_teacher_phone: "",
+    head_teacher_email: "",
+    head_teacher_whatsapp: "",
   }));
 }
 
@@ -373,8 +391,9 @@ export async function generateSchoolsWorkbook(args?: {
       "Do not rename headers or change the Schools_Template sheet name.",
       "Use one row per school.",
       "Required columns: school_name, country, region, sub_region, district, parish.",
-      "Use TRUE/FALSE, YES/NO, or 1/0 for is_active.",
+      "Use TRUE/FALSE, YES/NO, or 1/0 for is_active and current_partner_school.",
       "Latitude and longitude accept decimal values. year_founded must be numeric or blank.",
+      "classes_offered accepts a comma-separated list like 'Baby Class, P1, P2'.",
       "Blank optional fields are allowed. Do not invent missing location values.",
     ],
   );
@@ -392,13 +411,25 @@ export async function generateSchoolsWorkbook(args?: {
   });
   applyStaticListValidation({
     worksheet: templateSheet,
-    columnIndex: 19,
+    columnIndex: 17, // current_partner_school
+    values: ["TRUE", "FALSE", "YES", "NO", "1", "0"],
+    promptTitle: "Partner School value",
+  });
+  applyStaticListValidation({
+    worksheet: templateSheet,
+    columnIndex: 18, // is_active
     values: ["TRUE", "FALSE", "YES", "NO", "1", "0"],
     promptTitle: "School active value",
   });
-  applyTextNumberFormat(templateSheet, 16, "0.000000");
-  applyTextNumberFormat(templateSheet, 17, "0.000000");
-  applyTextNumberFormat(templateSheet, 18, "0");
+  applyStaticListValidation({
+    worksheet: templateSheet,
+    columnIndex: 21, // head_teacher_gender
+    values: ["Male", "Female", "Other"],
+    promptTitle: "Gender",
+  });
+  applyTextNumberFormat(templateSheet, 11, "0.000000"); // latitude
+  applyTextNumberFormat(templateSheet, 12, "0.000000"); // longitude
+  applyTextNumberFormat(templateSheet, 13, "0"); // year_founded
 
   addExamplesSheet(workbook, SCHOOL_IMPORT_HEADERS, buildSchoolsExampleRows());
   return toWorkbookBuffer(await workbook.xlsx.writeBuffer());
