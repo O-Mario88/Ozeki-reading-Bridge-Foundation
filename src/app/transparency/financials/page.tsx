@@ -72,22 +72,22 @@ export default async function FinancialTransparencyPage() {
         
         {/* 1. Hero Section */}
         <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-32">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-blue-100/50 via-white to-white pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-[#006b61]/10 via-white to-white pointer-events-none" />
           <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-[#00155F] font-semibold text-sm mb-6 shadow-sm border border-blue-50">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-[#006b61] font-semibold text-sm mb-6 shadow-sm border border-[#006b61]/10">
               <ShieldCheck className="w-4 h-4" /> Stewardship
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-[#00155F] tracking-tight leading-tight mb-8">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-[#006b61] tracking-tight leading-tight mb-8">
               Financial Transparency
             </h1>
-            <p className="text-xl md:text-2xl text-[#00155F]/80 max-w-3xl mx-auto leading-relaxed mb-6 font-medium">
+            <p className="text-xl md:text-2xl text-[#006b61]/80 max-w-3xl mx-auto leading-relaxed mb-6 font-medium">
               Responsible stewardship, clear reporting, and accountability in support of literacy impact.
             </p>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed mb-10">
               At Ozeki, we are committed to managing resources with integrity and linking financial stewardship to meaningful educational outcomes for children, schools, and communities.
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-              <a href="#reports" className="px-8 py-4 rounded-xl bg-[#00155F] text-white font-bold hover:bg-[#00155F]/90 transition-all shadow-md flex items-center gap-2">
+              <a href="#reports" className="px-8 py-4 rounded-xl bg-[#006b61] text-white font-bold hover:bg-[#006b61]/90 transition-all shadow-md flex items-center gap-2">
                 <FileText size={18} /> View Financial Reports
               </a>
               <Link href="/contact" className="px-8 py-4 rounded-xl border-2 border-gray-200 text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-300 transition-all">
@@ -111,8 +111,8 @@ export default async function FinancialTransparencyPage() {
         <SectionWrapper theme="off-white">
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <PremiumCard className="p-10 flex flex-col items-start bg-white" withHover>
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-6">
-                <Heart className="w-7 h-7 text-[#00155F]" />
+              <div className="w-14 h-14 rounded-2xl bg-[#006b61]/10 flex items-center justify-center mb-6">
+                <Heart className="w-7 h-7 text-[#006b61]" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Stewardship</h3>
               <p className="text-gray-600 leading-relaxed text-lg">
@@ -129,8 +129,8 @@ export default async function FinancialTransparencyPage() {
               </p>
             </PremiumCard>
             <PremiumCard className="p-10 flex flex-col items-start bg-white" withHover>
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-6">
-                <Target className="w-7 h-7 text-[#00155F]" />
+              <div className="w-14 h-14 rounded-2xl bg-[#006b61]/10 flex items-center justify-center mb-6">
+                <Target className="w-7 h-7 text-[#006b61]" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Impact</h3>
               <p className="text-gray-600 leading-relaxed text-lg">
@@ -190,9 +190,9 @@ export default async function FinancialTransparencyPage() {
               { title: "Teacher Reading Lesson Evaluation and Coaching", icon: ClipboardCheck },
               { title: "Systems and Operations", icon: Activity }
             ].map((block, i) => (
-              <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:border-[#00155F]/20 transition-colors">
-                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                  <block.icon className="w-6 h-6 text-[#00155F]" />
+              <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:border-[#006b61]/20 transition-colors">
+                <div className="w-12 h-12 rounded-full bg-[#006b61]/10 flex items-center justify-center mb-4">
+                  <block.icon className="w-6 h-6 text-[#006b61]" />
                 </div>
                 <h4 className="font-bold text-gray-900">{block.title}</h4>
               </div>
@@ -268,13 +268,13 @@ export default async function FinancialTransparencyPage() {
                   {fnSnapshots.map(s => (
                     <div key={s.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
                       <div>
-                        <h4 className="font-bold text-[#00155F] text-lg">FY {s.fy} Financial Ledger Snapshot</h4>
+                        <h4 className="font-bold text-[#006b61] text-lg">FY {s.fy} Financial Ledger Snapshot</h4>
                         <div className="text-sm text-gray-500 mt-1 flex gap-4">
                           <span>Income: <strong className="text-gray-700">{formatMoney(s.currency, s.totalIncome)}</strong></span>
                           <span>Expr: <strong className="text-gray-700">{formatMoney(s.currency, s.totalExpenditure)}</strong></span>
                         </div>
                       </div>
-                      <a href={`/api/transparency/financials/${s.id}/download?type=snapshot`} download className="shrink-0 p-3 bg-gray-50 hover:bg-gray-100 text-[#00155F] rounded-xl transition-colors">
+                      <a href={`/api/transparency/financials/${s.id}/download?type=snapshot`} download className="shrink-0 p-3 bg-gray-50 hover:bg-gray-100 text-[#006b61] rounded-xl transition-colors">
                         <Download className="w-5 h-5" />
                       </a>
                     </div>
@@ -286,13 +286,15 @@ export default async function FinancialTransparencyPage() {
             {/* Live Audited Documents */}
             <div>
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center border-b pb-4">
-                <Shield className="w-6 h-6 mr-3 text-[#00155F]" />
+                <Shield className="w-6 h-6 mr-3 text-[#006b61]" />
                 Audited Statements &amp; Accountability
               </h3>
               
               {audited.length === 0 ? (
                 <PublicReportDownloader 
                   type="audit"
+                  buttonColor="bg-[#FA7D15]"
+                  buttonHoverColor="hover:bg-[#FA7D15]/90"
                   options={[
                     { label: "2023 Audited Financials", value: "2023" },
                     { label: "2022 Audited Financials", value: "2022" },
@@ -308,7 +310,7 @@ export default async function FinancialTransparencyPage() {
                           <h4 className="font-bold text-gray-900 text-lg">FY {a.fy} Audited Financials</h4>
                           <p className="text-sm text-gray-500 mt-1">{a.auditorName ? `External Auditor: ${a.auditorName}` : "Official Audited Report"}</p>
                         </div>
-                        <a href={`/api/transparency/financials/${a.id}/download?type=audited`} download className="shrink-0 p-3 bg-blue-50 hover:bg-blue-100 text-[#00155F] rounded-xl transition-colors">
+                        <a href={`/api/transparency/financials/${a.id}/download?type=audited`} download className="shrink-0 p-3 bg-[#006b61]/10 hover:bg-[#006b61]/20 text-[#006b61] rounded-xl transition-colors">
                           <Download className="w-5 h-5" />
                         </a>
                       </div>
@@ -332,7 +334,7 @@ export default async function FinancialTransparencyPage() {
 
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             <PremiumCard className="p-8 md:p-10 bg-white" withHover>
-              <h3 className="text-2xl font-bold text-[#00155F] mb-6 flex items-center gap-3">
+              <h3 className="text-2xl font-bold text-[#006b61] mb-6 flex items-center gap-3">
                 <FileText className="w-6 h-6" /> Financial Management
               </h3>
               <ul className="space-y-4">
@@ -365,7 +367,7 @@ export default async function FinancialTransparencyPage() {
         <SectionWrapper theme="light">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">A Continuing Commitment</h2>
-            <p className="text-xl text-gray-600 leading-relaxed border-l-4 border-[#00155F] pl-6 text-left italic bg-gray-50 p-6 rounded-r-xl shadow-sm">
+            <p className="text-xl text-gray-600 leading-relaxed border-l-4 border-[#006b61] pl-6 text-left italic bg-gray-50 p-6 rounded-r-xl shadow-sm">
               Financial transparency is an ongoing commitment. As Ozeki grows, we are committed to improving the clarity, quality, and accessibility of the information we share. We view transparency as essential to trust, effective partnership, and long-term impact.
             </p>
           </div>

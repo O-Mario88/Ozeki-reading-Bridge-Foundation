@@ -13,8 +13,8 @@ interface PublicReportDownloaderProps {
 export function PublicReportDownloader({
   type,
   options,
-  buttonColor = "bg-[#00155F]",
-  buttonHoverColor = "hover:bg-[#00155F]/90"
+  buttonColor = "bg-[#006b61]",
+  buttonHoverColor = "hover:bg-[#006b61]/90"
 }: PublicReportDownloaderProps) {
   const [selected, setSelected] = useState(options[0]?.value || "");
   const [loading, setLoading] = useState(false);
