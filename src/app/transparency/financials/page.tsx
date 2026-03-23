@@ -258,9 +258,9 @@ export default async function FinancialTransparencyPage() {
                 <PublicReportDownloader 
                   type="summary"
                   options={[
-                    { label: "FY 2024 Financial Summary", value: "2024" },
-                    { label: "FY 2023 Financial Summary", value: "2023" },
-                    { label: "FY 2022 Financial Summary", value: "2022" }
+                    { label: "FY 2028 Financial Summary", value: "2028" },
+                    { label: "FY 2027 Financial Summary", value: "2027" },
+                    { label: "FY 2026 Financial Summary", value: "2026" }
                   ]}
                 />
               ) : (
@@ -296,9 +296,9 @@ export default async function FinancialTransparencyPage() {
                   buttonColor="bg-[#FA7D15]"
                   buttonHoverColor="hover:bg-[#FA7D15]/90"
                   options={[
-                    { label: "2023 Audited Financials", value: "2023" },
-                    { label: "2022 Audited Financials", value: "2022" },
-                    { label: "2021 Audited Financials", value: "2021" }
+                    { label: "2028 Audited Financials", value: "2028" },
+                    { label: "2027 Audited Financials", value: "2027" },
+                    { label: "2026 Audited Financials", value: "2026" }
                   ]}
                 />
               ) : (
