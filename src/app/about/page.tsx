@@ -4,7 +4,7 @@ import { listPortalCoreValuesPostgres } from "@/lib/server/postgres/repositories
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
-import { ArrowRight, Target, Eye, Heart, Anchor } from "lucide-react";
+import { Target, Eye, Heart } from "lucide-react";
 
 export const metadata = {
   title: "About",
@@ -60,8 +60,8 @@ export default async function AboutPage() {
               </a>
             </li>
             <li>
-              <Link href="/transparency/financials" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
-                Financials
+              <Link href="/financials-impact-reports" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+                Financials & Reports
               </Link>
             </li>
             <li>
@@ -152,31 +152,7 @@ export default async function AboutPage() {
         </div>
       </SectionWrapper>
 
-      {/* 5. Financials & Governance */}
-      <SectionWrapper theme="light" id="financial-annual-report">
-        <div className="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
-          <div className="flex justify-center md:justify-end">
-            <div className="w-full max-w-sm aspect-square bg-gray-50 rounded-full flex items-center justify-center border-8 border-white shadow-xl relative">
-              <div className="absolute inset-0 border border-gray-100 rounded-full m-8 border-dashed animate-spin-slow opacity-50" />
-              <Anchor className="w-32 h-32 text-gray-300" />
-            </div>
-          </div>
-          <div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">Financials &amp; Impact Reports</h2>
-            <p className="text-xl text-gray-600 leading-relaxed mb-8">
-              We believe in deep accountability. You can access our published financial transparency documents and annual/program report pages directly.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/transparency/financials" className="px-6 py-3 rounded-full bg-gray-900 text-white font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors">
-                Financial Reports <ArrowRight size={18} />
-              </Link>
-              <Link href="/impact#reports" className="px-6 py-3 rounded-full border-2 border-gray-200 text-gray-700 font-semibold flex items-center justify-center hover:border-gray-300 hover:bg-gray-50 transition-colors">
-                Annual &amp; Program Reports
-              </Link>
-            </div>
-          </div>
-        </div>
-      </SectionWrapper>
+
 
       {/* 6. Bottom CTA */}
       <CTAStrip 
