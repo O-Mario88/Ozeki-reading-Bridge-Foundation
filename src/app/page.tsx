@@ -15,6 +15,7 @@ import { PremiumCard } from "@/components/public/PremiumCard";
 import { ImpactStat } from "@/components/public/ImpactStat";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { PlayCircle, ArrowRight, Quote } from "lucide-react";
+import { getImpactSummary } from "@/services/dataService";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,8 @@ function clipQuote(text: string, maxChars: number) {
 
 export default async function HomePage() {
   let testimonialRows: PortalTestimonialRecord[] = [];
+  const impactStats = { schools: "500+", assessments: "2M+", teachers: "15K" };
+
   if (isPostgresConfigured()) {
     try {
       testimonialRows = (await listPublishedPortalTestimonialsPostgres(90))
@@ -50,8 +53,30 @@ export default async function HomePage() {
             TESTIMONIAL_FIELDS.has(String(item.quoteField ?? "")),
         )
         .slice(0, 3); // Show top 3 for cleaner layout
+
+      const summary = await getImpactSummary();
+      const formatStat = (val: number) => {
+        if (val >= 1000000) return (val / 1000000).toFixed(1).replace(/\.0$/, "") + "M+";
+        if (val >= 1000) return (val / 1000).toFixed(1).replace(/\.0$/, "") + "K+";
+        return String(val);
+      };
+
+      const getMetric = (labelMatched: string) => {
+         const found = summary.metrics.find(m => m.label === labelMatched);
+         return found && found.value > 0 ? formatStat(found.value) : null;
+      };
+
+      const dbSchools = getMetric("Schools trained");
+      if (dbSchools) impactStats.schools = dbSchools;
+
+      const dbAssessments = getMetric("Learners assessed");
+      if (dbAssessments) impactStats.assessments = dbAssessments;
+
+      const dbTeachers = getMetric("Teachers trained");
+      if (dbTeachers) impactStats.teachers = dbTeachers;
+
     } catch (error) {
-      console.error("Failed to load homepage testimonials.", error);
+      console.error("Failed to load homepage data.", error);
     }
   }
 
@@ -108,9 +133,9 @@ export default async function HomePage() {
       {/* 2. Impact Stats Band */}
       <SectionWrapper theme="dark" className="!py-12 border-y border-gray-100 bg-gray-50">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-gray-200">
-          <ImpactStat value="500+" label="Schools Reached" />
-          <ImpactStat value="2M+" label="Reading Assessments" />
-          <ImpactStat value="15K" label="Teachers Trained" />
+          <ImpactStat value={impactStats.schools} label="Schools Reached" />
+          <ImpactStat value={impactStats.assessments} label="Reading Assessments" />
+          <ImpactStat value={impactStats.teachers} label="Teachers Trained" />
           <ImpactStat value="100%" label="Data Privacy" />
         </div>
       </SectionWrapper>
