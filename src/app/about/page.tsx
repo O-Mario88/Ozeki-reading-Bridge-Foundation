@@ -40,16 +40,40 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* 2. Quick Navigation Strip */}
-      <div className="bg-white border-y border-gray-100 sticky top-20 z-40 hidden md:block">
-        <div className="container mx-auto px-6 max-w-5xl overflow-x-auto">
-          <ul className="flex items-center gap-8 py-4 whitespace-nowrap text-sm font-semibold text-gray-500">
-            <li><a href="#mission-vision" className="hover:text-brand-primary transition-colors">Mission & Vision</a></li>
-            <li><Link href="/about/leadership-team" className="hover:text-brand-primary transition-colors">Leadership Team</Link></li>
-            <li><a href="#core-values" className="hover:text-brand-primary transition-colors">Core Values</a></li>
-            <li><Link href="/transparency/financials" className="hover:text-brand-primary transition-colors">Financials</Link></li>
-            <li><Link href="/faqs" className="hover:text-brand-primary transition-colors">FAQs</Link></li>
-            <li><Link href="/contact" className="hover:text-brand-primary transition-colors">Contact</Link></li>
+      {/* 2. Quick Navigation Buttons */}
+      <div className="bg-white border-b border-gray-100 py-8">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <ul className="flex flex-wrap justify-center items-center gap-3 md:gap-4">
+            <li>
+              <a href="#mission-vision" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+                Mission & Vision
+              </a>
+            </li>
+            <li>
+              <Link href="/about/leadership-team" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+                Leadership Team
+              </Link>
+            </li>
+            <li>
+              <a href="#core-values" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+                Core Values
+              </a>
+            </li>
+            <li>
+              <Link href="/transparency/financials" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+                Financials
+              </Link>
+            </li>
+            <li>
+              <Link href="/faqs" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+                FAQs
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+                Contact
+              </Link>
+            </li>
           </ul>
         </div>
       </div>
