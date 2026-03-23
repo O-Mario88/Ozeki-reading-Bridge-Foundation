@@ -161,7 +161,7 @@ export default async function ImpactDashboardPage({
 
       {/* 3. Reports Downloader */}
       <SectionWrapper theme="light" id="reports">
-        <div className="max-w-4xl mx-auto flex flex-col gap-8">
+        <div className="max-w-7xl mx-auto flex flex-col gap-8">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center mx-auto mb-6">
               <Presentation size={32} />
@@ -185,7 +185,7 @@ export default async function ImpactDashboardPage({
           <PremiumCard className="p-8 md:p-12">
             <h3 className="text-2xl font-bold text-gray-900 mb-8 border-b border-gray-100 pb-4">Configure Report</h3>
             
-            <div className="mb-10 max-w-3xl">
+            <div className="mb-10 w-full">
               <ImpactReportFilters
                 initialYear={selectedYear}
                 initialReportType={selectedType}
