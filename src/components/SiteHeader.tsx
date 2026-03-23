@@ -94,7 +94,6 @@ const aboutGroup: NavGroup = {
     { href: "/about/leadership-team", label: "Leadership Team" },
     { href: "/about#financial-annual-report", label: "Financials/Annual Report" },
     { href: "/about/our-story", label: "Our Story" },
-    { href: "/about#core-values", label: "Core Values & Beliefs" },
     { href: "/faqs", label: "FAQs" },
     { href: "/contact", label: "Contact" },
   ],
