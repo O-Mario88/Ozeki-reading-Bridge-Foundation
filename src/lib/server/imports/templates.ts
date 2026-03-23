@@ -246,8 +246,6 @@ function buildSchoolsExampleRows(): SchoolsTemplateRow[] {
       sub_county: "Layibi",
       parish: "Layibi",
       village: "Koro",
-      latitude: "2.772404",
-      longitude: "32.298987",
       year_founded: "2014",
       school_status: "Open",
       school_status_date: "2024-01-01",
@@ -272,8 +270,6 @@ function buildSchoolsExampleRows(): SchoolsTemplateRow[] {
       sub_county: "Lira Central",
       parish: "Adyel",
       village: "",
-      latitude: "2.249900",
-      longitude: "32.899800",
       year_founded: "1998",
       school_status: "Open",
       school_status_date: "",
@@ -361,8 +357,6 @@ export function mapMissingSchoolsToTemplateRows(missingSchools: MissingSchoolCan
     sub_county: "",
     parish: normalizeCell(row.parish),
     village: "",
-    latitude: "",
-    longitude: "",
     year_founded: "",
     school_status: "Open",
     school_status_date: "",
@@ -392,7 +386,7 @@ export async function generateSchoolsWorkbook(args?: {
       "Use one row per school.",
       "Required columns: school_name, country, region, sub_region, district.",
       "Use TRUE/FALSE, YES/NO, or 1/0 for is_active and current_partner_school.",
-      "Latitude and longitude accept decimal values. year_founded must be numeric or blank.",
+      "year_founded must be numeric or blank.",
       "classes_offered accepts a comma-separated list like 'Baby Class, P1, P2'.",
       "Blank optional fields are allowed. Do not invent missing location values.",
     ],
@@ -411,25 +405,23 @@ export async function generateSchoolsWorkbook(args?: {
   });
   applyStaticListValidation({
     worksheet: templateSheet,
-    columnIndex: 17, // current_partner_school
+    columnIndex: 15, // current_partner_school
     values: ["TRUE", "FALSE", "YES", "NO", "1", "0"],
     promptTitle: "Partner School value",
   });
   applyStaticListValidation({
     worksheet: templateSheet,
-    columnIndex: 18, // is_active
+    columnIndex: 16, // is_active
     values: ["TRUE", "FALSE", "YES", "NO", "1", "0"],
     promptTitle: "School active value",
   });
   applyStaticListValidation({
     worksheet: templateSheet,
-    columnIndex: 21, // head_teacher_gender
+    columnIndex: 19, // head_teacher_gender
     values: ["Male", "Female", "Other"],
     promptTitle: "Gender",
   });
-  applyTextNumberFormat(templateSheet, 11, "0.000000"); // latitude
-  applyTextNumberFormat(templateSheet, 12, "0.000000"); // longitude
-  applyTextNumberFormat(templateSheet, 13, "0"); // year_founded
+  applyTextNumberFormat(templateSheet, 11, "0"); // year_founded
 
   addExamplesSheet(workbook, SCHOOL_IMPORT_HEADERS, buildSchoolsExampleRows());
   return toWorkbookBuffer(await workbook.xlsx.writeBuffer());

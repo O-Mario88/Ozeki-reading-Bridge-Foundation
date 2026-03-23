@@ -18,7 +18,6 @@ import {
   collapseWhitespace,
   normalizeBooleanString,
   normalizeOptionalInteger,
-  normalizeOptionalNumber,
   normalizeText,
 } from "@/lib/server/imports/utils";
 import {
@@ -53,14 +52,6 @@ function toDuplicateKey(row: SchoolsTemplateRow) {
 }
 
 function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
-  const latitude = row.latitude ? normalizeOptionalNumber(row.latitude) : null;
-  if (row.latitude && latitude === null) {
-    throw new Error("Latitude must be a valid decimal value.");
-  }
-  const longitude = row.longitude ? normalizeOptionalNumber(row.longitude) : null;
-  if (row.longitude && longitude === null) {
-    throw new Error("Longitude must be a valid decimal value.");
-  }
   const yearFounded = row.year_founded ? normalizeOptionalInteger(row.year_founded) : null;
   if (row.year_founded && yearFounded === null) {
     throw new Error("year_founded must be numeric.");
@@ -109,8 +100,6 @@ function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
     parish: collapseWhitespace(row.parish) || "",
     village: collapseWhitespace(row.village) || null,
 
-    latitude: latitude === null ? null : String(latitude),
-    longitude: longitude === null ? null : String(longitude),
     yearFounded,
 
     schoolStatus: collapseWhitespace(row.school_status) || "Open",

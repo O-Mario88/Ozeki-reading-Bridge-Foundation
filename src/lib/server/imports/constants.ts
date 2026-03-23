@@ -16,8 +16,6 @@ export const SCHOOL_IMPORT_HEADERS = [
   "sub_county",
   "parish",
   "village",
-  "latitude",
-  "longitude",
   "year_founded",
   "school_status",
   "school_status_date",
@@ -119,8 +117,6 @@ export interface SchoolsTemplateRow {
   sub_county: string;
   parish: string;
   village: string;
-  latitude: string;
-  longitude: string;
   year_founded: string;
   school_status: string;
   school_status_date: string;
