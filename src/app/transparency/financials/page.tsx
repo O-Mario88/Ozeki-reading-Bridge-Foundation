@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { 
   ShieldCheck, FileText, PieChart, Target, Heart, Scale, 
   BookOpen, Users, Building, Activity, LineChart, Download, 
-  CheckCircle, Shield, FileCheck, ArrowRight
+  CheckCircle, Shield, FileCheck, ArrowRight, BookText
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -160,6 +159,7 @@ export default async function FinancialTransparencyPage() {
               { title: "School Support Visits", icon: Building },
               { title: "Learner Assessments", icon: LineChart },
               { title: "Educational Resources", icon: FileText },
+              { title: "1001 Story Program", icon: BookText },
               { title: "Systems and Operations", icon: Activity }
             ].map((block, i) => (
               <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:border-[#00155F]/20 transition-colors">
