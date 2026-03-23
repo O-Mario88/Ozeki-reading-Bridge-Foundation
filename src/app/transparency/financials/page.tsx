@@ -90,7 +90,7 @@ export default async function FinancialTransparencyPage() {
               <a href="#reports" className="px-8 py-4 rounded-xl bg-[#006b61] text-white font-bold hover:bg-[#006b61]/90 transition-all shadow-md flex items-center gap-2">
                 <FileText size={18} /> View Financial Reports
               </a>
-              <Link href="/contact" className="px-8 py-4 rounded-xl border-2 border-gray-200 text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-300 transition-all">
+              <Link href="/contact" className="px-8 py-4 rounded-xl bg-[#FA7D15] text-white font-bold hover:bg-[#FA7D15]/90 transition-all shadow-md">
                 Contact Us
               </Link>
             </div>
@@ -379,6 +379,8 @@ export default async function FinancialTransparencyPage() {
           subheading="We welcome responsible inquiry and are committed to strengthening trust through openness and accountability."
           primaryButtonText="Contact Ozeki"
           primaryButtonHref="/contact"
+          primaryButtonColor="bg-[#FA7D15]"
+          primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
           secondaryButtonText="Explore Reports"
           secondaryButtonHref="#reports"
         />

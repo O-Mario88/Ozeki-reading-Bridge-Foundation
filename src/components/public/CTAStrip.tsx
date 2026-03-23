@@ -8,6 +8,8 @@ interface CTAStripProps {
   secondaryButtonText?: string;
   secondaryButtonHref?: string;
   theme?: "brand" | "dark" | "light";
+  primaryButtonColor?: string;
+  primaryButtonHoverColor?: string;
 }
 
 export function CTAStrip({
@@ -18,6 +20,8 @@ export function CTAStrip({
   secondaryButtonText,
   secondaryButtonHref,
   theme = "brand",
+  primaryButtonColor,
+  primaryButtonHoverColor,
 }: CTAStripProps) {
   const themes = {
     brand: "bg-brand-primary text-white",
@@ -25,9 +29,11 @@ export function CTAStrip({
     light: "bg-brand-surface text-brand-text border-y border-gray-100",
   };
 
-  const primaryBtnTheme = theme === "light" 
-    ? "bg-brand-primary text-white hover:bg-brand-primary/90" 
-    : "bg-white text-gray-900 hover:bg-gray-50";
+  const primaryBtnTheme = primaryButtonColor
+    ? `${primaryButtonColor} text-white ${primaryButtonHoverColor || ""}`
+    : theme === "light" 
+      ? "bg-brand-primary text-white hover:bg-brand-primary/90" 
+      : "bg-white text-gray-900 hover:bg-gray-50";
 
   const secondaryBtnTheme = theme === "light"
     ? "border-2 border-gray-200 text-gray-600 hover:border-gray-300"
