@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MediaTestimonialGrid } from "@/components/MediaTestimonialGrid";
 import { PageHero } from "@/components/PageHero";
-import { getMediaShowcase } from "@/lib/media-showcase";
+import { listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
 import { testimonials } from "@/lib/content";
 
 export const metadata = {
@@ -12,7 +12,23 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function TestimonialsPage() {
-  const mediaShowcase = await getMediaShowcase();
+  const dbItems = await listImpactGalleryEntriesPostgres(12);
+  const items = dbItems.map((record) => {
+    return {
+      id: String(record.id),
+      kind: "photo" as const,
+      url: record.imageUrl,
+      alt: record.personName,
+      caption: `${record.district}, ${record.region} • ${record.recordedYear}`,
+      quote: record.quoteText,
+      person: record.personName,
+      role: record.personRole,
+      playback: "file" as const,
+      youtubeVideoId: null,
+      youtubeEmbedUrl: null,
+      youtubeThumbnailUrl: null,
+    };
+  });
 
   return (
     <>
@@ -30,7 +46,7 @@ export default async function TestimonialsPage() {
               <h2 className="tpd-page-title">Testimonial wall with photos and videos</h2>
             </div>
           </div>
-          <MediaTestimonialGrid items={mediaShowcase.featuredItems} />
+          <MediaTestimonialGrid items={items} />
         </div>
       </section>
 

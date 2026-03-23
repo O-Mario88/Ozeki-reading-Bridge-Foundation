@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MediaTestimonialGrid } from "@/components/MediaTestimonialGrid";
 import { PageHero } from "@/components/PageHero";
-import { getMediaShowcase } from "@/lib/media-showcase";
+import { listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
 
 export const metadata = {
   title: "Media & Press",
@@ -11,7 +11,23 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function MediaPage() {
-  const mediaShowcase = await getMediaShowcase();
+  const dbItems = await listImpactGalleryEntriesPostgres(24);
+  const items = dbItems.map((record) => {
+    return {
+      id: String(record.id),
+      kind: "photo" as const,
+      url: record.imageUrl,
+      alt: record.personName,
+      caption: `${record.district}, ${record.region} • ${record.recordedYear}`,
+      quote: record.quoteText,
+      person: record.personName,
+      role: record.personRole,
+      playback: "file" as const,
+      youtubeVideoId: null,
+      youtubeEmbedUrl: null,
+      youtubeThumbnailUrl: null,
+    };
+  });
 
   return (
     <>
@@ -34,7 +50,7 @@ export default async function MediaPage() {
             </div>
           </div>
 
-          <MediaTestimonialGrid items={mediaShowcase.featuredItems} />
+          <MediaTestimonialGrid items={items} />
 
           <div className="action-row">
             <Link className="button" href="/testimonials">

@@ -1,8 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { MediaShowcaseItem } from "@/lib/media-showcase";
 import { buildVideoThumbnailFallback } from "@/lib/media-placeholders";
+
+export interface MediaShowcaseItem {
+  id: string;
+  kind: "photo" | "video";
+  url: string;
+  alt: string;
+  caption: string;
+  quote: string;
+  person: string;
+  role: string;
+  playback: "file" | "youtube";
+  youtubeEmbedUrl: string | null;
+  youtubeThumbnailUrl: string | null;
+  youtubeVideoId: string | null;
+}
 
 interface MediaTestimonialGridProps {
   items: MediaShowcaseItem[];
