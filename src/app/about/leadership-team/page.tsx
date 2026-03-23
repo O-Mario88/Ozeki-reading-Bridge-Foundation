@@ -194,8 +194,6 @@ export default async function LeadershipTeamPage() {
           primaryButtonHref="/about/our-story"
           primaryButtonColor="bg-[#006b61]"
           primaryButtonHoverColor="hover:bg-[#006b61]/90"
-          primaryButtonColor="bg-[#FA7D15]"
-          primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
           secondaryButtonText="Back to About"
           secondaryButtonHref="/about"
           theme="light"

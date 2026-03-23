@@ -215,8 +215,6 @@ export default function TeacherProfessionalDevelopmentPage() {
         primaryButtonHref="/partner-with-us"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
-        primaryButtonColor="bg-[#FA7D15]"
-        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Explore Evidence"
         secondaryButtonHref="/impact"
         theme="brand"

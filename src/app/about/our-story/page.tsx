@@ -153,8 +153,6 @@ export default function OurStoryPage() {
           primaryButtonHref="/impact"
           primaryButtonColor="bg-[#006b61]"
           primaryButtonHoverColor="hover:bg-[#006b61]/90"
-          primaryButtonColor="bg-[#FA7D15]"
-          primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
           secondaryButtonText="Explore Our Programs"
           secondaryButtonHref="/programs"
           theme="light"

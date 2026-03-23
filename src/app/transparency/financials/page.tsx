@@ -381,8 +381,6 @@ export default async function FinancialTransparencyPage() {
           primaryButtonHref="/contact"
           primaryButtonColor="bg-[#FA7D15]"
           primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
-          primaryButtonColor="bg-[#FA7D15]"
-          primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
           secondaryButtonText="Explore Reports"
           secondaryButtonHref="#reports"
         />

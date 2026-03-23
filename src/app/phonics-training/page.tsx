@@ -287,8 +287,6 @@ export default function PhonicsTrainingPage() {
         primaryButtonHref="/partner-with-us"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
-        primaryButtonColor="bg-[#FA7D15]"
-        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Explore Impact Evidence"
         secondaryButtonHref="/impact"
         theme="brand"
