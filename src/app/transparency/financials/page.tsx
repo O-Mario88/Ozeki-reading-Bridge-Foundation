@@ -2,7 +2,7 @@ import Link from "next/link";
 import { 
   ShieldCheck, FileText, PieChart, Target, Heart, Scale, 
   BookOpen, Users, Building, Activity, LineChart, Download, 
-  CheckCircle, Shield, FileCheck, ArrowRight, BookText
+  CheckCircle, Shield, FileCheck, ArrowRight, BookText, ClipboardCheck
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -185,6 +185,8 @@ export default async function FinancialTransparencyPage() {
               { title: "Learner Assessments", icon: LineChart },
               { title: "Educational Resources", icon: FileText },
               { title: "1001 Story Program", icon: BookText },
+              { title: "Training Follow Ups", icon: Target },
+              { title: "Teacher Reading Lesson Evaluation and Coaching", icon: ClipboardCheck },
               { title: "Systems and Operations", icon: Activity }
             ].map((block, i) => (
               <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:border-[#00155F]/20 transition-colors">
