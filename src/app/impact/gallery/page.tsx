@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { getMediaShowcase } from "@/lib/media-showcase";
-import { allUgandaDistricts, inferRegionFromDistrict, ugandaRegions } from "@/lib/uganda-locations";
+import { listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
+import { ugandaRegions } from "@/lib/uganda-locations";
 import { buildVideoThumbnailFallback } from "@/lib/media-placeholders";
 import { CTAStrip } from "@/components/public/CTAStrip";
-import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { Play, Sparkles } from "lucide-react";
 
@@ -23,26 +22,6 @@ function normalizeValue(value: string | string[] | undefined) {
 }
 
 type ActivityType = "Training" | "Coaching" | "Assessments" | "Materials" | "Story Project";
-
-function inferActivityType(caption: string, kind: "photo" | "video"): ActivityType {
-  const text = caption.toLowerCase();
-  if (text.includes("coach")) return "Coaching";
-  if (text.includes("assessment")) return "Assessments";
-  if (text.includes("story")) return "Story Project";
-  if (text.includes("material") || text.includes("reader")) return "Materials";
-  if (kind === "video") return "Coaching";
-  return "Training";
-}
-
-function inferDistrict(caption: string) {
-  const lower = caption.toLowerCase();
-  return allUgandaDistricts.find((district) => lower.includes(district.toLowerCase())) ?? null;
-}
-
-function inferYear(caption: string) {
-  const matched = caption.match(/(20\d{2})/);
-  return matched?.[1] ?? "Unspecified";
-}
 
 function toYouTubeWatchUrl(embedUrl: string | null, videoId: string | null) {
   if (videoId) {
@@ -68,16 +47,26 @@ export default async function ImpactGalleryPage({
   const selectedRegion = normalizeValue(params.region);
   const selectedActivity = normalizeValue(params.activity);
 
-  const mediaShowcase = await getMediaShowcase();
-  const items = mediaShowcase.featuredItems.map((item) => {
-    const district = inferDistrict(item.caption);
-    const region = district ? inferRegionFromDistrict(district) : null;
+  const dbItems = await listImpactGalleryEntriesPostgres(500);
+  
+  const items = dbItems.map((record) => {
     return {
-      ...item,
-      activity: inferActivityType(item.caption, item.kind),
-      district,
-      region,
-      year: inferYear(item.caption),
+      id: String(record.id),
+      kind: "photo" as const, // For now, backend only supports photo uploads, but keeping layout shape
+      url: record.imageUrl,
+      alt: record.personName,
+      caption: `${record.district}, ${record.region} • ${record.recordedYear}`,
+      quote: record.quoteText,
+      person: record.personName,
+      role: record.personRole,
+      activity: record.activityType as ActivityType,
+      district: record.district,
+      region: record.region,
+      year: record.recordedYear,
+      playback: "file" as const,
+      youtubeVideoId: null,
+      youtubeEmbedUrl: null,
+      youtubeThumbnailUrl: null,
     };
   });
 

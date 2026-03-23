@@ -2,18 +2,24 @@
 
 import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
+import { allUgandaDistricts } from "@/lib/uganda-locations";
 
 type GalleryUploadItem = {
-  id: string;
+  id: number;
   imageUrl: string;
-  description: string;
-  altText: string;
-  fileName: string;
-  sizeBytes: number;
-  mimeType: string;
+  quoteText: string;
+  personName: string;
+  personRole: string;
+  activityType: string;
+  district: string;
+  region: string;
+  recordedYear: string;
+  fileName: string | null;
+  sizeBytes: number | null;
+  mimeType: string | null;
   createdAt: string;
-  createdByUserId: number;
-  createdByName: string;
+  createdByUserId: number | null;
+  createdByName: string | null;
 };
 
 type FeedbackState = {
@@ -141,8 +147,8 @@ export function PortalGalleryManager({ initialItems }: PortalGalleryManagerProps
       </section>
 
       <section className="card">
-        <h2>Upload Photo</h2>
-        <p>Every photo requires a short description. New photos show first on the public gallery.</p>
+        <h2>Upload Impact Photo</h2>
+        <p>Complete the contextual information below so the photo appears fully classified on the public Gallery of Impact.</p>
         <form className="form-grid portal-form-grid" onSubmit={handleSubmit}>
           <label className="full-width">
             <span className="portal-field-label">Photo</span>
@@ -158,23 +164,67 @@ export function PortalGalleryManager({ initialItems }: PortalGalleryManagerProps
           </label>
 
           <label className="full-width">
-            <span className="portal-field-label">Short Description</span>
+            <span className="portal-field-label">Caption / Story Quote</span>
             <textarea
-              name="description"
+              name="quoteText"
               required
-              minLength={4}
-              maxLength={280}
+              minLength={5}
+              maxLength={400}
               rows={3}
-              placeholder="Brief description shown under the photo on the public gallery."
+              placeholder="The authentic quote or descriptive caption..."
             />
           </label>
 
-          <label className="full-width">
-            <span className="portal-field-label">Alt Text (optional)</span>
+          <label>
+            <span className="portal-field-label">Subject Name (or Group)</span>
             <input
-              name="altText"
-              maxLength={220}
-              placeholder="Accessible image text. Defaults to the short description."
+              name="personName"
+              required
+              minLength={2}
+              maxLength={100}
+              placeholder="e.g. Grace Apio"
+            />
+          </label>
+
+          <label>
+            <span className="portal-field-label">Subject Role</span>
+            <input
+              name="personRole"
+              required
+              minLength={2}
+              maxLength={100}
+              placeholder="e.g. Primary 2 Teacher"
+            />
+          </label>
+
+          <label>
+            <span className="portal-field-label">Activity Type</span>
+            <select name="activityType" required defaultValue="Training">
+              <option value="Training">Training</option>
+              <option value="Coaching">Coaching</option>
+              <option value="Assessments">Assessments</option>
+              <option value="Materials">Materials</option>
+              <option value="Story Project">Story Project</option>
+            </select>
+          </label>
+
+          <label>
+            <span className="portal-field-label">District</span>
+            <select name="district" required defaultValue="">
+              <option value="" disabled>Select District</option>
+              {allUgandaDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </label>
+
+          <label>
+            <span className="portal-field-label">Recorded Year</span>
+            <input
+              name="recordedYear"
+              type="number"
+              required
+              min={2018}
+              max={new Date().getFullYear()}
+              defaultValue={new Date().getFullYear()}
             />
           </label>
 
@@ -215,10 +265,10 @@ export function PortalGalleryManager({ initialItems }: PortalGalleryManagerProps
             <table>
               <thead>
                 <tr>
-                  <th>Photo</th>
-                  <th>Description</th>
-                  <th>Details</th>
-                  <th>Posted</th>
+                  <th>Photo Thumbnail</th>
+                  <th>Context Details</th>
+                  <th>Upload Details</th>
+                  <th>Posted By</th>
                 </tr>
               </thead>
               <tbody>
@@ -228,18 +278,23 @@ export function PortalGalleryManager({ initialItems }: PortalGalleryManagerProps
                       <a href={item.imageUrl} target="_blank" rel="noreferrer" className="portal-gallery-preview-link">
                         <Image
                           src={item.imageUrl}
-                          alt={item.altText || item.description}
+                          alt={item.personName}
                           width={220}
                           height={140}
                           className="portal-gallery-preview-image"
                         />
                       </a>
                     </td>
-                    <td>{item.description}</td>
+                    <td>
+                      <strong>{item.personName}</strong> ({item.personRole})<br />
+                      <small className="text-gray-500">{item.activityType} • {item.district}, {item.recordedYear}</small>
+                      <br /><br />
+                      <span className="line-clamp-2 text-sm italic">"{item.quoteText}"</span>
+                    </td>
                     <td>
                       {item.fileName}
                       <br />
-                      <small>{formatSize(item.sizeBytes)}</small>
+                      <small>{formatSize(item.sizeBytes ?? 0)}</small>
                     </td>
                     <td>
                       {item.createdByName}

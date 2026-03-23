@@ -4,7 +4,8 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
-import { addGalleryUpload, listGalleryUploads } from "@/lib/gallery-store";
+import { addImpactGalleryEntryPostgres, listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
+import { inferRegionFromDistrict } from "@/lib/uganda-locations";
 
 export const runtime = "nodejs";
 
@@ -12,8 +13,12 @@ const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const allowedExt = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
 
 const textSchema = z.object({
-  description: z.string().trim().min(4).max(280),
-  altText: z.string().trim().max(220).optional(),
+  quoteText: z.string().trim().min(5).max(400),
+  personName: z.string().trim().min(2).max(100),
+  personRole: z.string().trim().min(2).max(100),
+  activityType: z.enum(["Training", "Coaching", "Assessments", "Materials", "Story Project"]),
+  district: z.string().trim().min(2),
+  recordedYear: z.string().trim().min(4).max(4),
 });
 
 function sanitizeSegment(input: string) {
@@ -44,7 +49,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const items = await listGalleryUploads(500);
+  const items = await listImpactGalleryEntriesPostgres(500);
   return NextResponse.json({ items });
 }
 
@@ -60,8 +65,12 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const parsed = textSchema.parse({
-      description: formData.get("description"),
-      altText: formData.get("altText") || undefined,
+      quoteText: formData.get("quoteText"),
+      personName: formData.get("personName"),
+      personRole: formData.get("personRole"),
+      activityType: formData.get("activityType"),
+      district: formData.get("district"),
+      recordedYear: formData.get("recordedYear"),
     });
 
     const file = formData.get("file");
@@ -98,21 +107,20 @@ export async function POST(request: Request) {
     await fs.writeFile(storedPath, buffer);
 
     const publicUrl = `/uploads/gallery/${year}/${month}/${storedFile}`;
-    const description = parsed.description.trim();
-    const altText = parsed.altText?.trim() || description;
 
-    const item = await addGalleryUpload({
-      id: crypto.randomUUID(),
+    const item = await addImpactGalleryEntryPostgres({
       imageUrl: publicUrl,
-      description,
-      altText,
+      quoteText: parsed.quoteText,
+      personName: parsed.personName,
+      personRole: parsed.personRole,
+      activityType: parsed.activityType,
+      district: parsed.district,
+      region: inferRegionFromDistrict(parsed.district) ?? "Unknown",
+      recordedYear: parsed.recordedYear,
       fileName: file.name,
       sizeBytes: buffer.byteLength,
       mimeType: file.type || "image/jpeg",
-      createdAt: now.toISOString(),
-      createdByUserId: user.id,
-      createdByName: user.fullName,
-    });
+    }, user);
 
     return NextResponse.json({ ok: true, item });
   } catch (error) {

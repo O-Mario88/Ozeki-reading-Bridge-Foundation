@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PortalGalleryManager } from "@/components/portal/PortalGalleryManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { listGalleryUploads } from "@/lib/gallery-store";
+import { listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function PortalGalleryPage() {
   const user = await requirePortalStaffUser();
-  const uploads = await listGalleryUploads(500);
+  const uploads = await listImpactGalleryEntriesPostgres(500);
 
   return (
     <PortalShell
