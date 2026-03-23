@@ -1,5 +1,5 @@
 import { FinancialNarrationResult } from "../ai/finance-narration";
-import { generateAcademicReportPdf, AcademicReportData } from "./academic-report-template";
+import { renderBrandedPdf } from "./render";
 
 export interface FinancialReportData {
   title: string;
@@ -54,29 +54,37 @@ export async function generateFinancialPdf(data: FinancialReportData): Promise<B
     )
     .join("");
 
-  const combinedFindings = data.narration 
-    ? `${data.narration.findings}\n\n${tableHtml}`
-    : `No AI narration generated.\n\n${tableHtml}`;
+  const contentHtml = `
+    <div class="fp-header-grid">
+      <div class="fp-header-col">
+        <p><strong>Prepared For:</strong> Board of Directors</p>
+        <p><strong>Organization:</strong> ${escapeHtml(data.organization)}</p>
+      </div>
+      <div class="fp-header-col">
+        <p><strong>Reporting Period:</strong> ${escapeHtml(data.period)}</p>
+        <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+      </div>
+    </div>
+    
+    <hr />
+    
+    ${data.narration ? `
+      <h3>Executive Summary</h3>
+      <p>${escapeHtml(data.narration.executiveSummary)}</p>
+      
+      <h3>Financial Findings & Analysis</h3>
+      <p>${escapeHtml(data.narration.findings)}</p>
+      <hr />
+    ` : ""}
 
-  const academicData: AcademicReportData = {
+    ${tableHtml}
+  `;
+
+  return renderBrandedPdf({
     title: data.title,
-    subtitle: `Ledger Reporting Period: ${data.period}`,
-    author: "Oracle Finance AI Engine",
-    date: new Date().toLocaleDateString(),
-    recipient: "Board of Directors, Ozeki Reading Bridge Foundation",
-    sections: {
-      executiveSummary: data.narration?.executiveSummary ?? "No summary provided.",
-      introduction: data.narration?.introduction ?? "This report presents the financial activities and fund health for the specified period.",
-      methodology: data.narration?.methodology ?? "Data is sourced directly from the internal ledger.",
-      findings: combinedFindings,
-      conclusion: data.narration?.conclusion ?? "Report concluded.",
-      recommendations: data.narration?.recommendations ?? "No recommendations.",
-      references: data.narration?.references ?? "Internal Ledger System.",
-    }
-  };
-
-  return generateAcademicReportPdf(academicData, {
-    documentNumber: "FINANCIAL REPORT - AI GENERATED",
-    accentHex: "#0f5fc5",
+    subtitle: `Statement Period: ${data.period}`,
+    documentNumber: "OFFICIAL OZEKI FINANCIAL STATEMENT",
+    contentHtml,
+    accentHex: "#00155F",
   });
 }
