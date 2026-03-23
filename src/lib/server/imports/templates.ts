@@ -390,7 +390,7 @@ export async function generateSchoolsWorkbook(args?: {
     args?.instructionLines ?? [
       "Do not rename headers or change the Schools_Template sheet name.",
       "Use one row per school.",
-      "Required columns: school_name, country, region, sub_region, district, parish.",
+      "Required columns: school_name, country, region, sub_region, district.",
       "Use TRUE/FALSE, YES/NO, or 1/0 for is_active and current_partner_school.",
       "Latitude and longitude accept decimal values. year_founded must be numeric or blank.",
       "classes_offered accepts a comma-separated list like 'Baby Class, P1, P2'.",

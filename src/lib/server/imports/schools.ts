@@ -106,7 +106,7 @@ function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
     subRegion: requiredValue(row.sub_region, "sub_region"),
     district: requiredValue(row.district, "district"),
     subCounty: collapseWhitespace(row.sub_county) || null,
-    parish: requiredValue(row.parish, "parish"),
+    parish: collapseWhitespace(row.parish) || "",
     village: collapseWhitespace(row.village) || null,
 
     latitude: latitude === null ? null : String(latitude),
@@ -275,7 +275,7 @@ export async function commitSchoolsImport(args: {
 
     try {
       const normalizedData = (row.normalizedData ?? {}) as SchoolDirectoryWriteInput;
-      if (!normalizedData.name || !normalizedData.country || !normalizedData.region || !normalizedData.district || !normalizedData.parish) {
+      if (!normalizedData.name || !normalizedData.country || !normalizedData.region || !normalizedData.district) {
         throw new Error("This row is missing normalized school data and must be revalidated.");
       }
 
