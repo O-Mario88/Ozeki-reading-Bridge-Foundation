@@ -3269,8 +3269,8 @@ main {
   line-height: 1.35;
 }
 
-.portal-form-grid :is(input, select, textarea),
-.portal-filter-grid :is(input, select, textarea) {
+.portal-form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
+.portal-filter-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-radius: 0.42rem;
   border: 1px solid var(--md-sys-color-outline-variant);
   min-height: 2rem;
@@ -3351,20 +3351,46 @@ main {
   padding: 0;
 }
 
-.portal-multiselect input[type="checkbox"] {
-  accent-color: var(--md-sys-color-primary);
-  margin-top: 0.15rem;
+/* Global Custom Checkbox Styling */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1.5px solid #d0d5dd;
+  border-radius: 0.25rem;
+  background-color: #f8fafc;
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  vertical-align: text-bottom;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
 }
 
-.form-grid input[type="checkbox"],
-.portal-form-grid input[type="checkbox"],
-.portal-filter-grid input[type="checkbox"] {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  min-height: auto;
-  padding: 0;
-  width: auto;
+input[type="checkbox"]:hover {
+  border-color: #3b82f6;
+  background-color: #f1f5f9;
+}
+
+input[type="checkbox"]:checked {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid color-mix(in oklab, #2563eb, transparent 50%);
+  outline-offset: 2px;
+}
+
+.portal-multiselect input[type="checkbox"] {
+  margin-top: 0.15rem;
 }
 
 .portal-form-actions {
