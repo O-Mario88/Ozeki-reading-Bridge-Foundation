@@ -59,7 +59,7 @@ export default function PhonicsTrainingPage() {
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             
             <div className="flex flex-col items-start">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-brand-primary font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
                 Program Spotlight
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
@@ -115,7 +115,7 @@ export default function PhonicsTrainingPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center mb-6 text-brand-primary font-bold text-xl">1</div>
+            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Cycle Start: Diagnostics &amp; Training</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               At the start of each cycle, we conduct school diagnostics to understand
@@ -143,7 +143,7 @@ export default function PhonicsTrainingPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col md:col-span-1 lg:col-span-1" withHover>
-            <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center mb-6 text-brand-primary font-bold text-xl">2</div>
+            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">In-School Coaching</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               The differentiator is what happens next: in-school coaching and
@@ -285,6 +285,8 @@ export default function PhonicsTrainingPage() {
         subheading="Discuss a country, region, district, or school implementation package for this Signature Program with clear evidence deliverables."
         primaryButtonText="Partner With Us"
         primaryButtonHref="/partner-with-us"
+        primaryButtonColor="bg-[#FA7D15]"
+        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Explore Impact Evidence"
         secondaryButtonHref="/impact"
         theme="brand"

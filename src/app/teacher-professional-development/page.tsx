@@ -22,7 +22,7 @@ export default function TeacherProfessionalDevelopmentPage() {
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             
             <div className="flex flex-col items-start">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-brand-primary font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
                 Program Spotlight
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
@@ -213,6 +213,8 @@ export default function TeacherProfessionalDevelopmentPage() {
         subheading="Fund structured teacher professional development with built-in follow-up, coaching linkage, and verified literacy outcomes."
         primaryButtonText="Partner With Us"
         primaryButtonHref="/partner-with-us"
+        primaryButtonColor="bg-[#FA7D15]"
+        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Explore Evidence"
         secondaryButtonHref="/impact"
         theme="brand"
