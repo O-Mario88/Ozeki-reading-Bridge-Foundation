@@ -182,14 +182,12 @@ export default async function HomePage() {
 
       {/* 5. Live Stories / Testimonials */}
       <SectionWrapper theme="light">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-          <div className="max-w-2xl">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Voices from the classroom</h2>
-            <p className="text-lg text-gray-600">
-              Hear directly from teachers who are transforming their classrooms using Ozeki&apos;s practical phonics and coaching.
-            </p>
-          </div>
-          <Link href="/stories" className="px-6 py-3 rounded-full border-2 border-gray-200 font-semibold text-gray-700 hover:border-gray-900 hover:text-gray-900 transition-colors shrink-0">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Voices from the classroom</h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Hear directly from teachers who are transforming their classrooms using Ozeki&apos;s practical phonics and coaching.
+          </p>
+          <Link href="/stories" className="px-6 py-3 rounded-full border-2 border-gray-200 font-semibold text-gray-700 hover:border-gray-900 hover:text-gray-900 transition-colors">
             View All Stories
           </Link>
         </div>
