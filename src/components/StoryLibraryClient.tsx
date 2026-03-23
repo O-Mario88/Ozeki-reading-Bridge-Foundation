@@ -17,7 +17,7 @@ type Tab = "stories" | "anthologies";
 
 function StoryCard({ story }: { story: PublishedStory }) {
     return (
-        <PremiumCard className="h-full border-none shadow-md overflow-hidden bg-white hover:border-[#006b61]/20 transition-all p-0 flex flex-col" withHover>
+        <PremiumCard className="h-full border-none shadow-md overflow-hidden bg-white text-gray-900 hover:border-[#006b61]/20 transition-all p-0 flex flex-col" withHover>
             <Link href={`/stories/${story.slug}`} className="story-card flex-grow relative group">
             {story.coverImagePath ? (
                 <div className="story-card-cover">
@@ -71,7 +71,7 @@ function StoryCard({ story }: { story: PublishedStory }) {
 
 function AnthologyCard({ anthology }: { anthology: AnthologyRecord }) {
     return (
-        <PremiumCard className="h-full border-none shadow-md overflow-hidden bg-white hover:border-[#FA7D15]/20 transition-all p-0 flex flex-col" withHover>
+        <PremiumCard className="h-full border-none shadow-md overflow-hidden bg-white text-gray-900 hover:border-[#FA7D15]/20 transition-all p-0 flex flex-col" withHover>
             <Link href={`/anthologies/${anthology.slug}`} className="story-card flex-grow relative group">
             {anthology.coverImagePath ? (
                 <div className="story-card-cover">
@@ -222,7 +222,7 @@ export function StoryLibraryClient({ initialStories, initialTotal, initialAnthol
                     </p>
 
                     {stories.length === 0 ? (
-                        <PremiumCard className="p-12 text-center bg-white">
+                        <PremiumCard className="p-12 text-center bg-white text-gray-900">
                             <p className="text-xl font-medium text-gray-900 mb-2">No stories match your search.</p>
                             <p className="text-gray-500">
                                 Try adjusting your filters or search query.
@@ -255,7 +255,7 @@ export function StoryLibraryClient({ initialStories, initialTotal, initialAnthol
             ) : (
                 <>
                     {initialAnthologies.length === 0 ? (
-                        <PremiumCard className="p-12 text-center bg-white">
+                        <PremiumCard className="p-12 text-center bg-white text-gray-900">
                             <p className="text-xl font-medium text-gray-900">No anthologies published yet.</p>
                         </PremiumCard>
                     ) : (
