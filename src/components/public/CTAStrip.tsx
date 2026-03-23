@@ -24,7 +24,7 @@ export function CTAStrip({
   primaryButtonHoverColor,
 }: CTAStripProps) {
   const themes = {
-    brand: "bg-brand-primary text-white",
+    brand: "bg-orange-600 text-white",
     dark: "bg-gray-900 text-white",
     light: "bg-brand-surface text-brand-text border-y border-gray-100",
   };
