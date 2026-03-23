@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { StoryLibraryClient } from "@/components/StoryLibraryClient";
 import { FeaturedAnthologyHero } from "@/components/dashboard/FeaturedAnthologyHero";
+import { SectionWrapper } from "@/components/public/SectionWrapper";
+import { BookOpen } from "lucide-react";
 import {
     listPublishedAnthologiesPostgres,
     listPublishedStoriesPostgres,
@@ -39,33 +41,40 @@ export default async function StoriesPage() {
     }
 
     return (
-        <>
-            <section className="page-hero">
-                <div className="container">
-                    <p className="kicker">1001 Story Project</p>
-                    <h1>Story Library</h1>
-                    <p style={{ maxWidth: "640px", fontSize: "1.1rem" }}>
-                        Read stories written by primary school learners across Uganda.
-                        Every story is a step toward confidence, literacy, and voice.
-                    </p>
-                </div>
-            </section>
+        <div className="min-h-screen flex flex-col font-sans">
+            <main className="flex-grow pt-[72px] md:pt-20">
+                <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-24 border-b border-gray-100">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#006b61]/10 via-brand-background to-brand-background pointer-events-none" />
+                    <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
+                            <BookOpen className="w-4 h-4" /> 1001 Story Project
+                        </div>
+                        <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+                            Story Library
+                        </h1>
+                        <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                            Read stories written by primary school learners across Uganda.
+                            Every story is a step toward confidence, literacy, and voice.
+                        </p>
+                    </div>
+                </section>
 
-            {anthologies.length > 0 && anthologies[0].featured && (
-                <FeaturedAnthologyHero anthology={anthologies[0]} />
-            )}
+                {anthologies.length > 0 && anthologies[0].featured && (
+                    <FeaturedAnthologyHero anthology={anthologies[0]} />
+                )}
 
-            <section className="section" style={{ backgroundColor: "var(--md-sys-color-surface-container-low, #f6f6f6)" }}>
-                <div className="container">
-                    <StoryLibraryClient
-                        initialStories={stories}
-                        initialTotal={total}
-                        initialAnthologies={anthologies}
-                        languages={languages}
-                        tags={tags}
-                    />
-                </div>
-            </section>
-        </>
+                <SectionWrapper theme="off-white">
+                    <div className="max-w-7xl mx-auto">
+                        <StoryLibraryClient
+                            initialStories={stories}
+                            initialTotal={total}
+                            initialAnthologies={anthologies}
+                            languages={languages}
+                            tags={tags}
+                        />
+                    </div>
+                </SectionWrapper>
+            </main>
+        </div>
     );
 }

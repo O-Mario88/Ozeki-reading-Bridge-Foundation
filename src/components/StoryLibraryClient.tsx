@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import type { PublishedStory, AnthologyRecord } from "@/lib/types";
+import { PremiumCard } from "@/components/public/PremiumCard";
 
 interface Props {
     initialStories: PublishedStory[];
@@ -16,7 +17,8 @@ type Tab = "stories" | "anthologies";
 
 function StoryCard({ story }: { story: PublishedStory }) {
     return (
-        <Link href={`/stories/${story.slug}`} className="story-card card">
+        <PremiumCard className="h-full border-none shadow-md overflow-hidden bg-white hover:border-[#006b61]/20 transition-all p-0 flex flex-col" withHover>
+            <Link href={`/stories/${story.slug}`} className="story-card flex-grow relative group">
             {story.coverImagePath ? (
                 <div className="story-card-cover">
                     <img src={story.coverImagePath} alt="" loading="lazy" />
@@ -62,13 +64,15 @@ function StoryCard({ story }: { story: PublishedStory }) {
                     ))}
                 </div>
             </div>
-        </Link>
+            </Link>
+        </PremiumCard>
     );
 }
 
 function AnthologyCard({ anthology }: { anthology: AnthologyRecord }) {
     return (
-        <Link href={`/anthologies/${anthology.slug}`} className="story-card card">
+        <PremiumCard className="h-full border-none shadow-md overflow-hidden bg-white hover:border-[#FA7D15]/20 transition-all p-0 flex flex-col" withHover>
+            <Link href={`/anthologies/${anthology.slug}`} className="story-card flex-grow relative group">
             {anthology.coverImagePath ? (
                 <div className="story-card-cover">
                     <img src={anthology.coverImagePath} alt="" loading="lazy" />
@@ -91,7 +95,8 @@ function AnthologyCard({ anthology }: { anthology: AnthologyRecord }) {
                     <span className="story-tag-chip-small">{anthology.pdfPageCount} pages</span>
                 </div>
             </div>
-        </Link>
+            </Link>
+        </PremiumCard>
     );
 }
 
@@ -217,12 +222,12 @@ export function StoryLibraryClient({ initialStories, initialTotal, initialAnthol
                     </p>
 
                     {stories.length === 0 ? (
-                        <div className="card" style={{ padding: "3rem", textAlign: "center" }}>
-                            <p style={{ fontSize: "1.1rem" }}>No stories match your search.</p>
-                            <p style={{ color: "var(--md-sys-color-on-surface-variant)" }}>
+                        <PremiumCard className="p-12 text-center bg-white">
+                            <p className="text-xl font-medium text-gray-900 mb-2">No stories match your search.</p>
+                            <p className="text-gray-500">
                                 Try adjusting your filters or search query.
                             </p>
-                        </div>
+                        </PremiumCard>
                     ) : (
                         <div className="story-library-grid">
                             {stories.map(story => (
@@ -250,9 +255,9 @@ export function StoryLibraryClient({ initialStories, initialTotal, initialAnthol
             ) : (
                 <>
                     {initialAnthologies.length === 0 ? (
-                        <div className="card" style={{ padding: "3rem", textAlign: "center" }}>
-                            <p style={{ fontSize: "1.1rem" }}>No anthologies published yet.</p>
-                        </div>
+                        <PremiumCard className="p-12 text-center bg-white">
+                            <p className="text-xl font-medium text-gray-900">No anthologies published yet.</p>
+                        </PremiumCard>
                     ) : (
                         <div className="story-library-grid">
                             {initialAnthologies.map(anth => (

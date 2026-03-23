@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { StoryReader } from "@/components/StoryReader";
 import { StoryFeedback } from "@/components/StoryFeedback";
 import { notFound } from "next/navigation";
+import { SectionWrapper } from "@/components/public/SectionWrapper";
+import { PremiumCard } from "@/components/public/PremiumCard";
+import { BookOpen, User, BookMarked, Eye } from "lucide-react";
 import {
     getStoryBySlugPostgres,
     getStoryRatingStatsPostgres,
@@ -62,176 +65,171 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
     };
 
     return (
-        <>
+        <div className="min-h-screen flex flex-col font-sans">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
             />
 
-            <section className="page-hero">
-                <div className="container">
-                    <nav className="impact-dash-breadcrumb" aria-label="Breadcrumb">
-                        <Link href="/stories">Story Library</Link>
-                        <span aria-hidden>›</span>
-                        <span>{story.title}</span>
-                    </nav>
-                    <p className="kicker">1001 Story Project</p>
-                    <h1>{story.title}</h1>
-                    {story.excerpt ? (
-                        <p style={{ maxWidth: "760px", margin: "0.75rem auto 0", fontSize: "1.05rem", color: "var(--md-sys-color-on-surface-variant)" }}>
-                            {story.excerpt}
-                        </p>
-                    ) : null}
-                    <div className="story-detail-meta" style={{ marginBottom: story.anthologySlug ? "1.5rem" : "0" }}>
-                        <span className="story-detail-author">{safeAuthorName}</span>
-                        <span className="story-detail-divider">•</span>
-                        <Link href={`/schools/${story.schoolId}`} className="story-detail-school">
-                            {story.schoolName}
-                        </Link>
-                        <span className="story-detail-divider">•</span>
-                        <span>{story.district}{story.subRegion ? `, ${story.subRegion}` : ""}</span>
-                        {story.grade && (
-                            <>
-                                <span className="story-detail-divider">•</span>
-                                <span>{story.grade}</span>
-                            </>
+            <main className="flex-grow pt-[72px] md:pt-20">
+                <section className="relative overflow-hidden bg-brand-background pt-16 pb-16 md:pt-24 md:pb-24 border-b border-gray-100">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#FA7D15]/5 via-brand-background to-brand-background pointer-events-none" />
+                    
+                    <div className="container mx-auto px-4 md:px-6 max-w-6xl relative z-10">
+                        <nav className="flex items-center gap-2 text-sm text-gray-500 font-medium mb-8" aria-label="Breadcrumb">
+                            <Link href="/stories" className="hover:text-[#FA7D15] transition-colors">Story Library</Link>
+                            <span aria-hidden>›</span>
+                            <span className="text-gray-900 truncate max-w-[200px] md:max-w-md">{story.title}</span>
+                        </nav>
+                        
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
+                            <BookOpen className="w-4 h-4" /> 1001 Story Project
+                        </div>
+                        
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+                            {story.title}
+                        </h1>
+                        
+                        {story.excerpt ? (
+                            <p className="text-xl text-gray-600 max-w-3xl leading-relaxed mb-6">
+                                {story.excerpt}
+                            </p>
+                        ) : null}
+                        
+                        <div className="flex flex-wrap items-center gap-3 text-gray-600 font-medium mb-10 text-lg">
+                            <span className="text-gray-900 font-bold">{safeAuthorName}</span>
+                            <span className="text-gray-300">•</span>
+                            <Link href={`/schools/${story.schoolId}`} className="hover:text-[#FA7D15] transition-colors">
+                                {story.schoolName}
+                            </Link>
+                            <span className="text-gray-300">•</span>
+                            <span>{story.district}{story.subRegion ? `, ${story.subRegion}` : ""}</span>
+                            {story.grade && (
+                                <>
+                                    <span className="text-gray-300">•</span>
+                                    <span>{story.grade}</span>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="inline-flex items-center gap-4 p-3 pr-6 rounded-2xl border border-gray-100 bg-white shadow-sm">
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-[#006b61] bg-[#006b61]/10">
+                                {safeAuthorName.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="text-left">
+                                <p className="m-0 font-bold text-gray-900 leading-tight">{safeAuthorName}</p>
+                                <p className="m-0 text-sm font-medium text-gray-500">
+                                    {story.grade || "Class not set"} • {story.schoolName}
+                                </p>
+                            </div>
+                        </div>
+
+                        {story.anthologySlug && (
+                            <div className="mt-8 flex items-center gap-4">
+                                <Link 
+                                    href={`/anthologies/${story.anthologySlug}#page=${story.pageStart}`} 
+                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#006b61] text-white font-bold hover:bg-[#006b61]/90 transition-colors shadow-md"
+                                >
+                                    <BookMarked className="w-5 h-5" /> Read original in PDF
+                                </Link>
+                            </div>
                         )}
                     </div>
-                    <div style={{
-                        display: "inline-grid",
-                        gridTemplateColumns: "40px 1fr",
-                        gap: "0.6rem",
-                        alignItems: "center",
-                        marginTop: "0.85rem",
-                        padding: "0.55rem 0.8rem",
-                        borderRadius: "12px",
-                        border: "1px solid var(--md-sys-color-outline-variant)",
-                        background: "var(--md-sys-color-surface)"
-                    }}>
-                        <div
-                            aria-hidden
-                            style={{
-                                width: "40px",
-                                height: "40px",
-                                borderRadius: "999px",
-                                display: "grid",
-                                placeItems: "center",
-                                fontWeight: 800,
-                                color: "var(--md-sys-color-primary)",
-                                background: "color-mix(in oklab, var(--md-sys-color-secondary), white 75%)"
-                            }}
-                        >
-                            {safeAuthorName.charAt(0).toUpperCase()}
-                        </div>
-                        <div style={{ textAlign: "left" }}>
-                            <p style={{ margin: 0, fontWeight: 700 }}>{safeAuthorName}</p>
-                            <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--md-sys-color-on-surface-variant)" }}>
-                                {story.grade || "Class not set"} • {story.schoolName}
-                            </p>
-                        </div>
-                    </div>
-                    <p style={{ margin: "0.5rem auto 0", maxWidth: "760px", fontSize: "0.82rem", color: "var(--md-sys-color-on-surface-variant)" }}>
-                        <em>
-                            Learner name, photo, age, and school details are published with written consent from the parent/guardian and the school.
-                        </em>
-                    </p>
+                </section>
 
-                    {story.anthologySlug && (
-                        <div>
-                            <Link href={`/anthologies/${story.anthologySlug}#page=${story.pageStart}`} className="button" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 1.2rem" }}>
-                                <span style={{ fontSize: "1.2rem" }}>📖</span>
-                                Read original in PDF format
-                            </Link>
-                        </div>
-                    )}
-                </div>
-            </section>
+                <SectionWrapper theme="light">
+                    <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12">
+                        
+                        <article className="flex-grow w-full lg:w-2/3">
+                            <div className="p-4 mb-8 bg-[#FA7D15]/5 border border-[#FA7D15]/10 rounded-xl text-sm text-gray-600 leading-relaxed italic">
+                                Disclaimer: This work is published with the explicit written consent of the author's guardian and school. Standard safeguarding policies apply.
+                            </div>
 
-            <section className="section">
-                <div className="container story-detail-layout">
-                    <article className="story-detail-content">
-                        <div style={{ padding: "0.5rem 1rem", marginBottom: "1rem", backgroundColor: "var(--md-sys-color-surface-variant)", borderRadius: "6px", fontSize: "0.85rem", color: "var(--md-sys-color-on-surface-variant)" }}>
-                            <em>Disclaimer: This work is published with the explicit written consent of the author's guardian and school. Standard safeguarding policies apply.</em>
-                        </div>
-
-                        {story.storyContentBlocks && story.storyContentBlocks.length > 0 ? (
-                            <StoryReader title={story.title} author={safeAuthorName} blocks={story.storyContentBlocks} />
-                        ) : story.contentText ? (
-                            <div className="card" style={{ padding: "2rem" }}>
-                                <div className="story-detail-body">
+                            {story.storyContentBlocks && story.storyContentBlocks.length > 0 ? (
+                                <div className="prose prose-lg text-gray-800 max-w-none">
+                                    <StoryReader title={story.title} author={safeAuthorName} blocks={story.storyContentBlocks} />
+                                </div>
+                            ) : story.contentText ? (
+                                <PremiumCard className="p-8 md:p-12 mb-8 bg-white border border-gray-100 shadow-sm leading-relaxed text-lg text-gray-800 space-y-6">
                                     {story.contentText.split("\n").map((para, i) => (
                                         <p key={i}>{para}</p>
                                     ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="card" style={{ padding: "2rem" }}>
-                                <p style={{ color: "var(--md-sys-color-on-surface-variant)", fontStyle: "italic" }}>
+                                </PremiumCard>
+                            ) : (
+                                <PremiumCard className="p-8 text-center text-gray-500 italic bg-white">
                                     Story content is available in the printed anthology.
-                                </p>
-                            </div>
-                        )}
+                                </PremiumCard>
+                            )}
 
-                        {story.tags.length > 0 && (
-                            <div className="story-detail-tags" style={{ marginTop: "2rem" }}>
-                                {story.tags.map(tag => (
-                                    <Link key={tag} href={`/stories?tag=${encodeURIComponent(tag)}`} className="story-tag-chip">
-                                        {tag}
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                        <StoryFeedback slug={story.slug} initialStats={ratingStats} initialComments={comments} />
-                    </article>
-
-                    <aside className="story-detail-sidebar">
-                        <div className="card" style={{ padding: "1.2rem" }}>
-                            <h3 style={{ marginTop: 0, fontSize: "1rem" }}>About this story</h3>
-                            <p style={{ fontSize: "0.9rem" }}>
-                                This story was written by <strong>{safeAuthorName}</strong> as part of the{" "}
-                                <Link href="/story-project" style={{ color: "var(--md-sys-color-secondary)", textDecoration: "underline" }}>1001 Story Project</Link>.
-                            </p>
-                            {story.authorAbout ? (
-                                <p style={{ fontSize: "0.85rem", color: "var(--md-sys-color-on-surface-variant)" }}>
-                                    {story.authorAbout}
-                                </p>
-                            ) : null}
-                            <p style={{ fontSize: "0.85rem", color: "var(--md-sys-color-on-surface-variant)" }}>
-                                {story.viewCount.toLocaleString()} {story.viewCount === 1 ? "view" : "views"}
-                            </p>
-                            <div className="action-row" style={{ marginTop: "0.8rem" }}>
-                                <Link href={`/schools/${story.schoolId}`} className="button button-ghost" style={{ fontSize: "0.85rem" }}>
-                                    View school profile
-                                </Link>
-                            </div>
-                        </div>
-
-                        {moreStories.length > 0 && (
-                            <div className="card" style={{ padding: "1.2rem", marginTop: "1rem" }}>
-                                <h3 style={{ marginTop: 0, fontSize: "1rem" }}>More from {story.schoolName}</h3>
-                                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                                    {moreStories.map(s => (
-                                        <li key={s.slug} style={{ marginBottom: "0.6rem" }}>
-                                            <Link href={`/stories/${s.slug}`} style={{ color: "var(--md-sys-color-secondary)", fontWeight: 600 }}>
-                                                {s.title}
-                                            </Link>
-                                            <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--md-sys-color-on-surface-variant)" }}>
-                                                {s.publicAuthorDisplay}
-                                            </p>
-                                        </li>
+                            {story.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-8 mb-12">
+                                    {story.tags.map(tag => (
+                                        <Link key={tag} href={`/stories?tag=${encodeURIComponent(tag)}`} className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors">
+                                            {tag}
+                                        </Link>
                                     ))}
-                                </ul>
-                                <Link
-                                    href={`/stories?schoolId=${story.schoolId}`}
-                                    style={{ fontSize: "0.85rem", color: "var(--md-sys-color-secondary)", fontWeight: 600 }}
+                                </div>
+                            )}
+                            
+                            <hr className="my-12 border-gray-100" />
+                            <StoryFeedback slug={story.slug} initialStats={ratingStats} initialComments={comments} />
+                        </article>
+
+                        <aside className="w-full lg:w-1/3 flex flex-col gap-8 shrink-0">
+                            <PremiumCard className="p-6 md:p-8 bg-white" withHover>
+                                <h3 className="font-extrabold text-xl text-gray-900 mb-4 flex items-center gap-2">
+                                    <User className="w-5 h-5 text-[#006b61]" /> About the Author
+                                </h3>
+                                <p className="text-gray-600 leading-relaxed mb-4">
+                                    This story was written by <strong>{safeAuthorName}</strong> as part of the{" "}
+                                    <Link href="/story-project" className="text-[#FA7D15] font-bold hover:underline">1001 Story Project</Link>.
+                                </p>
+                                {story.authorAbout ? (
+                                    <p className="text-sm text-gray-500 leading-relaxed italic border-l-2 border-[#006b61]/20 pl-4 mb-4">
+                                        "{story.authorAbout}"
+                                    </p>
+                                ) : null}
+                                <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-6 bg-gray-50 p-3 rounded-lg">
+                                    <Eye className="w-4 h-4 text-gray-400" /> {story.viewCount.toLocaleString()} {story.viewCount === 1 ? "view" : "views"}
+                                </div>
+                                <Link 
+                                    href={`/schools/${story.schoolId}`} 
+                                    className="block text-center w-full px-4 py-2.5 rounded-lg border-2 border-gray-200 text-gray-700 font-bold hover:border-[#006b61] hover:text-[#006b61] transition-colors"
                                 >
-                                    View all from this school →
+                                    View School Profile
                                 </Link>
-                            </div>
-                        )}
-                    </aside>
-                </div>
-            </section>
-        </>
+                            </PremiumCard>
+
+                            {moreStories.length > 0 && (
+                                <PremiumCard className="p-6 md:p-8 bg-white">
+                                    <h3 className="font-extrabold text-lg text-gray-900 mb-6 border-b border-gray-100 pb-4">
+                                        More from {story.schoolName}
+                                    </h3>
+                                    <div className="flex flex-col gap-5">
+                                        {moreStories.map(s => (
+                                            <Link key={s.slug} href={`/stories/${s.slug}`} className="group block">
+                                                <h4 className="font-bold text-gray-900 group-hover:text-[#FA7D15] transition-colors line-clamp-2 leading-tight mb-1">
+                                                    {s.title}
+                                                </h4>
+                                                <p className="text-sm text-gray-500 font-medium">
+                                                    {s.publicAuthorDisplay}
+                                                </p>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                    <Link
+                                        href={`/stories?schoolId=${story.schoolId}`}
+                                        className="inline-block mt-6 text-sm text-[#006b61] font-bold hover:text-[#006b61]/80 hover:underline"
+                                    >
+                                        View all from this school →
+                                    </Link>
+                                </PremiumCard>
+                            )}
+                        </aside>
+
+                    </div>
+                </SectionWrapper>
+            </main>
+        </div>
     );
 }

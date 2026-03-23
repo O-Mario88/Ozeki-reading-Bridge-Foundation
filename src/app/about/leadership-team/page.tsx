@@ -27,7 +27,7 @@ function ProfileCard({ profile }: { profile: Profile }) {
     .join("");
 
   return (
-    <PremiumCard className="flex flex-col h-full bg-white overflow-hidden p-0 rounded-3xl group" withHover hoverStyle="lift">
+    <PremiumCard className="flex flex-col h-full bg-white overflow-hidden p-0 rounded-3xl group" withHover>
       {/* Photo Header */}
       <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
         {profile.photoFileName ? (
