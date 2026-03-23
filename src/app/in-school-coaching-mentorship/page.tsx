@@ -1,9 +1,10 @@
 import Image from "next/image";
-import coachingPhoto from "../../../assets/photos/PXL_20260217_110739688.jpg";
+import coachingPhoto from "../../../public/photos/PXL_20260217_110739688.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { CheckCircle2 } from "lucide-react";
+import { VoicesFromTheClassroom } from "@/components/public/VoicesFromTheClassroom";
 
 export const metadata = {
   title: "In-School Coaching & Mentorship",
@@ -219,7 +220,9 @@ export default function InSchoolCoachingMentorshipPage() {
         </div>
       </SectionWrapper>
 
-      {/* 5. Bottom CTA Strip */}
+      {/* Voices from the Classroom */}
+      <VoicesFromTheClassroom />
+
       <CTAStrip 
         heading="Partner for Coaching Scale"
         subheading="Support coaching cycles that are tracked, verified, and directly linked to learner reading gains."

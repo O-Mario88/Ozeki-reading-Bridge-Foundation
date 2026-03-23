@@ -760,6 +760,7 @@ export function PortalBlogManager({
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: {

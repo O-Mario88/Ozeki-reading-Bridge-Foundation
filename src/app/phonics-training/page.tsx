@@ -1,10 +1,11 @@
 import Image from "next/image";
-import trainingPhoto from "../../../assets/photos/PXL_20260218_124648833.MP.jpg";
+import trainingPhoto from "../../../public/photos/PXL_20260218_124648833.MP.jpg";
 import { signatureProgram } from "@/lib/content";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { CheckCircle2, MessageCircleQuestion } from "lucide-react";
+import { VoicesFromTheClassroom } from "@/components/public/VoicesFromTheClassroom";
 
 export const metadata = {
   title: "Signature Program: Phonics Training & School Support",
@@ -276,7 +277,9 @@ export default function PhonicsTrainingPage() {
         </div>
       </SectionWrapper>
 
-      {/* 5. Bottom CTA Strip */}
+      {/* Voices from the Classroom */}
+      <VoicesFromTheClassroom />
+
       <CTAStrip 
         heading="Implement this program"
         subheading="Discuss a country, region, district, or school implementation package for this Signature Program with clear evidence deliverables."

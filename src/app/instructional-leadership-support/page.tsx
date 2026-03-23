@@ -1,9 +1,10 @@
 import Image from "next/image";
-import leadershipPhoto from "../../../assets/photos/PXL_20260217_124357146.jpg";
+import leadershipPhoto from "../../../public/photos/PXL_20260217_124357146.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { CheckCircle2 } from "lucide-react";
+import { VoicesFromTheClassroom } from "@/components/public/VoicesFromTheClassroom";
 
 export const metadata = {
   title: "Instructional Leadership Support (Headteachers & Directors of Studies)",
@@ -223,7 +224,9 @@ export default function InstructionalLeadershipSupportPage() {
         </div>
       </SectionWrapper>
 
-      {/* 4. Bottom CTA Strip */}
+      {/* Voices from the Classroom */}
+      <VoicesFromTheClassroom />
+
       <CTAStrip 
         heading="Support Leadership Strengthening"
         subheading="Partner to scale Headteacher and DOS instructional leadership systems that keep reading gains protected and sustained."

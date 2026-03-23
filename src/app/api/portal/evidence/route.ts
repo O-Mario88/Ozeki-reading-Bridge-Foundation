@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { listPortalEvidence, savePortalEvidence } from "@/services/dataService";
+import { listPortalEvidencePostgres, savePortalEvidencePostgres } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       recordId: searchParams.get("recordId") || undefined,
     });
 
-    const evidence = (await listPortalEvidence(filters, user)).map((item) => ({
+    const evidence = (await listPortalEvidencePostgres(filters, user)).map((item) => ({
       ...item,
       downloadUrl: `/api/portal/evidence/${item.id}/download`,
     }));
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     const bytes = Buffer.from(await file.arrayBuffer());
     await fs.writeFile(storedPath, bytes);
 
-    const evidence = await savePortalEvidence({
+    const evidence = await savePortalEvidencePostgres({
       recordId: meta.recordId,
       module: meta.module,
       date: meta.date,

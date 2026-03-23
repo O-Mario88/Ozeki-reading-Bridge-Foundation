@@ -1,9 +1,10 @@
 import Image from "next/image";
-import trainingPhoto from "../../../assets/photos/PXL_20260217_124455266.MP.jpg";
+import trainingPhoto from "../../../public/photos/PXL_20260217_124455266.MP.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { CheckCircle2 } from "lucide-react";
+import { VoicesFromTheClassroom } from "@/components/public/VoicesFromTheClassroom";
 
 export const metadata = {
   title: "Teacher Professional Development (Structured Phonics)",
@@ -204,7 +205,9 @@ export default function TeacherProfessionalDevelopmentPage() {
         </div>
       </SectionWrapper>
 
-      {/* 4. Bottom CTA Strip */}
+      {/* Voices from the Classroom */}
+      <VoicesFromTheClassroom />
+
       <CTAStrip 
         heading="Partner to Scale Teacher Quality"
         subheading="Fund structured teacher professional development with built-in follow-up, coaching linkage, and verified literacy outcomes."

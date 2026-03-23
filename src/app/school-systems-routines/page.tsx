@@ -1,9 +1,10 @@
 import Image from "next/image";
-import schoolSystemsPhoto from "../../../assets/photos/Amolatar District Literacy.jpg";
+import schoolSystemsPhoto from "../../../public/photos/Amolatar District Literacy.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { CheckCircle2, Download } from "lucide-react";
+import { VoicesFromTheClassroom } from "@/components/public/VoicesFromTheClassroom";
 
 export const metadata = {
   title: "School Literacy Program Strengthening (Systems & Routines)",
@@ -223,7 +224,9 @@ export default function SchoolSystemsRoutinesPage() {
         </div>
       </SectionWrapper>
 
-      {/* 5. Bottom CTA Strip */}
+      {/* Voices from the Classroom */}
+      <VoicesFromTheClassroom />
+
       <CTAStrip 
         heading="Book a setup visit"
         subheading="Establish literacy routines and accountability systems directly in your school."

@@ -1,9 +1,10 @@
 import Image from "next/image";
-import assessmentPhoto from "../../../assets/photos/PXL_20260218_133343618.jpg";
+import assessmentPhoto from "../../../public/photos/PXL_20260218_133343618.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { CheckCircle2 } from "lucide-react";
+import { VoicesFromTheClassroom } from "@/components/public/VoicesFromTheClassroom";
 
 export const metadata = {
   title: "Learner Assessments & Progress Tracking",
@@ -224,7 +225,9 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
         </div>
       </SectionWrapper>
 
-      {/* 5. Bottom CTA Strip */}
+      {/* Voices from the Classroom */}
+      <VoicesFromTheClassroom />
+
       <CTAStrip 
         heading="Launch an Assessment Cycle"
         subheading="Start a baseline-progress-endline cycle and convert results into targeted teaching, catch-up plans, and partner-ready reporting."

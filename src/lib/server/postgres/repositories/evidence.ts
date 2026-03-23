@@ -1,60 +1,103 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
-import type { PortalEvidenceRecord } from "@/lib/types";
 
-export { listPortalEvidencePostgres };
+export async function listPortalEvidencePostgres(filters?: any, user?: any): Promise<any[]> {
+    const params: any[] = [];
+    let query = `
+      SELECT 
+        id, 
+        record_id AS "recordId", 
+        module, 
+        date, 
+        school_name AS "schoolName", 
+        file_name AS "fileName", 
+        stored_path AS "storedPath", 
+        mime_type AS "mimeType", 
+        size_bytes AS "sizeBytes", 
+        uploaded_by_user_id AS "uploadedByUserId", 
+        created_at AS "createdAt"
+      FROM portal_evidence WHERE 1=1
+    `;
 
-async function listPortalEvidencePostgres(recordId: number): Promise<PortalEvidenceRecord[]>;
-async function listPortalEvidencePostgres(filters?: any): Promise<any[]>;
-async function listPortalEvidencePostgres(arg?: any): Promise<any[]> {
-  if (typeof arg === "number") {
+    if (filters?.module) {
+        params.push(filters.module);
+        query += ` AND module = $${params.length}`;
+    }
+    if (filters?.dateFrom) {
+        params.push(filters.dateFrom);
+        query += ` AND date >= $${params.length}`;
+    }
+    if (filters?.dateTo) {
+        params.push(filters.dateTo);
+        query += ` AND date <= $${params.length}`;
+    }
+    if (filters?.school) {
+        params.push(`%${filters.school}%`);
+        query += ` AND school_name ILIKE $${params.length}`;
+    }
+    if (filters?.recordId) {
+        params.push(filters.recordId);
+        query += ` AND record_id = $${params.length}`;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT 500`;
+
+    const result = await queryPostgres(query, params);
+    return result.rows;
+}
+
+export async function savePortalEvidencePostgres(input: any): Promise<any> {
     const result = await queryPostgres(
-      `
-      SELECT id, record_id AS "recordId", file_name AS "fileName", stored_path AS "storedPath", uploaded_at AS "uploadedAt"
-      FROM portal_evidence
-      WHERE record_id = $1
-      ORDER BY uploaded_at DESC
-      `,
-      [arg]
+        `
+        INSERT INTO portal_evidence (
+            record_id, module, date, school_name, file_name, stored_path, mime_type, size_bytes, uploaded_by_user_id, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        RETURNING 
+            id, 
+            record_id AS "recordId", 
+            module, 
+            date, 
+            school_name AS "schoolName", 
+            file_name AS "fileName", 
+            stored_path AS "storedPath", 
+            mime_type AS "mimeType", 
+            size_bytes AS "sizeBytes", 
+            uploaded_by_user_id AS "uploadedByUserId", 
+            created_at AS "createdAt"
+        `,
+        [
+            input.recordId || null,
+            input.module,
+            input.date,
+            input.schoolName,
+            input.fileName,
+            input.storedPath,
+            input.mimeType,
+            input.sizeBytes,
+            input.uploadedByUserId
+        ]
     );
-    return result.rows as unknown as PortalEvidenceRecord[];
-  }
-  
-  const filters = arg || {};
-  let query = `SELECT * FROM portal_evidence WHERE 1=1`;
-  const params: any[] = [];
-  if (filters.schoolId) {
-    params.push(filters.schoolId);
-    query += ` AND school_id = $${params.length}`;
-  }
-  query += ` ORDER BY created_at DESC`;
-  const result = await queryPostgres(query, params);
-  return result.rows;
-}
-
-export async function addPortalEvidencePostgres(recordId: number, fileName: string, storedPath: string): Promise<PortalEvidenceRecord> {
-  const result = await queryPostgres(
-    `
-    INSERT INTO portal_evidence (record_id, file_name, stored_path, uploaded_at)
-    VALUES ($1, $2, $3, NOW())
-    RETURNING id, record_id AS "recordId", file_name AS "fileName", stored_path AS "storedPath", uploaded_at AS "uploadedAt"
-    `,
-    [recordId, fileName, storedPath]
-  );
-  return result.rows[0] as unknown as PortalEvidenceRecord;
-}
-
-export async function getPortalEvidenceByIdPostgres(id: number): Promise<any> {
-    const result = await queryPostgres(`SELECT * FROM portal_evidence WHERE id = $1`, [id]);
     return result.rows[0];
 }
 
-
-export async function savePortalEvidencePostgres(input: any, userId: number): Promise<any> {
+export async function getPortalEvidenceByIdPostgres(id: number, user?: any): Promise<any> {
     const result = await queryPostgres(
-        `INSERT INTO portal_evidence (title, description, file_path, school_id, created_by_user_id)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, created_at AS "createdAt"`,
-        [input.title, input.description, input.filePath, input.schoolId, userId]
+        `
+        SELECT 
+            id, 
+            record_id AS "recordId", 
+            module, 
+            date, 
+            school_name AS "schoolName", 
+            file_name AS "fileName", 
+            stored_path AS "storedPath", 
+            mime_type AS "mimeType", 
+            size_bytes AS "sizeBytes", 
+            uploaded_by_user_id AS "uploadedByUserId", 
+            created_at AS "createdAt"
+        FROM portal_evidence 
+        WHERE id = $1
+        `,
+        [id]
     );
-    return { id: result.rows[0].id, ...input, createdAt: result.rows[0].createdAt };
+    return result.rows[0] || null;
 }

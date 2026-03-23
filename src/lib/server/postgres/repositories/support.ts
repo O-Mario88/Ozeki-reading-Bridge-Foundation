@@ -5,18 +5,18 @@ export async function createSupportRequestPostgres(input: SupportRequestInput, u
   const result = await queryPostgres(
     `
     INSERT INTO support_requests (
-      school_id, contact_name, contact_role, contact_info, urgency, message, status, created_by_user_id, created_at, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-    RETURNING id, school_id AS "schoolId", contact_name AS "contactName", contact_role AS "contactRole", contact_info AS "contactInfo", urgency, message, status, created_at AS "createdAt", updated_at AS "updatedAt"
+      school_id, contact_name, contact_role, contact_info, urgency, message, support_types, status, created_by_user_id, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+    RETURNING id, school_id AS "schoolId", contact_name AS "contactName", contact_role AS "contactRole", contact_info AS "contactInfo", urgency, message, support_types AS "supportTypes", status, created_at AS "createdAt", updated_at AS "updatedAt"
     `,
-    [input.schoolId, input.contactName, input.contactRole, input.contactInfo, input.urgency, input.message, "New", userId]
+    [input.schoolId || null, input.contactName, input.contactRole, input.contactInfo, input.urgency, input.message, JSON.stringify(input.supportTypes || []), "New", userId]
   );
   return result.rows[0] as unknown as SupportRequestRecord;
 }
 
 export async function listSupportRequestsPostgres(filters?: { schoolId?: number; createdByUserId?: number; }): Promise<SupportRequestRecord[]> {
   const params: (string | number)[] = [];
-  let query = `SELECT id, school_id AS "schoolId", contact_name AS "contactName", contact_role AS "contactRole", contact_info AS "contactInfo", urgency, message, status, created_by_user_id AS "createdByUserId", created_at AS "createdAt", updated_at AS "updatedAt" FROM support_requests`;
+  let query = `SELECT id, school_id AS "schoolId", contact_name AS "contactName", contact_role AS "contactRole", contact_info AS "contactInfo", urgency, message, support_types AS "supportTypes", status, created_by_user_id AS "createdByUserId", created_at AS "createdAt", updated_at AS "updatedAt" FROM support_requests`;
   
   const conditions: string[] = [];
   

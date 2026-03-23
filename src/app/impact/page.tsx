@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
 import { getImpactReportFilterFacetsAsync } from "@/services/dataService";
@@ -111,8 +112,21 @@ export default async function ImpactDashboardPage({
   return (
     <>
       {/* 1. Impact Hero */}
-      <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-primary/10 via-brand-background to-brand-background pointer-events-none" />
+      <section className="relative overflow-hidden pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
+        <div className="absolute inset-0 pointer-events-none">
+          <Image 
+            src="/photos/22.jpeg" 
+            alt="Literacy impact in action"
+            fill
+            sizes="100vw"
+            priority
+            quality={90} 
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-white/85 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-[var(--tw-colors-brand-background,#FAFAFA)]" />
+        </div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-primary/15 via-transparent to-transparent pointer-events-none" />
         <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center flex flex-col items-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-brand-primary font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
             <BarChart3 size={16} />

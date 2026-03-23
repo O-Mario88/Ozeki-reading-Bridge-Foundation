@@ -16,11 +16,10 @@ type PortalNavItem = {
 };
 
 const primaryNavItems: PortalNavItem[] = [
-  // Menu
   { href: "/portal/dashboard", label: "Dashboard", icon: "📊", roles: ["Staff", "Admin", "Accountant"], section: "menu" },
   { href: "/portal/national-intelligence", label: "Insights", icon: "💡", roles: ["Staff", "Admin", "Accountant"], section: "menu" },
   { href: "/portal/schools", label: "Schools", icon: "🏫", roles: ["Staff", "Admin", "Volunteer", "Accountant"], section: "menu" },
-  { href: "/portal/crm", label: "CRM", icon: "👥", roles: ["Staff", "Admin", "Accountant"], section: "menu" },
+  { href: "/portal/contacts", label: "CRM", icon: "👥", roles: ["Staff", "Admin", "Accountant"], section: "menu" },
   { href: "/portal/finance", label: "Finance", icon: "💰", roles: ["Accountant", "Admin"], section: "menu" },
 
   // Features

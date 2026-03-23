@@ -1,9 +1,10 @@
 import Image from "next/image";
-import readingMaterialsPhoto from "../../../assets/photos/PXL_20260217_110748302.jpg";
+import readingMaterialsPhoto from "../../../public/photos/PXL_20260217_110748302.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { CheckCircle2, Download } from "lucide-react";
+import { VoicesFromTheClassroom } from "@/components/public/VoicesFromTheClassroom";
 
 export const metadata = {
   title: "Reading Materials Development (Learners)",
@@ -193,7 +194,9 @@ export default function ReadingMaterialsDevelopmentPage() {
         </div>
       </SectionWrapper>
 
-      {/* 4. Bottom CTA Strip */}
+      {/* Voices from the Classroom */}
+      <VoicesFromTheClassroom />
+
       <CTAStrip 
         heading="Need more guidance?"
         subheading="Open school profiles for implementation support or visit the full resources page."

@@ -1,9 +1,10 @@
 import Image from "next/image";
-import remedialPhoto from "../../../assets/photos/PXL_20260217_124358059.jpg";
+import remedialPhoto from "../../../public/photos/PXL_20260217_124358059.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { CheckCircle2 } from "lucide-react";
+import { VoicesFromTheClassroom } from "@/components/public/VoicesFromTheClassroom";
 
 export const metadata = {
   title: "Remedial & Catch-Up Reading Interventions",
@@ -193,7 +194,9 @@ export default function RemedialCatchUpReadingInterventionsPage() {
         </div>
       </SectionWrapper>
 
-      {/* 4. Bottom CTA Strip */}
+      {/* Voices from the Classroom */}
+      <VoicesFromTheClassroom />
+
       <CTAStrip 
         heading="Support Catch-Up Expansion"
         subheading="Partner to scale structured catch-up cycles with verified learner movement, accountable delivery, and targeted coaching support."

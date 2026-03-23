@@ -67,10 +67,10 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-brand-primary font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
               Knowledge Hub
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6 max-w-3xl">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6 w-full">
               Inspiring tales of transformation
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-600 w-full leading-relaxed">
               Practical literacy stories, implementation guidance, and field insights from schools,
               coaches, and learning teams.
             </p>
@@ -113,7 +113,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
                           {featured.title}
                         </Link>
                       </h2>
-                      <p className="text-xl text-gray-600 leading-relaxed mb-8 max-w-3xl">
+                      <p className="text-xl text-gray-600 leading-relaxed mb-8 w-full">
                         {featured.excerpt}
                       </p>
                       

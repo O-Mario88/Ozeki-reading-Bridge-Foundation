@@ -447,17 +447,7 @@ export async function reviewSchoolGraduationAsync(..._args: unknown[]) {
 }
 
 // ── Evidence ─────────────────────────────────────────────────────────
-export async function savePortalEvidence(_input: unknown, _actor?: unknown) {
-    return { id: 0, storedPath: "", mimeType: "application/octet-stream", fileName: "unknown", module: "", date: "", schoolName: "", sizeBytes: 0, uploadedByUserId: 0, createdAt: "" };
-}
-
-export async function listPortalEvidence(_filters?: unknown, _extra?: unknown) {
-    return [] as Array<{ id: number; storedPath: string; mimeType: string; fileName: string; module: string; date: string; schoolName: string; sizeBytes: number; uploadedByUserId: number; createdAt: string }>;
-}
-
-export async function getPortalEvidenceById(_id: number, _extra?: unknown) {
-    return { id: 0, storedPath: "", mimeType: "application/octet-stream", fileName: "unknown", userId: 0, createdAt: "" };
-}
+// (Evidence functions are exported directly via wildcard from repositories/evidence.ts)
 
 // ── Stories ──────────────────────────────────────────────────────────
 export async function getStoryById(id: number) {

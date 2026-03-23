@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { getPortalEvidenceById } from "@/services/dataService";
+import { getPortalEvidenceByIdPostgres } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/portal-api";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
@@ -27,7 +27,7 @@ export async function GET(
   try {
     const params = await context.params;
     const id = toId(params.id);
-    const evidence = await getPortalEvidenceById(id, user);
+    const evidence = await getPortalEvidenceByIdPostgres(id);
     if (!evidence) {
       return NextResponse.json({ error: "Evidence not found." }, { status: 404 });
     }
