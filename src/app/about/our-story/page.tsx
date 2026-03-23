@@ -1,225 +1,165 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRightCircle, Compass, Lightbulb, LineChart } from "lucide-react";
-import { PageHero } from "@/components/PageHero";
-import styles from "./page.module.css";
+import { AlertTriangle, ArrowRightCircle, Compass, Lightbulb, LineChart, BookOpen } from "lucide-react";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SectionWrapper } from "@/components/public/SectionWrapper";
+import { PremiumCard } from "@/components/public/PremiumCard";
+import { CTAStrip } from "@/components/public/CTAStrip";
 
 export const metadata = {
-  title: "Our Story",
+  title: "Our Story | Ozeki Reading Bridge Foundation",
   description:
     "Understand the literacy problem in Uganda and how Ozeki's National Literacy Intelligence Platform turns evidence into sustained classroom improvement.",
 };
 
 export default function OurStoryPage() {
   return (
-    <>
-      <PageHero
-        kicker="About"
-        title="Our Story"
-        description="A clear national pathway from literacy challenge to measurable, school-level improvement."
-      />
+    <div className="min-h-screen flex flex-col font-sans">
+      <SiteHeader />
+      <main className="flex-grow pt-[72px] md:pt-20">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#006b61]/15 via-brand-background to-brand-background pointer-events-none" />
+          <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#006b61]/10 text-[#006b61] font-bold text-sm mb-6 shadow-sm border border-[#006b61]/20">
+              <BookOpen className="w-4 h-4" /> About Us
+            </div>
+            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
+              Our Story
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-medium">
+              A clear national pathway from literacy challenge to measurable, school-level improvement.
+            </p>
+          </div>
+        </section>
 
-      <section className={`section ${styles.problemSection}`}>
-        <div className="container">
-          <article className={`card ${styles.problemSurface}`}>
-            <div className={styles.sectionHeader}>
-              <span className={styles.iconWrap} aria-hidden>
-                <AlertTriangle size={18} />
-              </span>
-              <h2>The Problem We Are Solving</h2>
+        {/* The Problem Section */}
+        <SectionWrapper theme="light" id="problem">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
+              <div className="w-12 h-12 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] flex items-center justify-center">
+                <AlertTriangle size={24} />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">The Problem We Are Solving</h2>
             </div>
 
-            <p>
-              Across Uganda, too many children are still moving through school without mastering
-              the foundational skill that unlocks all other learning: reading. National evidence
-              shows progress in access to education, but foundational literacy remains far too
-              weak for many learners. The 2024 National Population and Housing Census reports a
-              national literacy rate of about 74 percent, meaning a substantial share of Ugandans
-              still lack basic literacy skills, even as Uganda remains a very young country with
-              heavy pressure on the school system. Uwezo's national learning assessments also show
-              that many children are not reaching expected reading levels early enough, and that
-              foundational learning losses worsened around and after the COVID period. Their
-              evidence has shown large proportions of children remaining at non-reader or very
-              early reader levels, especially among younger age groups, which signals that too many
-              learners are entering upper primary without strong reading foundations.
-            </p>
-
-            <p>
-              This is not only a learner problem; it is a system problem. Many schools still lack
-              the conditions needed for consistent early grade reading instruction: enough teaching
-              and learning materials, sustained teacher support, and system-wide commitment to
-              foundational literacy. When foundational reading is weak, children struggle in every
-              subject because they cannot access written instruction, complete independent tasks, or
-              understand grade-level texts. As a result, progression through school can mask deep
-              learning gaps, creating a cycle where enrolment exists, but real learning remains
-              fragile.
-            </p>
-
-            <p className={styles.pullQuote}>
-              "Reading is the gateway skill&mdash;without it, every other subject becomes harder."
-            </p>
-
-            <p>
-              The challenge is even sharper in communities that have faced long periods of
-              disruption. Northern Uganda remains an important example of how conflict can reset
-              education systems for a generation. Years of insecurity, displacement, and life in
-              IDP camps disrupted attendance, weakened teacher availability, damaged learning
-              environments, and reduced reliable access to schooling. Even after the conflict
-              receded, the effects did not disappear automatically. Schools continued rebuilding
-              with limited materials, large classes, and uneven instructional support, which meant
-              that many children were returning to classrooms that could not consistently deliver
-              strong early reading instruction. That history matters because foundational literacy
-              depends on routine, repetition, and protected instructional time; when those are
-              broken for long periods, recovery requires more than reopening schools. It requires
-              structured teaching, follow-up, and measurement.
-            </p>
-
-            <p>
-              Uganda's own early grade reading evidence shows why structured support matters.
-              Practical fluency benchmarks such as 20, 40, and 60 correct words per minute have
-              been used to track whether learners are moving from basic decoding into stronger
-              reading fluency. Those findings show that when schools receive structured reading
-              support, learners are much more likely to move into stronger fluency bands. This
-              matters because it shows the problem is not permanent. Children can improve, teachers
-              can improve, and systems can recover-but only when support is practical,
-              classroom-focused, and sustained over time.
-            </p>
-
-            <p>
-              The deeper problem, therefore, is not just low reading scores. It is the absence of a
-              strong, connected literacy improvement system that can do five things well: identify
-              where learners are struggling, support teachers with effective methods, follow up
-              implementation in real classrooms, verify whether results are improving, and direct
-              help where the need is greatest. Too often, literacy initiatives are judged by
-              activities completed rather than learning changed. Trainings are counted, materials
-              are distributed, and visits are made, but schools, districts, and partners are still
-              left asking the most important questions: Are children reading better? Which schools
-              are improving? Which teachers still need support? Which districts require
-              remediation? What should happen next?
-            </p>
-
-            <p className={styles.transitionLine}>
-              Uganda does not only need more literacy activities. It needs a connected system that
-              turns evidence into action.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section className={`section ${styles.solutionSection}`}>
-        <div className="container">
-          <article className={`card ${styles.solutionSurface}`}>
-            <div className={styles.sectionHeader}>
-              <span className={styles.iconWrap} aria-hidden>
-                <Lightbulb size={18} />
-              </span>
-              <h2>Our Solution</h2>
-            </div>
-
-            <p>
-              Ozeki's solution is built on a simple but powerful conviction: Uganda's literacy
-              challenge will not be solved by isolated activities alone. It will be solved by a
-              connected system that helps schools teach reading better, measure progress
-              accurately, identify where support is most needed, and sustain improvement over time.
-              That is the purpose of the National Literacy Intelligence Platform (NLIP).
-            </p>
-
-            <p>
-              NLIP is not just a dashboard, and it is not only a training program. It is an
-              integrated literacy improvement system that connects teacher professional
-              development, in-school coaching, learner assessments, instructional leadership
-              support, remedial intervention, resource distribution, writing culture, and reporting
-              into one evidence-driven cycle. The platform is designed to work at every level of
-              the education system-school, district, sub-region, region, and national-so that
-              literacy support is not random or one-size-fits-all, but targeted, measurable, and
-              accountable.
-            </p>
-
-            <p className={styles.highlightLine}>
-              NLIP turns literacy data into action&mdash;school by school, district by district.
-            </p>
-
-            <div className={styles.loopStrip}>
-              <span><Compass size={15} aria-hidden /> Train teachers</span>
-              <span><ArrowRightCircle size={15} aria-hidden /> Support implementation</span>
-              <span><LineChart size={15} aria-hidden /> Assess and analyze</span>
-              <span><ArrowRightCircle size={15} aria-hidden /> Target intervention</span>
-              <span><Compass size={15} aria-hidden /> Track and sustain gains</span>
-            </div>
-
-            <p>
-              At its core, the solution works through a clear improvement loop: train teachers -
-              support implementation - assess learners - analyze results - target intervention -
-              track progress - sustain gains. This means schools are not left with knowledge
-              alone; they are supported until reading instruction improves and learner performance
-              begins to move.
-            </p>
-
-            <p>
-              The first part of the solution is practical, demonstration-based teacher training in
-              structured phonics. Teachers are equipped to teach reading step by step, with clear
-              routines for sound teaching, blending and segmenting, decoding, fluency, and
-              comprehension. But the work does not stop at training. Ozeki coaches then visit
-              schools to observe real lessons, provide immediate feedback, model routines where
-              needed, and support teachers and leaders through structured coaching cycles and
-              follow-up visits.
-            </p>
-
-            <p>
-              At the same time, learner assessments and progress tracking ensure that schools can
-              see what children can actually do. The platform automatically translates scores into
-              clear reading levels and domain profiles, helping teachers identify where learners
-              are stuck and what type of support is needed. Where results show weak performance,
-              NLIP triggers remedial and catch-up support. Where schools are improving, the
-              platform shifts recommendations toward sustaining routines and moving toward
-              graduation readiness.
-            </p>
-
-            <p>
-              Instructional leadership support strengthens headteachers and Directors of Studies to
-              protect reading time, supervise implementation, and use learner data for decisions.
-              Teaching aids and instructional resources make it easier for teachers to apply what
-              they learn consistently. The 1001 Story Project reinforces literacy by helping
-              learners write, revise, read aloud, and publish their own stories-building reading
-              culture, learner confidence, and locally relevant materials.
-            </p>
-
-            <p>
-              Finally, NLIP makes all of this visible and accountable. It produces school,
-              district, regional, and national reports that combine training data, coaching
-              evidence, learner outcomes, reading levels, and teaching quality into clear,
-              partner-ready reporting. This allows schools, government stakeholders, and donors to
-              move from broad intentions to precise action: where to coach more, where to
-              remediate, where to strengthen leadership, and where schools are ready to sustain
-              progress with less support.
-            </p>
-
-            <p>
-              In short, Ozeki's solution is not a set of disconnected projects. It is a national
-              literacy improvement system that trains, supports, measures, responds, and verifies
-              until strong reading instruction becomes normal classroom practice and children read
-              with confidence.
-            </p>
-          </article>
-
-          <article className={`card ${styles.ctaBand}`}>
-            <div className={styles.ctaCopy}>
-              <h3>From evidence to national literacy progress</h3>
+            <div className="space-y-6 text-gray-600 text-lg leading-relaxed">
               <p>
-                Explore verified outcomes, implementation trends, and program pathways across
-                Uganda.
+                Across Uganda, too many children are still moving through school without mastering
+                the foundational skill that unlocks all other learning: reading. National evidence
+                shows progress in access to education, but foundational literacy remains far too
+                weak for many learners. The 2024 National Population and Housing Census reports a
+                national literacy rate of about 74 percent, meaning a substantial share of Ugandans
+                still lack basic literacy skills, even as Uganda remains a very young country with
+                heavy pressure on the school system.
+              </p>
+
+              <blockquote className="my-10 pl-6 border-l-4 border-[#006b61] bg-[#006b61]/5 py-4 pr-6 rounded-r-2xl text-xl font-medium italic text-[#006b61] shadow-sm">
+                "Reading is the gateway skill&mdash;without it, every other subject becomes harder."
+              </blockquote>
+
+              <p>
+                This is not only a learner problem; it is a system problem. Many schools still lack
+                the conditions needed for consistent early grade reading instruction: enough teaching
+                and learning materials, sustained teacher support, and system-wide commitment to
+                foundational literacy. When foundational reading is weak, children struggle in every
+                subject because they cannot access written instruction, complete independent tasks, or
+                understand grade-level texts. Unaddressed progression through school masks deep learning gaps.
+              </p>
+
+              <p>
+                The challenge is even sharper in communities that have faced long periods of
+                disruption. Northern Uganda remains an important example of how conflict can reset
+                education systems for a generation. Years of insecurity and displacement severely weakened 
+                teacher availability and damaged learning environments. Recovery requires more than 
+                reopening schools. It requires structured teaching, rigorous follow-up, and localized measurement.
+              </p>
+
+              <div className="bg-gray-50 p-8 rounded-3xl border border-gray-200 my-10">
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Evidence-led Action</h3>
+                <p>
+                  Uganda's own early grade reading evidence shows why structured support matters.
+                  Practical fluency benchmarks (20, 40, and 60 correct words per minute) track whether 
+                  learners are moving from basic decoding into stronger reading fluency. Our data proves that 
+                  when schools receive structured reading support, learners predictably transition into stronger fluency bands.
+                </p>
+              </div>
+
+              <p>
+                The deeper problem is the absence of a strong, connected literacy improvement system that can perform five pivotal sequences: 
+                <strong className="text-gray-900"> identify where learners are struggling, support teachers, follow up in classrooms, verify results, and direct resources dynamically.</strong>
               </p>
             </div>
-            <div className={`action-row ${styles.ctaRow}`}>
-              <Link className="button button-compact" href="/impact">
-                View Live Impact Dashboard
-              </Link>
-              <Link className="button button-ghost button-compact" href="/programs">
-                Explore Our Programs
-              </Link>
+          </div>
+        </SectionWrapper>
+
+        {/* The Solution Section */}
+        <SectionWrapper theme="off-white" id="solution">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
+              <div className="w-12 h-12 rounded-full bg-[#006b61]/10 text-[#006b61] flex items-center justify-center">
+                <Lightbulb size={24} />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Our Connected Solution</h2>
             </div>
-          </article>
-        </div>
-      </section>
-    </>
+
+            <div className="space-y-6 text-gray-600 text-lg leading-relaxed mb-12">
+              <p>
+                Ozeki's solution is built on a simple conviction: Uganda's literacy challenge will not be solved 
+                by isolated activities. It will be solved by a connected system. That is the purpose of the <strong>National Literacy Intelligence Platform (NLIP)</strong>.
+              </p>
+            </div>
+
+            <PremiumCard className="bg-white border-2 border-[#006b61]/10 p-8 md:p-12 text-center mb-12 shadow-md">
+              <h3 className="text-2xl font-extrabold text-[#006b61] mb-8">The Evidence-Driven Improvement Cycle</h3>
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm font-bold text-gray-800 uppercase tracking-widest">
+                <div className="flex flex-col items-center"><Compass className="w-8 h-8 text-[#FA7D15] mb-2" /> Train</div>
+                <ArrowRightCircle className="w-5 h-5 text-gray-300 hidden md:block" />
+                <div className="flex flex-col items-center"><Lightbulb className="w-8 h-8 text-[#006b61] mb-2" /> Support</div>
+                <ArrowRightCircle className="w-5 h-5 text-gray-300 hidden md:block" />
+                <div className="flex flex-col items-center"><LineChart className="w-8 h-8 text-[#FA7D15] mb-2" /> Analyze</div>
+                <ArrowRightCircle className="w-5 h-5 text-gray-300 hidden md:block" />
+                <div className="flex flex-col items-center"><Compass className="w-8 h-8 text-[#006b61] mb-2" /> Sustain</div>
+              </div>
+            </PremiumCard>
+
+            <div className="space-y-6 text-gray-600 text-lg leading-relaxed">
+              <p>
+                At its core, the solution works through a clear improvement loop: schools are not left with knowledge alone; 
+                they are heavily supported until foundational reading instruction permanently transforms learner outcomes.
+              </p>
+              <p>
+                The first step is practical, demonstration-based teacher training in structured phonics. Teachers are equipped 
+                to teach reading step by step. Ozeki coaches then routinely visit schools to observe real lessons, provide 
+                immediate feedback, model routines, and support teachers through structured coaching cycles.
+              </p>
+              <p>
+                As learner assessments accumulate in our platform, it automatically translates raw scores into clear reading levels 
+                and domain profiles. NLIP instantly triggers remedial actions for weak performance zones or scales back intervention 
+                for rapidly graduating classrooms. 
+              </p>
+              <p>
+                NLIP makes all of this unconditionally accountable. It produces live district and national impact reports that consolidate 
+                training data, coaching evidence, learner outcomes, and reading progression into actionable intelligence for global partners.
+              </p>
+            </div>
+          </div>
+        </SectionWrapper>
+
+        <CTAStrip 
+          heading="From evidence to national progress"
+          subheading="Explore verified outcomes, implementation trends, and program pathways operating across Uganda."
+          primaryButtonText="View Live Dashboard"
+          primaryButtonHref="/impact"
+          primaryButtonColor="bg-[#006b61]"
+          primaryButtonHoverColor="hover:bg-[#006b61]/90"
+          secondaryButtonText="Explore Our Programs"
+          secondaryButtonHref="/programs"
+          theme="light"
+        />
+
+      </main>
+      <SiteFooter />
+    </div>
   );
 }
