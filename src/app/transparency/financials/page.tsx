@@ -4,8 +4,6 @@ import {
   BookOpen, Users, Building, Activity, LineChart, Download, 
   CheckCircle, Shield, FileCheck, ArrowRight, BookText, ClipboardCheck
 } from "lucide-react";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
@@ -65,10 +63,7 @@ export default async function FinancialTransparencyPage() {
   const fnSnapshots = snapshots.filter(s => s.snapshotType === "fy");
 
   return (
-    <div className="min-h-screen flex flex-col font-sans">
-      <SiteHeader />
-
-      <main className="flex-grow pt-[72px] md:pt-20">
+    <div className="pt-[72px] md:pt-20">
         
         {/* 1. Hero Section */}
         <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-32">
@@ -385,16 +380,11 @@ export default async function FinancialTransparencyPage() {
           secondaryButtonHref="#reports"
         />
 
-      </main>
-
-      {/* 11. Optional Footer Note */}
       <div className="bg-gray-100 py-6 text-center border-t border-gray-200">
         <p className="text-sm text-gray-500 max-w-4xl mx-auto px-4">
           Ozeki is committed to the responsible stewardship of resources in support of literacy, education, and community impact. Information shared on this page may be updated as reporting cycles and system improvements continue.
         </p>
       </div>
-
-      <SiteFooter />
     </div>
   );
 }

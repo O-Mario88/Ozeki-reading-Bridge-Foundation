@@ -1,7 +1,4 @@
-import Link from "next/link";
 import { AlertTriangle, ArrowRightCircle, Compass, Lightbulb, LineChart, BookOpen } from "lucide-react";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
@@ -14,9 +11,7 @@ export const metadata = {
 
 export default function OurStoryPage() {
   return (
-    <div className="min-h-screen flex flex-col font-sans">
-      <SiteHeader />
-      <main className="flex-grow pt-[72px] md:pt-20">
+    <div className="pt-[72px] md:pt-20">
         {/* Hero Section */}
         <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#006b61]/15 via-brand-background to-brand-background pointer-events-none" />
@@ -157,9 +152,6 @@ export default function OurStoryPage() {
           secondaryButtonHref="/programs"
           theme="light"
         />
-
-      </main>
-      <SiteFooter />
     </div>
   );
 }
