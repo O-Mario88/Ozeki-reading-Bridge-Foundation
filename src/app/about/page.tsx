@@ -60,8 +60,8 @@ export default async function AboutPage() {
               </a>
             </li>
             <li>
-              <Link href="/financials-impact-reports" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
-                Financials & Reports
+              <Link href="/transparency/financials" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+                Financial Transparency
               </Link>
             </li>
             <li>
