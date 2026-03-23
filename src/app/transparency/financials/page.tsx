@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
+import { PublicReportDownloader } from "@/components/public/PublicReportDownloader";
 import type { FinanceCurrency, FinancePublicSnapshotRecord, FinanceAuditedStatementRecord } from "@/lib/types";
 
 import { queryPostgres } from "@/lib/server/postgres/client";
@@ -254,16 +255,14 @@ export default async function FinancialTransparencyPage() {
               </h3>
               
               {fnSnapshots.length === 0 ? (
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col w-full">
-                  <select className="w-full p-3 mb-4 rounded-xl border border-gray-300 bg-gray-50 text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#00155F]/20">
-                    <option>FY 2024 Financial Summary</option>
-                    <option>FY 2023 Financial Summary</option>
-                    <option>FY 2022 Financial Summary</option>
-                  </select>
-                  <button className="w-full px-6 py-3 rounded-xl bg-[#00155F] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#00155F]/90 transition-colors">
-                    <Download className="w-5 h-5" /> Download Report
-                  </button>
-                </div>
+                <PublicReportDownloader 
+                  type="summary"
+                  options={[
+                    { label: "FY 2024 Financial Summary", value: "2024" },
+                    { label: "FY 2023 Financial Summary", value: "2023" },
+                    { label: "FY 2022 Financial Summary", value: "2022" }
+                  ]}
+                />
               ) : (
                 <div className="space-y-4">
                   {fnSnapshots.map(s => (
@@ -292,16 +291,14 @@ export default async function FinancialTransparencyPage() {
               </h3>
               
               {audited.length === 0 ? (
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col w-full">
-                  <select className="w-full p-3 mb-4 rounded-xl border border-gray-300 bg-gray-50 text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#00155F]/20">
-                    <option>2023 Audited Financials</option>
-                    <option>2022 Audited Financials</option>
-                    <option>2021 Audited Financials</option>
-                  </select>
-                  <button className="w-full px-6 py-3 rounded-xl bg-[#00155F] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#00155F]/90 transition-colors">
-                    <Download className="w-5 h-5" /> Download Statement
-                  </button>
-                </div>
+                <PublicReportDownloader 
+                  type="audit"
+                  options={[
+                    { label: "2023 Audited Financials", value: "2023" },
+                    { label: "2022 Audited Financials", value: "2022" },
+                    { label: "2021 Audited Financials", value: "2021" }
+                  ]}
+                />
               ) : (
                 <div className="space-y-4">
                   {audited.map(a => (
