@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { EditorialArticleLayout } from "@/components/blog/EditorialArticleLayout";
-import { blogPoppins } from "@/components/blog/blog-font";
 import {
   getMergedPublishedBlogPostBySlugAsync,
   getMergedPublishedBlogPostsAsync,
@@ -56,9 +55,5 @@ export default async function BlogPostPage({ params }: { params: Params }) {
     notFound();
   }
 
-  return (
-    <div className={`${blogPoppins.className} ${blogPoppins.variable}`}>
-      <EditorialArticleLayout post={post} allPosts={allPosts} />
-    </div>
-  );
+  return <EditorialArticleLayout post={post} allPosts={allPosts} />;
 }

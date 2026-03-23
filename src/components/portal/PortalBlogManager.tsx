@@ -12,12 +12,8 @@ import { sanitizeInlineRichText, stripHtmlTags } from "@/lib/rich-text";
 import type {
   BlogArticleType,
   BlogBodyBlock,
-  BlogHeaderLayoutType,
-  BlogHeroTextAlignment,
-  BlogOverlayStrength,
   BlogPost,
   BlogPostSection,
-  BlogSpotlightMode,
   PortalBlogPostRecord,
   PortalUser,
 } from "@/lib/types";
@@ -40,42 +36,21 @@ type FormState = {
   secondaryCategoriesCsv: string;
   authorName: string;
   authorRole: string;
-  authorAvatarUrl: string;
   authorBio: string;
   publishDate: string;
   readTimeOverrideMinutes: string;
   articleType: BlogArticleType;
-  headerLayoutType: BlogHeaderLayoutType;
   featuredImageUrl: string;
   featuredImageAlt: string;
   featuredImageCaption: string;
   featuredImageCredit: string;
   sidebarThumbnailUrl: string;
-  overlayStrength: BlogOverlayStrength;
-  heroTextAlignment: BlogHeroTextAlignment;
-  showOverlayMetadata: boolean;
-  showOverlayShareIcons: boolean;
-  tocEnabled: boolean;
   bodyBlocks: BlogBodyBlock[];
-  spotlightMode: BlogSpotlightMode;
-  spotlightArticleSlugs: string[];
-  showSpotlightSidebar: boolean;
-  showCategoryExplorer: boolean;
-  showNewsletterBlock: boolean;
-  ctaEnabled: boolean;
-  ctaPillLabel: string;
-  ctaHeadline: string;
-  ctaText: string;
-  ctaButtonLabel: string;
-  ctaButtonLink: string;
-  ctaGradientPreset: "preset-1" | "preset-2" | "preset-3";
   seoTitle: string;
   metaDescription: string;
   socialImageUrl: string;
   canonicalUrl: string;
   tagsCsv: string;
-  featuredFlag: boolean;
-  allowComments: boolean;
   workflowStatus: WorkflowStatus;
 };
 
@@ -88,11 +63,7 @@ const ARTICLE_TYPE_OPTIONS: BlogArticleType[] = [
   "Report Summary",
 ];
 
-const HEADER_LAYOUT_OPTIONS: Array<{ value: BlogHeaderLayoutType; label: string }> = [
-  { value: "standard", label: "Standard Editorial" },
-  { value: "overlay", label: "Overlay Hero" },
-  { value: "minimal", label: "Minimal Editorial" },
-];
+
 
 function slugify(value: string) {
   return value
@@ -644,44 +615,21 @@ function toFormState(post: PortalBlogPostRecord): FormState {
     secondaryCategoriesCsv: toCsv(post.secondaryCategories),
     authorName: post.author,
     authorRole: post.role,
-    authorAvatarUrl: post.authorAvatarUrl ?? "",
     authorBio: post.authorBio ?? "",
     publishDate: toDateInputValue(post.publishedAt),
     readTimeOverrideMinutes: post.readTimeMinutes ? String(post.readTimeMinutes) : "",
     articleType: post.articleType || "Blog Post",
-    headerLayoutType: post.headerLayoutType || "standard",
     featuredImageUrl: post.featuredImageUrl || "",
     featuredImageAlt: post.featuredImageAlt || "",
     featuredImageCaption: post.featuredImageCaption || "",
     featuredImageCredit: post.featuredImageCredit || "",
     sidebarThumbnailUrl: post.mediaImageUrl || "",
-    overlayStrength: post.overlayStrength || "medium",
-    heroTextAlignment: post.heroTextAlignment || "left",
-    showOverlayMetadata: post.showOverlayMetadata !== false,
-    showOverlayShareIcons: post.showOverlayShareIcons !== false,
-    tocEnabled: post.tocEnabled !== false,
     bodyBlocks: blocks,
-    spotlightMode: post.spotlightMode || "auto",
-    spotlightArticleSlugs: post.spotlightArticleSlugs ?? [],
-    showSpotlightSidebar: post.showSpotlightSidebar !== false,
-    showCategoryExplorer: post.showCategoryExplorer !== false,
-    showNewsletterBlock: post.showNewsletterBlock === true,
-    ctaEnabled: post.ctaCard?.enabled === true,
-    ctaPillLabel: post.ctaCard?.pillLabel || "Explore Resources",
-    ctaHeadline: post.ctaCard?.headline || "Follow the Literacy Journey",
-    ctaText:
-      post.ctaCard?.text
-      || "Discover practical literacy tools, implementation notes, and stories from the field.",
-    ctaButtonLabel: post.ctaCard?.buttonLabel || "Explore",
-    ctaButtonLink: post.ctaCard?.buttonLink || "/resources",
-    ctaGradientPreset: post.ctaCard?.gradientPreset || "preset-1",
     seoTitle: post.seoTitle || "",
     metaDescription: post.metaDescription || "",
     socialImageUrl: post.socialImageUrl || "",
     canonicalUrl: post.canonicalUrl || "",
     tagsCsv: toCsv(post.tags),
-    featuredFlag: post.featuredFlag === true,
-    allowComments: post.allowComments === true,
     workflowStatus: toWorkflowStatus(post),
   };
 }
@@ -702,7 +650,6 @@ function toPreviewPost(form: FormState, autoReadMinutes: number): BlogPost {
     secondaryCategories: parseCsv(form.secondaryCategoriesCsv),
     author: form.authorName || "Editorial Team",
     role: form.authorRole || "Program Team",
-    authorAvatarUrl: form.authorAvatarUrl.trim() || undefined,
     authorBio: form.authorBio.trim() || undefined,
     publishedAt: publishIso,
     readTime: `${readTimeMinutes} min read`,
@@ -711,36 +658,14 @@ function toPreviewPost(form: FormState, autoReadMinutes: number): BlogPost {
     bodyBlocks: form.bodyBlocks,
     mediaImageUrl: form.sidebarThumbnailUrl.trim() || null,
     articleType: form.articleType,
-    headerLayoutType: form.headerLayoutType,
     featuredImageUrl: form.featuredImageUrl.trim() || null,
     featuredImageAlt: form.featuredImageAlt.trim() || null,
     featuredImageCaption: form.featuredImageCaption.trim() || null,
     featuredImageCredit: form.featuredImageCredit.trim() || null,
-    overlayStrength: form.overlayStrength,
-    heroTextAlignment: form.heroTextAlignment,
-    showOverlayMetadata: form.showOverlayMetadata,
-    showOverlayShareIcons: form.showOverlayShareIcons,
-    tocEnabled: form.tocEnabled,
-    spotlightMode: form.spotlightMode,
-    spotlightArticleSlugs: form.spotlightArticleSlugs,
-    showSpotlightSidebar: form.showSpotlightSidebar,
-    showCategoryExplorer: form.showCategoryExplorer,
-    showNewsletterBlock: form.showNewsletterBlock,
-    ctaCard: {
-      enabled: form.ctaEnabled,
-      pillLabel: form.ctaPillLabel,
-      headline: form.ctaHeadline,
-      text: form.ctaText,
-      buttonLabel: form.ctaButtonLabel,
-      buttonLink: form.ctaButtonLink,
-      gradientPreset: form.ctaGradientPreset,
-    },
     seoTitle: form.seoTitle.trim() || null,
     metaDescription: form.metaDescription.trim() || null,
     socialImageUrl: form.socialImageUrl.trim() || null,
     canonicalUrl: form.canonicalUrl.trim() || null,
-    featuredFlag: form.featuredFlag,
-    allowComments: form.allowComments,
     source: "portal",
     views: 0,
   };
@@ -764,30 +689,15 @@ function toBlogPost(record: PortalBlogPostRecord): BlogPost {
     bodyBlocks: record.bodyBlocks,
     mediaImageUrl: record.mediaImageUrl,
     articleType: record.articleType,
-    headerLayoutType: record.headerLayoutType,
     featuredImageUrl: record.featuredImageUrl,
     featuredImageAlt: record.featuredImageAlt,
     featuredImageCaption: record.featuredImageCaption,
     featuredImageCredit: record.featuredImageCredit,
-    overlayStrength: record.overlayStrength,
-    heroTextAlignment: record.heroTextAlignment,
-    showOverlayMetadata: record.showOverlayMetadata,
-    showOverlayShareIcons: record.showOverlayShareIcons,
-    authorAvatarUrl: record.authorAvatarUrl,
     authorBio: record.authorBio,
-    tocEnabled: record.tocEnabled,
-    spotlightMode: record.spotlightMode,
-    spotlightArticleSlugs: record.spotlightArticleSlugs,
-    showSpotlightSidebar: record.showSpotlightSidebar,
-    showCategoryExplorer: record.showCategoryExplorer,
-    showNewsletterBlock: record.showNewsletterBlock,
-    ctaCard: record.ctaCard,
     seoTitle: record.seoTitle,
     metaDescription: record.metaDescription,
     socialImageUrl: record.socialImageUrl,
     canonicalUrl: record.canonicalUrl,
-    featuredFlag: record.featuredFlag,
-    allowComments: record.allowComments,
     source: "portal",
     views: 0,
   };
@@ -803,42 +713,21 @@ const INITIAL_FORM: FormState = {
   secondaryCategoriesCsv: "",
   authorName: "",
   authorRole: "",
-  authorAvatarUrl: "",
   authorBio: "",
   publishDate: new Date().toISOString().slice(0, 10),
   readTimeOverrideMinutes: "",
   articleType: "Blog Post",
-  headerLayoutType: "standard",
   featuredImageUrl: "",
   featuredImageAlt: "",
   featuredImageCaption: "",
   featuredImageCredit: "",
   sidebarThumbnailUrl: "",
-  overlayStrength: "medium",
-  heroTextAlignment: "left",
-  showOverlayMetadata: true,
-  showOverlayShareIcons: true,
-  tocEnabled: true,
   bodyBlocks: [createBlock("heading2"), createBlock("paragraph")],
-  spotlightMode: "auto",
-  spotlightArticleSlugs: [],
-  showSpotlightSidebar: true,
-  showCategoryExplorer: true,
-  showNewsletterBlock: false,
-  ctaEnabled: true,
-  ctaPillLabel: "Explore Resources",
-  ctaHeadline: "Follow the Literacy Journey",
-  ctaText: "Discover practical literacy tools, implementation stories, and teacher resources.",
-  ctaButtonLabel: "Explore",
-  ctaButtonLink: "/resources",
-  ctaGradientPreset: "preset-1",
   seoTitle: "",
   metaDescription: "",
   socialImageUrl: "",
   canonicalUrl: "",
   tagsCsv: "",
-  featuredFlag: false,
-  allowComments: false,
   workflowStatus: "draft",
 };
 
@@ -999,20 +888,7 @@ export function PortalBlogManager({
     }
   }
 
-  function toggleSpotlightArticle(slug: string, checked: boolean) {
-    setForm((prev) => {
-      const next = new Set(prev.spotlightArticleSlugs);
-      if (checked) {
-        next.add(slug);
-      } else {
-        next.delete(slug);
-      }
-      return {
-        ...prev,
-        spotlightArticleSlugs: [...next],
-      };
-    });
-  }
+
 
   async function uploadImage(file: File, key: string) {
     setUploadingKey(key);
@@ -1056,9 +932,8 @@ export function PortalBlogManager({
     if (form.authorName.trim().length < 2 || form.authorRole.trim().length < 2) {
       throw new Error("Author name and role are required.");
     }
-    if ((form.headerLayoutType === "standard" || form.headerLayoutType === "overlay")
-      && !form.featuredImageUrl.trim()) {
-      throw new Error("Featured image is required for Standard and Overlay layouts.");
+    if (!form.featuredImageUrl.trim()) {
+      throw new Error("Featured image is required.");
     }
     if (form.featuredImageUrl.trim() && !form.featuredImageAlt.trim()) {
       throw new Error("Featured image alt text is required.");
@@ -1075,11 +950,7 @@ export function PortalBlogManager({
       throw new Error("Add at least one body block.");
     }
 
-    if (form.spotlightMode === "manual") {
-      if (form.spotlightArticleSlugs.length < 3 || form.spotlightArticleSlugs.length > 5) {
-        throw new Error("Manual spotlight mode requires selecting 3 to 5 related articles.");
-      }
-    }
+
 
     if (targetStatus === "scheduled") {
       const publishIso = fromDateInputToIso(form.publishDate, new Date().toISOString());
@@ -1140,40 +1011,17 @@ export function PortalBlogManager({
         mediaImageUrl: form.sidebarThumbnailUrl.trim() || undefined,
         mediaVideoUrl: undefined,
         articleType: form.articleType,
-        headerLayoutType: form.headerLayoutType,
         featuredImageUrl: form.featuredImageUrl.trim() || undefined,
         featuredImageAlt: form.featuredImageAlt.trim() || undefined,
         featuredImageCaption: form.featuredImageCaption.trim() || undefined,
         featuredImageCredit: form.featuredImageCredit.trim() || undefined,
-        overlayStrength: form.overlayStrength,
-        heroTextAlignment: form.heroTextAlignment,
-        showOverlayMetadata: form.showOverlayMetadata,
-        showOverlayShareIcons: form.showOverlayShareIcons,
         primaryCategory: form.primaryCategory.trim(),
         secondaryCategories: parseCsv(form.secondaryCategoriesCsv),
-        authorAvatarUrl: form.authorAvatarUrl.trim() || undefined,
         authorBio: form.authorBio.trim() || undefined,
-        tocEnabled: form.tocEnabled,
-        spotlightMode: form.spotlightMode,
-        spotlightArticleSlugs: form.spotlightArticleSlugs,
-        showSpotlightSidebar: form.showSpotlightSidebar,
-        showCategoryExplorer: form.showCategoryExplorer,
-        showNewsletterBlock: form.showNewsletterBlock,
-        ctaCard: {
-          enabled: form.ctaEnabled,
-          pillLabel: form.ctaPillLabel.trim() || "Explore Resources",
-          headline: form.ctaHeadline.trim() || "Follow the Literacy Journey",
-          text: form.ctaText.trim() || "Discover practical literacy tools and resources.",
-          buttonLabel: form.ctaButtonLabel.trim() || "Explore",
-          buttonLink: form.ctaButtonLink.trim() || "/resources",
-          gradientPreset: form.ctaGradientPreset,
-        },
         seoTitle: form.seoTitle.trim() || undefined,
         metaDescription: form.metaDescription.trim() || undefined,
         socialImageUrl: form.socialImageUrl.trim() || undefined,
         canonicalUrl: form.canonicalUrl.trim() || undefined,
-        featuredFlag: form.featuredFlag,
-        allowComments: form.allowComments,
         publishStatus: targetStatus === "published" ? "published" : "draft",
       };
 
@@ -1481,27 +1329,6 @@ export function PortalBlogManager({
                 />
               </label>
 
-              <label className="full-width">
-                Author Avatar URL
-                <div style={{ display: "grid", gap: "0.45rem" }}>
-                  <input
-                    value={form.authorAvatarUrl}
-                    onChange={(event) => updateForm("authorAvatarUrl", event.target.value)}
-                    placeholder="https://..."
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) {
-                        void uploadAndSetImage(file, "authorAvatarUrl");
-                      }
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </div>
-              </label>
 
               <label className="full-width">
                 Author Bio
@@ -1517,73 +1344,11 @@ export function PortalBlogManager({
                 B) Visual Header / Hero Settings
               </h4>
 
-              <label>
-                Header Layout Type *
-                <select
-                  value={form.headerLayoutType}
-                  onChange={(event) => updateForm("headerLayoutType", event.target.value as BlogHeaderLayoutType)}
-                >
-                  {HEADER_LAYOUT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Overlay Strength
-                <select
-                  value={form.overlayStrength}
-                  onChange={(event) => updateForm("overlayStrength", event.target.value as BlogOverlayStrength)}
-                >
-                  <option value="light">Light</option>
-                  <option value="medium">Medium</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </label>
-
-              <label>
-                Hero Text Alignment
-                <select
-                  value={form.heroTextAlignment}
-                  onChange={(event) =>
-                    updateForm("heroTextAlignment", event.target.value as BlogHeroTextAlignment)}
-                >
-                  <option value="left">Left</option>
-                  <option value="center">Center</option>
-                  <option value="bottom-left">Bottom-left</option>
-                </select>
-              </label>
-
-              <label>
-                Show Overlay Metadata
-                <select
-                  value={form.showOverlayMetadata ? "yes" : "no"}
-                  onChange={(event) => updateForm("showOverlayMetadata", event.target.value === "yes")}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
-
-              <label>
-                Show Overlay Share Icons
-                <select
-                  value={form.showOverlayShareIcons ? "yes" : "no"}
-                  onChange={(event) =>
-                    updateForm("showOverlayShareIcons", event.target.value === "yes")}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
 
               <label className="full-width">
                 Featured Image URL *
                 <div style={{ display: "grid", gap: "0.45rem" }}>
                   <input
-                    required={form.headerLayoutType !== "minimal"}
                     value={form.featuredImageUrl}
                     onChange={(event) => updateForm("featuredImageUrl", event.target.value)}
                     placeholder="https://..."
@@ -1656,16 +1421,6 @@ export function PortalBlogManager({
                 C) Article Body Content
               </h4>
 
-              <label>
-                TOC Enabled
-                <select
-                  value={form.tocEnabled ? "yes" : "no"}
-                  onChange={(event) => updateForm("tocEnabled", event.target.value === "yes")}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
 
               <div className="full-width card" style={{ padding: "0.9rem", display: "grid", gap: "0.75rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "0.8rem", flexWrap: "wrap" }}>
@@ -1811,159 +1566,6 @@ export function PortalBlogManager({
                 </p>
               </div>
 
-              <h4 className="full-width" style={{ margin: "1rem 0 0.2rem" }}>
-                D) Sidebar / Spotlight Settings
-              </h4>
-
-              <label>
-                Spotlight Mode
-                <select
-                  value={form.spotlightMode}
-                  onChange={(event) => updateForm("spotlightMode", event.target.value as BlogSpotlightMode)}
-                >
-                  <option value="auto">Auto (latest / related)</option>
-                  <option value="manual">Manual selection</option>
-                  <option value="hidden">Hide spotlight</option>
-                </select>
-              </label>
-
-              <label>
-                Show Spotlight Sidebar
-                <select
-                  value={form.showSpotlightSidebar ? "yes" : "no"}
-                  onChange={(event) => updateForm("showSpotlightSidebar", event.target.value === "yes")}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
-
-              <label>
-                Show Category Explorer
-                <select
-                  value={form.showCategoryExplorer ? "yes" : "no"}
-                  onChange={(event) => updateForm("showCategoryExplorer", event.target.value === "yes")}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
-
-              <label>
-                Show Newsletter Block
-                <select
-                  value={form.showNewsletterBlock ? "yes" : "no"}
-                  onChange={(event) => updateForm("showNewsletterBlock", event.target.value === "yes")}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
-
-              {form.spotlightMode === "manual" ? (
-                <div className="full-width card" style={{ padding: "0.8rem" }}>
-                  <p style={{ marginTop: 0, fontWeight: 600 }}>
-                    Select 3–5 related spotlight articles
-                  </p>
-                  <div style={{ display: "grid", gap: "0.4rem" }}>
-                    {posts
-                      .filter((post) => post.id !== form.id)
-                      .slice(0, 30)
-                      .map((post) => {
-                        const checked = form.spotlightArticleSlugs.includes(post.slug);
-                        return (
-                          <label key={post.id} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(event) => toggleSpotlightArticle(post.slug, event.target.checked)}
-                            />
-                            <span>
-                              {post.title}
-                              <span className="portal-muted" style={{ marginLeft: "0.4rem" }}>
-                                ({post.primaryCategory || post.category})
-                              </span>
-                            </span>
-                          </label>
-                        );
-                      })}
-                  </div>
-                </div>
-              ) : null}
-
-              <h4 className="full-width" style={{ margin: "1rem 0 0.2rem" }}>
-                E) Branded CTA Card Settings
-              </h4>
-
-              <label>
-                CTA Card Enabled
-                <select
-                  value={form.ctaEnabled ? "yes" : "no"}
-                  onChange={(event) => updateForm("ctaEnabled", event.target.value === "yes")}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
-
-              <label>
-                CTA Gradient Preset
-                <select
-                  value={form.ctaGradientPreset}
-                  onChange={(event) =>
-                    updateForm("ctaGradientPreset", event.target.value as "preset-1" | "preset-2" | "preset-3")}
-                >
-                  <option value="preset-1">Preset 1</option>
-                  <option value="preset-2">Preset 2</option>
-                  <option value="preset-3">Preset 3</option>
-                </select>
-              </label>
-
-              <label>
-                CTA Pill Label
-                <input
-                  value={form.ctaPillLabel}
-                  onChange={(event) => updateForm("ctaPillLabel", event.target.value)}
-                  placeholder="Explore Resources"
-                />
-              </label>
-
-              <label className="full-width">
-                CTA Headline
-                <input
-                  value={form.ctaHeadline}
-                  onChange={(event) => updateForm("ctaHeadline", event.target.value)}
-                  placeholder="Follow the Literacy Journey"
-                />
-              </label>
-
-              <label className="full-width">
-                CTA Supporting Text
-                <textarea
-                  rows={2}
-                  value={form.ctaText}
-                  onChange={(event) => updateForm("ctaText", event.target.value)}
-                  placeholder="Short supporting message"
-                />
-              </label>
-
-              <label>
-                CTA Button Label
-                <input
-                  value={form.ctaButtonLabel}
-                  onChange={(event) => updateForm("ctaButtonLabel", event.target.value)}
-                  placeholder="Explore"
-                />
-              </label>
-
-              <label>
-                CTA Button Link
-                <input
-                  value={form.ctaButtonLink}
-                  onChange={(event) => updateForm("ctaButtonLink", event.target.value)}
-                  placeholder="/resources"
-                />
-              </label>
 
               <h4 className="full-width" style={{ margin: "1rem 0 0.2rem" }}>
                 F) SEO / Social / Publishing
@@ -1981,27 +1583,6 @@ export function PortalBlogManager({
                 </select>
               </label>
 
-              <label>
-                Featured Article
-                <select
-                  value={form.featuredFlag ? "yes" : "no"}
-                  onChange={(event) => updateForm("featuredFlag", event.target.value === "yes")}
-                >
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </label>
-
-              <label>
-                Allow Comments
-                <select
-                  value={form.allowComments ? "yes" : "no"}
-                  onChange={(event) => updateForm("allowComments", event.target.value === "yes")}
-                >
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </label>
 
               <label className="full-width">
                 Tags (comma-separated)

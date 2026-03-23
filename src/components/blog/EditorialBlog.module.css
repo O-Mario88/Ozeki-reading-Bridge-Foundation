@@ -1,5 +1,5 @@
 .blogRoot {
-  --blog-bg: color-mix(in oklab, var(--color-bg), white 12%);
+  --blog-bg: transparent;
   --blog-surface: var(--color-surface);
   --blog-tint: var(--color-surface-soft);
   --blog-border: var(--color-border);
@@ -15,10 +15,6 @@
   --blog-radius-lg: 32px;
   width: 100%;
   color: var(--blog-text);
-  /* Apply Poppins to the root of the blog */
-  font-family: var(--font-poppins), system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.005em;
-  line-height: 1.55;
 }
 
 .blogRoot :where(h1, h2, h3, h4, h5, h6) {

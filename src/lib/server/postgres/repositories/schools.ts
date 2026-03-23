@@ -320,7 +320,6 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
   const fyLastStart = new Date(new Date().getFullYear() - 1, 0, 1).toISOString().slice(0, 10);
   const fyLastEnd = new Date(new Date().getFullYear() - 1, 11, 31).toISOString().slice(0, 10);
 
-  const schoolIdText = String(id);
 
   const [
     contactsResult,
@@ -349,10 +348,10 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
           FROM online_training_sessions ots
           LEFT JOIN online_training_participants otp ON otp.session_id = ots.id
           WHERE otp.school_id = $1
-             OR (ots.scope_type = 'school' AND COALESCE(ots.scope_id, '') = $2)
+             OR (ots.scope_type = 'school' AND ots.scope_id = $1)
         ) scoped
       `,
-      [id, schoolIdText],
+      [id],
     )),
     queryPostgres<{ total: number }>(
       `SELECT COUNT(*)::int AS total FROM coaching_visits WHERE school_id = $1`,
@@ -395,17 +394,17 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
             SELECT COUNT(*)::int
             FROM coaching_visits cv
             WHERE cv.school_id = $1
-              AND cv.visit_date >= $3::date
+              AND cv.visit_date >= $2::date
           ) AS "schoolVisitsThisFy",
           (
             SELECT COUNT(*)::int
             FROM coaching_visits cv
             WHERE cv.school_id = $1
-              AND cv.visit_date >= $4::date
-              AND cv.visit_date <= $5::date
+              AND cv.visit_date >= $3::date
+              AND cv.visit_date <= $4::date
           ) AS "schoolVisitsLastFy"
       `,
-      [id, schoolIdText, fyStart, fyLastStart, fyLastEnd],
+      [id, fyStart, fyLastStart, fyLastEnd],
     ),
     queryPostgres<{
       learnersAssessed: number;
@@ -485,12 +484,12 @@ export async function getSchoolAccountProfilePostgres(id: number): Promise<Schoo
           FROM online_training_sessions ots
           LEFT JOIN online_training_participants otp ON otp.session_id = ots.id
           WHERE otp.school_id = $1
-             OR (ots.scope_type = 'school' AND COALESCE(ots.scope_id, '') = $2)
+             OR (ots.scope_type = 'school' AND ots.scope_id = $1)
         ) scoped
         ORDER BY scoped.session_date DESC NULLS LAST, scoped.id DESC
         LIMIT 6
       `,
-      [id, schoolIdText],
+      [id],
     )),
     queryPostgres(
       `

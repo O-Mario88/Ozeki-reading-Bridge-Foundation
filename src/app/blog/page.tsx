@@ -1,5 +1,4 @@
 import { EditorialBlogIndex } from "@/components/blog/EditorialBlogIndex";
-import { blogPoppins } from "@/components/blog/blog-font";
 import { getMergedBlogCategoriesAsync, getMergedPublishedBlogPostsAsync } from "@/lib/blog-data";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +14,6 @@ export default async function BlogPage() {
   const categories = await getMergedBlogCategoriesAsync();
 
   return (
-    <div className={`${blogPoppins.className} ${blogPoppins.variable}`}>
-      <EditorialBlogIndex posts={posts} categories={categories} />
-    </div>
+    <EditorialBlogIndex posts={posts} categories={categories} />
   );
 }

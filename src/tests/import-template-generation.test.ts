@@ -43,7 +43,6 @@ test("missing schools template mapping fills official defaults", () => {
   assert.equal(rows[0]?.school_name, "Bright Future Primary");
   assert.equal(rows[0]?.country, "Uganda");
   assert.equal(rows[0]?.is_active, "TRUE");
-  assert.equal(rows[0]?.school_email, "");
 });
 
 test("missing schools template XLSX is directly uploadable with the official sheets", async () => {

@@ -4,14 +4,17 @@ import { HomeSupportRequestModal } from "@/components/home/HomeSupportRequestMod
 import { organizationName, tagline } from "@/lib/content";
 import {
   INTELLIGENCE_LOOP,
-  INSIGHT_TILES,
   PARTNERSHIP_OPTIONS,
-  TRUST_LINKS,
 } from "@/lib/home-static-data";
 import { isPostgresConfigured } from "@/lib/server/postgres/client";
 import { listPublishedPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
 import type { PortalTestimonialRecord } from "@/lib/types";
-import styles from "./homepage.module.css";
+
+import { SectionWrapper } from "@/components/public/SectionWrapper";
+import { PremiumCard } from "@/components/public/PremiumCard";
+import { ImpactStat } from "@/components/public/ImpactStat";
+import { CTAStrip } from "@/components/public/CTAStrip";
+import { PlayCircle, ArrowRight, Quote } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +28,14 @@ const WORKING_PARTNERS = [
     name: "Edify",
     href: "https://edify.org/uganda/",
     logoSrc: "/partners/edify-logo.svg?v=edify-uganda",
-    width: 220,
-    height: 72,
+    width: 140,
+    height: 48,
   },
 ];
 
 function clipQuote(text: string, maxChars: number) {
   const clean = text.trim();
-  if (clean.length <= maxChars) {
-    return clean;
-  }
+  if (clean.length <= maxChars) return clean;
   return `${clean.slice(0, maxChars).trimEnd()}...`;
 }
 
@@ -48,7 +49,7 @@ export default async function HomePage() {
             item.sourceType === "training_feedback" &&
             TESTIMONIAL_FIELDS.has(String(item.quoteField ?? "")),
         )
-        .slice(0, 6);
+        .slice(0, 3); // Show top 3 for cleaner layout
     } catch (error) {
       console.error("Failed to load homepage testimonials.", error);
     }
@@ -70,289 +71,225 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
       />
 
-      <section className={`section ${styles.hero}`}>
-        <div className={`container ${styles.heroInner}`}>
-          <p className={styles.heroKicker}>National Literacy Intelligence Platform</p>
-          <h1>Ozeki Reading Bridge Foundation</h1>
-          <p className={styles.heroSubhead}>
-            Practical Literacy. Strong Teachers. Confident Readers-measured and improved
-            with real classroom data across Uganda.
+      {/* 1. Hero Section */}
+      <section className="relative overflow-hidden bg-white pt-24 pb-32 md:pt-32 md:pb-40">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-secondary/20 via-white to-white pointer-events-none" />
+        <div className="container mx-auto px-4 md:px-6 max-w-7xl relative z-10 flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-primary/10 text-brand-primary font-semibold text-sm mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
+            National Literacy Intelligence Platform
+          </div>
+          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight max-w-5xl leading-[1.1] mb-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-150">
+            Building confident readers across Uganda.
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+            Practical phonics. Strong teachers. Measured outcomes. We turn real
+            classroom data into targeted action where it matters most.
           </p>
-          <div className={styles.ctaRow}>
-            <Link className={`button ${styles.primaryCta}`} href="/impact">
+          <div className="flex flex-col sm:flex-row gap-4 items-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
+            <Link 
+              href="/impact"
+              className="px-8 py-4 rounded-full bg-brand-primary text-white font-semibold flex items-center gap-2 hover:bg-brand-primary/90 hover:shadow-xl hover:shadow-brand-primary/20 transition-all hover:-translate-y-0.5"
+            >
               View Live Impact Dashboard
+              <ArrowRight size={18} />
             </Link>
-            <Link className={`button ${styles.outlineCta}`} href="/programs">
+            <Link 
+              href="/programs"
+              className="px-8 py-4 rounded-full bg-white text-gray-900 font-semibold flex items-center gap-2 border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all hover:-translate-y-0.5"
+            >
+              <PlayCircle size={18} className="text-gray-400" />
               Explore Programs
             </Link>
           </div>
-          <p className={styles.microline}>
-            Aggregated, privacy-protected classroom data. Updated regularly.
-          </p>
         </div>
       </section>
 
-      <section className={styles.trustStrip}>
-        <div className="container">
-          <ul className={styles.trustLinks}>
-            {TRUST_LINKS.map((item) => (
-              <li key={item.label}>
-                <Link href={item.href}>{item.label}</Link>
-              </li>
-            ))}
-          </ul>
+      {/* 2. Impact Stats Band */}
+      <SectionWrapper theme="dark" className="!py-12 border-y border-gray-100 bg-gray-50">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-gray-200">
+          <ImpactStat value="500+" label="Schools Reached" />
+          <ImpactStat value="2M+" label="Reading Assessments" />
+          <ImpactStat value="15K" label="Teachers Trained" />
+          <ImpactStat value="100%" label="Data Privacy" />
         </div>
-      </section>
+      </SectionWrapper>
 
-      <section className={`section ${styles.problemSection}`}>
-        <div className="container">
-          <div className={styles.sectionHeading}>
-            <h2 className={styles.problemSectionTitle}>
-              Reading is the gateway skill: Uganda can&apos;t afford weak foundations.
-            </h2>
-          </div>
-          <div className={styles.problemPhotoWrap}>
-            <aside className={styles.problemPhotoCard}>
+      {/* 3. The Problem & Narrative (Split Storytelling Layout) */}
+      <SectionWrapper theme="light" className="overflow-hidden">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="relative">
+            <div className="absolute inset-0 bg-brand-primary/5 rounded-[2.5rem] transform -rotate-3 scale-105 transition-transform duration-500 hover:rotate-0" />
+            <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] md:aspect-[3/4] shadow-2xl">
               <Image
                 src="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg"
                 alt="Reading session in Dokolo Greater Bata Cluster."
                 fill
-                className={styles.problemPhotoImage}
-                sizes="(max-width: 1024px) 100vw, 1200px"
-                loading="lazy"
+                className="object-cover object-center transform hover:scale-105 transition-transform duration-700"
+                sizes="(max-width: 1024px) 100vw, 800px"
               />
-            </aside>
+            </div>
           </div>
-          <div className={styles.problemNarrative}>
-            <p className={styles.problemLead}>
-              Public dashboard data is aggregated from verified staff submissions and
-              published with privacy controls.
+          <div className="flex flex-col gap-6 lg:pl-8">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
+              Reading is the gateway. We cannot afford weak foundations.
+            </h2>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              Across Uganda, reading is the single skill determining whether children
+              can access the rest of the curriculum. Yet national evidence shows too
+              many learners still not mastering literacy early enough.
             </p>
-            <p>
-              Across Uganda, reading is the single skill that determines whether children
-              can access the rest of the curriculum. Yet national evidence shows that too
-              many learners are still not mastering foundational literacy early enough.
-              Uganda has made progress, but large numbers of children still move through
-              school without fluent reading-slowing learning in every subject and widening
-              inequality between regions, school types, and communities. This is why a
-              national response must be practical, measurable, and focused on the
-              classroom: when reading is weak, every other learning goal becomes harder.
+            <p className="text-lg text-gray-600 leading-relaxed">
+              Years of disrupted schooling left many classrooms with limited materials 
+              and large class sizes. Recovery requires systematic instruction and repeated 
+              practice. 
             </p>
-            <p>
-              Northern Uganda shows what happens when education systems are disrupted for
-              long periods. Years of conflict and displacement interrupted schooling,
-              reduced consistent instructional time, and left many classrooms rebuilding
-              with limited materials, large class sizes, and teacher shortages. Even after
-              stability returns, the learning gap does not close automatically-early
-              reading requires systematic instruction and repeated practice. The good news
-              is that recovery is possible when support is structured, sustained, and
-              measured.
-            </p>
-            <p>
-              That is the purpose of a National Literacy Intelligence Platform: strengthen
-              teachers through structured phonics and coaching, measure learner progress
-              through simple, trusted reading outcomes, and turn data into targeted
-              action-school by school, district by district. NLIP helps partners and
-              schools move from &quot;support everywhere&quot; to &quot;support where it matters most,&quot;
-              and it proves progress with credible evidence that government, donors, and
-              communities can trust.
-            </p>
-          </div>
-          <div className={styles.ctaRow}>
-            <Link className={`button ${styles.primaryCta}`} href="/impact">
-              Open the Impact Hub
-            </Link>
-            <Link className={`button ${styles.outlineCta}`} href="/programs">
-              See Our Programs
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <div className={`${styles.sectionHeading} ${styles.loopSectionHeading}`}>
-            <h2>How Our National Literacy Intelligence Platform works</h2>
-          </div>
-          <div className={styles.loopGrid}>
-            {INTELLIGENCE_LOOP.map((step, index) => (
-              <article className={styles.loopCard} key={step.title}>
-                <div className={styles.loopIcon}>{index + 1}</div>
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
-              </article>
-            ))}
-          </div>
-          <p className={styles.loopCtaWrap}>
-            <Link className={styles.inlineLink} href="/impact">
-              Explore the Impact Hub
-            </Link>
-          </p>
-        </div>
-      </section>
-
-      <section className={`section ${styles.insightSection}`}>
-        <div className="container">
-          <div className={styles.sectionHeading}>
-            <h2>What NLIP reveals nationwide</h2>
-          </div>
-          <p className={styles.insightLead}>
-            Public dashboard data is aggregated from verified staff submissions and
-            published with privacy controls.
-          </p>
-          <div className={styles.insightGrid}>
-            {INSIGHT_TILES.map((tile) => (
-              <article className={styles.insightTile} key={tile}>
-                <h3>{tile}</h3>
-              </article>
-            ))}
-          </div>
-          <div className={styles.centeredCta}>
-            <Link className={`button ${styles.primaryCta}`} href="/impact">
-              View Live Impact Dashboard
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="section" id="funding-packages">
-        <div className="container">
-          <div className={styles.sectionHeading}>
-            <h2>Fund literacy by geography</h2>
-          </div>
-          <div className={styles.partnerGrid}>
-            {PARTNERSHIP_OPTIONS.map((option) => (
-              <article
-                className={`${styles.partnerCard}${option.fullRow ? ` ${styles.partnerCardFullRow}` : ""}`}
-                key={option.title}
-              >
-                <h3>{option.title}</h3>
-                {option.href ? (
-                  <p>
-                    <Link className="button button-ghost" href={option.href}>
-                      Open package details
-                    </Link>
-                  </p>
-                ) : null}
-              </article>
-            ))}
-          </div>
-          <div className={styles.ctaRow}>
-            <Link className={`button ${styles.outlineCta}`} href="/impact/calculator">
-              Open Funding Calculator
-            </Link>
-            <HomeSupportRequestModal
-              triggerLabel="Partner With Us"
-              title="Partnership request form"
-              description="Share your partnership interest and geography focus, and our team will follow up."
-              triggerClassName={`button ${styles.primaryCta}`}
-              presetMessage="I would like to partner with Ozeki Reading Bridge Foundation."
-            />
-            <HomeSupportRequestModal
-              triggerLabel="Request a concept note"
-              title="Request a proposal concept note"
-              description="Share your geography focus and we will route this to the partnership team."
-              triggerClassName={`button ${styles.outlineCta}`}
-              presetMessage="I would like to request a concept note for a literacy partnership."
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className={`section ${styles.testimonialSection}`}>
-        <div className="container">
-          <div className={styles.sectionHeading}>
-            <h2>What teachers say after training</h2>
-          </div>
-          <div className={styles.testimonialGrid}>
-            {testimonialRows.length > 0 ? (
-              testimonialRows.map((quote) => (
-                <article className={styles.testimonialCard} key={quote.id}>
-                  <p className={styles.quote}>
-                    &quot;{clipQuote(quote.storyText, 280)}&quot;
-                  </p>
-                  <div className={styles.metaRow}>
-                    <span className={styles.roleChip}>{quote.storytellerRole}</span>
-                    <span className={styles.geoMeta}>{quote.district}</span>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <article className={styles.testimonialCard}>
-                <p className={styles.quote}>
-                  Approved training-feedback testimonials will appear here after moderation.
-                </p>
-              </article>
-            )}
-          </div>
-          <div className={styles.ctaRow}>
-            <Link className={`button ${styles.outlineCta}`} href="/stories">
-              Read more stories
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className={`section ${styles.supportSection}`}>
-        <div className="container">
-          <div className={styles.supportCard}>
-            <h2>Supporting your school&apos;s literacy journey</h2>
-            <p>
-              Need training, coaching, assessment support, or 1001 Story activation?
-              Submit a request and our team will route it to the right support lead.
-            </p>
-            <article className={styles.liveSessionCard}>
-              <h3>Live training sessions</h3>
-              <p>
-                Join scheduled virtual sessions on phonics instruction, coaching practice,
-                learner assessment routines, and literacy leadership.
-              </p>
-            </article>
-            <div className={styles.supportActionRow}>
-              <HomeSupportRequestModal
-                triggerLabel="Request Support"
-                title="Request school literacy support"
-                description="Tell us the support needed and the team will follow up."
-                triggerClassName={`button ${styles.primaryCta} ${styles.supportCompactButton}`}
-              />
-              <Link
-                className={`button ${styles.supportCompactButton} ${styles.supportSecondaryButton}`}
-                href="/events"
-              >
-                Signup for Live Training Sessions
+            <div className="mt-8">
+              <Link href="/about" className="text-brand-primary font-bold inline-flex items-center gap-2 hover:gap-3 transition-all">
+                Read our full story <ArrowRight size={18} />
               </Link>
             </div>
           </div>
         </div>
-      </section>
+      </SectionWrapper>
 
-      <section className={styles.partnerLogoStrip} aria-label="Partners we work with">
-        <div className={`container ${styles.partnerLogoContainer}`}>
-          <ul className={styles.partnerLogoList}>
+      {/* 4. The Loop Grid */}
+      <SectionWrapper theme="off-white">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 mb-6">How our platform works</h2>
+          <p className="text-xl text-gray-600">
+            We strengthen teachers through structured phonics, measure progress through transparent outcomes, and turn data into targeted action.
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-8">
+          {INTELLIGENCE_LOOP.map((step, index) => (
+            <PremiumCard key={step.title} withHover className="p-8">
+              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center text-xl font-bold mb-6">
+                {index + 1}
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">{step.title}</h3>
+              <p className="text-gray-600 leading-relaxed">{step.body}</p>
+            </PremiumCard>
+          ))}
+        </div>
+        <div className="text-center mt-12">
+          <Link href="/impact" className="inline-flex items-center gap-2 font-semibold text-brand-primary hover:text-brand-primary/80 transition-colors">
+            Explore the public impact map <ArrowRight size={16} />
+          </Link>
+        </div>
+      </SectionWrapper>
+
+      {/* 5. Live Stories / Testimonials */}
+      <SectionWrapper theme="light">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+          <div className="max-w-2xl">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Voices from the classroom</h2>
+            <p className="text-lg text-gray-600">
+              Hear directly from teachers who are transforming their classrooms using Ozeki&apos;s practical phonics and coaching.
+            </p>
+          </div>
+          <Link href="/stories" className="px-6 py-3 rounded-full border-2 border-gray-200 font-semibold text-gray-700 hover:border-gray-900 hover:text-gray-900 transition-colors shrink-0">
+            View All Stories
+          </Link>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {testimonialRows.length > 0 ? (
+            testimonialRows.map((quote) => (
+              <PremiumCard key={quote.id} className="p-8 flex flex-col bg-brand-background/20" withHover>
+                <Quote className="text-brand-primary opacity-20 w-10 h-10 mb-6" />
+                <p className="text-lg text-gray-800 leading-relaxed mb-8 flex-1 font-medium">
+                  &quot;{clipQuote(quote.storyText, 220)}&quot;
+                </p>
+                <div className="flex items-center justify-between border-t border-gray-100 pt-6 mt-auto">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-900 text-sm">{quote.storytellerRole}</span>
+                    <span className="text-brand-primary text-xs uppercase tracking-wider font-semibold mt-1">
+                      {quote.district}
+                    </span>
+                  </div>
+                </div>
+              </PremiumCard>
+            ))
+          ) : (
+             <PremiumCard className="p-8 col-span-3 text-center bg-gray-50 border-dashed border-2">
+               <p className="text-gray-500 font-medium">Stories and testimonials are currently being curated.</p>
+             </PremiumCard>
+          )}
+        </div>
+      </SectionWrapper>
+
+      {/* 6. Partner/Support Grid */}
+      <SectionWrapper theme="off-white">
+        <div className="max-w-3xl mx-auto text-center mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 mb-6">Join the movement</h2>
+          <p className="text-xl text-gray-600">
+            Whether you are a school looking for support, or an organization eager to fund literacy by geography, we have a pathway for you.
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {PARTNERSHIP_OPTIONS.slice(0, 2).map((option) => (
+            <PremiumCard key={option.title} className="p-8 md:p-12 text-center flex flex-col items-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">{option.title}</h3>
+              <p className="text-gray-600 mb-8 flex-1">
+                {option.href ? "Invest directly in teacher training and classroom resources." : "Support a cluster of schools in your chosen geography."}
+              </p>
+              {option.href ? (
+                <Link className="px-6 py-3 rounded-full bg-brand-primary text-white font-semibold hover:bg-brand-primary/90 transition-colors w-full" href={option.href}>
+                  View Details
+                </Link>
+              ) : (
+                <HomeSupportRequestModal
+                  triggerLabel="Partner With Us"
+                  title="Partnership request form"
+                  description="Share your partnership interest and geography focus."
+                  triggerClassName="px-6 py-3 rounded-full bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors w-full block"
+                  presetMessage="I would like to partner with Ozeki Reading Bridge Foundation."
+                />
+              )}
+            </PremiumCard>
+          ))}
+        </div>
+      </SectionWrapper>
+
+      {/* 7. Partner Logo Strip */}
+      <section className="py-12 border-t border-gray-100 bg-white">
+        <div className="container mx-auto px-4 max-w-5xl text-center">
+          <p className="text-sm font-semibold tracking-wider text-gray-400 uppercase mb-8">Trusted by</p>
+          <div className="flex flex-wrap justify-center items-center gap-12 opacity-60 hover:opacity-100 transition-opacity">
             {WORKING_PARTNERS.map((partner) => (
-              <li key={partner.name} className={styles.partnerLogoItem}>
-                <a
-                  href={partner.href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  aria-label={`Visit ${partner.name}`}
-                  className={styles.partnerLogoLink}
-                >
-                  <img
-                    src={partner.logoSrc}
-                    alt={`${partner.name} logo`}
-                    width={partner.width}
-                    height={partner.height}
-                    className={styles.partnerLogoImage}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </a>
-              </li>
+              <a
+                key={partner.name}
+                href={partner.href}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="hover:scale-105 transition-transform"
+              >
+                <img
+                  src={partner.logoSrc}
+                  alt={partner.name}
+                  width={partner.width}
+                  height={partner.height}
+                  className="object-contain"
+                />
+              </a>
             ))}
-          </ul>
+          </div>
         </div>
       </section>
+
+      {/* 8. Bottom CTA */}
+      <CTAStrip 
+        heading="Ready to improve literacy outcomes?"
+        subheading="Join our live training sessions or explore evidence-based interventions for your school."
+        primaryButtonText="Request School Support"
+        primaryButtonHref="/contact"
+        secondaryButtonText="View Impact Hub"
+        secondaryButtonHref="/impact"
+        theme="brand"
+      />
     </>
   );
 }

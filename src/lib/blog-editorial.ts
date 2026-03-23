@@ -184,22 +184,6 @@ export function getPostCoverImage(post: BlogPost, variant: "hero" | "card" | "th
 }
 
 export function selectSpotlightPosts(post: BlogPost, allPosts: BlogPost[], limit = 4) {
-  if (post.showSpotlightSidebar === false || post.spotlightMode === "hidden") {
-    return [] as BlogPost[];
-  }
-
-  const bySlug = new Map(allPosts.map((item) => [item.slug, item]));
-
-  if (post.spotlightMode === "manual") {
-    const manual = (post.spotlightArticleSlugs ?? [])
-      .map((slug) => bySlug.get(slug))
-      .filter((candidate): candidate is BlogPost => candidate !== undefined && candidate.slug !== post.slug)
-      .slice(0, limit);
-    if (manual.length > 0) {
-      return manual;
-    }
-  }
-
   const sameCategory = allPosts.filter((candidate) => {
     if (candidate.slug === post.slug) {
       return false;

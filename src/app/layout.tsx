@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 
 import "./globals.css";
 import "@/styles/finance-theme.css";
-import { SiteFooter } from "@/components/SiteFooter";
-import { SiteHeader } from "@/components/SiteHeader";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { ModalAccessibilityManager } from "@/components/ModalAccessibilityManager";
 import { organizationName, tagline } from "@/lib/content";
 import { GradientBackground } from "@/components/ui/GradientBackground";
 import { Inter } from "next/font/google";
+import { LayoutOrchestrator } from "@/components/public/LayoutOrchestrator";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -57,9 +56,9 @@ export default function RootLayout({
         <GradientBackground />
         <ModalAccessibilityManager />
         <ServiceWorkerRegister />
-        <SiteHeader />
-        <main className="dashboard-inspired-main min-h-[calc(100vh-var(--header-height))]">{children}</main>
-        <SiteFooter />
+        <LayoutOrchestrator>
+          {children}
+        </LayoutOrchestrator>
       </body>
     </html>
   );

@@ -11,8 +11,6 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { ArticleContentsRail } from "@/components/blog/ArticleContentsRail";
-import { ArticleGradientCtaCard } from "@/components/blog/ArticleGradientCtaCard";
-import { ArticleHeaderOverlay } from "@/components/blog/ArticleHeaderOverlay";
 import { ArticleHeaderStandard } from "@/components/blog/ArticleHeaderStandard";
 import { ArticleReadTimeCard } from "@/components/blog/ArticleReadTimeCard";
 import { ArticleSpotlightSidebar } from "@/components/blog/ArticleSpotlightSidebar";
@@ -54,7 +52,7 @@ export function EditorialArticleLayout({
   previewMode = false,
 }: EditorialArticleLayoutProps) {
   const prepared = useMemo(() => prepareEditorialPost(post), [post]);
-  const toc = post.tocEnabled === false ? [] : prepared.toc;
+  const toc = prepared.toc;
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(toc[0]?.id ?? null);
   const [progressPercent, setProgressPercent] = useState(0);
 
@@ -115,17 +113,12 @@ export function EditorialArticleLayout({
   const [engagementBusy, setEngagementBusy] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [engagementError, setEngagementError] = useState("");
-  const showGradientCta = post.ctaCard ? post.ctaCard.enabled !== false : true;
   const publishedLabel = formatPostDate(post.publishedAt);
 
   const renderAuthorInfoCard = (className: string) => (
     <section className={`${styles.readTimeCard} ${styles.authorInfoCard} ${className}`}>
       <div className={styles.authorMeta}>
-        {post.authorAvatarUrl ? (
-          <img className={styles.authorAvatar} src={post.authorAvatarUrl} alt={`${post.author} avatar`} />
-        ) : (
-          <span className={styles.authorAvatarFallback}>{avatarInitials(post.author)}</span>
-        )}
+        <span className={styles.authorAvatarFallback}>{avatarInitials(post.author)}</span>
         <div>
           <p className={styles.authorName}>{post.author}</p>
         </div>
@@ -327,31 +320,8 @@ export function EditorialArticleLayout({
     });
   }
 
-  const hasRightRail =
-    (post.showSpotlightSidebar !== false && spotlightPosts.length > 0)
-    || showGradientCta
-    || post.showCategoryExplorer
-    || post.showNewsletterBlock;
-  const articleHeader = post.headerLayoutType === "overlay" ? (
-    <ArticleHeaderOverlay post={post} categories={prepared.categories} shareUrl={shareUrl} />
-  ) : post.headerLayoutType === "minimal" ? (
-    <header className={styles.articleHeader}>
-      <div className={styles.headerTopGrid}>
-        <div className={styles.headerMainContent}>
-          <div className={styles.breadcrumbRow}>
-            {prepared.categories.map((category) => (
-              <span key={category} className={styles.headerCategoryTag}>
-                <CircleDot size={13} aria-hidden="true" />
-                {category}
-              </span>
-            ))}
-          </div>
-          <h1 className={styles.editorialTitle}>{post.title}</h1>
-          {post.subtitle ? <p className={styles.editorialSubtitle}>{post.subtitle}</p> : null}
-        </div>
-      </div>
-    </header>
-  ) : (
+  const hasRightRail = spotlightPosts.length > 0;
+  const articleHeader = (
     <ArticleHeaderStandard
       post={post}
       categories={prepared.categories}
@@ -548,15 +518,12 @@ export function EditorialArticleLayout({
 
             {hasRightRail ? (
               <aside className={styles.rightRail}>
-                {post.showSpotlightSidebar !== false ? (
-                  <ArticleSpotlightSidebar
-                    posts={spotlightPosts}
-                    categories={categories}
-                    showCategoryExplorer={post.showCategoryExplorer === true}
-                    showNewsletterBlock={post.showNewsletterBlock === true}
-                  />
-                ) : null}
-                <ArticleGradientCtaCard ctaCard={post.ctaCard} />
+                <ArticleSpotlightSidebar
+                  posts={spotlightPosts}
+                  categories={categories}
+                  showCategoryExplorer={false}
+                  showNewsletterBlock={false}
+                />
               </aside>
             ) : null}
           </div>

@@ -7,8 +7,10 @@ import type {
   SchoolAccountProfile,
   SchoolSupportStatusRecord,
 } from "@/lib/types";
+import { EnrollmentFormModal } from "./EnrollmentFormModal";
+import { LiteracyImpactFormModal } from "./LiteracyImpactFormModal";
+import type { SchoolEnrollmentRecord, SchoolLiteracyImpactRecord } from "@/lib/types";
 import { GraduationReviewModal } from "./GraduationReviewModal";
-import { UpdateEnrollmentDialog } from "./UpdateEnrollmentDialog";
 
 type SupervisorOption = {
   id: number;
@@ -60,11 +62,16 @@ function formatYesNo(value: boolean) {
 
 export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
   const { school, counts, recentTrainings, recentInteractions, summary, progress } = profile;
-  const [activeTab, setActiveTab] = useState<"details" | "contacts" | "related" | "trainings" | "interactions">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "metrics" | "contacts" | "related" | "trainings" | "interactions">("details");
   const [graduationLoading, setGraduationLoading] = useState(false);
   const [graduationError, setGraduationError] = useState("");
   const [graduationOpen, setGraduationOpen] = useState(false);
   const [enrollmentOpen, setEnrollmentOpen] = useState(false);
+  const [literacyImpactOpen, setLiteracyImpactOpen] = useState(false);
+
+  const [enrollments, setEnrollments] = useState<SchoolEnrollmentRecord[]>([]);
+  const [literacyImpacts, setLiteracyImpacts] = useState<SchoolLiteracyImpactRecord[]>([]);
+  const [metricsLoading, setMetricsLoading] = useState(false);
   const [graduationEligibility, setGraduationEligibility] = useState<GraduationEligibilityRecord | null>(null);
   const [graduationSupervisors, setGraduationSupervisors] = useState<SupervisorOption[]>([]);
   const [supportStatusLoading, setSupportStatusLoading] = useState(false);
@@ -143,6 +150,24 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
     return () => {
       active = false;
     };
+  }, [school.id]);
+
+  function fetchMetricsHistory() {
+    setMetricsLoading(true);
+    Promise.all([
+      fetch(`/api/portal/schools/${school.id}/enrollments`).then((r) => r.json()),
+      fetch(`/api/portal/schools/${school.id}/literacy-impacts`).then((r) => r.json()),
+    ])
+      .then(([enrollmentData, impactData]) => {
+        if (enrollmentData.items) setEnrollments(enrollmentData.items);
+        if (impactData.items) setLiteracyImpacts(impactData.items);
+      })
+      .catch((err) => console.error("Failed to load metrics history:", err))
+      .finally(() => setMetricsLoading(false));
+  }
+
+  useEffect(() => {
+    fetchMetricsHistory();
   }, [school.id]);
 
   const detailsLeft = useMemo(
@@ -229,7 +254,10 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             Back to Accounts
           </Link>
           <button className="button" onClick={() => setEnrollmentOpen(true)}>
-            Update Enrollment
+            New Enrollment
+          </button>
+          <button className="button" onClick={() => setLiteracyImpactOpen(true)}>
+            New Literacy Impact
           </button>
           <Link className="button" href={`/portal/trainings?new=1&schoolId=${school.id}`}>
             New Training
@@ -326,6 +354,13 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                 Details
               </button>
               <button
+                className={activeTab === "metrics" ? "is-active" : ""}
+                type="button"
+                onClick={() => setActiveTab("metrics")}
+              >
+                Metrics History
+              </button>
+              <button
                 className={activeTab === "contacts" ? "is-active" : ""}
                 type="button"
                 onClick={() => setActiveTab("contacts")}
@@ -376,6 +411,80 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+            ) : null}
+
+            {activeTab === "metrics" ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "2rem", padding: "1.5rem" }}>
+                <div>
+                  <h3 style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: "0.5rem", marginBottom: "1rem" }}>Enrollment History</h3>
+                  {metricsLoading ? (
+                    <p className="ds-text-secondary">Loading enrollment history...</p>
+                  ) : enrollments.length === 0 ? (
+                    <p className="ds-text-muted">No historical general enrollment snapshot records found.</p>
+                  ) : (
+                    <table className="portal-table full-width">
+                      <thead>
+                        <tr>
+                          <th>Date Recorded</th>
+                          <th>Total Enrollment</th>
+                          <th>Boys</th>
+                          <th>Girls</th>
+                          <th>Source</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {enrollments.map((env) => (
+                          <tr key={env.id}>
+                            <td>{formatDateTime(env.createdAt)}</td>
+                            <td><strong>{formatNumber(env.totalEnrollment)}</strong></td>
+                            <td>{formatNumber(env.boysCount)}</td>
+                            <td>{formatNumber(env.girlsCount)}</td>
+                            <td>{env.updatedFrom}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                <div>
+                  <h3 style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: "0.5rem", marginBottom: "1rem" }}>Literacy Impact History</h3>
+                  {metricsLoading ? (
+                    <p className="ds-text-secondary">Loading literacy impact history...</p>
+                  ) : literacyImpacts.length === 0 ? (
+                    <p className="ds-text-muted">No literacy impact snapshots have been verified yet.</p>
+                  ) : (
+                    <table className="portal-table full-width">
+                      <thead>
+                        <tr>
+                          <th>Date Recorded</th>
+                          <th>Total Impacted</th>
+                          <th>Baby</th>
+                          <th>Middle</th>
+                          <th>Top</th>
+                          <th>P1</th>
+                          <th>P2</th>
+                          <th>P3</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {literacyImpacts.map((imp) => (
+                          <tr key={imp.id}>
+                            <td>{formatDateTime(imp.createdAt)}</td>
+                            <td><strong>{formatNumber(imp.totalImpacted)}</strong></td>
+                            <td>{formatNumber(imp.babyClassImpacted)}</td>
+                            <td>{formatNumber(imp.middleClassImpacted)}</td>
+                            <td>{formatNumber(imp.topClassImpacted)}</td>
+                            <td>{formatNumber(imp.p1Impacted)}</td>
+                            <td>{formatNumber(imp.p2Impacted)}</td>
+                            <td>{formatNumber(imp.p3Impacted)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -572,20 +681,23 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
         supervisors={graduationSupervisors}
       />
 
-      <UpdateEnrollmentDialog
+      <EnrollmentFormModal
         open={enrollmentOpen}
         onClose={() => setEnrollmentOpen(false)}
-        schoolId={school.id}
-        schoolName={school.name}
-        initialData={{
-          enrolledBaby: school.enrolledBaby ?? 0,
-          enrolledMiddle: school.enrolledMiddle ?? 0,
-          enrolledTop: school.enrolledTop ?? 0,
-          enrolledP1: school.enrolledP1 ?? 0,
-          enrolledP2: school.enrolledP2 ?? 0,
-          enrolledP3: school.enrolledP3 ?? 0,
-          enrolledBoys: school.enrolledBoys ?? 0,
-          enrolledGirls: school.enrolledGirls ?? 0,
+        school={school as any}
+        onSuccess={() => {
+          fetchMetricsHistory();
+          window.location.reload();
+        }}
+      />
+
+      <LiteracyImpactFormModal
+        open={literacyImpactOpen}
+        onClose={() => setLiteracyImpactOpen(false)}
+        school={school as any}
+        onSuccess={() => {
+          fetchMetricsHistory();
+          window.location.reload();
         }}
       />
 

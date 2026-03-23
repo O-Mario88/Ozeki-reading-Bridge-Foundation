@@ -16,8 +16,9 @@ const SchoolRosterPicker = dynamic(
   () => import("./SchoolRosterPicker").then((mod) => mod.SchoolRosterPicker),
   { ssr: false, loading: () => <div>Loading roster...</div> },
 );
-
 import { FormModal } from "@/components/forms";
+import { EnrollmentFormModal } from "./EnrollmentFormModal";
+import { LiteracyImpactFormModal } from "./LiteracyImpactFormModal";
 
 interface PortalSchoolsManagerProps {
   initialSchools: SchoolDirectoryRecord[];
@@ -62,6 +63,8 @@ export function PortalSchoolsManager({
   const [loading, setLoading] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
+  const [isEnrollmentFormOpen, setIsEnrollmentFormOpen] = useState(false);
+  const [isLiteracyImpactFormOpen, setIsLiteracyImpactFormOpen] = useState(false);
   const [createContactName, setCreateContactName] = useState("");
   const [createContactPhone, setCreateContactPhone] = useState("");
   const [createContactGender, setCreateContactGender] = useState<"Male" | "Female" | "Other" | "">("");
@@ -758,9 +761,16 @@ export function PortalSchoolsManager({
                 <button
                   type="button"
                   className="button button-compact"
-                  onClick={() => setEditingProfile(true)}
+                  onClick={() => setIsEnrollmentFormOpen(true)}
                 >
                   New Enrollment
+                </button>
+                <button
+                  type="button"
+                  className="button button-compact"
+                  onClick={() => setIsLiteracyImpactFormOpen(true)}
+                >
+                  New Literacy Impact
                 </button>
                 <Link href={`/portal/trainings?new=1&schoolId=${selectedSchool.id}`} className="button button-compact">
                   New Training
@@ -797,7 +807,25 @@ export function PortalSchoolsManager({
                 <strong>{Number(selectedSchool.enrolledLearners ?? 0).toLocaleString()}</strong>
                 <span>Overall Enrollment</span>
               </article>
+              <article>
+                <strong>{Number(selectedSchool.directImpactLearners ?? 0).toLocaleString()}</strong>
+                <span>Literacy Impact Learners</span>
+              </article>
             </div>
+            
+            <EnrollmentFormModal 
+              open={isEnrollmentFormOpen} 
+              onClose={() => setIsEnrollmentFormOpen(false)} 
+              school={selectedSchool}
+              onSuccess={() => fetchSchools(districtFilter, queryFilter)}
+            />
+            
+            <LiteracyImpactFormModal 
+              open={isLiteracyImpactFormOpen} 
+              onClose={() => setIsLiteracyImpactFormOpen(false)} 
+              school={selectedSchool}
+              onSuccess={() => fetchSchools(districtFilter, queryFilter)}
+            />
 
             {/* ── School Roster Tabs ── */}
             <div className="portal-school-roster-tabs" style={{ marginTop: "1rem" }}>

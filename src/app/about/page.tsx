@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { PageHero } from "@/components/PageHero";
 import { mission, organizationName, vision } from "@/lib/content";
 import { listPortalCoreValuesPostgres } from "@/lib/server/postgres/repositories/public-content";
-import styles from "./page.module.css";
+import { SectionWrapper } from "@/components/public/SectionWrapper";
+import { PremiumCard } from "@/components/public/PremiumCard";
+import { CTAStrip } from "@/components/public/CTAStrip";
+import { ArrowRight, Target, Eye, Heart, Anchor } from "lucide-react";
 
 export const metadata = {
   title: "About",
@@ -22,132 +24,144 @@ export default async function AboutPage() {
 
   return (
     <>
-      <PageHero
-        kicker="Who we are"
-        title={organizationName}
-        description="A literacy-focused organization based in Gulu City, Northern Uganda, strengthening how reading is taught in primary schools through practical classroom support."
-      />
-
-      <section className="section">
-        <div className="container">
-          <nav className={`card ${styles.quickNav}`} aria-label="About page links">
-            <p className="kicker">About Navigation</p>
-            <ul>
-              <li><a href="#mission-vision">Mission &amp; Vision</a></li>
-              <li><Link href="/about/leadership-team">Leadership Team</Link></li>
-              <li><a href="#financial-annual-report">Financials/Annual Report</a></li>
-              <li><Link href="/about/our-story">Our Story</Link></li>
-              <li><a href="#core-values">Core Values &amp; Beliefs</a></li>
-              <li><Link href="/faqs">FAQs</Link></li>
-              <li><Link href="/contact">Contact</Link></li>
-            </ul>
-          </nav>
-        </div>
-      </section>
-
-      <section className="section bg-surface-container" id="mission-vision" style={{ backgroundColor: "var(--md-sys-color-surface-container)" }}>
-        <div className="container">
-          <div className={styles.stackSection}>
-            <div className="section-head">
-              <p className="kicker">Section 1</p>
-              <h2>Mission &amp; Vision</h2>
-            </div>
-            <div className={styles.twoCol}>
-              <article className="card">
-                <h3 className={styles.cardTitle}>Vision</h3>
-                <p>{vision}</p>
-              </article>
-              <article className="card">
-                <h3 className={styles.cardTitle}>Mission</h3>
-                <p>{mission}</p>
-              </article>
-            </div>
+      {/* 1. Hero Section */}
+      <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-32">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-brand-primary/10 via-brand-background to-brand-background pointer-events-none" />
+        <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-brand-primary font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
+            Who we are
           </div>
+          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
+            {organizationName}
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            A literacy-focused organization based in Gulu City, Northern Uganda, strengthening how reading is taught in primary schools through practical classroom support and measurable outcomes.
+          </p>
         </div>
       </section>
 
-      <section className="section" id="core-values">
-        <div className="container">
-          <div className={styles.stackSection}>
-            <div className={`section-head ${styles.valuesSectionHead}`}>
-              <p className="kicker">Section 2</p>
-              <h2>Our Core Values</h2>
-              <p className={styles.valuesIntro}>
-                These values shape how we measure progress, support schools, work with
-                partners, and serve children across Uganda.
+      {/* 2. Quick Navigation Strip */}
+      <div className="bg-white border-y border-gray-100 sticky top-20 z-40 hidden md:block">
+        <div className="container mx-auto px-6 max-w-5xl overflow-x-auto">
+          <ul className="flex items-center gap-8 py-4 whitespace-nowrap text-sm font-semibold text-gray-500">
+            <li><a href="#mission-vision" className="hover:text-brand-primary transition-colors">Mission & Vision</a></li>
+            <li><Link href="/about/leadership-team" className="hover:text-brand-primary transition-colors">Leadership Team</Link></li>
+            <li><a href="#core-values" className="hover:text-brand-primary transition-colors">Core Values</a></li>
+            <li><Link href="/transparency/financials" className="hover:text-brand-primary transition-colors">Financials</Link></li>
+            <li><Link href="/faqs" className="hover:text-brand-primary transition-colors">FAQs</Link></li>
+            <li><Link href="/contact" className="hover:text-brand-primary transition-colors">Contact</Link></li>
+          </ul>
+        </div>
+      </div>
+
+      {/* 3. Mission & Vision (Split panels) */}
+      <SectionWrapper theme="light" id="mission-vision">
+        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-stretch max-w-5xl mx-auto">
+          <PremiumCard className="p-10 md:p-12 flex flex-col items-start bg-brand-primary text-white border-none" withHover>
+            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-8">
+              <Eye className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold mb-6">Our Vision</h2>
+            <p className="text-xl leading-relaxed text-white/90">
+              {vision}
+            </p>
+          </PremiumCard>
+          
+          <PremiumCard className="p-10 md:p-12 flex flex-col items-start bg-white" withHover>
+            <div className="w-14 h-14 rounded-2xl bg-brand-primary/10 flex items-center justify-center mb-8">
+              <Target className="w-8 h-8 text-brand-primary" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
+            <p className="text-xl leading-relaxed text-gray-600">
+              {mission}
+            </p>
+          </PremiumCard>
+        </div>
+      </SectionWrapper>
+
+      {/* 4. Core Values */}
+      <SectionWrapper theme="off-white" id="core-values">
+        <div className="max-w-3xl mx-auto text-center mb-16">
+          <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-primary">
+            <Heart size={32} />
+          </div>
+          <h2 className="text-4xl font-bold text-gray-900 mb-6">Our Core Values</h2>
+          <p className="text-xl text-gray-600 leading-relaxed">
+            These values shape how we measure progress, support schools, work with
+            partners, and serve children across Uganda.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {coreValues.length === 0 ? (
+            <PremiumCard className="p-8 col-span-3 text-center border-dashed border-2 bg-transparent shadow-none">
+              <h3 className="text-xl font-bold text-gray-400 mb-2">Core values will appear here</h3>
+              <p className="text-gray-500">Publish the organization&apos;s core values from the staff portal.</p>
+            </PremiumCard>
+          ) : (
+            coreValues.map((value, index) => (
+              <PremiumCard className="p-8 flex flex-col" key={value.id} withHover>
+                <div className="text-5xl font-extrabold text-gray-100 mb-4 tracking-tighter">
+                  {String(index + 1).padStart(2, '0')}
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">{value.title}</h3>
+                <p className="text-gray-600 leading-relaxed break-words">{value.description}</p>
+              </PremiumCard>
+            ))
+          )}
+        </div>
+
+        {/* Values CTA */}
+        <div className="mt-16 max-w-4xl mx-auto">
+          <PremiumCard className="p-8 md:p-12 bg-gray-900 text-white flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-2xl font-bold mb-4">Evidence-led values in practice</h3>
+              <p className="text-gray-400 text-lg">
+                See how these values translate into classroom support, measurable
+                learning outcomes, and partner accountability.
               </p>
             </div>
+            <Link href="/impact" className="px-8 py-4 rounded-full bg-brand-primary text-white font-semibold hover:bg-brand-primary/90 transition-all shrink-0">
+              Explore the Impact Hub
+            </Link>
+          </PremiumCard>
+        </div>
+      </SectionWrapper>
 
-            <div className={styles.valuesContent}>
-              {coreValues.length === 0 ? (
-                <article className={`card ${styles.valueCard}`}>
-                  <h3 className={styles.valueTitle}>Core values will appear here</h3>
-                  <p className={styles.valueBody}>
-                    Publish the organization&apos;s core values from the staff portal to show them on
-                    this page.
-                  </p>
-                </article>
-              ) : (
-                coreValues.map((value) => (
-                  <article className={`card ${styles.valueCard}`} key={value.id}>
-                    <h3 className={styles.valueTitle}>{value.title}</h3>
-                    <p className={styles.valueBody}>{value.description}</p>
-                  </article>
-                ))
-              )}
+      {/* 5. Financials & Governance */}
+      <SectionWrapper theme="light" id="financial-annual-report">
+        <div className="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
+          <div className="flex justify-center md:justify-end">
+            <div className="w-full max-w-sm aspect-square bg-gray-50 rounded-full flex items-center justify-center border-8 border-white shadow-xl relative">
+              <div className="absolute inset-0 border border-gray-100 rounded-full m-8 border-dashed animate-spin-slow opacity-50" />
+              <Anchor className="w-32 h-32 text-gray-300" />
             </div>
-
-            <article className={`card ${styles.valuesCtaBand}`}>
-              <div>
-                <h3 className={styles.cardTitle}>Evidence-led values in practice</h3>
-                <p>
-                  See how these values translate into classroom support, measurable
-                  learning outcomes, and partner accountability.
-                </p>
-              </div>
-              <Link className="button button-compact" href="/impact">
-                Explore the Impact Hub
+          </div>
+          <div>
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">Financials &amp; Impact Reports</h2>
+            <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              We believe in deep accountability. You can access our published financial transparency documents and annual/program report pages directly.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link href="/transparency/financials" className="px-6 py-3 rounded-full bg-gray-900 text-white font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors">
+                Financial Reports <ArrowRight size={18} />
               </Link>
-            </article>
-
-            <div className={styles.bottomUtilityRow}>
-              <p>
-                Need our full approach by program, district, or national scope? Visit the
-                programs and reports sections.
-              </p>
-              <div className="action-row">
-                <Link className="button button-ghost button-compact" href="/programs">
-                  Learn more about our work
-                </Link>
-              </div>
+              <Link href="/impact#reports" className="px-6 py-3 rounded-full border-2 border-gray-200 text-gray-700 font-semibold flex items-center justify-center hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                Annual &amp; Program Reports
+              </Link>
             </div>
           </div>
         </div>
-      </section>
+      </SectionWrapper>
 
-      <section className="section" id="financial-annual-report">
-        <div className="container">
-          <div className={styles.stackSection}>
-            <div className="section-head">
-              <p className="kicker">Section 3</p>
-              <h2>Financials / Annual Report</h2>
-            </div>
-            <article className="card">
-              <p>
-                Open published financial transparency documents and annual/program report pages.
-              </p>
-              <div className={`action-row ${styles.reportActions}`}>
-                <Link className="button button-compact" href="/transparency/financials">
-                  Financial Reports
-                </Link>
-                <Link className="button button-ghost button-compact" href="/impact#reports">
-                  Annual &amp; Program Reports
-                </Link>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
+      {/* 6. Bottom CTA */}
+      <CTAStrip 
+        heading="Need our full approach?"
+        subheading="Learn how our model adapts to different districts and scales to the national level."
+        primaryButtonText="Learn about our programs"
+        primaryButtonHref="/programs"
+        theme="brand"
+      />
     </>
   );
 }

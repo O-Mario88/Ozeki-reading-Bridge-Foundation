@@ -105,10 +105,7 @@ export interface BlogPostSection {
   paragraphs: string[];
 }
 
-export type BlogHeaderLayoutType = "standard" | "overlay" | "minimal";
-export type BlogOverlayStrength = "light" | "medium" | "dark";
-export type BlogHeroTextAlignment = "left" | "center" | "bottom-left";
-export type BlogSpotlightMode = "auto" | "manual" | "hidden";
+
 export type BlogArticleType =
   | "Blog Post"
   | "Resource Article"
@@ -154,15 +151,7 @@ export interface BlogBodyBlock {
   hideFromToc?: boolean | null;
 }
 
-export interface BlogGradientCtaCard {
-  enabled: boolean;
-  pillLabel?: string | null;
-  headline?: string | null;
-  text?: string | null;
-  buttonLabel?: string | null;
-  buttonLink?: string | null;
-  gradientPreset?: "preset-1" | "preset-2" | "preset-3" | null;
-}
+
 
 export interface BlogComment {
   id: number;
@@ -196,33 +185,18 @@ export interface BlogPost {
   mediaImageUrl?: string | null;
   mediaVideoUrl?: string | null;
   articleType?: BlogArticleType | null;
-  headerLayoutType?: BlogHeaderLayoutType | null;
   featuredImageUrl?: string | null;
   featuredImageAlt?: string | null;
   featuredImageCaption?: string | null;
   featuredImageCredit?: string | null;
-  overlayStrength?: BlogOverlayStrength | null;
-  heroTextAlignment?: BlogHeroTextAlignment | null;
-  showOverlayMetadata?: boolean;
-  showOverlayShareIcons?: boolean;
   primaryCategory?: string | null;
   secondaryCategories?: string[];
-  authorAvatarUrl?: string | null;
   authorBio?: string | null;
   bodyBlocks?: BlogBodyBlock[];
-  tocEnabled?: boolean;
-  spotlightMode?: BlogSpotlightMode | null;
-  spotlightArticleSlugs?: string[];
-  showSpotlightSidebar?: boolean;
-  showCategoryExplorer?: boolean;
-  showNewsletterBlock?: boolean;
-  ctaCard?: BlogGradientCtaCard | null;
   seoTitle?: string | null;
   metaDescription?: string | null;
   socialImageUrl?: string | null;
   canonicalUrl?: string | null;
-  featuredFlag?: boolean;
-  allowComments?: boolean;
   source?: "static" | "portal";
   views?: number;
   likes?: number;
@@ -251,32 +225,17 @@ export interface PortalBlogPostRecord {
   mediaImageUrl: string | null;
   mediaVideoUrl: string | null;
   articleType?: BlogArticleType | null;
-  headerLayoutType?: BlogHeaderLayoutType | null;
   featuredImageUrl?: string | null;
   featuredImageAlt?: string | null;
   featuredImageCaption?: string | null;
   featuredImageCredit?: string | null;
-  overlayStrength?: BlogOverlayStrength | null;
-  heroTextAlignment?: BlogHeroTextAlignment | null;
-  showOverlayMetadata?: boolean;
-  showOverlayShareIcons?: boolean;
   primaryCategory?: string | null;
   secondaryCategories?: string[];
-  authorAvatarUrl?: string | null;
   authorBio?: string | null;
-  tocEnabled?: boolean;
-  spotlightMode?: BlogSpotlightMode | null;
-  spotlightArticleSlugs?: string[];
-  showSpotlightSidebar?: boolean;
-  showCategoryExplorer?: boolean;
-  showNewsletterBlock?: boolean;
-  ctaCard?: BlogGradientCtaCard | null;
   seoTitle?: string | null;
   metaDescription?: string | null;
   socialImageUrl?: string | null;
   canonicalUrl?: string | null;
-  featuredFlag?: boolean;
-  allowComments?: boolean;
   publishStatus: PortalBlogPublishStatus;
   createdByUserId: number;
   createdByUserName: string;
@@ -4075,4 +4034,30 @@ export interface NationalInsights {
     disclaimer: string;
   };
   priorityQueue: NationalPriorityQueueItem[];
+}
+
+export interface SchoolEnrollmentRecord {
+  id: number;
+  schoolId: number;
+  boysCount: number;
+  girlsCount: number;
+  totalEnrollment: number;
+  academicTerm: string | null;
+  updatedFrom: string;
+  recordedById: number;
+  createdAt: string;
+}
+
+export interface SchoolLiteracyImpactRecord {
+  id: number;
+  schoolId: number;
+  babyClassImpacted: number;
+  middleClassImpacted: number;
+  topClassImpacted: number;
+  p1Impacted: number;
+  p2Impacted: number;
+  p3Impacted: number;
+  totalImpacted: number;
+  recordedById: number;
+  createdAt: string;
 }
