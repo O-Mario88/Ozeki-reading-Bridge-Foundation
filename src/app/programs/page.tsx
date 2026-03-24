@@ -28,8 +28,31 @@ export default async function ProgramsPage() {
     .map((label) => summary.metrics.find((metric) => metric.label === label))
     .filter((metric): metric is { label: string; value: number } => Boolean(metric));
 
+  const programsSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: PROGRAM_DIRECTORY_DETAILS.map((program, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      item: {
+        "@type": "EducationalOccupationalProgram",
+        name: program.title,
+        description: program.description,
+        url: `https://www.ozekiread.org${program.href}`,
+        provider: {
+          "@type": "Organization",
+          name: "Ozeki Reading Bridge Foundation",
+        },
+      },
+    })),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(programsSchema) }}
+      />
       {/* 1. Hero Section */}
       <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-primary/10 via-brand-background to-brand-background pointer-events-none" />

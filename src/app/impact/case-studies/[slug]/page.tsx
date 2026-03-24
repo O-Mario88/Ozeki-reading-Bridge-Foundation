@@ -24,8 +24,30 @@ export default async function ImpactCaseStudyDetailPage({
     notFound();
   }
 
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: story.title,
+    description: story.excerpt,
+    author: {
+      "@type": "Person",
+      name: story.storytellerName,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Ozeki Reading Bridge Foundation",
+      url: "https://www.ozekiread.org",
+    },
+    datePublished: story.createdAt,
+    image: story.photoUrl ? [story.photoUrl] : undefined,
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
       <section className="page-hero">
         <div className="container">
           <p className="kicker">Change story</p>

@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
 import { listPublishedChangeStories } from "@/lib/change-stories";
 import { listPublishedStoriesPostgres } from "@/lib/server/postgres/repositories/public-content";
+import { getMergedPublishedBlogPostsAsync } from "@/lib/blog-data";
 
 export const revalidate = 300;
 
@@ -58,6 +59,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/for-schools",
     "/events",
     "/diagnostic-quiz",
+    "/blog",
+    "/privacy",
+    "/terms",
+    "/safeguarding",
+    "/governance",
+    "/story-library",
+    "/anthologies",
+    "/donate",
+    "/insights",
   ].map((path) => ({
     url: `${base}${path}`,
     lastModified: new Date(),
@@ -92,5 +102,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // DB may not be ready during build
   }
 
-  return [...routes, ...storyRoutes, ...changeStoryRoutes];
+  let blogRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const posts = await getMergedPublishedBlogPostsAsync();
+    blogRoutes = posts.map((post) => ({
+      url: `${base}/blog/${post.slug}`,
+      lastModified: post.publishedAt ? new Date(post.publishedAt) : new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+  } catch {
+    // DB may not be ready during build
+  }
+
+  return [...routes, ...storyRoutes, ...changeStoryRoutes, ...blogRoutes];
 }

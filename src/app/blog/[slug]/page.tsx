@@ -55,5 +55,31 @@ export default async function BlogPostPage({ params }: { params: Params }) {
     notFound();
   }
 
-  return <EditorialArticleLayout post={post} allPosts={allPosts} />;
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.seoTitle || post.title,
+    description: post.metaDescription || post.excerpt,
+    author: {
+      "@type": "Person",
+      name: post.author,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Ozeki Reading Bridge Foundation",
+      url: "https://www.ozekiread.org",
+    },
+    datePublished: post.publishedAt,
+    image: post.featuredImageUrl || post.socialImageUrl || post.mediaImageUrl,
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <EditorialArticleLayout post={post} allPosts={allPosts} />
+    </>
+  );
 }
