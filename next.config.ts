@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: [],
+  serverExternalPackages: ["exceljs", "xlsx"],
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   images: { unoptimized: true },

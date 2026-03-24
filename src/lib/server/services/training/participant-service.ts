@@ -1341,9 +1341,9 @@ export async function listTrainingImportLookupRows() {
       SELECT
         pr.id,
         pr.record_code AS "trainingCode",
-        COALESCE(NULLIF(pr.payload_json::jsonb ->> 'trainingName', ''), pr.record_code) AS "trainingTitle",
+        COALESCE(NULLIF(COALESCE(NULLIF(pr.payload_json, ''), '{}')::jsonb ->> 'trainingName', ''), pr.record_code) AS "trainingTitle",
         pr.date::text AS "startDate",
-        NULLIF(pr.payload_json::jsonb ->> 'endTime', '') AS "endDate"
+        NULLIF(COALESCE(NULLIF(pr.payload_json, ''), '{}')::jsonb ->> 'endTime', '') AS "endDate"
       FROM portal_records pr
       WHERE pr.module = 'training'
         AND pr.deleted_at IS NULL
