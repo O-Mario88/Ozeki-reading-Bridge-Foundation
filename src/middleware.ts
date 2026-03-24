@@ -68,7 +68,7 @@ export function middleware(request: NextRequest) {
 
   // Helper: refresh portal session cookie on any portal-scoped response
   function refreshSessionCookie(response: NextResponse) {
-    if (isPortalPath(pathname) || pathname.startsWith("/api/import/")) {
+    if (isPortalPath(pathname) || pathname.startsWith("/api/import/") || pathname.startsWith("/api/auth/")) {
       const sessionCookie = request.cookies.get("orbf_portal_session");
       if (sessionCookie?.value) {
         response.cookies.set({
