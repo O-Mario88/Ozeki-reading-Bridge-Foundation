@@ -111,7 +111,7 @@ export default async function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 items-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
             <Link 
-              href="/impact"
+              href="/impact/dashboard"
               className="px-8 py-4 rounded-full bg-brand-primary text-white font-semibold flex items-center gap-2 hover:bg-brand-primary/90 hover:shadow-xl hover:shadow-brand-primary/20 transition-all hover:-translate-y-0.5"
             >
               View Live Impact Dashboard
@@ -197,7 +197,7 @@ export default async function HomePage() {
           ))}
         </div>
         <div className="text-center mt-12">
-          <Link href="/impact" className="inline-flex items-center gap-2 font-semibold text-brand-primary hover:text-brand-primary/80 transition-colors">
+          <Link href="/impact/dashboard" className="inline-flex items-center gap-2 font-semibold text-brand-primary hover:text-brand-primary/80 transition-colors">
             Explore the public impact map <ArrowRight size={16} />
           </Link>
         </div>
@@ -310,7 +310,7 @@ export default async function HomePage() {
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="View Impact Hub"
-        secondaryButtonHref="/impact"
+        secondaryButtonHref="/impact/dashboard"
         theme="brand"
       />
     </>

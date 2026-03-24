@@ -147,7 +147,7 @@ export default async function PortalReportsPage({
           >
             Assessment Reports
           </Link>
-          <Link href="/impact" className="button button-ghost">
+          <Link href="/impact/dashboard" className="button button-ghost">
             Public Live Dashboard
           </Link>
         </div>
@@ -210,7 +210,7 @@ export default async function PortalReportsPage({
                   Generate Staff School Report
                 </Link>
               )}
-              <Link href="/impact" className="button button-ghost">
+              <Link href="/impact/dashboard" className="button button-ghost">
                 Open Public Live Dashboard
               </Link>
             </div>
@@ -268,7 +268,7 @@ export default async function PortalReportsPage({
                   Request Staff to Generate National Report
                 </Link>
               )}
-              <Link href="/impact" className="button button-ghost">
+              <Link href="/impact/dashboard" className="button button-ghost">
                 Open Public Live Dashboard
               </Link>
             </div>

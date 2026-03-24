@@ -73,7 +73,7 @@ const programsGroup: NavGroup = {
 
 const impactGroup: NavGroup = {
   title: "Impact",
-  href: "/impact",
+  href: "/impact/dashboard",
   description: "Public impact evidence, dashboards, reports, stories, resources, and galleries.",
   links: [
     { href: "/impact#reports", label: "Reports Library" },

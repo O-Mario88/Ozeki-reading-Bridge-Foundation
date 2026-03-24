@@ -41,7 +41,7 @@ export default async function RegionPage({ params }: { params: Params }) {
             <section className="page-hero">
                 <div className="container">
                     <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
-                        <Link href="/impact">Dashboard</Link>
+                        <Link href="/impact/dashboard">Dashboard</Link>
                         <span aria-hidden>›</span>
                         <span>{name}</span>
                     </nav>
