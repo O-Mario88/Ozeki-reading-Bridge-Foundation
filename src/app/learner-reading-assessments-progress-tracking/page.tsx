@@ -77,7 +77,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Assessment Cycles</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Assessment Outcomes Domains</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Ozeki supports schools to run baseline, progress, and endline cycles
               using outcome areas aligned with EGRA-style reporting and classroom
@@ -85,10 +85,12 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
             </p>
             <ul className="mt-2 space-y-3 mb-4">
               {[
-                "Letter-sound knowledge (early grades)",
-                "Decoding accuracy",
-                "Oral reading fluency (CWPM) with accuracy",
-                "Reading comprehension"
+                "Phonemic Awareness (i)",
+                "Grapheme-Phoneme Correspondence (i)",
+                "Blending & Decoding (i)",
+                "Word Recognition & Fluency (i)",
+                "Sentence & Paragraph Construction (i)",
+                "Reading Comprehension (i)"
               ].map((item, idx) => (
                 <li key={idx} className="flex flex-wrap items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
