@@ -155,6 +155,13 @@ const districtsByRegion = new Map<string, string[]>(
   ugandaRegions.map((entry) => [entry.region, entry.districts]),
 );
 
+// Also register sub-regions so getDistrictsByRegion("West Nile") etc. works
+ugandaRegions.forEach((entry) => {
+  entry.subRegions.forEach((sr) => {
+    districtsByRegion.set(sr.subRegion, sr.districts);
+  });
+});
+
 const regionByDistrict = new Map<string, string>();
 const subRegionByDistrict = new Map<string, string>();
 ugandaRegions.forEach((entry) => {

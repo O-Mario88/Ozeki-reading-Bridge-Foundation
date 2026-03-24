@@ -4576,9 +4576,14 @@ export function PortalModuleManager({
               >
                 <option value="">All regions</option>
                 {ugandaRegions.map((entry) => (
-                  <option key={entry.region} value={entry.region}>
-                    {entry.region}
-                  </option>
+                  <optgroup key={entry.region} label={entry.region}>
+                    <option value={entry.region}>All {entry.region}</option>
+                    {entry.subRegions.map((sr) => (
+                      <option key={sr.subRegion} value={sr.subRegion}>
+                        {sr.subRegion}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </label>
@@ -4971,9 +4976,14 @@ export function PortalModuleManager({
                                 >
                                   <option value="">Select region</option>
                                   {ugandaRegions.map((entry) => (
-                                    <option key={entry.region} value={entry.region}>
-                                      {entry.region}
-                                    </option>
+                                    <optgroup key={entry.region} label={entry.region}>
+                                      <option value={entry.region}>All {entry.region}</option>
+                                      {entry.subRegions.map((sr) => (
+                                        <option key={sr.subRegion} value={sr.subRegion}>
+                                          {sr.subRegion}
+                                        </option>
+                                      ))}
+                                    </optgroup>
                                   ))}
                                 </select>
                               </label>
