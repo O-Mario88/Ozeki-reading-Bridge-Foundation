@@ -34,3 +34,4 @@ pnpm-debug.log*
 yarn-error.log*
 database.sqlite
 test.pdf
+lighthouse-report.json
