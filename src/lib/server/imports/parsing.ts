@@ -80,27 +80,33 @@ function parseCsvMatrix(input: string) {
   return rows;
 }
 
-function ensureHeaderContract(actual: string[], expected: readonly string[]) {
+function ensureHeaderContract(actual: string[], expected: readonly string[]): Map<string, number> {
   const normalized = normalizeHeaderCells(actual);
   const duplicates = normalized.filter((value, index) => value && normalized.indexOf(value) !== index);
   if (duplicates.length > 0) {
     throw new Error(`Duplicate headers detected: ${Array.from(new Set(duplicates)).join(", ")}.`);
   }
-  if (normalized.length !== expected.length) {
-    throw new Error(`The uploaded file must contain exactly ${expected.length} columns in the official template order.`);
+  // Build a map from header name → column index
+  const headerIndexMap = new Map<string, number>();
+  for (let i = 0; i < normalized.length; i++) {
+    if (normalized[i]) {
+      headerIndexMap.set(normalized[i], i);
+    }
   }
-  const mismatches = expected.filter((header, index) => normalized[index] !== header);
-  if (mismatches.length > 0) {
-    throw new Error(`Header mismatch. Use the official template with this exact order: ${expected.join(", ")}.`);
+  const missing = expected.filter((header) => !headerIndexMap.has(header));
+  if (missing.length > 0) {
+    throw new Error(`Missing required columns: ${missing.join(", ")}. Use the official template.`);
   }
+  return headerIndexMap;
 }
 
-function matrixToObjects(matrix: unknown[][], headers: readonly string[]) {
+function matrixToObjects(matrix: unknown[][], headers: readonly string[], headerIndexMap: Map<string, number>) {
   return matrix
     .slice(1)
     .map((rawRow) =>
-      headers.reduce<Record<string, string>>((accumulator, header, index) => {
-        accumulator[header] = collapseWhitespace(String(rawRow[index] ?? ""));
+      headers.reduce<Record<string, string>>((accumulator, header) => {
+        const colIndex = headerIndexMap.get(header) ?? -1;
+        accumulator[header] = collapseWhitespace(String((rawRow as unknown[])[colIndex] ?? ""));
         return accumulator;
       }, {}),
     )
@@ -147,11 +153,11 @@ export async function parseUploadSheet(args: {
   }
 
   const headerRow = (matrix[0] ?? []) as unknown[];
-  ensureHeaderContract(headerRow.map((value) => String(value ?? "")), args.expectedHeaders);
+  const headerIndexMap = ensureHeaderContract(headerRow.map((value) => String(value ?? "")), args.expectedHeaders);
 
   return {
     fileName,
     fileFormat,
-    rows: matrixToObjects(matrix, args.expectedHeaders),
+    rows: matrixToObjects(matrix, args.expectedHeaders, headerIndexMap),
   };
 }
