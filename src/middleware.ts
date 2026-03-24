@@ -92,6 +92,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const response = NextResponse.next();
+
   if ((isPublicHost || hostname !== adminPortalHost) && isPortalPath(pathname)) {
     if (pathname.startsWith("/api/portal")) {
       return NextResponse.json({ error: "Not Found" }, { status: 404 });
@@ -103,7 +105,23 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl, 307);
   }
 
-  return NextResponse.next();
+  // Refresh portal session cookie expiration on matching portal/api routes
+  if (isPortalPath(pathname)) {
+    const sessionCookie = request.cookies.get("orbf_portal_session");
+    if (sessionCookie?.value) {
+      response.cookies.set({
+        name: "orbf_portal_session",
+        value: sessionCookie.value,
+        maxAge: 1800, // 30 minutes
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+    }
+  }
+
+  return response;
 }
 
 export const config = {
