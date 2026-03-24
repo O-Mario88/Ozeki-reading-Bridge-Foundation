@@ -177,7 +177,7 @@ export default function PhonicsTrainingPage() {
             <ul className="mt-2 space-y-4">
               {signatureProgram.outcomes.map((outcome, idx) => (
                 <li key={idx} className="flex items-start gap-3 text-white/90">
-                  <CheckCircle2 className="w-5 h-5 text-brand-accent shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-white shrink-0 mt-0.5" />
                   <span>{outcome}</span>
                 </li>
               ))}

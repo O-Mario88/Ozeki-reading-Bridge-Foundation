@@ -109,7 +109,6 @@ export async function GET(request: Request) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: session.maxAge,
   });
   response.cookies.set({
     name: GOOGLE_OAUTH_STATE_COOKIE,

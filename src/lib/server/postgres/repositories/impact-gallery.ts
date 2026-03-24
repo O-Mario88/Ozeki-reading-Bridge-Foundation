@@ -78,31 +78,36 @@ export async function addImpactGalleryEntryPostgres(
 }
 
 export async function listImpactGalleryEntriesPostgres(limit = 400): Promise<ImpactGalleryEntryRecord[]> {
-  const safeLimit = Math.max(1, Math.min(Math.trunc(limit), 1000));
-  const result = await queryPostgres(
-    `SELECT g.*, u.full_name as created_by_name 
-     FROM portal_impact_gallery g
-     LEFT JOIN portal_users u ON g.created_by_user_id = u.id
-     ORDER BY g.created_at DESC
-     LIMIT $1`,
-    [safeLimit]
-  );
+  try {
+    const safeLimit = Math.max(1, Math.min(Math.trunc(limit), 1000));
+    const result = await queryPostgres(
+      `SELECT g.*, u.full_name as created_by_name 
+       FROM portal_impact_gallery g
+       LEFT JOIN portal_users u ON g.created_by_user_id = u.id
+       ORDER BY g.created_at DESC
+       LIMIT $1`,
+      [safeLimit]
+    );
 
-  return result.rows.map(row => ({
-    id: row.id,
-    imageUrl: row.image_url,
-    quoteText: row.quote_text,
-    personName: row.person_name,
-    personRole: row.person_role,
-    activityType: row.activity_type,
-    district: row.district,
-    region: row.region,
-    recordedYear: row.recorded_year,
-    fileName: row.file_name,
-    sizeBytes: row.size_bytes,
-    mimeType: row.mime_type,
-    createdAt: row.created_at,
-    createdByUserId: row.created_by_user_id,
-    createdByName: row.created_by_name || "Unknown",
-  }));
+    return result.rows.map(row => ({
+      id: row.id,
+      imageUrl: row.image_url,
+      quoteText: row.quote_text,
+      personName: row.person_name,
+      personRole: row.person_role,
+      activityType: row.activity_type,
+      district: row.district,
+      region: row.region,
+      recordedYear: row.recorded_year,
+      fileName: row.file_name,
+      sizeBytes: row.size_bytes,
+      mimeType: row.mime_type,
+      createdAt: row.created_at,
+      createdByUserId: row.created_by_user_id,
+      createdByName: row.created_by_name || "Unknown",
+    }));
+  } catch (error) {
+    console.error("[listImpactGalleryEntriesPostgres] Error:", error);
+    return [];
+  }
 }
