@@ -245,7 +245,7 @@ function buildSchoolsExampleRows(): SchoolsTemplateRow[] {
       parish: "Layibi",
       village: "Koro",
       head_teacher_name: "Sarah Akello",
-      head_teacher_phone: "+256700000001",
+      head_teacher_phone: "256700000001",
     },
     {
       school_name: "Lira Demonstration School",
@@ -257,7 +257,7 @@ function buildSchoolsExampleRows(): SchoolsTemplateRow[] {
       parish: "Adyel",
       village: "",
       head_teacher_name: "John Okello",
-      head_teacher_phone: "+256700000014",
+      head_teacher_phone: "256700000014",
     },
   ];
 }
@@ -270,7 +270,7 @@ function buildTrainingParticipantsExampleRows(trainingCode = "TR-0001"): Trainin
       first_name: "Ruth",
       last_name: "Nakato",
       sex: "Female",
-      phone: "+256700000021",
+      phone: "256700000021",
       email: "ruth.nakato@example.org",
       role: "Classroom Teacher",
       job_title: "P3 Teacher",
@@ -293,7 +293,7 @@ function buildTrainingParticipantsExampleRows(trainingCode = "TR-0001"): Trainin
       first_name: "Peter",
       last_name: "Okello",
       sex: "Male",
-      phone: "+256700000022",
+      phone: "256700000022",
       email: "",
       role: "School Leader",
       job_title: "Head Teacher",

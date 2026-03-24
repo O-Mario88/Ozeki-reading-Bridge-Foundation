@@ -130,7 +130,7 @@ function toWriteInput(row: TrainingParticipantTemplateRow, trainingRecordId?: nu
     firstName: requiredValue(row.first_name, "first_name"),
     lastName: requiredValue(row.last_name, "last_name"),
     sex: collapseWhitespace(row.sex) || null,
-    phone: collapseWhitespace(row.phone) || null,
+    phone: normalizePhone(row.phone),
     email: collapseWhitespace(row.email) || null,
     role: requiredValue(row.role, "role"),
     jobTitle: collapseWhitespace(row.job_title) || null,

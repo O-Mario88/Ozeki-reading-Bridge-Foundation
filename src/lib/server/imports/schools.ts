@@ -16,6 +16,7 @@ import {
   assertImportRole,
   assertImportScope,
   collapseWhitespace,
+  normalizePhone,
   normalizeText,
 } from "@/lib/server/imports/utils";
 import {
@@ -45,6 +46,7 @@ function toDuplicateKey(row: SchoolsTemplateRow) {
   ].join("|");
 }
 
+
 function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
   let headTeacher: SchoolDirectoryWriteInput["headTeacher"] = null;
   const hName = collapseWhitespace(row.head_teacher_name);
@@ -52,7 +54,7 @@ function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
     headTeacher = {
       fullName: hName,
       gender: "Other",
-      phone: collapseWhitespace(row.head_teacher_phone) || null,
+      phone: normalizePhone(row.head_teacher_phone),
       email: null,
       whatsapp: null,
     };

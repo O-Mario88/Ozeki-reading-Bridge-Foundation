@@ -16,8 +16,9 @@ export function normalizeText(value: string | null | undefined) {
   return collapseWhitespace(String(value ?? "")).toLowerCase();
 }
 
-export function normalizePhone(value: string | null | undefined) {
-  return String(value ?? "").replace(/[^0-9]+/g, "");
+export function normalizePhone(value: string | null | undefined): string | null {
+  const digits = String(value ?? "").replace(/[^0-9]+/g, "");
+  return digits ? `+${digits}` : null;
 }
 
 export function isTruthyLike(value: string | null | undefined) {
