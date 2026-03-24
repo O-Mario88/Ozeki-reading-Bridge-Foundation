@@ -8,6 +8,7 @@ import { organizationName, tagline } from "@/lib/content";
 import { GradientBackground } from "@/components/ui/GradientBackground";
 import { Inter } from "next/font/google";
 import { LayoutOrchestrator } from "@/components/public/LayoutOrchestrator";
+import { OfflineBanner } from "@/components/public/OfflineBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -53,6 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans text-brand-text antialiased`} suppressHydrationWarning>
+        <OfflineBanner />
         <GradientBackground />
         <ModalAccessibilityManager />
         <ServiceWorkerRegister />
