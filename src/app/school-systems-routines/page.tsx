@@ -25,7 +25,7 @@ export default function SchoolSystemsRoutinesPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 School Literacy Program Strengthening
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -75,7 +75,7 @@ export default function SchoolSystemsRoutinesPage() {
       {/* 2. How We Do It */}
       <SectionWrapper theme="light" id="details">
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">How We Do It</h2>
+          <h2 className="text-4xl font-bold text-brand-primary mb-6">How We Do It</h2>
           <p className="text-xl text-gray-600 leading-relaxed">
             What happens in a school when we install literacy routines.
           </p>
@@ -85,7 +85,7 @@ export default function SchoolSystemsRoutinesPage() {
           
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Set the Literacy Structure</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Set the Literacy Structure</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               We help the school create a realistic literacy timetable that
               protects reading time every day and clarifies responsibility.
@@ -107,7 +107,7 @@ export default function SchoolSystemsRoutinesPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Install Daily &amp; Weekly Routines</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Install Daily &amp; Weekly Routines</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               We introduce repeatable routines teachers can run every day without
               overthinking.
@@ -129,7 +129,7 @@ export default function SchoolSystemsRoutinesPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Track Implementation</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Track Implementation</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               We provide simple tools to track whether routines are happening
               consistently and whether learners are progressing.
@@ -151,7 +151,7 @@ export default function SchoolSystemsRoutinesPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">4</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Accountability (Supportive)</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Accountability (Supportive)</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               We help leaders supervise reading lessons using short checklists and
               coaching conversations, without blame.
@@ -180,7 +180,7 @@ export default function SchoolSystemsRoutinesPage() {
           <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-primary">
             <Download size={32} />
           </div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">Tools &amp; Templates Downloads</h2>
+          <h2 className="text-4xl font-bold text-brand-primary mb-6">Tools &amp; Templates Downloads</h2>
           <p className="text-xl text-gray-600 leading-relaxed">
             Direct access to the same implementation resources we use in schools.
           </p>
@@ -188,7 +188,7 @@ export default function SchoolSystemsRoutinesPage() {
 
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           <PremiumCard className="p-8" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Literacy Timetables</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Literacy Timetables</h3>
             <ul className="space-y-3">
               <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={16}/> Download Literacy Timetable Template</a></li>
               <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={16}/> Download Reading Block Schedule Samples</a></li>
@@ -196,7 +196,7 @@ export default function SchoolSystemsRoutinesPage() {
           </PremiumCard>
           
           <PremiumCard className="p-8" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Daily &amp; Weekly Reading Routines</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Daily &amp; Weekly Reading Routines</h3>
             <ul className="space-y-3">
               <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={16}/> Download Daily Reading Routine Poster</a></li>
               <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={16}/> Download Weekly Literacy Routine Planner</a></li>
@@ -205,7 +205,7 @@ export default function SchoolSystemsRoutinesPage() {
           </PremiumCard>
           
           <PremiumCard className="p-8" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Implementation Tracking Tools</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Implementation Tracking Tools</h3>
             <ul className="space-y-3">
               <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={16}/> Download Routine Tracker (Teacher/Class)</a></li>
               <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={16}/> Download Term Literacy Checklist</a></li>
@@ -214,7 +214,7 @@ export default function SchoolSystemsRoutinesPage() {
           </PremiumCard>
           
           <PremiumCard className="p-8" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Accountability Tools</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Accountability Tools</h3>
             <ul className="space-y-3">
               <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={16}/> Download Headteacher Supervision Checklist</a></li>
               <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={16}/> Download Coaching Conversation Guide</a></li>

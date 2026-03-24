@@ -12,7 +12,7 @@ export default function RequestSupportPage() {
                     <span className="inline-block px-4 py-1.5 mb-6 text-sm font-bold tracking-widest text-indigo-600 uppercase bg-indigo-50 rounded-full border border-indigo-100">
                         Ozeki Bridge Foundation
                     </span>
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-tight max-w-4xl mx-auto">
+                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-brand-primary mb-6 tracking-tight leading-tight max-w-4xl mx-auto">
                         Supporting Your School's <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500">Literacy Journey</span>
                     </h1>

@@ -26,7 +26,7 @@ export default function MonitoringEvaluationReportingPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Data &amp; Evidence
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Monitoring, Evaluation &amp; Reporting
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -77,7 +77,7 @@ export default function MonitoringEvaluationReportingPage() {
           
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Operational Delivery</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Operational Delivery</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               The foundation of evidence rests on what actually happens in schools. 
               The platform tracks:
@@ -99,7 +99,7 @@ export default function MonitoringEvaluationReportingPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Instructional Quality</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Instructional Quality</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Delivery alone does not equal impact. Data must verify if training
               changes teaching behavior. Using standardized rubrics, coaches evaluate routines like:
@@ -121,7 +121,7 @@ export default function MonitoringEvaluationReportingPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Learner Reading Progress</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Learner Reading Progress</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               The ultimate measure is learner capability. Assessment tools (like
               EGRA and internal benchmarks) capture:
@@ -149,7 +149,7 @@ export default function MonitoringEvaluationReportingPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Public Dashboards & Transparency</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Public Dashboards & Transparency</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Ozeki builds public dashboards that share aggregated insights
               from network schools. This transforms isolated program data into

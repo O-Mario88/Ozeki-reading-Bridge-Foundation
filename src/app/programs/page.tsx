@@ -37,7 +37,7 @@ export default async function ProgramsPage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
             What We Do
           </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
+          <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-8">
             Programs & Services
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 max-w-3xl leading-relaxed">
@@ -52,7 +52,7 @@ export default async function ProgramsPage() {
           <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-primary">
             <BarChart3 size={32} />
           </div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">Real-Time Impact</h2>
+          <h2 className="text-4xl font-bold text-brand-primary mb-6">Real-Time Impact</h2>
           <p className="text-xl text-gray-600 leading-relaxed">
             Live headline metrics from the backend data system demonstrating our current reach.
           </p>
@@ -75,7 +75,7 @@ export default async function ProgramsPage() {
       {/* 3. Program Directory */}
       <SectionWrapper theme="light" id="directory">
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">Program Directory</h2>
+          <h2 className="text-4xl font-bold text-brand-primary mb-6">Program Directory</h2>
           <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
             The detailed program narratives below outline the full NLIP implementation
             pathways, serving as the single source of truth for our literacy interventions.
@@ -85,7 +85,7 @@ export default async function ProgramsPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {PROGRAM_DIRECTORY_DETAILS.map((program) => (
             <PremiumCard className="p-8 md:p-10 flex flex-col" key={program.href} withHover>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">{program.title}</h3>
+              <h3 className="text-2xl font-bold text-brand-primary mb-4">{program.title}</h3>
               <p className="text-gray-600 leading-relaxed mb-6 flex-grow">{program.description}</p>
               
               <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100">

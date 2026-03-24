@@ -11,7 +11,7 @@ export function DiscussionPanel() {
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide flex items-center">
+                <h3 className="font-bold text-brand-primary text-sm uppercase tracking-wide flex items-center">
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Session Discussion
                 </h3>

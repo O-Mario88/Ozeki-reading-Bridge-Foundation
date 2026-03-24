@@ -123,14 +123,14 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
         {/* DESCRIPTION */}
         {activeTab === "description" && (
             <div className="animate-in fade-in duration-300">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Agenda</h3>
+                <h3 className="text-lg font-bold text-brand-primary mb-4">Agenda</h3>
                 <div className="prose prose-blue prose-sm max-w-none text-gray-600">
                     {session.agenda}
                 </div>
 
                 {session.objectives && (
                     <>
-                        <h3 className="text-lg font-bold text-gray-900 mt-8 mb-4">Learning Objectives</h3>
+                        <h3 className="text-lg font-bold text-brand-primary mt-8 mb-4">Learning Objectives</h3>
                         <div className="prose prose-blue prose-sm max-w-none text-gray-600">
                             {session.objectives}
                         </div>
@@ -156,7 +156,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
         {activeTab === "transcript" && (
             <div className="animate-in fade-in duration-300">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-gray-900">Session Artifacts</h3>
+                    <h3 className="text-lg font-bold text-brand-primary">Session Artifacts</h3>
                     {isStaff && (
                         <button className="text-sm text-blue-600 hover:underline">Sync from Google</button>
                     )}
@@ -170,7 +170,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                             <PlayCircle className="w-6 h-6" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-gray-900">Video Recording</h4>
+                            <h4 className="font-bold text-brand-primary">Video Recording</h4>
                             <p className="text-sm text-gray-500">{hasRecording ? "Available on Drive" : "Waiting for Meet sync"}</p>
                         </div>
                     </div>
@@ -188,7 +188,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                         <FileText className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-gray-900">Full Transcript</h4>
+                        <h4 className="font-bold text-brand-primary">Full Transcript</h4>
                         <p className="text-sm text-gray-500">{hasTranscript ? "Available" : "Will appear post-session"}</p>
                     </div>
                 </div>
@@ -231,7 +231,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Loader2 className="w-8 h-8 text-gray-400 rotate-180" />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Notes not available yet</h3>
+                    <h3 className="text-lg font-bold text-brand-primary mb-2">Notes not available yet</h3>
                     <p className="text-gray-500 max-w-md mx-auto">
                         Once the session concludes and the Google Meet transcript finishes processing, AI meeting notes will appear here.
                     </p>
@@ -245,7 +245,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
 {
     activeTab === "resources" && (
         <div className="animate-in fade-in duration-300">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">Session Materials</h3>
+            <h3 className="text-lg font-bold text-brand-primary mb-6">Session Materials</h3>
             {normalizedResources.length === 0 ? (
                 <div className="p-8 text-center bg-gray-50 rounded-xl border border-gray-200 border-dashed">
                     <p className="text-gray-500">No resources uploaded for this session yet.</p>
@@ -256,7 +256,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
                         <div key={i} className="group p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between">
                             <div className="flex items-start mb-4">
                                 <FileText className="w-8 h-8 text-blue-500 shrink-0 mr-3" />
-                                <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{r.title || "Resource"}</h4>
+                                <h4 className="font-medium text-brand-primary text-sm line-clamp-2">{r.title || "Resource"}</h4>
                             </div>
                             <a href={r.fileUrl || "#"} download className="text-sm font-bold text-blue-600 group-hover:underline flex items-center">
                                 Download <Download className="w-3 h-3 ml-1" />
@@ -274,7 +274,7 @@ export function SessionTabs({ session, resources, artifacts, isStaff }: SessionT
     activeTab === "attendance" && isStaff && (
         <div className="animate-in fade-in duration-300">
             <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                <h3 className="text-lg font-bold text-brand-primary flex items-center">
                     <Users className="w-5 h-5 mr-2 text-gray-400" />
                     Participant Roster Tracker
                 </h3>

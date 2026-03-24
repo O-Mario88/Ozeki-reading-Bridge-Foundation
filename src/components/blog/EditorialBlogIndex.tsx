@@ -67,7 +67,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
               Knowledge Hub
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6 w-full">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6 w-full">
               Inspiring tales of transformation
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 w-full leading-relaxed">
@@ -108,7 +108,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
                           {featured.primaryCategory || featured.category}
                         </span>
                       </div>
-                      <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 leading-tight">
+                      <h2 className="text-3xl md:text-4xl font-extrabold text-brand-primary mb-4 leading-tight">
                         <Link href={`/blog/${featured.slug}`} className="hover:text-brand-primary transition-colors">
                           {featured.title}
                         </Link>
@@ -171,7 +171,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <h3 className="font-bold text-gray-900 mb-2 px-3 text-sm tracking-widest uppercase text-brand-primary">
+                  <h3 className="font-bold text-brand-primary mb-2 px-3 text-sm tracking-widest uppercase text-brand-primary">
                     Categories
                   </h3>
                   <button
@@ -203,7 +203,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
               </PremiumCard>
 
               <PremiumCard className="p-6 overflow-hidden">
-                <h3 className="font-bold text-gray-900 mb-6 px-3 text-sm tracking-widest uppercase text-brand-primary">
+                <h3 className="font-bold text-brand-primary mb-6 px-3 text-sm tracking-widest uppercase text-brand-primary">
                   Featured Reads
                 </h3>
                 <div className="flex flex-col gap-6">

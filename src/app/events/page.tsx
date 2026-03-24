@@ -73,7 +73,7 @@ export default async function OnlineTrainingPage() {
               <Sparkles size={16} />
               Ozeki Capability Building
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight mb-8">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary leading-tight mb-8">
               Join Ozeki Online Training Sessions
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 leading-relaxed mb-10 max-w-2xl">
@@ -158,7 +158,7 @@ export default async function OnlineTrainingPage() {
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12">
             <div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Explore Top Sessions</h2>
+              <h2 className="text-4xl font-bold text-brand-primary mb-4">Explore Top Sessions</h2>
               <p className="text-lg text-gray-600">
                 Enroll in upcoming webinars to gain access to exclusive presentation materials and live coaching.
               </p>
@@ -170,7 +170,7 @@ export default async function OnlineTrainingPage() {
               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Calendar className="w-10 h-10 text-gray-400" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">No upcoming sessions</h3>
+              <h3 className="text-2xl font-bold text-brand-primary mb-2">No upcoming sessions</h3>
               <p className="text-gray-500 max-w-md mx-auto">
                 Check back soon! Our staff are scheduling new literacy masterclasses right now.
               </p>

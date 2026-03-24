@@ -26,7 +26,7 @@ export default function StoryProjectPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 The 1001 Story Project
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -78,7 +78,7 @@ export default function StoryProjectPage() {
           
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Classroom Routine</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Classroom Routine</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               At the heart of the project is a simple but powerful routine:
               learners write short stories using clear prompts and guided
@@ -93,7 +93,7 @@ export default function StoryProjectPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Teacher Training</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Teacher Training</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Teachers are trained to deliver story writing as structured literacy instruction, guiding learners in:
             </p>
@@ -114,7 +114,7 @@ export default function StoryProjectPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Read-Aloud Cycles</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Read-Aloud Cycles</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Read-aloud cycles are used strategically. Learners read their own
               work and peers' work as drafts improve, building fluency,
@@ -134,7 +134,7 @@ export default function StoryProjectPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Publication and Visibility</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Publication and Visibility</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               The project is designed for publication. Learner stories are
               compiled into school anthologies that can be published as PDF for

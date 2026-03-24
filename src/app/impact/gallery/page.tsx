@@ -95,7 +95,7 @@ export default async function ImpactGalleryPage({
               <Sparkles className="w-4 h-4 text-[#FA7D15]" /> Gallery of Impact
             </div>
             
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold text-gray-900 tracking-tight leading-[1.1] mb-8">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold text-brand-primary tracking-tight leading-[1.1] mb-8">
               Moments <br className="hidden sm:block" />
               <span className="text-gray-400 font-light italic">of</span> Change
             </h1>
@@ -253,7 +253,7 @@ export default async function ImpactGalleryPage({
                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                  <Sparkles className="w-8 h-8 text-gray-300" />
                </div>
-               <h3 className="text-2xl font-bold text-gray-900 mb-3">No moments found</h3>
+               <h3 className="text-2xl font-bold text-brand-primary mb-3">No moments found</h3>
                <p className="text-gray-500 text-lg leading-relaxed">
                  We couldn't find any media matching your exact filters. Try broadening your selection.
                </p>

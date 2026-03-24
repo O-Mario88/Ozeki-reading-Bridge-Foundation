@@ -25,7 +25,7 @@ export default function InstructionalLeadershipSupportPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Instructional Leadership Support
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -76,7 +76,7 @@ export default function InstructionalLeadershipSupportPage() {
           
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Practical Supervision Tools</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Practical Supervision Tools</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               We equip Headteachers and Directors of Studies with simple supervision
               tools that fit into their normal schedules:
@@ -97,7 +97,7 @@ export default function InstructionalLeadershipSupportPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Targeted Observations</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Targeted Observations</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               During reading lessons, leaders are guided to track core routines:
             </p>
@@ -119,7 +119,7 @@ export default function InstructionalLeadershipSupportPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Action-Oriented Coaching</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Action-Oriented Coaching</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Leaders move beyond general comments to actionable guidance linked to
               learner outcomes:
@@ -146,7 +146,7 @@ export default function InstructionalLeadershipSupportPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Evidence-Led Decisions</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Evidence-Led Decisions</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Leaders are trained to use learner assessment and reading-level data
               for practical school decisions:
@@ -167,7 +167,7 @@ export default function InstructionalLeadershipSupportPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Lightweight Accountability</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Lightweight Accountability</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Leaders learn to run manageable school systems that sustain gains
               even when external coaches are not present:

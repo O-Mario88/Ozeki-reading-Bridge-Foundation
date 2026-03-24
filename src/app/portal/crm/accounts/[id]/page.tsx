@@ -24,7 +24,7 @@ export default async function Account360Page({
       <div className="flex justify-between items-start mb-8">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-bold text-gray-900">{account.account_name}</h1>
+            <h1 className="text-4xl font-bold text-brand-primary">{account.account_name}</h1>
             <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wider">
               {account.account_type}
             </span>
@@ -49,15 +49,15 @@ export default async function Account360Page({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
         <div className="bg-white p-6 border rounded-2xl shadow-sm">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Impact</p>
-          <h3 className="text-2xl font-bold text-gray-900">{account.enrolled_learners || 0} Learners</h3>
+          <h3 className="text-2xl font-bold text-brand-primary">{account.enrolled_learners || 0} Learners</h3>
         </div>
         <div className="bg-white p-6 border rounded-2xl shadow-sm">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Engagement</p>
-          <h3 className="text-2xl font-bold text-gray-900">{account.total_interactions || 0} Touches</h3>
+          <h3 className="text-2xl font-bold text-brand-primary">{account.total_interactions || 0} Touches</h3>
         </div>
         <div className="bg-white p-6 border rounded-2xl shadow-sm">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Active Staff</p>
-          <h3 className="text-2xl font-bold text-gray-900">{account.total_contacts || 0} People</h3>
+          <h3 className="text-2xl font-bold text-brand-primary">{account.total_contacts || 0} People</h3>
         </div>
         <div className="bg-white p-6 border rounded-2xl shadow-sm">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Program Status</p>
@@ -72,7 +72,7 @@ export default async function Account360Page({
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50/50">
-              <h3 className="font-bold text-gray-900 tracking-tight">Interaction Timeline</h3>
+              <h3 className="font-bold text-brand-primary tracking-tight">Interaction Timeline</h3>
             </div>
             <div className="p-6">
               {account.interactions?.length === 0 ? (
@@ -84,7 +84,7 @@ export default async function Account360Page({
                       <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-white border-4 border-blue-500 ring-4 ring-white"></div>
                       <div>
                         <div className="flex justify-between items-start">
-                          <h4 className="font-bold text-gray-900">{event.subject}</h4>
+                          <h4 className="font-bold text-brand-primary">{event.subject}</h4>
                           <span className="text-xs font-medium text-gray-400">
                             {new Date(event.activity_date).toLocaleDateString()}
                           </span>
@@ -112,7 +112,7 @@ export default async function Account360Page({
         {/* Right Column: Key Contacts & Details */}
         <div className="space-y-8">
           <div className="bg-white border rounded-2xl shadow-sm p-6">
-            <h3 className="font-bold text-gray-900 mb-4 flex justify-between items-center">
+            <h3 className="font-bold text-brand-primary mb-4 flex justify-between items-center">
               Key Contacts
               <button className="text-xs text-blue-600 hover:underline">+ Add</button>
             </h3>

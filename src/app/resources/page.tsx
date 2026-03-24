@@ -42,7 +42,7 @@ export default async function ResourcesPage() {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#006b61]/10 text-[#006b61] font-bold text-sm mb-6 shadow-sm border border-[#006b61]/20">
               <BookOpen className="w-4 h-4" /> Downloadable Resources
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
               Resources Library
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">

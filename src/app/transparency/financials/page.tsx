@@ -95,7 +95,7 @@ export default async function FinancialTransparencyPage() {
         {/* 2. Intro Section */}
         <SectionWrapper theme="light" id="intro">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Why Financial Transparency Matters</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">Why Financial Transparency Matters</h2>
             <p className="text-xl text-gray-600 leading-relaxed">
               Transparency is central to how Ozeki builds trust with partners, supporters, schools, and communities. We believe that every resource entrusted to us should be managed responsibly, applied purposefully, and reported clearly. Our financial transparency work is designed to show not only how funds are used, but also how those resources contribute to literacy and education outcomes.
             </p>
@@ -109,7 +109,7 @@ export default async function FinancialTransparencyPage() {
               <div className="w-14 h-14 rounded-2xl bg-[#006b61]/10 flex items-center justify-center mb-6">
                 <Heart className="w-7 h-7 text-[#006b61]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Stewardship</h3>
+              <h3 className="text-2xl font-bold text-brand-primary mb-4">Stewardship</h3>
               <p className="text-gray-600 leading-relaxed text-lg">
                 We manage financial resources with care, discipline, and a strong commitment to mission alignment.
               </p>
@@ -118,7 +118,7 @@ export default async function FinancialTransparencyPage() {
               <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center mb-6">
                 <Scale className="w-7 h-7 text-[#FA7D15]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Accountability</h3>
+              <h3 className="text-2xl font-bold text-brand-primary mb-4">Accountability</h3>
               <p className="text-gray-600 leading-relaxed text-lg">
                 We strengthen internal controls, documentation, and reporting processes to support responsible oversight.
               </p>
@@ -127,7 +127,7 @@ export default async function FinancialTransparencyPage() {
               <div className="w-14 h-14 rounded-2xl bg-[#006b61]/10 flex items-center justify-center mb-6">
                 <Target className="w-7 h-7 text-[#006b61]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Impact</h3>
+              <h3 className="text-2xl font-bold text-brand-primary mb-4">Impact</h3>
               <p className="text-gray-600 leading-relaxed text-lg">
                 We aim to connect funding to program delivery, educational reach, and measurable literacy outcomes.
               </p>
@@ -139,7 +139,7 @@ export default async function FinancialTransparencyPage() {
         <SectionWrapper theme="light">
           <div className="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Our Commitment to Responsible Financial Management</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">Our Commitment to Responsible Financial Management</h2>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
                 Ozeki is committed to maintaining sound financial practices that promote trust, accountability, and sustainability. We work to ensure that our financial systems support program delivery, responsible decision-making, and transparent communication with stakeholders.
               </p>
@@ -167,7 +167,7 @@ export default async function FinancialTransparencyPage() {
         {/* 5. How Funds Are Used */}
         <SectionWrapper theme="off-white">
           <div className="max-w-4xl mx-auto text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">How Resources Support Our Work</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">How Resources Support Our Work</h2>
             <p className="text-xl text-gray-600 leading-relaxed">
               Financial resources support the implementation of Ozeki’s literacy and education mission across programmatic and operational areas. We aim to direct resources toward activities that create meaningful and measurable benefit for schools, teachers, and learners.
             </p>
@@ -189,7 +189,7 @@ export default async function FinancialTransparencyPage() {
                 <div className="w-12 h-12 rounded-full bg-[#006b61]/10 flex items-center justify-center mb-4">
                   <block.icon className="w-6 h-6 text-[#006b61]" />
                 </div>
-                <h4 className="font-bold text-gray-900">{block.title}</h4>
+                <h4 className="font-bold text-brand-primary">{block.title}</h4>
               </div>
             ))}
           </div>
@@ -232,7 +232,7 @@ export default async function FinancialTransparencyPage() {
         {/* 7. Reports and Documents (LIVE DATA) */}
         <SectionWrapper theme="light" id="reports">
           <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Reports and Financial Documents</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">Reports and Financial Documents</h2>
             <p className="text-xl text-gray-600 leading-relaxed">
               This section provides access to selected financial and accountability materials intended to improve visibility into how resources are managed and applied. 
             </p>
@@ -244,7 +244,7 @@ export default async function FinancialTransparencyPage() {
           <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12">
             {/* Live Financial Summaries */}
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center border-b pb-4">
+              <h3 className="text-2xl font-bold text-brand-primary mb-6 flex items-center border-b pb-4">
                 <FileCheck className="w-6 h-6 mr-3 text-[#FA7D15]" />
                 Financial Summary Reports
               </h3>
@@ -280,7 +280,7 @@ export default async function FinancialTransparencyPage() {
 
             {/* Live Audited Documents */}
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center border-b pb-4">
+              <h3 className="text-2xl font-bold text-brand-primary mb-6 flex items-center border-b pb-4">
                 <Shield className="w-6 h-6 mr-3 text-[#006b61]" />
                 Audited Statements &amp; Accountability
               </h3>
@@ -302,7 +302,7 @@ export default async function FinancialTransparencyPage() {
                     <div key={a.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h4 className="font-bold text-gray-900 text-lg">FY {a.fy} Audited Financials</h4>
+                          <h4 className="font-bold text-brand-primary text-lg">FY {a.fy} Audited Financials</h4>
                           <p className="text-sm text-gray-500 mt-1">{a.auditorName ? `External Auditor: ${a.auditorName}` : "Official Audited Report"}</p>
                         </div>
                         <a href={`/api/transparency/financials/${a.id}/download?type=audited`} download className="shrink-0 p-3 bg-[#006b61]/10 hover:bg-[#006b61]/20 text-[#006b61] rounded-xl transition-colors">
@@ -321,7 +321,7 @@ export default async function FinancialTransparencyPage() {
         {/* 8. Accountability Approach */}
         <SectionWrapper theme="off-white">
           <div className="max-w-4xl mx-auto text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Our Accountability Approach</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">Our Accountability Approach</h2>
             <p className="text-xl text-gray-600 leading-relaxed">
               Ozeki continues to strengthen its internal processes for financial planning, expenditure control, reporting, and review. We aim to ensure that our systems are robust enough to support responsible management today and credible growth in the future.
             </p>
@@ -361,7 +361,7 @@ export default async function FinancialTransparencyPage() {
         {/* 9. Continuous Improvement */}
         <SectionWrapper theme="light">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">A Continuing Commitment</h2>
+            <h2 className="text-3xl font-bold text-brand-primary mb-6">A Continuing Commitment</h2>
             <p className="text-xl text-gray-600 leading-relaxed border-l-4 border-[#006b61] pl-6 text-left italic bg-gray-50 p-6 rounded-r-xl shadow-sm">
               Financial transparency is an ongoing commitment. As Ozeki grows, we are committed to improving the clarity, quality, and accessibility of the information we share. We view transparency as essential to trust, effective partnership, and long-term impact.
             </p>

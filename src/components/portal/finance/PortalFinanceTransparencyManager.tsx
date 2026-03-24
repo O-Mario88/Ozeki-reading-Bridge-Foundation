@@ -84,7 +84,7 @@ function PortalFinanceTransparencyManagerContent() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 border-none outline-none ring-0 appearance-none">Financial Transparency Hub</h2>
+          <h2 className="text-xl font-bold text-brand-primary border-none outline-none ring-0 appearance-none">Financial Transparency Hub</h2>
           <p className="text-sm text-gray-500">Manage public financial snapshots and audited statements.</p>
         </div>
       </div>

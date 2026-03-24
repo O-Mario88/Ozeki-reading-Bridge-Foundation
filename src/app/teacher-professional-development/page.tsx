@@ -25,7 +25,7 @@ export default function TeacherProfessionalDevelopmentPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Teacher Professional Development
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -76,7 +76,7 @@ export default function TeacherProfessionalDevelopmentPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Instructional Model</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Instructional Model</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Each training series begins by aligning teachers to a clear instructional model:
             </p>
@@ -94,7 +94,7 @@ export default function TeacherProfessionalDevelopmentPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Core Reading Engine</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Core Reading Engine</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Teachers learn how to teach pure letter sounds, strengthen sound-symbol mapping, and run oral response routines.
             </p>
@@ -114,7 +114,7 @@ export default function TeacherProfessionalDevelopmentPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Fluency + Comprehension</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Fluency + Comprehension</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               The program builds habits that accelerate reading growth: accuracy,
               pace, repeated reading, and partner reading.
@@ -138,7 +138,7 @@ export default function TeacherProfessionalDevelopmentPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Ready-to-Use Materials</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Ready-to-Use Materials</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Teachers receive practical tools that reduce preparation burden and improve consistency:
             </p>
@@ -158,7 +158,7 @@ export default function TeacherProfessionalDevelopmentPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Implementation & Accountability</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Implementation & Accountability</h3>
             <p className="text-gray-600 leading-relaxed mb-4">Every session closes with a simple plan:</p>
             <ul className="mt-2 space-y-3 mb-4 border-b border-gray-100 pb-4">
               {[

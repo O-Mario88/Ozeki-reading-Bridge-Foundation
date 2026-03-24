@@ -19,7 +19,7 @@ export default function ContactPage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
             Get in touch
           </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
             Contact Us
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
@@ -34,7 +34,7 @@ export default function ContactPage() {
           {/* Office Details Column */}
           <div className="lg:col-span-2 flex flex-col gap-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Head Office</h2>
+              <h2 className="text-3xl font-bold text-brand-primary mb-6">Our Head Office</h2>
               <p className="text-lg text-gray-600 leading-relaxed mb-8">
                 Based in Northern Uganda, our team travels regularly to support partner schools across multiple districts. Reach us directly using any of the channels below.
               </p>
@@ -46,7 +46,7 @@ export default function ContactPage() {
                   <Mail size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-1">Email us</h3>
+                  <h3 className="font-bold text-brand-primary mb-1">Email us</h3>
                   <a href={officialContactLinks.mailto} className="text-gray-600 hover:text-brand-primary transition-colors">
                     {officialContact.email}
                   </a>
@@ -58,7 +58,7 @@ export default function ContactPage() {
                   <Phone size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-1">Call us</h3>
+                  <h3 className="font-bold text-brand-primary mb-1">Call us</h3>
                   <a href={officialContactLinks.tel} className="text-gray-600 hover:text-brand-primary transition-colors">
                     {officialContact.phoneDisplay}
                   </a>
@@ -70,7 +70,7 @@ export default function ContactPage() {
                   <MessageCircle size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-1">WhatsApp</h3>
+                  <h3 className="font-bold text-brand-primary mb-1">WhatsApp</h3>
                   <a href={officialContactLinks.whatsapp} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-green-600 transition-colors">
                     Chat with our support team
                   </a>
@@ -82,7 +82,7 @@ export default function ContactPage() {
                   <MapPin size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-1">Visit us</h3>
+                  <h3 className="font-bold text-brand-primary mb-1">Visit us</h3>
                   <p className="text-gray-600 leading-relaxed max-w-[200px]">
                     {officialContact.address}
                   </p>
@@ -94,7 +94,7 @@ export default function ContactPage() {
           {/* Contact Form Column */}
           <div className="lg:col-span-3">
             <PremiumCard className="p-8 md:p-12 shadow-xl border-none">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Send an inquiry</h2>
+              <h2 className="text-3xl font-bold text-brand-primary mb-2">Send an inquiry</h2>
               <p className="text-gray-500 mb-8 pb-8 border-b border-gray-100">
                 Use the form below and our team will route it to the right department.
               </p>

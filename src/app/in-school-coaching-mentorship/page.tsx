@@ -25,7 +25,7 @@ export default function InSchoolCoachingMentorshipPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 In-School Coaching &amp; Mentorship
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -76,7 +76,7 @@ export default function InSchoolCoachingMentorshipPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Classroom Observation Focus</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Classroom Observation Focus</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Ozeki coaches work directly inside classrooms and observe real
               reading lessons using a standard lesson evaluation tool. The tool
@@ -100,7 +100,7 @@ export default function InSchoolCoachingMentorshipPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col md:col-span-1 lg:col-span-1" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Coaching, Not Inspection</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Coaching, Not Inspection</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Observation is never inspection. It is a coaching moment.
               Coaches provide immediate and specific feedback that identifies:
@@ -141,7 +141,7 @@ export default function InSchoolCoachingMentorshipPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Daily Routines Repaired</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Daily Routines Repaired</h3>
             <ul className="mt-2 space-y-3 mb-4 border-b border-gray-100 pb-4">
               {[
                 "Accurate sound teaching",
@@ -163,7 +163,7 @@ export default function InSchoolCoachingMentorshipPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Evidence and Accountability</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Evidence and Accountability</h3>
             <p className="text-gray-600 leading-relaxed mb-4">Each coaching visit generates structured data:</p>
             <ul className="mt-2 space-y-3 mb-4 border-b border-gray-100 pb-4">
               {[
@@ -183,7 +183,7 @@ export default function InSchoolCoachingMentorshipPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Linked to Learner Outcomes</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Linked to Learner Outcomes</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Coaching results connect directly to learner assessment data:
             </p>
@@ -206,13 +206,13 @@ export default function InSchoolCoachingMentorshipPage() {
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-8">
            <PremiumCard className="p-8 flex flex-col" withHover>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">School System Strengthening</h3>
+              <h3 className="text-xl font-bold text-brand-primary mb-4">School System Strengthening</h3>
               <p className="text-gray-600 leading-relaxed mb-4">
                 Where leadership support is included, Headteachers and Directors of Studies are guided to supervise instruction, protect reading time, and use data dashboards.
               </p>
            </PremiumCard>
            <PremiumCard className="p-8 flex flex-col" withHover>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Pathway to Graduation</h3>
+              <h3 className="text-xl font-bold text-brand-primary mb-4">Pathway to Graduation</h3>
               <p className="text-gray-600 leading-relaxed mb-4">
                 Over time, schools move from intensive coaching to lighter follow-up and, when performance thresholds are met, toward graduation readiness.
               </p>

@@ -19,7 +19,7 @@ export default function OurStoryPage() {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#006b61]/10 text-[#006b61] font-bold text-sm mb-6 shadow-sm border border-[#006b61]/20">
               <BookOpen className="w-4 h-4" /> About Us
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-8">
               Our Story
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-medium">
@@ -35,7 +35,7 @@ export default function OurStoryPage() {
               <div className="w-12 h-12 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] flex items-center justify-center">
                 <AlertTriangle size={24} />
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">The Problem We Are Solving</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-brand-primary">The Problem We Are Solving</h2>
             </div>
 
             <div className="space-y-6 text-gray-600 text-lg leading-relaxed">
@@ -71,7 +71,7 @@ export default function OurStoryPage() {
               </p>
 
               <div className="bg-gray-50 p-8 rounded-3xl border border-gray-200 my-10">
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Evidence-led Action</h3>
+                <h3 className="text-xl font-bold text-brand-primary mb-3">Evidence-led Action</h3>
                 <p>
                   Uganda's own early grade reading evidence shows why structured support matters.
                   Practical fluency benchmarks (20, 40, and 60 correct words per minute) track whether 
@@ -95,7 +95,7 @@ export default function OurStoryPage() {
               <div className="w-12 h-12 rounded-full bg-[#006b61]/10 text-[#006b61] flex items-center justify-center">
                 <Lightbulb size={24} />
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Our Connected Solution</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-brand-primary">Our Connected Solution</h2>
             </div>
 
             <div className="space-y-6 text-gray-600 text-lg leading-relaxed mb-12">

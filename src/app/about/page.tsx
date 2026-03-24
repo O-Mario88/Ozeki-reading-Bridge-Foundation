@@ -31,7 +31,7 @@ export default async function AboutPage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
             Who we are
           </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
+          <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-8">
             {organizationName}
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
@@ -95,7 +95,7 @@ export default async function AboutPage() {
             <div className="w-14 h-14 rounded-2xl bg-brand-primary/10 flex items-center justify-center mb-8">
               <Target className="w-8 h-8 text-brand-primary" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
+            <h2 className="text-3xl font-bold text-brand-primary mb-6">Our Mission</h2>
             <p className="text-xl leading-relaxed text-gray-600">
               {mission}
             </p>
@@ -109,7 +109,7 @@ export default async function AboutPage() {
           <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-primary">
             <Heart size={32} />
           </div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">Our Core Values</h2>
+          <h2 className="text-4xl font-bold text-brand-primary mb-6">Our Core Values</h2>
           <p className="text-xl text-gray-600 leading-relaxed">
             These values shape how we measure progress, support schools, work with
             partners, and serve children across Uganda.
@@ -128,7 +128,7 @@ export default async function AboutPage() {
                 <div className="text-5xl font-extrabold text-gray-100 mb-4 tracking-tighter">
                   {String(index + 1).padStart(2, '0')}
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{value.title}</h3>
+                <h3 className="text-2xl font-bold text-brand-primary mb-4">{value.title}</h3>
                 <p className="text-gray-600 leading-relaxed break-words">{value.description}</p>
               </PremiumCard>
             ))

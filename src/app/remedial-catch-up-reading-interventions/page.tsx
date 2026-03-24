@@ -25,7 +25,7 @@ export default function RemedialCatchUpReadingInterventionsPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Remedial &amp; Catch-Up Interventions
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -75,7 +75,7 @@ export default function RemedialCatchUpReadingInterventionsPage() {
           
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Diagnosis Before Delivery</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Diagnosis Before Delivery</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Real learner data identifies missing skills. Assessment results automatically
               identify learners who are non-readers or struggling in specific domains.
@@ -87,7 +87,7 @@ export default function RemedialCatchUpReadingInterventionsPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Skill-Based Grouping</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Skill-Based Grouping</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               The platform connects the diagnosis to specific learning needs:
             </p>
@@ -107,7 +107,7 @@ export default function RemedialCatchUpReadingInterventionsPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">High-Frequency Delivery</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">High-Frequency Delivery</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Catch-up runs through short, high-frequency small-group lessons,
               daily or several times per week, in a clear sequence.
@@ -134,7 +134,7 @@ export default function RemedialCatchUpReadingInterventionsPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Aligned Materials</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Aligned Materials</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Teachers receive intervention materials aligned to taught skills so
               practice is meaningful:
@@ -158,13 +158,13 @@ export default function RemedialCatchUpReadingInterventionsPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Coaching Support</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Coaching Support</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Ozeki coaches help schools establish grouping plans, intervention schedules, 
               and delivery quality. Coaches model strategies for grouped instruction and 
               reinforce simple progress monitoring.
             </p>
-            <h3 className="text-xl font-bold text-gray-900 border-t border-gray-100 pt-6 mb-4">Transition Strategy</h3>
+            <h3 className="text-xl font-bold text-brand-primary border-t border-gray-100 pt-6 mb-4">Transition Strategy</h3>
             <p className="text-gray-600 leading-relaxed">
               The goal is rapid recovery, not permanent remediation. As learners gain decoding ability,
               they transition into broader reading practice. Evidence dashboards guide when to exit or adapt.

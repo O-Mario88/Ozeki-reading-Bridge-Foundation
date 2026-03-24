@@ -62,7 +62,7 @@ export default function PhonicsTrainingPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Signature Program: Phonics Training &amp; School Support
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -116,7 +116,7 @@ export default function PhonicsTrainingPage() {
           
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Cycle Start: Diagnostics &amp; Training</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Cycle Start: Diagnostics &amp; Training</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               At the start of each cycle, we conduct school diagnostics to understand
               what learners can and cannot do across core reading outcomes
@@ -144,7 +144,7 @@ export default function PhonicsTrainingPage() {
 
           <PremiumCard className="p-8 flex flex-col md:col-span-1 lg:col-span-1" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">In-School Coaching</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">In-School Coaching</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               The differentiator is what happens next: in-school coaching and
               follow-up. Ozeki coaches observe live reading lessons using a
@@ -192,7 +192,7 @@ export default function PhonicsTrainingPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">NLIP Data-to-Action</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">NLIP Data-to-Action</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               NLIP ensures improvement is measured, transparent, and actionable.
               Each cycle includes learner assessments and progress tracking that
@@ -216,7 +216,7 @@ export default function PhonicsTrainingPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Partner Evidence Chain</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Partner Evidence Chain</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               For potential partners, this program provides what most education
               investments lack: a complete evidence chain.
@@ -246,7 +246,7 @@ export default function PhonicsTrainingPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col border-brand-primary/20 bg-brand-primary/5" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Our Promise</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Our Promise</h3>
             <p className="text-gray-700 leading-relaxed text-lg font-medium">
               We do not stop at workshop delivery. Partners fund a full system that
               produces sustained classroom change, supports targeted remediation
@@ -264,13 +264,13 @@ export default function PhonicsTrainingPage() {
           <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-primary">
             <MessageCircleQuestion size={32} />
           </div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
+          <h2 className="text-4xl font-bold text-brand-primary mb-6">Frequently Asked Questions</h2>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {faq.map((item, index) => (
             <PremiumCard key={index} className="p-8" withHover>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">{item.question}</h3>
+              <h3 className="text-xl font-bold text-brand-primary mb-3">{item.question}</h3>
               <p className="text-gray-600 leading-relaxed">{item.answer}</p>
             </PremiumCard>
           ))}

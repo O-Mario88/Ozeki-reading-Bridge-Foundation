@@ -46,7 +46,7 @@ function ProfileCard({ profile }: { profile: Profile }) {
 
       {/* Content Body */}
       <div className="p-6 md:p-8 flex-grow flex flex-col">
-        <h3 className="text-2xl font-bold text-gray-900 mb-1">{profile.name}</h3>
+        <h3 className="text-2xl font-bold text-brand-primary mb-1">{profile.name}</h3>
         <p className="text-[#006b61] font-semibold text-sm uppercase tracking-wide mb-4">
           {profile.role}
         </p>
@@ -100,7 +100,7 @@ export default async function LeadershipTeamPage() {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
               <Users className="w-4 h-4" /> About Us
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-8">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-8">
               Leadership Team
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-6">
@@ -115,7 +115,7 @@ export default async function LeadershipTeamPage() {
               <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
                 <Users className="w-10 h-10 text-gray-400" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Leadership profiles will appear here</h2>
+              <h2 className="text-3xl font-bold text-brand-primary mb-4">Leadership profiles will appear here</h2>
               <p className="text-xl text-gray-500 max-w-2xl mx-auto">
                 Once records are published from the administrative staff portal, the leadership directory will populate automatically.
               </p>
@@ -131,7 +131,7 @@ export default async function LeadershipTeamPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#006b61]/10 text-[#006b61] mb-6">
                       <ShieldCheck className="w-8 h-8" />
                     </div>
-                    <h2 className="text-4xl font-bold text-gray-900 mb-4">Board Governance</h2>
+                    <h2 className="text-4xl font-bold text-brand-primary mb-4">Board Governance</h2>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                       Providing strategic accountability, oversight, and guidance to ensure organizational integrity and mission focus.
                     </p>
@@ -153,7 +153,7 @@ export default async function LeadershipTeamPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#FA7D15]/10 text-[#FA7D15] mb-6">
                       <HeartPulse className="w-8 h-8" />
                     </div>
-                    <h2 className="text-4xl font-bold text-gray-900 mb-4">Core Staff Team</h2>
+                    <h2 className="text-4xl font-bold text-brand-primary mb-4">Core Staff Team</h2>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                       The professionals designing, managing, and evaluating our programs on the ground every single day.
                     </p>
@@ -172,7 +172,7 @@ export default async function LeadershipTeamPage() {
               <SectionWrapper theme="light" id="volunteers">
                 <div className="max-w-7xl mx-auto">
                   <div className="text-center mb-16">
-                    <h2 className="text-4xl font-bold text-gray-900 mb-4">Volunteer Team</h2>
+                    <h2 className="text-4xl font-bold text-brand-primary mb-4">Volunteer Team</h2>
                     <div className="w-24 h-1 bg-[#006b61]/20 mx-auto rounded-full" />
                   </div>
                   <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

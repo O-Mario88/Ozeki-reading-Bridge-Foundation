@@ -13,7 +13,7 @@ export default async function CrmAccountsPage({
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">CRM Account Registry</h1>
+          <h1 className="text-3xl font-bold text-brand-primary">CRM Account Registry</h1>
           <p className="text-gray-500 mt-1">Manage unified school, donor, and partner profiles.</p>
         </div>
         <div className="flex gap-4">

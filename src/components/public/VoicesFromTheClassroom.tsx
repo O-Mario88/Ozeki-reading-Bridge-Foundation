@@ -13,7 +13,7 @@ export async function VoicesFromTheClassroom() {
     return (
       <SectionWrapper theme="light" id="voices">
         <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="font-serif text-4xl md:text-5xl text-gray-900 mb-6 font-bold">Voices from the classroom</h2>
+          <h2 className="font-serif text-4xl md:text-5xl text-brand-primary mb-6 font-bold">Voices from the classroom</h2>
           <p className="text-xl text-gray-600 leading-relaxed font-sans">
             Hear directly from teachers who are transforming their classrooms using Ozeki's practical phonics and coaching.
           </p>
@@ -25,7 +25,7 @@ export async function VoicesFromTheClassroom() {
               <Image src="/photos/PXL_20260218_140233638.jpg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
             </div>
             <p className="text-gray-600 italic mb-6 leading-relaxed">"The phonics routines have completely transformed how my learners decode words. I see progress every single day."</p>
-            <h4 className="font-bold text-gray-900 text-lg">Madam Sarah</h4>
+            <h4 className="font-bold text-brand-primary text-lg">Madam Sarah</h4>
             <span className="text-sm text-brand-primary font-medium">P.1 Teacher</span>
           </PremiumCard>
           
@@ -34,7 +34,7 @@ export async function VoicesFromTheClassroom() {
               <Image src="/photos/PXL_20260218_135704961.jpg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
             </div>
             <p className="text-gray-600 italic mb-6 leading-relaxed">"With the coaching support, I now know exactly how to correct blending errors instantly. My confidence has grown."</p>
-            <h4 className="font-bold text-gray-900 text-lg">Mr. Daniel</h4>
+            <h4 className="font-bold text-brand-primary text-lg">Mr. Daniel</h4>
             <span className="text-sm text-brand-primary font-medium">P.2 Teacher</span>
           </PremiumCard>
 
@@ -43,7 +43,7 @@ export async function VoicesFromTheClassroom() {
               <Image src="/photos/PXL_20260218_134438769.jpg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
             </div>
             <p className="text-gray-600 italic mb-6 leading-relaxed">"Our school's reading levels have improved dramatically since we implemented the daily reading routines."</p>
-            <h4 className="font-bold text-gray-900 text-lg">Madam Grace</h4>
+            <h4 className="font-bold text-brand-primary text-lg">Madam Grace</h4>
             <span className="text-sm text-brand-primary font-medium">Headteacher</span>
           </PremiumCard>
         </div>
@@ -55,7 +55,7 @@ export async function VoicesFromTheClassroom() {
   return (
     <SectionWrapper theme="light" id="voices">
       <div className="max-w-4xl mx-auto text-center mb-16">
-        <h2 className="font-serif text-4xl md:text-5xl text-gray-900 mb-6 font-bold">Voices from the classroom</h2>
+        <h2 className="font-serif text-4xl md:text-5xl text-brand-primary mb-6 font-bold">Voices from the classroom</h2>
         <p className="text-xl text-gray-600 leading-relaxed font-sans">
           Hear directly from teachers who are transforming their classrooms using Ozeki's practical phonics and coaching.
         </p>
@@ -89,7 +89,7 @@ export async function VoicesFromTheClassroom() {
             </p>
             
             <div className="mt-auto">
-              <h4 className="font-bold text-gray-900 text-lg">{item.storytellerName}</h4>
+              <h4 className="font-bold text-brand-primary text-lg">{item.storytellerName}</h4>
               <span className="text-sm text-brand-primary font-medium">{item.storytellerRole}</span>
               {item.schoolName && (
                 <div className="text-xs text-gray-500 mt-1">{item.schoolName}</div>

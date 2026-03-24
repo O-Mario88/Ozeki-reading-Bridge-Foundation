@@ -11,7 +11,7 @@ export function UpNextPanel() {
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wide">Up Next</h3>
+                <h3 className="font-bold text-brand-primary text-sm uppercase tracking-wide">Up Next</h3>
                 <button className="text-xs font-medium text-blue-600 hover:text-blue-800">View All</button>
             </div>
 
@@ -26,7 +26,7 @@ export function UpNextPanel() {
                             </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-bold text-gray-900 line-clamp-2 leading-tight mb-1 group-hover:text-blue-600 transition-colors">{item.title}</h4>
+                            <h4 className="text-sm font-bold text-brand-primary line-clamp-2 leading-tight mb-1 group-hover:text-blue-600 transition-colors">{item.title}</h4>
                             <div className="flex items-center text-xs text-gray-500">
                                 <Clock className="w-3 h-3 mr-1" />
                                 {item.time} ({item.duration})

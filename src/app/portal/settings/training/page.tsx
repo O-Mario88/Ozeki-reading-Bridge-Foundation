@@ -65,7 +65,7 @@ export default function TrainingSettingsPage() {
         <div className="max-w-4xl mx-auto p-6 lg:p-10 bg-white min-h-screen">
 
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+                <h1 className="text-2xl font-bold text-brand-primary flex items-center">
                     <Settings className="w-6 h-6 mr-3 text-[#00155F]" />
                     Online Training Settings
                 </h1>
@@ -87,13 +87,13 @@ export default function TrainingSettingsPage() {
                 <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                     <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center">
                         <Server className="w-5 h-5 text-gray-500 mr-2" />
-                        <h2 className="text-lg font-bold text-gray-900">Google Workspace API</h2>
+                        <h2 className="text-lg font-bold text-brand-primary">Google Workspace API</h2>
                     </div>
 
                     <div className="p-6 space-y-6">
                         <div className="flex items-start justify-between">
                             <div>
-                                <h3 className="font-semibold text-gray-900">Connection Status</h3>
+                                <h3 className="font-semibold text-brand-primary">Connection Status</h3>
                                 <p className="text-sm text-gray-500 mt-1">Authenticate Ozeki to schedule Meets on behalf of staff.</p>
                                 {settings.googleStatus?.calendarId ? (
                                     <p className="text-xs text-gray-500 mt-1">
@@ -154,14 +154,14 @@ export default function TrainingSettingsPage() {
                 <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                     <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center">
                         <Bot className="w-5 h-5 text-gray-500 mr-2" />
-                        <h2 className="text-lg font-bold text-gray-900">AI Meeting Notes Generation</h2>
+                        <h2 className="text-lg font-bold text-brand-primary">AI Meeting Notes Generation</h2>
                     </div>
 
                     <div className="p-6 space-y-6">
 
                         <div className="flex items-center justify-between">
                             <div>
-                                <h3 className="font-semibold text-gray-900">Enable AI Processing</h3>
+                                <h3 className="font-semibold text-brand-primary">Enable AI Processing</h3>
                                 <p className="text-sm text-gray-500 mt-1">Automatically generate minutes and action items from transcripts.</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">

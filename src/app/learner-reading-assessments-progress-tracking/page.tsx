@@ -25,7 +25,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Learner Assessments &amp; Progress Tracking
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -77,7 +77,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Assessment Outcomes Domains</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Assessment Outcomes Domains</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Ozeki supports schools to run baseline, progress, and endline cycles
               using outcome areas aligned with EGRA-style reporting and classroom
@@ -105,7 +105,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Automatic Reading Levels</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Automatic Reading Levels</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Each learner&apos;s scores are entered once. The platform then
               automatically calculates reading level bands (for example,
@@ -119,7 +119,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col md:col-span-2 lg:col-span-1" withHover>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">School-Level Profiles</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">School-Level Profiles</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Once entered, data becomes immediately actionable for teachers and
               school leaders:
@@ -150,7 +150,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Progress Tracking by Term</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Progress Tracking by Term</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Over time, schools can see whether interventions are working:
             </p>
@@ -173,7 +173,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
           </PremiumCard>
 
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">District Dashboards</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">District Dashboards</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               At district and regional levels, school data aggregates into
               dashboards that support planning and resource targeting.

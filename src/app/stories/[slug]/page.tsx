@@ -86,7 +86,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                             <BookOpen className="w-4 h-4" /> 1001 Story Project
                         </div>
                         
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                             {story.title}
                         </h1>
                         
@@ -177,7 +177,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
 
                         <aside className="w-full lg:w-1/3 flex flex-col gap-8 shrink-0">
                             <PremiumCard className="p-6 md:p-8 bg-white" withHover>
-                                <h3 className="font-extrabold text-xl text-gray-900 mb-4 flex items-center gap-2">
+                                <h3 className="font-extrabold text-xl text-brand-primary mb-4 flex items-center gap-2">
                                     <User className="w-5 h-5 text-[#006b61]" /> About the Author
                                 </h3>
                                 <p className="text-gray-600 leading-relaxed mb-4">
@@ -202,13 +202,13 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
 
                             {moreStories.length > 0 && (
                                 <PremiumCard className="p-6 md:p-8 bg-white">
-                                    <h3 className="font-extrabold text-lg text-gray-900 mb-6 border-b border-gray-100 pb-4">
+                                    <h3 className="font-extrabold text-lg text-brand-primary mb-6 border-b border-gray-100 pb-4">
                                         More from {story.schoolName}
                                     </h3>
                                     <div className="flex flex-col gap-5">
                                         {moreStories.map(s => (
                                             <Link key={s.slug} href={`/stories/${s.slug}`} className="group block">
-                                                <h4 className="font-bold text-gray-900 group-hover:text-[#FA7D15] transition-colors line-clamp-2 leading-tight mb-1">
+                                                <h4 className="font-bold text-brand-primary group-hover:text-[#FA7D15] transition-colors line-clamp-2 leading-tight mb-1">
                                                     {s.title}
                                                 </h4>
                                                 <p className="text-sm text-gray-500 font-medium">

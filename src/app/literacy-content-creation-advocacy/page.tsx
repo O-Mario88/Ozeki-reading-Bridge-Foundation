@@ -25,7 +25,7 @@ export default function LiteracyContentCreationAdvocacyPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Program Spotlight
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Literacy Content &amp; Advocacy
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
@@ -78,7 +78,7 @@ export default function LiteracyContentCreationAdvocacyPage() {
           
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Implementation-Focused</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Implementation-Focused</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Ozeki produces resources designed for real classrooms and quick use:
             </p>
@@ -100,7 +100,7 @@ export default function LiteracyContentCreationAdvocacyPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Built for Immediate Use</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Built for Immediate Use</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Content is structured to be usable in minutes: clear steps, examples,
               and common mistakes with corrections.
@@ -113,7 +113,7 @@ export default function LiteracyContentCreationAdvocacyPage() {
 
           <PremiumCard className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Leadership Guidance</h3>
+            <h3 className="text-2xl font-bold text-brand-primary mb-4">Leadership Guidance</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               For Headteachers and Directors of Studies, content emphasizes practical implementation:
             </p>
@@ -139,13 +139,13 @@ export default function LiteracyContentCreationAdvocacyPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
           <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Smart Support System</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4">Smart Support System</h3>
             <p className="text-gray-600 leading-relaxed mb-6">
               Within the platform, resources are organized by grade, phonics set,
               topic, and program. This turns content into a practical support
               system rather than a static repository.
             </p>
-            <h3 className="text-xl font-bold text-gray-900 border-t border-gray-100 pt-6 mb-4">Targeted Recommendations</h3>
+            <h3 className="text-xl font-bold text-brand-primary border-t border-gray-100 pt-6 mb-4">Targeted Recommendations</h3>
             <p className="text-gray-600 leading-relaxed mb-4">
               Resources are surfaced strategically by school need:
             </p>

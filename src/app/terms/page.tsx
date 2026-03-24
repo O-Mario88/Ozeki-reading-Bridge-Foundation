@@ -11,7 +11,7 @@ export default function TermsPage() {
     <>
       <section className="relative overflow-hidden bg-brand-background pt-24 pb-16 md:pt-32 md:pb-20 border-b border-gray-100">
         <div className="container mx-auto px-4 md:px-6 max-w-4xl text-center">
-          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
             Terms &amp; Conditions
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">

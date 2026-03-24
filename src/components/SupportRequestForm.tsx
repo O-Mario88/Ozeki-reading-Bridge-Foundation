@@ -83,7 +83,7 @@ export default function SupportRequestForm() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Submitted!</h2>
+                <h2 className="text-2xl font-bold text-brand-primary mb-2">Request Submitted!</h2>
                 <p className="text-gray-600">
                     Thank you for reaching out. A staff member will contact you soon.
                 </p>
@@ -111,7 +111,7 @@ export default function SupportRequestForm() {
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
 
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Request School Support</h2>
+                    <h2 className="text-3xl font-bold text-brand-primary mb-2 tracking-tight">Request School Support</h2>
                     <p className="text-gray-500">Submit a request for training or resources for your school.</p>
                 </div>
 

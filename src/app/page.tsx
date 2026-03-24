@@ -191,7 +191,7 @@ export default async function HomePage() {
               <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center text-xl font-bold mb-6">
                 {index + 1}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">{step.title}</h3>
+              <h3 className="text-xl font-bold text-brand-primary mb-4">{step.title}</h3>
               <p className="text-gray-600 leading-relaxed">{step.body}</p>
             </PremiumCard>
           ))}
@@ -253,7 +253,7 @@ export default async function HomePage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {PARTNERSHIP_OPTIONS.slice(0, 2).map((option) => (
             <PremiumCard key={option.title} className="p-8 md:p-12 text-center flex flex-col items-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">{option.title}</h3>
+              <h3 className="text-2xl font-bold text-brand-primary mb-4">{option.title}</h3>
               <p className="text-gray-600 mb-8 flex-1">
                 {option.href ? "Invest directly in teacher training and classroom resources." : "Support a cluster of schools in your chosen geography."}
               </p>
