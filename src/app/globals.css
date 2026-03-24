@@ -4376,8 +4376,8 @@ fieldset .action-row {
   color: #1f2937;
 }
 
-.floating-surface-body .portal-form-grid :is(input, select, textarea),
-.floating-surface-body .form-grid :is(input, select, textarea) {
+.floating-surface-body .portal-form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
+.floating-surface-body .form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-radius: 0.42rem;
   border: 1px solid #97a6b8;
   background: #ffffff;

@@ -91,31 +91,19 @@ interface SchoolWriteRow {
   parish: string;
   parishId: number | null;
 
-  denomination: string | null;
   schoolPhone: string | null;
   schoolEmail: string | null;
 
-  gpsLat: string | null;
-  gpsLng: string | null;
   yearFounded: number | null;
   schoolStatus: string;
   schoolStatusDate: string | null;
   currentPartnerType: string;
-  accountRecordType: string;
-  schoolType: string;
-  parentAccountLabel: string;
-  schoolRelationshipStatus: string | null;
-  schoolRelationshipStatusDate: string | null;
-  protestantDenomination: string | null;
   clientSchoolNumber: number;
-  firstMetricDate: string | null;
   metricCount: number;
   runningTotalMaxEnrollment: number;
-  partnerType: string | null;
   currentPartnerSchool: boolean;
   schoolActive: boolean;
   website: string | null;
-  description: string | null;
   enrollmentTotal: number;
   enrollmentByGrade: string | null;
   enrolledBoys: number;
@@ -131,7 +119,6 @@ interface SchoolWriteRow {
   enrolledP6: number;
   enrolledP7: number;
   classesJson: string | null;
-  notes: string | null;
   village: string | null;
   primaryContactId: number | null;
   primaryContactName: string | null;
@@ -174,7 +161,7 @@ function nullableText(value: string | number | null | undefined) {
   return normalized || null;
 }
 
-function nullableCoordinate(value: string | number | null | undefined) {
+function _nullableCoordinate(value: string | number | null | undefined) {
   if (value === null || value === undefined || String(value).trim() === "") {
     return null;
   }
@@ -233,33 +220,18 @@ async function loadSchoolWriteRow(client: PoolClient, schoolId: number) {
         s.sub_county AS "subCounty",
         s.parish,
         s.parish_id AS "parishId",
-        s.school_level AS "schoolLevel",
-        s.ownership,
-        s.denomination,
         s.contact_phone AS "schoolPhone",
         s.contact_email AS "schoolEmail",
-        s.school_shipping_address AS "schoolShippingAddress",
-        s.gps_lat AS "gpsLat",
-        s.gps_lng AS "gpsLng",
         s.year_founded AS "yearFounded",
         COALESCE(s.school_status, 'Open') AS "schoolStatus",
         s.school_status_date::text AS "schoolStatusDate",
         COALESCE(s.current_partner_type, 'NA') AS "currentPartnerType",
-        COALESCE(s.account_record_type, 'School') AS "accountRecordType",
-        COALESCE(s.school_type, 'School') AS "schoolType",
-        COALESCE(s.parent_account_label, 'Uganda') AS "parentAccountLabel",
-        s.school_relationship_status AS "schoolRelationshipStatus",
-        s.school_relationship_status_date::text AS "schoolRelationshipStatusDate",
-        s.protestant_denomination AS "protestantDenomination",
         COALESCE(s.client_school_number, 0) AS "clientSchoolNumber",
-        s.first_metric_date::text AS "firstMetricDate",
         COALESCE(s.metric_count, 0) AS "metricCount",
         COALESCE(s.running_total_max_enrollment, 0) AS "runningTotalMaxEnrollment",
-        s.partner_type AS "partnerType",
         COALESCE(s.current_partner_school, FALSE) AS "currentPartnerSchool",
         COALESCE(s.school_active, TRUE) AS "schoolActive",
         s.website,
-        s.description,
         COALESCE(s.enrollment_total, 0) AS "enrollmentTotal",
         s.enrollment_by_grade AS "enrollmentByGrade",
         COALESCE(s.enrolled_boys, 0) AS "enrolledBoys",
@@ -275,7 +247,6 @@ async function loadSchoolWriteRow(client: PoolClient, schoolId: number) {
         COALESCE(s.enrolled_p6, 0) AS "enrolledP6",
         COALESCE(s.enrolled_p7, 0) AS "enrolledP7",
         s.classes_json AS "classesJson",
-        s.notes,
         s.village,
         s.primary_contact_id AS "primaryContactId",
         sc.full_name AS "primaryContactName",
@@ -815,12 +786,9 @@ export async function writeSchoolDirectoryRecord(args: {
         parish: hierarchy.parishName,
         parishId: hierarchy.parishId,
 
-        denomination: nullableText(args.input.denomination) ?? current?.denomination ?? null,
         schoolPhone,
         schoolEmail,
 
-        gpsLat: nullableCoordinate(args.input.latitude) ?? current?.gpsLat ?? null,
-        gpsLng: nullableCoordinate(args.input.longitude) ?? current?.gpsLng ?? null,
         yearFounded:
           args.input.yearFounded === undefined
             ? current?.yearFounded ?? null
@@ -828,29 +796,17 @@ export async function writeSchoolDirectoryRecord(args: {
         schoolStatus: nullableText(args.input.schoolStatus) ?? current?.schoolStatus ?? "Open",
         schoolStatusDate: nullableText(args.input.schoolStatusDate) ?? current?.schoolStatusDate ?? null,
         currentPartnerType: nullableText(args.input.currentPartnerType) ?? current?.currentPartnerType ?? "NA",
-        accountRecordType: nullableText(args.input.accountRecordType) ?? current?.accountRecordType ?? "School",
-        schoolType: nullableText(args.input.schoolType) ?? current?.schoolType ?? "School",
-        parentAccountLabel: nullableText(args.input.parentAccountLabel) ?? current?.parentAccountLabel ?? "Uganda",
-        schoolRelationshipStatus:
-          nullableText(args.input.schoolRelationshipStatus) ?? current?.schoolRelationshipStatus ?? null,
-        schoolRelationshipStatusDate:
-          nullableText(args.input.schoolRelationshipStatusDate) ?? current?.schoolRelationshipStatusDate ?? null,
-        protestantDenomination:
-          nullableText(args.input.protestantDenomination) ?? current?.protestantDenomination ?? null,
         clientSchoolNumber: wholeNumber(args.input.clientSchoolNumber, current?.clientSchoolNumber ?? 0),
-        firstMetricDate: nullableText(args.input.firstMetricDate) ?? current?.firstMetricDate ?? null,
         metricCount: wholeNumber(args.input.metricCount, current?.metricCount ?? 0),
         runningTotalMaxEnrollment: wholeNumber(
           args.input.runningTotalMaxEnrollment,
           current?.runningTotalMaxEnrollment ?? 0,
         ),
-        partnerType: nullableText(args.input.partnerType) ?? current?.partnerType ?? null,
         currentPartnerSchool:
           args.input.currentPartnerSchool ?? current?.currentPartnerSchool ?? false,
         schoolActive:
           args.input.schoolActive ?? args.input.isActive ?? current?.schoolActive ?? true,
         website: nullableText(args.input.website) ?? current?.website ?? null,
-        description: nullableText(args.input.description) ?? current?.description ?? null,
         enrolledBoys: wholeNumber(args.input.enrolledBoys, current?.enrolledBoys ?? 0),
         enrolledGirls: wholeNumber(args.input.enrolledGirls, current?.enrolledGirls ?? 0),
         enrolledBaby: wholeNumber(args.input.enrolledBaby, current?.enrolledBaby ?? 0),
@@ -863,7 +819,6 @@ export async function writeSchoolDirectoryRecord(args: {
         enrolledP5: wholeNumber(args.input.enrolledP5, current?.enrolledP5 ?? 0),
         enrolledP6: wholeNumber(args.input.enrolledP6, current?.enrolledP6 ?? 0),
         enrolledP7: wholeNumber(args.input.enrolledP7, current?.enrolledP7 ?? 0),
-        notes: nullableText(args.input.notes) ?? current?.notes ?? null,
         village: nullableText(args.input.village) ?? current?.village ?? null,
         enrollmentByGrade: nullableText(args.input.enrollmentByGrade) ?? current?.enrollmentByGrade ?? null,
         primaryContactName,
@@ -891,7 +846,7 @@ export async function writeSchoolDirectoryRecord(args: {
       const enrollmentTotal = providedEnrollment ?? (autoEnrollment > 0 ? autoEnrollment : directImpact);
 
       let schoolId = current?.id ?? null;
-      let action: "CREATE" | "UPDATE" = current ? "UPDATE" : "CREATE";
+      const action: "CREATE" | "UPDATE" = current ? "UPDATE" : "CREATE";
 
       if (schoolExternalId) {
         const externalConflict = await client.query<{ id: number }>(
@@ -934,20 +889,18 @@ export async function writeSchoolDirectoryRecord(args: {
               name, alternate_school_names,
               country, region, sub_region, district, sub_county, parish, parish_id,
               contact_name, contact_phone, contact_email,
-              gps_lat, gps_lng, year_founded,
+              year_founded,
               school_status, school_status_date,
-              current_partner_type, account_record_type, school_type, parent_account_label,
-              school_relationship_status, school_relationship_status_date,
-              denomination, protestant_denomination,
-              client_school_number, first_metric_date, metric_count,
-              running_total_max_enrollment, partner_type,
+              current_partner_type,
+              client_school_number, metric_count,
+              running_total_max_enrollment,
               current_partner_school, school_active,
-              website, description,
+              website,
               enrollment_total, enrollment_by_grade,
               enrolled_boys, enrolled_girls, enrolled_learners,
               enrolled_baby, enrolled_middle, enrolled_top,
               enrolled_p1, enrolled_p2, enrolled_p3, enrolled_p4, enrolled_p5, enrolled_p6, enrolled_p7,
-              notes, village,
+              village,
               classes_json,
               created_at
             ) VALUES (
@@ -956,21 +909,19 @@ export async function writeSchoolDirectoryRecord(args: {
               $3, $4,
               $5, $6, $7, $8, $9, $10, $11,
               $12, $13, $14,
-              $15, $16, $17,
-              $18, $19::date,
-              $20, $21, $22, $23,
-              $24, $25::date,
-              $26, $27,
-              $28, $29::date, $30,
-              $31, $32,
-              $33, $34,
-              $35, $36,
-              $37, $38,
-              $39, $40, $41,
-              $42, $43, $44,
-              $45, $46, $47, $48, $49, $50, $51,
-              $52, $53,
-              $54,
+              $15,
+              $16, $17::date,
+              $18,
+              $19, $20,
+              $21,
+              $22, $23,
+              $24,
+              $25, $26,
+              $27, $28, $29,
+              $30, $31, $32,
+              $33, $34, $35, $36, $37, $38, $39,
+              $40,
+              $41,
               NOW()
             ) RETURNING id
           `,
@@ -989,46 +940,33 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.primaryContactName,                // $12
             resolved.schoolPhone,                       // $13
             resolved.schoolEmail,                       // $14
-            resolved.gpsLat,                            // $15
-            resolved.gpsLng,                            // $16
-            resolved.yearFounded,                       // $17
-            resolved.schoolStatus,                      // $18
-            resolved.schoolStatusDate,                  // $19
-            resolved.currentPartnerType,                // $20
-            resolved.accountRecordType,                 // $21
-            resolved.schoolType,                        // $22
-            resolved.parentAccountLabel,                // $23
-            resolved.schoolRelationshipStatus,          // $24
-            resolved.schoolRelationshipStatusDate,      // $25
-            resolved.denomination,                      // $26
-            resolved.protestantDenomination,            // $27
-            resolved.clientSchoolNumber,                // $28
-            resolved.firstMetricDate,                   // $29
-            resolved.metricCount,                       // $30
-            resolved.runningTotalMaxEnrollment,          // $31
-            resolved.partnerType,                       // $32
-            resolved.currentPartnerSchool,              // $33
-            resolved.schoolActive,                      // $34
-            resolved.website,                           // $35
-            resolved.description,                       // $36
-            enrollmentTotal,                            // $37
-            resolved.enrollmentByGrade,                 // $38
-            resolved.enrolledBoys,                      // $39
-            resolved.enrolledGirls,                     // $40
-            enrollmentTotal,                            // $41 (enrolled_learners)
-            resolved.enrolledBaby,                      // $42
-            resolved.enrolledMiddle,                    // $43
-            resolved.enrolledTop,                       // $44
-            resolved.enrolledP1,                        // $45
-            resolved.enrolledP2,                        // $46
-            resolved.enrolledP3,                        // $47
-            resolved.enrolledP4,                        // $48
-            resolved.enrolledP5,                        // $49
-            resolved.enrolledP6,                        // $50
-            resolved.enrolledP7,                        // $51
-            resolved.notes,                             // $52
-            resolved.village,                           // $53
-            resolved.classesJson,                       // $54
+            resolved.yearFounded,                       // $15
+            resolved.schoolStatus,                      // $16
+            resolved.schoolStatusDate,                  // $17
+            resolved.currentPartnerType,                // $18
+            resolved.clientSchoolNumber,                // $19
+            resolved.metricCount,                       // $20
+            resolved.runningTotalMaxEnrollment,          // $21
+            resolved.currentPartnerSchool,              // $22
+            resolved.schoolActive,                      // $23
+            resolved.website,                           // $24
+            enrollmentTotal,                            // $25
+            resolved.enrollmentByGrade,                 // $26
+            resolved.enrolledBoys,                      // $27
+            resolved.enrolledGirls,                     // $28
+            enrollmentTotal,                            // $29 (enrolled_learners)
+            resolved.enrolledBaby,                      // $30
+            resolved.enrolledMiddle,                    // $31
+            resolved.enrolledTop,                       // $32
+            resolved.enrolledP1,                        // $33
+            resolved.enrolledP2,                        // $34
+            resolved.enrolledP3,                        // $35
+            resolved.enrolledP4,                        // $36
+            resolved.enrolledP5,                        // $37
+            resolved.enrolledP6,                        // $38
+            resolved.enrolledP7,                        // $39
+            resolved.village,                           // $40
+            resolved.classesJson,                       // $41
           ],
         );
         schoolId = Number(insertResult.rows[0]?.id ?? 0);
@@ -1054,46 +992,33 @@ export async function writeSchoolDirectoryRecord(args: {
               contact_name = $12,
               contact_phone = $13,
               contact_email = $14,
-              gps_lat = $15,
-              gps_lng = $16,
-              year_founded = $17,
-              school_status = $18,
-              school_status_date = $19::date,
-              current_partner_type = $20,
-              account_record_type = $21,
-              school_type = $22,
-              parent_account_label = $23,
-              school_relationship_status = $24,
-              school_relationship_status_date = $25::date,
-              denomination = $26,
-              protestant_denomination = $27,
-              client_school_number = $28,
-              first_metric_date = $29::date,
-              metric_count = $30,
-              running_total_max_enrollment = $31,
-              partner_type = $32,
-              current_partner_school = $33,
-              school_active = $34,
-              website = $35,
-              description = $36,
-              enrollment_total = $37,
-              enrollment_by_grade = $38,
-              enrolled_boys = $39,
-              enrolled_girls = $40,
-              enrolled_learners = $41,
-              enrolled_baby = $42,
-              enrolled_middle = $43,
-              enrolled_top = $44,
-              enrolled_p1 = $45,
-              enrolled_p2 = $46,
-              enrolled_p3 = $47,
-              enrolled_p4 = $48,
-              enrolled_p5 = $49,
-              enrolled_p6 = $50,
-              enrolled_p7 = $51,
-              notes = $52,
-              village = $53,
-              classes_json = $54
+              year_founded = $15,
+              school_status = $16,
+              school_status_date = $17::date,
+              current_partner_type = $18,
+              client_school_number = $19,
+              metric_count = $20,
+              running_total_max_enrollment = $21,
+              current_partner_school = $22,
+              school_active = $23,
+              website = $24,
+              enrollment_total = $25,
+              enrollment_by_grade = $26,
+              enrolled_boys = $27,
+              enrolled_girls = $28,
+              enrolled_learners = $29,
+              enrolled_baby = $30,
+              enrolled_middle = $31,
+              enrolled_top = $32,
+              enrolled_p1 = $33,
+              enrolled_p2 = $34,
+              enrolled_p3 = $35,
+              enrolled_p4 = $36,
+              enrolled_p5 = $37,
+              enrolled_p6 = $38,
+              enrolled_p7 = $39,
+              village = $40,
+              classes_json = $41
             WHERE id = $1
           `,
           [
@@ -1111,46 +1036,33 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.primaryContactName,                // $12
             resolved.schoolPhone,                       // $13
             resolved.schoolEmail,                       // $14
-            resolved.gpsLat,                            // $15
-            resolved.gpsLng,                            // $16
-            resolved.yearFounded,                       // $17
-            resolved.schoolStatus,                      // $18
-            resolved.schoolStatusDate,                  // $19
-            resolved.currentPartnerType,                // $20
-            resolved.accountRecordType,                 // $21
-            resolved.schoolType,                        // $22
-            resolved.parentAccountLabel,                // $23
-            resolved.schoolRelationshipStatus,          // $24
-            resolved.schoolRelationshipStatusDate,      // $25
-            resolved.denomination,                      // $26
-            resolved.protestantDenomination,            // $27
-            resolved.clientSchoolNumber,                // $28
-            resolved.firstMetricDate,                   // $29
-            resolved.metricCount,                       // $30
-            resolved.runningTotalMaxEnrollment,          // $31
-            resolved.partnerType,                       // $32
-            resolved.currentPartnerSchool,              // $33
-            resolved.schoolActive,                      // $34
-            resolved.website,                           // $35
-            resolved.description,                       // $36
-            enrollmentTotal,                            // $37
-            resolved.enrollmentByGrade,                 // $38
-            resolved.enrolledBoys,                      // $39
-            resolved.enrolledGirls,                     // $40
-            enrollmentTotal,                            // $41 (enrolled_learners)
-            resolved.enrolledBaby,                      // $42
-            resolved.enrolledMiddle,                    // $43
-            resolved.enrolledTop,                       // $44
-            resolved.enrolledP1,                        // $45
-            resolved.enrolledP2,                        // $46
-            resolved.enrolledP3,                        // $47
-            resolved.enrolledP4,                        // $48
-            resolved.enrolledP5,                        // $49
-            resolved.enrolledP6,                        // $50
-            resolved.enrolledP7,                        // $51
-            resolved.notes,                             // $52
-            resolved.village,                           // $53
-            resolved.classesJson,                       // $54
+            resolved.yearFounded,                       // $15
+            resolved.schoolStatus,                      // $16
+            resolved.schoolStatusDate,                  // $17
+            resolved.currentPartnerType,                // $18
+            resolved.clientSchoolNumber,                // $19
+            resolved.metricCount,                       // $20
+            resolved.runningTotalMaxEnrollment,          // $21
+            resolved.currentPartnerSchool,              // $22
+            resolved.schoolActive,                      // $23
+            resolved.website,                           // $24
+            enrollmentTotal,                            // $25
+            resolved.enrollmentByGrade,                 // $26
+            resolved.enrolledBoys,                      // $27
+            resolved.enrolledGirls,                     // $28
+            enrollmentTotal,                            // $29 (enrolled_learners)
+            resolved.enrolledBaby,                      // $30
+            resolved.enrolledMiddle,                    // $31
+            resolved.enrolledTop,                       // $32
+            resolved.enrolledP1,                        // $33
+            resolved.enrolledP2,                        // $34
+            resolved.enrolledP3,                        // $35
+            resolved.enrolledP4,                        // $36
+            resolved.enrolledP5,                        // $37
+            resolved.enrolledP6,                        // $38
+            resolved.enrolledP7,                        // $39
+            resolved.village,                           // $40
+            resolved.classesJson,                       // $41
           ],
         );
       }
@@ -1257,12 +1169,9 @@ export async function loadSchoolImportCandidate(schoolId: number) {
     region: string;
     subRegion: string;
 
-    denomination: string | null;
     schoolPhone: string | null;
     schoolEmail: string | null;
 
-    gpsLat: string | null;
-    gpsLng: string | null;
     yearFounded: number | null;
     schoolActive: boolean;
     alternateSchoolNames: string | null;
@@ -1278,12 +1187,9 @@ export async function loadSchoolImportCandidate(schoolId: number) {
         region,
         sub_region AS "subRegion",
 
-        denomination,
         contact_phone AS "schoolPhone",
         contact_email AS "schoolEmail",
 
-        gps_lat AS "gpsLat",
-        gps_lng AS "gpsLng",
         year_founded AS "yearFounded",
         COALESCE(school_active, TRUE) AS "schoolActive",
         alternate_school_names AS "alternateSchoolNames"
@@ -1311,12 +1217,9 @@ export async function schoolImportFieldsChanged(schoolId: number, input: SchoolD
     [current.district, nullableText(input.district)],
     [current.parish, nullableText(input.parish)],
 
-    [current.denomination, nullableText(input.denomination)],
     [current.schoolPhone, nullableText(input.schoolPhone)],
     [current.schoolEmail, nullableText(input.schoolEmail)],
 
-    [current.gpsLat, nullableCoordinate(input.latitude)],
-    [current.gpsLng, nullableCoordinate(input.longitude)],
     [current.yearFounded, input.yearFounded ?? null],
     [current.schoolActive, input.schoolActive ?? input.isActive ?? null],
   ];
