@@ -132,11 +132,6 @@ export const PARTNERSHIP_OPTIONS: PartnershipOption[] = [
         fullRow: true,
         href: "/sponsor-a-region",
     },
-    {
-        title: "Sponsor the country",
-        fullRow: true,
-        href: "/sponsor-uganda",
-    },
 ];
 
 export const TRUST_LINKS = [

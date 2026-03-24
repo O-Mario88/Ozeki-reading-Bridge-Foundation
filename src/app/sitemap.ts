@@ -28,7 +28,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/sponsor-a-district",
     "/sponsor-a-sub-region",
     "/sponsor-a-region",
-    "/sponsor-uganda",
     "/teacher-professional-development",
     "/in-school-coaching-mentorship",
     "/learner-reading-assessments-progress-tracking",

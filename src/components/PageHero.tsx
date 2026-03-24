@@ -1,12 +1,14 @@
+import type { ReactNode } from "react";
 import { MotionReveal } from "@/components/ui/MotionReveal";
 
 interface PageHeroProps {
   kicker?: string;
   title: string;
   description: string;
+  children?: ReactNode;
 }
 
-export function PageHero({ kicker, title, description }: PageHeroProps) {
+export function PageHero({ kicker, title, description, children }: PageHeroProps) {
   return (
     <section
       className="section tpd-hero-section bg-[var(--md-sys-color-surface-container)] py-20 pb-12"
@@ -16,6 +18,7 @@ export function PageHero({ kicker, title, description }: PageHeroProps) {
           {kicker ? <p className="kicker">{kicker}</p> : null}
           <h1 className="tpd-page-title m-0 text-[var(--md-sys-color-primary)]">{title}</h1>
           <p className="m-0 text-[1.15rem] text-[var(--md-sys-color-on-surface-variant)]">{description}</p>
+          {children}
         </MotionReveal>
       </div>
     </section>

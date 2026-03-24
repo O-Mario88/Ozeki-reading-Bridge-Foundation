@@ -39,10 +39,9 @@ test("missing schools template mapping fills official defaults", () => {
 
   const rows = mapMissingSchoolsToTemplateRows(missingSchools);
   assert.equal(rows.length, 1);
-  assert.equal(rows[0]?.school_external_id, "SCH-001");
   assert.equal(rows[0]?.school_name, "Bright Future Primary");
   assert.equal(rows[0]?.country, "Uganda");
-  assert.equal(rows[0]?.is_active, "TRUE");
+  assert.equal(rows[0]?.district, "Gulu");
 });
 
 test("missing schools template XLSX is directly uploadable with the official sheets", async () => {
@@ -75,8 +74,7 @@ test("missing schools template XLSX is directly uploadable with the official she
   const rawHeader = templateRows[0] ?? [];
   const header = rawHeader.filter((h: string) => h !== "");
   assert.deepEqual(header, [...SCHOOL_IMPORT_HEADERS]);
-  assert.equal(templateRows[1]?.[1], "New Hope School");
-  assert.equal(templateRows[1]?.[17], "TRUE");
+  assert.equal(templateRows[1]?.[0], "New Hope School");
 });
 
 test("missing schools template CSV includes only official headers and missing rows", async () => {

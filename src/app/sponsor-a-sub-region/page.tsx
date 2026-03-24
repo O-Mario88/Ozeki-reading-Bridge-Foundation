@@ -304,7 +304,6 @@ export default function SponsorSubRegionPage() {
             { label: "School", href: "/sponsor-a-school", desc: "One school, full support" },
             { label: "District", href: "/sponsor-a-district", desc: "District-wide coverage" },
             { label: "Region", href: "/sponsor-a-region", desc: "Region-wide impact" },
-            { label: "Country", href: "/sponsor-uganda", desc: "National transformation" },
           ].map((tier) => (
             <Link key={tier.label} href={tier.href}>
               <PremiumCard className="p-6 text-center h-full cursor-pointer" withHover>

@@ -140,6 +140,20 @@ p {
   line-height: 1.6;
 }
 
+/* White text override for green (brand-primary) backgrounds */
+.bg-brand-primary,
+.bg-brand-primary h1,
+.bg-brand-primary h2,
+.bg-brand-primary h3,
+.bg-brand-primary h4,
+.bg-brand-primary h5,
+.bg-brand-primary h6,
+.bg-brand-primary p,
+.bg-brand-primary span,
+.bg-brand-primary li {
+  color: #ffffff;
+}
+
 .kicker,
 .section-subtitle {
   color: var(--md-sys-color-tertiary);
@@ -7275,6 +7289,99 @@ h3 {
 
 .partner-summary-grid .action-row {
   margin-top: 0.8rem;
+}
+
+/* Redesigned partner page */
+.partner-section-head {
+  margin-bottom: 1.4rem;
+  text-align: center;
+}
+
+.partner-section-head h2 {
+  margin: 0 0 0.35rem;
+}
+
+.partner-section-head p {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 1.05rem;
+  margin: 0 auto;
+  max-width: 64ch;
+}
+
+.partner-cards-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.partner-card {
+  background: #ffffff;
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant), white 14%);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1.25rem;
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.partner-card:hover {
+  box-shadow:
+    0 4px 12px rgba(6, 36, 53, 0.08),
+    0 12px 28px rgba(6, 36, 53, 0.1);
+  transform: translateY(-2px);
+}
+
+.partner-card h3 {
+  color: var(--md-sys-color-primary);
+  font-size: 1.18rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.partner-card p {
+  color: var(--orbf-body-text);
+  flex: 1;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.partner-card .action-row {
+  margin-top: auto;
+  padding-top: 0.4rem;
+}
+
+.partner-cta-card {
+  background: color-mix(in oklab, var(--md-sys-color-surface-container), white 40%);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant), white 14%);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.partner-cta-content h2 {
+  margin: 0 0 0.3rem;
+}
+
+.partner-cta-content p {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 1.05rem;
+  margin: 0 auto;
+  max-width: 52ch;
+}
+
+@media (max-width: 760px) {
+  .partner-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .partner-cta-card {
+    padding: 1.3rem 1rem;
+  }
 }
 
 .booking-info-grid {

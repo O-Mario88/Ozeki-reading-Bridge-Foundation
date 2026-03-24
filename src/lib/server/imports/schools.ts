@@ -16,8 +16,6 @@ import {
   assertImportRole,
   assertImportScope,
   collapseWhitespace,
-  normalizeBooleanString,
-  normalizeOptionalInteger,
   normalizeText,
 } from "@/lib/server/imports/utils";
 import {
@@ -39,10 +37,6 @@ function requiredValue(value: string, label: string) {
 }
 
 function toDuplicateKey(row: SchoolsTemplateRow) {
-  const externalId = normalizeText(row.school_external_id);
-  if (externalId) {
-    return `external:${externalId}`;
-  }
   return [
     normalizeText(row.school_name),
     normalizeText(row.district),
@@ -52,64 +46,40 @@ function toDuplicateKey(row: SchoolsTemplateRow) {
 }
 
 function toImportInput(row: SchoolsTemplateRow): SchoolDirectoryWriteInput {
-  const yearFounded = row.year_founded ? normalizeOptionalInteger(row.year_founded) : null;
-  if (row.year_founded && yearFounded === null) {
-    throw new Error("year_founded must be numeric.");
-  }
-  const isActive = row.is_active ? normalizeBooleanString(row.is_active) : true;
-  if (row.is_active && isActive === null) {
-    throw new Error("is_active must be TRUE/FALSE, YES/NO, or 1/0.");
-  }
-  const currentPartnerSchool = row.current_partner_school ? normalizeBooleanString(row.current_partner_school) : false;
-  if (row.current_partner_school && currentPartnerSchool === null) {
-    throw new Error("current_partner_school must be TRUE/FALSE, YES/NO, or 1/0.");
-  }
-
   let headTeacher: SchoolDirectoryWriteInput["headTeacher"] = null;
   const hName = collapseWhitespace(row.head_teacher_name);
   if (hName) {
-    const rawGender = collapseWhitespace(row.head_teacher_gender);
-    const gender = (rawGender === "Male" || rawGender === "Female") ? rawGender : "Other";
     headTeacher = {
       fullName: hName,
-      gender,
+      gender: "Other",
       phone: collapseWhitespace(row.head_teacher_phone) || null,
-      email: collapseWhitespace(row.head_teacher_email) || null,
-      whatsapp: collapseWhitespace(row.head_teacher_whatsapp) || null,
+      email: null,
+      whatsapp: null,
     };
   }
 
-  let classesJson: string | null = null;
-  const classesRaw = collapseWhitespace(row.classes_offered);
-  if (classesRaw) {
-    const classes = classesRaw.split(",").map(c => c.trim()).filter(Boolean);
-    if (classes.length > 0) {
-      classesJson = JSON.stringify(classes);
-    }
-  }
-
   return {
-    schoolExternalId: collapseWhitespace(row.school_external_id) || null,
+    schoolExternalId: null,
     name: requiredValue(row.school_name, "school_name"),
-    alternativeSchoolNames: collapseWhitespace(row.alternative_school_names) || null,
+    alternativeSchoolNames: null,
     country: requiredValue(row.country, "country"),
     region: requiredValue(row.region, "region"),
-    subRegion: requiredValue(row.sub_region, "sub_region"),
+    subRegion: collapseWhitespace(row.sub_region) || null,
     district: requiredValue(row.district, "district"),
     subCounty: collapseWhitespace(row.sub_county) || null,
     parish: collapseWhitespace(row.parish) || "",
     village: collapseWhitespace(row.village) || null,
 
-    yearFounded,
+    yearFounded: null,
 
-    schoolStatus: collapseWhitespace(row.school_status) || "Open",
-    schoolStatusDate: collapseWhitespace(row.school_status_date) || null,
-    currentPartnerType: collapseWhitespace(row.current_partner_type) || "NA",
-    currentPartnerSchool: currentPartnerSchool ?? false,
+    schoolStatus: "Open",
+    schoolStatusDate: null,
+    currentPartnerType: "NA",
+    currentPartnerSchool: false,
 
-    isActive,
-    schoolActive: isActive,
-    classesJson,
+    isActive: true,
+    schoolActive: true,
+    classesJson: null,
     headTeacher,
   };
 }
@@ -203,10 +173,7 @@ export async function validateSchoolsImport(args: {
           rawData,
           normalizedData: normalizedInput as Record<string, unknown>,
           errorMessage: null,
-          warningMessage:
-            !typedRow.school_external_id
-              ? "school_external_id is optional but recommended for future matching."
-              : null,
+          warningMessage: null,
           suggestedFix: null,
           linkedSchoolId: match.schoolId,
         });

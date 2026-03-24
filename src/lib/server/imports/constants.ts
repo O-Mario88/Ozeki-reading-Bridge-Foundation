@@ -6,9 +6,7 @@ export const SCHOOLS_TEMPLATE_SHEET_NAME = "Schools_Template";
 export const TRAINING_PARTICIPANTS_TEMPLATE_SHEET_NAME = "Training_Participants_Template";
 
 export const SCHOOL_IMPORT_HEADERS = [
-  "school_external_id",
   "school_name",
-  "alternative_school_names",
   "country",
   "region",
   "sub_region",
@@ -16,18 +14,8 @@ export const SCHOOL_IMPORT_HEADERS = [
   "sub_county",
   "parish",
   "village",
-  "year_founded",
-  "school_status",
-  "school_status_date",
-  "current_partner_type",
-  "current_partner_school",
-  "is_active",
-  "classes_offered",
   "head_teacher_name",
-  "head_teacher_gender",
   "head_teacher_phone",
-  "head_teacher_email",
-  "head_teacher_whatsapp",
 ] as const;
 
 export const TRAINING_PARTICIPANT_IMPORT_HEADERS = [
@@ -107,9 +95,7 @@ export interface MissingSchoolCandidate {
 }
 
 export interface SchoolsTemplateRow {
-  school_external_id: string;
   school_name: string;
-  alternative_school_names: string;
   country: string;
   region: string;
   sub_region: string;
@@ -117,18 +103,8 @@ export interface SchoolsTemplateRow {
   sub_county: string;
   parish: string;
   village: string;
-  year_founded: string;
-  school_status: string;
-  school_status_date: string;
-  current_partner_type: string;
-  current_partner_school: string;
-  is_active: string;
-  classes_offered: string;
   head_teacher_name: string;
-  head_teacher_gender: string;
   head_teacher_phone: string;
-  head_teacher_email: string;
-  head_teacher_whatsapp: string;
 }
 
 export interface TrainingParticipantTemplateRow {
