@@ -1,10 +1,30 @@
--- Add missing columns to support_requests to match application expectations
+-- Create the support_requests table strictly adhering to the repository model
+CREATE TABLE IF NOT EXISTS support_requests (
+  id SERIAL PRIMARY KEY,
+  school_id INTEGER REFERENCES schools_directory(id) ON DELETE SET NULL,
+  contact_name TEXT,
+  contact_role TEXT,
+  contact_info TEXT,
+  urgency TEXT,
+  message TEXT,
+  support_types JSONB DEFAULT '[]'::jsonb,
+  status TEXT DEFAULT 'New',
+  created_by_user_id INTEGER REFERENCES portal_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-ALTER TABLE support_requests ADD COLUMN IF NOT EXISTS school_id INTEGER;
-ALTER TABLE support_requests ADD COLUMN IF NOT EXISTS contact_name TEXT;
-ALTER TABLE support_requests ADD COLUMN IF NOT EXISTS contact_role TEXT;
-ALTER TABLE support_requests ADD COLUMN IF NOT EXISTS contact_info TEXT;
-ALTER TABLE support_requests ADD COLUMN IF NOT EXISTS urgency TEXT;
-ALTER TABLE support_requests ADD COLUMN IF NOT EXISTS message TEXT;
-ALTER TABLE support_requests ADD COLUMN IF NOT EXISTS support_types JSONB;
-ALTER TABLE support_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+-- Note: we use IF NOT EXISTS just in case older environments partially instantiated it.
+-- Also create concept_note_requests as it was discovered missing during schema audit
+
+CREATE TABLE IF NOT EXISTS concept_note_requests (
+  id SERIAL PRIMARY KEY,
+  requester_type TEXT,
+  source_page TEXT,
+  region TEXT,
+  sub_region TEXT,
+  district TEXT,
+  payload_json JSONB,
+  submitted_by_user_id INTEGER REFERENCES portal_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
