@@ -105,7 +105,7 @@ export async function GET(request: Request) {
   response.cookies.set({
     name: PORTAL_SESSION_COOKIE,
     value: session.token,
-    maxAge: 1800, // 30 minutes
+    maxAge: 604_800, // 7 days – matches DB session expiry
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

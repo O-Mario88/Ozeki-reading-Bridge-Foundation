@@ -66,13 +66,32 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicHost = hostname === publicSiteHost || hostname === `www.${publicSiteHost}`;
 
+  // Helper: refresh portal session cookie on any portal-scoped response
+  function refreshSessionCookie(response: NextResponse) {
+    if (isPortalPath(pathname) || pathname.startsWith("/api/import/")) {
+      const sessionCookie = request.cookies.get("orbf_portal_session");
+      if (sessionCookie?.value) {
+        response.cookies.set({
+          name: "orbf_portal_session",
+          value: sessionCookie.value,
+          maxAge: 604_800, // 7 days – matches DB session expiry
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+        });
+      }
+    }
+    return response;
+  }
+
   if (localHosts.has(hostname) || hostname.endsWith(".local")) {
-    return NextResponse.next();
+    return refreshSessionCookie(NextResponse.next());
   }
 
   // Host split is opt-in. Keep portal available on the same host unless explicitly enforced.
   if (!enforceHostSplit) {
-    return NextResponse.next();
+    return refreshSessionCookie(NextResponse.next());
   }
 
   if (hostname === adminPortalHost) {
@@ -89,10 +108,8 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/portal/login", request.url), 307);
     }
 
-    return NextResponse.next();
+    return refreshSessionCookie(NextResponse.next());
   }
-
-  const response = NextResponse.next();
 
   if ((isPublicHost || hostname !== adminPortalHost) && isPortalPath(pathname)) {
     if (pathname.startsWith("/api/portal")) {
@@ -105,25 +122,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl, 307);
   }
 
-  // Refresh portal session cookie expiration on matching portal/api routes
-  if (isPortalPath(pathname)) {
-    const sessionCookie = request.cookies.get("orbf_portal_session");
-    if (sessionCookie?.value) {
-      response.cookies.set({
-        name: "orbf_portal_session",
-        value: sessionCookie.value,
-        maxAge: 1800, // 30 minutes
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-      });
-    }
-  }
-
-  return response;
+  return refreshSessionCookie(NextResponse.next());
 }
 
 export const config = {
   matcher: ["/:path*"],
 };
+
