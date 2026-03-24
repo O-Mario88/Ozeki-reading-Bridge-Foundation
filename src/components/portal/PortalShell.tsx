@@ -185,16 +185,14 @@ export function PortalShell({
         </div>
       </aside>
 
-      {sidebarOpen && (
-        <div
-          className="ds-overlay"
-          onClick={() => setSidebarOpen(false)}
-          onKeyDown={(e) => e.key === "Escape" && setSidebarOpen(false)}
-          role="button"
-          tabIndex={-1}
-          aria-label="Close sidebar"
-        />
-      )}
+      <div
+        className={`ds-overlay${sidebarOpen ? " visible" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+        onKeyDown={(e) => e.key === "Escape" && setSidebarOpen(false)}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close sidebar"
+      />
 
       {/* Main Content */}
       <div className="ds-main">

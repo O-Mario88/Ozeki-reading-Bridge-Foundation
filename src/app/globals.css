@@ -4838,6 +4838,123 @@ th {
   }
 }
 
+/* ── Portal Mobile Polish (≤900px) ──────────────────────────── */
+@media (max-width: 900px) {
+  /* Full-screen form dialogs on mobile */
+  .floating-donor-overlay,
+  .floating-surface-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .floating-donor-dialog,
+  .floating-surface-panel {
+    width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+  }
+
+  .floating-surface-panel--drawer {
+    width: 100% !important;
+    border-radius: 0 !important;
+  }
+
+  /* Touch-friendly buttons */
+  .button,
+  .portal-module-header .button,
+  .ds-portal-shell .button {
+    min-height: 42px;
+    padding: 0.55rem 1rem;
+    font-size: 0.82rem;
+  }
+
+  .button.button-ghost {
+    min-height: 38px;
+    padding: 0.45rem 0.85rem;
+  }
+
+  /* Action rows wrap on mobile */
+  .action-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .action-row .button {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Portal module header stacks vertically */
+  .portal-module-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .portal-module-header .action-row {
+    width: 100%;
+  }
+
+  /* Tables always scroll horizontally */
+  .table-wrap,
+  .ds-portal-shell .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ds-portal-shell table {
+    min-width: 640px;
+  }
+
+  /* Portal toolbar stacking */
+  .portal-table-toolbar {
+    flex-direction: column;
+    gap: 0.65rem;
+    align-items: stretch;
+  }
+
+  .portal-search-box input {
+    width: 100%;
+  }
+
+  .portal-toolbar-actions {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .portal-filter-chip {
+    flex: 1 1 auto;
+    text-align: center;
+    min-width: 0;
+  }
+
+  /* Advanced filters grid */
+  .portal-filter-grid,
+  .portal-filter-grid-pretty {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Stepper text wrapping */
+  .portal-visit-stepper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Floating dialog body padding */
+  .floating-surface-body {
+    padding: 0.75rem;
+  }
+
+  .floating-surface-header {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .floating-surface-footer {
+    padding: 0.6rem 0.75rem;
+  }
+}
+
 /* CARE-inspired overrides */
 .visually-hidden {
   border: 0;
