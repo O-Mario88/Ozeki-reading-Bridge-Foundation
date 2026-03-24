@@ -61,7 +61,7 @@ export function BookingForm({
 
       const data = result.data ?? {};
 
-      if (!result.response.ok) {
+      if (!result.response?.ok) {
         throw new Error(data.error ?? "Could not submit booking request.");
       }
 

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createPortalRecord, listPortalRecords } from "@/services/dataService";
+import { createPortalRecord, listPortalRecords, getPortalRecordByLocalId } from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
-import { PortalRecordFilters, PortalRecordPayload } from "@/lib/types";
+import { PortalRecordFilters, PortalRecordPayload, PortalUser } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -21,7 +21,7 @@ const createRecordSchema = z.object({
   module: moduleSchema,
   date: z.string().min(6),
   district: z.string().min(2),
-  schoolId: z.coerce.number().int().positive(),
+  schoolId: z.coerce.number().int().nonnegative(),
   schoolName: z.string().min(2),
   programType: z.string().trim().optional(),
   followUpDate: z.string().trim().optional(),
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = createRecordSchema.parse(await request.json());
-    const reviewer = canReview(user as any);
+    const reviewer = canReview(user as PortalUser);
 
     if (!reviewer && (payload.status === "Returned" || payload.status === "Approved")) {
       return NextResponse.json(
@@ -124,9 +124,23 @@ export async function POST(request: Request) {
       );
     }
 
+    // --- Phase 2: Idempotency Validation ---
+    // If the client network dropped *after* a previous successful submission but *before* 
+    // it received the HTTP 200, the offline sync queue might retry the POST.
+    // We strictly catch that duplicate using the cryptographically unique `localId`.
+    const localId = payload.payload.localId as string | undefined;
+    if (localId && typeof localId === "string") {
+      const existingRecord = await getPortalRecordByLocalId(localId, user.id);
+      if (existingRecord) {
+        // Stop execution and simply return the existing confirmed database record.
+        return NextResponse.json({ ok: true, record: existingRecord });
+      }
+    }
+
     const record = await createPortalRecord(
       {
         ...payload,
+        schoolId: payload.schoolId === 0 ? null : payload.schoolId,
         programType: payload.programType?.trim() || undefined,
         followUpDate: payload.followUpDate?.trim() || undefined,
         followUpType: payload.followUpType,

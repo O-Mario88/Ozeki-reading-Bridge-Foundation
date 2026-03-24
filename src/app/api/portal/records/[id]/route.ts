@@ -5,7 +5,7 @@ import {
   updatePortalRecord,
 } from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
-import { PortalRecordPayload } from "@/lib/types";
+import { PortalRecordPayload, PortalUser } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -24,7 +24,7 @@ const updateSchema = z.object({
   module: moduleSchema,
   date: z.string().min(6),
   district: z.string().min(2),
-  schoolId: z.coerce.number().int().positive(),
+  schoolId: z.coerce.number().int().nonnegative(),
   schoolName: z.string().min(2),
   programType: z.string().trim().optional(),
   followUpDate: z.string().trim().optional(),
@@ -113,7 +113,7 @@ export async function PUT(
     const params = await context.params;
     const id = toId(params.id);
     const payload = updateSchema.parse(await request.json());
-    const reviewer = canReview(user as any);
+    const reviewer = canReview(user as PortalUser);
 
     if (!reviewer && (payload.status === "Returned" || payload.status === "Approved")) {
       return NextResponse.json(
@@ -122,10 +122,34 @@ export async function PUT(
       );
     }
 
+    // --- Phase 2: Conflict Detection ---
+    // Prevent offline edits from silently overwriting fresh changes made by another admin
+    const existingRecord = await getPortalRecordById(id);
+    if (!existingRecord) {
+      return NextResponse.json({ error: "Record not found." }, { status: 404 });
+    }
+
+    const lastSyncUpdatedAt = payload.payload.lastSyncUpdatedAt as string | undefined;
+    if (lastSyncUpdatedAt) {
+      const dbDate = new Date(existingRecord.updatedAt).getTime();
+      const syncDate = new Date(lastSyncUpdatedAt).getTime();
+      // Add a 2000ms buffer to handle JS precision drops compared to Postgres timestamps
+      if (dbDate > syncDate + 2000) {
+        return NextResponse.json(
+          { 
+            error: "Conflict: The physical database record is newer than your offline device cache. Please review the live changes before syncing.", 
+            conflict: true 
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const record = await updatePortalRecord(
       id,
       {
         ...payload,
+        schoolId: payload.schoolId === 0 ? null : payload.schoolId,
         programType: payload.programType?.trim() || undefined,
         followUpDate: payload.followUpDate?.trim() || undefined,
         followUpType: payload.followUpType,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useOfflineReference } from "@/hooks/useOfflineReference";
 
 /* ── Types ── */
 
@@ -104,8 +105,21 @@ export function SchoolRosterPicker({
     onSelect,
     label,
 }: SchoolRosterPickerProps) {
-    const [roster, setRoster] = useState<RosterEntry[]>([]);
-    const [loading, setLoading] = useState(false);
+    const participantUrl = schoolId 
+        ? `/api/portal/schools/roster?schoolId=${schoolId}&type=${participantType}`
+        : null;
+
+    const { data: rosterData, loading, refetch: fetchRoster } = useOfflineReference(
+        participantUrl,
+        async () => {
+            const res = await fetch(participantUrl!);
+            if (!res.ok) throw new Error("Failed to fetch roster");
+            const data = await res.json();
+            return data.roster ?? [];
+        }
+    );
+    const roster = (rosterData as RosterEntry[]) ?? [];
+
     const [searchQuery, setSearchQuery] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
     const [addError, setAddError] = useState("");
@@ -141,31 +155,7 @@ export function SchoolRosterPicker({
         internalChildId: "",
     });
 
-    /* ── Fetch roster when schoolId changes ── */
-    const fetchRoster = useCallback(async () => {
-        if (!schoolId) {
-            setRoster([]);
-            return;
-        }
-        setLoading(true);
-        try {
-            const res = await fetch(
-                `/api/portal/schools/roster?schoolId=${schoolId}&type=${participantType}`,
-            );
-            if (res.ok) {
-                const data = await res.json();
-                setRoster(data.roster ?? []);
-            }
-        } catch {
-            /* ignore */
-        } finally {
-            setLoading(false);
-        }
-    }, [schoolId, participantType]);
 
-    useEffect(() => {
-        fetchRoster();
-    }, [fetchRoster]);
 
     useEffect(() => {
         if (!showAddModal) {

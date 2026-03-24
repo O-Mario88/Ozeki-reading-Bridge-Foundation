@@ -3,6 +3,7 @@ export {
     createPortalRecordPostgres as createPortalRecord,
     listPortalRecordsPostgres as listPortalRecords,
     getPortalRecordByIdPostgres as getPortalRecordById,
+    getPortalRecordByLocalIdPostgres as getPortalRecordByLocalId,
     updatePortalRecordPostgres as updatePortalRecord,
     softDeletePortalRecordPostgres as softDeletePortalRecord,
     saveObservationRubricPostgres as saveObservationRubric,

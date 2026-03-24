@@ -26,7 +26,7 @@ export function ContactForm({
       };
     }
 
-    if (!result.response.ok) {
+    if (!result.response?.ok) {
       throw new Error(result.data?.error ?? "Could not submit inquiry.");
     }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ReactNode, useState } from "react";
 import { PortalLogoutButton } from "@/components/PortalLogoutButton";
+import { SyncStatusBadge } from "./SyncStatusBadge";
 import { PortalUser, PortalUserRole } from "@/lib/types";
 import "@/app/portal-dashboard.css";
 
@@ -215,27 +216,28 @@ export function PortalShell({
             />
           </form>
 
-          <div className="ds-topbar-actions">
-            <details className="ds-create-menu">
-              <summary className="ds-topbar-icon-btn" title="Create new">✚</summary>
-              <div className="ds-create-menu-list">
-                <Link href="/portal/visits?new=1">New Visit</Link>
-                <Link href="/portal/assessments?new=1">New Assessment</Link>
-                <Link href="/portal/trainings?new=1">New Training</Link>
-                <Link href="/portal/national-intelligence">New Intervention</Link>
-                <Link href="/portal/resources">Upload Evidence</Link>
-              </div>
-            </details>
+            <div className="ds-topbar-actions">
+              <SyncStatusBadge />
+              <details className="ds-create-menu">
+                <summary className="ds-topbar-icon-btn" title="Create new">✚</summary>
+                <div className="ds-create-menu-list">
+                  <Link href="/portal/visits?new=1">New Visit</Link>
+                  <Link href="/portal/assessments?new=1">New Assessment</Link>
+                  <Link href="/portal/trainings?new=1">New Training</Link>
+                  <Link href="/portal/national-intelligence">New Intervention</Link>
+                  <Link href="/portal/resources">Upload Evidence</Link>
+                </div>
+              </details>
 
-            <Link href="/portal/support" className="ds-topbar-icon-btn" title="Notifications">
-              🔔
-              <span className="ds-topbar-badge" />
-            </Link>
+              <Link href="/portal/support" className="ds-topbar-icon-btn" title="Notifications">
+                🔔
+                <span className="ds-topbar-badge" />
+              </Link>
 
-            <Link href="/portal/profiles" className="ds-topbar-avatar" title={user.fullName}>
-              {getInitials(user.fullName)}
-            </Link>
-          </div>
+              <Link href="/portal/profiles" className="ds-topbar-avatar" title={user.fullName}>
+                {getInitials(user.fullName)}
+              </Link>
+            </div>
         </header>
 
         {/* Page Header + Content */}

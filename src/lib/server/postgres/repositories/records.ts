@@ -86,6 +86,16 @@ export async function getPortalRecordByIdPostgres(id: number): Promise<PortalRec
   return (result.rows[0] as unknown as PortalRecord) || null;
 }
 
+export async function getPortalRecordByLocalIdPostgres(localId: string, userId: number): Promise<PortalRecord | null> {
+  const result = await queryPostgres(
+    `SELECT id, school_id AS "schoolId", module, status, payload_json AS "payload", updated_at AS "createdAt", updated_at AS "updatedAt", follow_up_date::text AS "followUpDate", follow_up_type AS "followUpType", follow_up_owner_user_id AS "followUpOwnerUserId" 
+     FROM portal_records 
+     WHERE payload_json->>'localId' = $1 AND created_by_user_id = $2`,
+    [localId, userId]
+  );
+  return (result.rows[0] as unknown as PortalRecord) || null;
+}
+
 export async function updatePortalRecordPostgres(id: number, input: Partial<PortalRecordInput>): Promise<PortalRecord> {
   const params: unknown[] = [];
   let query = `UPDATE portal_records SET updated_at = NOW()`;

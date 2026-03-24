@@ -1,37 +1,8 @@
 "use client";
 
-type MutationMethod = "POST" | "PUT" | "PATCH" | "DELETE";
+import { offlineDb, type SyncQueueItem, type MutationAction } from "./offline-db";
 
-type OfflineFormQueueItem = {
-  id: string;
-  createdAt: string;
-  method: MutationMethod;
-  url: string;
-  headers: Record<string, string>;
-  payload: unknown;
-  label?: string;
-  attempts: number;
-  lastError?: string;
-};
-
-type SubmitQueuedResult = {
-  queued: true;
-  queueId: string;
-};
-
-type SubmitOnlineResult<T> = {
-  queued: false;
-  response: Response;
-  data: T | null;
-};
-
-export type SubmitWithOfflineQueueResult<T> = SubmitQueuedResult | SubmitOnlineResult<T>;
-
-const OFFLINE_QUEUE_STORAGE_KEY = "orbf-offline-form-queue-v1";
-const OFFLINE_SYNC_EVENT = "orbf-offline-form-sync";
-const OFFLINE_QUEUED_EVENT = "orbf-offline-form-queued";
-const SYNC_INTERVAL_MS = 60_000;
-
+const SYNC_INTERVAL_MS = 30_000;
 let syncStarted = false;
 let syncInFlight = false;
 
@@ -39,259 +10,275 @@ function canUseBrowser() {
   return typeof window !== "undefined";
 }
 
-function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
-  if (!headers) {
-    return {};
-  }
-  if (headers instanceof Headers) {
-    return Object.fromEntries(headers.entries());
-  }
-  if (Array.isArray(headers)) {
-    return Object.fromEntries(headers.map(([key, value]) => [String(key), String(value)]));
-  }
-  return Object.fromEntries(
-    Object.entries(headers).map(([key, value]) => [key, String(value)]),
-  );
-}
-
-function readQueue(): OfflineFormQueueItem[] {
-  if (!canUseBrowser()) {
-    return [];
-  }
-  try {
-    const raw = window.localStorage.getItem(OFFLINE_QUEUE_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw) as OfflineFormQueueItem[];
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.filter((item) =>
-      item &&
-      typeof item.id === "string" &&
-      typeof item.url === "string" &&
-      typeof item.method === "string",
-    );
-  } catch {
-    return [];
-  }
-}
-
-function writeQueue(queue: OfflineFormQueueItem[]) {
-  if (!canUseBrowser()) {
-    return;
-  }
-  window.localStorage.setItem(OFFLINE_QUEUE_STORAGE_KEY, JSON.stringify(queue));
-}
-
-function isNetworkError(error: unknown) {
-  return error instanceof TypeError;
-}
-
-function queueMutation(item: Omit<OfflineFormQueueItem, "id" | "createdAt" | "attempts">): OfflineFormQueueItem {
-  const queue = readQueue();
-  const id =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `offline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  const queued: OfflineFormQueueItem = {
-    ...item,
-    id,
-    createdAt: new Date().toISOString(),
-    attempts: 0,
-  };
-  queue.push(queued);
-  writeQueue(queue);
+function dispatchSyncEvent(detail: { synced: number; pending: number; failed: number }) {
   if (canUseBrowser()) {
-    window.dispatchEvent(
-      new CustomEvent(OFFLINE_QUEUED_EVENT, {
-        detail: {
-          id: queued.id,
-          label: queued.label || "Submission",
-          createdAt: queued.createdAt,
-          queueLength: queue.length,
-        },
-      }),
-    );
+    window.dispatchEvent(new CustomEvent("orbf-offline-sync-status", { detail }));
   }
-  return queued;
 }
 
-async function sendItem(item: OfflineFormQueueItem) {
-  return fetch(item.url, {
-    method: item.method,
-    headers: item.headers,
-    body: JSON.stringify(item.payload),
+/**
+ * Universal offline-to-online Id Reconciliation Sweep.
+ * If we created a school offline, it gets `local-UUID`. The backend gives it integer `42`.
+ * Before we sync subsequent dependent items (like an Enrollment tied to `local-UUID`),
+ * we MUST scour the entire Dexie payload history and rewrite `local-UUID` to `42`.
+ */
+async function reconcileLocalId(oldId: string, newId: string | number) {
+  const newIdStr = String(newId);
+
+  // 1. Rewrite pending SyncQueue payloads
+  const pendingItems = await offlineDb.syncQueue.toArray();
+  for (const item of pendingItems) {
+    let modified = false;
+    let payloadStr = JSON.stringify(item.payload);
+
+    if (payloadStr.includes(oldId)) {
+      payloadStr = payloadStr.replaceAll(oldId, newIdStr);
+      modified = true;
+    }
+
+    if (item.localRecordId === oldId) {
+      item.localRecordId = newIdStr;
+      modified = true;
+    }
+
+    if (modified) {
+      item.payload = JSON.parse(payloadStr);
+      await offlineDb.syncQueue.put(item);
+    }
+  }
+
+  // 2. Rewrite Offline UI Cache
+  const cachedItems = await offlineDb.offlineRecords.toArray();
+  for (const record of cachedItems) {
+    let modified = false;
+    let dataStr = JSON.stringify(record.data);
+
+    if (dataStr.includes(oldId)) {
+      dataStr = dataStr.replaceAll(oldId, newIdStr);
+      modified = true;
+    }
+
+    if (record.id === oldId) {
+      // The actual ID changed, we must delete the old row and insert a fresh one
+      await offlineDb.offlineRecords.delete(oldId);
+      await offlineDb.offlineRecords.put({
+        id: newIdStr,
+        module: record.module,
+        data: JSON.parse(dataStr),
+        isLocalOnly: 0,
+        updatedAt: record.updatedAt,
+      });
+      continue;
+    }
+
+    if (modified) {
+      record.data = JSON.parse(dataStr);
+      await offlineDb.offlineRecords.put(record);
+    }
+  }
+}
+
+async function sendSyncItem(item: SyncQueueItem): Promise<boolean> {
+  const url = item.action === "update" 
+    ? `/api/portal/records/${item.localRecordId}`
+    : `/api/portal/records`;
+
+  const method = item.action === "update" ? "PUT" : "POST";
+
+  const response = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      module: item.module,
+      status: item.payload.status || "Submitted",
+      ...item.payload, // The entire raw form state
+    }),
   });
-}
 
-function dispatchSyncEvent(detail: {
-  synced: number;
-  pending: number;
-  failed: number;
-}) {
-  if (!canUseBrowser()) {
-    return;
+  if (response.ok) {
+    const json = await response.json();
+    if (item.action === "create" && json.record?.id && String(json.record.id) !== item.localRecordId) {
+      // It successfully synced! Reconcile the fake Local UUID with the real PostgreSQL sequence ID
+      await reconcileLocalId(item.localRecordId, json.record.id);
+    }
+    
+    // Mark as definitely synced offline
+    const finalRecordId = json.record?.id ? String(json.record.id) : item.localRecordId;
+    const finalCache = await offlineDb.offlineRecords.get(finalRecordId);
+    if (finalCache) {
+      await offlineDb.offlineRecords.put({
+        ...finalCache,
+        isLocalOnly: 0, 
+      });
+    }
+
+    return true;
   }
-  window.dispatchEvent(new CustomEvent(OFFLINE_SYNC_EVENT, { detail }));
-}
 
-export function getOfflineFormQueueCount() {
-  return readQueue().length;
+  if (response.status === 409) {
+    // Conflict detection hit
+    await offlineDb.syncQueue.put({
+      ...item,
+      status: "conflict",
+      lastError: "Conflict: The physical database record is newer than your offline device cache.",
+    });
+    return false;
+  }
+
+  if (response.status >= 400 && response.status < 500) {
+    // Permanent Validation error (Zod) - stop trying to sync it blindly
+    const resData = await response.json().catch(() => ({}));
+    await offlineDb.syncQueue.put({
+      ...item,
+      status: "failed",
+      lastError: resData.error || `HTTP ${response.status} Validation Error`,
+    });
+    return false;
+  }
+
+  // 500 server error, keep it pending to retry next loop
+  throw new Error(`HTTP ${response.status}`);
 }
 
 export async function flushOfflineFormQueue() {
-  if (!canUseBrowser() || syncInFlight) {
-    return { synced: 0, pending: getOfflineFormQueueCount(), failed: 0 };
-  }
-  if (!navigator.onLine) {
-    return { synced: 0, pending: getOfflineFormQueueCount(), failed: 0 };
+  if (!canUseBrowser() || syncInFlight || !navigator.onLine) {
+    return;
   }
 
   syncInFlight = true;
   try {
-    const queue = readQueue();
-    if (queue.length === 0) {
+    const pendingItems = await offlineDb.syncQueue
+      .where("status")
+      .equals("pending")
+      .sortBy("createdAt");
+
+    if (pendingItems.length === 0) {
       dispatchSyncEvent({ synced: 0, pending: 0, failed: 0 });
-      return { synced: 0, pending: 0, failed: 0 };
+      return;
     }
 
-    const pending: OfflineFormQueueItem[] = [];
     let synced = 0;
     let failed = 0;
 
-    for (const item of queue) {
+    for (const item of pendingItems) {
       try {
-        const response = await sendItem(item);
-        if (response.ok) {
-          synced += 1;
-          continue;
+        const success = await sendSyncItem(item);
+        if (success) {
+          await offlineDb.syncQueue.delete(item.id);
+          synced++;
+        } else {
+          failed++;
         }
-        // Drop items that received 4xx client errors — they are permanently invalid
-        // and will never succeed on retry (e.g. Zod validation failures).
-        if (response.status >= 400 && response.status < 500) {
-          failed += 1;
-          continue;
-        }
-        // Only retry on 5xx server errors
-        failed += 1;
-        pending.push({
-          ...item,
-          attempts: item.attempts + 1,
-          lastError: `HTTP ${response.status}`,
-        });
       } catch (error) {
-        failed += 1;
-        pending.push({
+        failed++;
+        await offlineDb.syncQueue.put({
           ...item,
           attempts: item.attempts + 1,
           lastError: error instanceof Error ? error.message : "Network error",
         });
-        // If network has dropped again, stop and keep remaining queue as-is.
-        if (!navigator.onLine || isNetworkError(error)) {
-          const remainingIndex = queue.indexOf(item) + 1;
-          pending.push(...queue.slice(remainingIndex));
+
+        // If the internet natively dropped mid-sync loop, break completely.
+        if (!navigator.onLine) {
           break;
         }
       }
     }
 
-    writeQueue(pending);
-    dispatchSyncEvent({ synced, pending: pending.length, failed });
-    return { synced, pending: pending.length, failed };
+    const remaining = await offlineDb.syncQueue.where("status").equals("pending").count();
+    dispatchSyncEvent({ synced, pending: remaining, failed });
+
   } finally {
     syncInFlight = false;
   }
 }
 
 export function startOfflineFormQueueSync() {
-  if (!canUseBrowser() || syncStarted) {
-    return;
-  }
+  if (!canUseBrowser() || syncStarted) return;
   syncStarted = true;
 
-  const syncNow = () => {
-    void flushOfflineFormQueue();
-  };
+  const syncNow = () => { void flushOfflineFormQueue(); };
 
   window.addEventListener("online", syncNow);
   window.addEventListener("focus", syncNow);
+  window.addEventListener("orbf-offline-db-updated", syncNow);
+
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      syncNow();
-    }
+    if (document.visibilityState === "visible") syncNow();
   });
 
   window.setInterval(() => {
-    if (navigator.onLine) {
-      syncNow();
-    }
+    if (navigator.onLine) syncNow();
   }, SYNC_INTERVAL_MS);
 
-  if (navigator.onLine) {
-    syncNow();
-  }
+  if (navigator.onLine) syncNow();
 }
 
+/**
+ * Legacy Support: For non-priority modules (finance, newsletters) that expected the old
+ * localStorage-based queue, this maps them natively into Dexie.
+ */
 export async function submitJsonWithOfflineQueue<T = Record<string, unknown>>(
   url: string,
   options: {
     payload: unknown;
-    method?: MutationMethod;
+    method?: "POST" | "PUT" | "PATCH" | "DELETE";
     headers?: HeadersInit;
     label?: string;
   },
-): Promise<SubmitWithOfflineQueueResult<T>> {
-  const method = options.method ?? "POST";
-  const headers = {
-    "Content-Type": "application/json",
-    ...normalizeHeaders(options.headers),
-  };
+): Promise<
+  | { queued: true; queueId: string; response?: never; data?: never }
+  | { queued: false; response: Response; data: T; queueId?: never }
+> {
+  const method = options.method ?? "POST"; // Map legacy HTTP methods
+  let mappedAction: MutationAction = "create";
+  if (method === "PUT" || method === "PATCH") mappedAction = "update";
+  if (method === "DELETE") mappedAction = "delete";
 
-  if (canUseBrowser() && !navigator.onLine) {
-    const queued = queueMutation({
-      method,
-      url,
-      headers,
+  const isNetworkDown = canUseBrowser() && !navigator.onLine;
+
+  if (isNetworkDown) {
+    const queueId = `sync-legacy-${Date.now()}`;
+    await offlineDb.syncQueue.put({
+      id: queueId,
+      module: options.label || "generic_legacy_form",
+      action: mappedAction,
+      localRecordId: queueId,
       payload: options.payload,
-      label: options.label,
-      lastError: "Queued offline",
+      createdAt: new Date().toISOString(),
+      status: "pending",
+      attempts: 0,
     });
-    return { queued: true, queueId: queued.id };
+    return { queued: true, queueId };
   }
 
   try {
     const response = await fetch(url, {
-      method,
-      headers,
+      method: options.method || "POST",
+      headers: { "Content-Type": "application/json", ...options.headers },
       body: JSON.stringify(options.payload),
     });
+    
+    // We do NOT want to throw manually for network errors if it's legacy 400s
     const contentType = response.headers.get("content-type") || "";
-    const data =
-      contentType.includes("application/json")
-        ? ((await response.json()) as T)
-        : null;
-    return { queued: false, response, data };
+    const data = contentType.includes("application/json") ? await response.json() : null;
+    return { queued: false, response, data: data as T };
   } catch (error) {
-    if (!canUseBrowser() || !isNetworkError(error)) {
+    if (!canUseBrowser() || !(error instanceof TypeError)) {
       throw error;
     }
-    const queued = queueMutation({
-      method,
-      url,
-      headers,
-      payload: options.payload,
-      label: options.label,
-      lastError: error instanceof Error ? error.message : "Network error",
+    const queueId = `sync-legacy-fallback-${Date.now()}`;
+    await offlineDb.syncQueue.put({
+       id: queueId,
+       module: options.label || "generic_legacy_form",
+       action: mappedAction,
+       localRecordId: queueId,
+       payload: options.payload,
+       createdAt: new Date().toISOString(),
+       status: "pending",
+       attempts: 0,
+       lastError: error.message,
     });
-    return { queued: true, queueId: queued.id };
+    return { queued: true, queueId };
   }
 }
 
-export function getOfflineFormQueueEvents() {
-  return {
-    queued: OFFLINE_QUEUED_EVENT,
-    sync: OFFLINE_SYNC_EVENT,
-  };
-}
