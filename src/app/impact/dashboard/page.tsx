@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
 import { getImpactReportFilterFacetsAsync } from "@/services/dataService";
@@ -145,16 +146,18 @@ export default async function ImpactDashboardPage({
       <SectionWrapper theme="off-white" className="!pt-12">
         <PremiumCard className="overflow-hidden p-1 shadow-2xl border-brand-primary/10" withHover={false}>
           <div className="bg-white rounded-[1.8rem] overflow-hidden">
-             <PublicImpactMapExplorer
-                syncUrl
-                initialPeriod={firstValue(params.period) || "FY"}
-                initialSelection={{
-                  region: firstValue(params.region),
-                  subRegion: firstValue(params.subRegion),
-                  district: firstValue(params.district),
-                  school: firstValue(params.school) || firstValue(params.schoolId),
-                }}
-              />
+             <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-gray-100 flex items-center justify-center text-gray-400 font-medium">Loading live data explorer...</div>}>
+               <PublicImpactMapExplorer
+                  syncUrl
+                  initialPeriod={firstValue(params.period) || "FY"}
+                  initialSelection={{
+                    region: firstValue(params.region),
+                    subRegion: firstValue(params.subRegion),
+                    district: firstValue(params.district),
+                    school: firstValue(params.school) || firstValue(params.schoolId),
+                  }}
+                />
+             </Suspense>
           </div>
         </PremiumCard>
       </SectionWrapper>
