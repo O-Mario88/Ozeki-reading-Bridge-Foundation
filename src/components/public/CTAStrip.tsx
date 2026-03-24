@@ -24,29 +24,29 @@ export function CTAStrip({
   primaryButtonHoverColor,
 }: CTAStripProps) {
   const themes = {
-    brand: "bg-orange-600 text-white",
+    brand: "bg-gray-100", // Neutral light grey background
     dark: "bg-gray-900 text-white",
     light: "bg-brand-surface text-brand-text border-y border-gray-100",
   };
 
   const primaryBtnTheme = primaryButtonColor
     ? `${primaryButtonColor} text-white ${primaryButtonHoverColor || ""}`
-    : theme === "light" 
-      ? "bg-brand-primary text-white hover:bg-brand-primary/90" 
-      : "bg-white text-gray-900 hover:bg-gray-50";
+    : theme === "brand" || theme === "light"
+      ? "bg-brand-primary text-white hover:bg-brand-primary/90 shadow-sm hover:shadow"
+      : "bg-white text-gray-900 hover:bg-gray-50 shadow-sm";
 
-  const secondaryBtnTheme = theme === "light"
-    ? "border-2 border-gray-200 text-gray-600 hover:border-gray-300"
+  const secondaryBtnTheme = theme === "brand" || theme === "light"
+    ? "border-2 border-gray-200 text-gray-800 hover:border-gray-300 bg-white hover:bg-gray-50"
     : "border-2 border-white text-white hover:bg-white/10";
 
   return (
     <section className={`py-16 md:py-24 ${themes[theme]}`}>
       <div className="container mx-auto px-4 md:px-6 max-w-4xl text-center">
-        <h2 className={`text-3xl md:text-5xl font-bold mb-6 tracking-tight ${theme === 'light' ? 'text-brand-text' : 'text-white'}`}>
+        <h2 className={`text-3xl md:text-5xl font-bold mb-6 tracking-tight ${theme === 'brand' ? 'text-brand-primary' : theme === 'light' ? 'text-brand-text' : 'text-white'}`}>
           {heading}
         </h2>
         {subheading && (
-          <p className={`text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed ${theme === 'light' ? 'text-brand-text/80' : 'text-white/90'}`}>
+          <p className={`text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed ${theme === 'brand' ? 'text-gray-900' : theme === 'light' ? 'text-brand-text/80' : 'text-white/90'}`}>
             {subheading}
           </p>
         )}
@@ -54,7 +54,7 @@ export function CTAStrip({
           {primaryButtonText && primaryButtonHref && (
             <Link 
               href={primaryButtonHref}
-              className={`px-8 py-3.5 rounded-full font-semibold transition-all shadow-sm ${primaryBtnTheme}`}
+              className={`px-8 py-3.5 rounded-full font-semibold transition-all ${primaryBtnTheme}`}
             >
               {primaryButtonText}
             </Link>
