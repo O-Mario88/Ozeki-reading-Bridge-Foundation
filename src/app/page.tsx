@@ -42,7 +42,7 @@ function clipQuote(text: string, maxChars: number) {
 
 export default async function HomePage() {
   let testimonialRows: PortalTestimonialRecord[] = [];
-  const impactStats = { schools: "500+", assessments: "2M+", teachers: "15K" };
+  const impactStats = { schools: "...", assessments: "...", teachers: "..." };
 
   if (isPostgresConfigured()) {
     try {
@@ -56,9 +56,7 @@ export default async function HomePage() {
 
       const summary = await getImpactSummary();
       const formatStat = (val: number) => {
-        if (val >= 1000000) return (val / 1000000).toFixed(1).replace(/\.0$/, "") + "M+";
-        if (val >= 1000) return (val / 1000).toFixed(1).replace(/\.0$/, "") + "K+";
-        return String(val);
+        return val.toLocaleString();
       };
 
       const getMetric = (labelMatched: string) => {
