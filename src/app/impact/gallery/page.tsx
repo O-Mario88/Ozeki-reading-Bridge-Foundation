@@ -257,12 +257,12 @@ export default async function ImpactGalleryPage({
                <p className="text-gray-500 text-lg leading-relaxed">
                  We couldn't find any media matching your exact filters. Try broadening your selection.
                </p>
-               <button 
-                 onClick={() => { window.location.href = "/impact/gallery"; }} 
-                 className="mt-8 text-[#006b61] font-bold hover:underline underline-offset-4"
+               <Link 
+                 href="/impact/gallery" 
+                 className="mt-8 block text-[#006b61] font-bold hover:underline underline-offset-4"
                >
                  Clear all filters
-               </button>
+               </Link>
             </div>
           )}
         </section>
