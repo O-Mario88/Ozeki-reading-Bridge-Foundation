@@ -55,10 +55,24 @@ export default async function SchoolProfilePage({ params }: PageProps) {
                         )}&subCounty=${encodeURIComponent(school.subCounty)}&parish=${encodeURIComponent(
                             school.parish,
                         )}&search=${encodeURIComponent(school.name)}`}
-                        className="button button-ghost"
+                        className="button button-primary"
                     >
                         Open School Report
                     </Link>
+                    <Link href={`/portal/trainings/import-participants?schoolId=${schoolId}`} className="button button-ghost">
+                        Import Participants
+                    </Link>
+                    <div className="dropdown">
+                        <span className="button button-ghost">Templates ▾</span>
+                        <div className="dropdown-content">
+                            <Link href={`/api/import/templates/training-participants.xlsx?schoolId=${schoolId}`}>
+                                Excel Template
+                            </Link>
+                            <Link href={`/api/import/templates/training-participants.csv?schoolId=${schoolId}`}>
+                                CSV Template
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             }
         >

@@ -35,20 +35,8 @@ export default async function PortalTrainingProfilePage({ params }: PageProps) {
           <Link href={`/portal/trainings/participants/new?trainingId=${trainingId}`} className="button">
             Add Participant
           </Link>
-          <Link href={`/portal/trainings/import-participants?trainingId=${trainingId}`} className="button button-ghost">
-            Import Participants
-          </Link>
-          <Link
-            href={`/api/import/templates/training-participants.xlsx?trainingId=${trainingId}`}
-            className="button button-ghost"
-          >
-            Download Excel Template
-          </Link>
-          <Link
-            href={`/api/import/templates/training-participants.csv?trainingId=${trainingId}`}
-            className="button button-ghost"
-          >
-            Download CSV Template
+          <Link href={`/portal/trainings/${trainingId}/feedback`} className="button button-secondary">
+            Participants Feedback
           </Link>
         </div>
       }

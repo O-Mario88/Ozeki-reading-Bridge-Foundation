@@ -253,6 +253,7 @@ interface PortalModuleManagerProps {
   initialRecords: PortalRecord[];
   initialSchools: SchoolDirectoryRecord[];
   initialUsers: Array<{ id: number; fullName: string }>;
+  initialFinanceContacts?: Array<{ id: number; fullName: string }>;
   currentUser: PortalUser;
 }
 
@@ -1820,6 +1821,7 @@ export function PortalModuleManager({
   initialRecords,
   initialSchools,
   initialUsers,
+  initialFinanceContacts,
   currentUser,
 }: PortalModuleManagerProps) {
   const searchParams = useSearchParams();
@@ -6572,11 +6574,17 @@ export function PortalModuleManager({
                                   disabled={isTrainingScheduledLockedField}
                                 >
                                   <option value="">Select</option>
-                                  {(field.options ?? []).map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
+                                  {(() => {
+                                    const optionsToRender =
+                                      field.key === "facilitatedByContactId" && initialFinanceContacts
+                                        ? initialFinanceContacts.map((c) => ({ value: String(c.id), label: c.fullName }))
+                                        : (field.options ?? []);
+                                    return optionsToRender.map((option) => (
+                                      <option key={option.value} value={option.value}>
+                                        {option.label}
+                                      </option>
+                                    ));
+                                  })()}
                                 </select>
                               </label>
                             );

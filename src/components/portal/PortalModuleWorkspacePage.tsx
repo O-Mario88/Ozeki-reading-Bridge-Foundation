@@ -27,6 +27,13 @@ export async function PortalModuleWorkspacePage({
   const schools = await listSchoolDirectoryRecords();
   const users = await listPortalUsersForFilters(user);
 
+  let financeContacts: Array<{ id: number; fullName: string }> | undefined = undefined;
+  if (module === "training") {
+    const { listFinanceContacts } = await import("@/services/financeService");
+    const contacts = await listFinanceContacts();
+    financeContacts = contacts.map((c) => ({ id: c.id, fullName: c.name }));
+  }
+
   return (
     <PortalShell
       user={user}
@@ -49,6 +56,7 @@ export async function PortalModuleWorkspacePage({
         initialRecords={records}
         initialSchools={schools}
         initialUsers={users}
+        initialFinanceContacts={financeContacts}
         currentUser={user}
       />
     </PortalShell>

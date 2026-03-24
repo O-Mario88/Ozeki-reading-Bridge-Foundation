@@ -33,46 +33,66 @@ export default function PartnerPage() {
         <div className="container cards-grid">
           <article className="card">
             <h2>Sponsor a School</h2>
-            <p>Full two-year school package with coaching, assessments, and reporting.</p>
+            <p>
+              Fund one school&apos;s complete two-year literacy journey — coaching visits,
+              assessment rounds, teaching materials, and NLIP evidence reporting. See exactly
+              how your support translates into reading gains.
+            </p>
             <div className="action-row">
               <Link className="button" href="/sponsor-a-school">
-                Open package
+                View School Package
               </Link>
             </div>
           </article>
           <article className="card">
             <h2>Sponsor a District</h2>
-            <p>District-wide two-year literacy support with sub-county and parish reporting.</p>
+            <p>
+              Strengthen reading instruction across an entire district. Every school receives
+              structured coaching, four assessment rounds, and leadership support. You receive
+              partner-ready evidence showing district-wide improvement.
+            </p>
             <div className="action-row">
               <Link className="button" href="/sponsor-a-district">
-                Open package
+                View District Package
               </Link>
             </div>
           </article>
           <article className="card">
             <h2>Sponsor a Sub-Region</h2>
-            <p>Targeted two-year sub-region partnership with district performance evidence.</p>
+            <p>
+              The ideal balance of depth and scale. A sub-region is large enough to drive
+              system-level change, but focused enough for every school to get meaningful
+              support. Creates a replicable proof point for further investment.
+            </p>
             <div className="action-row">
               <Link className="button" href="/sponsor-a-sub-region">
-                Open package
+                View Sub-Region Package
               </Link>
             </div>
           </article>
           <article className="card">
             <h2>Sponsor a Region</h2>
-            <p>Region-level implementation and accountability package over two years.</p>
+            <p>
+              Fix the literacy system at regional scale. When improvement is coordinated
+              across all districts and sub-regions, gains are sustainable and leadership
+              decisions are backed by credible evidence.
+            </p>
             <div className="action-row">
               <Link className="button" href="/sponsor-a-region">
-                Open package
+                View Region Package
               </Link>
             </div>
           </article>
           <article className="card">
             <h2>Sponsor Uganda</h2>
-            <p>National two-year partnership with reports across regions and districts.</p>
+            <p>
+              The highest-impact tier. Build a national literacy operating system across all
+              regions and districts. Your investment creates permanent institutional capacity
+              and provides government with evidence for policy decisions.
+            </p>
             <div className="action-row">
               <Link className="button" href="/sponsor-uganda">
-                Open package
+                View Country Package
               </Link>
             </div>
           </article>
