@@ -194,7 +194,7 @@ export function PortalBulkImportWorkflow({
     }
   }
 
-  async function handleCommit() {
+  async function handleCommit(options?: { forceImport?: boolean }) {
     if (!preview) {
       return;
     }
@@ -206,7 +206,10 @@ export function PortalBulkImportWorkflow({
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ importJobId: preview.importJobId }),
+        body: JSON.stringify({
+          importJobId: preview.importJobId,
+          forceImport: options?.forceImport ?? false,
+        }),
       });
       const payload = await readJson(response);
       if (!response.ok || !payload?.success) {
@@ -411,6 +414,16 @@ export function PortalBulkImportWorkflow({
               >
                 {committing ? "Committing..." : "Commit Import"}
               </button>
+              {hasBlockingErrors ? (
+                <button
+                  type="button"
+                  className="button portal-import-force-btn"
+                  onClick={() => void handleCommit({ forceImport: true })}
+                  disabled={committing || summaryValue(preview.summary, "validRows") === 0}
+                >
+                  {committing ? "Force-Committing..." : `Force Import (${summaryValue(preview.summary, "validRows")} valid rows)`}
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="button button-ghost"
@@ -422,7 +435,8 @@ export function PortalBulkImportWorkflow({
             </div>
             {hasBlockingErrors ? (
               <p className="portal-import-inline-note">
-                Commit is disabled while blocking errors exist. Fix the rows listed below, or use the generated missing-schools template first.
+                Commit is disabled due to {summaryValue(preview.summary, "errorCount")} error row(s).
+                Use <strong>Force Import</strong> to skip the error rows and commit only the {summaryValue(preview.summary, "validRows")} valid row(s).
               </p>
             ) : null}
             {commitSummary ? (
@@ -666,6 +680,15 @@ export function PortalBulkImportWorkflow({
         .portal-import-pill--error {
           background: rgba(239, 68, 68, 0.12);
           color: #b91c1c;
+        }
+        .portal-import-force-btn {
+          background: linear-gradient(135deg, #d97706, #b45309) !important;
+          color: #fff !important;
+          border: none !important;
+        }
+        .portal-import-force-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
         }
         @media (max-width: 900px) {
           .portal-import-hero {

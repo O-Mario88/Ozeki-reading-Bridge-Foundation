@@ -299,6 +299,7 @@ export async function validateTrainingParticipantsImport(args: {
 export async function commitTrainingParticipantsImport(args: {
   actor: PortalUser;
   importJobId: number;
+  forceImport?: boolean;
 }) {
   assertImportRole(args.actor, "training_participants");
 
@@ -306,13 +307,28 @@ export async function commitTrainingParticipantsImport(args: {
   if (!job || job.importType !== "training_participants") {
     throw new Error("Training participant import job not found.");
   }
-  if (job.rows.some((row) => row.status === "ERROR" || row.action === "ERROR")) {
+  const hasErrors = job.rows.some((row) => row.status === "ERROR" || row.action === "ERROR");
+  if (hasErrors && !args.forceImport) {
     throw new Error("Fix import errors before committing this training participant import.");
   }
 
   await markImportJobCommitting(args.importJobId, args.actor);
 
   for (const row of job.rows) {
+    if (row.action === "ERROR" || row.status === "ERROR") {
+      await updateImportJobRow({
+        importJobId: args.importJobId,
+        rowNumber: row.rowNumber,
+        action: "SKIP",
+        status: "SKIPPED",
+        warningMessage: row.errorMessage
+          ? `Force-skipped: ${row.errorMessage}`
+          : "Force-skipped due to validation error.",
+        linkedSchoolId: row.linkedSchoolId,
+        linkedTrainingId: row.linkedTrainingId,
+      });
+      continue;
+    }
     if (row.action === "SKIP") {
       await updateImportJobRow({
         importJobId: args.importJobId,

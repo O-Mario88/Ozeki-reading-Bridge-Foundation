@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 
 const commitSchema = z.object({
   importJobId: z.coerce.number().int().positive(),
+  forceImport: z.boolean().optional().default(false),
 });
 
 export async function POST(request: Request) {
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
       const result = await commitSchoolsImport({
         actor: user,
         importJobId: payload.importJobId,
+        forceImport: payload.forceImport,
       });
       return jsonSuccess(result, requestId);
     },
