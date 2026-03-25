@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 import { SiteHeader } from "../SiteHeader";
 import { SiteFooter } from "../SiteFooter";
-import { PortalSessionTimeout } from "../portal/PortalSessionTimeout";
 
 export function LayoutOrchestrator({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "";
@@ -13,7 +12,6 @@ export function LayoutOrchestrator({ children }: { children: ReactNode }) {
   if (isPortal) {
     return (
       <>
-        <PortalSessionTimeout />
         <SiteHeader />
         <main className="dashboard-inspired-main min-h-[calc(100vh-var(--header-height))]">
           {children}
