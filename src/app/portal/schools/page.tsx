@@ -1,6 +1,6 @@
 import { PortalSchoolsManager } from "@/components/portal/PortalSchoolsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import { listSchoolDirectoryRecordsPostgres } from "@/lib/server/postgres/repositories/schools";
 import Link from "next/link";
 

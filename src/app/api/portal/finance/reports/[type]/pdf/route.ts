@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { getPortalUserOrRedirect } from "@/lib/auth-server";
+import { getPortalUserOrRedirect } from "@/lib/auth";
 import {
   getIncomeVsExpenseSummary,
   getBudgetVsActual,

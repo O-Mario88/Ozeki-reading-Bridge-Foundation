@@ -1,4 +1,4 @@
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { validateTrainingParticipantsImport } from "@/lib/server/imports/training-participants";
 import { RouteError, jsonSuccess, withRouteHandler } from "@/lib/server/http/route-utils";
 

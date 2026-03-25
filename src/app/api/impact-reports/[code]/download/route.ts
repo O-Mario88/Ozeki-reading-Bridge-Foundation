@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getImpactReportByCodeAsync, incrementImpactReportDownloadCountAsync } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { buildPublicDashboardReportModel, renderPublicDashboardReportHtml } from "@/lib/public-dashboard-report-engine";
 import { renderBrandedPdf } from "@/lib/server/pdf/render";
 

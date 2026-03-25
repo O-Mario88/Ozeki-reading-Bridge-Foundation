@@ -4,7 +4,7 @@ import {
   getPortalRecordById,
   updatePortalRecord,
 } from "@/services/dataService";
-import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
 import { PortalRecordPayload, PortalUser } from "@/lib/types";
 
 export const runtime = "nodejs";

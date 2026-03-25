@@ -9,7 +9,7 @@ import {
     listStoryAnthologies,
     saveStoryAnthology,
 } from "@/services/dataService";
-import { getCurrentPortalUser } from "@/lib/portal-auth";
+import { getCurrentPortalUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

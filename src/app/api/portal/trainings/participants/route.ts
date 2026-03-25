@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { createOrUpdateTrainingParticipant } from "@/lib/server/services/training/participant-service";
 import { assertImportRole } from "@/lib/server/imports/utils";
 import { RouteError, jsonSuccess, withRouteHandler } from "@/lib/server/http/route-utils";

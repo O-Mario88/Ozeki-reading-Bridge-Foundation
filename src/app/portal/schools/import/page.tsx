@@ -1,6 +1,6 @@
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalBulkImportWorkflow } from "@/components/imports/PortalBulkImportWorkflow";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

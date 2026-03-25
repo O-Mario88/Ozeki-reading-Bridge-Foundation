@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { z } from "zod";
-import { getPortalUserFromSession } from "@/services/dataService";
-import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { getCurrentPortalUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { createSchoolContactInSchoolPostgres } from "@/lib/server/postgres/repositories/schools";
 import { addEventParticipants, getTrainingSession } from "@/lib/training-db";
@@ -29,15 +27,10 @@ const registrationSchema = z.object({
   contacts: z.array(contactSchema).min(1, "At least one contact is required."),
 });
 
-async function requireAuth() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(PORTAL_SESSION_COOKIE)?.value;
-  if (!token) return null;
-  return getPortalUserFromSession(token);
-}
+
 
 export async function POST(request: Request) {
-  const user = await requireAuth();
+  const user = await getCurrentPortalUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

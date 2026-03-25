@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PortalGalleryManager } from "@/components/portal/PortalGalleryManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

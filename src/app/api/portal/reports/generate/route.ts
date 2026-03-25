@@ -23,7 +23,7 @@ import {
     validateNarrative,
     AI_GUARDRAILS,
 } from "@/lib/recommendations";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { getOpenAiServerConfig } from "@/lib/server/openai-config";
 
 export const runtime = "nodejs";

@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { getCurrentPortalUser } from "@/lib/portal-auth";
+import { getCurrentPortalUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 

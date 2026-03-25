@@ -7,7 +7,7 @@ import {
   listSchoolDirectoryRecords,
 } from "@/services/dataService";
 import { portalModuleConfigByModule } from "@/lib/portal-config";
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalUser } from "@/lib/auth";
 import type { PortalRecordModule } from "@/lib/types";
 
 interface PortalModuleWorkspacePageProps {

@@ -1,6 +1,6 @@
 import { PortalShell } from "@/components/portal/PortalShell";
 import { OrganizationProfileManager } from "@/components/portal/admin/OrganizationProfileManager";
-import { requirePortalSuperAdminUser } from "@/lib/portal-auth";
+import { requirePortalSuperAdminUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

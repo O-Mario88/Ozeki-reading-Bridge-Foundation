@@ -364,13 +364,13 @@ export async function recomputeLearningAutomationSnapshots(_filters?: unknown) {
 
 // ── Auth / Portal User Management ───────────────────────────────────
 export async function authenticatePortalUser(identifier: string, password: string) {
-    const { authenticatePortalUser: fn } = await import("@/services/authService");
-    return fn(identifier, password);
+    const { authenticatePortalUserPostgres } = await import("@/lib/server/postgres/repositories/auth");
+    return authenticatePortalUserPostgres(identifier, password);
 }
 
 export async function getPortalUserByEmail(email: string) {
-    const { getPortalUserByEmail: fn } = await import("@/services/authService");
-    return fn(email);
+    const { findPortalUserByEmailPostgres } = await import("@/lib/server/postgres/repositories/auth");
+    return findPortalUserByEmailPostgres(email);
 }
 
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -379,14 +379,14 @@ export async function createPortalSession(userId: number) {
     const crypto = await import("node:crypto");
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
-    const { createPortalSession: insertSession } = await import("@/services/authService");
-    await insertSession(userId, token, expiresAt);
+    const { createPortalSessionPostgres } = await import("@/lib/server/postgres/repositories/auth");
+    await createPortalSessionPostgres(userId, token, expiresAt);
     return { token, maxAge: SESSION_MAX_AGE_SECONDS };
 }
 
 export async function deletePortalSession(token: string) {
-    const { deletePortalSession: fn } = await import("@/services/authService");
-    return fn(token);
+    const { deletePortalSessionPostgres } = await import("@/lib/server/postgres/repositories/auth");
+    return deletePortalSessionPostgres(token);
 }
 
 export async function createPortalUserAccount(_input: unknown, _actor?: unknown) {

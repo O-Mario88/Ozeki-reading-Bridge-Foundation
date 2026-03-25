@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createPortalRecord, listPortalRecords, getPortalRecordByLocalId } from "@/services/dataService";
-import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
 import { PortalRecordFilters, PortalRecordPayload, PortalUser } from "@/lib/types";
 
 export const runtime = "nodejs";

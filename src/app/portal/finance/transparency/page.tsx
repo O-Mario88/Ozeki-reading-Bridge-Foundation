@@ -1,6 +1,6 @@
 import { PortalFinanceTransparencyManager } from "@/components/portal/finance/PortalFinanceTransparencyManager";
 import { FinanceShell } from "@/components/portal/finance/FinanceShell";
-import { requirePortalSuperAdminUser } from "@/lib/portal-auth";
+import { requirePortalSuperAdminUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

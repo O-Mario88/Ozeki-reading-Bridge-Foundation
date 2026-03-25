@@ -4,7 +4,7 @@ import { GeoSyncPanel } from "@/components/portal/GeoSyncPanel";
 import { PortalGraduationSettingsManager } from "@/components/portal/PortalGraduationSettingsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { getGraduationSettings, listPortalUsersForAdmin } from "@/services/dataService";
-import { requirePortalSuperAdminUser } from "@/lib/portal-auth";
+import { requirePortalSuperAdminUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

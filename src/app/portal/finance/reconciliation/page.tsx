@@ -1,7 +1,7 @@
 import { PortalFinanceReconciliationManager } from "@/components/portal/finance/PortalFinanceReconciliationManager";
 import { FinanceShell } from "@/components/portal/finance/FinanceShell";
 import { listStatementLines, listFinanceLedgerTransactions } from "@/services/financeService";
-import { requirePortalFinanceReceiptEditorUser } from "@/lib/portal-auth";
+import { requirePortalFinanceReceiptEditorUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

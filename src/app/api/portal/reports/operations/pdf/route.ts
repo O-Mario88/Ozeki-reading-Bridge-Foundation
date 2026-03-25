@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPortalUserOrRedirect } from "@/lib/auth-server";
+import { getPortalUserOrRedirect } from "@/lib/auth";
 import { getPortalOperationalReportsData } from "@/services/dataService";
 import { buildOperationsWorkspaceHtml } from "@/lib/server/pdf/program-pdf-templates";
 import { renderBrandedPdf } from "@/lib/server/pdf/render";

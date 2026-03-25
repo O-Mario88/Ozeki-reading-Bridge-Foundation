@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPortalUserOrRedirect } from "@/lib/auth-server";
+import { getPortalUserOrRedirect } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { generateAcademicReportPdf, AcademicReportData } from "@/lib/server/pdf/academic-report-template";
 

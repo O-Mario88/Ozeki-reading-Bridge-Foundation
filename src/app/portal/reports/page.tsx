@@ -5,7 +5,7 @@ import {
   listPortalImpactReportsAsync,
 } from "@/services/dataService";
 import { PortalImpactReportsManager } from "@/components/portal/PortalImpactReportsManager";
-import { requirePortalUser, getPortalHomePath } from "@/lib/portal-auth";
+import { requirePortalUser, getPortalHomePath } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PortalOperationsReportsWorkspace } from "@/components/portal/PortalOperationsReportsWorkspace";
 import { PortalTrainingReportsManager } from "@/components/portal/PortalTrainingReportsManager";

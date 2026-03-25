@@ -47,14 +47,14 @@ export {
   listAuditLogs,
 } from "@/services/dataService";
 
-// ── authService re-exports ───────────────────────────────────────────
+// ── auth re-exports (direct from postgres repo) ─────────────────────
 export {
-  authenticatePortalUser,
-  createPortalSession,
-  deletePortalSession,
-  getPortalUserByEmail,
-  getPortalUserFromSession,
-} from "@/services/authService";
+  authenticatePortalUserPostgres as authenticatePortalUser,
+  createPortalSessionPostgres as createPortalSession,
+  deletePortalSessionPostgres as deletePortalSession,
+  findPortalUserByEmailPostgres as getPortalUserByEmail,
+  findPortalUserBySessionTokenPostgres as getPortalUserFromSession,
+} from "@/lib/server/postgres/repositories/auth";
 
 // ── Graduation re-exports ────────────────────────────────────────────
 export {

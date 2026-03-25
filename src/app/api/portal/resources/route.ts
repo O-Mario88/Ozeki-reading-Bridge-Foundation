@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { listPortalResources, savePortalResource } from "@/lib/content-db";
 import { resolveMimeType } from "@/lib/media-response";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { portalResourceSections } from "@/lib/types";
 
 export const runtime = "nodejs";

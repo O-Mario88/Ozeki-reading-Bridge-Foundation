@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PortalBlogManager } from "@/components/portal/PortalBlogManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { listPortalBlogPostsAsync } from "@/services/blogService";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

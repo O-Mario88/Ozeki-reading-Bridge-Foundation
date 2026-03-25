@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { PortalLoginForm } from "@/components/PortalLoginForm";
-import { getCurrentPortalUser, getPortalHomePath } from "@/lib/portal-auth";
+import { getCurrentPortalUser, getPortalHomePath } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

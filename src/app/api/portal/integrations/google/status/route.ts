@@ -1,23 +1,14 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
-import { getPortalUserFromSession } from "@/services/dataService";
+import { getCurrentPortalUser } from "@/lib/auth";
 import { getGoogleWorkspaceDiagnostics } from "@/lib/google-workspace";
 
 export const runtime = "nodejs";
 
-async function requireAuth() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(PORTAL_SESSION_COOKIE)?.value;
-  if (!token) {
-    return null;
-  }
-  return await getPortalUserFromSession(token);
-}
+
 
 export async function GET() {
   try {
-    const user = await requireAuth();
+    const user = await getCurrentPortalUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,4 +1,4 @@
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { generateTrainingParticipantsTemplate } from "@/lib/server/imports/templates";
 import { assertImportRole } from "@/lib/server/imports/utils";
 import { RouteError, fileResponse, withRouteHandler } from "@/lib/server/http/route-utils";

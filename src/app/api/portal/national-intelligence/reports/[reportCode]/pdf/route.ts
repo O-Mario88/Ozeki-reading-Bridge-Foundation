@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getNationalReportPdfAsync } from "@/lib/national-intelligence-async";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { canAccessNationalIntelligenceInternal } from "@/lib/national-intelligence-auth";
 
 export const runtime = "nodejs";

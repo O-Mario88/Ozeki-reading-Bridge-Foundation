@@ -6,7 +6,7 @@ import {
   listFinanceHighRiskTransactions,
   listFinanceReceiptRegistry,
 } from "@/services/financeService";
-import { requirePortalFinanceReceiptEditorUser } from "@/lib/portal-auth";
+import { requirePortalFinanceReceiptEditorUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

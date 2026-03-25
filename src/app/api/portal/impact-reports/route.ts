@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createImpactReport, listPortalImpactReportsAsync, getPublicImpactAggregate } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { generatePublicDashboardNarrative } from "@/lib/public-dashboard-report-engine";
 
 export const runtime = "nodejs";

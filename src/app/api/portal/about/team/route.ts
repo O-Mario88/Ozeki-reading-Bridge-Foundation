@@ -8,7 +8,7 @@ import {
   savePortalLeadershipTeamMemberPostgres,
   updatePortalLeadershipTeamMemberPostgres,
 } from "@/lib/server/postgres/repositories/public-content";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";

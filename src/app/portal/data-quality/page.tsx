@@ -1,6 +1,6 @@
 import { PortalNationalIntelligenceManager } from "@/components/portal/PortalNationalIntelligenceManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

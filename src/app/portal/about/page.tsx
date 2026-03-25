@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PortalAboutContentManager } from "@/components/portal/PortalAboutContentManager";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import {
   listPortalCoreValuesPostgres,
   listPortalLeadershipTeamMembersPostgres,

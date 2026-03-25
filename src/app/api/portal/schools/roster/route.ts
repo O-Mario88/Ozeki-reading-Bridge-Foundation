@@ -10,7 +10,7 @@ import {
   updateSchoolContactInSchool,
   updateSchoolLearnerInSchool,
 } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { isPostgresConfigured } from "@/lib/server/postgres/client";
 import {
   createSchoolContactInSchoolPostgres,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPortalOperationalReportsData } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { PortalSchoolReportRow } from "@/lib/types";
 
 export const runtime = "nodejs";

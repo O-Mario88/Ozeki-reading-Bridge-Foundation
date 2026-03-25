@@ -5,7 +5,7 @@ import { SessionVideoPanel } from "@/components/training/SessionVideoPanel";
 import { SessionTabs } from "@/components/training/SessionTabs";
 import { UpNextPanel } from "@/components/training/UpNextPanel";
 import { DiscussionPanel } from "@/components/training/DiscussionPanel";
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalUser } from "@/lib/auth";
 import {
   getTrainingSession,
   listTrainingArtifacts,

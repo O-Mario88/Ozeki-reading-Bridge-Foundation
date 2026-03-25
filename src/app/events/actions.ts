@@ -1,6 +1,6 @@
 "use server";
 
-import { getCurrentPortalUser } from "@/lib/portal-auth";
+import { getCurrentPortalUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { revalidatePath } from "next/cache";
 

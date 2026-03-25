@@ -1,7 +1,7 @@
 import { PortalEventsManager } from "@/components/portal/PortalEventsManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { listOnlineTrainingEvents } from "@/lib/content-db";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

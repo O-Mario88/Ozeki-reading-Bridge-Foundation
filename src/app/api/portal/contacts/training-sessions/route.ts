@@ -1,4 +1,4 @@
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { RouteError, jsonSuccess, withRouteHandler } from "@/lib/server/http/route-utils";
 import { queryPostgres } from "@/lib/server/postgres/client";
 

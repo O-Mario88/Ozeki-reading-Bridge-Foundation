@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalCrmProfileView } from "@/components/portal/crm/PortalCrmProfileView";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import { getTrainingCrmProfile } from "@/lib/server/postgres/repositories/portal-crm";
 
 export const dynamic = "force-dynamic";

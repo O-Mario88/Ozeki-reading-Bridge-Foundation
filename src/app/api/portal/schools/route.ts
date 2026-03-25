@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { listSchoolDirectoryRecordsPostgres } from "@/lib/server/postgres/repositories/schools";
 import { createOrUpdateSchool } from "@/lib/server/services/schools/write-service";
 

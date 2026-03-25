@@ -1,4 +1,4 @@
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";

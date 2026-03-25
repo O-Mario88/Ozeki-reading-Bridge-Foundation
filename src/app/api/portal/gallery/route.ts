@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { addImpactGalleryEntryPostgres, listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
 import { inferRegionFromDistrict } from "@/lib/uganda-locations";
 

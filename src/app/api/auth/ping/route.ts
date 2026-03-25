@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentPortalUser } from "@/lib/portal-auth";
+import { getCurrentPortalUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 

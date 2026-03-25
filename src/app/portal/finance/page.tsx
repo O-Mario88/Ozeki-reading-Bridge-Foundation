@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getPortalUserOrRedirect } from "@/lib/auth-server";
+import { getPortalUserOrRedirect } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { 
   getFinanceDashboardSummaryPostgres,

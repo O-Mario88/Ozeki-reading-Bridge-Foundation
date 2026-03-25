@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCurrentPortalUser } from "@/lib/portal-auth";
+import { getCurrentPortalUser } from "@/lib/auth";
 import { 
   listOnlineTrainingSessionsPostgres, 
   listOnlineTrainingResourcesPostgres 

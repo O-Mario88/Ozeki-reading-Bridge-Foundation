@@ -1,7 +1,7 @@
 import { PortalAnalyticsDashboard } from "@/components/portal/PortalAnalyticsDashboard";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { getImpactExplorerProfiles, getPortalAnalyticsData } from "@/services/dataService";
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

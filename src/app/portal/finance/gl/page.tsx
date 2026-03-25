@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getPortalUserOrRedirect } from "@/lib/auth-server";
+import { getPortalUserOrRedirect } from "@/lib/auth";
 import { getTrialBalance } from "@/lib/server/postgres/repositories/finance-reports";
 import { initializeChartOfAccounts } from "@/lib/server/postgres/repositories/finance-v2";
 

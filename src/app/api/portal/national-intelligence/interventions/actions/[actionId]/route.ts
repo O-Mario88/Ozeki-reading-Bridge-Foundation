@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { updateInterventionActionAsync } from "@/lib/national-intelligence-async";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { canManageNationalInterventions } from "@/lib/national-intelligence-auth";
 
 export const runtime = "nodejs";

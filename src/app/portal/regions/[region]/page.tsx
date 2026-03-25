@@ -1,5 +1,5 @@
 
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import { getRegionStats, listSchoolSupportStatuses } from "@/services/dataService";
 import { notFound } from "next/navigation";
 import { RegionProfileView } from "@/components/portal/RegionProfileView";

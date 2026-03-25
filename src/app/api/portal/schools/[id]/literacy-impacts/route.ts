@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { createSchoolLiteracyImpact, getSchoolLiteracyImpacts } from "@/lib/server/postgres/repositories/school-metrics";
 
 export const runtime = "nodejs";

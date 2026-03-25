@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { listPortalRecordsAsync, logAuditEvent } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { PortalRecordFilters } from "@/lib/types";
 
 export const runtime = "nodejs";

@@ -1,7 +1,7 @@
 import { PortalDashboardClient } from "@/components/portal/PortalDashboardClient";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { getPortalDashboardData, getPerformanceCascadeData } from "@/services/dataService";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import { buildPerformanceCascadeFromRows } from "@/lib/performance-utils";
 
 export const dynamic = "force-dynamic";

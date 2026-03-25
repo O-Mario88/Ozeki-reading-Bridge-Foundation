@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { isPostgresConfigured, queryPostgres } from "@/lib/server/postgres/client";
 import { EditContactForm } from "@/components/portal/crm/EditContactForm";
 import Link from "next/link";

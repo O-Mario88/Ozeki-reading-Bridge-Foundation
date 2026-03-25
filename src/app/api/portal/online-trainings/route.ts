@@ -8,7 +8,7 @@ import {
   createGoogleCalendarEvent,
   isGoogleCalendarConfigured,
 } from "@/lib/google-calendar";
-import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { createOnlineTrainingSessionPostgres, listOnlineTrainingSessionsPostgres } from "@/lib/server/postgres/repositories/training";
 import { queryPostgres } from "@/lib/server/postgres/client";
 

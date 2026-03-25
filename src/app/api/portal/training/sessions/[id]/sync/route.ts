@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalUser } from "@/lib/auth";
 import { getTrainingSession } from "@/lib/training-db";
 import { syncMeetArtifactsJob, generateAiMeetingNotesJob, syncConferenceRecordJob } from "@/lib/training-jobs";
 

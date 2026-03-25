@@ -1,6 +1,6 @@
 import { PortalShell } from "@/components/portal/PortalShell";
 import SchoolReportManager from "@/components/portal/reports/SchoolReportManager";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 
 export default async function SchoolReportsPage({ params }: { params: Promise<{ id: string }> }) {

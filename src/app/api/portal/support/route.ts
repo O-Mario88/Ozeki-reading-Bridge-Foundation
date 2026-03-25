@@ -4,7 +4,7 @@ import {
   createSupportRequest,
   listSupportRequests,
 } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import {
   SupportRequestInput,
   SupportRequestUrgency,

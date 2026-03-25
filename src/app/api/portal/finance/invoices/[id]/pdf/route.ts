@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { getPortalUserOrRedirect } from "@/lib/auth-server";
+import { getPortalUserOrRedirect } from "@/lib/auth";
 import { getFinanceInvoiceByIdPostgres, getFinanceSettingsPostgres } from "@/lib/server/postgres/repositories/finance";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { renderInvoicePdf } from "@/lib/server/pdf/finance-pdf-direct";

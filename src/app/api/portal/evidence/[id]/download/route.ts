@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { getPortalEvidenceByIdPostgres } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";

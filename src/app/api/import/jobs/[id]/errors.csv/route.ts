@@ -1,4 +1,4 @@
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { getImportJobErrorCsv } from "@/lib/server/imports/jobs";
 import { RouteError, fileResponse, withRouteHandler } from "@/lib/server/http/route-utils";
 

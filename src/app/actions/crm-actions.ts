@@ -1,7 +1,7 @@
 "use server";
 
 import { getCrmAccounts, getAccount360, logInteraction } from "@/lib/server/postgres/repositories/crm";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth";
 
 export async function fetchCrmAccounts(filters: any) {
   return await getCrmAccounts(filters);

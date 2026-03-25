@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { listSupportRequests, listPortalUsersForAdmin } from "@/services/dataService";
-import { getCurrentPortalUser } from "@/lib/portal-auth";
+import { getCurrentPortalUser } from "@/lib/auth";
 import SupportHubClient from "@/components/portal/SupportHubClient";
 import { PortalShell } from "@/components/portal/PortalShell";
 

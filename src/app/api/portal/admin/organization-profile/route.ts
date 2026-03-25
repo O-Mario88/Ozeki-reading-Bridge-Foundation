@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/portal-api";
+import { requireAdmin } from "@/lib/auth";
 import {
   getActiveOrganizationProfile,
   upsertOrganizationProfile,

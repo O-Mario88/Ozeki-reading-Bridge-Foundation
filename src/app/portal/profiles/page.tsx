@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { getImpactExplorerProfiles } from "@/services/dataService";
-import { requirePortalUser } from "@/lib/portal-auth";
+import { requirePortalUser } from "@/lib/auth";
 import { inferSubRegionFromDistrict } from "@/lib/uganda-locations";
 
 export const dynamic = "force-dynamic";

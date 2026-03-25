@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 
 export async function GET(
   _request: Request,

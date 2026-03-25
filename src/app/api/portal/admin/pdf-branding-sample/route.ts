@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/portal-api";
+import { requireAdmin } from "@/lib/auth";
 import { renderBrandedPdf } from "@/lib/server/pdf/render";
 
 export const runtime = "nodejs";

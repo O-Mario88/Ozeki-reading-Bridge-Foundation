@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateSupportRequest } from "@/services/dataService";
-import { getAuthenticatedPortalUser, canReview } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser, canReview } from "@/lib/auth";
 
 export async function PATCH(
     req: NextRequest,

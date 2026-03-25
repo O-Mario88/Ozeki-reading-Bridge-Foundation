@@ -1,6 +1,6 @@
 "use server";
 
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import { 
   getStatementOfFinancialPosition, 
   getStatementOfActivities, 

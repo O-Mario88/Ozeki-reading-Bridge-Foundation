@@ -5,7 +5,7 @@ import {
     listStoryAnthologies,
     listSchoolDirectoryRecords,
 } from "@/services/dataService";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

@@ -7,7 +7,7 @@ import {
     saveMaterialDistribution,
     saveObservationRubric,
 } from "@/services/dataService";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { RubricIndicator } from "@/lib/types";
 
 export const runtime = "nodejs";

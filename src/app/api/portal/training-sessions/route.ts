@@ -6,7 +6,7 @@ import {
   listTrainingSessions,
   saveTrainingSession,
 } from "@/services/dataService";
-import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 
 export const runtime = "nodejs";
 

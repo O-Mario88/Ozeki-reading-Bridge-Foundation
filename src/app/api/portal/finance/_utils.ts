@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 
 export type FinanceApiActor = {
   id: number;

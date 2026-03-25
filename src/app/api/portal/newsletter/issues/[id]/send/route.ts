@@ -8,7 +8,7 @@ import {
   saveNewsletterDispatchLogs,
 } from "@/lib/content-db";
 import { sendNewsletterIssueInGroups } from "@/lib/newsletter";
-import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 

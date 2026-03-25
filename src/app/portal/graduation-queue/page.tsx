@@ -1,7 +1,7 @@
 import { PortalGraduationQueueManager } from "@/components/portal/PortalGraduationQueueManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { listGraduationQueueAsync, listGraduationReviewSupervisorsAsync } from "@/services/dataService";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

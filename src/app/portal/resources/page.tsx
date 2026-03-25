@@ -1,7 +1,7 @@
 import { PortalResourcesManager } from "@/components/portal/PortalResourcesManager";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { listPortalResources } from "@/lib/content-db";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";

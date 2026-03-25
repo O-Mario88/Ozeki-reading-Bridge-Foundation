@@ -5,7 +5,7 @@ import {
   listTrainingReportArtifactsAsync,
 } from "@/lib/training-report-automation";
 import type { TrainingReportScopeType } from "@/lib/types";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 

@@ -1,6 +1,6 @@
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalTrainingParticipantCreateForm } from "@/components/imports/PortalTrainingParticipantCreateForm";
-import { requirePortalStaffUser } from "@/lib/portal-auth";
+import { requirePortalStaffUser } from "@/lib/auth";
 import {
   listTrainingImportLookupRows,
   listTrainingParticipantSchoolLookupRows,

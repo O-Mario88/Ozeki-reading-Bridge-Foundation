@@ -1,4 +1,4 @@
-import { getPortalUserOrRedirect } from "@/lib/auth-server";
+import { getPortalUserOrRedirect } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFinanceNav } from "@/components/portal/finance/PortalFinanceNav";
 import { PortalFinanceAssetsManager } from "@/components/portal/finance/PortalFinanceAssetsManager";

@@ -65,7 +65,7 @@ function buildDashboardHref(
   return `/impact?${query.toString()}`;
 }
 
-import { resolveReportScope } from "@/lib/auth-middleware";
+import { resolveReportScope } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const scopeLevel = normalizeScopeLevel(request.nextUrl.searchParams.get("scopeLevel"));

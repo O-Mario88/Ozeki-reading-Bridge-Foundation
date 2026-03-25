@@ -5,7 +5,7 @@ import {
   savePortalCoreValuePostgres,
   updatePortalCoreValuePostgres,
 } from "@/lib/server/postgres/repositories/public-content";
-import { getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { getAuthenticatedPortalUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 

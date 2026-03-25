@@ -7,7 +7,7 @@ import {
   getSchoolDirectoryRecord,
 } from "@/services/dataService";
 import { resolveMimeType } from "@/lib/media-response";
-import { canReview, getAuthenticatedPortalUser } from "@/lib/portal-api";
+import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import {
   listPortalTestimonialsPostgres,
