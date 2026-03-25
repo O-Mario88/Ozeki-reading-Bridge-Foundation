@@ -424,6 +424,44 @@ export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
   }
 }
 
+export type PerformanceCascadeRow = {
+  schoolId: number;
+  schoolName: string;
+  district: string;
+  subCounty: string;
+  scoreInstruction: number;
+  scoreOutcomes: number;
+  scoreLeadership: number;
+  scoreCommunity: number;
+  scoreEnvironment: number;
+};
+
+export async function getPerformanceCascadeDataPostgres(): Promise<PerformanceCascadeRow[]> {
+  try {
+    const result = await queryPostgres(`
+      SELECT DISTINCT ON (pr.school_id)
+        pr.school_id AS "schoolId",
+        COALESCE(sd.name, '') AS "schoolName",
+        COALESCE(sd.district, '') AS "district",
+        COALESCE(sd.sub_county, '') AS "subCounty",
+        COALESCE((pr.payload_json->>'score_instruction')::numeric, 0) AS "scoreInstruction",
+        COALESCE((pr.payload_json->>'score_outcomes')::numeric, 0) AS "scoreOutcomes",
+        COALESCE((pr.payload_json->>'score_leadership')::numeric, 0) AS "scoreLeadership",
+        COALESCE((pr.payload_json->>'score_community')::numeric, 0) AS "scoreCommunity",
+        COALESCE((pr.payload_json->>'score_environment')::numeric, 0) AS "scoreEnvironment"
+      FROM portal_records pr
+      LEFT JOIN schools_directory sd ON sd.id = pr.school_id
+      WHERE pr.module = 'assessment'
+        AND pr.school_id IS NOT NULL
+        AND pr.payload_json->>'score_instruction' IS NOT NULL
+      ORDER BY pr.school_id, pr.updated_at DESC
+    `);
+    return result.rows as PerformanceCascadeRow[];
+  } catch {
+    return [];
+  }
+}
+
 export async function getTableRowCountsPostgres(): Promise<any[]> {
   const tables = [
     "portal_records", "schools_directory", "support_requests", "portal_users",

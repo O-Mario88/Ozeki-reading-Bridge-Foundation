@@ -50,6 +50,7 @@ export {
     getPublicImpactAggregatePostgres as getPublicImpactAggregate,
     getCostEffectivenessDataPostgres as getCostEffectivenessData,
     getPortalDashboardDataPostgres as getPortalDashboardData,
+    getPerformanceCascadeDataPostgres as getPerformanceCascadeData,
     getTableRowCountsPostgres as getTableRowCounts,
     purgeAllDataPostgres as purgeAllData,
     purgeSelectedDataTablesPostgres as purgeSelectedDataTables,

@@ -1,8 +1,8 @@
 import { PortalDashboardClient } from "@/components/portal/PortalDashboardClient";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { getPortalDashboardData, listPortalRecordsAsync } from "@/services/dataService";
+import { getPortalDashboardData, getPerformanceCascadeData } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/portal-auth";
-import { buildPerformanceCascade } from "@/lib/performance-utils";
+import { buildPerformanceCascadeFromRows } from "@/lib/performance-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +14,14 @@ export const metadata = {
 
 export default async function PortalDashboardPage() {
   const user = await requirePortalStaffUser();
-  const dashboard = await getPortalDashboardData(user);
 
-  // Fetch all assessment records to build the performance scorecard
-  const assessments = await listPortalRecordsAsync({ module: "assessment" }, user);
-  const performanceData = buildPerformanceCascade(assessments);
+  // Fetch dashboard KPIs and performance cascade data in parallel
+  const [dashboard, cascadeRows] = await Promise.all([
+    getPortalDashboardData(user),
+    getPerformanceCascadeData(),
+  ]);
+
+  const performanceData = buildPerformanceCascadeFromRows(cascadeRows);
 
   return (
     <PortalShell

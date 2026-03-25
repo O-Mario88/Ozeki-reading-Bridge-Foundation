@@ -1,6 +1,7 @@
 import { PortalRecord, PortalRecordPayload } from "@/lib/types";
 import { PerformanceNode } from "@/components/dashboard/PerformanceCascade";
 import { inferRegionFromDistrict } from "@/lib/uganda-locations";
+import type { PerformanceCascadeRow } from "@/lib/server/postgres/repositories/metrics";
 
 type RecordScores = {
     instruction: number;
@@ -61,13 +62,129 @@ function calculateAverage(nodes: PerformanceNode[]): RecordScores {
     };
 }
 
+// Build hierarchy from pre-aggregated SQL rows (fast path)
+function buildHierarchy(
+    entries: Array<{ schoolId: number; schoolName: string; district: string; subCounty: string; scores: RecordScores }>
+): PerformanceNode {
+    const regionNodes = new Map<string, PerformanceNode>();
+
+    for (const entry of entries) {
+        const district = entry.district || "Unknown District";
+        const region = inferRegionFromDistrict(district) || "Unknown Region";
+        const subCounty = entry.subCounty || "Unknown Sub-County";
+
+        if (!regionNodes.has(region)) {
+            regionNodes.set(region, {
+                id: `region-${region}`,
+                name: region,
+                level: "Region",
+                scores: { ...entry.scores },
+                children: [],
+                schoolCount: 0,
+            });
+        }
+        const regionNode = regionNodes.get(region)!;
+
+        let districtNode = regionNode.children.find((c) => c.name === district);
+        if (!districtNode) {
+            districtNode = {
+                id: `district-${district}`,
+                name: district,
+                level: "District",
+                scores: { ...entry.scores },
+                children: [],
+                schoolCount: 0,
+            };
+            regionNode.children.push(districtNode);
+        }
+
+        let subCountyNode = districtNode.children.find((c) => c.name === subCounty);
+        if (!subCountyNode) {
+            subCountyNode = {
+                id: `subcounty-${district}-${subCounty}`,
+                name: subCounty,
+                level: "Sub-County",
+                scores: { ...entry.scores },
+                children: [],
+                schoolCount: 0,
+            };
+            districtNode.children.push(subCountyNode);
+        }
+
+        const isWeaningEligible =
+            entry.scores.instruction >= 8 &&
+            entry.scores.outcomes >= 8 &&
+            entry.scores.leadership >= 8 &&
+            entry.scores.community >= 8 &&
+            entry.scores.environment >= 8;
+
+        subCountyNode.children.push({
+            id: `school-${entry.schoolId}`,
+            name: entry.schoolName,
+            level: "School",
+            scores: entry.scores,
+            children: [],
+            schoolCount: 1,
+            isWeaningEligible,
+        });
+    }
+
+    // Recalculate averages bottom-up
+    const finalRegionNodes: PerformanceNode[] = [];
+
+    for (const regionNode of regionNodes.values()) {
+        for (const districtNode of regionNode.children) {
+            for (const subCountyNode of districtNode.children) {
+                subCountyNode.scores = calculateAverage(subCountyNode.children);
+                subCountyNode.schoolCount = subCountyNode.children.length;
+                subCountyNode.children.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            districtNode.scores = calculateAverage(districtNode.children);
+            districtNode.schoolCount = districtNode.children.reduce((acc, c) => acc + c.schoolCount, 0);
+            districtNode.children.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        regionNode.scores = calculateAverage(regionNode.children);
+        regionNode.schoolCount = regionNode.children.reduce((acc, c) => acc + c.schoolCount, 0);
+        regionNode.children.sort((a, b) => a.name.localeCompare(b.name));
+        finalRegionNodes.push(regionNode);
+    }
+
+    finalRegionNodes.sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+        id: "country-uganda",
+        name: "Uganda (National)",
+        level: "Country",
+        scores: calculateAverage(finalRegionNodes),
+        children: finalRegionNodes,
+        schoolCount: finalRegionNodes.reduce((acc, c) => acc + c.schoolCount, 0),
+    };
+}
+
+// Fast path: build from pre-aggregated SQL rows (one row per school, latest scores)
+export function buildPerformanceCascadeFromRows(rows: PerformanceCascadeRow[]): PerformanceNode {
+    const entries = rows.map((r) => ({
+        schoolId: Number(r.schoolId),
+        schoolName: r.schoolName || "Unknown School",
+        district: r.district || "Unknown District",
+        subCounty: r.subCounty || "Unknown Sub-County",
+        scores: {
+            instruction: Number(r.scoreInstruction) || 0,
+            outcomes: Number(r.scoreOutcomes) || 0,
+            leadership: Number(r.scoreLeadership) || 0,
+            community: Number(r.scoreCommunity) || 0,
+            environment: Number(r.scoreEnvironment) || 0,
+        },
+    }));
+    return buildHierarchy(entries);
+}
+
+// Legacy path: build from full PortalRecord[] (kept for backward compatibility)
 export function buildPerformanceCascade(records: PortalRecord[]): PerformanceNode {
-    // Map: School ID -> Latest Score
     const schoolScores = new Map<string, { record: PortalRecord; scores: RecordScores }>();
 
-    // Use the latest assessment for each school
     records
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Newest first
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .forEach((r) => {
             if (!r.schoolId) return;
             const scores = getAssessmentScores(r);
@@ -76,114 +193,17 @@ export function buildPerformanceCascade(records: PortalRecord[]): PerformanceNod
             }
         });
 
-    // Build Hierarchy
-    // Groups: Region -> District -> SubCounty -> School
-
-    const regionNodes = new Map<string, PerformanceNode>();
-
+    const entries: Array<{ schoolId: number; schoolName: string; district: string; subCounty: string; scores: RecordScores }> = [];
     schoolScores.forEach(({ record, scores }) => {
-        const district = record.district || "Unknown District";
-        const region = inferRegionFromDistrict(district) || "Unknown Region";
-        const subCounty = String(record.payload.subCounty || "Unknown Sub-County");
-        const schoolName = record.schoolName;
-
-        // --- Country Level (Processed at end) ---
-
-        // --- Region Level ---
-        if (!regionNodes.has(region)) {
-            regionNodes.set(region, {
-                id: `region-${region}`,
-                name: region,
-                level: "Region",
-                scores: { ...scores }, // Placeholder, will recalculate
-                children: [],
-                schoolCount: 0,
-            });
-        }
-        const regionNode = regionNodes.get(region)!;
-
-        // --- District Level ---
-        let districtNode = regionNode.children.find((c) => c.name === district);
-        if (!districtNode) {
-            districtNode = {
-                id: `district-${district}`,
-                name: district,
-                level: "District",
-                scores: { ...scores }, // Placeholder
-                children: [],
-                schoolCount: 0,
-            };
-            regionNode.children.push(districtNode);
-        }
-
-        // --- Sub-County Level ---
-        let subCountyNode = districtNode.children.find((c) => c.name === subCounty);
-        if (!subCountyNode) {
-            subCountyNode = {
-                id: `subcounty-${district}-${subCounty}`,
-                name: subCounty,
-                level: "Sub-County",
-                scores: { ...scores }, // Placeholder
-                children: [],
-                schoolCount: 0,
-            };
-            districtNode.children.push(subCountyNode);
-        }
-
-        // --- School Level ---
-        const isWeaningEligible =
-            scores.instruction >= 8 &&
-            scores.outcomes >= 8 &&
-            scores.leadership >= 8 &&
-            scores.community >= 8 &&
-            scores.environment >= 8;
-
-        subCountyNode.children.push({
-            id: `school-${record.schoolId}`,
-            name: schoolName,
-            level: "School",
-            scores: scores,
-            children: [],
-            schoolCount: 1,
-            isWeaningEligible,
+        entries.push({
+            schoolId: Number(record.schoolId),
+            schoolName: record.schoolName,
+            district: record.district || "Unknown District",
+            subCounty: String(record.payload.subCounty || "Unknown Sub-County"),
+            scores,
         });
     });
 
-    // Recalculate averages bottom-up
-    const finalRegionNodes: PerformanceNode[] = [];
-
-    for (const regionNode of regionNodes.values()) {
-        for (const districtNode of regionNode.children) {
-            // 1. Sub-counties
-            for (const subCountyNode of districtNode.children) {
-                subCountyNode.scores = calculateAverage(subCountyNode.children);
-                subCountyNode.schoolCount = subCountyNode.children.length;
-                // Sort schools alphabetical
-                subCountyNode.children.sort((a, b) => a.name.localeCompare(b.name));
-            }
-            // 2. District
-            districtNode.scores = calculateAverage(districtNode.children);
-            districtNode.schoolCount = districtNode.children.reduce((acc, c) => acc + c.schoolCount, 0);
-            districtNode.children.sort((a, b) => a.name.localeCompare(b.name));
-        }
-        // 3. Region
-        regionNode.scores = calculateAverage(regionNode.children);
-        regionNode.schoolCount = regionNode.children.reduce((acc, c) => acc + c.schoolCount, 0);
-        regionNode.children.sort((a, b) => a.name.localeCompare(b.name));
-
-        finalRegionNodes.push(regionNode);
-    }
-
-    finalRegionNodes.sort((a, b) => a.name.localeCompare(b.name));
-
-    const countryNode: PerformanceNode = {
-        id: "country-uganda",
-        name: "Uganda (National)",
-        level: "Country",
-        scores: calculateAverage(finalRegionNodes),
-        children: finalRegionNodes,
-        schoolCount: finalRegionNodes.reduce((acc, c) => acc + c.schoolCount, 0),
-    };
-
-    return countryNode;
+    return buildHierarchy(entries);
 }
+
