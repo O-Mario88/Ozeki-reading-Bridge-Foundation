@@ -75,8 +75,25 @@ export function normalizeOptionalInteger(value: string | null | undefined) {
   return parsed === null ? null : Number.isInteger(parsed) ? parsed : null;
 }
 
+/**
+ * Canonicalize a single header string so that common user variations all
+ * map to the official snake_case column name.
+ *
+ * "School Name" → "school_name"
+ * "SCHOOL_NAME" → "school_name"
+ * "school-name" → "school_name"
+ */
+export function canonicalizeHeader(value: string): string {
+  return collapseWhitespace(value)
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")       // spaces / hyphens → underscore
+    .replace(/[^a-z0-9_]/g, "")     // strip anything else
+    .replace(/_+/g, "_")            // collapse duplicate underscores
+    .replace(/^_|_$/g, "");         // trim leading/trailing underscores
+}
+
 export function normalizeHeaderCells(row: unknown[]) {
-  return row.map((value) => collapseWhitespace(String(value ?? "")));
+  return row.map((value) => canonicalizeHeader(String(value ?? "")));
 }
 
 export function buildCsv(rows: Array<Record<string, unknown>>, orderedHeaders: string[]) {

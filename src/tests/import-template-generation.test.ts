@@ -12,6 +12,7 @@ import {
   generateMissingSchoolsTemplate,
   mapMissingSchoolsToTemplateRows,
 } from "../lib/server/imports/templates";
+import { canonicalizeHeader, normalizeHeaderCells } from "../lib/server/imports/utils";
 
 test("schools CSV template uses the official header order", () => {
   const csv = buildSchoolsCsvTemplate();
@@ -99,4 +100,37 @@ test("missing schools template CSV includes only official headers and missing ro
   assert.equal(lines[0], SCHOOL_IMPORT_HEADERS.join(","));
   assert.equal(lines.length, 2);
   assert.match(lines[1] ?? "", /Riverbank School/);
+});
+
+// ── Header canonicalization tests ─────────────────────────────────────
+
+test("canonicalizeHeader normalizes common variations to snake_case", () => {
+  assert.equal(canonicalizeHeader("school_name"), "school_name");
+  assert.equal(canonicalizeHeader("School Name"), "school_name");
+  assert.equal(canonicalizeHeader("SCHOOL_NAME"), "school_name");
+  assert.equal(canonicalizeHeader("school-name"), "school_name");
+  assert.equal(canonicalizeHeader("  School  Name  "), "school_name");
+  assert.equal(canonicalizeHeader("Head Teacher Phone"), "head_teacher_phone");
+});
+
+test("normalizeHeaderCells resolves UPPERCASE headers to official template columns", () => {
+  const uppercaseHeaders = SCHOOL_IMPORT_HEADERS.map((h) => h.toUpperCase());
+  const normalized = normalizeHeaderCells(uppercaseHeaders);
+  assert.deepEqual(normalized, [...SCHOOL_IMPORT_HEADERS]);
+});
+
+test("normalizeHeaderCells resolves space-separated Title Case headers", () => {
+  const spacedHeaders = SCHOOL_IMPORT_HEADERS.map((h) =>
+    h.split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join(" "),
+  );
+  const normalized = normalizeHeaderCells(spacedHeaders);
+  assert.deepEqual(normalized, [...SCHOOL_IMPORT_HEADERS]);
+});
+
+test("normalizeHeaderCells resolves mixed-case training participant headers", () => {
+  const variants = TRAINING_PARTICIPANT_IMPORT_HEADERS.map((h) =>
+    h.split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join(" "),
+  );
+  const normalized = normalizeHeaderCells(variants);
+  assert.deepEqual(normalized, [...TRAINING_PARTICIPANT_IMPORT_HEADERS]);
 });
