@@ -12,6 +12,36 @@ type SubmitState = {
 const initialState: SubmitState = { status: "idle", message: "" };
 const approvedGoogleDomain = "ozekiread.org";
 
+/* ── SVG Icons ──────────────────────────────────────────────── */
+function UserIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+    </svg>
+  );
+}
+
 export function PortalLoginForm() {
   const [state, setState] = useState<SubmitState>(initialState);
   const [showPassword, setShowPassword] = useState(false);
@@ -66,45 +96,60 @@ export function PortalLoginForm() {
       <div className="portal-login-brand">
         <div className="portal-login-brand-icon">OR</div>
         <div>
-          <h1 className="portal-login-title">Staff Portal</h1>
-          <p className="portal-login-subtitle">Sign in to your Ozeki account</p>
+          <h1 className="portal-login-title">Login</h1>
+          <p className="portal-login-subtitle">Welcome back, please sign in to your account</p>
         </div>
       </div>
 
       <form className="portal-login-form" onSubmit={handleSubmit}>
+        {/* Email / Phone */}
         <label className="portal-login-label">
-          Email or Phone
-          <input
-            name="identifier"
-            required
-            placeholder="support@ozekiread.org or +2567xxxxxxx"
-            className="portal-login-input"
-            autoComplete="username"
-          />
+          <div className="portal-login-input-wrap">
+            <input
+              name="identifier"
+              required
+              placeholder="Email or Phone"
+              className="portal-login-input"
+              autoComplete="username"
+            />
+            <span className="portal-login-input-icon">
+              <UserIcon />
+            </span>
+          </div>
         </label>
 
+        {/* Password */}
         <label className="portal-login-label">
-          <span className="portal-login-label-row">
-            <span>Password</span>
-            <button
-              type="button"
-              className="portal-login-toggle"
+          <div className="portal-login-input-wrap">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              required
+              minLength={6}
+              placeholder="Password"
+              className="portal-login-input"
+              autoComplete="current-password"
+            />
+            <span
+              className="portal-login-input-icon clickable"
+              role="button"
+              tabIndex={0}
               onClick={() => setShowPassword((v) => !v)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowPassword((v) => !v); }}
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? "Hide" : "Show"}
-            </button>
-          </span>
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            required
-            minLength={6}
-            placeholder="Enter your password"
-            className="portal-login-input"
-            autoComplete="current-password"
-          />
+              {showPassword ? <EyeIcon /> : <EyeOffIcon />}
+            </span>
+          </div>
         </label>
 
+        {/* Remember me */}
+        <div className="portal-login-remember">
+          <input type="checkbox" id="remember-me" defaultChecked />
+          <span><label htmlFor="remember-me">Remember me</label></span>
+        </div>
+
+        {/* Submit */}
         <button
           type="submit"
           disabled={state.status === "submitting"}
@@ -116,7 +161,7 @@ export function PortalLoginForm() {
               Signing in…
             </>
           ) : (
-            "Sign In"
+            "Login"
           )}
         </button>
 
