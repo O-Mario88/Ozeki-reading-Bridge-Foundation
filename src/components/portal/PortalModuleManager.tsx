@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import {
@@ -20,9 +20,12 @@ import {
   SchoolDirectoryRecord,
   PortalUser,
 } from "@/lib/types";
-import { EgraLearnerInputModal, EgraLearner } from "./EgraLearnerInputModal";
-import { SchoolRosterPicker, RosterEntry } from "./SchoolRosterPicker";
-import { LessonEvaluationPanel } from "./LessonEvaluationPanel";
+import type { EgraLearner } from "./EgraLearnerInputModal";
+import type { RosterEntry } from "./SchoolRosterPicker";
+
+const EgraLearnerInputModal = lazy(() => import("./EgraLearnerInputModal").then(m => ({ default: m.EgraLearnerInputModal })));
+const SchoolRosterPicker = lazy(() => import("./SchoolRosterPicker").then(m => ({ default: m.SchoolRosterPicker })));
+const LessonEvaluationPanel = lazy(() => import("./LessonEvaluationPanel").then(m => ({ default: m.LessonEvaluationPanel })));
 import { useOfflineReference } from "@/hooks/useOfflineReference";
 import { EXTENDED_RECOMMENDATION_CATALOG } from "@/lib/recommendations";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
@@ -6033,6 +6036,7 @@ export function PortalModuleManager({
                                                   : undefined
                                               }
                                             >
+                                              <Suspense fallback={<div className="portal-muted">Loading…</div>}>
                                               <SchoolRosterPicker
                                                 schoolId={selectedSchoolId}
                                                 schoolName={row.schoolAttachedTo || formState.schoolName}
@@ -6102,6 +6106,7 @@ export function PortalModuleManager({
                                                   );
                                                 }}
                                               />
+                                              </Suspense>
                                             </div>
                                             {row.participantName && (
                                               <div style={{ fontSize: "0.78rem", color: "#C35D0E", marginTop: 2 }}>
@@ -6248,6 +6253,7 @@ export function PortalModuleManager({
                             const selectedContactUid = sanitizeForInput(formState.payload.teacherContactUid);
                             return (
                               <div key={field.key} className="full-width">
+                                <Suspense fallback={<div className="portal-muted">Loading…</div>}>
                                 <SchoolRosterPicker
                                   schoolId={selectedSchoolId}
                                   schoolName={formState.schoolName}
@@ -6293,6 +6299,7 @@ export function PortalModuleManager({
                                   }}
                                   label={field.label}
                                 />
+                                </Suspense>
                                 {field.helperText ? (
                                   <small className="portal-field-help">{field.helperText}</small>
                                 ) : null}
@@ -6889,6 +6896,7 @@ export function PortalModuleManager({
                   {config.module === "visit" && visitStep === 3 ? (
                     <div className="full-width">
                       {visitAllowsObservation && formState.schoolId ? (
+                        <Suspense fallback={<div className="portal-muted">Loading evaluation panel…</div>}>
                         <LessonEvaluationPanel
                           schoolId={Number(formState.schoolId)}
                           schoolName={formState.schoolName}
@@ -6898,6 +6906,7 @@ export function PortalModuleManager({
                           newButtonLabel="New Observation"
                           allowVoid={currentUser.isSuperAdmin}
                         />
+                        </Suspense>
                       ) : visitAllowsObservation ? (
                         <p className="portal-muted">
                           Select a school account first, then save this visit to attach lesson evaluations.
@@ -7059,6 +7068,7 @@ export function PortalModuleManager({
           document.body,
         )
         : null}
+      <Suspense fallback={null}>
       <EgraLearnerInputModal
         isOpen={isEgraModalOpen}
         onClose={() => setIsEgraModalOpen(false)}
@@ -7069,6 +7079,7 @@ export function PortalModuleManager({
         schoolId={formState.schoolId ? Number(formState.schoolId) : null}
         schoolName={formState.schoolName}
       />
+      </Suspense>
     </>
   );
 }

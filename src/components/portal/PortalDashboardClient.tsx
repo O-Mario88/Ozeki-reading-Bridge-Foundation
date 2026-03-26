@@ -68,7 +68,7 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
     let active = true;
     async function loadGraduationAlerts() {
       try {
-        const response = await fetch(`/api/portal/graduation/queue?summary=1&limit=5&refresh=1`, { cache: "no-store" });
+        const response = await fetch(`/api/portal/graduation/queue?summary=1&limit=5&refresh=1`);
         const json = (await response.json()) as { eligibleCount?: number };
         if (!response.ok || !active) return;
         setGraduationEligibleCount(Number(json.eligibleCount ?? 0));

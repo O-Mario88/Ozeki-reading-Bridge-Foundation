@@ -115,6 +115,7 @@ export function PortalShell({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`ds-nav-item${activeHref === item.href ? " active" : ""}`}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -132,6 +133,7 @@ export function PortalShell({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`ds-nav-item${activeHref === item.href ? " active" : ""}`}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -149,6 +151,7 @@ export function PortalShell({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`ds-nav-item${activeHref === item.href ? " active" : ""}`}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -166,6 +169,7 @@ export function PortalShell({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`ds-nav-item${activeHref === item.href ? " active" : ""}`}
                 onClick={() => setSidebarOpen(false)}
               >

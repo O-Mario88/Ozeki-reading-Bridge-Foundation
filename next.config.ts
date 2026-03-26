@@ -4,7 +4,13 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["exceljs", "xlsx"],
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
-  images: { unoptimized: true },
+  compress: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400,
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
   // Amplify SSR does NOT auto-pass env vars to Lambda. This block inlines
   // them at build time — the only mechanism that works on Amplify.
   // The client.ts getDatabaseUrlRaw() auto-corrects missing database names.
