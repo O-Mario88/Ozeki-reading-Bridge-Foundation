@@ -1528,13 +1528,16 @@ export async function listStoryCommentsPostgres(
 }
 
 // Story Management Functions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getStoryByIdPostgres(id: number): Promise<any> {
     const result = await queryPostgres(`SELECT * FROM story_library WHERE id = $1`, [id]);
     return result.rows[0];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function listStoryEntriesPostgres(filters: any = {}): Promise<any[]> {
     let query = `SELECT * FROM story_library WHERE 1=1`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const params: any[] = [];
     if (filters.schoolId) {
         params.push(filters.schoolId);
@@ -1545,6 +1548,7 @@ export async function listStoryEntriesPostgres(filters: any = {}): Promise<any[]
     return result.rows;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveStoryEntryPostgres(input: any, userId: number): Promise<any> {
     const result = await queryPostgres(
         `INSERT INTO story_library (title, content_text, public_author_display, school_id, created_by_user_id, slug, publish_status, consent_status)
@@ -1567,11 +1571,13 @@ export async function unpublishStoryEntryPostgres(id: number): Promise<void> {
     await queryPostgres(`UPDATE story_library SET publish_status = 'draft' WHERE id = $1`, [id]);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function listStoryAnthologiesPostgres(): Promise<any[]> {
     const result = await queryPostgres(`SELECT * FROM story_anthologies ORDER BY created_at DESC`);
     return result.rows;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveStoryAnthologyPostgres(input: any): Promise<any> {
     const result = await queryPostgres(
         `INSERT INTO story_anthologies (title, slug, scope_type, school_id)

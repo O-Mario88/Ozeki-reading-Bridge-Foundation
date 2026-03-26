@@ -1,5 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
-import type { PublicImpactAggregate, PublicImpactDomainAggregate, CostEffectivenessData, CostCategory } from "@/lib/types";
+import type { PublicImpactAggregate, CostEffectivenessData, CostCategory } from "@/lib/types";
 import { buildPublicImpactAggregatePostgres } from "./public-impact";
 
 function toNumber(value: unknown) {
@@ -170,12 +170,14 @@ export const getPublicImpactAggregatePostgres = unstable_cache(
     _reportScopeOverride: string = "Public",
     year?: string
   ): Promise<PublicImpactAggregate> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return buildPublicImpactAggregatePostgres(scopeLevel as any, scopeId, periodLabel || "All Time", year);
   },
   ["public-impact-aggregate-postgres"],
   { revalidate: 3600, tags: ["impact"] }
 );
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getImpactReportByCodeAsyncPostgres(code: string, _context?: unknown): Promise<any> {
     try {
         const res = await queryPostgres(`SELECT * FROM impact_reports WHERE id::text = $1`, [code]);
@@ -185,6 +187,7 @@ export async function getImpactReportByCodeAsyncPostgres(code: string, _context?
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getImpactReportFilterFacetsAsyncPostgres(): Promise<any> {
     const [regions, districts] = await Promise.all([
         queryPostgres(`SELECT DISTINCT region FROM schools_directory ORDER BY region`),
@@ -248,6 +251,7 @@ export async function getImpactReportFilterFacetsAsyncPostgres(): Promise<any> {
     };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getReportPreviewStatsPostgres(_filters: any): Promise<any> {
     return {
         reachTotal: 0,
@@ -268,6 +272,7 @@ export async function incrementImpactReportViewCountAsyncPostgres(id: string | n
     } catch { /* table may not exist */ }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function listPublicImpactReportsAsyncPostgres(limitOrFilters: number | { limit?: number; [key: string]: unknown } = 10): Promise<any[]> {
     try {
         const limit = typeof limitOrFilters === 'number' ? limitOrFilters : (limitOrFilters.limit ?? 10);
@@ -278,6 +283,7 @@ export async function listPublicImpactReportsAsyncPostgres(limitOrFilters: numbe
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function runImpactCalculatorPostgres(_input: any): Promise<any> {
     return {
         projectedImpact: 0,
@@ -291,6 +297,7 @@ export async function getCostEffectivenessDataPostgres(
   period?: string,
 ): Promise<CostEffectivenessData> {
   const conditions: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any[] = [];
 
   if (scopeType && scopeType !== "country") {
@@ -341,6 +348,7 @@ export async function getCostEffectivenessDataPostgres(
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
   const emptyDashboard = {
     kpis: {
@@ -462,6 +470,7 @@ export async function getPerformanceCascadeDataPostgres(): Promise<PerformanceCa
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getTableRowCountsPostgres(): Promise<any[]> {
   const tables = [
     "portal_records", "schools_directory", "support_requests", "portal_users",
@@ -494,6 +503,7 @@ export async function purgeSelectedDataTablesPostgres(tables: string[]): Promise
   await Promise.all(toPurge.map(table => queryPostgres(`DELETE FROM ${table}`)));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveCostEntryPostgres(input: any, userId: number): Promise<any> {
     const result = await queryPostgres(
         `INSERT INTO cost_entries (scope_type, scope_value, period, category, amount, notes, created_by_user_id)
@@ -504,6 +514,7 @@ export async function saveCostEntryPostgres(input: any, userId: number): Promise
     return { id: result.rows[0].id, ...input, createdByUserId: userId, createdAt: result.rows[0].createdAt };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveMaterialDistributionPostgres(input: any, userId: number): Promise<any> {
     const result = await queryPostgres(
         `INSERT INTO material_distributions (school_id, date, material_type, quantity, receipt_path, notes, created_by_user_id)
@@ -514,6 +525,7 @@ export async function saveMaterialDistributionPostgres(input: any, userId: numbe
     return { id: result.rows[0].id, ...input, createdByUserId: userId, createdAt: result.rows[0].createdAt };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createImpactReportPostgres(payload: any, user: any): Promise<any> {
     try {
         const crypto = await import("crypto");
@@ -559,6 +571,7 @@ export async function createImpactReportPostgres(payload: any, user: any): Promi
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function listPortalImpactReportsAsyncPostgres(user: any, limit: number = 100): Promise<any[]> {
     try {
         const result = await queryPostgres(

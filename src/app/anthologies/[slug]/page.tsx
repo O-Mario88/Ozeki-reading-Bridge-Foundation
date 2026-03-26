@@ -53,6 +53,7 @@ export default async function AnthologyPage({ params }: { params: Params }) {
 
                     <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start", marginTop: "2rem", flexWrap: "wrap" }}>
                         {anthology.coverImagePath && (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                                 src={anthology.coverImagePath}
                                 alt=""

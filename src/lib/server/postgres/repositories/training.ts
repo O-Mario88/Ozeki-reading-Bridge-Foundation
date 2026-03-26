@@ -530,8 +530,10 @@ export async function upsertOnlineTrainingNotesPostgres(input: {
 }
 
 // Training Session Management (portal_records based)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function listTrainingSessions(filters: any = {}): Promise<any[]> {
     let sql = `SELECT * FROM portal_records WHERE module = 'training'`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const params: any[] = [];
     if (filters.schoolId) {
         params.push(filters.schoolId);
@@ -542,6 +544,7 @@ export async function listTrainingSessions(filters: any = {}): Promise<any[]> {
     return res.rows;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveTrainingSession(input: any, userId: number): Promise<any> {
     const result = await queryPostgres(
         `INSERT INTO portal_records (module, school_id, school_name, district, date, payload_json, created_by_user_id)

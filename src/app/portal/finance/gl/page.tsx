@@ -28,6 +28,7 @@ async function TrialBalanceTable() {
               </td>
             </tr>
           ) : (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             trialBalance.map((row: any) => (
               <tr key={row.account_code} className="border-b hover:bg-gray-50">
                 <td className="p-3 text-sm font-mono">{row.account_code}</td>

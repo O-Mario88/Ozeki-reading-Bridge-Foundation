@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { CircleDot } from "lucide-react";
 import styles from "@/components/blog/EditorialBlog.module.css";
 import { getPostCoverImage } from "@/lib/blog-editorial";

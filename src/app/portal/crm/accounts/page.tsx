@@ -63,6 +63,7 @@ export default async function CrmAccountsPage({
                 </td>
               </tr>
             ) : (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               accounts.map((account: any) => (
                 <tr key={account.id} className="hover:bg-gray-50 transition group">
                   <td className="px-6 py-4">

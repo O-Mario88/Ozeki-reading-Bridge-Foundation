@@ -1,6 +1,8 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
 
-export async function listPortalEvidencePostgres(filters?: any, user?: any): Promise<any[]> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function listPortalEvidencePostgres(filters?: any, _user?: any): Promise<any[]> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const params: any[] = [];
     let query = `
       SELECT 
@@ -45,6 +47,7 @@ export async function listPortalEvidencePostgres(filters?: any, user?: any): Pro
     return result.rows;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function savePortalEvidencePostgres(input: any): Promise<any> {
     const result = await queryPostgres(
         `
@@ -79,7 +82,8 @@ export async function savePortalEvidencePostgres(input: any): Promise<any> {
     return result.rows[0];
 }
 
-export async function getPortalEvidenceByIdPostgres(id: number, user?: any): Promise<any> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getPortalEvidenceByIdPostgres(id: number, _user?: any): Promise<any> {
     const result = await queryPostgres(
         `
         SELECT 

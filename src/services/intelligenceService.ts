@@ -1343,6 +1343,7 @@ export const IntelligenceService = {
     ] as NationalReportPreset[];
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   buildPartnerImpactCsv(data: any) {
     const lines: string[] = [];
     lines.push(
@@ -1363,6 +1364,7 @@ export const IntelligenceService = {
       ].join(","),
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data.priorityQueue || []).forEach((item: any) => {
       const cells = [
         data.scopeType,
@@ -1582,6 +1584,7 @@ export const IntelligenceService = {
       schoolId: number;
       schoolName: string;
       district: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       metrics: any;
       recommendedIntervention: string;
     };

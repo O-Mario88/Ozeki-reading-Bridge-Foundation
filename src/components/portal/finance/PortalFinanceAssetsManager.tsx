@@ -34,6 +34,7 @@ export function PortalFinanceAssetsManager({ initialAssets }: { initialAssets: F
       if (!res.ok) throw new Error(data.error || "Failed to create asset.");
       setAssets([data.asset, ...assets]);
       setIsAdding(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message);
     }
@@ -52,6 +53,7 @@ export function PortalFinanceAssetsManager({ initialAssets }: { initialAssets: F
         throw new Error(data.error || "Disposal failed");
       }
       setAssets(assets.map(a => a.id === id ? { ...a, status: 'disposed' } : a));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch(err: any) {
       alert(err.message);
     }

@@ -1,5 +1,4 @@
 import {
-  PortalUser,
   NationalReportPreset,
   NlisGeoScopeType,
   BenchmarkRuleInput,
@@ -23,6 +22,7 @@ export async function createBenchmarkProfileAsync(args: {
 }) {
   return service.upsertBenchmarkProfile({
     user: args.user,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     input: args.profile as any,
   });
 }
@@ -34,6 +34,7 @@ export async function updateBenchmarkProfileAsync(args: {
 }) {
   return service.upsertBenchmarkProfile({
     user: args.user,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     input: args.profile as any,
   });
 }
@@ -59,6 +60,7 @@ export async function listEducationAuditExceptionsAsync(filters: {
   return service.listEducationAuditExceptions({
     scopeType: filters.scopeType as NlisGeoScopeType,
     scopeId: filters.scopeId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: filters.status as any,
     limit: filters.limit,
   });
@@ -166,8 +168,10 @@ export async function listInterventionPlansAsync(filters: {
   limit?: number;
 }) {
   return service.listInterventionPlans({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     scopeType: filters.scopeType as any,
     scopeId: filters.scopeId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: filters.status as any,
     limit: filters.limit,
   });
@@ -179,7 +183,9 @@ export async function getInterventionPlanByIdAsync(planId: number) {
 
 export async function upsertInterventionPlanAsync(args: {
   user: { id: number; fullName: string };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   plan: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   actions: any[];
 }) {
   return service.upsertInterventionPlan(args);
@@ -187,6 +193,7 @@ export async function upsertInterventionPlanAsync(args: {
 
 export async function addInterventionActionAsync(args: {
   user: { id: number; fullName: string };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input: any;
 }) {
   return service.addInterventionAction(args);
@@ -195,6 +202,7 @@ export async function addInterventionActionAsync(args: {
 export async function updateInterventionActionAsync(args: {
   user: { id: number; fullName: string };
   actionId: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input: any;
 }) {
   return service.updateInterventionAction({
@@ -223,6 +231,7 @@ export function listNationalReportPresets() {
   return service.listNationalReportPresets();
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function assertPartnerScopeAllowed(args: any) {
   return service.assertPartnerScopeAllowed(args);
 }
@@ -231,14 +240,17 @@ export async function authenticatePartnerApiKeyAsync(apiKeyHash: string) {
   return service.authenticatePartnerApiKey(apiKeyHash);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function logPartnerExportAsync(args: any) {
   return service.logPartnerExport(args);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function buildPartnerImpactCsv(data: any) {
   return service.buildPartnerImpactCsv(data);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function listNationalReportPacksAsync(filters: any) {
   return service.listNationalReportPacks(filters);
 }
@@ -305,6 +317,7 @@ export async function createInterventionPlanFromPriorityAsync(args: {
     schoolId: number;
     schoolName: string;
     district: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metrics: any;
     recommendedIntervention: string;
   };

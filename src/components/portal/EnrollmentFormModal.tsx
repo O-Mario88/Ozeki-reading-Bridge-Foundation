@@ -31,7 +31,7 @@ export function EnrollmentFormModal({
     const updatedFrom = String(formData.get("updatedFrom"));
     
     // Auto calculate
-    const totalEnrollment = boysCount + girlsCount;
+    const _totalEnrollment = boysCount + girlsCount;
 
     try {
       const response = await fetch(`/api/portal/schools/${school.id}/enrollments`, {

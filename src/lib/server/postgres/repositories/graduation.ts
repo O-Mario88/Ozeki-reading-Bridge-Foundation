@@ -10,6 +10,7 @@ export async function getGraduationSettingsPostgres(): Promise<GraduationSetting
 }
 
 export async function listGraduationEligibilityPostgres(schoolId?: number): Promise<GraduationEligibilityRecord[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any[] = [];
   let query = `SELECT * FROM graduation_eligibility`;
   

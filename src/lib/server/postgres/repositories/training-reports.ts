@@ -40,6 +40,7 @@ const SELECT_ARTIFACT_COLUMNS = `
   tra.updated_at::text AS "updatedAt"
 `;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapArtifactRow(row: any): TrainingReportArtifactRecord {
   // We use any for row here because it's the raw result from queryPostgres which is an object with snake_case or camelCase depending on the query.
   // The SELECT_ARTIFACT_COLUMNS uses camelCase aliases, so row will have properties like reportCode, factsJson, etc.

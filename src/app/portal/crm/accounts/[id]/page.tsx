@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchAccountDetail } from "@/app/actions/crm-actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";

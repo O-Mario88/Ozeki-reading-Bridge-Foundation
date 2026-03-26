@@ -23,7 +23,7 @@ function parseEventId(value: string) {
 
 export async function GET(
   _request: Request,
-  context: { params: Promise<{ id: string }> },
+  _context: { params: Promise<{ id: string }> },
 ) {
   // Simple pass-through not normally used, leaving implemented but stubbed to avoid complex mapping unless necessary
   return NextResponse.json({ error: "Direct GET for individual sessions is deprecated." }, { status: 400 });

@@ -1,5 +1,5 @@
 import { 
-  getCountries, getRegions, getSubRegions, 
+  getCountries, getRegions, 
   getDistricts, getParishes, getSchoolsByParish 
 } from "@/app/actions/geo-actions";
 import Link from "next/link";

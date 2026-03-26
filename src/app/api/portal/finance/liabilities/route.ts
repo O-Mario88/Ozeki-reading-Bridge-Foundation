@@ -15,7 +15,7 @@ const createSchema = z.object({
   type: z.enum(["loan", "unpaid_expense"]),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const auth = await requireFinanceEditor();
   if (auth.error) return auth.error;
 

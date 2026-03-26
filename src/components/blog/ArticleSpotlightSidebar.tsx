@@ -38,6 +38,7 @@ export function ArticleSpotlightSidebar({
                 </div>
                 <div className={styles.spotlightThumb}>
                   {image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={image}
                       alt={post.featuredImageAlt || `${post.title} thumbnail`}

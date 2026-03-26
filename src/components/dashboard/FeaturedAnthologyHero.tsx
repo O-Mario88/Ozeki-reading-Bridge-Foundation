@@ -39,6 +39,7 @@ export function FeaturedAnthologyHero({ anthology }: { anthology: AnthologyRecor
                     </div>
                     <div>
                         {anthology.coverImagePath ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                                 src={anthology.coverImagePath}
                                 alt={`Cover of ${anthology.title}`}

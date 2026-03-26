@@ -1,4 +1,5 @@
-import Link from "next/link";
+/* eslint-disable @next/next/no-img-element */
+
 import { Users, ShieldCheck, HeartPulse } from "lucide-react";
 import type { PortalLeadershipTeamMemberRecord } from "@/lib/types";
 import { listPortalLeadershipTeamMembersPostgres } from "@/lib/server/postgres/repositories/public-content";

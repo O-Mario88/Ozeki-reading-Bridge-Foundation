@@ -930,6 +930,7 @@ export function StoryStudioDrawer({
                             <p className="story-studio-upload-status">Uploading image…</p>
                           ) : null}
                           {block.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={block.image_url}
                               alt={block.alt_text || "Story illustration preview"}

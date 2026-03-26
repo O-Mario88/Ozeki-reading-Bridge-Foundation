@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
 import { ugandaRegions } from "@/lib/uganda-locations";

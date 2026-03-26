@@ -922,13 +922,13 @@ export async function submitFinanceExpensePostgres(expenseId: number, actor: { i
   return current!;
 }
 
-export async function deleteFinanceExpenseDraftPostgres(id: number, _reason: string, actor: { id: number }) {
+export async function deleteFinanceExpenseDraftPostgres(id: number, _reason: string, _actor: { id: number }) {
   const res = await queryPostgres("DELETE FROM finance_expenses WHERE id = $1 AND status = 'draft'", [id]);
   if (res.rowCount === 0) throw new Error("Expense not found or not in draft status.");
   return true;
 }
 
-export async function voidFinanceExpensePostgres(id: number, reason: string, actor: { id: number }) {
+export async function voidFinanceExpensePostgres(id: number, reason: string, _actor: { id: number }) {
   return await withPostgresClient(async (client) => {
     await client.query("BEGIN");
     try {
@@ -993,6 +993,7 @@ export async function postFinanceExpensePostgres(expenseId: number, actor: { id:
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function upsertFinanceExpenseReceiptsPostgres(expenseId: number, receipts: any[], actor: { id: number }) {
   return await withPostgresClient(async (client) => {
     await client.query("BEGIN");

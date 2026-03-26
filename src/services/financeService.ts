@@ -44,6 +44,7 @@ export {
  * Utility to export finance rows to CSV format
  */
 export function exportFinanceRowsToCsv(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rows: any[],
     columns: string[] | { label: string; key: string }[]
 ): string {

@@ -1,5 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
-import { type PortalUser } from "@/lib/types";
+
 import { scoreLabel, LESSON_EVALUATION_DOMAIN_KEYS } from "@/lib/lesson-evaluation";
 
 export type CreateLessonEvaluationItem = {

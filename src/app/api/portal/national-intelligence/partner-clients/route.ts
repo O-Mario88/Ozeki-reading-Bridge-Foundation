@@ -26,6 +26,7 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (!canManagePartnerApiClients(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (!canManagePartnerApiClients(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -80,6 +82,7 @@ export async function PATCH(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (!canManagePartnerApiClients(user as any)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

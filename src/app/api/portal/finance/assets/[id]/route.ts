@@ -12,7 +12,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   }
 
   try {
-    const { action, reason } = await request.json();
+    const { action, _reason } = await request.json();
     if (action !== "dispose") {
       return NextResponse.json({ error: "Invalid action." }, { status: 400 });
     }

@@ -64,6 +64,7 @@ export async function listAuditLogsPostgres(options?: {
   limit?: number;
 }): Promise<AuditLogEntry[]> {
   const conditions: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any[] = [];
 
   if (options?.userId) {

@@ -14,6 +14,7 @@ export function generateLocalId() {
  * Creates a record locally and pushes a "create" event into the Sync Queue.
  * Automatically injects the `localId` into the payload for backend idempotency.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createOfflineRecord(module: string, payload: any) {
   const localId = generateLocalId();
   
@@ -58,6 +59,7 @@ export async function createOfflineRecord(module: string, payload: any) {
  * Updates an existing record.
  * Handles the complexity of editing a record that hasn't synced yet vs a real server record.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateOfflineRecord(module: string, recordId: string | number, payload: any) {
   const now = new Date().toISOString();
   const idStr = String(recordId);
@@ -112,6 +114,7 @@ export async function updateOfflineRecord(module: string, recordId: string | num
   return { id: recordId, data: payload };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function queueUpdate(module: string, targetId: string, payload: any, timestamp: string) {
   await offlineDb.syncQueue.put({
     id: generateLocalId().replace("local-", "sync-"),

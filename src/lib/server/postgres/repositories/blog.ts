@@ -2,7 +2,6 @@ import { queryPostgres, withPostgresClient, requirePostgresConfigured } from "@/
 import { blogPosts as staticBlogPosts } from "@/lib/content";
 import { sanitizeInlineRichText, stripHtmlTags } from "@/lib/rich-text";
 import type {
-  BlogArticleType,
   BlogBodyBlock,
   BlogBodyBlockType,
   BlogComment,
@@ -85,10 +84,12 @@ function normalizeSections(value: unknown): BlogPostSection[] {
   return value
     .map((entry, index) => {
       if (!entry || typeof entry !== "object") return null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const obj = entry as Record<string, any>;
       const heading = (typeof obj.heading === "string" ? obj.heading : "").trim().slice(0, 140);
       const paragraphs = Array.isArray(obj.paragraphs)
         ? obj.paragraphs
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .filter((p: any): p is string => typeof p === "string")
             .map((p) => p.trim())
             .filter(Boolean)
@@ -109,12 +110,14 @@ function normalizeBodyBlocks(value: unknown): BlogBodyBlock[] {
   return value
     .map((entry, index) => {
       if (!entry || typeof entry !== "object") return null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const obj = entry as Record<string, any>;
       const type = typeof obj.type === "string" && validTypes.has(obj.type as BlogBodyBlockType)
         ? (obj.type as BlogBodyBlockType) : null;
       if (!type) return null;
       const items = Array.isArray(obj.items)
         ? obj.items
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .filter((p: any): p is string => typeof p === "string")
             .map((p) => sanitizeInlineRichText(p.trim()))
             .filter(Boolean)
@@ -155,6 +158,7 @@ function inferReadTimeFromBodyBlocks(bodyBlocks: BlogBodyBlock[]) {
   return { readTimeMinutes: minutes, readTime: `${minutes} min read` };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapPortalBlogPostRow(row: any): PortalBlogPostRecord {
   return {
     id: row.id,
@@ -259,6 +263,7 @@ async function resolveUniqueSlugAsyncPostgres(rawSlug: string | undefined, title
 
 export async function getBlogPostBySlugPostgres(slug: string): Promise<BlogPost | null> {
   requirePostgresConfigured();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await queryPostgres<any>(
     `SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE slug = $1 AND publish_status = 'published' LIMIT 1`,
     [slug]
@@ -270,6 +275,7 @@ export async function getBlogPostBySlugPostgres(slug: string): Promise<BlogPost 
 export async function listPortalBlogPostsAsyncPostgres(includeDrafts = true): Promise<PortalBlogPostRecord[]> {
   requirePostgresConfigured();
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await queryPostgres<any>(
       `SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts ${includeDrafts ? "" : "WHERE publish_status = 'published'"} ORDER BY published_at DESC, id DESC`
     );
@@ -324,6 +330,7 @@ export async function toggleBlogPostLikeAsyncPostgres(postSlug: string, sessionI
 
 export async function addBlogPostCommentAsyncPostgres(input: { postSlug: string; commentText: string; displayName?: string | null; sessionId?: string | null }) {
   requirePostgresConfigured();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await queryPostgres<any>(
     `INSERT INTO blog_post_comments (post_slug, session_id, display_name, comment_text) VALUES ($1, $2, $3, $4) RETURNING id, post_slug, display_name, comment_text, created_at::text AS created_at`,
     [input.postSlug, input.sessionId, input.displayName || "Anonymous", input.commentText]
@@ -340,10 +347,12 @@ export async function addBlogPostCommentAsyncPostgres(input: { postSlug: string;
 
 export async function listBlogPostCommentsAsyncPostgres(postSlug: string, limit = 50): Promise<BlogComment[]> {
   requirePostgresConfigured();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await queryPostgres<any>(
     `SELECT id, post_slug, display_name, comment_text, created_at::text AS created_at FROM blog_post_comments WHERE post_slug = $1 AND status = 'visible' ORDER BY created_at DESC, id DESC LIMIT $2`,
     [postSlug, limit]
   );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return result.rows.map((row: any) => ({
     id: Number(row.id),
     postSlug: row.post_slug,
@@ -358,6 +367,7 @@ export async function getBlogPostEngagementAsyncPostgres(postSlug: string, sessi
     queryPostgres<{ count: string }>(`SELECT COUNT(*)::text AS count FROM blog_post_views WHERE post_slug = $1`, [postSlug]),
     queryPostgres<{ count: string }>(`SELECT COUNT(*)::text AS count FROM blog_post_likes WHERE post_slug = $1`, [postSlug]),
     queryPostgres<{ count: string }>(`SELECT COUNT(*)::text AS count FROM blog_post_comments WHERE post_slug = $1 AND status = 'visible'`, [postSlug]),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     sessionId ? queryPostgres<{ liked: boolean }>(`SELECT TRUE AS liked FROM blog_post_likes WHERE post_slug = $1 AND session_id = $2 LIMIT 1`, [postSlug, sessionId]) : Promise.resolve({ rows: [] } as any),
     listBlogPostCommentsAsyncPostgres(postSlug, 120),
   ]);
@@ -371,6 +381,7 @@ export async function getBlogPostEngagementAsyncPostgres(postSlug: string, sessi
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function savePortalBlogPostAsyncPostgres(input: any, user: PortalUser): Promise<PortalBlogPostRecord> {
   requirePostgresConfigured();
   const now = new Date().toISOString();
@@ -382,6 +393,7 @@ export async function savePortalBlogPostAsyncPostgres(input: any, user: PortalUs
 
   let existing: PortalBlogPostRecord | null = null;
   if (input.id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await queryPostgres<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [input.id]);
     existing = result.rows[0] ? mapPortalBlogPostRow(result.rows[0]) : null;
     if (!existing) throw new Error("Blog post not found.");
@@ -490,6 +502,7 @@ export async function savePortalBlogPostAsyncPostgres(input: any, user: PortalUs
         );
       }
       await client.query("COMMIT");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const finalRes = await client.query<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [finalId]);
       return mapPortalBlogPostRow(finalRes.rows[0]);
     } catch (error) {
@@ -507,6 +520,7 @@ export async function setPortalBlogPublishStatusAsyncPostgres(
   user: PortalUser,
 ) {
   requirePostgresConfigured();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const postResult = await queryPostgres<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [postId]);
   const post = postResult.rows[0] ? mapPortalBlogPostRow(postResult.rows[0]) : null;
   if (!post) throw new Error("Blog post not found.");
@@ -534,12 +548,14 @@ export async function setPortalBlogPublishStatusAsyncPostgres(
     }
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const finalRes = await queryPostgres<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [postId]);
   return mapPortalBlogPostRow(finalRes.rows[0]);
 }
 
 export async function deletePortalBlogPostAsyncPostgres(postId: number, user: PortalUser) {
   requirePostgresConfigured();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const postResult = await queryPostgres<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [postId]);
   const post = postResult.rows[0] ? mapPortalBlogPostRow(postResult.rows[0]) : null;
   if (!post) throw new Error("Blog post not found.");

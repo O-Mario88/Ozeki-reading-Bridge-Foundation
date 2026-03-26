@@ -23,7 +23,9 @@ export interface CrmAccount {
 }
 
 export interface CrmAccount360 extends CrmAccount {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   interactions: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contacts: any[];
 }
 
@@ -31,6 +33,7 @@ export interface CrmAccount360 extends CrmAccount {
 
 export async function getCrmAccounts(filters: { type?: string; status?: string } = {}): Promise<CrmAccount[]> {
   let sql = "SELECT * FROM crm_accounts";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any[] = [];
   const conditions: string[] = [];
 
@@ -78,6 +81,7 @@ export async function syncCrmAccountFromSource(sourceTable: string, sourceId: nu
 
 export async function getCrmContacts(accountId?: string) {
   let sql = "SELECT * FROM crm_contacts";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any[] = [];
 
   if (accountId) {

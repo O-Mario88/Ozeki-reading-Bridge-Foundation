@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { sanitizeInlineRichText, stripHtmlTags } from "@/lib/rich-text";

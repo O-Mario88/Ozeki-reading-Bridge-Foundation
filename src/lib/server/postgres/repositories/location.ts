@@ -133,6 +133,7 @@ export async function searchGeoDistricts(query: string): Promise<string[]> {
 
 export async function listGeoSubcounties(district?: string): Promise<string[]> {
     let sql = `SELECT DISTINCT sub_county FROM schools_directory WHERE sub_county IS NOT NULL`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const params: any[] = [];
     if (district) {
         params.push(district);
@@ -145,6 +146,7 @@ export async function listGeoSubcounties(district?: string): Promise<string[]> {
 
 export async function listGeoParishes(subCounty?: string): Promise<string[]> {
     let sql = `SELECT DISTINCT parish FROM schools_directory WHERE parish IS NOT NULL`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const params: any[] = [];
     if (subCounty) {
         params.push(subCounty);
@@ -155,9 +157,11 @@ export async function listGeoParishes(subCounty?: string): Promise<string[]> {
     return res.rows.map(r => r.parish);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function listGeoSchools(filtersOrDistrictId?: any, _year?: string | null): Promise<any[]> {
     const filters = typeof filtersOrDistrictId === 'object' ? filtersOrDistrictId : { district: filtersOrDistrictId };
     let sql = `SELECT id, name, district, sub_county, parish FROM schools_directory WHERE 1=1`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const params: any[] = [];
     if (filters.district) {
         params.push(filters.district);

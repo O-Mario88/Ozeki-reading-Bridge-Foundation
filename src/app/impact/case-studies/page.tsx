@@ -47,6 +47,7 @@ export default async function ImpactCaseStudiesPage() {
           {stories.map((story) => (
             <article className="card" key={story.id}>
               {story.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={story.photoUrl}
                   alt={`Evidence photo for ${story.title}`}

@@ -102,6 +102,7 @@ export async function saveSchoolReportDraft(data: {
   schoolId: number;
   periodStart: string;
   periodEnd: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   factPack: any;
   userId: number;
 }) {

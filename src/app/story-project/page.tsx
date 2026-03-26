@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import storyProjectPhoto from "../../../public/photos/PXL_20260217_124359226.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";

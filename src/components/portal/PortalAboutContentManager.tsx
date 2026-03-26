@@ -602,6 +602,7 @@ export function PortalAboutContentManager({
                     >
                       <div>
                         {member.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={member.photoUrl}
                             alt={member.photoAlt || member.name}

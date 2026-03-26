@@ -28,7 +28,7 @@ const WORKING_PARTNERS = [
   {
     name: "Edify",
     href: "https://edify.org/uganda/",
-    logoSrc: "/partners/edify-logo.svg?v=edify-uganda",
+    logoSrc: "/partners/edify-logo.svg",
     width: 140,
     height: 48,
   },
@@ -288,7 +288,7 @@ export default async function HomePage() {
                 rel="noreferrer noopener"
                 className="hover:scale-105 transition-transform"
               >
-                <img
+                <Image
                   src={partner.logoSrc}
                   alt={partner.name}
                   width={partner.width}

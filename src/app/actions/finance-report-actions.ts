@@ -24,6 +24,7 @@ export async function generateFinancialReport(reportType: string, options: {
 
   const orgName = "Ozeki Reading Bridge Foundation";
   let title = "Financial Report";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dataRows: any[] = [];
   let headers: string[] = [];
   let period = "";

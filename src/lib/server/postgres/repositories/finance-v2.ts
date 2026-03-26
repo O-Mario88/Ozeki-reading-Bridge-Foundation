@@ -1,16 +1,14 @@
 import { queryPostgres, withPostgresClient } from "../client";
 import type { 
-  ChartOfAccount, 
   JournalEntry, 
   JournalLine, 
-  FinanceFund,
   FinanceAccountType 
 } from "@/lib/types";
 
 /**
  * Initializes a standard Chart of Accounts for a nonprofit if empty.
  */
-export async function initializeChartOfAccounts(userId: number) {
+export async function initializeChartOfAccounts(_userId: number) {
   const existing = await queryPostgres("SELECT COUNT(*) FROM finance_chart_of_accounts");
   if (parseInt(existing.rows[0].count) > 0) return;
 

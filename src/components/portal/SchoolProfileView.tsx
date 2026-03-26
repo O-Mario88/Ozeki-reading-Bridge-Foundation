@@ -684,6 +684,7 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
       <EnrollmentFormModal
         open={enrollmentOpen}
         onClose={() => setEnrollmentOpen(false)}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         school={school as any}
         onSuccess={() => {
           fetchMetricsHistory();
@@ -694,6 +695,7 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
       <LiteracyImpactFormModal
         open={literacyImpactOpen}
         onClose={() => setLiteracyImpactOpen(false)}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         school={school as any}
         onSuccess={() => {
           fetchMetricsHistory();

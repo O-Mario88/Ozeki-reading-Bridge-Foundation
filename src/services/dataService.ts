@@ -195,6 +195,7 @@ export async function getImpactDrilldownData(scopeType: string, scopeId: string)
         kpis: {
             schoolsSupported: 0,
             learnersAssessed: 0,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ...(base as any).kpis
         }
     };
@@ -459,6 +460,7 @@ export async function getStoryById(id: number) {
 
 export async function saveStoryEntry(input: unknown) {
     const { saveStoryEntryPostgres } = await import("@/lib/server/postgres/repositories/public-content");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return saveStoryEntryPostgres(input as any, 0);
 }
 
@@ -484,6 +486,7 @@ export async function deleteStoryEntry(id: number, _actorId?: unknown, _actorNam
 
 export async function saveStoryAnthology(input: unknown) {
     const { saveStoryAnthologyPostgres } = await import("@/lib/server/postgres/repositories/public-content");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return saveStoryAnthologyPostgres(input as any);
 }
 
@@ -497,18 +500,45 @@ export async function addSchoolLearnerToSchool(..._args: unknown[]) {
 }
 
 // ── Support updates ────────────────────────────────────────────────
-export async function updateSupportRequest(_id: number, _updates: unknown) {
-    throw new Error("updateSupportRequest: not yet migrated to PostgreSQL");
+export async function updateSupportRequest(id: number, updates: Record<string, unknown>) {
+    const setClauses: string[] = [];
+    const params: unknown[] = [];
+    if (updates.status !== undefined) {
+        params.push(updates.status);
+        setClauses.push(`status = $${params.length}`);
+    }
+    if (updates.assignedStaffId !== undefined) {
+        params.push(updates.assignedStaffId);
+        setClauses.push(`assigned_staff_id = $${params.length}`);
+    }
+    if (setClauses.length === 0) return;
+    params.push(id);
+    setClauses.push(`updated_at = NOW()`);
+    const { queryPostgres: qp } = await import("@/lib/server/postgres/client");
+    await qp(
+        `UPDATE support_requests SET ${setClauses.join(", ")} WHERE id = $${params.length}`,
+        params,
+    );
 }
 
 // ── Portal record status ─────────────────────────────────────────────
 export async function setPortalRecordStatusAsync(
-    _id: number,
-    _status: string,
+    id: number,
+    status: string,
     _user?: unknown,
-    _reviewNote?: string,
+    reviewNote?: string,
 ) {
-    throw new Error("setPortalRecordStatusAsync: not yet migrated to PostgreSQL");
+    const { queryPostgres: qp } = await import("@/lib/server/postgres/client");
+    const result = await qp(
+        `UPDATE portal_records
+         SET status = $1, review_note = $2, updated_at = NOW()
+         WHERE id = $3
+         RETURNING id, school_id AS "schoolId", module, status,
+                   payload_json AS "payload", review_note AS "reviewNote",
+                   updated_at AS "createdAt", updated_at AS "updatedAt"`,
+        [status, reviewNote || null, id],
+    );
+    return result.rows[0] ?? null;
 }
 
 // ── Finance budget / reconciliation extras ───────────────────────────

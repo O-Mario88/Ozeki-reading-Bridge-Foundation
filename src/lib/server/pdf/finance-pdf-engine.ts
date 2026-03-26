@@ -5,7 +5,22 @@ import {
   drawBrandWatermark, 
   loadBrandLogo 
 } from "@/lib/pdf-branding";
-import { embedPdfSansFonts, embedPdfSerifFonts } from "@/lib/pdf-fonts";
+import { embedPdfSansFonts } from "@/lib/pdf-fonts";
+
+type DonorReceiptInput = {
+  receipt_number?: string;
+  receipt_date?: string;
+  received_from?: string;
+  currency?: string;
+  amount_received?: number;
+  description?: string;
+};
+
+type FinancialReportRow = {
+  account_code?: string;
+  account_name?: string;
+  balance?: number;
+};
 
 /**
  * Generates a professional PDF for a financial document.
@@ -14,14 +29,14 @@ export async function generateFinancePdf(options: {
   title: string;
   subtitle?: string;
   documentNumber?: string;
-  content: (ctx: { doc: PDFDocument; page: any; font: any; fontBold: any; y: number }) => Promise<number>;
+  content: (ctx: { doc: PDFDocument; page: ReturnType<PDFDocument["addPage"]>; font: Awaited<ReturnType<PDFDocument["embedFont"]>>; fontBold: Awaited<ReturnType<PDFDocument["embedFont"]>>; y: number }) => Promise<number>;
 }) {
   const doc = await PDFDocument.create();
   const { regular: sans, bold: sansBold } = await embedPdfSansFonts(doc);
   const logo = await loadBrandLogo(doc);
 
-  let page = doc.addPage([595.27, 841.89]); // A4
-  const { width, height } = page.getSize();
+  const page = doc.addPage([595.27, 841.89]); // A4
+  const { width: _width, height } = page.getSize();
 
   drawBrandWatermark(page, logo);
   drawBrandHeader({
@@ -35,7 +50,7 @@ export async function generateFinancePdf(options: {
   });
 
   // Main content area starts below header
-  let currentY = height - 220;
+  const currentY = height - 220;
   
   await options.content({ 
     doc, 
@@ -58,7 +73,7 @@ export async function generateFinancePdf(options: {
 /**
  * Specifically for Donor Receipts.
  */
-export async function generateDonorReceiptPdf(receipt: any) {
+export async function generateDonorReceiptPdf(receipt: DonorReceiptInput) {
   return generateFinancePdf({
     title: "DONATION RECEIPT",
     documentNumber: receipt.receipt_number,
@@ -66,11 +81,11 @@ export async function generateDonorReceiptPdf(receipt: any) {
     content: async ({ page, font, fontBold, y }) => {
       const x = 50;
       page.drawText("Received From:", { x, y, size: 10, font: fontBold });
-      page.drawText(receipt.received_from, { x: x + 80, y, size: 10, font });
+      page.drawText(receipt.received_from ?? "N/A", { x: x + 80, y, size: 10, font });
       
       const nextY = y - 20;
       page.drawText("Amount:", { x, y: nextY, size: 10, font: fontBold });
-      page.drawText(`${receipt.currency} ${receipt.amount_received.toLocaleString()}`, { x: x + 80, y: nextY, size: 12, font: fontBold, color: rgb(0, 0.4, 0) });
+      page.drawText(`${receipt.currency ?? "UGX"} ${(receipt.amount_received ?? 0).toLocaleString()}`, { x: x + 80, y: nextY, size: 12, font: fontBold, color: rgb(0, 0.4, 0) });
 
       page.drawText("Description:", { x, y: nextY - 30, size: 10, font: fontBold });
       page.drawText(receipt.description || "N/A", { x: x + 80, y: nextY - 30, size: 10, font });
@@ -83,7 +98,7 @@ export async function generateDonorReceiptPdf(receipt: any) {
 /**
  * Specifically for Financial Reports (Table layout).
  */
-export async function generateFinancialReportPdf(title: string, data: any[]) {
+export async function generateFinancialReportPdf(title: string, data: FinancialReportRow[]) {
   return generateFinancePdf({
     title,
     content: async ({ page, font, fontBold, y }) => {

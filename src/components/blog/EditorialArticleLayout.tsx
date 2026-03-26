@@ -410,6 +410,7 @@ export function EditorialArticleLayout({
                       <Link href={`/blog/${previousPost.slug}`} className={styles.prevNextLink}>
                         <div className={styles.prevNextThumb}>
                           {previousPostImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={previousPostImage}
                               alt={previousPost.featuredImageAlt || previousPost.title}
@@ -431,6 +432,7 @@ export function EditorialArticleLayout({
                       <Link href={`/blog/${nextPost.slug}`} className={styles.prevNextLink}>
                         <div className={styles.prevNextThumb}>
                           {nextPostImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={nextPostImage}
                               alt={nextPost.featuredImageAlt || nextPost.title}

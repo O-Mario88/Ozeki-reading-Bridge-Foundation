@@ -7,6 +7,7 @@ export interface SyncQueueItem {
   module: string;
   action: MutationAction;
   localRecordId: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any;
   createdAt: string;
   status: "pending" | "syncing" | "failed" | "conflict";
@@ -17,6 +18,7 @@ export interface SyncQueueItem {
 export interface OfflineRecord {
   id: string;
   module: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
   isLocalOnly: number; // 1 (true) or 0 (false) for Dexie indexing
   updatedAt: string;
@@ -24,6 +26,7 @@ export interface OfflineRecord {
 
 export interface ReferenceData {
   key: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
   updatedAt: string;
 }

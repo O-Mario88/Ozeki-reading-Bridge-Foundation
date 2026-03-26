@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { RouteError, jsonSuccess, withRouteHandler } from "@/lib/server/http/route-utils";
-import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import { withPostgresClient } from "@/lib/server/postgres/client";
 import type { PortalUser } from "@/lib/types";
 
 export const runtime = "nodejs";

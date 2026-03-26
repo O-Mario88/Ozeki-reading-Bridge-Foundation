@@ -62,10 +62,12 @@ export async function getPublicImpactMetrics(filters: {
     totalTeachers: 0, // Enriched from CRM or staff tables
     averageReadingScore: Number(totalsRes.rows[0]?.avg_story || 0),
     averageCompScore: Number(totalsRes.rows[0]?.avg_comp || 0),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     levelsDistribution: levelsRes.rows.reduce((acc: any, r: any) => {
       acc[r.computed_level_band] = r.total;
       return acc;
     }, {}),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     regionalBreakdown: regionalRes.rows.map((r: any) => ({
       regionName: r.region_name,
       learnerCount: r.learners,

@@ -3,6 +3,7 @@
 import { getCrmAccounts, getAccount360, logInteraction } from "@/lib/server/postgres/repositories/crm";
 import { auth } from "@/lib/auth";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchCrmAccounts(filters: any) {
   return await getCrmAccounts(filters);
 }
@@ -11,6 +12,7 @@ export async function fetchAccountDetail(id: string) {
   return await getAccount360(id);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function addInteraction(data: any) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");

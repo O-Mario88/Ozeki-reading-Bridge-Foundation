@@ -92,6 +92,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
                   <PremiumCard className="overflow-hidden shadow-xl border-none">
                     <Link href={`/blog/${featured.slug}`} className="block relative h-64 md:h-96 w-full bg-gray-100 overflow-hidden group">
                       {featuredImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img 
                           src={featuredImage} 
                           alt={featured.featuredImageAlt || featured.title} 
@@ -213,6 +214,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
                       <Link key={post.slug} href={`/blog/${post.slug}`} className="flex gap-4 group">
                         <div className="w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                           {spotlightImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img 
                               src={spotlightImage} 
                               alt={post.featuredImageAlt || post.title} 

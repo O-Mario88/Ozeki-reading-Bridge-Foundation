@@ -557,7 +557,9 @@ export async function createNationalReportPackPostgres(input: {
   scopeId: string;
   periodStart: string;
   periodEnd: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   facts: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   narrative: any;
   htmlReport: string;
   generatedByUserId: number;
@@ -642,6 +644,7 @@ export async function createInterventionPlanPostgres(input: {
   title: string;
   createdBy: number;
   status: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   targetMetrics: any;
   startDate: string | null;
   endDate: string | null;

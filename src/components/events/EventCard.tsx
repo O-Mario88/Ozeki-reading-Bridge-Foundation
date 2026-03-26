@@ -2,8 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { joinOnlineTrainingSessionAction } from "@/app/events/actions";
-import { Calendar, Clock, Video, Download, User as UserIcon, CheckCircle2, Copy } from "lucide-react";
-import Image from "next/image";
+import { Calendar, Clock, Video, Download, User as UserIcon, CheckCircle2 } from "lucide-react";
 
 export type EventCardProps = {
   session: {
@@ -26,7 +25,7 @@ export function EventCard({ session, resources, isSignedUp: initiallySignedUp, i
   const [copied, setCopied] = useState(false);
 
   const startDate = new Date(session.startTime);
-  const endDate = new Date(session.endTime);
+  const _endDate = new Date(session.endTime);
 
   const handleSignUp = () => {
     if (!isLoggedIn) {

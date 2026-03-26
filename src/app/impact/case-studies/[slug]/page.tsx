@@ -79,6 +79,7 @@ export default async function ImpactCaseStudyDetailPage({
           <article className="card">
             <h2>Photo evidence</h2>
             {story.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={story.photoUrl}
                 alt={`Photo evidence for ${story.title}`}

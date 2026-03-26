@@ -3697,6 +3697,7 @@ export interface GeneratedDocument {
   fileId: number | null;
   storedPath: string | null;
   generatedByUserId: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata: Record<string, any> | null;
   isImmutable: boolean;
   createdAt: string;

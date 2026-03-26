@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { BookOpen, Calendar as CalendarIcon, CheckCircle2, Video } from "lucide-react";
 import { listOnlineTrainingSessions } from "@/lib/training-db";
