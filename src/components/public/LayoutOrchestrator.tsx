@@ -7,6 +7,13 @@ import { SiteFooter } from "../SiteFooter";
 
 export function LayoutOrchestrator({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "";
+  const isPortalLogin = pathname === "/portal/login";
+
+  /* Full-screen immersive login — no header / footer */
+  if (isPortalLogin) {
+    return <>{children}</>;
+  }
+
   const isPortal = pathname.startsWith("/portal");
 
   if (isPortal) {

@@ -3285,10 +3285,21 @@ main {
 
 .portal-form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
 .portal-filter-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
-  border-radius: 0.42rem;
-  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(180, 195, 215, 0.45);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   min-height: 2rem;
   padding: 0.38rem 0.55rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.portal-form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus,
+.portal-filter-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(44, 134, 201, 0.5);
+  box-shadow: 0 0 0 3px rgba(44, 134, 201, 0.1);
 }
 
 .portal-filter-field :is(input, select) {
@@ -3329,12 +3340,18 @@ main {
 }
 
 .portal-form-section {
-  background: color-mix(in oklab, var(--md-sys-color-surface-container), white 35%);
-  border-color: color-mix(in oklab, var(--md-sys-color-outline), white 4%);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 0.65rem;
 }
 
 .portal-form-options {
-  background: color-mix(in oklab, var(--md-sys-color-surface-container), white 46%);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 0.5rem;
 }
 
 .portal-form-header {
@@ -3803,22 +3820,25 @@ input[type="checkbox"]:focus-visible {
 }
 
 /* ── Portal Login Page — Glassmorphism ─────────────────────── */
+
 .portal-login-page {
   min-height: 100dvh;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
-  background: url('/assets/login-bg.png') center / cover no-repeat fixed;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: auto;
+  background: url('/photos/classroom-learners-writing.jpg') center / cover no-repeat;
 }
 
 .portal-login-page::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.25);
   pointer-events: none;
 }
 
@@ -3830,16 +3850,16 @@ input[type="checkbox"]:focus-visible {
   z-index: 1;
 }
 
-/* ── Glass Card ─────────────────────────────────────────────── */
+/* ── Glass Card — dark frosted glass ───────────────────────── */
 .portal-login-card {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  background: rgba(30, 40, 30, 0.45);
+  backdrop-filter: blur(22px) saturate(1.3);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   padding: 2.5rem 2rem 2rem;
   width: 100%;
   animation: loginCardIn 0.5s ease-out;
@@ -4342,10 +4362,14 @@ fieldset .action-row {
 .floating-surface-panel {
   width: min(var(--floating-surface-max-width, 860px), 100%);
   max-height: calc(100vh - 2rem);
-  background: #ffffff;
-  border-radius: 0.55rem;
-  border: 1px solid #cfd8e3;
-  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.28);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 24px 56px rgba(15, 23, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
@@ -4364,8 +4388,10 @@ fieldset .action-row {
 
 .floating-surface-header {
   padding: 0.72rem 1rem;
-  border-bottom: 2px solid #2c86c9;
-  background: #ffffff;
+  border-bottom: 2px solid rgba(44, 134, 201, 0.6);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -4423,8 +4449,10 @@ fieldset .action-row {
 }
 
 .floating-surface-footer {
-  border-top: 1px solid #d7dee8;
-  background: #f8fafc;
+  border-top: 1px solid rgba(215, 222, 232, 0.6);
+  background: rgba(248, 250, 252, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 0.8rem 1.05rem;
 }
 
@@ -4450,11 +4478,21 @@ fieldset .action-row {
 
 .floating-surface-body .portal-form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
 .floating-surface-body .form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
-  border-radius: 0.42rem;
-  border: 1px solid #97a6b8;
-  background: #ffffff;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(151, 166, 184, 0.45);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   min-height: 2.6rem;
   padding: 0.56rem 0.72rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.floating-surface-body .portal-form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus,
+.floating-surface-body .form-grid :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(44, 134, 201, 0.55);
+  box-shadow: 0 0 0 3px rgba(44, 134, 201, 0.12);
 }
 
 .floating-surface-body .portal-form-grid textarea,
@@ -13107,12 +13145,18 @@ label:has(> span + :is(input, select, textarea))>:is(input, select, textarea),
 /* Unified platform card skin (testimonial-style) */
 .dashboard-inspired-main :where(.card, .card-ref, .card-ref-pro, [class$="-card"], [class$="Card"]) {
     background:
-        linear-gradient(180deg, color-mix(in oklab, var(--color-surface), var(--dashboard-ambient-top) 12%), var(--color-surface));
-    border: 1px solid var(--dashboard-card-border);
+        linear-gradient(180deg,
+          rgba(255, 255, 255, 0.78),
+          rgba(255, 255, 255, 0.62));
+    backdrop-filter: blur(12px) saturate(1.3);
+    -webkit-backdrop-filter: blur(12px) saturate(1.3);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     border-top: 3px solid var(--dashboard-card-topline);
     border-radius: 14px;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 180ms ease, transform 180ms ease;
+    box-shadow:
+      var(--shadow-sm),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    transition: box-shadow 180ms ease, transform 180ms ease, backdrop-filter 180ms ease;
 }
 
 .dashboard-inspired-main :where(.card, .card-ref, .card-ref-pro, [class$="-card"], [class$="Card"]):hover {

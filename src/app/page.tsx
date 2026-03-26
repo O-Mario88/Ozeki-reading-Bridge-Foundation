@@ -145,8 +145,8 @@ export default async function HomePage() {
             <div className="absolute inset-0 bg-brand-primary/5 rounded-[2.5rem] transform -rotate-3 scale-105 transition-transform duration-500 hover:rotate-0" />
             <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] md:aspect-[3/4] shadow-2xl">
               <Image
-                src="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg"
-                alt="Reading session in Dokolo Greater Bata Cluster."
+                src="/photos/classroom-learners-writing.jpg"
+                alt="Primary school learners practising writing in a classroom in Uganda."
                 fill
                 className="object-cover object-center transform hover:scale-105 transition-transform duration-700"
                 sizes="(max-width: 1024px) 100vw, 800px"
