@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { offlineDb } from "@/lib/offline-db";
 
 /**
@@ -22,6 +22,12 @@ export function useOfflineReference<T>(
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [isOfflineFallback, setIsOfflineFallback] = useState<boolean>(false);
+
+  // Store the latest fetcher in a ref to avoid infinite rendering loops
+  const fetcherRef = useRef(fetcher);
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  }, [fetcher]);
 
   const fetchWithCache = useCallback(async () => {
     if (!key) {
@@ -47,7 +53,7 @@ export function useOfflineReference<T>(
         // 2. Fetch fresh data if online
         if (typeof navigator !== "undefined" && navigator.onLine) {
           try {
-            const freshData = await fetcher();
+            const freshData = await fetcherRef.current();
 
             setData(freshData);
             setIsOfflineFallback(false);
@@ -74,7 +80,7 @@ export function useOfflineReference<T>(
       } finally {
         setLoading(false);
       }
-  }, [key, fetcher]);
+  }, [key]);
 
   useEffect(() => {
     fetchWithCache();
