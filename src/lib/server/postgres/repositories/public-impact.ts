@@ -941,12 +941,26 @@ export async function listOnlineSessionStatsForPublicImpactPostgres(
   };
 }
 
+/** In-process cache for expensive aggregate builds. Avoids re-querying
+ *  8+ tables when the same scope+period is requested within 5 minutes.
+ *  Safe because the outer unstable_cache already controls staleness at 1h. */
+const AGGREGATE_CACHE_TTL_MS = 5 * 60 * 1000;
+const AGGREGATE_CACHE_MAX = 30;
+const aggregateProcessCache = new Map<string, { data: PublicImpactAggregate; ts: number }>();
+
 export async function buildPublicImpactAggregatePostgres(
   scopeLevel: PublicImpactScopeLevel,
   scopeId: string,
   periodLabel: string = "All Time",
   year?: string
 ): Promise<PublicImpactAggregate> {
+  // Check in-process cache
+  const cacheKey = `${scopeLevel}:${scopeId}:${periodLabel}:${year ?? ""}`;
+  const cached = aggregateProcessCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < AGGREGATE_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const scopedSchools = await listScopedSchoolsForPublicImpactPostgres(scopeLevel, scopeId);
   const schoolIds = scopedSchools.map((s) => s.schoolId);
 
@@ -1018,7 +1032,7 @@ export async function buildPublicImpactAggregatePostgres(
     setup: null, newSound: null, decoding: null, readingPractice: null, trickyWords: null, checkNext: null
   };
 
-  return {
+  const result: PublicImpactAggregate = {
     scope: {
       level: scopeLevel,
       id: scopeId,
@@ -1095,4 +1109,13 @@ export async function buildPublicImpactAggregatePostgres(
     },
     generatedAt: new Date().toISOString()
   };
+
+  // Store in process cache (bounded eviction)
+  if (aggregateProcessCache.size >= AGGREGATE_CACHE_MAX) {
+    const oldest = aggregateProcessCache.keys().next().value;
+    if (oldest) aggregateProcessCache.delete(oldest);
+  }
+  aggregateProcessCache.set(cacheKey, { data: result, ts: Date.now() });
+
+  return result;
 }

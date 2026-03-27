@@ -1,10 +1,47 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { PublicImpactAggregate } from "@/lib/types";
-import { UgandaImpactMapPro } from "./UgandaImpactMapPro";
+
+const UgandaImpactMapPro = dynamic(
+  () => import("./UgandaImpactMapPro").then((m) => m.UgandaImpactMapPro),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="impact-map-skeleton" aria-busy="true">
+        <div className="impact-map-skeleton-inner">
+          <div className="impact-skeleton-pulse" style={{ width: '60%', height: 16, borderRadius: 8, marginBottom: 12 }} />
+          <div className="impact-skeleton-pulse" style={{ width: '100%', height: 320, borderRadius: 16 }} />
+          <div className="impact-skeleton-pulse" style={{ width: '40%', height: 14, borderRadius: 8, marginTop: 12 }} />
+        </div>
+      </div>
+    ),
+  },
+);
+
+/** Client-side response cache with TTL to avoid redundant API calls */
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const responseCache = new Map<string, { data: PublicImpactAggregate; timestamp: number }>();
+function getCached(key: string): PublicImpactAggregate | null {
+  const entry = responseCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    responseCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+function setCache(key: string, data: PublicImpactAggregate) {
+  // Keep cache bounded — evict oldest if > 50 entries
+  if (responseCache.size > 50) {
+    const oldest = responseCache.keys().next().value;
+    if (oldest) responseCache.delete(oldest);
+  }
+  responseCache.set(key, { data, timestamp: Date.now() });
+}
 import { HeadlineStatsPanel } from "./HeadlineStatsPanel";
 import { LocationNavigator, PublicMapSelection } from "./LocationNavigator";
 import {
@@ -20,6 +57,8 @@ type PublicImpactMapExplorerProps = {
   syncUrl?: boolean;
   initialPeriod?: string;
   initialSelection?: Partial<PublicMapSelection>;
+  /** Server-fetched aggregate passed as prop to avoid duplicate initial fetch */
+  initialPayload?: PublicImpactAggregate | null;
 };
 
 type ScopeLevel = "country" | "region" | "subregion" | "district" | "school";
@@ -234,6 +273,7 @@ export function PublicImpactMapExplorer({
   syncUrl = false,
   initialPeriod = "FY",
   initialSelection,
+  initialPayload = null,
 }: PublicImpactMapExplorerProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -244,29 +284,56 @@ export function PublicImpactMapExplorer({
     defaultSelection(initialSelection),
   );
   const [selectionHistory, setSelectionHistory] = useState<PublicMapSelection[]>([]);
-  const [payload, setPayload] = useState<PublicImpactAggregate | null>(null);
-  const [navigatorSnapshot, setNavigatorSnapshot] = useState<PublicImpactAggregate["navigator"] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [payload, setPayload] = useState<PublicImpactAggregate | null>(initialPayload);
+  const [navigatorSnapshot, setNavigatorSnapshot] = useState<PublicImpactAggregate["navigator"] | null>(initialPayload?.navigator ?? null);
+  const [loading, setLoading] = useState(!initialPayload);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"outcomes" | "readingLevels" | "implementation" | "teaching" | "equity" | "quality">("outcomes");
+  const initialPayloadUsed = useRef(!!initialPayload);
 
   const scope = useMemo(() => resolveScope(selection), [selection]);
 
+  // Single fetch effect — uses client cache, skips initial load when server data is available
   useEffect(() => {
+    // Skip the first fetch if we already have server-provided data for the initial scope
+    if (initialPayloadUsed.current) {
+      initialPayloadUsed.current = false;
+      return;
+    }
     let active = true;
+    const cacheKey = `${scope.level}:${scope.id}:${period}`;
     async function fetchAggregate() {
+      // Check client-side cache first
+      const cached = getCached(cacheKey);
+      if (cached) {
+        setPayload(cached);
+        // Also update navigator from cached country-level data if available
+        if (cached.navigator) {
+          setNavigatorSnapshot(cached.navigator);
+        }
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(scopeEndpoint(scope.level, scope.id, period), {
-          cache: "no-store",
-        });
+        const response = await fetch(scopeEndpoint(scope.level, scope.id, period));
         if (!response.ok) {
           throw new Error("stats-unavailable");
         }
         const json = (await response.json()) as PublicImpactAggregate;
+        // Cache the response
+        setCache(cacheKey, json);
         if (active) {
           setPayload(json);
+          // Use navigator data from any response to populate dropdowns
+          if (json.navigator) {
+            setNavigatorSnapshot((prev) => {
+              // Country-level navigator has the most comprehensive data
+              if (scope.level === "country" || !prev) return json.navigator;
+              return prev;
+            });
+          }
         }
       } catch {
         if (active) {
@@ -284,31 +351,35 @@ export function PublicImpactMapExplorer({
     };
   }, [period, scope.id, scope.level]);
 
+  // Fetch country-level navigator only once for comprehensive dropdown data
+  // (only if we don't already have it from initialPayload)
   useEffect(() => {
+    if (navigatorSnapshot && navigatorSnapshot.schools.length > 0) {
+      return; // Already have comprehensive navigator data
+    }
     let active = true;
+    const cacheKey = `country:Uganda:${period}`;
     async function fetchNavigatorSnapshot() {
+      const cached = getCached(cacheKey);
+      if (cached?.navigator) {
+        if (active) setNavigatorSnapshot(cached.navigator);
+        return;
+      }
       try {
-        const response = await fetch(`/api/impact/country?period=${encodeURIComponent(period)}`, {
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          throw new Error("navigator-unavailable");
-        }
+        const response = await fetch(`/api/impact/country?period=${encodeURIComponent(period)}`);
+        if (!response.ok) return;
         const json = (await response.json()) as PublicImpactAggregate;
+        setCache(cacheKey, json);
         if (active) {
           setNavigatorSnapshot(json.navigator ?? null);
         }
       } catch {
-        if (active) {
-          setNavigatorSnapshot(null);
-        }
+        // Navigator is non-critical; keep going
       }
     }
     fetchNavigatorSnapshot();
-    return () => {
-      active = false;
-    };
-  }, [period]);
+    return () => { active = false; };
+  }, [period, navigatorSnapshot]);
 
   useEffect(() => {
     if (!syncUrl) {

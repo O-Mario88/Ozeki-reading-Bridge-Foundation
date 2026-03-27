@@ -200,8 +200,8 @@ export default function ReadingMaterialsDevelopmentPage() {
       <CTAStrip 
         heading="Need more guidance?"
         subheading="Open school profiles for implementation support or visit the full resources page."
-        primaryButtonText="Open school profiles"
-        primaryButtonHref="/portal/schools"
+        primaryButtonText="Browse Resources"
+        primaryButtonHref="/resources"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="All Resources"

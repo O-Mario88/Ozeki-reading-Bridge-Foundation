@@ -237,8 +237,6 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
         primaryButtonHref="/partner-with-us"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
-        secondaryButtonText="Open school profiles"
-        secondaryButtonHref="/portal/schools"
         theme="brand"
       />
     </>

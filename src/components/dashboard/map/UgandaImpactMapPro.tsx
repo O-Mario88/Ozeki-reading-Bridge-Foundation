@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   stableDistrictId,
   stableSubRegionId,
@@ -382,7 +382,7 @@ export function UgandaImpactMapPro({
         return statsCache[key];
       }
 
-      const response = await fetch(pathForTarget(target, periodLabel), { cache: "no-store" });
+      const response = await fetch(pathForTarget(target, periodLabel));
       if (!response.ok) {
         throw new Error("Failed to load map stats");
       }
@@ -405,9 +405,7 @@ export function UgandaImpactMapPro({
     setBestDistrictStats(null);
     const loadBestDistrict = async () => {
       const period = encodeURIComponent(periodLabel);
-      const response = await fetch(`/api/impact/best-district?period=${period}`, {
-        cache: "no-store",
-      });
+      const response = await fetch(`/api/impact/best-district?period=${period}`);
       if (!response.ok) {
         throw new Error("Failed to load best district comparison");
       }
@@ -428,13 +426,21 @@ export function UgandaImpactMapPro({
     };
   }, [periodLabel]);
 
+  // Debounced hover fetch — avoids rapid-fire API calls during mouse movement
+  const hoverFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!hoveredTarget || !isOpen) {
       return;
     }
-    fetchStats(hoveredTarget).catch(() => {
-      // noop
-    });
+    if (hoverFetchTimer.current) clearTimeout(hoverFetchTimer.current);
+    hoverFetchTimer.current = setTimeout(() => {
+      fetchStats(hoveredTarget).catch(() => {
+        // noop
+      });
+    }, 200);
+    return () => {
+      if (hoverFetchTimer.current) clearTimeout(hoverFetchTimer.current);
+    };
   }, [fetchStats, hoveredTarget, isOpen]);
 
   const beginHover = useCallback(

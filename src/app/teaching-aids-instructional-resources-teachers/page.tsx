@@ -182,8 +182,6 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
         primaryButtonHref="/partner-with-us"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
-        secondaryButtonText="Open School Profiles"
-        secondaryButtonHref="/portal/schools"
         theme="brand"
       />
     </>

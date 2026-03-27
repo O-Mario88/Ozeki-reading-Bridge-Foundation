@@ -56,9 +56,6 @@ export default async function MediaPage() {
             <Link className="button" href="/testimonials">
               View testimonial quotes
             </Link>
-            <Link className="button button-ghost" href="/portal/login">
-              Staff portal uploads
-            </Link>
           </div>
         </div>
       </section>

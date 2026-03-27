@@ -56,7 +56,7 @@ export function toPublicImpactResponse(payload: PublicImpactAggregate) {
 export function cachedImpactJson(payload: PublicImpactAggregate) {
   return NextResponse.json(toPublicImpactResponse(payload), {
     headers: {
-      "Cache-Control": "public, max-age=600, stale-while-revalidate=900",
+      "Cache-Control": "public, max-age=900, stale-while-revalidate=1800",
     },
   });
 }

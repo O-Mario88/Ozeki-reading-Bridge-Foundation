@@ -14,14 +14,14 @@ function chunkArray<T>(items: T[], chunkSize: number): T[][] {
   return chunks;
 }
 
-type NavGroup = {
+export type NavGroup = {
   title: string;
   href: string;
   description: string;
   links: Array<{ href: string; label: string }>;
 };
 
-type NavItem =
+export type NavItem =
   | {
     type: "link";
     label: string;
@@ -33,7 +33,7 @@ type NavItem =
     group: NavGroup;
   };
 
-const utilityLinks = [
+export const utilityLinks = [
   { href: "/request-support", label: "Request School Support" },
   { href: "/portal/login", label: "Staff Portal" },
 ];
@@ -99,7 +99,7 @@ const aboutGroup: NavGroup = {
   ],
 };
 
-const navItems: NavItem[] = [
+export const navItems: NavItem[] = [
   { type: "link", label: "Home", href: "/" },
   { type: "link", label: "Live Dashboard", href: "/impact/dashboard" },
   { type: "group", key: "programs", group: programsGroup },

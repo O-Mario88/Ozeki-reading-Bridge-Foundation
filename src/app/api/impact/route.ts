@@ -18,7 +18,7 @@ function cachedJson(data: unknown) {
     { ...((typeof data === "object" && data !== null) ? data : { data }), lastUpdated: new Date().toISOString() },
     {
       headers: {
-        "Cache-Control": "public, max-age=300, stale-while-revalidate=600",
+        "Cache-Control": "public, max-age=900, stale-while-revalidate=1800",
       },
     },
   );

@@ -186,9 +186,6 @@ export default function ProblemPage() {
               <Link className="button" href="/phonics-training">
                 See signature program
               </Link>
-              <Link className="button button-ghost" href="/portal/schools">
-                Open school profiles
-              </Link>
             </div>
           </article>
         </div>

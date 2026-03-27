@@ -44,6 +44,12 @@ const coreValues = [
     description:
       "We value collaboration, mutual respect, and shared responsibility with schools, communities, partners, supporters, and one another as we work toward a common vision of hope and transformation.",
   },
+  {
+    title: "Foundations that Last",
+    tagline: "We believe strong literacy foundations change lives.",
+    description:
+      "That is why we are committed to equipping teachers, strengthening schools, and nurturing every child's opportunity to read, learn, and thrive.",
+  },
 ];
 
 export default function AboutPage() {

@@ -83,11 +83,6 @@ export default async function OnlineTrainingPage() {
               <a href="#sessions" className="px-8 py-4 rounded-full bg-brand-primary text-white font-bold text-lg hover:bg-brand-primary/90 transition-all shadow-xl hover:shadow-brand-primary/30 flex items-center gap-2 justify-center">
                 Explore Upcoming Trainings
               </a>
-              {!user && (
-                 <a href="/portal/login?continue=/events" className="px-8 py-4 rounded-full bg-gray-100 text-gray-800 font-bold text-lg hover:bg-gray-200 transition-all flex items-center gap-2 justify-center">
-                   Sign In to Enroll
-                 </a>
-              )}
             </div>
             
             <p className="mt-8 text-sm font-semibold text-gray-400 tracking-wide">

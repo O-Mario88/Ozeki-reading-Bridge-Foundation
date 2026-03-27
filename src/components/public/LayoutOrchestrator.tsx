@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 import { SiteHeader } from "../SiteHeader";
 import { SiteFooter } from "../SiteFooter";
+import { MobileBottomNav } from "../MobileBottomNav";
 
 export function LayoutOrchestrator({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "";
@@ -35,6 +36,8 @@ export function LayoutOrchestrator({ children }: { children: ReactNode }) {
         {children}
       </main>
       <SiteFooter />
+      <MobileBottomNav />
     </div>
   );
 }
+

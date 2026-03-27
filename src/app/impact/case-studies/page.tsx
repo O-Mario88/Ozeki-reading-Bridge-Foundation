@@ -35,12 +35,7 @@ export default async function ImpactCaseStudiesPage() {
           {stories.length === 0 ? (
             <article className="card">
               <h2>No change stories published yet</h2>
-              <p>Staff can submit stories from the portal. Approved stories appear here automatically.</p>
-              <div className="action-row">
-                <Link className="button" href="/portal/testimonials">
-                  Open staff change story form
-                </Link>
-              </div>
+              <p>Approved stories appear here automatically once published by the team.</p>
             </article>
           ) : null}
 

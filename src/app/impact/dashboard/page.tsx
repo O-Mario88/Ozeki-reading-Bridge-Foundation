@@ -121,7 +121,7 @@ export default async function ImpactDashboardPage({
             fill
             sizes="100vw"
             priority
-            quality={90} 
+            quality={75} 
             className="object-cover"
           />
           <div className="absolute inset-0 bg-white/85 backdrop-blur-[2px]" />
@@ -156,6 +156,7 @@ export default async function ImpactDashboardPage({
                     district: firstValue(params.district),
                     school: firstValue(params.school) || firstValue(params.schoolId),
                   }}
+                  initialPayload={aggregate}
                 />
              </Suspense>
           </div>
