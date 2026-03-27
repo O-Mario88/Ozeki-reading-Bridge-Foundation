@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { mission, organizationName, vision } from "@/lib/content";
-import { listPortalCoreValuesPostgres } from "@/lib/server/postgres/repositories/public-content";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
@@ -14,14 +13,40 @@ export const metadata = {
 
 export const revalidate = 300;
 
-export default async function AboutPage() {
-  let coreValues: Awaited<ReturnType<typeof listPortalCoreValuesPostgres>> = [];
-  try {
-    coreValues = await listPortalCoreValuesPostgres();
-  } catch {
-    // Table may not exist yet — show fallback
-  }
+const coreValues = [
+  {
+    title: "Purposeful Service",
+    tagline: "We are called to serve with compassion, humility, and excellence.",
+    description:
+      "Our work is rooted in a deep commitment to children, schools, teachers, and communities, and we strive to ensure that every action contributes to meaningful and lasting transformation.",
+  },
+  {
+    title: "Integrity and Stewardship",
+    tagline: "We honor trust through honesty, accountability, and faithful stewardship.",
+    description:
+      "We are committed to doing what is right, managing resources responsibly, and maintaining transparency in our decisions, relationships, and work.",
+  },
+  {
+    title: "Excellence for Impact",
+    tagline: "We pursue excellence because the people we serve deserve our very best.",
+    description:
+      "We hold ourselves to high standards of quality, professionalism, and discipline so that our work produces credible, measurable, and sustainable impact.",
+  },
+  {
+    title: "Continuous Learning and Growth",
+    tagline: "We believe transformation begins with a willingness to learn.",
+    description:
+      "We remain teachable, reflective, and innovative, always seeking to improve our systems, strengthen our people, and deepen the impact of our work.",
+  },
+  {
+    title: "Partnership for Lasting Change",
+    tagline: "We believe the strongest impact is built together.",
+    description:
+      "We value collaboration, mutual respect, and shared responsibility with schools, communities, partners, supporters, and one another as we work toward a common vision of hope and transformation.",
+  },
+];
 
+export default function AboutPage() {
   return (
     <>
       {/* 1. Hero Section */}
@@ -46,7 +71,7 @@ export default async function AboutPage() {
           <ul className="flex flex-wrap justify-center items-center gap-3 md:gap-4">
             <li>
               <a href="#mission-vision" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
-                Mission & Vision
+                Mission &amp; Vision
               </a>
             </li>
             <li>
@@ -117,22 +142,16 @@ export default async function AboutPage() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {coreValues.length === 0 ? (
-            <PremiumCard className="p-8 col-span-3 text-center border-dashed border-2 bg-transparent shadow-none">
-              <h3 className="text-xl font-bold text-gray-400 mb-2">Core values will appear here</h3>
-              <p className="text-gray-500">Publish the organization&apos;s core values from the staff portal.</p>
+          {coreValues.map((value, index) => (
+            <PremiumCard className="p-8 flex flex-col" key={value.title} withHover>
+              <div className="text-5xl font-extrabold text-gray-100 mb-4 tracking-tighter">
+                {String(index + 1).padStart(2, '0')}
+              </div>
+              <h3 className="text-2xl font-bold text-brand-primary mb-2">{value.title}</h3>
+              <p className="text-sm font-semibold text-[#006b61]/70 italic mb-4">{value.tagline}</p>
+              <p className="text-gray-600 leading-relaxed break-words">{value.description}</p>
             </PremiumCard>
-          ) : (
-            coreValues.map((value, index) => (
-              <PremiumCard className="p-8 flex flex-col" key={value.id} withHover>
-                <div className="text-5xl font-extrabold text-gray-100 mb-4 tracking-tighter">
-                  {String(index + 1).padStart(2, '0')}
-                </div>
-                <h3 className="text-2xl font-bold text-brand-primary mb-4">{value.title}</h3>
-                <p className="text-gray-600 leading-relaxed break-words">{value.description}</p>
-              </PremiumCard>
-            ))
-          )}
+          ))}
         </div>
 
         {/* Values CTA */}

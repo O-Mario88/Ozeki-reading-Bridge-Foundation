@@ -2760,14 +2760,11 @@ export interface PortalLeadershipTeamMemberRecord {
   section: AboutTeamSection;
   name: string;
   role: string;
-  biography: string;
-  background: string;
-  career: string;
+  about: string;
   photoFileName: string | null;
   photoStoredPath: string | null;
   photoMimeType: string | null;
   photoSizeBytes: number | null;
-  photoAlt: string | null;
   sortOrder: number;
   isPublished: boolean;
   createdByUserId: number;

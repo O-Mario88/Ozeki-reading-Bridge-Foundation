@@ -96,15 +96,9 @@ export async function POST(request: Request) {
       photo instanceof File && photo.size > 0 ? await savePhotoFile(photo) : null;
 
     const member = await savePortalLeadershipTeamMemberPostgres({
-      section: String(formData.get("section") ?? "").trim() as "board" | "staff" | "volunteer",
       name: String(formData.get("name") ?? ""),
       role: String(formData.get("role") ?? ""),
-      biography: String(formData.get("biography") ?? ""),
-      background: String(formData.get("background") ?? ""),
-      career: String(formData.get("career") ?? ""),
-      photoAlt: String(formData.get("photoAlt") ?? "").trim() || null,
-      sortOrder: Number(formData.get("sortOrder") ?? 0),
-      isPublished: String(formData.get("isPublished") ?? "1") !== "0",
+      about: String(formData.get("about") ?? ""),
       userId: user!.id,
       ...upload,
     });
@@ -146,17 +140,9 @@ export async function PATCH(request: Request) {
 
     const member = await updatePortalLeadershipTeamMemberPostgres({
       id,
-      section: String(formData.get("section") ?? existing.section).trim() as "board" | "staff" | "volunteer",
       name: String(formData.get("name") ?? existing.name),
       role: String(formData.get("role") ?? existing.role),
-      biography: String(formData.get("biography") ?? existing.biography),
-      background: String(formData.get("background") ?? existing.background),
-      career: String(formData.get("career") ?? existing.career),
-      photoAlt:
-        String(formData.get("photoAlt") ?? existing.photoAlt ?? "").trim() || null,
-      sortOrder: Number(formData.get("sortOrder") ?? existing.sortOrder),
-      isPublished:
-        String(formData.get("isPublished") ?? (existing.isPublished ? "1" : "0")) !== "0",
+      about: String(formData.get("about") ?? existing.about),
       userId: user!.id,
       photoFileName: removePhoto ? null : upload?.photoFileName ?? existing.photoFileName,
       photoStoredPath: removePhoto ? null : upload?.photoStoredPath ?? existing.photoStoredPath,

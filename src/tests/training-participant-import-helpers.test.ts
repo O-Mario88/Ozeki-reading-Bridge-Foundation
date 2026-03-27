@@ -46,7 +46,7 @@ test("participant duplicate key prefers participant_external_id, then email, the
   );
   assert.equal(
     createParticipantDuplicateKey(buildRow({ participant_external_id: "", email: "", phone: "+256 700 000 001" })),
-    "phone:256700000001",
+    "phone:+256700000001",
   );
 });
 

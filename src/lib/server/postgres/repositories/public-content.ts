@@ -123,14 +123,11 @@ function mapPortalLeadershipMember(row: Record<string, unknown>): PortalLeadersh
     section,
     name: toText(row.name),
     role: toText(row.role),
-    biography: toText(row.biography),
-    background: toText(row.background),
-    career: toText(row.career),
+    about: toText(row.about) || toText(row.biography),
     photoFileName: toNullableText(row.photoFileName),
     photoStoredPath: toNullableText(row.photoStoredPath),
     photoMimeType: toNullableText(row.photoMimeType),
     photoSizeBytes: toNullableNumber(row.photoSizeBytes),
-    photoAlt: toNullableText(row.photoAlt),
     sortOrder: toNumber(row.sortOrder),
     isPublished: toBoolean(row.isPublished),
     createdByUserId: toNumber(row.createdByUserId),
@@ -581,14 +578,12 @@ export async function listPortalLeadershipTeamMembersPostgres(options?: {
         tm.section,
         tm.name,
         tm.role,
+        COALESCE(tm.about, tm.biography, '') AS "about",
         tm.biography,
-        tm.background,
-        tm.career,
         tm.photo_file_name AS "photoFileName",
         tm.photo_stored_path AS "photoStoredPath",
         tm.photo_mime_type AS "photoMimeType",
         tm.photo_size_bytes AS "photoSizeBytes",
-        tm.photo_alt AS "photoAlt",
         tm.sort_order AS "sortOrder",
         tm.is_published AS "isPublished",
         tm.created_by_user_id AS "createdByUserId",
@@ -602,12 +597,6 @@ export async function listPortalLeadershipTeamMembersPostgres(options?: {
       LEFT JOIN portal_users updater ON updater.id = tm.updated_by_user_id
       ${whereClause}
       ORDER BY
-        CASE tm.section
-          WHEN 'board' THEN 1
-          WHEN 'staff' THEN 2
-          WHEN 'volunteer' THEN 3
-          ELSE 4
-        END,
         tm.sort_order ASC,
         tm.updated_at DESC
     `,
@@ -625,14 +614,12 @@ export async function getPortalLeadershipTeamMemberByIdPostgres(
         tm.section,
         tm.name,
         tm.role,
+        COALESCE(tm.about, tm.biography, '') AS "about",
         tm.biography,
-        tm.background,
-        tm.career,
         tm.photo_file_name AS "photoFileName",
         tm.photo_stored_path AS "photoStoredPath",
         tm.photo_mime_type AS "photoMimeType",
         tm.photo_size_bytes AS "photoSizeBytes",
-        tm.photo_alt AS "photoAlt",
         tm.sort_order AS "sortOrder",
         tm.is_published AS "isPublished",
         tm.created_by_user_id AS "createdByUserId",
@@ -663,14 +650,12 @@ export async function getPublishedPortalLeadershipTeamMemberByIdPostgres(
         tm.section,
         tm.name,
         tm.role,
+        COALESCE(tm.about, tm.biography, '') AS "about",
         tm.biography,
-        tm.background,
-        tm.career,
         tm.photo_file_name AS "photoFileName",
         tm.photo_stored_path AS "photoStoredPath",
         tm.photo_mime_type AS "photoMimeType",
         tm.photo_size_bytes AS "photoSizeBytes",
-        tm.photo_alt AS "photoAlt",
         tm.sort_order AS "sortOrder",
         tm.is_published AS "isPublished",
         tm.created_by_user_id AS "createdByUserId",
@@ -692,19 +677,13 @@ export async function getPublishedPortalLeadershipTeamMemberByIdPostgres(
 }
 
 export async function savePortalLeadershipTeamMemberPostgres(input: {
-  section: PortalLeadershipTeamMemberRecord["section"];
   name: string;
   role: string;
-  biography: string;
-  background: string;
-  career: string;
+  about: string;
   photoFileName?: string | null;
   photoStoredPath?: string | null;
   photoMimeType?: string | null;
   photoSizeBytes?: number | null;
-  photoAlt?: string | null;
-  sortOrder?: number;
-  isPublished?: boolean;
   userId: number;
 }): Promise<PortalLeadershipTeamMemberRecord> {
   const result = await queryPostgres<{ id: number }>(
@@ -713,6 +692,7 @@ export async function savePortalLeadershipTeamMemberPostgres(input: {
         section,
         name,
         role,
+        about,
         biography,
         background,
         career,
@@ -720,28 +700,21 @@ export async function savePortalLeadershipTeamMemberPostgres(input: {
         photo_stored_path,
         photo_mime_type,
         photo_size_bytes,
-        photo_alt,
         sort_order,
         is_published,
         created_by_user_id,
         updated_by_user_id
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14)
+      ) VALUES ('staff',$1,$2,$3,$3,'','',  $4,$5,$6,$7, 0,TRUE,$8,$8)
       RETURNING id
     `,
     [
-      input.section,
       input.name.trim(),
       input.role.trim(),
-      input.biography.trim(),
-      input.background.trim(),
-      input.career.trim(),
+      input.about.trim(),
       input.photoFileName ?? null,
       input.photoStoredPath ?? null,
       input.photoMimeType ?? null,
       input.photoSizeBytes ?? null,
-      input.photoAlt?.trim() || null,
-      Math.max(0, Math.trunc(input.sortOrder ?? 0)),
-      input.isPublished === false ? false : true,
       input.userId,
     ],
   );
@@ -754,56 +727,38 @@ export async function savePortalLeadershipTeamMemberPostgres(input: {
 
 export async function updatePortalLeadershipTeamMemberPostgres(input: {
   id: number;
-  section: PortalLeadershipTeamMemberRecord["section"];
   name: string;
   role: string;
-  biography: string;
-  background: string;
-  career: string;
+  about: string;
   photoFileName?: string | null;
   photoStoredPath?: string | null;
   photoMimeType?: string | null;
   photoSizeBytes?: number | null;
-  photoAlt?: string | null;
-  sortOrder?: number;
-  isPublished?: boolean;
   userId: number;
 }): Promise<PortalLeadershipTeamMemberRecord> {
   await queryPostgres(
     `
       UPDATE portal_leadership_team_members
       SET
-        section = $1,
-        name = $2,
-        role = $3,
-        biography = $4,
-        background = $5,
-        career = $6,
-        photo_file_name = $7,
-        photo_stored_path = $8,
-        photo_mime_type = $9,
-        photo_size_bytes = $10,
-        photo_alt = $11,
-        sort_order = $12,
-        is_published = $13,
-        updated_by_user_id = $14,
+        name = $1,
+        role = $2,
+        about = $3,
+        photo_file_name = $4,
+        photo_stored_path = $5,
+        photo_mime_type = $6,
+        photo_size_bytes = $7,
+        updated_by_user_id = $8,
         updated_at = NOW()
-      WHERE id = $15
+      WHERE id = $9
     `,
     [
-      input.section,
       input.name.trim(),
       input.role.trim(),
-      input.biography.trim(),
-      input.background.trim(),
-      input.career.trim(),
+      input.about.trim(),
       input.photoFileName ?? null,
       input.photoStoredPath ?? null,
       input.photoMimeType ?? null,
       input.photoSizeBytes ?? null,
-      input.photoAlt?.trim() || null,
-      Math.max(0, Math.trunc(input.sortOrder ?? 0)),
-      input.isPublished === false ? false : true,
       input.userId,
       input.id,
     ],

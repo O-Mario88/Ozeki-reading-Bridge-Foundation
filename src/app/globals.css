@@ -9895,3 +9895,21 @@ body.app-has-modal {
     border-radius: 18px 18px 0 0 !important;
   }
 }
+
+/* --- Leadership Team – Floating Portrait Cards --- */
+
+.leadership-card {
+  position: relative;
+  padding-top: 2.5rem;
+}
+
+.leadership-card__accent {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10rem;
+  height: 10rem;
+  pointer-events: none;
+  z-index: 0;
+}

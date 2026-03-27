@@ -3,7 +3,6 @@ import { PortalAboutContentManager } from "@/components/portal/PortalAboutConten
 import { PortalShell } from "@/components/portal/PortalShell";
 import { requirePortalStaffUser } from "@/lib/auth";
 import {
-  listPortalCoreValuesPostgres,
   listPortalLeadershipTeamMembersPostgres,
 } from "@/lib/server/postgres/repositories/public-content";
 
@@ -11,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "About Content",
-  description: "Manage leadership team and core values shown on the public About pages.",
+  description: "Manage leadership team shown on the public About pages.",
 };
 
 export default async function PortalAboutPage() {
@@ -24,14 +23,13 @@ export default async function PortalAboutPage() {
         : null,
     }),
   );
-  const values = await listPortalCoreValuesPostgres({ includeUnpublished: true });
 
   return (
     <PortalShell
       user={user}
       activeHref="/portal/about"
       title="About Content"
-      description="Manage public leadership profiles and core values from the staff portal."
+      description="Manage public leadership profiles from the staff portal."
       actions={(
         <div className="action-row">
           <Link className="button button-ghost" href="/about" target="_blank" rel="noreferrer">
@@ -48,7 +46,7 @@ export default async function PortalAboutPage() {
         </div>
       )}
     >
-      <PortalAboutContentManager initialMembers={members} initialValues={values} />
+      <PortalAboutContentManager initialMembers={members} />
     </PortalShell>
   );
 }
