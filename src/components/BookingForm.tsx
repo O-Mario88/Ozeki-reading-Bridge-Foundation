@@ -5,6 +5,7 @@ import { serviceOptions } from "@/lib/content";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 
 import { BaseContactForm } from "./BaseContactForm";
+import { FormSection } from "./forms/FormPrimitives";
 
 type BookingSubmitState = {
   status: "idle" | "submitting" | "success" | "error";
@@ -94,72 +95,76 @@ export function BookingForm({
       submitLabel="Submit request"
       submittingLabel="Submitting..."
     >
-      <label>
-        Service
-        <select name="service" required>
-          <option value="">Select a service</option>
-          {serviceOptions.map((service) => (
-            <option key={service} value={service}>
-              {service}
-            </option>
-          ))}
-        </select>
-      </label>
+      <FormSection title="Booking Service">
+        <label className="form-field-label">
+          Service
+          <select name="service" required>
+            <option value="">Select a service</option>
+            {serviceOptions.map((service) => (
+              <option key={service} value={service}>
+                {service}
+              </option>
+            ))}
+          </select>
+        </label>
+      </FormSection>
 
-      <label>
-        School name
-        <input name="schoolName" required />
-      </label>
+      <FormSection title="School Details">
+        <label className="form-field-label">
+          School name
+          <input name="schoolName" required />
+        </label>
+        <label className="form-field-label">
+          Location
+          <input name="location" placeholder="District / Town" required />
+        </label>
+        <label className="form-field-label">
+          Grades served
+          <input name="grades" placeholder="Nursery, P1-P7" required />
+        </label>
+        <label className="form-field-label">
+          Number of teachers
+          <input type="number" name="teachers" min={1} required />
+        </label>
+      </FormSection>
 
-      <label>
-        Contact person
-        <input name="contactName" required />
-      </label>
+      <FormSection title="Contact Person">
+        <label className="form-field-label">
+          Contact person
+          <input name="contactName" required />
+        </label>
+        <label className="form-field-label">
+          Email
+          <input type="email" name="email" required />
+        </label>
+        <label className="form-field-label">
+          Phone / WhatsApp
+          <input type="tel" name="phone" required />
+        </label>
+      </FormSection>
 
-      <label>
-        Email
-        <input type="email" name="email" required />
-      </label>
+      <FormSection title="Scheduling Preferences">
+        <label className="form-field-label">
+          Preferred date
+          <input type="date" name="preferredDate" required />
+        </label>
+        <label className="form-field-label">
+          Preferred time
+          <input type="time" name="preferredTime" required />
+        </label>
+      </FormSection>
 
-      <label>
-        Phone / WhatsApp
-        <input name="phone" required />
-      </label>
-
-      <label>
-        Number of teachers
-        <input type="number" name="teachers" min={1} required />
-      </label>
-
-      <label>
-        Grades served
-        <input name="grades" placeholder="Nursery, P1-P7" required />
-      </label>
-
-      <label>
-        Location
-        <input name="location" placeholder="District / Town" required />
-      </label>
-
-      <label>
-        Preferred date
-        <input type="date" name="preferredDate" required />
-      </label>
-
-      <label>
-        Preferred time
-        <input type="time" name="preferredTime" required />
-      </label>
-
-      <label className="full-width">
-        Key literacy challenges
-        <textarea
-          name="challenges"
-          rows={4}
-          placeholder="Describe current challenges in reading instruction."
-          required
-        />
-      </label>
+      <FormSection title="Instructional Context">
+        <label className="form-field-label full-width">
+          Key literacy challenges
+          <textarea
+            name="challenges"
+            rows={4}
+            placeholder="Describe current challenges in reading instruction."
+            required
+          />
+        </label>
+      </FormSection>
 
       <div className="action-row"></div>
       {state.eventLink || state.meetLink ? (

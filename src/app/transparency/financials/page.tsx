@@ -78,7 +78,7 @@ export default async function FinancialTransparencyPage() {
             <p className="text-xl md:text-2xl text-[#006b61]/80 max-w-3xl mx-auto leading-relaxed mb-6 font-medium">
               Responsible stewardship, clear reporting, and accountability in support of literacy impact.
             </p>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed mb-10">
+            <p className="text-lg text-gray-500 max-w-3xl mx-auto leading-relaxed mb-10">
               At Ozeki, we are committed to managing resources with integrity and linking financial stewardship to meaningful educational outcomes for children, schools, and communities.
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
@@ -93,42 +93,42 @@ export default async function FinancialTransparencyPage() {
         </section>
 
         {/* 2. Intro Section */}
-        <SectionWrapper theme="light" id="intro">
+        <SectionWrapper theme="charius-beige" id="intro">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">Why Financial Transparency Matters</h2>
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-6">Why Financial Transparency Matters</h2>
+            <p className="text-xl text-gray-500 leading-relaxed">
               Transparency is central to how Ozeki builds trust with partners, supporters, schools, and communities. We believe that every resource entrusted to us should be managed responsibly, applied purposefully, and reported clearly. Our financial transparency work is designed to show not only how funds are used, but also how those resources contribute to literacy and education outcomes.
             </p>
           </div>
         </SectionWrapper>
 
         {/* 3. Three highlight cards */}
-        <SectionWrapper theme="off-white">
+        <SectionWrapper theme="charius-beige">
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <PremiumCard className="p-10 flex flex-col items-start bg-white" withHover>
+            <PremiumCard variant="charius" className="p-10 flex flex-col items-start bg-white" withHover>
               <div className="w-14 h-14 rounded-2xl bg-[#006b61]/10 flex items-center justify-center mb-6">
                 <Heart className="w-7 h-7 text-[#006b61]" />
               </div>
-              <h3 className="text-2xl font-bold text-brand-primary mb-4">Stewardship</h3>
-              <p className="text-gray-600 leading-relaxed text-lg">
+              <h3 className="text-2xl font-bold text-[#111] mb-4">Stewardship</h3>
+              <p className="text-gray-500 leading-relaxed text-lg">
                 We manage financial resources with care, discipline, and a strong commitment to mission alignment.
               </p>
             </PremiumCard>
-            <PremiumCard className="p-10 flex flex-col items-start bg-white" withHover>
+            <PremiumCard variant="charius" className="p-10 flex flex-col items-start bg-white" withHover>
               <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center mb-6">
                 <Scale className="w-7 h-7 text-[#FA7D15]" />
               </div>
-              <h3 className="text-2xl font-bold text-brand-primary mb-4">Accountability</h3>
-              <p className="text-gray-600 leading-relaxed text-lg">
+              <h3 className="text-2xl font-bold text-[#111] mb-4">Accountability</h3>
+              <p className="text-gray-500 leading-relaxed text-lg">
                 We strengthen internal controls, documentation, and reporting processes to support responsible oversight.
               </p>
             </PremiumCard>
-            <PremiumCard className="p-10 flex flex-col items-start bg-white" withHover>
+            <PremiumCard variant="charius" className="p-10 flex flex-col items-start bg-white" withHover>
               <div className="w-14 h-14 rounded-2xl bg-[#006b61]/10 flex items-center justify-center mb-6">
                 <Target className="w-7 h-7 text-[#006b61]" />
               </div>
-              <h3 className="text-2xl font-bold text-brand-primary mb-4">Impact</h3>
-              <p className="text-gray-600 leading-relaxed text-lg">
+              <h3 className="text-2xl font-bold text-[#111] mb-4">Impact</h3>
+              <p className="text-gray-500 leading-relaxed text-lg">
                 We aim to connect funding to program delivery, educational reach, and measurable literacy outcomes.
               </p>
             </PremiumCard>
@@ -136,11 +136,11 @@ export default async function FinancialTransparencyPage() {
         </SectionWrapper>
 
         {/* 4. Our Commitment section */}
-        <SectionWrapper theme="light">
+        <SectionWrapper theme="charius-beige">
           <div className="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">Our Commitment to Responsible Financial Management</h2>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-6">Our Commitment to Responsible Financial Management</h2>
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Ozeki is committed to maintaining sound financial practices that promote trust, accountability, and sustainability. We work to ensure that our financial systems support program delivery, responsible decision-making, and transparent communication with stakeholders.
               </p>
             </div>
@@ -165,10 +165,10 @@ export default async function FinancialTransparencyPage() {
         </SectionWrapper>
 
         {/* 5. How Funds Are Used */}
-        <SectionWrapper theme="off-white">
+        <SectionWrapper theme="charius-beige">
           <div className="max-w-4xl mx-auto text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">How Resources Support Our Work</h2>
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-6">How Resources Support Our Work</h2>
+            <p className="text-xl text-gray-500 leading-relaxed">
               Financial resources support the implementation of Ozeki’s literacy and education mission across programmatic and operational areas. We aim to direct resources toward activities that create meaningful and measurable benefit for schools, teachers, and learners.
             </p>
           </div>
@@ -230,10 +230,10 @@ export default async function FinancialTransparencyPage() {
         </SectionWrapper>
 
         {/* 7. Reports and Documents (LIVE DATA) */}
-        <SectionWrapper theme="light" id="reports">
+        <SectionWrapper theme="charius-beige" id="reports">
           <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">Reports and Financial Documents</h2>
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-6">Reports and Financial Documents</h2>
+            <p className="text-xl text-gray-500 leading-relaxed">
               This section provides access to selected financial and accountability materials intended to improve visibility into how resources are managed and applied. 
             </p>
             <p className="text-sm text-gray-500 mt-4 italic">
@@ -244,7 +244,7 @@ export default async function FinancialTransparencyPage() {
           <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12">
             {/* Live Financial Summaries */}
             <div>
-              <h3 className="text-2xl font-bold text-brand-primary mb-6 flex items-center border-b pb-4">
+              <h3 className="text-2xl font-bold text-[#111] mb-6 flex items-center border-b pb-4">
                 <FileCheck className="w-6 h-6 mr-3 text-[#FA7D15]" />
                 Financial Summary Reports
               </h3>
@@ -280,7 +280,7 @@ export default async function FinancialTransparencyPage() {
 
             {/* Live Audited Documents */}
             <div>
-              <h3 className="text-2xl font-bold text-brand-primary mb-6 flex items-center border-b pb-4">
+              <h3 className="text-2xl font-bold text-[#111] mb-6 flex items-center border-b pb-4">
                 <Shield className="w-6 h-6 mr-3 text-[#006b61]" />
                 Audited Statements &amp; Accountability
               </h3>
@@ -309,7 +309,7 @@ export default async function FinancialTransparencyPage() {
                           <Download className="w-5 h-5" />
                         </a>
                       </div>
-                      {a.notes && <p className="text-sm text-gray-600 mt-3 pt-3 border-t border-gray-50 italic">{a.notes}</p>}
+                      {a.notes && <p className="text-sm text-gray-500 mt-3 pt-3 border-t border-gray-50 italic">{a.notes}</p>}
                     </div>
                   ))}
                 </div>
@@ -319,16 +319,16 @@ export default async function FinancialTransparencyPage() {
         </SectionWrapper>
 
         {/* 8. Accountability Approach */}
-        <SectionWrapper theme="off-white">
+        <SectionWrapper theme="charius-beige">
           <div className="max-w-4xl mx-auto text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-brand-primary mb-6">Our Accountability Approach</h2>
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-6">Our Accountability Approach</h2>
+            <p className="text-xl text-gray-500 leading-relaxed">
               Ozeki continues to strengthen its internal processes for financial planning, expenditure control, reporting, and review. We aim to ensure that our systems are robust enough to support responsible management today and credible growth in the future.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            <PremiumCard className="p-8 md:p-10 bg-white" withHover>
+            <PremiumCard variant="charius" className="p-8 md:p-10 bg-white" withHover>
               <h3 className="text-2xl font-bold text-[#006b61] mb-6 flex items-center gap-3">
                 <FileText className="w-6 h-6" /> Financial Management
               </h3>
@@ -342,7 +342,7 @@ export default async function FinancialTransparencyPage() {
               </ul>
             </PremiumCard>
             
-            <PremiumCard className="p-8 md:p-10 bg-white" withHover>
+            <PremiumCard variant="charius" className="p-8 md:p-10 bg-white" withHover>
               <h3 className="text-2xl font-bold text-[#FA7D15] mb-6 flex items-center gap-3">
                 <ShieldCheck className="w-6 h-6" /> Governance and Oversight
               </h3>
@@ -359,10 +359,10 @@ export default async function FinancialTransparencyPage() {
         </SectionWrapper>
 
         {/* 9. Continuous Improvement */}
-        <SectionWrapper theme="light">
+        <SectionWrapper theme="charius-beige">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-brand-primary mb-6">A Continuing Commitment</h2>
-            <p className="text-xl text-gray-600 leading-relaxed border-l-4 border-[#006b61] pl-6 text-left italic bg-gray-50 p-6 rounded-r-xl shadow-sm">
+            <h2 className="text-3xl font-bold text-[#111] mb-6">A Continuing Commitment</h2>
+            <p className="text-xl text-gray-500 leading-relaxed border-l-4 border-[#006b61] pl-6 text-left italic bg-gray-50 p-6 rounded-r-xl shadow-sm">
               Financial transparency is an ongoing commitment. As Ozeki grows, we are committed to improving the clarity, quality, and accessibility of the information we share. We view transparency as essential to trust, effective partnership, and long-term impact.
             </p>
           </div>

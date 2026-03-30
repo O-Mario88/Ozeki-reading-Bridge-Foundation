@@ -3,6 +3,7 @@
 import { BaseContactForm } from "./BaseContactForm";
 import type { BaseContactSubmitResult } from "./BaseContactForm";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
+import { FormSection } from "./forms/FormPrimitives";
 
 export function ContactForm({
   onSuccess,
@@ -42,46 +43,49 @@ export function ContactForm({
       submitLabel="Send inquiry"
       submittingLabel="Submitting..."
     >
-      <label>
-        Inquiry type
-        <select name="type" required>
-          <option value="">Select inquiry type</option>
-          <option value="School">School support inquiry</option>
-          <option value="Partner">Partner/donor inquiry</option>
-          <option value="Media">Media inquiry</option>
-          <option value="General">General inquiry</option>
-        </select>
-      </label>
+      <FormSection title="Inquiry Details">
+        <label className="form-field-label">
+          Inquiry type
+          <select name="type" required>
+            <option value="">Select inquiry type</option>
+            <option value="School">School support inquiry</option>
+            <option value="Partner">Partner/donor inquiry</option>
+            <option value="Media">Media inquiry</option>
+            <option value="General">General inquiry</option>
+          </select>
+        </label>
+      </FormSection>
 
-      <label>
-        Name
-        <input name="name" required />
-      </label>
+      <FormSection title="Personal Information">
+        <label className="form-field-label">
+          Name
+          <input name="name" required />
+        </label>
+        <label className="form-field-label">
+          Email
+          <input type="email" name="email" required />
+        </label>
+        <label className="form-field-label">
+          Phone
+          <input type="tel" name="phone" />
+        </label>
+      </FormSection>
 
-      <label>
-        Email
-        <input type="email" name="email" required />
-      </label>
-
-      <label>
-        Phone
-        <input name="phone" />
-      </label>
-
-      <label className="full-width">
-        Organization
-        <input name="organization" />
-      </label>
-
-      <label className="full-width">
-        Message
-        <textarea
-          name="message"
-          rows={5}
-          placeholder="Tell us about your school, project, or support request."
-          required
-        />
-      </label>
+      <FormSection title="Organization Details">
+        <label className="form-field-label full-width">
+          Organization
+          <input name="organization" />
+        </label>
+        <label className="form-field-label full-width">
+          Message
+          <textarea
+            name="message"
+            rows={5}
+            placeholder="Tell us about your school, project, or support request."
+            required
+          />
+        </label>
+      </FormSection>
     </BaseContactForm>
   );
 }

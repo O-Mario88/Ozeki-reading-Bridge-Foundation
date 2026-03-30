@@ -28,11 +28,11 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Learner Assessments &amp; Progress Tracking
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Measurement backbone for reliable reading evidence and practical next actions.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   Learner Assessments &amp; Progress Tracking is our measurement
                   backbone, designed to give schools, districts, and partners simple,
@@ -73,12 +73,12 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
       </section>
 
       {/* 2. Core Components */}
-      <SectionWrapper theme="light" id="details">
+      <SectionWrapper theme="charius-beige" id="details">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Assessment Outcomes Domains</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Assessment Outcomes Domains</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               Ozeki supports schools to run baseline, progress, and endline cycles
               using outcome areas aligned with EGRA-style reporting and classroom
               practice.
@@ -98,29 +98,29 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               Assessments are practical enough for real school conditions while
               structured enough to generate credible, comparable results.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Automatic Reading Levels</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Automatic Reading Levels</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               Each learner&apos;s scores are entered once. The platform then
               automatically calculates reading level bands (for example,
               non-reader to fluent) using standardized CWPM and related
               thresholds.
             </p>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               This removes guesswork, reduces manual errors, and ensures schools
               and districts are compared using the same definitions.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col md:col-span-2 lg:col-span-1" withHover>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">School-Level Profiles</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+          <PremiumCard variant="charius" className="p-8 flex flex-col md:col-span-2 lg:col-span-1" withHover>
+            <h3 className="text-2xl font-bold text-[#111] mb-4">School-Level Profiles</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               Once entered, data becomes immediately actionable for teachers and
               school leaders:
             </p>
@@ -136,7 +136,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4 font-medium">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4 font-medium">
               This is not data for reporting only. It directly informs what to
               reteach, who needs catch-up, and how to target lesson routines.
             </p>
@@ -146,12 +146,12 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
       </SectionWrapper>
 
       {/* 3. Tracking & Integration */}
-      <SectionWrapper theme="off-white" id="tracking">
+      <SectionWrapper theme="charius-beige" id="tracking">
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Progress Tracking by Term</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Over time, schools can see whether interventions are working:
             </p>
             <ul className="mt-2 space-y-3 mb-4 border-b border-gray-100 pb-4">
@@ -166,15 +166,15 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-gray-600 leading-relaxed">
+            <p className="text-gray-500 leading-relaxed">
               The platform shows movement term by term, making school-level
               planning and accountability clearer.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">District Dashboards</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               At district and regional levels, school data aggregates into
               dashboards that support planning and resource targeting.
               Partners can view coverage alongside outcomes:
@@ -192,12 +192,12 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-gray-600 leading-relaxed font-medium">
+            <p className="text-gray-500 leading-relaxed font-medium">
               Data Quality Signals (sample size, completeness) strengthen credibility.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col md:col-span-2 bg-brand-primary text-white border-none" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col md:col-span-2 bg-brand-primary text-white border-none" withHover>
             <h3 className="text-2xl font-bold mb-4">National Evidence System Result</h3>
             <div className="grid md:grid-cols-2 gap-8">
               <div>
@@ -237,7 +237,7 @@ export default function LearnerReadingAssessmentsProgressTrackingPage() {
         primaryButtonHref="/partner-with-us"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

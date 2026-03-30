@@ -7,7 +7,7 @@ interface CTAStripProps {
   primaryButtonHref?: string;
   secondaryButtonText?: string;
   secondaryButtonHref?: string;
-  theme?: "brand" | "dark" | "light";
+  theme?: "brand" | "dark" | "light" | "charius";
   primaryButtonColor?: string;
   primaryButtonHoverColor?: string;
 }
@@ -27,17 +27,22 @@ export function CTAStrip({
     brand: "bg-gray-100", // Neutral light grey background
     dark: "bg-gray-900 text-white",
     light: "bg-brand-surface text-brand-text border-y border-gray-100",
+    charius: "bg-charius-dark text-white", // Dark green background for Charius
   };
 
   const primaryBtnTheme = primaryButtonColor
     ? `${primaryButtonColor} text-white ${primaryButtonHoverColor || ""}`
-    : theme === "brand" || theme === "light"
-      ? "bg-brand-primary text-white hover:bg-brand-primary/90 shadow-sm hover:shadow"
-      : "bg-white text-gray-900 hover:bg-gray-50 shadow-sm";
+    : theme === "charius"
+      ? "bg-charius-orange text-white hover:bg-[#E86D0B] shadow-lg hover:shadow-xl border border-transparent"
+      : theme === "brand" || theme === "light"
+        ? "bg-brand-primary text-white hover:bg-brand-primary/90 shadow-sm hover:shadow"
+        : "bg-white text-gray-900 hover:bg-gray-50 shadow-sm";
 
   const secondaryBtnTheme = theme === "brand" || theme === "light"
     ? "border-2 border-gray-200 text-gray-800 hover:border-gray-300 bg-white hover:bg-gray-50"
-    : "border-2 border-white text-white hover:bg-white/10";
+    : theme === "charius"
+      ? "border-2 border-[#FAF5EF]/20 text-white hover:bg-[#FAF5EF]/10"
+      : "border-2 border-white text-white hover:bg-white/10";
 
   return (
     <section className={`py-16 md:py-24 ${themes[theme]}`}>

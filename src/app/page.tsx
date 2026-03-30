@@ -139,7 +139,7 @@ export default async function HomePage() {
       </SectionWrapper>
 
       {/* 3. The Problem & Narrative (Split Storytelling Layout) */}
-      <SectionWrapper theme="light" className="overflow-hidden">
+      <SectionWrapper theme="charius-beige" className="overflow-hidden">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="relative">
             <div className="absolute inset-0 bg-brand-primary/5 rounded-[2.5rem] transform -rotate-3 scale-105 transition-transform duration-500 hover:rotate-0" />
@@ -177,7 +177,7 @@ export default async function HomePage() {
       </SectionWrapper>
 
       {/* 4. The Loop Grid */}
-      <SectionWrapper theme="off-white">
+      <SectionWrapper theme="charius-beige">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-4xl font-bold text-brand-primary mb-6">How our platform works</h2>
           <p className="text-xl text-gray-600">
@@ -187,7 +187,7 @@ export default async function HomePage() {
         
         <div className="grid md:grid-cols-3 gap-8">
           {INTELLIGENCE_LOOP.map((step, index) => (
-            <PremiumCard key={step.title} withHover className="p-8">
+            <PremiumCard variant="charius" key={step.title} withHover className="p-8">
               <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center text-xl font-bold mb-6">
                 {index + 1}
               </div>
@@ -204,7 +204,7 @@ export default async function HomePage() {
       </SectionWrapper>
 
       {/* 5. Live Stories / Testimonials */}
-      <SectionWrapper theme="light">
+      <SectionWrapper theme="charius-beige">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-4xl font-bold text-brand-primary mb-4">Voices from the classroom</h2>
           <p className="text-lg text-gray-600 mb-8">
@@ -218,7 +218,7 @@ export default async function HomePage() {
         <div className="grid md:grid-cols-3 gap-8">
           {testimonialRows.length > 0 ? (
             testimonialRows.map((quote) => (
-              <PremiumCard key={quote.id} className="p-8 flex flex-col bg-brand-background/20" withHover>
+              <PremiumCard variant="charius" key={quote.id} className="p-8 flex flex-col bg-brand-background/20" withHover>
                 <Quote className="text-brand-primary opacity-20 w-10 h-10 mb-6" />
                 <p className="text-lg text-gray-800 leading-relaxed mb-8 flex-1 font-medium">
                   &quot;{clipQuote(quote.storyText, 220)}&quot;
@@ -234,7 +234,7 @@ export default async function HomePage() {
               </PremiumCard>
             ))
           ) : (
-             <PremiumCard className="p-8 col-span-3 text-center bg-gray-50 border-dashed border-2">
+             <PremiumCard variant="charius" className="p-8 col-span-3 text-center bg-gray-50 border-dashed border-2">
                <p className="text-gray-500 font-medium">Stories and testimonials are currently being curated.</p>
              </PremiumCard>
           )}
@@ -242,7 +242,7 @@ export default async function HomePage() {
       </SectionWrapper>
 
       {/* 6. Partner/Support Grid */}
-      <SectionWrapper theme="off-white">
+      <SectionWrapper theme="charius-beige">
         <div className="max-w-3xl mx-auto text-center mb-16">
           <h2 className="text-4xl font-bold text-brand-primary mb-6">Join the movement</h2>
           <p className="text-xl text-gray-600">
@@ -252,7 +252,7 @@ export default async function HomePage() {
         
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {PARTNERSHIP_OPTIONS.slice(0, 2).map((option) => (
-            <PremiumCard key={option.title} className="p-8 md:p-12 text-center flex flex-col items-center">
+            <PremiumCard variant="charius" key={option.title} className="p-8 md:p-12 text-center flex flex-col items-center">
               <h3 className="text-2xl font-bold text-brand-primary mb-4">{option.title}</h3>
               <p className="text-gray-600 mb-8 flex-1">
                 {option.href ? "Invest directly in teacher training and classroom resources." : "Support a cluster of schools in your chosen geography."}
@@ -311,7 +311,7 @@ export default async function HomePage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="View Impact Hub"
         secondaryButtonHref="/impact/dashboard"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

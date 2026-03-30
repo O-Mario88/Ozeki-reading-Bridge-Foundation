@@ -28,12 +28,12 @@ export default function TeacherProfessionalDevelopmentPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Teacher Professional Development
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Practical, demonstration-led structured phonics training built for real Ugandan
                 classrooms.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   Teacher Professional Development (Structured Phonics) is our
                   hands-on training pathway that equips teachers to teach reading the
@@ -72,12 +72,12 @@ export default function TeacherProfessionalDevelopmentPage() {
       </section>
 
       {/* 2. Core Method */}
-      <SectionWrapper theme="light" id="methodology">
+      <SectionWrapper theme="charius-beige" id="methodology">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Instructional Model</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Instructional Model</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               Each training series begins by aligning teachers to a clear instructional model:
             </p>
             <ol className="mt-2 space-y-3 mb-4 list-decimal list-inside text-gray-700 font-medium text-lg ml-2">
@@ -87,15 +87,15 @@ export default function TeacherProfessionalDevelopmentPage() {
               <li>Independent practice</li>
               <li>Quick check</li>
             </ol>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               This structure gives teachers repeatable routines they can apply
               immediately.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Core Reading Engine</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Core Reading Engine</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               Teachers learn how to teach pure letter sounds, strengthen sound-symbol mapping, and run oral response routines.
             </p>
             <ul className="mt-2 space-y-3 mb-4">
@@ -113,18 +113,18 @@ export default function TeacherProfessionalDevelopmentPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Fluency + Comprehension</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Fluency + Comprehension</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               The program builds habits that accelerate reading growth: accuracy,
               pace, repeated reading, and partner reading.
             </p>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Teachers are supported to select texts that match taught skills,
               such as decodable and leveled passages.
             </p>
             <div className="mt-auto pt-4 border-t border-gray-100">
-              <p className="text-gray-600 leading-relaxed font-medium">
+              <p className="text-gray-500 leading-relaxed font-medium">
                 Practice is meaningful and success is visible in learner performance.
               </p>
             </div>
@@ -134,12 +134,12 @@ export default function TeacherProfessionalDevelopmentPage() {
       </SectionWrapper>
 
       {/* 3. Implementation Details */}
-      <SectionWrapper theme="off-white" id="implementation">
+      <SectionWrapper theme="charius-beige" id="implementation">
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Ready-to-Use Materials</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Teachers receive practical tools that reduce preparation burden and improve consistency:
             </p>
             <ul className="mt-2 space-y-3 mb-4">
@@ -157,9 +157,9 @@ export default function TeacherProfessionalDevelopmentPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Implementation & Accountability</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">Every session closes with a simple plan:</p>
+            <p className="text-gray-500 leading-relaxed mb-4">Every session closes with a simple plan:</p>
             <ul className="mt-2 space-y-3 mb-4 border-b border-gray-100 pb-4">
               {[
                 "What the teacher will do daily",
@@ -175,7 +175,7 @@ export default function TeacherProfessionalDevelopmentPage() {
             <p className="text-gray-500 text-sm">A follow-up date is scheduled immediately.</p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col md:col-span-2 bg-brand-primary text-white border-none" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col md:col-span-2 bg-brand-primary text-white border-none" withHover>
             <div className="grid md:grid-cols-2 gap-8">
               <div>
                 <h3 className="text-2xl font-bold mb-4">NLIP Measurement and Evidence</h3>
@@ -217,7 +217,7 @@ export default function TeacherProfessionalDevelopmentPage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Explore Evidence"
         secondaryButtonHref="/impact"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

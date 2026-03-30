@@ -28,11 +28,11 @@ export default function MonitoringEvaluationReportingPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Monitoring, Evaluation &amp; Reporting
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Turning fragmented activities into a unified view of literacy progress.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   Too often in education programming, training is tracked in one
                   place, coaching in another, and reading outcomes in a report 
@@ -71,13 +71,13 @@ export default function MonitoringEvaluationReportingPage() {
       </section>
 
       {/* 2. The Literacy Data Pipeline */}
-      <SectionWrapper theme="light" id="pipeline">
+      <SectionWrapper theme="charius-beige" id="pipeline">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Operational Delivery</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Operational Delivery</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               The foundation of evidence rests on what actually happens in schools. 
               The platform tracks:
             </p>
@@ -96,10 +96,10 @@ export default function MonitoringEvaluationReportingPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Instructional Quality</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Instructional Quality</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Delivery alone does not equal impact. Data must verify if training
               changes teaching behavior. Using standardized rubrics, coaches evaluate routines like:
             </p>
@@ -118,10 +118,10 @@ export default function MonitoringEvaluationReportingPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Learner Reading Progress</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Learner Reading Progress</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               The ultimate measure is learner capability. Assessment tools (like
               EGRA and internal benchmarks) capture:
             </p>
@@ -144,12 +144,12 @@ export default function MonitoringEvaluationReportingPage() {
       </SectionWrapper>
 
       {/* 3. Visibility and Synthesis */}
-      <SectionWrapper theme="off-white" id="visibility">
+      <SectionWrapper theme="charius-beige" id="visibility">
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Public Dashboards & Transparency</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Ozeki builds public dashboards that share aggregated insights
               from network schools. This transforms isolated program data into
               sector-wide intelligence.
@@ -166,12 +166,12 @@ export default function MonitoringEvaluationReportingPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-gray-600 leading-relaxed text-sm">
+            <p className="text-gray-500 leading-relaxed text-sm">
               We believe data should advocate for effective literacy practices.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col bg-brand-primary text-white border-none" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col bg-brand-primary text-white border-none" withHover>
             <h3 className="text-2xl font-bold mb-4">Partner Intelligence Portals</h3>
             <p className="text-white/90 leading-relaxed mb-6">
               For active partners and large-scale funders, we provide dedicated
@@ -201,7 +201,7 @@ export default function MonitoringEvaluationReportingPage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="View Impact Dashboard"
         secondaryButtonHref="/impact"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

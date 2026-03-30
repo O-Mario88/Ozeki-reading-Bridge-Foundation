@@ -28,11 +28,11 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Teaching Aids &amp; Instructional Resources
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Practical tools that make structured phonics easier to deliver every day.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   Teaching Aids &amp; Instructional Resources (Teachers) equips
                   classrooms with practical, high-impact tools that make structured
@@ -74,13 +74,13 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
       </section>
 
       {/* 2. Resources Package */}
-      <SectionWrapper theme="light" id="resources-package">
+      <SectionWrapper theme="charius-beige" id="resources-package">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Structured Teaching Aids</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Structured Teaching Aids</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Ozeki provides a package of tools aligned to the same phonics sequence and lesson routines used in training and coaching:
             </p>
             <ul className="mt-auto space-y-3 pt-4 border-t border-gray-100">
@@ -99,29 +99,29 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Accurate Delivery Guides</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Accurate Delivery Guides</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Teacher guides provide step-by-step delivery notes, sample scripts,
               common error patterns, and correction routines so lessons remain
               accurate even when teachers are still building confidence.
             </p>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               Resources are designed to be reproducible so schools
               can sustain supply over time.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Built for Constraints</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Built for Constraints</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Resources are built for typical school realities: large class sizes,
               mixed learner ability, limited prep time, and uneven access to
               materials.
             </p>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               The goal is to make high-quality routines workable every
               day, not only under ideal conditions.
             </p>
@@ -131,12 +131,12 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
       </SectionWrapper>
 
       {/* 3. Measurement & Feedback Loop */}
-      <SectionWrapper theme="off-white" id="measurement">
+      <SectionWrapper theme="charius-beige" id="measurement">
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Tracking & Accountability</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Beyond availability, the platform makes resources measurable. 
               Materials are recorded at the school level:
             </p>
@@ -152,18 +152,18 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-gray-600 leading-relaxed text-sm">
+            <p className="text-gray-500 leading-relaxed text-sm">
               Usage is also verified directly during lesson evaluations.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Partner Transparency</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <p className="text-gray-500 leading-relaxed mb-6">
               For partners, this strengthens transparency. Rather than materials treated 
               as a one-time activity, we link resources to execution quality and outcomes.
             </p>
-            <p className="text-gray-600 leading-relaxed border-t border-gray-100 pt-6">
+            <p className="text-gray-500 leading-relaxed border-t border-gray-100 pt-6">
               If teaching quality improves but decoding remains weak, the platform highlights 
               whether key tools are lacking or inconsistently applied.
             </p>
@@ -182,7 +182,7 @@ export default function TeachingAidsInstructionalResourcesTeachersPage() {
         primaryButtonHref="/partner-with-us"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

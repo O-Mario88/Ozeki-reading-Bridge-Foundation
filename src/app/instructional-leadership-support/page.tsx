@@ -28,11 +28,11 @@ export default function InstructionalLeadershipSupportPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Instructional Leadership Support
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Leadership systems that protect reading time and sustain instructional quality.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   Instructional Leadership Support strengthens school leadership to
                   protect reading time and sustain quality instruction beyond one-off
@@ -71,13 +71,13 @@ export default function InstructionalLeadershipSupportPage() {
       </section>
 
       {/* 2. Supervision Tools & Routines */}
-      <SectionWrapper theme="light" id="supervision">
+      <SectionWrapper theme="charius-beige" id="supervision">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Practical Supervision Tools</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Practical Supervision Tools</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               We equip Headteachers and Directors of Studies with simple supervision
               tools that fit into their normal schedules:
             </p>
@@ -95,10 +95,10 @@ export default function InstructionalLeadershipSupportPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Targeted Observations</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Targeted Observations</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               During reading lessons, leaders are guided to track core routines:
             </p>
             <ul className="mt-auto space-y-3 pt-4 border-t border-gray-100">
@@ -117,10 +117,10 @@ export default function InstructionalLeadershipSupportPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Action-Oriented Coaching</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Action-Oriented Coaching</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Leaders move beyond general comments to actionable guidance linked to
               learner outcomes:
             </p>
@@ -142,12 +142,12 @@ export default function InstructionalLeadershipSupportPage() {
       </SectionWrapper>
 
       {/* 3. Evidence & Systems */}
-      <SectionWrapper theme="off-white" id="evidence">
+      <SectionWrapper theme="charius-beige" id="evidence">
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Evidence-Led Decisions</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Leaders are trained to use learner assessment and reading-level data
               for practical school decisions:
             </p>
@@ -166,9 +166,9 @@ export default function InstructionalLeadershipSupportPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Lightweight Accountability</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Leaders learn to run manageable school systems that sustain gains
               even when external coaches are not present:
             </p>
@@ -186,7 +186,7 @@ export default function InstructionalLeadershipSupportPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col md:col-span-2 bg-brand-primary text-white border-none" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col md:col-span-2 bg-brand-primary text-white border-none" withHover>
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div>
                 <h3 className="text-2xl font-bold mb-4">Measured Leadership Actions</h3>
@@ -236,7 +236,7 @@ export default function InstructionalLeadershipSupportPage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Explore Evidence"
         secondaryButtonHref="/impact"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

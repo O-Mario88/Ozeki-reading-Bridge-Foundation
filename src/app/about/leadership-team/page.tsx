@@ -3,8 +3,6 @@
 import { Users } from "lucide-react";
 import type { PortalLeadershipTeamMemberRecord } from "@/lib/types";
 import { listPortalLeadershipTeamMembersPostgres } from "@/lib/server/postgres/repositories/public-content";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { CTAStrip } from "@/components/public/CTAStrip";
 
 export const metadata = {
@@ -105,8 +103,6 @@ export default async function LeadershipTeamPage() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
-      <SiteHeader />
-
       <main className="flex-grow pt-[72px] md:pt-20">
         {/* Section heading */}
         <section className="relative overflow-hidden bg-brand-background pt-24 pb-10 md:pt-32 md:pb-16">
@@ -119,7 +115,7 @@ export default async function LeadershipTeamPage() {
               Meet The Leadership Team
             </h1>
             <div className="w-24 h-1.5 bg-[#006b61] mx-auto rounded-full mb-6" />
-            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-500 max-w-3xl mx-auto leading-relaxed">
               Dedicated professionals committed to transforming literacy outcomes across schools and communities.
             </p>
           </div>
@@ -132,7 +128,7 @@ export default async function LeadershipTeamPage() {
               <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
                 <Users className="w-10 h-10 text-gray-400" />
               </div>
-              <h2 className="text-3xl font-bold text-brand-primary mb-4">Leadership profiles will appear here</h2>
+              <h2 className="text-3xl font-bold text-[#111] mb-4">Leadership profiles will appear here</h2>
               <p className="text-xl text-gray-500 max-w-2xl mx-auto">
                 Once records are published from the administrative staff portal, the leadership directory will populate automatically.
               </p>
@@ -160,11 +156,9 @@ export default async function LeadershipTeamPage() {
           primaryButtonHoverColor="hover:bg-[#006b61]/90"
           secondaryButtonText="Back to About"
           secondaryButtonHref="/about"
-          theme="light"
+          theme="charius"
         />
       </main>
-
-      <SiteFooter />
     </div>
   );
 }

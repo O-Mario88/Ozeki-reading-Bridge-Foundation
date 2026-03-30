@@ -16,6 +16,11 @@ const config: Config = {
           text: "var(--md-sys-color-on-surface)",
           muted: "var(--md-sys-color-on-surface-variant)",
         },
+        charius: {
+          beige: "#FAF5EF",
+          dark: "#09110D",
+          orange: "#FA7D15",
+        },
       },
       boxShadow: {
         panel: "var(--elevation-2)",

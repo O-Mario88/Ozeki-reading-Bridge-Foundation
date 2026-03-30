@@ -144,12 +144,12 @@ export default function SponsorSubRegionPage() {
       </section>
 
       {/* 2. Why Sponsor a Sub-Region */}
-      <SectionWrapper theme="light">
+      <SectionWrapper theme="charius-beige">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-4xl font-bold text-brand-primary mb-6">
+          <h2 className="text-4xl font-bold text-[#111] mb-6">
             Why sponsor a sub-region?
           </h2>
-          <p className="text-xl text-gray-600 leading-relaxed">
+          <p className="text-xl text-gray-500 leading-relaxed">
             A sub-region is the ideal unit for high-impact literacy investment. Large enough to
             generate system-level change, focused enough to ensure every school gets meaningful
             support. Your investment creates a proof point that local leaders and future partners
@@ -158,31 +158,31 @@ export default function SponsorSubRegionPage() {
         </div>
         <div className="grid md:grid-cols-2 gap-8">
           {WHY_SPONSOR_REASONS.map((reason) => (
-            <PremiumCard key={reason.title} className="p-8" withHover>
+            <PremiumCard variant="charius" key={reason.title} className="p-8" withHover>
               <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center mb-6">
                 <reason.icon size={24} />
               </div>
               <h3 className="text-xl font-bold text-brand-primary mb-3">{reason.title}</h3>
-              <p className="text-gray-600 leading-relaxed">{reason.body}</p>
+              <p className="text-gray-500 leading-relaxed">{reason.body}</p>
             </PremiumCard>
           ))}
         </div>
       </SectionWrapper>
 
       {/* 3. What You Fund (Implementation) */}
-      <SectionWrapper theme="off-white">
+      <SectionWrapper theme="charius-beige">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-4xl font-bold text-brand-primary mb-6">
+          <h2 className="text-4xl font-bold text-[#111] mb-6">
             What happens over 2 years
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-gray-500">
             Structured support with follow-through: train → coach → assess → improve → verify,
             repeated consistently until strong reading instruction becomes routine.
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-8">
           {IMPLEMENTATION_PHASES.map((phase, index) => (
-            <PremiumCard key={phase.title} className="p-8" withHover>
+            <PremiumCard variant="charius" key={phase.title} className="p-8" withHover>
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center text-lg font-bold">
                   {index + 1}
@@ -190,14 +190,14 @@ export default function SponsorSubRegionPage() {
                 <phase.icon size={20} className="text-brand-primary" />
               </div>
               <h3 className="text-lg font-bold text-brand-primary mb-3">{phase.title}</h3>
-              <p className="text-gray-600 leading-relaxed">{phase.body}</p>
+              <p className="text-gray-500 leading-relaxed">{phase.body}</p>
             </PremiumCard>
           ))}
         </div>
       </SectionWrapper>
 
       {/* 4. Expected Outcomes */}
-      <SectionWrapper theme="light">
+      <SectionWrapper theme="charius-beige">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="relative order-2 lg:order-1">
             <div className="absolute inset-0 bg-brand-primary/5 rounded-[2.5rem] transform rotate-3 scale-105" />
@@ -212,10 +212,10 @@ export default function SponsorSubRegionPage() {
             </div>
           </div>
           <div className="order-1 lg:order-2">
-            <h2 className="text-4xl font-bold text-brand-primary mb-6 tracking-tight">
+            <h2 className="text-4xl font-bold text-[#111] mb-6 tracking-tight">
               Expected outcomes
             </h2>
-            <p className="text-lg text-gray-600 leading-relaxed mb-8">
+            <p className="text-lg text-gray-500 leading-relaxed mb-8">
               After two years of structured support, your sub-region will have measurable
               literacy improvements — tracked through NLIP and reported with full credibility
               markers so you can trust every data point.
@@ -233,20 +233,20 @@ export default function SponsorSubRegionPage() {
       </SectionWrapper>
 
       {/* 5. Evidence & Reporting */}
-      <SectionWrapper theme="off-white">
+      <SectionWrapper theme="charius-beige">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <div className="w-16 h-16 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center mx-auto mb-6">
               <BarChart3 size={32} />
             </div>
-            <h2 className="text-4xl font-bold text-brand-primary mb-4">
+            <h2 className="text-4xl font-bold text-[#111] mb-4">
               Evidence you receive
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-gray-500">
               Sub-Region Evidence Pack — Dashboard access + PDF reports with credibility markers.
             </p>
           </div>
-          <PremiumCard className="p-8 md:p-12">
+          <PremiumCard variant="charius" className="p-8 md:p-12">
             <div className="grid md:grid-cols-2 gap-6">
               {EVIDENCE_PACK.map((item) => (
                 <div key={item} className="flex items-start gap-3">
@@ -266,14 +266,14 @@ export default function SponsorSubRegionPage() {
       </SectionWrapper>
 
       {/* 6. Costing */}
-      <SectionWrapper theme="light">
+      <SectionWrapper theme="charius-beige">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-brand-primary mb-6">
+          <h2 className="text-4xl font-bold text-[#111] mb-6">
             Simple, transparent costing
           </h2>
-          <PremiumCard className="p-8 md:p-12 text-center">
+          <PremiumCard variant="charius" className="p-8 md:p-12 text-center">
             <p className="text-6xl font-extrabold text-brand-primary mb-2">$1,100</p>
-            <p className="text-xl text-gray-600 mb-6">per school · full 2-year support cycle</p>
+            <p className="text-xl text-gray-500 mb-6">per school · full 2-year support cycle</p>
             <p className="text-gray-500 leading-relaxed max-w-xl mx-auto mb-8">
               When you select a sub-region, NLIP automatically calculates the total based on the
               number of schools. No manual calculations required. The cost covers training,
@@ -290,12 +290,12 @@ export default function SponsorSubRegionPage() {
       </SectionWrapper>
 
       {/* 7. Other Sponsorship Levels */}
-      <SectionWrapper theme="off-white">
+      <SectionWrapper theme="charius-beige">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-brand-primary mb-4">
+          <h2 className="text-3xl font-bold text-[#111] mb-4">
             Other sponsorship levels
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-500">
             Choose the geographic level that matches your impact goals.
           </p>
         </div>
@@ -306,7 +306,7 @@ export default function SponsorSubRegionPage() {
             { label: "Region", href: "/sponsor-a-region", desc: "Region-wide impact" },
           ].map((tier) => (
             <Link key={tier.label} href={tier.href}>
-              <PremiumCard className="p-6 text-center h-full cursor-pointer" withHover>
+              <PremiumCard variant="charius" className="p-6 text-center h-full cursor-pointer" withHover>
                 <h3 className="text-lg font-bold text-brand-primary mb-2">{tier.label}</h3>
                 <p className="text-sm text-gray-500">{tier.desc}</p>
               </PremiumCard>
@@ -325,7 +325,7 @@ export default function SponsorSubRegionPage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="All Partnership Options"
         secondaryButtonHref="/partner"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

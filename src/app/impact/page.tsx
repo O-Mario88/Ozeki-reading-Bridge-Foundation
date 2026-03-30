@@ -58,7 +58,7 @@ export default async function ImpactToStoryLibraryPage() {
                         <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                             1001 Story Library
                         </h1>
-                        <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                        <p className="text-xl md:text-2xl text-gray-500 max-w-3xl mx-auto leading-relaxed">
                             Read stories written by primary school learners across Uganda.
                             Every story is a step toward confidence, literacy, and voice.
                         </p>
@@ -69,7 +69,7 @@ export default async function ImpactToStoryLibraryPage() {
                     <FeaturedAnthologyHero anthology={anthologies[0]} />
                 )}
 
-                <SectionWrapper theme="off-white">
+                <SectionWrapper theme="charius-beige">
                     <div className="max-w-7xl mx-auto">
                         <StoryLibraryClient
                             initialStories={stories}
@@ -88,7 +88,7 @@ export default async function ImpactToStoryLibraryPage() {
                     subheading="Review the data collection and synthesis methodology powering the National Literacy Intelligence Platform."
                     primaryButtonText="Read the Methodology"
                     primaryButtonHref="/impact/methodology"
-                    theme="brand"
+                    theme="charius"
                 />
             </main>
         </div>

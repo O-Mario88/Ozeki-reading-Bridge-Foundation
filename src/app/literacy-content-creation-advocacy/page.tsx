@@ -28,11 +28,11 @@ export default function LiteracyContentCreationAdvocacyPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Literacy Content &amp; Advocacy
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Continuous practical guidance for teachers and school leaders beyond trainings.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   Literacy Content Creation &amp; Advocacy extends Ozeki Reading Bridge
                   Foundation beyond trainings and school visits by providing
@@ -73,13 +73,13 @@ export default function LiteracyContentCreationAdvocacyPage() {
       </section>
 
       {/* 2. Content Elements */}
-      <SectionWrapper theme="light" id="resources">
+      <SectionWrapper theme="charius-beige" id="resources">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Implementation-Focused</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Implementation-Focused</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Ozeki produces resources designed for real classrooms and quick use:
             </p>
             <ul className="mt-auto space-y-3 pt-4 border-t border-gray-100">
@@ -98,23 +98,23 @@ export default function LiteracyContentCreationAdvocacyPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Built for Immediate Use</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Built for Immediate Use</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Content is structured to be usable in minutes: clear steps, examples,
               and common mistakes with corrections.
             </p>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               This allows teachers to improve practice without long workshops and
               supports leaders to supervise instruction effortlessly.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Leadership Guidance</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Leadership Guidance</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               For Headteachers and Directors of Studies, content emphasizes practical implementation:
             </p>
             <ul className="mt-auto space-y-3 pt-4 border-t border-gray-100">
@@ -135,18 +135,18 @@ export default function LiteracyContentCreationAdvocacyPage() {
       </SectionWrapper>
 
       {/* 3. Platform & Advocacy */}
-      <SectionWrapper theme="off-white" id="platform">
+      <SectionWrapper theme="charius-beige" id="platform">
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Smart Support System</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <p className="text-gray-500 leading-relaxed mb-6">
               Within the platform, resources are organized by grade, phonics set,
               topic, and program. This turns content into a practical support
               system rather than a static repository.
             </p>
             <h3 className="text-xl font-bold text-brand-primary border-t border-gray-100 pt-6 mb-4">Targeted Recommendations</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Resources are surfaced strategically by school need:
             </p>
             <ul className="mt-2 space-y-3 mb-4">
@@ -163,7 +163,7 @@ export default function LiteracyContentCreationAdvocacyPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col md:col-span-1 bg-brand-primary text-white border-none" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col md:col-span-1 bg-brand-primary text-white border-none" withHover>
             <div className="flex flex-col h-full">
               <h3 className="text-2xl font-bold mb-4">National Advocacy</h3>
               <p className="text-white/90 leading-relaxed mb-6">
@@ -206,7 +206,7 @@ export default function LiteracyContentCreationAdvocacyPage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Read the Blog"
         secondaryButtonHref="/blog"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

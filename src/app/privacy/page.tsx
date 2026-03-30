@@ -14,13 +14,13 @@ export default function PrivacyPolicyPage() {
           <h1 className="text-5xl md:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
             Privacy Policy
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
             Your privacy matters. This page explains how we handle personal information.
           </p>
         </div>
       </section>
 
-      <SectionWrapper theme="light">
+      <SectionWrapper theme="charius-beige">
         <div className="max-w-3xl mx-auto prose prose-lg prose-gray">
           <p className="text-sm text-gray-500 mb-8">
             <strong>Last updated:</strong> March 2026

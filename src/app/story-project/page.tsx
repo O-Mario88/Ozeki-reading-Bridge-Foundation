@@ -28,11 +28,11 @@ export default function StoryProjectPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 The 1001 Story Project
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Structured learner authorship that reinforces reading through meaningful writing.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   The 1001 Story Project is our structured learner authorship
                   program, designed to strengthen writing while reinforcing reading
@@ -72,28 +72,28 @@ export default function StoryProjectPage() {
       </section>
 
       {/* 2. Structured Routine */}
-      <SectionWrapper theme="light" id="routine">
+      <SectionWrapper theme="charius-beige" id="routine">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Classroom Routine</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Classroom Routine</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               At the heart of the project is a simple but powerful routine:
               learners write short stories using clear prompts and guided
               structures, then improve them through repeated cycles of drafting,
               reading aloud, revising, and editing.
             </p>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               This moves the project beyond creative writing activities into a
               consistent literacy-development process.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Teacher Training</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Teacher Training</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Teachers are trained to deliver story writing as structured literacy instruction, guiding learners in:
             </p>
             <ul className="mt-auto space-y-3 pt-4 border-t border-gray-100">
@@ -111,15 +111,15 @@ export default function StoryProjectPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Read-Aloud Cycles</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Read-Aloud Cycles</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Read-aloud cycles are used strategically. Learners read their own
               work and peers' work as drafts improve, building fluency,
               confidence, and comprehension alongside writing quality.
             </p>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               Over time, sentence construction strengthens and learners gain pride
               in producing complete text.
             </p>
@@ -129,12 +129,12 @@ export default function StoryProjectPage() {
       </SectionWrapper>
 
       {/* 3. Publication & Measurement */}
-      <SectionWrapper theme="off-white" id="publication">
+      <SectionWrapper theme="charius-beige" id="publication">
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Publication and Visibility</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               The project is designed for publication. Learner stories are
               compiled into school anthologies that can be published as PDF for
               rapid release or printed when funding allows.
@@ -151,12 +151,12 @@ export default function StoryProjectPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-gray-600 leading-relaxed text-sm">
+            <p className="text-gray-500 leading-relaxed text-sm">
               This strengthens reading engagement and sustained classroom use.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col bg-brand-primary text-white border-none" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col bg-brand-primary text-white border-none" withHover>
             <h3 className="text-2xl font-bold mb-4">Measured Participation</h3>
             <p className="text-white/90 leading-relaxed mb-6">
               What makes this a true literacy intelligence program is measurement
@@ -186,7 +186,7 @@ export default function StoryProjectPage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Explore Published Stories"
         secondaryButtonHref="/stories"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

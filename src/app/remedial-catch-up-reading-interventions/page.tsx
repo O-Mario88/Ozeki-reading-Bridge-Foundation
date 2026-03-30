@@ -28,11 +28,11 @@ export default function RemedialCatchUpReadingInterventionsPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Remedial &amp; Catch-Up Interventions
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Targeted recovery pathway for learners still below foundational reading benchmarks.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   Remedial &amp; Catch-Up Reading Interventions is our targeted
                   recovery pathway for schools where a significant share of learners
@@ -70,25 +70,25 @@ export default function RemedialCatchUpReadingInterventionsPage() {
       </section>
 
       {/* 2. Intervention Elements */}
-      <SectionWrapper theme="light" id="approach">
+      <SectionWrapper theme="charius-beige" id="approach">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Diagnosis Before Delivery</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Diagnosis Before Delivery</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               Real learner data identifies missing skills. Assessment results automatically
               identify learners who are non-readers or struggling in specific domains.
             </p>
-            <p className="text-gray-600 leading-relaxed mt-auto border-t border-gray-100 pt-4">
+            <p className="text-gray-500 leading-relaxed mt-auto border-t border-gray-100 pt-4">
               This replaces generic remediation with targeted catch-up.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Skill-Based Grouping</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Skill-Based Grouping</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               The platform connects the diagnosis to specific learning needs:
             </p>
             <ul className="mt-2 space-y-3 mb-6">
@@ -105,10 +105,10 @@ export default function RemedialCatchUpReadingInterventionsPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">High-Frequency Delivery</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">High-Frequency Delivery</h3>
+            <p className="text-gray-500 leading-relaxed mb-4">
               Catch-up runs through short, high-frequency small-group lessons,
               daily or several times per week, in a clear sequence.
             </p>
@@ -130,12 +130,12 @@ export default function RemedialCatchUpReadingInterventionsPage() {
       </SectionWrapper>
 
       {/* 3. Materials, Coaching & Tracking */}
-      <SectionWrapper theme="off-white" id="support">
+      <SectionWrapper theme="charius-beige" id="support">
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Aligned Materials</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="text-gray-500 leading-relaxed mb-4">
               Teachers receive intervention materials aligned to taught skills so
               practice is meaningful:
             </p>
@@ -152,26 +152,26 @@ export default function RemedialCatchUpReadingInterventionsPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-gray-600 leading-relaxed">
+            <p className="text-gray-500 leading-relaxed">
               This prevents mismatch between instruction and practice materials.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <h3 className="text-xl font-bold text-brand-primary mb-4">Coaching Support</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <p className="text-gray-500 leading-relaxed mb-6">
               Ozeki coaches help schools establish grouping plans, intervention schedules, 
               and delivery quality. Coaches model strategies for grouped instruction and 
               reinforce simple progress monitoring.
             </p>
             <h3 className="text-xl font-bold text-brand-primary border-t border-gray-100 pt-6 mb-4">Transition Strategy</h3>
-            <p className="text-gray-600 leading-relaxed">
+            <p className="text-gray-500 leading-relaxed">
               The goal is rapid recovery, not permanent remediation. As learners gain decoding ability,
               they transition into broader reading practice. Evidence dashboards guide when to exit or adapt.
             </p>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col md:col-span-2 bg-brand-primary text-white border-none" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col md:col-span-2 bg-brand-primary text-white border-none" withHover>
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div>
                 <h3 className="text-2xl font-bold mb-4">Accountable by Design</h3>
@@ -206,7 +206,7 @@ export default function RemedialCatchUpReadingInterventionsPage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="Explore Evidence"
         secondaryButtonHref="/impact"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

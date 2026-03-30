@@ -28,12 +28,12 @@ export default function ReadingMaterialsDevelopmentPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
                 Reading Materials Development
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8">
+              <p className="text-xl text-gray-500 leading-relaxed mb-8">
                 Learner-friendly texts aligned to phonics progression and classroom lessons,
                 so practice actually builds reading skill.
               </p>
               
-              <div className="prose prose-lg text-gray-600">
+              <div className="prose prose-lg text-gray-500">
                 <p className="mb-4">
                   Children become readers through practice, but practice only works when
                   the text matches what they have been taught.
@@ -71,20 +71,20 @@ export default function ReadingMaterialsDevelopmentPage() {
       </section>
 
       {/* 2. What We Provide */}
-      <SectionWrapper theme="light" id="focus-areas">
+      <SectionWrapper theme="charius-beige" id="focus-areas">
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-4xl font-bold text-brand-primary mb-6">What We Provide</h2>
-          <p className="text-xl text-gray-600 leading-relaxed">
+          <h2 className="text-4xl font-bold text-[#111] mb-6">What We Provide</h2>
+          <p className="text-xl text-gray-500 leading-relaxed">
             Materials that match the learner&apos;s exact level.
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Decodable Readers</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Decodable Readers</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Short books where most words follow phonics patterns learners have already learned.
               Learners stop guessing and start decoding, building real reading skill.
             </p>
@@ -103,10 +103,10 @@ export default function ReadingMaterialsDevelopmentPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Leveled Passages</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Leveled Passages</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Short texts organized by difficulty to build smooth reading and stamina.
               After decoding, learners need structured fluency practice to read faster and smoother.
             </p>
@@ -125,10 +125,10 @@ export default function ReadingMaterialsDevelopmentPage() {
             </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
             <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
-            <h3 className="text-2xl font-bold text-brand-primary mb-4">Comprehension Activities</h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
+            <h3 className="text-2xl font-bold text-[#111] mb-4">Comprehension Activities</h3>
+            <p className="text-gray-500 leading-relaxed mb-6">
               Help learners understand, retell, and respond to text without overwhelming them.
               Comprehension grows when decoding and fluency are supported.
             </p>
@@ -151,40 +151,40 @@ export default function ReadingMaterialsDevelopmentPage() {
       </SectionWrapper>
 
       {/* 3. Downloads Section */}
-      <SectionWrapper theme="off-white" id="downloads">
+      <SectionWrapper theme="charius-beige" id="downloads">
         <div className="max-w-3xl mx-auto text-center mb-16">
           <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-primary">
             <Download size={32} />
           </div>
-          <h2 className="text-4xl font-bold text-brand-primary mb-6">Free Resource Library</h2>
-          <p className="text-xl text-gray-600 leading-relaxed">
+          <h2 className="text-4xl font-bold text-[#111] mb-6">Free Resource Library</h2>
+          <p className="text-xl text-gray-500 leading-relaxed">
             Download our decodable readers, passages, and activities directly.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          <PremiumCard className="p-8 flex flex-col" withHover>
-             <h3 className="text-2xl font-bold text-brand-primary mb-6">Decodable Readers</h3>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+             <h3 className="text-2xl font-bold text-[#111] mb-6">Decodable Readers</h3>
              <ul className="space-y-4 mb-6">
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> Download Set 1 (PDF)</a></li>
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> Download Set 2 (PDF)</a></li>
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> Download Set 3 (PDF)</a></li>
              </ul>
-             <h3 className="text-2xl font-bold text-brand-primary mb-6 mt-4">Classroom Materials</h3>
+             <h3 className="text-2xl font-bold text-[#111] mb-6 mt-4">Classroom Materials</h3>
              <ul className="space-y-4">
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> Download Practice Sheets (PDF)</a></li>
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> Full Classroom Text Set (ZIP Array)</a></li>
              </ul>
           </PremiumCard>
 
-          <PremiumCard className="p-8 flex flex-col" withHover>
-             <h3 className="text-2xl font-bold text-brand-primary mb-6">Leveled Passages</h3>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+             <h3 className="text-2xl font-bold text-[#111] mb-6">Leveled Passages</h3>
              <ul className="space-y-4 mb-6">
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> level - Beginner (PDF)</a></li>
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> level - Intermediate (PDF)</a></li>
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> level - Advanced (PDF)</a></li>
              </ul>
-             <h3 className="text-2xl font-bold text-brand-primary mb-6 mt-4">Comprehension</h3>
+             <h3 className="text-2xl font-bold text-[#111] mb-6 mt-4">Comprehension</h3>
              <ul className="space-y-4">
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> Activities - Level 1 (PDF)</a></li>
                 <li><a className="text-brand-primary font-medium hover:underline flex items-center gap-2" href="/resources"><Download size={18}/> Activities - Level 2 (PDF)</a></li>
@@ -206,7 +206,7 @@ export default function ReadingMaterialsDevelopmentPage() {
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="All Resources"
         secondaryButtonHref="/resources"
-        theme="brand"
+        theme="charius"
       />
     </>
   );

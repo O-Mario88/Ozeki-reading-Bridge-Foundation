@@ -22,23 +22,23 @@ export default function OurStoryPage() {
             <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-8">
               Our Story
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-medium">
+            <p className="text-xl md:text-2xl text-gray-500 max-w-4xl mx-auto leading-relaxed font-medium">
               A clear national pathway from literacy challenge to measurable, school-level improvement.
             </p>
           </div>
         </section>
 
         {/* The Problem Section */}
-        <SectionWrapper theme="light" id="problem">
+        <SectionWrapper theme="charius-beige" id="problem">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
               <div className="w-12 h-12 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] flex items-center justify-center">
                 <AlertTriangle size={24} />
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-brand-primary">The Problem We Are Solving</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#111]">The Problem We Are Solving</h2>
             </div>
 
-            <div className="space-y-6 text-gray-600 text-lg leading-relaxed">
+            <div className="space-y-6 text-gray-500 text-lg leading-relaxed">
               <p>
                 Across Uganda, too many children are still moving through school without mastering
                 the foundational skill that unlocks all other learning: reading. National evidence
@@ -89,23 +89,23 @@ export default function OurStoryPage() {
         </SectionWrapper>
 
         {/* The Solution Section */}
-        <SectionWrapper theme="off-white" id="solution">
+        <SectionWrapper theme="charius-beige" id="solution">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
               <div className="w-12 h-12 rounded-full bg-[#006b61]/10 text-[#006b61] flex items-center justify-center">
                 <Lightbulb size={24} />
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-brand-primary">Our Connected Solution</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#111]">Our Connected Solution</h2>
             </div>
 
-            <div className="space-y-6 text-gray-600 text-lg leading-relaxed mb-12">
+            <div className="space-y-6 text-gray-500 text-lg leading-relaxed mb-12">
               <p>
                 Ozeki's solution is built on a simple conviction: Uganda's literacy challenge will not be solved 
                 by isolated activities. It will be solved by a connected system. That is the purpose of the <strong>National Literacy Intelligence Platform (NLIP)</strong>.
               </p>
             </div>
 
-            <PremiumCard className="bg-white border-2 border-[#006b61]/10 p-8 md:p-12 text-center mb-12 shadow-md">
+            <PremiumCard variant="charius" className="bg-white border-2 border-[#006b61]/10 p-8 md:p-12 text-center mb-12 shadow-md">
               <h3 className="text-2xl font-extrabold text-[#006b61] mb-8">The Evidence-Driven Improvement Cycle</h3>
               <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm font-bold text-gray-800 uppercase tracking-widest">
                 <div className="flex flex-col items-center"><Compass className="w-8 h-8 text-[#FA7D15] mb-2" /> Train</div>
@@ -118,7 +118,7 @@ export default function OurStoryPage() {
               </div>
             </PremiumCard>
 
-            <div className="space-y-6 text-gray-600 text-lg leading-relaxed">
+            <div className="space-y-6 text-gray-500 text-lg leading-relaxed">
               <p>
                 At its core, the solution works through a clear improvement loop: schools are not left with knowledge alone; 
                 they are heavily supported until foundational reading instruction permanently transforms learner outcomes.
@@ -150,7 +150,7 @@ export default function OurStoryPage() {
           primaryButtonHoverColor="hover:bg-[#006b61]/90"
           secondaryButtonText="Explore Our Programs"
           secondaryButtonHref="/programs"
-          theme="light"
+          theme="charius"
         />
     </div>
   );

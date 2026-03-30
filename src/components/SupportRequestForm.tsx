@@ -117,8 +117,10 @@ export default function SupportRequestForm() {
 
                 <form onSubmit={handleSubmit} className="space-y-8">
                     {/* School Selection */}
-                    <section className="space-y-4">
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">1. School Information</h3>
+                    <section className="form-section">
+                        <div className="form-section-header">
+                            <h3>1. School Information</h3>
+                        </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Search for your school</label>
                             <input
@@ -163,9 +165,9 @@ export default function SupportRequestForm() {
                     </section>
 
                     {/* Contact Information */}
-                    <section className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
-                        <div className="md:col-span-2">
-                            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">2. Contact Details</h3>
+                    <section className="form-section">
+                        <div className="form-section-header">
+                            <h3>2. Contact Details</h3>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
@@ -201,9 +203,11 @@ export default function SupportRequestForm() {
                     </section>
 
                     {/* Support Types */}
-                    <section className="space-y-4 pt-4 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">3. What support do you need?</h3>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <section className="form-section">
+                        <div className="form-section-header">
+                            <h3>3. What support do you need?</h3>
+                        </div>
+                        <div className="grid mobile-grid-keep lg:grid-cols-4 gap-4">
                             {supportTypeOptions.map(option => (
                                 <button
                                     key={option.value}
@@ -223,9 +227,11 @@ export default function SupportRequestForm() {
                     </section>
 
                     {/* Urgency & Message */}
-                    <section className="space-y-4 pt-4 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">4. Additional Information</h3>
-                        <div>
+                    <section className="form-section">
+                        <div className="form-section-header">
+                            <h3>4. Additional Information</h3>
+                        </div>
+                        <div className="form-field">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
                             <div className="flex gap-4">
                                 {urgencyLevels.map(level => (

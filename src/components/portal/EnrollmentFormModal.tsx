@@ -92,14 +92,17 @@ export function EnrollmentFormModal({
           </p>
         </fieldset>
 
-        <label className="full-width">
-          <span className="portal-field-label">Updated From (Source)</span>
-          <select name="updatedFrom" required defaultValue="School Data">
-            <option value="School Data">School Data</option>
-            <option value="Ozeki Staff">Ozeki Staff</option>
-            <option value="School Staff">School Staff</option>
-          </select>
-        </label>
+        <fieldset className="portal-fieldset full-width">
+          <legend>Metadata</legend>
+          <label className="full-width">
+            <span className="portal-field-label">Updated From (Source)</span>
+            <select name="updatedFrom" required defaultValue="School Data">
+              <option value="School Data">School Data</option>
+              <option value="Ozeki Staff">Ozeki Staff</option>
+              <option value="School Staff">School Staff</option>
+            </select>
+          </label>
+        </fieldset>
 
         <div className="full-width action-row portal-form-actions mt-4">
           <button type="button" className="button button-outline" onClick={onClose} disabled={saving}>

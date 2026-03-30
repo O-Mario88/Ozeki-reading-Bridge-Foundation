@@ -254,109 +254,120 @@ export function EgraLearnerInputModal({
                 )}
 
                 {schoolId && selectedLearnerUid ? (
-                    <div className="full-width form-grid form-grid--two">
-                        <label>
-                            <span className="label-text">Learner ID</span>
-                            <input value={learner.learnerId} readOnly className="form-readonly-input" />
-                        </label>
-                        <label>
-                            <span className="label-text">Name</span>
-                            <input value={learner.learnerName} readOnly className="form-readonly-input" />
-                        </label>
-                        <label>
-                            <span className="label-text">Gender</span>
-                            <input
-                                value={learner.sex === "M" ? "Male" : learner.sex === "F" ? "Female" : "-"}
-                                readOnly
-                                className="form-readonly-input"
-                            />
-                        </label>
-                        <label>
-                            <span className="label-text">Class</span>
-                            <input value={learner.classGrade || "-"} readOnly className="form-readonly-input" />
-                        </label>
-                        <label>
-                            <span className="label-text">Age</span>
-                            <input value={String(learner.age)} readOnly className="form-readonly-input" />
-                        </label>
-                    </div>
+                    <fieldset className="portal-fieldset full-width">
+                        <legend>Learner Details</legend>
+                        <div className="full-width form-grid form-grid--two">
+                            <label>
+                                <span className="portal-field-label">Learner ID</span>
+                                <input value={learner.learnerId} readOnly className="form-readonly-input" />
+                            </label>
+                            <label>
+                                <span className="portal-field-label">Name</span>
+                                <input value={learner.learnerName} readOnly className="form-readonly-input" />
+                            </label>
+                            <label>
+                                <span className="portal-field-label">Gender</span>
+                                <input
+                                    value={learner.sex === "M" ? "Male" : learner.sex === "F" ? "Female" : "-"}
+                                    readOnly
+                                    className="form-readonly-input"
+                                />
+                            </label>
+                            <label>
+                                <span className="portal-field-label">Class</span>
+                                <input value={learner.classGrade || "-"} readOnly className="form-readonly-input" />
+                            </label>
+                            <label>
+                                <span className="portal-field-label">Age</span>
+                                <input value={String(learner.age)} readOnly className="form-readonly-input" />
+                            </label>
+                        </div>
+                    </fieldset>
                 ) : null}
 
-                <label>
-                    <span className="label-text">Phonemic Awareness</span>
-                    <input
-                        type="number"
-                        min="0"
-                        value={learner.letterIdentification}
-                        onChange={(e) => updateField("letterIdentification", e.target.value)}
-                    />
-                </label>
+                <fieldset className="portal-fieldset full-width">
+                    <legend>Assessment Domains</legend>
+                    <div className="grid grid-cols-2 gap-4">
+                        <label>
+                            <span className="portal-field-label">Phonemic Awareness</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value={learner.letterIdentification}
+                                onChange={(e) => updateField("letterIdentification", e.target.value)}
+                            />
+                        </label>
 
-                <label>
-                    <span className="label-text">Grapheme-Phoneme Correspondence</span>
-                    <input
-                        type="number"
-                        min="0"
-                        value={learner.soundIdentification}
-                        onChange={(e) => updateField("soundIdentification", e.target.value)}
-                    />
-                </label>
+                        <label>
+                            <span className="portal-field-label">Grapheme-Phoneme</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value={learner.soundIdentification}
+                                onChange={(e) => updateField("soundIdentification", e.target.value)}
+                            />
+                        </label>
 
-                <label>
-                    <span className="label-text">Blending & Decoding</span>
-                    <input
-                        type="number"
-                        min="0"
-                        value={learner.decodableWords}
-                        onChange={(e) => updateField("decodableWords", e.target.value)}
-                    />
-                </label>
+                        <label>
+                            <span className="portal-field-label">Blending & Decoding</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value={learner.decodableWords}
+                                onChange={(e) => updateField("decodableWords", e.target.value)}
+                            />
+                        </label>
 
-                <label>
-                    <span className="label-text">Word Recognition & Fluency</span>
-                    <input
-                        type="number"
-                        min="0"
-                        value={learner.madeUpWords}
-                        onChange={(e) => updateField("madeUpWords", e.target.value)}
-                    />
-                </label>
+                        <label>
+                            <span className="portal-field-label">Word Rec. & Fluency</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value={learner.madeUpWords}
+                                onChange={(e) => updateField("madeUpWords", e.target.value)}
+                            />
+                        </label>
 
-                <label>
-                    <span className="label-text">Sentence & Paragraph Construction</span>
-                    <input
-                        type="number"
-                        min="0"
-                        value={learner.storyReading}
-                        onChange={(e) => updateField("storyReading", e.target.value)}
-                    />
-                </label>
+                        <label>
+                            <span className="portal-field-label">Sentence Const.</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value={learner.storyReading}
+                                onChange={(e) => updateField("storyReading", e.target.value)}
+                            />
+                        </label>
 
-                <label>
-                    <span className="label-text">Comprehension</span>
-                    <input
-                        type="number"
-                        min="0"
-                        value={learner.readingComprehension}
-                        onChange={(e) => updateField("readingComprehension", e.target.value)}
-                    />
-                </label>
-
-                <label className="full-width">
-                    <span className="label-text">Computed Reading Stage</span>
-                    <div
-                        className="computed-reading-level"
-                        title={READING_LEVEL_RULE_TOOLTIP}
-                        aria-label={READING_LEVEL_RULE_TOOLTIP}
-                    >
-                        <strong>{readingPreview.readingStageLabel}</strong>
-                        <span>Benchmark level: {readingPreview.benchmarkGradeLevel}</span>
-                        <span className="portal-muted">{readingPreview.expectedVsActualStatus}</span>
-                        <span className="computed-reading-level__profile">
-                            Rubric profile: {formatMasteryProfile(readingPreview)}
-                        </span>
+                        <label>
+                            <span className="portal-field-label">Comprehension</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value={learner.readingComprehension}
+                                onChange={(e) => updateField("readingComprehension", e.target.value)}
+                            />
+                        </label>
                     </div>
-                </label>
+                </fieldset>
+
+                <fieldset className="portal-fieldset full-width">
+                    <legend>Final Assessment</legend>
+                    <label className="full-width">
+                        <span className="portal-field-label">Computed Reading Stage</span>
+                        <div
+                            className="computed-reading-level"
+                            title={READING_LEVEL_RULE_TOOLTIP}
+                            aria-label={READING_LEVEL_RULE_TOOLTIP}
+                        >
+                            <strong>{readingPreview.readingStageLabel}</strong>
+                            <span>Benchmark level: {readingPreview.benchmarkGradeLevel}</span>
+                            <span className="portal-muted">{readingPreview.expectedVsActualStatus}</span>
+                            <span className="computed-reading-level__profile">
+                                Rubric profile: {formatMasteryProfile(readingPreview)}
+                            </span>
+                        </div>
+                    </label>
+                </fieldset>
 
                 <ValidationMessage message={validationError} className="full-width" />
             </form>

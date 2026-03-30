@@ -11,7 +11,7 @@ interface PageHeroProps {
 export function PageHero({ kicker, title, description, children }: PageHeroProps) {
   return (
     <section
-      className="section tpd-hero-section bg-[var(--md-sys-color-surface-container)] py-20 pb-12"
+      className="section section-wrapper tpd-hero-section bg-[var(--md-sys-color-surface-container)] py-20 pb-12"
     >
       <div className="container flex flex-col items-center text-center">
         <MotionReveal className="flex max-w-[800px] flex-col items-center gap-4">

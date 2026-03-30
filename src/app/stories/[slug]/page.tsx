@@ -91,12 +91,12 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                         </h1>
                         
                         {story.excerpt ? (
-                            <p className="text-xl text-gray-600 max-w-3xl leading-relaxed mb-6">
+                            <p className="text-xl text-gray-500 max-w-3xl leading-relaxed mb-6">
                                 {story.excerpt}
                             </p>
                         ) : null}
                         
-                        <div className="flex flex-wrap items-center gap-3 text-gray-600 font-medium mb-10 text-lg">
+                        <div className="flex flex-wrap items-center gap-3 text-gray-500 font-medium mb-10 text-lg">
                             <span className="text-gray-900 font-bold">{safeAuthorName}</span>
                             <span className="text-gray-300">•</span>
                             <Link href={`/schools/${story.schoolId}`} className="hover:text-[#FA7D15] transition-colors">
@@ -137,11 +137,11 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                     </div>
                 </section>
 
-                <SectionWrapper theme="light">
+                <SectionWrapper theme="charius-beige">
                     <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12">
                         
                         <article className="flex-grow w-full lg:w-2/3">
-                            <div className="p-4 mb-8 bg-[#FA7D15]/5 border border-[#FA7D15]/10 rounded-xl text-sm text-gray-600 leading-relaxed italic">
+                            <div className="p-4 mb-8 bg-[#FA7D15]/5 border border-[#FA7D15]/10 rounded-xl text-sm text-gray-500 leading-relaxed italic">
                                 Disclaimer: This work is published with the explicit written consent of the author's guardian and school. Standard safeguarding policies apply.
                             </div>
 
@@ -150,13 +150,13 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                                     <StoryReader title={story.title} author={safeAuthorName} blocks={story.storyContentBlocks} />
                                 </div>
                             ) : story.contentText ? (
-                                <PremiumCard className="p-8 md:p-12 mb-8 bg-white border border-gray-100 shadow-sm leading-relaxed text-lg text-gray-800 space-y-6">
+                                <PremiumCard variant="charius" className="p-8 md:p-12 mb-8 bg-white border border-gray-100 shadow-sm leading-relaxed text-lg text-gray-800 space-y-6">
                                     {story.contentText.split("\n").map((para, i) => (
                                         <p key={i}>{para}</p>
                                     ))}
                                 </PremiumCard>
                             ) : (
-                                <PremiumCard className="p-8 text-center text-gray-500 italic bg-white">
+                                <PremiumCard variant="charius" className="p-8 text-center text-gray-500 italic bg-white">
                                     Story content is available in the printed anthology.
                                 </PremiumCard>
                             )}
@@ -176,11 +176,11 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                         </article>
 
                         <aside className="w-full lg:w-1/3 flex flex-col gap-8 shrink-0">
-                            <PremiumCard className="p-6 md:p-8 bg-white" withHover>
+                            <PremiumCard variant="charius" className="p-6 md:p-8 bg-white" withHover>
                                 <h3 className="font-extrabold text-xl text-brand-primary mb-4 flex items-center gap-2">
                                     <User className="w-5 h-5 text-[#006b61]" /> About the Author
                                 </h3>
-                                <p className="text-gray-600 leading-relaxed mb-4">
+                                <p className="text-gray-500 leading-relaxed mb-4">
                                     This story was written by <strong>{safeAuthorName}</strong> as part of the{" "}
                                     <Link href="/story-project" className="text-[#FA7D15] font-bold hover:underline">1001 Story Project</Link>.
                                 </p>
@@ -201,7 +201,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                             </PremiumCard>
 
                             {moreStories.length > 0 && (
-                                <PremiumCard className="p-6 md:p-8 bg-white">
+                                <PremiumCard variant="charius" className="p-6 md:p-8 bg-white">
                                     <h3 className="font-extrabold text-lg text-brand-primary mb-6 border-b border-gray-100 pb-4">
                                         More from {story.schoolName}
                                     </h3>
