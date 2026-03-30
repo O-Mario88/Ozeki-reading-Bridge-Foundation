@@ -55,7 +55,7 @@ export function PortalFinanceAssetsManager({ initialAssets }: { initialAssets: F
       setAssets(assets.map(a => a.id === id ? { ...a, status: 'disposed' } : a));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch(err: any) {
-      alert(err.message);
+      setError(err.message);
     }
   }
 
@@ -63,10 +63,16 @@ export function PortalFinanceAssetsManager({ initialAssets }: { initialAssets: F
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2>Fixed Asset Register</h2>
-        <button className="button button-primary" onClick={() => setIsAdding(true)}>
+        <button className="button button-primary" onClick={() => { setIsAdding(true); setError(null); }}>
           Register Fixed Asset
         </button>
       </div>
+      
+      {error && !isAdding && (
+        <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">
+          Error: {error}
+        </div>
+      )}
 
       <div className="table-wrapper">
         <table className="table">

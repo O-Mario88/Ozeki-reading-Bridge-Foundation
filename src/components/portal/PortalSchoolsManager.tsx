@@ -58,6 +58,9 @@ export function PortalSchoolsManager({
   const [districtFilter, setDistrictFilter] = useState("");
   const [queryFilter, setQueryFilter] = useState("");
 
+  const [deletingSchoolId, setDeletingSchoolId] = useState<number | null>(null);
+  const [isDeletingSchool, setIsDeletingSchool] = useState(false);
+
   const [savingSchool, setSavingSchool] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -89,9 +92,11 @@ export function PortalSchoolsManager({
   const createFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
 
-  const createDistrictOptions = createRegion
-    ? getDistrictsByRegion(createRegion)
-    : allUgandaDistricts;
+  const createDistrictOptions = createSubRegion
+    ? getDistrictsByRegion(createSubRegion)
+    : createRegion
+      ? getDistrictsByRegion(createRegion)
+      : allUgandaDistricts;
   const filterDistrictOptions = filterRegion
     ? getDistrictsByRegion(filterRegion)
     : allUgandaDistricts;
@@ -455,14 +460,48 @@ export function PortalSchoolsManager({
         kind: "success",
         message: `School profile for ${data.school.schoolCode} updated.`,
       });
-    } catch (error) {
+    } catch (e) {
       setProfileFeedback({
         kind: "error",
-        message: error instanceof Error ? error.message : "Could not update school profile.",
+        message: e instanceof Error ? e.message : "Network error",
       });
     } finally {
+      setEditingProfile(false);
       setSavingProfile(false);
     }
+  }
+
+  async function handleDeleteSchool(id: number, e: React.MouseEvent) {
+    e.preventDefault();
+    if (!window.confirm("Are you SURE you want to permanently delete this school and all of its associated records? This cannot be undone.")) return;
+    
+    setIsDeletingSchool(true);
+    try {
+      const res = await fetch(`/api/portal/schools/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        throw new Error("Failed to delete school");
+      }
+      setSchools((current) => current.filter((s) => s.id !== id));
+      if (selectedSchoolId === id) {
+        setSelectedSchoolId(schools.find((s) => s.id !== id)?.id ?? null);
+      }
+      setDirectoryFeedback({
+        kind: "success",
+        message: "School and all tied records successfully deleted.",
+      });
+    } catch (e) {
+      setDirectoryFeedback({
+        kind: "error",
+        message: e instanceof Error ? e.message : "Network error during deletion",
+      });
+    } finally {
+      setIsDeletingSchool(false);
+      setDeletingSchoolId(null);
+    }
+  }
+
+  if (loading) {
+    return <section className="ds-card">Loading schools...</section>;
   }
 
   return (
@@ -568,7 +607,12 @@ export function PortalSchoolsManager({
                   name="subRegion"
                   value={createSubRegion}
                   onChange={(event) => {
-                    setCreateSubRegion(event.target.value);
+                    const nextSubRegion = event.target.value;
+                    setCreateSubRegion(nextSubRegion);
+                    const options = nextSubRegion 
+                      ? getDistrictsByRegion(nextSubRegion) 
+                      : getDistrictsByRegion(createRegion);
+                    setCreateDistrict((current) => (options.includes(current) ? current : ""));
                   }}
                 >
                   <option value="">Select sub-region</option>
@@ -787,6 +831,14 @@ export function PortalSchoolsManager({
                 <Link href={`/portal/schools/${selectedSchool.id}`} className="button button-compact">
                   Open Full Profile
                 </Link>
+                <button
+                  type="button"
+                  className="button button-compact button-error ml-auto"
+                  onClick={(e) => handleDeleteSchool(selectedSchool.id, e)}
+                  disabled={isDeletingSchool}
+                >
+                  {isDeletingSchool ? "Deleting..." : "Delete School"}
+                </button>
               </div>
             </div>
 

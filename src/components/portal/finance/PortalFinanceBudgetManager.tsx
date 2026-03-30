@@ -56,9 +56,9 @@ export function PortalFinanceBudgetManager({ initialBudgets }: Props) {
         else loadVariance();
     }, [mode, month, currency, loadBudgets, loadVariance]);
 
-    const handleSave = useCallback(async (subcategory: string) => {
-        const val = Number(editValues[subcategory] || 0);
-        if (!val || val < 0) return;
+    const handleSave = useCallback(async (subcategory: string, forcedValue?: number) => {
+        const val = forcedValue !== undefined ? forcedValue : Number(editValues[subcategory] || 0);
+        if (typeof val !== 'number' || val < 0) return;
         setSaving(true);
         setMsg("");
         try {
@@ -153,15 +153,29 @@ export function PortalFinanceBudgetManager({ initialBudgets }: Props) {
                                         />
                                     </td>
                                     <td>
-                                        <button
-                                            type="button"
-                                            className="finance-btn finance-btn-primary"
-                                            style={{ fontSize: 12, padding: "4px 12px" }}
-                                            onClick={() => handleSave(sub)}
-                                            disabled={saving}
-                                        >
-                                            Save
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                                type="button"
+                                                className="finance-btn finance-btn-primary"
+                                                style={{ fontSize: 12, padding: "4px 12px" }}
+                                                onClick={() => handleSave(sub)}
+                                                disabled={saving}
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="finance-btn finance-btn-outline"
+                                                style={{ fontSize: 12, padding: "4px 12px", color: 'var(--fin-danger)', borderColor: 'var(--fin-danger)' }}
+                                                onClick={() => {
+                                                    setEditValues(p => ({ ...p, [sub]: "0" }));
+                                                    handleSave(sub, 0);
+                                                }}
+                                                disabled={saving || (Number(editValues[sub]) === 0 && !budgets.find(b => b.subcategory === sub && b.month === month && b.currency === currency && b.budgetAmount > 0))}
+                                            >
+                                                Clear
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

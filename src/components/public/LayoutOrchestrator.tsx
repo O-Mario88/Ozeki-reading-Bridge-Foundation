@@ -18,15 +18,7 @@ export function LayoutOrchestrator({ children }: { children: ReactNode }) {
   const isPortal = pathname.startsWith("/portal");
 
   if (isPortal) {
-    return (
-      <>
-        <SiteHeader />
-        <main className="dashboard-inspired-main min-h-[calc(100vh-var(--header-height))]">
-          {children}
-        </main>
-        <SiteFooter />
-      </>
-    );
+    return <>{children}</>;
   }
 
   return (

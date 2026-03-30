@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { PortalShell } from "@/components/portal/PortalShell";
+import { FinanceShell } from "@/components/portal/finance/FinanceShell";
 import { getPortalUserOrRedirect } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { 
@@ -84,15 +84,14 @@ export default async function FinancePage() {
   const user = await getPortalUserOrRedirect();
   
   return (
-    <PortalShell 
+    <FinanceShell 
       user={user} 
       activeHref="/portal/finance" 
-      title="Financial Management"
-      description="Fund accounting, budgeting, and financial reporting center."
+      title="Finance Workspace"
     >
       <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading accurate financial metrics...</div>}>
         <FinanceDashboardContent />
       </Suspense>
-    </PortalShell>
+    </FinanceShell>
   );
 }

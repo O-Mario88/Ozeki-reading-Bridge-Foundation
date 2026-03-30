@@ -16,10 +16,10 @@ export function SectionWrapper({
   id,
 }: SectionWrapperProps) {
   const themeClasses = {
-    light: "bg-white text-brand-text",
-    dark: "bg-brand-background text-brand-text",
-    brand: "bg-brand-primary text-white",
-    "off-white": "bg-[#F9FAFB] text-brand-text",
+    light: "bg-white text-[#111]",
+    dark: "bg-brand-background text-white",
+    brand: "bg-[#006b61] text-white",
+    "off-white": "bg-charius-beige text-[#111]",
     "charius-beige": "bg-charius-beige text-[#111]",
     "charius-dark": "bg-charius-dark text-white",
   };

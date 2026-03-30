@@ -19,17 +19,30 @@ function renderDetail(item: { label: string; value: string; href?: string | null
   );
 }
 
+/* ── emoji icon map for quick-link stat cards ── */
+const ICON_MAP: Record<string, string> = {
+  TR: "🎓", VS: "🏫", AS: "📋", FL: "📁", PT: "👥",
+  TE: "📝", ST: "📖", SC: "🏛", QR: "❓",
+};
+
 export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileViewProps) {
   const [activeTab, setActiveTab] = useState(profile.tabs[0]?.id ?? "details");
   const active = profile.tabs.find((tab) => tab.id === activeTab) ?? profile.tabs[0] ?? null;
 
   return (
     <div className="portal-crm-page">
+      {/* ═══════════ HERO / PROFILE SUMMARY CARD ═══════════ */}
       <section className="portal-crm-hero">
-        <div className="portal-crm-hero-main">
-          <div className="portal-crm-badge">{profile.badge}</div>
-          <h1>{profile.title}</h1>
-          {profile.subtitle ? <p className="portal-crm-subtitle">{profile.subtitle}</p> : null}
+        <div className="portal-crm-hero-left">
+          <div className="portal-crm-avatar">{profile.badge.charAt(0)}</div>
+          <div className="portal-crm-hero-main">
+            <div className="portal-crm-badge">{profile.badge}</div>
+            <h1>{profile.title}</h1>
+            {profile.subtitle ? <p className="portal-crm-subtitle">{profile.subtitle}</p> : null}
+          </div>
+        </div>
+
+        <div className="portal-crm-hero-right">
           <div className="portal-crm-overview">
             {profile.heroFields.map((field) => (
               <div key={field.label}>
@@ -38,49 +51,47 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
               </div>
             ))}
           </div>
+          {profile.primaryActions?.length ? (
+            <div className="portal-crm-hero-actions">
+              {profile.primaryActions.map((action) =>
+                action.href === "#add-to-training" && contactId ? (
+                  <AddContactToTrainingModal key={action.label} contactId={contactId} />
+                ) : (
+                  <Link
+                    key={action.label}
+                    className={`portal-crm-button${action.tone === "ghost" ? " portal-crm-button--ghost" : ""}`}
+                    href={action.href}
+                  >
+                    {action.label}
+                  </Link>
+                ),
+              )}
+            </div>
+          ) : null}
         </div>
-        {profile.primaryActions?.length ? (
-          <div className="portal-crm-hero-actions">
-            {profile.primaryActions.map((action) =>
-              action.href === "#add-to-training" && contactId ? (
-                <AddContactToTrainingModal key={action.label} contactId={contactId} />
-              ) : (
-                <Link
-                  key={action.label}
-                  className={`portal-crm-button${action.tone === "ghost" ? " portal-crm-button--ghost" : ""}`}
-                  href={action.href}
-                >
-                  {action.label}
-                </Link>
-              ),
-            )}
-          </div>
-        ) : null}
       </section>
 
+      {/* ═══════════ NOTICE BAR ═══════════ */}
       {profile.notice ? (
         <section className="portal-crm-notice">
           <strong>{profile.notice}</strong>
         </section>
       ) : null}
 
+      {/* ═══════════ STAT COUNTER CARDS ═══════════ */}
+      <section className="portal-crm-stats-row">
+        {profile.quickLinks.map((link) => (
+          <Link key={link.label} href={link.href} target="_blank" className="portal-crm-stat-card">
+            <div className="portal-crm-stat-icon">{ICON_MAP[link.icon ?? ""] ?? "📊"}</div>
+            <div className="portal-crm-stat-count">{link.count}</div>
+            <div className="portal-crm-stat-label">{link.label}</div>
+          </Link>
+        ))}
+      </section>
+
+      {/* ═══════════ MAIN + SIDEBAR LAYOUT ═══════════ */}
       <section className="portal-crm-layout">
         <div className="portal-crm-main">
-          <article className="portal-crm-card">
-            <header>
-              <h2>Related List Quick Links</h2>
-            </header>
-            <div className="portal-crm-quick-grid">
-              {profile.quickLinks.map((link) => (
-                <Link key={link.label} href={link.href} target="_blank" className="portal-crm-quick-link">
-                  <span>{link.icon || "•"}</span>
-                  <strong>{link.label}</strong>
-                  <small>({link.count})</small>
-                </Link>
-              ))}
-            </div>
-          </article>
-
           <article className="portal-crm-card">
             <div className="portal-crm-tabs">
               <button
@@ -183,259 +194,409 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
       </section>
 
       <style jsx>{`
+        /* ================================================================
+           PORTAL CRM PROFILE — WARM PREMIUM ERP THEME
+           ================================================================ */
         .portal-crm-page {
           display: grid;
-          gap: 1rem;
-          font-family: var(--portal-backend-font);
+          gap: 1.25rem;
+          font-family: var(--portal-backend-font, 'Inter', -apple-system, sans-serif);
         }
-        .portal-crm-hero,
-        .portal-crm-card,
-        .portal-crm-notice {
-          border: 1px solid rgba(78, 108, 136, 0.24);
-          border-radius: 18px;
-          background: #f7f8fa;
-          box-shadow: 0 16px 36px rgba(23, 39, 65, 0.08);
-        }
+
+        /* ── HERO / PROFILE SUMMARY CARD ── */
         .portal-crm-hero {
           display: flex;
           justify-content: space-between;
+          gap: 1.5rem;
+          flex-wrap: wrap;
+          padding: 1.75rem 2rem;
+          border: 1px solid rgba(168,162,158,0.2);
+          border-radius: 20px;
+          background: linear-gradient(180deg, #ffffff 0%, #faf8f5 100%);
+          box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        }
+        .portal-crm-hero-left {
+          display: flex;
+          gap: 1.25rem;
+          align-items: flex-start;
+        }
+        .portal-crm-avatar {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #e8f0de 0%, #d4e4c8 100%);
+          color: #3d6b4f;
+          font-size: 1.5rem;
+          font-weight: 800;
+          flex-shrink: 0;
+          border: 2px solid rgba(74,124,89,0.15);
+        }
+        .portal-crm-hero-main {
+          min-width: 0;
+        }
+        .portal-crm-hero-right {
+          display: flex;
+          flex-direction: column;
           gap: 1rem;
-          padding: 1.35rem 1.5rem;
-          background: linear-gradient(180deg, #fdfefe 0%, #f1f5f9 100%);
+          align-items: flex-end;
         }
         .portal-crm-badge {
-          color: #4b5563;
-          font-size: 0.92rem;
-          margin-bottom: 0.2rem;
+          color: #78716c;
+          font-size: 0.8rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          margin-bottom: 0.25rem;
         }
         .portal-crm-hero h1 {
           margin: 0;
-          font-size: 2rem;
+          font-size: 1.85rem;
           line-height: 1.15;
-          color: #1f2937;
+          color: #292524;
+          font-weight: 800;
         }
         .portal-crm-subtitle {
-          margin: 0.35rem 0 0;
-          color: #4b5563;
-          font-size: 1rem;
+          margin: 0.3rem 0 0;
+          color: #78716c;
+          font-size: 0.95rem;
         }
         .portal-crm-overview {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 0.95rem;
-          margin-top: 1rem;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1.25rem;
         }
-        .portal-crm-overview span,
-        .portal-crm-detail-row span,
-        .portal-crm-activity-item span,
-        .portal-crm-activity-item small,
-        .portal-crm-activity-item i {
+        .portal-crm-overview span {
           display: block;
-          color: #6b7280;
-          font-size: 0.9rem;
-          font-style: normal;
+          color: #a8a29e;
+          font-size: 0.72rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
         .portal-crm-overview strong,
-        .portal-crm-overview :global(a),
-        .portal-crm-detail-row strong,
-        .portal-crm-detail-row :global(a),
-        .portal-crm-activity-item strong,
-        .portal-crm-activity-item :global(a) {
-          color: #1f2937;
-          font-size: 1.15rem;
+        .portal-crm-overview :global(a) {
+          display: block;
+          color: #292524;
+          font-size: 0.95rem;
           font-weight: 700;
           text-decoration: none;
+          margin-top: 0.15rem;
         }
-        .portal-crm-overview :global(a),
-        .portal-crm-detail-row :global(a),
-        .portal-crm-activity-item :global(a) {
-          color: #0f5fc5;
+        .portal-crm-overview :global(a) {
+          color: #3d6b4f;
         }
-        .portal-crm-overview :global(a:hover),
-        .portal-crm-detail-row :global(a:hover),
-        .portal-crm-activity-item :global(a:hover) {
+        .portal-crm-overview :global(a:hover) {
           text-decoration: underline;
         }
+
+        /* ── ACTION BUTTONS ── */
         .portal-crm-hero-actions {
           display: flex;
-          gap: 0.75rem;
+          gap: 0.6rem;
           flex-wrap: wrap;
-          align-self: flex-start;
         }
         .portal-crm-button {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 42px;
-          padding: 0.7rem 1rem;
+          min-height: 38px;
+          padding: 0.55rem 1.1rem;
           border-radius: 10px;
-          border: 1px solid #2563eb;
-          background: #2563eb;
+          border: 1px solid #4a7c59;
+          background: #4a7c59;
           color: #fff;
           font-weight: 700;
+          font-size: 0.85rem;
           text-decoration: none;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+        }
+        .portal-crm-button:hover {
+          background: #3d6b4f;
+          border-color: #3d6b4f;
         }
         .portal-crm-button--ghost {
           background: transparent;
-          color: #1f2937;
-          border-color: rgba(78, 108, 136, 0.32);
+          color: #57534e;
+          border-color: rgba(168,162,158,0.35);
         }
+        .portal-crm-button--ghost:hover {
+          background: rgba(232,240,222,0.3);
+          color: #3d6b4f;
+          border-color: #4a7c59;
+        }
+
+        /* ── NOTICE BAR ── */
         .portal-crm-notice {
-          padding: 0.95rem 1.25rem;
+          padding: 0.85rem 1.25rem;
+          border: 1px solid rgba(168,162,158,0.2);
+          border-radius: 14px;
+          background: #faf8f5;
+          color: #57534e;
+          font-size: 0.9rem;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.02);
         }
+        .portal-crm-notice strong {
+          color: #292524;
+        }
+
+        /* ── STAT COUNTER CARDS ROW ── */
+        .portal-crm-stats-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 0.85rem;
+        }
+        .portal-crm-stat-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.3rem;
+          padding: 1.15rem 0.75rem;
+          border: 1px solid rgba(168,162,158,0.18);
+          border-radius: 16px;
+          background: #ffffff;
+          text-decoration: none;
+          text-align: center;
+          transition: all 0.18s ease;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        }
+        .portal-crm-stat-card:hover {
+          background: #faf8f5;
+          border-color: rgba(74,124,89,0.3);
+          box-shadow: 0 4px 16px rgba(74,124,89,0.08);
+          transform: translateY(-1px);
+        }
+        .portal-crm-stat-icon {
+          font-size: 1.35rem;
+          line-height: 1;
+        }
+        .portal-crm-stat-count {
+          font-size: 1.75rem;
+          font-weight: 800;
+          color: #292524;
+          line-height: 1.1;
+        }
+        .portal-crm-stat-label {
+          color: #78716c;
+          font-size: 0.78rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        /* ── MAIN + SIDEBAR LAYOUT ── */
         .portal-crm-layout {
           display: grid;
           grid-template-columns: minmax(0, 2fr) minmax(280px, 0.9fr);
-          gap: 1rem;
+          gap: 1.25rem;
         }
         .portal-crm-main,
         .portal-crm-sidebar {
           display: grid;
-          gap: 1rem;
+          gap: 1.25rem;
+          align-content: start;
         }
+
+        /* ── CARDS ── */
         .portal-crm-card {
-          padding: 1.25rem;
+          border: 1px solid rgba(168,162,158,0.2);
+          border-radius: 18px;
+          background: #ffffff;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+          padding: 1.5rem;
         }
         .portal-crm-card header h2 {
           margin: 0;
-          font-size: 1.55rem;
-          color: #1f2937;
-        }
-        .portal-crm-quick-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 0.85rem;
-          margin-top: 1rem;
-        }
-        .portal-crm-quick-link {
-          display: grid;
-          gap: 0.15rem;
-          padding: 0.85rem 0.95rem;
-          border: 1px solid #d7dde7;
-          border-radius: 14px;
-          background: #fff;
-          color: #0f5fc5;
-          text-decoration: none;
-        }
-        .portal-crm-quick-link span {
-          color: #2563eb;
-          font-size: 0.82rem;
+          font-size: 1.1rem;
           font-weight: 700;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
+          color: #292524;
+          letter-spacing: -0.01em;
         }
-        .portal-crm-quick-link strong {
-          font-size: 1rem;
-        }
-        .portal-crm-quick-link small {
-          color: #6b7280;
-          font-size: 0.9rem;
-        }
+
+        /* ── TABS ── */
         .portal-crm-tabs {
           display: flex;
-          gap: 0.75rem;
+          gap: 0.25rem;
           flex-wrap: wrap;
           padding-bottom: 1rem;
-          border-bottom: 1px solid #d7dde7;
+          border-bottom: 1px solid rgba(168,162,158,0.2);
+          margin-bottom: 1rem;
         }
         .portal-crm-tabs button {
           border: 0;
           background: transparent;
-          color: #4b5563;
+          color: #78716c;
           font: inherit;
-          font-weight: 700;
-          padding: 0.25rem 0;
-          border-bottom: 3px solid transparent;
+          font-size: 0.88rem;
+          font-weight: 600;
+          padding: 0.45rem 0.85rem;
+          border-radius: 8px;
+          border-bottom: 2px solid transparent;
           cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .portal-crm-tabs button:hover {
+          background: rgba(232,240,222,0.3);
+          color: #3d6b4f;
         }
         .portal-crm-tabs button.is-active {
-          color: #0f5fc5;
-          border-bottom-color: #2563eb;
+          color: #3d6b4f;
+          background: rgba(232,240,222,0.4);
+          border-bottom-color: #4a7c59;
         }
+
+        /* ── DETAILS GRID ── */
         .portal-crm-details-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 1rem;
-          margin-top: 1rem;
+          gap: 0 2rem;
         }
         .portal-crm-details-column {
           display: grid;
-          gap: 0.75rem;
+          gap: 0;
+          align-content: start;
         }
         .portal-crm-detail-row {
-          padding: 0.85rem 0;
-          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 1rem;
+          padding: 0.65rem 0;
+          border-bottom: 1px solid rgba(168,162,158,0.12);
         }
-        .portal-crm-activity-list {
-          display: grid;
-          gap: 0.85rem;
-          margin-top: 1rem;
+        .portal-crm-detail-row span {
+          color: #78716c;
+          font-size: 0.88rem;
+          flex-shrink: 0;
         }
+        .portal-crm-detail-row strong {
+          color: #292524;
+          font-size: 0.92rem;
+          font-weight: 600;
+          text-align: right;
+        }
+        .portal-crm-detail-row :global(a) {
+          color: #3d6b4f;
+          font-size: 0.92rem;
+          font-weight: 600;
+          text-decoration: none;
+          text-align: right;
+        }
+        .portal-crm-detail-row :global(a:hover) {
+          text-decoration: underline;
+        }
+
+        /* ── TABLE ── */
         .portal-crm-tab-table-wrap {
-          margin-top: 1rem;
           overflow-x: auto;
         }
         .portal-crm-tab-table {
           width: 100%;
-          min-width: 920px;
+          min-width: 780px;
           border-collapse: collapse;
-          background: #fff;
-          border: 1px solid #d7dde7;
-          border-radius: 14px;
-          overflow: hidden;
         }
         .portal-crm-tab-table th,
         .portal-crm-tab-table td {
-          padding: 0.85rem 0.95rem;
-          border-bottom: 1px solid #e5e7eb;
+          padding: 0.75rem 0.85rem;
+          border-bottom: 1px solid rgba(168,162,158,0.12);
           text-align: left;
           vertical-align: top;
         }
         .portal-crm-tab-table th {
-          background: #f8fafc;
-          color: #475569;
-          font-size: 0.94rem;
+          color: #a8a29e;
+          font-size: 0.72rem;
           font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
           white-space: nowrap;
+          background: transparent;
+          border-bottom-color: rgba(168,162,158,0.25);
         }
         .portal-crm-tab-table td {
-          color: #1f2937;
-          font-size: 0.98rem;
+          color: #292524;
+          font-size: 0.9rem;
         }
         .portal-crm-tab-table :global(a) {
-          color: #0f5fc5;
+          color: #3d6b4f;
           font-weight: 600;
           text-decoration: none;
         }
         .portal-crm-tab-table :global(a:hover) {
           text-decoration: underline;
         }
+        .portal-crm-tab-table .is-muted {
+          color: #a8a29e;
+        }
+
+        /* ── ACTIVITY LIST ── */
+        .portal-crm-activity-list {
+          display: grid;
+          gap: 0.75rem;
+        }
         .portal-crm-activity-item {
           display: flex;
           justify-content: space-between;
           gap: 1rem;
-          padding: 0.95rem 1rem;
-          border: 1px solid #d7dde7;
+          padding: 1rem 1.15rem;
+          border: 1px solid rgba(168,162,158,0.15);
           border-radius: 14px;
-          background: #fff;
+          background: #faf8f5;
+          transition: border-color 0.15s ease;
+        }
+        .portal-crm-activity-item:hover {
+          border-color: rgba(74,124,89,0.25);
+        }
+        .portal-crm-activity-item strong,
+        .portal-crm-activity-item :global(a) {
+          color: #292524;
+          font-size: 0.95rem;
+          font-weight: 700;
+          text-decoration: none;
+        }
+        .portal-crm-activity-item :global(a) {
+          color: #3d6b4f;
+        }
+        .portal-crm-activity-item :global(a:hover) {
+          text-decoration: underline;
         }
         .portal-crm-activity-item p {
-          margin: 0.25rem 0 0;
-          color: #4b5563;
+          margin: 0.2rem 0 0;
+          color: #78716c;
+          font-size: 0.88rem;
         }
         .portal-crm-activity-item > div:last-child {
           text-align: right;
-          min-width: 180px;
+          min-width: 160px;
+          flex-shrink: 0;
         }
+        .portal-crm-activity-item span,
+        .portal-crm-activity-item small,
+        .portal-crm-activity-item i {
+          display: block;
+          color: #a8a29e;
+          font-size: 0.82rem;
+          font-style: normal;
+        }
+
+        /* ── EMPTY STATE ── */
         .portal-crm-empty {
-          margin: 1rem 0 0;
-          color: #6b7280;
+          color: #a8a29e;
+          padding: 1.5rem 0;
+          text-align: center;
+          font-size: 0.92rem;
         }
+
+        /* ── SIDEBAR ── */
         .portal-crm-sidebar-list {
           display: grid;
-          gap: 0.75rem;
-          margin-top: 1rem;
+          gap: 0;
+          margin-top: 0.75rem;
         }
+
+        /* ── RESPONSIVE ── */
         @media (max-width: 1024px) {
           .portal-crm-layout {
             grid-template-columns: 1fr;
@@ -444,6 +605,10 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
         @media (max-width: 768px) {
           .portal-crm-hero {
             flex-direction: column;
+            padding: 1.25rem;
+          }
+          .portal-crm-hero-right {
+            align-items: flex-start;
           }
           .portal-crm-details-grid {
             grid-template-columns: 1fr;
@@ -454,6 +619,14 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
           .portal-crm-activity-item > div:last-child {
             text-align: left;
             min-width: auto;
+          }
+          .portal-crm-stats-row {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+        @media (max-width: 480px) {
+          .portal-crm-stats-row {
+            grid-template-columns: repeat(2, 1fr);
           }
         }
       `}</style>

@@ -1070,6 +1070,47 @@ export async function updateSchoolContactInSchoolPostgres(
   });
 }
 
+/**
+ * Hard deletes a school and forcefully cascades the deletion down to all linked records.
+ * This ensures test environments or mistaken inputs (like the 'Bootstrap' school) can be erased without FK constraint errors.
+ */
+export async function deleteSchoolDirectoryRecordPostgres(schoolId: number): Promise<boolean> {
+  return withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      // 1. Delete associated operational records
+      await client.query("DELETE FROM coaching_visits WHERE school_id = $1", [schoolId]);
+      await client.query("DELETE FROM assessment_sessions WHERE school_id = $1", [schoolId]);
+      await client.query("DELETE FROM lesson_evaluations WHERE school_id = $1", [schoolId]);
+
+      // 2. Clear out participants and contacts
+      await client.query("DELETE FROM school_contacts WHERE school_id = $1", [schoolId]);
+      await client.query("DELETE FROM school_learners WHERE school_id = $1", [schoolId]);
+      await client.query("DELETE FROM teacher_roster WHERE school_id = $1", [schoolId]);
+      await client.query("DELETE FROM portal_participants WHERE school_id = $1", [schoolId]);
+
+      // 3. Delete any online training linking
+      await client.query("DELETE FROM online_training_participants WHERE school_id = $1", [schoolId]);
+
+      // 4. Delete JSON generic portal records (e.g. training logs, assessment wrappers)
+      await client.query("DELETE FROM portal_records WHERE school_id = $1", [schoolId]);
+
+      // 5. Delete school mapping roles 
+      await client.query("DELETE FROM portal_user_roles WHERE target_school_id = $1", [schoolId]);
+
+      // 6. Finally delete the school
+      const res = await client.query("DELETE FROM schools_directory WHERE id = $1 RETURNING id", [schoolId]);
+      
+      await client.query("COMMIT");
+      return (res.rowCount ?? 0) > 0;
+    } catch (e) {
+      await client.query("ROLLBACK");
+      console.error("Failed to delete school", e);
+      throw e;
+    }
+  });
+}
+
 export async function listSchoolLearnersBySchoolPostgres(schoolId: number) {
   const result = await queryPostgres(
     `

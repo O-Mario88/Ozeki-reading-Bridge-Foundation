@@ -6,16 +6,16 @@ import { requirePortalFinanceReceiptEditorUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Money Out (Expenses)",
+  title: "Expenses",
   description: "Draft, evidence, and post operational expenses.",
 };
 
-export default async function PortalFinanceMoneyOutPage() {
+export default async function PortalFinanceExpensesPage() {
   const user = await requirePortalFinanceReceiptEditorUser();
   const expenses = await listFinanceExpenses();
 
   return (
-    <FinanceShell user={user} activeHref="/portal/finance/money-out" title="Money Out">
+    <FinanceShell user={user} activeHref="/portal/finance/expenses" title="Expenses">
       <PortalFinanceExpensesManager initialExpenses={expenses} />
     </FinanceShell>
   );

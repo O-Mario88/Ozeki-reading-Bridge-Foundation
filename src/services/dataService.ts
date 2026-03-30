@@ -42,6 +42,7 @@ export {
     listSchoolDirectoryRecordsPostgres,
     getSchoolDirectoryRecordPostgres,
     getSchoolAccountProfilePostgres,
+    deleteSchoolDirectoryRecordPostgres,
 } from "@/lib/server/postgres/repositories/schools";
 
 // ── Metrics / Impact ─────────────────────────────────────────────────

@@ -357,24 +357,40 @@ function drawTable(
 
   // Data rows
   for (const row of rows) {
-    if (curY - rowH < 80) break; // safety margin
+    let maxLines = 1;
+    const rowLines: string[][] = [];
+
+    // Pre-calculate lines for text wrapping and determine max height
+    for (let i = 0; i < Math.min(row.length, headers.length); i++) {
+      const w = colWidths[i] * CW;
+      if (numericCols.has(i)) {
+        rowLines.push([row[i]]);
+      } else {
+        const maxTextW = w - 12;
+        const lines = wrapText(row[i], font, rowSize, maxTextW);
+        rowLines.push(lines);
+        maxLines = Math.max(maxLines, lines.length);
+      }
+    }
+
+    const dynamicRowH = Math.max(rowH, maxLines * 12 + 10);
+    
+    if (curY - dynamicRowH < 80) break; // safety margin
 
     page.drawLine({
-      start: { x: ML, y: curY - rowH },
-      end: { x: ML + CW, y: curY - rowH },
+      start: { x: ML, y: curY - dynamicRowH },
+      end: { x: ML + CW, y: curY - dynamicRowH },
       thickness: 0.5,
       color: BORDER_GRAY,
     });
 
     colX = ML;
-    for (let i = 0; i < Math.min(row.length, headers.length); i++) {
+    for (let i = 0; i < rowLines.length; i++) {
       const w = colWidths[i] * CW;
+      const lines = rowLines[i];
       if (numericCols.has(i)) {
-        drawRightText(page, row[i], colX + w - 4, curY - 14, font, rowSize, BLACK);
+        drawRightText(page, lines[0], colX + w - 4, curY - 14, font, rowSize, BLACK);
       } else {
-        // Wrap description if too long
-        const maxTextW = w - 12;
-        const lines = wrapText(row[i], font, rowSize, maxTextW);
         let ly = curY - 14;
         for (const line of lines) {
           drawText(page, line, colX + 6, ly, font, rowSize, BLACK);
@@ -384,7 +400,7 @@ function drawTable(
       colX += w;
     }
 
-    curY -= rowH;
+    curY -= dynamicRowH;
   }
 
   return curY;
@@ -598,7 +614,7 @@ export async function renderInvoicePdf(
     page, afterStrip, font, fontBold,
     { heading: "From", lines: fromLines },
     { heading: "To", lines: billedToLines },
-    { heading: "Total due", bigValue: fmtMoney(invoice.currency, invoice.balanceDue), color: BLACK },
+    { heading: "Invoice Total", bigValue: fmtMoney(invoice.currency, invoice.total), color: BLACK },
   );
 
   // 4. Line items table

@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowRightCircle, Compass, Lightbulb, LineChart, BookOpe
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
+import { PageHero } from "@/components/public/PageHero";
 
 export const metadata = {
   title: "Our Story | Ozeki Reading Bridge Foundation",
@@ -13,20 +14,12 @@ export default function OurStoryPage() {
   return (
     <div className="pt-[72px] md:pt-20">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#006b61]/15 via-brand-background to-brand-background pointer-events-none" />
-          <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#006b61]/10 text-[#006b61] font-bold text-sm mb-6 shadow-sm border border-[#006b61]/20">
-              <BookOpen className="w-4 h-4" /> About Us
-            </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-8">
-              Our Story
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-500 max-w-4xl mx-auto leading-relaxed font-medium">
-              A clear national pathway from literacy challenge to measurable, school-level improvement.
-            </p>
-          </div>
-        </section>
+        <PageHero
+          tagline={<><BookOpen className="w-4 h-4 inline mr-1" /> About Us</>}
+          title="Our Story"
+          subtitle="A clear national pathway from literacy challenge to measurable, school-level improvement."
+          imageSrc="/photos/PXL_20260218_140233638.jpg"
+        />
 
         {/* The Problem Section */}
         <SectionWrapper theme="charius-beige" id="problem">

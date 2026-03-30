@@ -38,6 +38,7 @@ export {
     listFinanceEmailLogsPostgres as listFinanceEmailLogs,
     getFinanceFileByIdPostgres as getFinanceFileById,
     listFinanceFilesBySourcePostgres as listFinanceFilesBySource,
+    generateFinanceMonthlyStatementPostgres as generateFinanceMonthlyStatement,
 } from "@/lib/server/postgres/repositories/finance";
 
 /**
@@ -172,21 +173,7 @@ export async function updateFinanceAuditExceptionStatusAsync(_id: number, _statu
     throw new Error("updateFinanceAuditExceptionStatusAsync: not yet migrated to PostgreSQL");
 }
 
-// ── Monthly statements ───────────────────────────────────────────────
-export async function generateFinanceMonthlyStatement(_monthOrFilters: string | unknown, _actor?: unknown, _extra?: unknown) {
-    const month = typeof _monthOrFilters === 'string' ? _monthOrFilters : String((_monthOrFilters as Record<string, unknown>)?.month ?? '');
-    return {
-        month,
-        periodType: 'monthly' as string,
-        currency: 'UGX' as string,
-        totalMoneyIn: 0,
-        totalMoneyOut: 0,
-        net: 0,
-        breakdownByCategory: { Donation: 0, Expense: 0 } as Record<string, number>,
-        lines: [] as unknown[],
-        summary: {} as Record<string, unknown>,
-    };
-}
+// generateFinanceMonthlyStatement is now natively exported above
 
 // ── Transparency / public snapshots ──────────────────────────────────
 export async function generatePublicSnapshot(..._args: unknown[]) {

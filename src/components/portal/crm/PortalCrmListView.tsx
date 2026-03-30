@@ -69,14 +69,14 @@ export function PortalCrmListView({ view }: PortalCrmListViewProps) {
         .portal-crm-list-page {
           display: grid;
           gap: 1rem;
-          font-family: var(--portal-backend-font);
+          font-family: var(--ds-font, system-ui);
         }
         .portal-crm-list-hero,
         .portal-crm-table-wrap {
-          border: 1px solid rgba(78, 108, 136, 0.24);
+          border: 1px solid #eee9e0;
           border-radius: 18px;
-          background: #f7f8fa;
-          box-shadow: 0 16px 36px rgba(23, 39, 65, 0.08);
+          background: #ffffff;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
         }
         .portal-crm-list-hero {
           display: flex;
@@ -84,24 +84,24 @@ export function PortalCrmListView({ view }: PortalCrmListViewProps) {
           align-items: flex-start;
           gap: 1rem;
           padding: 1.25rem 1.5rem;
-          background: linear-gradient(180deg, #fdfefe 0%, #f2f5f9 100%);
+          background: linear-gradient(180deg, #ffffff 0%, #faf8f5 100%);
         }
         .portal-crm-list-badge {
           margin: 0 0 0.2rem;
-          font-size: 0.9rem;
-          color: #4b5563;
+          font-size: 0.82rem;
+          color: #78716c;
         }
         .portal-crm-list-hero h1 {
           margin: 0;
-          font-size: 2rem;
+          font-size: 1.5rem;
           line-height: 1.15;
-          color: #1f2937;
+          color: #292524;
         }
         .portal-crm-list-hero p:last-child {
           margin: 0.35rem 0 0;
           max-width: 62rem;
-          color: #4b5563;
-          font-size: 1rem;
+          color: #57534e;
+          font-size: 0.88rem;
         }
         .portal-crm-list-actions {
           display: flex;
@@ -112,19 +112,27 @@ export function PortalCrmListView({ view }: PortalCrmListViewProps) {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 42px;
-          padding: 0.7rem 1rem;
+          min-height: 40px;
+          padding: 0.55rem 1rem;
           border-radius: 10px;
-          border: 1px solid #2563eb;
-          background: #2563eb;
+          border: 1px solid #4a7c59;
+          background: #4a7c59;
           color: #fff;
-          font-weight: 700;
+          font-weight: 600;
+          font-size: 0.84rem;
           text-decoration: none;
+          transition: all 0.15s ease;
+        }
+        .portal-crm-list-button:hover {
+          opacity: 0.9;
         }
         .portal-crm-list-button--ghost {
           background: transparent;
-          color: #1f2937;
-          border-color: rgba(78, 108, 136, 0.32);
+          color: #292524;
+          border-color: #d9d4cb;
+        }
+        .portal-crm-list-button--ghost:hover {
+          background: #faf8f5;
         }
         .portal-crm-table-wrap {
           overflow: hidden;
@@ -136,26 +144,31 @@ export function PortalCrmListView({ view }: PortalCrmListViewProps) {
         }
         .portal-crm-table thead th {
           text-align: left;
-          padding: 0.9rem 1rem;
-          font-size: 1rem;
-          font-weight: 700;
-          color: #3f3f46;
-          border-bottom: 1px solid #d7dde7;
-          background: #f8fafc;
+          padding: 0.85rem 1rem;
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #a8a29e;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          border-bottom: 1px solid #eee9e0;
+          background: transparent;
           white-space: nowrap;
         }
         .portal-crm-table tbody td {
           padding: 0.8rem 1rem;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid #f5f2ec;
           vertical-align: top;
-          font-size: 0.98rem;
-          color: #1f2937;
+          font-size: 0.84rem;
+          color: #292524;
         }
         .portal-crm-table tbody tr:hover {
-          background: #f9fbff;
+          background: #faf8f5;
+        }
+        .portal-crm-table tbody tr:last-child td {
+          border-bottom: none;
         }
         .portal-crm-table a {
-          color: #0f5fc5;
+          color: #4a7c59;
           text-decoration: none;
           font-weight: 600;
         }
@@ -163,11 +176,11 @@ export function PortalCrmListView({ view }: PortalCrmListViewProps) {
           text-decoration: underline;
         }
         .is-muted {
-          color: #6b7280;
+          color: #78716c;
         }
         .portal-crm-table-empty {
           text-align: center;
-          color: #6b7280;
+          color: #78716c;
         }
         @media (max-width: 960px) {
           .portal-crm-list-hero {

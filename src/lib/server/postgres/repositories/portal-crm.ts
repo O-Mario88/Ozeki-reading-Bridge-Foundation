@@ -276,6 +276,8 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
     linkedActivityResult,
     schoolProgressResult,
     feedbackResult,
+    schoolsImpactedResult,
+    feedbackCountResult,
   ] = await Promise.all([
     queryPostgres(
       `
@@ -405,6 +407,16 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
       `,
       [id],
     ).catch(() => ({ rows: [] as Array<Record<string, unknown>> })),
+    /* Schools impacted: count distinct schools from which participants attended */
+    queryPostgres<{ total: number }>(
+      `SELECT COUNT(DISTINCT school_id)::int AS total FROM portal_training_attendance WHERE portal_record_id = $1 AND school_id IS NOT NULL`,
+      [id],
+    ),
+    /* Feedback entries: count rows in portal_training_feedback */
+    queryPostgres<{ total: number }>(
+      `SELECT COUNT(*)::int AS total FROM portal_training_feedback WHERE portal_record_id = $1`,
+      [id],
+    ).catch(() => ({ rows: [{ total: 0 }] })),
   ]);
 
   const attended = whole(attendanceResult.rows[0]?.attended);
@@ -440,17 +452,18 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
       { label: "Total Attendees", value: String(attended) },
     ],
     primaryActions: [
-      { label: "Training Workspace", href: "/portal/trainings/manage", tone: "ghost" },
-      { label: "School Account", href: `/portal/schools/${row.schoolId}` },
+      { label: "Add Participant", href: `/portal/trainings/participants/new?trainingId=${id}&schoolId=${row.schoolId}` },
+      { label: "Training Workspace", href: "/portal/trainings/manage", tone: "ghost" as const },
+      { label: "School Account", href: `/portal/schools/${row.schoolId}`, tone: "ghost" as const },
     ],
     notice: "Training data is linked to the school account, participant roster, evidence files, and follow-up workflow.",
     quickLinks: [
       { label: "Participants", count: whole(attendanceResult.rows[0]?.total), href: "#participants", icon: "TR" },
-      { label: "Files", count: whole(filesResult.rows[0]?.total), href: `/portal/reports?module=training&search=${encodeURIComponent(text(row.recordCode))}`, icon: "FL" },
-      { label: "Assessments", count: whole(relatedCounts?.assessments), href: `/portal/assessments?school=${encodeURIComponent(text(row.schoolName))}`, icon: "AS" },
+      { label: "Feedback", count: whole(feedbackCountResult.rows[0]?.total), href: "#feedback", icon: "FL" },
+      { label: "Schools Impacted", count: whole(schoolsImpactedResult.rows[0]?.total), href: `/portal/schools/${row.schoolId}`, icon: "SC" },
+      { label: "Learners Assessed", count: whole(progress?.assessed), href: `/portal/assessments?school=${encodeURIComponent(text(row.schoolName))}`, icon: "AS" },
       { label: "School Visits", count: whole(relatedCounts?.visits), href: `/portal/visits?school=${encodeURIComponent(text(row.schoolName))}`, icon: "VS" },
       { label: "Teacher Evaluations", count: whole(relatedCounts?.evaluations), href: `/portal/schools/${row.schoolId}/teachers`, icon: "TE" },
-      { label: "1001 Story", count: whole(relatedCounts?.storyProjects), href: `/portal/story?school=${encodeURIComponent(text(row.schoolName))}`, icon: "ST" },
     ],
     detailsLeft: [
       { label: "Training Session Name", value: trainingName },
@@ -597,6 +610,7 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
           { label: "Organization", value: organization },
           { label: "Attendees", value: String(attended) },
           { label: "School Code", value: text(row.schoolCode) },
+          { label: "Evidence Files", value: formatNumber(filesResult.rows[0]?.total) },
         ],
       },
       {
@@ -782,8 +796,8 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
       { label: "Edit Contact", href: `/portal/contacts/${id}/edit` },
       { label: "Add Contact to Training Session", href: `#add-to-training` },
       ...(isTeacher ? [
-        { label: "New Evaluation", href: `/portal/evaluations/new?teacherId=${id}&schoolId=${row.schoolId}` },
-        { label: "New Coaching", href: `/portal/visits/new?type=Coaching&teacherId=${id}&schoolId=${row.schoolId}` },
+        { label: "New Evaluation", href: `/portal/schools/${row.schoolId}/teachers/${encodeURIComponent(text(row.teacherUid))}/improvement` },
+        { label: "New Coaching", href: `/portal/visits?new=1&schoolId=${row.schoolId}&programType=Coaching+Visit` },
       ] : []),
       { label: "School Account", href: `/portal/schools/${row.schoolId}`, tone: "ghost" as const },
       { label: "Contact List", href: "/portal/contacts", tone: "ghost" as const },
@@ -1001,7 +1015,7 @@ export async function getAssessmentCrmProfile(id: number): Promise<PortalCrmProf
     return null;
   }
   const payload = safeJson(row.payloadJson);
-  const [responsesResult, filesResult, recordsResult] = await Promise.all([
+  const [responsesResult, filesResult, recordsResult, learnersCountResult] = await Promise.all([
     queryPostgres<{ total: number }>(
       `
         SELECT COUNT(*)::int AS total
@@ -1035,6 +1049,16 @@ export async function getAssessmentCrmProfile(id: number): Promise<PortalCrmProf
       `,
       [row.portalRecordId ?? -1, row.schoolId, row.assessmentDate, row.assessmentType],
     ),
+    queryPostgres<{ total: number }>(
+      `
+        SELECT COUNT(*)::int AS total
+        FROM assessment_records ar
+        WHERE ar.source_portal_record_id = $1 OR (
+          ar.school_id = $2 AND ar.assessment_date = $3::date AND ar.assessment_type = $4
+        )
+      `,
+      [row.portalRecordId ?? -1, row.schoolId, row.assessmentDate, row.assessmentType],
+    ),
   ]);
 
   const assessmentNumber = text(row.recordCode, `AN-${String(id).padStart(4, "0")}`);
@@ -1054,10 +1078,10 @@ export async function getAssessmentCrmProfile(id: number): Promise<PortalCrmProf
     ],
     notice: "Assessment summaries, reading-level evidence, and report-generation metrics are sourced from the assessment tables in PostgreSQL.",
     quickLinks: [
+      { label: "Learners Assessed", count: whole(learnersCountResult.rows[0]?.total), href: "#results", icon: "LR" },
       { label: "Files", count: whole(filesResult.rows[0]?.total), href: `/portal/reports?module=learner-assessment&search=${encodeURIComponent(assessmentNumber)}`, icon: "FL" },
       { label: "Question Responses", count: whole(responsesResult.rows[0]?.total), href: "#responses", icon: "QR" },
       { label: "School Account", count: 1, href: `/portal/schools/${row.schoolId}`, icon: "SC" },
-      { label: "Training Session", count: payloadText(payload, "trainingSessionName") ? 1 : 0, href: "/portal/trainings", icon: "TR" },
     ],
     detailsLeft: [
       { label: "Survey", value: payloadText(payload, "surveyName") ?? text(row.toolVersion, "Annual School Assessment (Core)") },
@@ -1325,8 +1349,10 @@ export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileVi
       { label: "Pathway", value: text(visit.visitPathway ?? payloadText(payload, "visitPathway")) },
     ],
     primaryActions: [
-      { label: "Visit Workspace", href: "/portal/visits/manage", tone: "ghost" },
-      { label: "School Account", href: `/portal/schools/${row.schoolId}` },
+      { label: "New Assessment", href: `/portal/assessments?new=1&schoolId=${row.schoolId}` },
+      { label: "New Evaluation", href: `/portal/schools/${row.schoolId}/teachers` },
+      { label: "Visit Workspace", href: "/portal/visits/manage", tone: "ghost" as const },
+      { label: "School Account", href: `/portal/schools/${row.schoolId}`, tone: "ghost" as const },
     ],
     notice: "Visit profiles combine implementation checks, coaching notes, demo follow-through, and leadership meeting evidence from PostgreSQL.",
     quickLinks: [

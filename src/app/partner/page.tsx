@@ -76,10 +76,10 @@ export default function PartnerPage() {
         </div>
       </SectionWrapper>
 
-      <SectionWrapper theme="charius-dark" id="book-a-partner-call">
+      <SectionWrapper theme="charius-beige" id="book-a-partner-call">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">Request a partnership discussion</h2>
-          <p className="text-xl text-gray-300 leading-relaxed mb-10 max-w-2xl mx-auto">Share your geography focus and timeline. The partnerships team will follow up.</p>
+          <h2 className="text-4xl font-bold text-[#111] mb-6">Request a partnership discussion</h2>
+          <p className="text-xl text-gray-600 leading-relaxed mb-10 max-w-2xl mx-auto">Share your geography focus and timeline. The partnerships team will follow up.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <HomeSupportRequestModal
               triggerLabel="Partner With Us"
@@ -92,7 +92,7 @@ export default function PartnerPage() {
               triggerLabel="Request a concept note"
               title="Concept note request"
               description="Share the sponsorship scope and we will prepare a concept note."
-              triggerClassName="px-8 py-3.5 rounded-full border-2 border-white/20 text-white font-semibold hover:bg-white/10 transition-all inline-flex items-center justify-center cursor-pointer"
+              triggerClassName="px-8 py-3.5 rounded-full border-2 border-gray-200 text-[#111] font-semibold hover:border-gray-300 bg-white hover:bg-gray-50 transition-all inline-flex items-center justify-center cursor-pointer"
               presetMessage="I would like a concept note for a literacy partnership."
             />
           </div>

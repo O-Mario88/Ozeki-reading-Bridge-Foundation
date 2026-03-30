@@ -7,33 +7,33 @@
 
 /* ── Design Tokens ── */
 .finance-shell {
-    --fin-bg: var(--color-bg, #EAECF0);
-    --fin-card-bg: var(--color-surface, #ffffff);
-    --fin-border: var(--color-border, #D0D5DD);
-    --fin-border-hover: color-mix(in oklab, var(--color-border, #D0D5DD), black 12%);
-    --fin-primary: var(--color-brand-blue, #006B61);
-    --fin-primary-light: color-mix(in oklab, var(--color-brand-blue, #006B61), white 92%);
-    --fin-primary-dark: var(--color-brand-blue-dark, #005248);
-    --fin-success: var(--color-brand-orange, #FE8B5C);
-    --fin-success-bg: color-mix(in oklab, var(--color-brand-orange, #FE8B5C), white 90%);
-    --fin-danger: var(--color-state-danger, #DC2626);
-    --fin-danger-bg: color-mix(in oklab, var(--color-state-danger, #DC2626), white 90%);
-    --fin-warning: var(--color-state-warning, #D97706);
-    --fin-warning-bg: color-mix(in oklab, var(--color-state-warning, #D97706), white 90%);
-    --fin-text: var(--color-text, #101828);
-    --fin-text-secondary: var(--color-text, #101828);
-    --fin-text-muted: var(--color-text-muted, #344054);
-    --fin-text-light: color-mix(in oklab, var(--color-text-muted, #344054), white 35%);
-    --fin-radius: 14px;
+    --fin-bg: #f0ece4;
+    --fin-card-bg: #ffffff;
+    --fin-border: #eee9e0;
+    --fin-border-hover: #d9d4cb;
+    --fin-primary: #4a7c59;
+    --fin-primary-light: #e8f0de;
+    --fin-primary-dark: #3d6b4f;
+    --fin-success: #4a7c59;
+    --fin-success-bg: #eef6ec;
+    --fin-danger: #DC2626;
+    --fin-danger-bg: color-mix(in oklab, #DC2626, white 90%);
+    --fin-warning: #D97706;
+    --fin-warning-bg: color-mix(in oklab, #D97706, white 90%);
+    --fin-text: #292524;
+    --fin-text-secondary: #57534e;
+    --fin-text-muted: #78716c;
+    --fin-text-light: #a8a29e;
+    --fin-radius: 18px;
     --fin-radius-sm: 10px;
     --fin-radius-xs: 6px;
-    --fin-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .04), 0 1px 2px rgba(15, 23, 42, .02));
-    --fin-shadow-md: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, .06), 0 2px 4px rgba(15, 23, 42, .03));
+    --fin-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    --fin-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
     --fin-sidebar-w: 260px;
     --fin-topbar-h: 64px;
     --fin-transition: 0.2s cubic-bezier(.4, 0, .2, 1);
 
-    font-family: var(--orbf-font-family, 'Poppins', -apple-system, BlinkMacSystemFont, system-ui, sans-serif);
+    font-family: var(--ds-font, 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif);
     color: var(--fin-text);
     background: var(--fin-bg);
     min-height: 100vh;
@@ -149,11 +149,50 @@
 
 /* ── Main Content Area ── */
 .finance-main {
-    margin-left: var(--fin-sidebar-w);
     flex: 1;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+/* ── Top Tabs ── */
+.finance-top-tabs {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 0 28px;
+    background: var(--fin-card-bg);
+    border-bottom: 1px solid var(--fin-border);
+    overflow-x: auto;
+    scrollbar-width: none; /* Hide scrollbar Firefox */
+}
+.finance-top-tabs::-webkit-scrollbar {
+    display: none; /* Hide scrollbar Chrome/Safari */
+}
+
+.finance-top-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: 14px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fin-text-muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: all var(--fin-transition);
+    white-space: nowrap;
+    position: relative;
+    top: 1px; /* Align with container border-bottom */
+}
+
+.finance-top-tab:hover {
+    color: var(--fin-text);
+}
+
+.finance-top-tab.active {
+    color: var(--fin-primary); /* Green text */
+    font-weight: 600;
+    border-bottom-color: #ea580c; /* Orange underline */
 }
 
 /* ── Top Bar ── */

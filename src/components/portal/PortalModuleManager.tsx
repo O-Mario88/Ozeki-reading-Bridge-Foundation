@@ -11,6 +11,7 @@ import {
 import {
   allUgandaDistricts,
   getDistrictsByRegion,
+  getSubRegionsByRegion,
   inferRegionFromDistrict,
   ugandaRegions,
 } from "@/lib/uganda-locations";
@@ -3024,13 +3025,37 @@ export function PortalModuleManager({
   ]);
 
   const updatePayloadField = useCallback((key: string, value: string | string[]) => {
-    setFormState((prev) => ({
-      ...prev,
-      payload: {
-        ...prev.payload,
-        [key]: value,
-      },
-    }));
+    setFormState((prev) => {
+      let nextFollowUpDate = prev.followUpDate;
+      let nextFollowUpType = prev.followUpType;
+      let nextFollowUpOwnerUserId = prev.followUpOwnerUserId;
+
+      if (key === "followUpDate") nextFollowUpDate = Array.isArray(value) ? value[0] ?? "" : value;
+      if (key === "followUpType") nextFollowUpType = Array.isArray(value) ? value[0] ?? "school_visit" : (value as "school_visit" | "virtual_check_in");
+      if (key === "followUpOwnerUserId") nextFollowUpOwnerUserId = Array.isArray(value) ? value[0] ?? "" : value;
+
+      const nextPayload = { ...prev.payload, [key]: value };
+
+      if (key === "trainingRegion" || key === "region") {
+        if (typeof nextPayload.trainingSubRegion !== "undefined") nextPayload.trainingSubRegion = "";
+        if (typeof nextPayload.subRegion !== "undefined") nextPayload.subRegion = "";
+        if (typeof nextPayload.trainingDistrict !== "undefined") nextPayload.trainingDistrict = "";
+        if (typeof nextPayload.district !== "undefined") nextPayload.district = "";
+      }
+
+      if (key === "trainingSubRegion" || key === "subRegion") {
+        if (typeof nextPayload.trainingDistrict !== "undefined") nextPayload.trainingDistrict = "";
+        if (typeof nextPayload.district !== "undefined") nextPayload.district = "";
+      }
+
+      return {
+        ...prev,
+        followUpDate: nextFollowUpDate,
+        followUpType: nextFollowUpType,
+        followUpOwnerUserId: nextFollowUpOwnerUserId,
+        payload: nextPayload,
+      };
+    });
   }, []);
 
   const updateTrainingParticipant = useCallback(
@@ -4753,6 +4778,32 @@ export function PortalModuleManager({
                         >
                           View/Edit
                         </button>
+                        <button
+                          className="button button-ghost"
+                          type="button"
+                          style={{color: "var(--charius-red)"}}
+                          onClick={async () => {
+                            const reason = window.prompt("Are you sure you want to delete this record? Please provide a reason:");
+                            if (reason !== null) {
+                              try {
+                                const res = await fetch(`/api/portal/records/${record.id}?reason=${encodeURIComponent(reason)}`, {
+                                  method: "DELETE"
+                                });
+                                if (res.ok) {
+                                  setFeedback({ kind: "success", message: "Record deleted." });
+                                  void fetchRecords(true);
+                                } else {
+                                  const err = await res.json();
+                                  setFeedback({ kind: "error", message: err.error || "Failed to delete" });
+                                }
+                              } catch (e) {
+                                setFeedback({ kind: "error", message: "Network error" });
+                              }
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -4884,13 +4935,13 @@ export function PortalModuleManager({
                         <>
                           <label>
                             {renderLabel("School Account", true)}
-                            <select
-                              value={formState.schoolId}
+                            <input
+                              list="visit-school-options"
+                              value={formState.schoolName || ""}
                               onChange={(event) => {
-                                const nextSchoolId = event.target.value;
-                                const selectedSchool = nextSchoolId
-                                  ? schoolsById.get(Number(nextSchoolId))
-                                  : undefined;
+                                const typedName = event.target.value;
+                                const selectedSchool = Array.from(schoolsById.values()).find(s => s.name === typedName);
+                                const nextSchoolId = selectedSchool ? String(selectedSchool.id) : "";
 
                                 setFormState((prev) => ({
                                   ...prev,
@@ -4907,7 +4958,7 @@ export function PortalModuleManager({
                                     leadershipNextActionsJson: "[]",
                                   }, selectedSchool ?? null),
                                   schoolId: nextSchoolId,
-                                  schoolName: selectedSchool?.name ?? "",
+                                  schoolName: typedName,
                                   district: selectedSchool?.district ?? prev.district,
                                   region: selectedSchool
                                     ? inferRegionFromDistrict(selectedSchool.district) ??
@@ -4918,15 +4969,16 @@ export function PortalModuleManager({
                                   { id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" },
                                 ]);
                               }}
+                              placeholder="Type to search school..."
                               required
-                            >
-                              <option value="">Select school account</option>
+                            />
+                            <datalist id="visit-school-options">
                               {formSchoolOptions.map((school) => (
-                                <option key={school.id} value={String(school.id)}>
-                                  {school.name} ({school.schoolCode})
+                                <option key={school.id} value={school.name}>
+                                  {school.schoolCode}
                                 </option>
                               ))}
-                            </select>
+                            </datalist>
                           </label>
                           <label>
                             {renderLabel("Region", true)}
@@ -5048,13 +5100,13 @@ export function PortalModuleManager({
                           {config.module === "training" ? null : (
                             <label>
                               {renderLabel("School Account", true)}
-                            <select
-                              value={formState.schoolId}
+                            <input
+                              list="standard-school-options"
+                              value={formState.schoolName || ""}
                               onChange={(event) => {
-                                const nextSchoolId = event.target.value;
-                                const selectedSchool = nextSchoolId
-                                  ? schoolsById.get(Number(nextSchoolId))
-                                  : undefined;
+                                const typedName = event.target.value;
+                                const selectedSchool = Array.from(schoolsById.values()).find(s => s.name === typedName);
+                                const nextSchoolId = selectedSchool ? String(selectedSchool.id) : "";
 
                                 setFormState((prev) => {
                                   const geoPayload = applySchoolGeoPayload(
@@ -5082,7 +5134,7 @@ export function PortalModuleManager({
                                     ...prev,
                                     payload: nextPayload,
                                     schoolId: nextSchoolId,
-                                    schoolName: selectedSchool?.name ?? "",
+                                    schoolName: typedName,
                                     district: selectedSchool?.district ?? prev.district,
                                     region: selectedSchool
                                       ? inferRegionFromDistrict(selectedSchool.district) ??
@@ -5111,15 +5163,16 @@ export function PortalModuleManager({
                                   setEgraLearners(createDefaultEgraRows());
                                 }
                               }}
+                              placeholder="Type to search school..."
                               required
-                            >
-                              <option value="">Select school account</option>
+                            />
+                            <datalist id="standard-school-options">
                               {formSchoolOptions.map((school) => (
-                                <option key={school.id} value={String(school.id)}>
-                                  {school.name} ({school.schoolCode})
+                                <option key={school.id} value={school.name}>
+                                  {school.schoolCode}
                                 </option>
                               ))}
-                            </select>
+                            </datalist>
                             {hideTrainingPhysicalLocationContext ? (
                               <small className="portal-field-help">
                                 Online sessions use virtual follow-up and hide physical location fields.
@@ -6599,10 +6652,40 @@ export function PortalModuleManager({
                                 >
                                   <option value="">Select</option>
                                   {(() => {
-                                    const optionsToRender =
-                                      field.key === "facilitatedByContactId" && initialFinanceContacts
-                                        ? initialFinanceContacts.map((c) => ({ value: String(c.id), label: c.fullName }))
-                                        : (field.options ?? []);
+                                    let optionsToRender = field.options ?? [];
+                                    
+                                    if (field.key === "facilitatedByContactId" && initialFinanceContacts) {
+                                      optionsToRender = initialFinanceContacts.map((c) => ({ value: String(c.id), label: c.fullName }));
+                                    } else if (field.key === "followUpOwnerUserId" && initialUsers) {
+                                      optionsToRender = initialUsers.map((u) => ({ value: String(u.id), label: u.fullName }));
+                                    } else if (field.key === "trainingSubRegion" || field.key === "subRegion") {
+                                      const currentRegion = String(formState.payload.trainingRegion || formState.payload.region || "").trim().replace(/ Region$/i, "");
+                                      if (currentRegion) {
+                                        optionsToRender = getSubRegionsByRegion(currentRegion).map((sr) => ({ value: sr.subRegion, label: sr.subRegion }));
+                                      } else {
+                                        optionsToRender = ugandaRegions.flatMap((r) => r.subRegions.map((sr) => ({ value: sr.subRegion, label: sr.subRegion })));
+                                      }
+                                    } else if (field.key === "trainingDistrict" || field.key === "district") {
+                                      const currentRegion = String(formState.payload.trainingRegion || formState.payload.region || "").trim().replace(/ Region$/i, "");
+                                      const currentSubRegion = String(formState.payload.trainingSubRegion || formState.payload.subRegion || "").trim();
+                                      
+                                      let validSubRegion = currentSubRegion;
+                                      if (currentRegion && currentSubRegion) {
+                                         const validSubRegions = getSubRegionsByRegion(currentRegion).map(sr => sr.subRegion);
+                                         if (!validSubRegions.includes(currentSubRegion)) {
+                                            validSubRegion = "";
+                                         }
+                                      }
+
+                                      if (validSubRegion) {
+                                        optionsToRender = getDistrictsByRegion(validSubRegion).map((d) => ({ value: d, label: d }));
+                                      } else if (currentRegion) {
+                                        optionsToRender = getDistrictsByRegion(currentRegion).map((d) => ({ value: d, label: d }));
+                                      } else {
+                                        optionsToRender = ugandaRegions.flatMap((r) => r.districts.map((d) => ({ value: d, label: d })));
+                                      }
+                                    }
+
                                     return optionsToRender.map((option) => (
                                       <option key={option.value} value={option.value}>
                                         {option.label}

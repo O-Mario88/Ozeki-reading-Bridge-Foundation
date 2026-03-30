@@ -600,19 +600,6 @@ const assessmentConfig: PortalModuleConfig = {
       id: "basics",
       title: "SECTION A: SCHOOL INFORMATION",
       fields: [
-        {
-          key: "surveyName",
-          label: "Survey / tool name",
-          type: "text",
-          required: true,
-          placeholder: "e.g. Annual School Assessment (Core)",
-        },
-        {
-          key: "assessmentNumber",
-          label: "Assessment number",
-          type: "text",
-          helperText: "Optional manual identifier. If blank, the system will generate one.",
-        },
         { key: "subCounty", label: "Sub-county", type: "text", required: true },
         { key: "parish", label: "Parish", type: "text", required: true },
         {

@@ -1944,3 +1944,103 @@ export async function listFinanceAuditedStatementsPostgres(filters?: { published
     };
   });
 }
+
+export async function generateFinanceMonthlyStatementPostgres(
+  params: { periodType: "monthly" | "quarterly" | "fiscal_year"; month?: string; year?: number; quarter?: "Q1" | "Q2" | "Q3" | "Q4" },
+  currency: FinanceCurrency,
+  actor: { id: number },
+) {
+  let from: Date | string, to: Date | string, monthStr: string;
+
+  if (params.periodType === "monthly") {
+    if (!params.month) throw new Error("Month is required for monthly statements");
+    const window = getMonthWindow(params.month);
+    from = window.from;
+    to = window.to;
+    monthStr = params.month;
+  } else if (params.periodType === "quarterly") {
+    if (!params.year || !params.quarter) throw new Error("Year and quarter are required");
+    const y = params.year;
+    if (params.quarter === "Q1") { from = new Date(`${y}-01-01T00:00:00Z`); to = new Date(`${y}-04-01T00:00:00Z`); }
+    else if (params.quarter === "Q2") { from = new Date(`${y}-04-01T00:00:00Z`); to = new Date(`${y}-07-01T00:00:00Z`); }
+    else if (params.quarter === "Q3") { from = new Date(`${y}-07-01T00:00:00Z`); to = new Date(`${y}-10-01T00:00:00Z`); }
+    else { from = new Date(`${y}-10-01T00:00:00Z`); to = new Date(`${y+1}-01-01T00:00:00Z`); }
+    monthStr = `${y}-${params.quarter}`;
+  } else {
+    if (!params.year) throw new Error("Year is required");
+    from = new Date(`${params.year}-01-01T00:00:00Z`);
+    to = new Date(`${params.year + 1}-01-01T00:00:00Z`);
+    monthStr = `${params.year}`;
+  }
+
+  const totalsResult = await queryPostgres(
+    `
+      SELECT
+        COALESCE(SUM(CASE WHEN txn_type = 'money_in' THEN amount ELSE 0 END), 0) AS "moneyIn",
+        COALESCE(SUM(CASE WHEN txn_type = 'money_out' THEN amount ELSE 0 END), 0) AS "moneyOut"
+      FROM finance_transactions_ledger
+      WHERE posted_status = 'posted'
+        AND currency = $1
+        AND date >= $2
+        AND date < $3
+    `,
+    [currency, from, to],
+  );
+
+  const breakdownResult = await queryPostgres(
+    `
+      SELECT
+        COALESCE(display_category, CASE WHEN category = 'Donations' THEN 'Donation' ELSE category END) AS category,
+        COALESCE(SUM(amount), 0) AS amount
+      FROM finance_transactions_ledger
+      WHERE posted_status = 'posted'
+        AND txn_type = 'money_in'
+        AND currency = $1
+        AND date >= $2
+        AND date < $3
+      GROUP BY COALESCE(display_category, CASE WHEN category = 'Donations' THEN 'Donation' ELSE category END)
+    `,
+    [currency, from, to],
+  );
+
+  const categoryBreakdown = createFinanceIncomeBreakdownZero();
+  for (const row of breakdownResult.rows as Array<Record<string, unknown>>) {
+    try {
+      const category = normalizeFinanceIncomeCategory(String(row.category ?? "Donation"));
+      categoryBreakdown[category] = normalizeNumber(row.amount);
+    } catch {
+      // Ignore
+    }
+  }
+
+  const totals = totalsResult.rows[0] as Record<string, unknown> | undefined;
+  const moneyIn = normalizeNumber(totals?.moneyIn ?? 0);
+  const moneyOut = normalizeNumber(totals?.moneyOut ?? 0);
+  const net = normalizeNumber(moneyIn - moneyOut);
+  const breakdownJson = { ...categoryBreakdown, Expense: moneyOut };
+
+  const insertResult = await queryPostgres(
+    `
+      INSERT INTO finance_monthly_statements (
+        month, period_type, currency,
+        total_money_in, total_money_out, net,
+        breakdown_json, generated_by_user_id, generated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      RETURNING id, generated_at
+    `,
+    [monthStr, params.periodType, currency, moneyIn, moneyOut, net, JSON.stringify(breakdownJson), actor.id],
+  );
+
+  return {
+    id: insertResult.rows[0].id,
+    month: monthStr,
+    periodType: params.periodType,
+    currency,
+    totalMoneyIn: moneyIn,
+    totalMoneyOut: moneyOut,
+    net,
+    breakdownByCategory: breakdownJson,
+    generatedAt: insertResult.rows[0].generated_at,
+    generatedBy: actor.id,
+  };
+}

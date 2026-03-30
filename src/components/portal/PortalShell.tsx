@@ -212,6 +212,11 @@ export function PortalShell({
             ☰
           </button>
 
+          <div className="ds-topbar-welcome">
+            <p className="ds-topbar-welcome-title">Welcome, {user.fullName.split(" ")[0]} 👋</p>
+            <p className="ds-topbar-welcome-sub">Here&apos;s what&apos;s happening in your workspace.</p>
+          </div>
+
           <form action="/portal/schools" method="get" className="ds-topbar-search">
             <input
               name="query"

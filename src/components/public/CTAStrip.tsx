@@ -24,34 +24,30 @@ export function CTAStrip({
   primaryButtonHoverColor,
 }: CTAStripProps) {
   const themes = {
-    brand: "bg-gray-100", // Neutral light grey background
-    dark: "bg-gray-900 text-white",
-    light: "bg-brand-surface text-brand-text border-y border-gray-100",
-    charius: "bg-charius-dark text-white", // Dark green background for Charius
+    brand: "bg-[#006b61] text-white", // Deep Green for Charius
+    dark: "bg-[#09110D] text-white", // Dark mode
+    light: "bg-charius-beige text-[#111]", // Charius beige
+    charius: "bg-charius-beige text-[#111] border-t border-gray-200", // Refined from black to neutral tone
   };
 
   const primaryBtnTheme = primaryButtonColor
     ? `${primaryButtonColor} text-white ${primaryButtonHoverColor || ""}`
-    : theme === "charius"
+    : (theme === "charius" || theme === "brand" || theme === "dark" || theme === "light")
       ? "bg-charius-orange text-white hover:bg-[#E86D0B] shadow-lg hover:shadow-xl border border-transparent"
-      : theme === "brand" || theme === "light"
-        ? "bg-brand-primary text-white hover:bg-brand-primary/90 shadow-sm hover:shadow"
-        : "bg-white text-gray-900 hover:bg-gray-50 shadow-sm";
+      : "bg-white text-gray-900 hover:bg-gray-50 shadow-sm";
 
-  const secondaryBtnTheme = theme === "brand" || theme === "light"
-    ? "border-2 border-gray-200 text-gray-800 hover:border-gray-300 bg-white hover:bg-gray-50"
-    : theme === "charius"
-      ? "border-2 border-[#FAF5EF]/20 text-white hover:bg-[#FAF5EF]/10"
-      : "border-2 border-white text-white hover:bg-white/10";
+  const secondaryBtnTheme = theme === "brand" || theme === "dark" 
+      ? "border-2 border-white/20 text-white hover:bg-white/10"
+      : "border-2 border-gray-200 text-[#111] hover:border-gray-300 bg-white hover:bg-gray-50";
 
   return (
     <section className={`py-16 md:py-24 ${themes[theme]}`}>
       <div className="container mx-auto px-4 md:px-6 max-w-4xl text-center">
-        <h2 className={`text-3xl md:text-5xl font-bold mb-6 tracking-tight ${theme === 'brand' ? 'text-brand-primary' : theme === 'light' ? 'text-brand-text' : 'text-white'}`}>
+        <h2 className={`text-[32px] md:text-5xl font-bold mb-6 tracking-tight ${(theme === 'light' || theme === 'charius') ? 'text-[#111]' : 'text-white'}`}>
           {heading}
         </h2>
         {subheading && (
-          <p className={`text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed ${theme === 'brand' ? 'text-gray-900' : theme === 'light' ? 'text-brand-text/80' : 'text-white/90'}`}>
+          <p className={`text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed ${(theme === 'light' || theme === 'charius') ? 'text-gray-600' : 'text-white/80'}`}>
             {subheading}
           </p>
         )}
@@ -59,7 +55,7 @@ export function CTAStrip({
           {primaryButtonText && primaryButtonHref && (
             <Link 
               href={primaryButtonHref}
-              className={`px-8 py-3.5 rounded-full font-semibold transition-all ${primaryBtnTheme}`}
+              className={`px-8 py-4 rounded-full font-bold transition-all ${primaryBtnTheme}`}
             >
               {primaryButtonText}
             </Link>
@@ -67,7 +63,7 @@ export function CTAStrip({
           {secondaryButtonText && secondaryButtonHref && (
             <Link 
               href={secondaryButtonHref}
-              className={`px-8 py-3.5 rounded-full font-semibold transition-all ${secondaryBtnTheme}`}
+              className={`px-8 py-4 rounded-full font-bold transition-all ${secondaryBtnTheme}`}
             >
               {secondaryButtonText}
             </Link>

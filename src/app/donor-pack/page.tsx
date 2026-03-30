@@ -100,9 +100,9 @@ export default async function DonorPackPage() {
             </div>
           </PremiumCard>
 
-          <PremiumCard variant="charius" className="p-8 bg-charius-dark text-white">
-            <h2 className="text-2xl font-bold mb-4">Next action</h2>
-            <p className="text-gray-300 leading-relaxed mb-8">
+          <PremiumCard variant="charius" className="p-8 border-t-4 border-[#FA7D15]">
+            <h2 className="text-2xl font-bold text-[#111] mb-4">Next action</h2>
+            <p className="text-gray-600 leading-relaxed mb-8">
               Request a concept note for your target district or package and receive
               scoped implementation and reporting options.
             </p>

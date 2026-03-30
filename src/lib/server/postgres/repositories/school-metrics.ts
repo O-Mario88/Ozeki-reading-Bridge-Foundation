@@ -9,6 +9,8 @@ export interface SchoolEnrollmentRecord {
   updatedFrom: string;
   academicTerm: string | null;
   recordedAt: string;
+  /** Alias of recordedAt for compatibility with types.ts / SchoolProfileView */
+  createdAt: string;
   recordedById: number | null;
 }
 
@@ -23,13 +25,16 @@ export interface SchoolLiteracyImpactRecord {
   p3Impacted: number;
   totalImpacted: number;
   recordedAt: string;
+  /** Alias of recordedAt for compatibility with types.ts / SchoolProfileView */
+  createdAt: string;
   recordedById: number | null;
 }
 
-export type CreateEnrollmentInput = Omit<SchoolEnrollmentRecord, "id" | "recordedAt">;
-export type CreateLiteracyImpactInput = Omit<SchoolLiteracyImpactRecord, "id" | "recordedAt">;
+export type CreateEnrollmentInput = Omit<SchoolEnrollmentRecord, "id" | "recordedAt" | "createdAt">;
+export type CreateLiteracyImpactInput = Omit<SchoolLiteracyImpactRecord, "id" | "recordedAt" | "createdAt">;
 
 function normalizeEnrollment(row: Record<string, unknown>): SchoolEnrollmentRecord {
+  const recordedAt = String(row.recorded_at ?? row.created_at ?? "");
   return {
     id: String(row.id),
     schoolId: Number(row.school_id),
@@ -38,12 +43,14 @@ function normalizeEnrollment(row: Record<string, unknown>): SchoolEnrollmentReco
     totalEnrollment: Number(row.total_enrollment),
     updatedFrom: String(row.updated_from),
     academicTerm: row.academic_term ? String(row.academic_term) : null,
-    recordedAt: String(row.recorded_at),
+    recordedAt,
+    createdAt: recordedAt,
     recordedById: row.recorded_by_id ? Number(row.recorded_by_id) : null,
   };
 }
 
 function normalizeLiteracyImpact(row: Record<string, unknown>): SchoolLiteracyImpactRecord {
+  const recordedAt = String(row.recorded_at ?? row.created_at ?? "");
   return {
     id: String(row.id),
     schoolId: Number(row.school_id),
@@ -54,7 +61,8 @@ function normalizeLiteracyImpact(row: Record<string, unknown>): SchoolLiteracyIm
     p2Impacted: Number(row.p2_impacted),
     p3Impacted: Number(row.p3_impacted),
     totalImpacted: Number(row.total_impacted),
-    recordedAt: String(row.recorded_at),
+    recordedAt,
+    createdAt: recordedAt,
     recordedById: row.recorded_by_id ? Number(row.recorded_by_id) : null,
   };
 }

@@ -6,18 +6,18 @@ import { requirePortalFinanceReceiptEditorUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Money In",
+  title: "Income",
   description: "All posted money-in ledger transactions from receipts and invoice payments.",
 };
 
-export default async function PortalFinanceMoneyInPage() {
+export default async function PortalFinanceIncomePage() {
   const user = await requirePortalFinanceReceiptEditorUser();
   const transactions = await listFinanceLedgerTransactions({ txnType: "money_in" });
 
   return (
-    <FinanceShell user={user} activeHref="/portal/finance/money-in" title="Money In">
+    <FinanceShell user={user} activeHref="/portal/finance/income" title="Income">
       <PortalFinanceLedgerManager
-        title="Money In Ledger"
+        title="Income Ledger"
         transactions={transactions}
         txnType="money_in"
       />

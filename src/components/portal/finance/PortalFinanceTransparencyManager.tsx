@@ -24,6 +24,7 @@ export function PortalFinanceTransparencyManager() {
 function PortalFinanceTransparencyManagerContent() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"fy" | "quarterly" | "audited">("fy");
+  const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<{ snapshots: FinancePublicSnapshotRecord[], audited: FinanceAuditedStatementRecord[] }>({
     queryKey: ["finance", "transparency", "admin"],
@@ -46,7 +47,8 @@ function PortalFinanceTransparencyManagerContent() {
       });
       if (!res.ok) throw new Error((await res.json()).error || "Failed to publish");
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["finance", "transparency", "admin"] })
+    onSuccess: () => { setError(null); queryClient.invalidateQueries({ queryKey: ["finance", "transparency", "admin"] }); },
+    onError: (err) => setError(err.message)
   });
 
   const archiveMutation = useMutation({
@@ -61,20 +63,24 @@ function PortalFinanceTransparencyManagerContent() {
       });
       if (!res.ok) throw new Error("Failed to archive");
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["finance", "transparency", "admin"] })
+    onSuccess: () => { setError(null); queryClient.invalidateQueries({ queryKey: ["finance", "transparency", "admin"] }); },
+    onError: (err) => setError(err.message)
   });
 
   const handlePublish = (id: number, type: "snapshot" | "audited") => {
+    setError(null);
     const text = type === "snapshot" ? "PUBLISH FY SNAPSHOT" : "PUBLISH AUDITED STATEMENTS";
     const conf = prompt(`Type "${text}" to confirm publishing to the public page:`);
     if (conf === text) {
       publishMutation.mutate({ id, type, confirmation: text });
     } else if (conf !== null) {
-      alert("Verification failed.");
+      setError("Verification failed. You must type the phrase exactly.");
+      setTimeout(() => setError(null), 4000);
     }
   };
 
   const handleArchive = (id: number, type: "snapshot" | "audited") => {
+    setError(null);
     if (confirm("Are you sure you want to archive this document? It will no longer be visible publicly if it was published.")) {
       archiveMutation.mutate({ id, type });
     }
@@ -88,6 +94,12 @@ function PortalFinanceTransparencyManagerContent() {
           <p className="text-sm text-gray-500">Manage public financial snapshots and audited statements.</p>
         </div>
       </div>
+      
+      {error && (
+        <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">
+          Error: {error}
+        </div>
+      )}
 
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
@@ -164,6 +176,7 @@ function StatusBadge({ status }: { status: string }) {
 function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data: FinancePublicSnapshotRecord[], type: "fy" | "quarterly", onPublish: (id: number) => void, onArchive: (id: number) => void, isPending: boolean }) {
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [openGenerate, setOpenGenerate] = useState(false);
   const [fy, setFy] = useState(new Date().getFullYear());
   const [currency, setCurrency] = useState<FinanceCurrency>("UGX");
@@ -171,6 +184,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setError(null);
     try {
       const res = await fetch("/api/portal/finance/transparency", {
         method: "POST",
@@ -184,7 +198,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
       queryClient.invalidateQueries({ queryKey: ["finance", "transparency", "admin"] });
       setOpenGenerate(false);
     } catch (err: unknown) {
-      alert(getErrorMessage(err, "Failed to generate snapshot"));
+      setError(getErrorMessage(err, "Failed to generate snapshot"));
     } finally {
       setIsGenerating(false);
     }
@@ -214,6 +228,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
         closeLabel="Close"
         maxWidth="640px"
       >
+        {error && <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">Error: {error}</div>}
         <form
           className="form-grid portal-form-grid"
           onSubmit={(event) => {
@@ -298,6 +313,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
 function AuditedManager({ data, onPublish, onArchive, isPending }: { data: FinanceAuditedStatementRecord[], onPublish: (id: number) => void, onArchive: (id: number) => void, isPending: boolean }) {
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [openUpload, setOpenUpload] = useState(false);
   const [fy, setFy] = useState(new Date().getFullYear() - 1);
   const [auditor, setAuditor] = useState("");
@@ -307,6 +323,7 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
     e.preventDefault();
     if (!file) return;
     setIsUploading(true);
+    setError(null);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -323,7 +340,7 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
       setAuditor("");
       setOpenUpload(false);
     } catch (err: unknown) {
-      alert(getErrorMessage(err, "Upload failed"));
+      setError(getErrorMessage(err, "Upload failed"));
     } finally {
       setIsUploading(false);
     }
@@ -351,6 +368,7 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
         closeLabel="Close"
         maxWidth="700px"
       >
+        {error && <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">Error: {error}</div>}
         <form className="form-grid portal-form-grid" onSubmit={handleUpload}>
           <label>
             <span className="portal-field-label">Fiscal Year</span>

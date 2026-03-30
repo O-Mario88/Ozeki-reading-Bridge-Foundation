@@ -9,7 +9,7 @@ import { EventCard } from "@/components/events/EventCard";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { PageHero } from "@/components/public/PageHero";
-import { Users, MonitorPlay, Presentation, Sparkles, Calendar, CheckCircle2 } from "lucide-react";
+import { Users, MonitorPlay, Sparkles, Calendar, CheckCircle2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +73,7 @@ export default async function OnlineTrainingPage() {
       </PageHero>
 
       {/* 2. Stats Band */}
-      <section className="bg-charius-dark py-12 relative overflow-hidden">
+      <section className="bg-[#006b61] py-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/patterns/topography.svg')] opacity-10" />
         <div className="container mx-auto px-4 relative z-10 max-w-7xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-white/10">

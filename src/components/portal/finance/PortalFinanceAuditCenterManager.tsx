@@ -37,6 +37,7 @@ export function PortalFinanceAuditCenterManager({
   const [monthFilter, setMonthFilter] = useState("");
   const [severityFilter, setSeverityFilter] = useState<"all" | "low" | "medium" | "high">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | "acknowledged" | "resolved" | "overridden">("open");
+  const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
 
   const filteredExceptions = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -187,7 +188,7 @@ export function PortalFinanceAuditCenterManager({
       <section className="card">
         <div className="finance-list-toolbar">
           <div className="finance-list-toolbar-left">
-            <button type="button" className={`button button-sm ${tab === "exceptions" ? "" : "button-ghost"}`} onClick={() => setTab("exceptions")}>
+            <button type="button" className={`button button-sm ${tab === "exceptions" ? "" : "button-ghost"}`} onClick={() => { setTab("exceptions"); setSelectedMessage(null); }}>
               Exceptions
             </button>
             <button type="button" className={`button button-sm ${tab === "registry" ? "" : "button-ghost"}`} onClick={() => setTab("registry")}>
@@ -240,6 +241,13 @@ export function PortalFinanceAuditCenterManager({
           </div>
         ) : null}
 
+        {selectedMessage && tab === "exceptions" && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-md mb-4 flex justify-between items-start">
+            <div className="text-sm">{selectedMessage}</div>
+            <button className="text-blue-800 hover:text-blue-900 font-bold ml-4" onClick={() => setSelectedMessage(null)}>&times;</button>
+          </div>
+        )}
+
         {tab === "exceptions" ? (
           filteredExceptions.length === 0 ? (
             <p>No open exceptions.</p>
@@ -271,7 +279,7 @@ export function PortalFinanceAuditCenterManager({
                           <button
                             type="button"
                             className="button button-ghost button-sm"
-                            onClick={() => window.alert(item.message)}
+                            onClick={() => setSelectedMessage(item.message)}
                           >
                             View
                           </button>

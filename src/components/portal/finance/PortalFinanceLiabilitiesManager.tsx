@@ -55,9 +55,9 @@ export function PortalFinanceLiabilitiesManager({ initialLiabilities }: { initia
       setLiabilities(liabilities.map(l => l.id === id ? { ...l, status: 'reversed' } : l));
     } catch(err: unknown) {
       if (err instanceof Error) {
-        alert(err.message);
+        setError(err.message);
       } else {
-        alert(String(err));
+        setError(String(err));
       }
     }
   }
@@ -66,10 +66,16 @@ export function PortalFinanceLiabilitiesManager({ initialLiabilities }: { initia
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2>Liabilities Registry</h2>
-        <button className="button button-primary" onClick={() => setIsAdding(true)}>
+        <button className="button button-primary" onClick={() => { setIsAdding(true); setError(null); }}>
           Record Liability
         </button>
       </div>
+
+      {error && !isAdding && (
+        <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm mb-4">
+          Error: {error}
+        </div>
+      )}
 
       <div className="table-wrapper">
         <table className="table">
