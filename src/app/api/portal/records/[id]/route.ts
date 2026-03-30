@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
   getPortalRecordById,
   updatePortalRecord,
-  softDeletePortalRecord,
 } from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
 import { PortalRecordPayload, PortalUser } from "@/lib/types";

@@ -4796,7 +4796,7 @@ export function PortalModuleManager({
                                   const err = await res.json();
                                   setFeedback({ kind: "error", message: err.error || "Failed to delete" });
                                 }
-                              } catch (e) {
+                              } catch (_e) {
                                 setFeedback({ kind: "error", message: "Network error" });
                               }
                             }

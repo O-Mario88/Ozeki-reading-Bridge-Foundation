@@ -3,6 +3,8 @@ import { getPortalUserFromSession, deleteSchoolDirectoryRecordPostgres } from "@
 import { canManagePortalUsers } from "@/lib/db-api";
 import { cookies } from "next/headers";
 
+import { PortalUser } from "@/lib/types";
+
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const p = await params;
@@ -25,8 +27,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     // Authorization: Only directors/admins should permanently delete schools
-    const permissions = await canManagePortalUsers(user.id);
-    if (!permissions.canManageUsers && user.role !== "Director") {
+    const canManage = canManagePortalUsers(user as PortalUser);
+    if (!canManage && user.role !== "Director") {
         return NextResponse.json({ error: "Insufficient permissions to delete schools" }, { status: 403 });
     }
 

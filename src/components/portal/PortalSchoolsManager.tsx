@@ -58,7 +58,6 @@ export function PortalSchoolsManager({
   const [districtFilter, setDistrictFilter] = useState("");
   const [queryFilter, setQueryFilter] = useState("");
 
-  const [deletingSchoolId, setDeletingSchoolId] = useState<number | null>(null);
   const [isDeletingSchool, setIsDeletingSchool] = useState(false);
 
   const [savingSchool, setSavingSchool] = useState(false);
@@ -496,7 +495,6 @@ export function PortalSchoolsManager({
       });
     } finally {
       setIsDeletingSchool(false);
-      setDeletingSchoolId(null);
     }
   }
 
