@@ -29,9 +29,12 @@ export default function SupportRequestForm() {
     useEffect(() => {
         if (search.length > 2) {
             // Simplified search logic, ideally this would be an API call
-            fetch(`/api/portal/schools?search=${search}`)
+            fetch(`/api/schools/search?search=${search}`)
                 .then(res => res.json())
-                .then(data => setSchools(data.slice(0, 10)))
+                .then(data => {
+                    const schoolsArr = Array.isArray(data.schools) ? data.schools : [];
+                    setSchools(schoolsArr.slice(0, 10));
+                })
                 .catch(err => console.error("Error fetching schools:", err));
         } else {
             setSchools([]);

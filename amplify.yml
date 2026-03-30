@@ -21,7 +21,7 @@ frontend:
         - cp -r database .next/standalone/database || true
         - |
           echo "Writing runtime environment variables..."
-          env | grep -E '^(DATABASE_|DB_|GOOGLE_|NEXT_PUBLIC_|NODE_ENV|SMTP_|FINANCE_)' > .next/standalone/.env.production || true
+          env | grep -E '^(DATABASE_|DB_|GOOGLE_|NEXT_PUBLIC_|NODE_ENV|SMTP_|FINANCE_|APP_|PUBLIC_|ADMIN_|PORTAL_|YOUTUBE_)' > .next/standalone/.env.production || true
           echo "Env vars written: $(wc -l < .next/standalone/.env.production) lines"
   artifacts:
     baseDirectory: .next

@@ -37,11 +37,12 @@ export function BaseContactForm({
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        const form = event.currentTarget;
         setState({ status: "submitting", message: "Submitting..." });
 
         try {
-            const result = await onSubmit(new FormData(event.currentTarget));
-            event.currentTarget.reset();
+            const result = await onSubmit(new FormData(form));
+            form.reset();
             setState({
                 status: "success",
                 message: result?.successMessage || successMessage,
