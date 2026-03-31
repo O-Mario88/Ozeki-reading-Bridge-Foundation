@@ -4791,7 +4791,7 @@ export function PortalModuleManager({
                                 });
                                 if (res.ok) {
                                   setFeedback({ kind: "success", message: "Record deleted." });
-                                  void fetchRecords(true);
+                                  void fetchRecords(filters);
                                 } else {
                                   const err = await res.json();
                                   setFeedback({ kind: "error", message: err.error || "Failed to delete" });

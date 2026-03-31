@@ -26,9 +26,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Authorization: Only directors/admins should permanently delete schools
+    // Authorization: Only admins should permanently delete schools
     const canManage = canManagePortalUsers(user as PortalUser);
-    if (!canManage && user.role !== "Director") {
+    if (!canManage && user.role !== "Admin") {
         return NextResponse.json({ error: "Insufficient permissions to delete schools" }, { status: 403 });
     }
 
