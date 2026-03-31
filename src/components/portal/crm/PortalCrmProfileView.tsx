@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { PortalCrmProfileViewModel } from "@/lib/portal-crm-types";
 import { AddContactToTrainingModal } from "./AddContactToTrainingModal";
 
+
 interface PortalCrmProfileViewProps {
   profile: PortalCrmProfileViewModel;
   contactId?: number;
@@ -28,6 +29,33 @@ const ICON_MAP: Record<string, string> = {
 export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileViewProps) {
   const [activeTab, setActiveTab] = useState(profile.tabs[0]?.id ?? "details");
   const active = profile.tabs.find((tab) => tab.id === activeTab) ?? profile.tabs[0] ?? null;
+
+  // ── Delete contact state (only used when profile.badge === 'Contact') ──
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const isContactProfile = profile.badge === "Contact" && contactId;
+
+  async function handleDeleteContact() {
+    if (deleteConfirmName.trim().toLowerCase() !== profile.title.trim().toLowerCase()) {
+      setDeleteError("Contact name does not match. Please type it exactly to confirm.");
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      const res = await fetch(`/api/portal/contacts/${contactId}`, { method: "DELETE" });
+      const json = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? "Failed to delete contact.");
+      }
+      window.location.href = "/portal/contacts";
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Deletion failed. Please try again.");
+      setDeleteLoading(false);
+    }
+  }
 
   return (
     <div className="portal-crm-page">
@@ -66,6 +94,15 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
                   </Link>
                 ),
               )}
+              {isContactProfile ? (
+                <button
+                  type="button"
+                  className="portal-crm-button portal-crm-button--danger"
+                  onClick={() => { setDeleteConfirmOpen(true); setDeleteConfirmName(""); setDeleteError(""); }}
+                >
+                  Delete Contact
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -192,6 +229,53 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
           </aside>
         ) : null}
       </section>
+
+      {/* ═══════════ DELETE CONTACT CONFIRM DIALOG ═══════════ */}
+      {deleteConfirmOpen && isContactProfile ? (
+        <div className="portal-crm-delete-overlay" role="dialog" aria-modal="true" aria-labelledby="crm-delete-dialog-title">
+          <div className="portal-crm-delete-dialog">
+            <h2 id="crm-delete-dialog-title">⚠️ Permanently Delete Contact?</h2>
+            <p>
+              This action is <strong>irreversible</strong>. It will permanently remove{" "}
+              <strong>{profile.title}</strong> from the database, including their training attendance and
+              participation history.
+            </p>
+            <p className="portal-crm-delete-hint">
+              To confirm, type the contact name exactly: <strong>{profile.title}</strong>
+            </p>
+            <input
+              id="delete-contact-confirm-input"
+              className="portal-crm-delete-input"
+              type="text"
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.target.value)}
+              placeholder={profile.title}
+              disabled={deleteLoading}
+              autoFocus
+            />
+            {deleteError ? <p className="portal-crm-delete-error">{deleteError}</p> : null}
+            <div className="portal-crm-delete-actions">
+              <button
+                type="button"
+                className="portal-crm-button portal-crm-button--ghost"
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+              <button
+                id="confirm-delete-contact-btn"
+                type="button"
+                className="portal-crm-button portal-crm-button--danger"
+                onClick={handleDeleteContact}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Deleting…" : "Yes, Delete Forever"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <style jsx>{`
         /* ================================================================
@@ -327,6 +411,87 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
           background: rgba(232,240,222,0.3);
           color: #3d6b4f;
           border-color: #4a7c59;
+        }
+        .portal-crm-button--danger {
+          background: #dc2626;
+          border-color: #dc2626;
+          color: #fff;
+          cursor: pointer;
+        }
+        .portal-crm-button--danger:hover {
+          background: #b91c1c;
+          border-color: #b91c1c;
+        }
+        .portal-crm-button--danger:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* ── DELETE CONFIRM DIALOG ── */
+        .portal-crm-delete-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.55);
+          backdrop-filter: blur(3px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 1rem;
+        }
+        .portal-crm-delete-dialog {
+          background: #fff;
+          border-radius: 18px;
+          padding: 2rem;
+          max-width: 480px;
+          width: 100%;
+          box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+          border: 1px solid rgba(220,38,38,0.2);
+        }
+        .portal-crm-delete-dialog h2 {
+          margin: 0 0 0.85rem;
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: #dc2626;
+        }
+        .portal-crm-delete-dialog p {
+          margin: 0 0 0.85rem;
+          color: #57534e;
+          font-size: 0.92rem;
+          line-height: 1.55;
+        }
+        .portal-crm-delete-hint {
+          font-size: 0.88rem !important;
+          color: #78716c !important;
+        }
+        .portal-crm-delete-input {
+          width: 100%;
+          padding: 0.65rem 0.85rem;
+          border: 1.5px solid rgba(220,38,38,0.35);
+          border-radius: 10px;
+          font-size: 0.92rem;
+          font-family: inherit;
+          outline: none;
+          margin-bottom: 0.75rem;
+          background: #fff8f8;
+          transition: border-color 0.15s;
+          box-sizing: border-box;
+        }
+        .portal-crm-delete-input:focus {
+          border-color: #dc2626;
+          background: #fff;
+        }
+        .portal-crm-delete-error {
+          color: #dc2626 !important;
+          font-size: 0.85rem !important;
+          margin-bottom: 0.75rem !important;
+          font-weight: 600;
+        }
+        .portal-crm-delete-actions {
+          display: flex;
+          gap: 0.75rem;
+          justify-content: flex-end;
+          margin-top: 0.5rem;
         }
 
         /* ── NOTICE BAR ── */

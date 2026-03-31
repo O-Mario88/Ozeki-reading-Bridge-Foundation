@@ -80,6 +80,32 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
   const [supportStatusError, setSupportStatusError] = useState("");
   const [schoolSupportStatus, setSchoolSupportStatus] = useState<SchoolSupportStatusRecord | null>(null);
 
+  // ── Delete school state ──
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  async function handleDeleteSchool() {
+    if (deleteConfirmName.trim().toLowerCase() !== school.name.trim().toLowerCase()) {
+      setDeleteError("School name does not match. Please type it exactly to confirm.");
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      const res = await fetch(`/api/portal/schools/${school.id}`, { method: "DELETE" });
+      const json = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? "Failed to delete school.");
+      }
+      window.location.href = "/portal/schools";
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Deletion failed. Please try again.");
+      setDeleteLoading(false);
+    }
+  }
+
   useEffect(() => {
     let active = true;
     setGraduationLoading(true);
@@ -256,6 +282,13 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           <Link className="sp-btn" href={`/portal/events`}>Online Training</Link>
           <Link className="sp-btn" href={`/portal/visits?new=1&schoolId=${school.id}`}>New Visit</Link>
           <Link className="sp-btn" href={`/portal/assessments?new=1&schoolId=${school.id}`}>New Assessment</Link>
+          <button
+            className="sp-btn sp-btn--danger"
+            type="button"
+            onClick={() => { setDeleteConfirmOpen(true); setDeleteConfirmName(""); setDeleteError(""); }}
+          >
+            Delete School
+          </button>
         </div>
       </section>
 
@@ -590,6 +623,53 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
         </aside>
       </div>
 
+      {/* ═══════════ DELETE SCHOOL CONFIRM DIALOG ═══════════ */}
+      {deleteConfirmOpen ? (
+        <div className="sp-delete-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
+          <div className="sp-delete-dialog">
+            <h2 id="delete-dialog-title">⚠️ Permanently Delete School?</h2>
+            <p>
+              This action is <strong>irreversible</strong>. It will permanently delete{" "}
+              <strong>{school.name}</strong> and all linked contacts, visits, assessments, trainings, and
+              evaluations from the database.
+            </p>
+            <p className="sp-delete-hint">
+              To confirm, type the school name exactly: <strong>{school.name}</strong>
+            </p>
+            <input
+              id="delete-school-confirm-input"
+              className="sp-delete-input"
+              type="text"
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.target.value)}
+              placeholder={school.name}
+              disabled={deleteLoading}
+              autoFocus
+            />
+            {deleteError ? <p className="sp-delete-error">{deleteError}</p> : null}
+            <div className="sp-delete-actions">
+              <button
+                type="button"
+                className="sp-btn sp-btn--ghost"
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+              <button
+                id="confirm-delete-school-btn"
+                type="button"
+                className="sp-btn sp-btn--danger"
+                onClick={handleDeleteSchool}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Deleting…" : "Yes, Delete Forever"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* ═══════════ MODALS ═══════════ */}
       <GraduationReviewModal
         open={graduationOpen}
@@ -754,6 +834,86 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           padding: 0.35rem 0.85rem;
           font-size: 0.78rem;
           border-radius: 8px;
+        }
+        .sp-btn--danger {
+          background: #dc2626;
+          border-color: #dc2626;
+          color: #fff;
+        }
+        .sp-btn--danger:hover {
+          background: #b91c1c;
+          border-color: #b91c1c;
+        }
+        .sp-btn--danger:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* ── DELETE CONFIRM DIALOG ── */
+        .sp-delete-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.55);
+          backdrop-filter: blur(3px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 1rem;
+        }
+        .sp-delete-dialog {
+          background: #fff;
+          border-radius: 18px;
+          padding: 2rem;
+          max-width: 480px;
+          width: 100%;
+          box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+          border: 1px solid rgba(220,38,38,0.2);
+        }
+        .sp-delete-dialog h2 {
+          margin: 0 0 0.85rem;
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: #dc2626;
+        }
+        .sp-delete-dialog p {
+          margin: 0 0 0.85rem;
+          color: #57534e;
+          font-size: 0.92rem;
+          line-height: 1.55;
+        }
+        .sp-delete-hint {
+          font-size: 0.88rem !important;
+          color: #78716c !important;
+        }
+        .sp-delete-input {
+          width: 100%;
+          padding: 0.65rem 0.85rem;
+          border: 1.5px solid rgba(220,38,38,0.35);
+          border-radius: 10px;
+          font-size: 0.92rem;
+          font-family: inherit;
+          outline: none;
+          margin-bottom: 0.75rem;
+          background: #fff8f8;
+          transition: border-color 0.15s;
+          box-sizing: border-box;
+        }
+        .sp-delete-input:focus {
+          border-color: #dc2626;
+          background: #fff;
+        }
+        .sp-delete-error {
+          color: #dc2626 !important;
+          font-size: 0.85rem !important;
+          margin-bottom: 0.75rem !important;
+          font-weight: 600;
+        }
+        .sp-delete-actions {
+          display: flex;
+          gap: 0.75rem;
+          justify-content: flex-end;
+          margin-top: 0.5rem;
         }
 
         /* ── NOTICE BAR ── */

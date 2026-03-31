@@ -1273,3 +1273,52 @@ export async function updateSchoolLearnerInSchoolPostgres(
   );
   return normalizeSchoolLearnerRecord(result.rows[0]);
 }
+
+/**
+ * Permanently deletes a contact from school_contacts and removes related participation records.
+ * Returns true if the contact was found and deleted, false if not found.
+ */
+export async function deleteContactPostgres(contactId: number): Promise<boolean> {
+  return withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      // Verify contact exists and get schoolId for primary contact sync
+      const checkRes = await client.query(
+        `SELECT contact_id, school_id, is_primary_contact FROM school_contacts WHERE contact_id = $1 LIMIT 1`,
+        [contactId],
+      );
+      if (!checkRes.rows[0]) {
+        await client.query("ROLLBACK");
+        return false;
+      }
+      const schoolId = checkRes.rows[0].school_id as number;
+
+      // Remove attendance/participation links
+      await client.query(
+        `DELETE FROM portal_training_attendance WHERE contact_id = $1`,
+        [contactId],
+      );
+      await client.query(
+        `DELETE FROM visit_participants WHERE contact_id = $1`,
+        [contactId],
+      );
+      await client.query(
+        `DELETE FROM story_activity_participants WHERE contact_id = $1`,
+        [contactId],
+      );
+
+      // Delete from school_contacts
+      await client.query(`DELETE FROM school_contacts WHERE contact_id = $1`, [contactId]);
+
+      // Re-sync primary contact on the school account
+      await syncSchoolPrimaryContactPostgres(schoolId, client);
+
+      await client.query("COMMIT");
+      return true;
+    } catch (e) {
+      await client.query("ROLLBACK");
+      console.error("Failed to delete contact", e);
+      throw e;
+    }
+  });
+}
