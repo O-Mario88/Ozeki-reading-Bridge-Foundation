@@ -1,4 +1,4 @@
-import { queryPostgres } from "@/lib/server/postgres/client";
+import { queryPostgres, chunkedPromiseAll } from "@/lib/server/postgres/client";
 import type { PublicImpactAggregate, CostEffectivenessData, CostCategory } from "@/lib/types";
 import { buildPublicImpactAggregatePostgres } from "./public-impact";
 
@@ -22,20 +22,20 @@ export const getImpactSummaryPostgres = unstable_cache(
       contactCountResult,
       downloadCountResult,
       newsletterCountResult,
-    ] = await Promise.all([
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM training_participants WHERE participant_role = 'Classroom teacher'`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM training_sessions`),
-      queryPostgres(`
+    ] = await chunkedPromiseAll([
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM training_participants WHERE participant_role = 'Classroom teacher'`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM training_sessions`),
+      () => queryPostgres(`
         SELECT
           COUNT(*)::int AS total,
           COALESCE(SUM(online_teachers_trained), 0)::int AS teachers
         FROM online_training_sessions
         WHERE status IN ('scheduled', 'live', 'completed')
       `),
-      queryPostgres(`SELECT COALESCE(SUM(learners_assessed), 0)::int AS total FROM legacy_assessment_records`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM assessment_records`),
-      queryPostgres(`SELECT COALESCE(SUM(stories_published), 0)::int AS total FROM legacy_assessment_records`),
-      queryPostgres(`
+      () => queryPostgres(`SELECT COALESCE(SUM(learners_assessed), 0)::int AS total FROM legacy_assessment_records`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM assessment_records`),
+      () => queryPostgres(`SELECT COALESCE(SUM(stories_published), 0)::int AS total FROM legacy_assessment_records`),
+      () => queryPostgres(`
         SELECT COALESCE(
           SUM(
             CASE
@@ -48,7 +48,7 @@ export const getImpactSummaryPostgres = unstable_cache(
         )::int AS total
         FROM schools_directory
       `),
-      queryPostgres(`
+      () => queryPostgres(`
         SELECT
           id,
           lower(trim(name)) AS school_key,
@@ -56,7 +56,7 @@ export const getImpactSummaryPostgres = unstable_cache(
         FROM schools_directory
         WHERE trim(COALESCE(name, '')) != ''
       `),
-      queryPostgres(`
+      () => queryPostgres(`
         SELECT
           module,
           school_id AS "schoolId",
@@ -65,11 +65,11 @@ export const getImpactSummaryPostgres = unstable_cache(
           payload_json AS "payloadJson"
         FROM portal_records
       `),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM bookings`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM contacts`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM download_leads`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM newsletter_subscribers`),
-    ]);
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM bookings`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM contacts`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM download_leads`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM newsletter_subscribers`),
+    ], 2);
 
     const teachersTrained = toNumber(teachersTrainedResult.rows[0]?.total);
     const trainingSessionsCompleted = toNumber(trainingSessionsResult.rows[0]?.total);
@@ -379,16 +379,16 @@ export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
       assessmentsRes,
       recentRes,
       demoVisitsRes,
-    ] = await Promise.all([
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM schools_directory`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM support_requests WHERE status != 'resolved'`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_users`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'training'`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'assessment'`),
-      queryPostgres(`SELECT id, module, status, school_name AS "schoolName", date, created_at AS "createdAt" FROM portal_records ORDER BY created_at DESC LIMIT 10`),
-      queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'visit' AND (payload_json->>'demoDelivered' = 'true' OR payload_json->>'demoClass' IS NOT NULL)`),
-    ]);
+    ] = await chunkedPromiseAll([
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM schools_directory`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM support_requests WHERE status != 'resolved'`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_users`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'training'`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'assessment'`),
+      () => queryPostgres(`SELECT id, module, status, school_name AS "schoolName", date, created_at AS "createdAt" FROM portal_records ORDER BY created_at DESC LIMIT 10`),
+      () => queryPostgres(`SELECT COUNT(*)::int AS total FROM portal_records WHERE module = 'visit' AND (payload_json->>'demoDelivered' = 'true' OR payload_json->>'demoClass' IS NOT NULL)`),
+    ], 2);
 
     const totalRecords = toNumber(recordsRes.rows[0]?.total);
     const activeSchools = toNumber(schoolsRes.rows[0]?.total);
@@ -396,7 +396,8 @@ export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
     const assessments = toNumber(assessmentsRes.rows[0]?.total);
     const demoVisitsConducted = toNumber(demoVisitsRes.rows[0]?.total);
 
-    const mappedRecentActivity = recentRes.rows.map(r => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mappedRecentActivity = recentRes.rows.map((r: any) => ({
       id: Number(r.id),
       module: String(r.module),
       status: String(r.status),
@@ -478,10 +479,10 @@ export async function getTableRowCountsPostgres(): Promise<any[]> {
     "material_distributions", "consent_records"
   ];
   
-  const counts = await Promise.all(tables.map(async (table) => {
+  const counts = await chunkedPromiseAll(tables.map(table => async () => {
     const res = await queryPostgres(`SELECT COUNT(*)::int AS total FROM ${table}`);
     return { table, count: toNumber(res.rows[0]?.total) };
-  }));
+  }), 2);
 
   return counts;
 }
@@ -491,7 +492,7 @@ export async function purgeAllDataPostgres(): Promise<void> {
     "portal_records", "support_requests", "audit_logs", "cost_entries",
     "observation_rubrics", "intervention_groups", "material_distributions", "consent_records"
   ];
-  await Promise.all(tables.map(table => queryPostgres(`DELETE FROM ${table}`)));
+  await chunkedPromiseAll(tables.map(table => () => queryPostgres(`DELETE FROM ${table}`)), 2);
 }
 
 export async function purgeSelectedDataTablesPostgres(tables: string[]): Promise<void> {
@@ -500,7 +501,7 @@ export async function purgeSelectedDataTablesPostgres(tables: string[]): Promise
     "observation_rubrics", "intervention_groups", "material_distributions", "consent_records"
   ];
   const toPurge = tables.filter(t => allowed.includes(t));
-  await Promise.all(toPurge.map(table => queryPostgres(`DELETE FROM ${table}`)));
+  await chunkedPromiseAll(toPurge.map(table => () => queryPostgres(`DELETE FROM ${table}`)), 2);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

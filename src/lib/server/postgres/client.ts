@@ -131,3 +131,26 @@ export async function checkPostgresConnectivity() {
   await queryPostgres("SELECT 1");
   return getPostgresRuntimeInfo();
 }
+
+/**
+ * Executes an array of factory functions that return Promises, sequentially in chunks.
+ * Useful for preventing PostgreSQL connection pool exhaustion when fetching multiple
+ * distinct data points dynamically across a dashboard or analytics page.
+ * 
+ * Default concurrency is 2 (matching the default DATABASE_POOL_MAX).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function chunkedPromiseAll<T extends any[]>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  promiseFactories: (() => Promise<any>)[],
+  concurrency = 2,
+): Promise<T> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const results: any[] = [];
+  for (let i = 0; i < promiseFactories.length; i += concurrency) {
+    const chunk = promiseFactories.slice(i, i + concurrency);
+    const chunkResults = await Promise.all(chunk.map((fn) => fn()));
+    results.push(...chunkResults);
+  }
+  return results as unknown as T;
+}

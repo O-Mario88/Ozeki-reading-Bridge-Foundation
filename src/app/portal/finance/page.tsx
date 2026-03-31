@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { FinanceShell } from "@/components/portal/finance/FinanceShell";
 import { getPortalUserOrRedirect } from "@/lib/auth";
-import { queryPostgres } from "@/lib/server/postgres/client";
+import { queryPostgres, chunkedPromiseAll } from "@/lib/server/postgres/client";
 import { 
   getFinanceDashboardSummaryPostgres,
   listFinanceInvoicesPostgres,
@@ -42,11 +42,11 @@ async function FinanceDashboardContent({ period }: { period: string }) {
     recentReceipts,
     recentExpenses,
     budgetStats
-  ] = await Promise.all([
-    getFinanceDashboardSummaryPostgres(new Date().toISOString().slice(0, 7), "UGX"),
+  ] = await chunkedPromiseAll([
+    () => getFinanceDashboardSummaryPostgres(new Date().toISOString().slice(0, 7), "UGX"),
 
     // Income & expenses from the actual ledger governed by the selected period
-    queryPostgres(
+    () => queryPostgres(
       `SELECT
         COALESCE(SUM(CASE WHEN txn_type = 'money_in' THEN amount ELSE 0 END), 0) AS "incomeYtd",
         COALESCE(SUM(CASE WHEN txn_type = 'money_out' THEN amount ELSE 0 END), 0) AS "expensesYtd"
@@ -58,19 +58,19 @@ async function FinanceDashboardContent({ period }: { period: string }) {
       [startDate, today],
     ),
 
-    listFinanceInvoicesPostgres(),
-    listFinanceReceiptsPostgres(),
-    listFinanceExpensesPostgres(),
+    () => listFinanceInvoicesPostgres(),
+    () => listFinanceReceiptsPostgres(),
+    () => listFinanceExpensesPostgres(),
     
     // Aggregation for the new budget metrics
-    queryPostgres(
+    () => queryPostgres(
       `SELECT 
          COALESCE(SUM(CASE WHEN status IN ('submitted', 'under_review') THEN requested_amount ELSE 0 END), 0) as pending,
          COALESCE(SUM(approved_amount - spent_amount), 0) as committed
        FROM finance_operation_budgets
        WHERE status NOT IN ('draft', 'closed', 'rejected')`
-    )
-  ]);
+    ).catch(() => ({ rows: [{ pending: 0, committed: 0 }] }))
+  ], 2);
 
   const ytdRow = ytdTotals.rows[0] as Record<string, unknown> | undefined;
   const incomeYtd = Number(ytdRow?.incomeYtd ?? 0);
