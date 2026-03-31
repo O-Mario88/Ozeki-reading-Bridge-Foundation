@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import "./sociaplan.css";
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
 import { getImpactReportFilterFacetsAsync } from "@/services/dataService";
+import { SectionWrapper } from "@/components/public/SectionWrapper";
+import { PremiumCard } from "@/components/public/PremiumCard";
+import { CTAStrip } from "@/components/public/CTAStrip";
 import { ShieldAlert, Download, BarChart3, Presentation } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -109,142 +111,159 @@ export default async function ImpactDashboardPage({
   const pdfDownloadUrl = `/api/impact/report-engine?scopeLevel=${activeScopeLevel}&scopeId=${encodeURIComponent(activeScopeId)}&period=${encodeURIComponent(selectedPeriodType || "This Fiscal Year")}&year=${selectedYear}&format=pdf&reportType=${encodeURIComponent(selectedType || "General Literacy Report")}&reportCategory=${encodeURIComponent(selectedCategory)}`;
 
   return (
-    <div className="sp-layout">
-      {/* 1. Sidebar */}
-      <aside className="sp-sidebar hidden md:flex">
-        <div className="sp-logo-area">
-          <div className="sp-logo-icon" />
-          Ozeki Impact
+    <>
+      {/* 1. Impact Hero */}
+      <section className="relative overflow-hidden pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
+        <div className="absolute inset-0 pointer-events-none">
+          <Image 
+            src="/photos/22.jpeg" 
+            alt="Literacy impact in action"
+            fill
+            sizes="100vw"
+            priority
+            quality={75} 
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-white/85 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-[var(--tw-colors-brand-background,#FAFAFA)]" />
         </div>
-        <div className="sp-nav-group">
-          <div className="sp-nav-label">Main Navigation</div>
-          <Link href="/" className="sp-nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            Home
-          </Link>
-          <div className="sp-nav-item active">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></svg>
-            Dashboard
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-primary/15 via-transparent to-transparent pointer-events-none" />
+        <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
+            <BarChart3 size={16} />
+            Data & Outcomes
           </div>
-          <Link href="/impact/methodology" className="sp-nav-item">
-            <ShieldAlert /> Methodology
-          </Link>
-          <Link href="/impact/case-studies" className="sp-nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            Case Studies
-          </Link>
-          <Link href="/sponsor-a-district" className="sp-nav-item">
-            <BarChart3 /> Sponsor Impact
-          </Link>
+          <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-8">
+            Evidence-based Reading Impact
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-600 max-w-3xl leading-relaxed">
+            Transforming literacy outcomes through continuous assessment, dedicated coaching, and community alignment. We verify every classroom milestone with real data across Uganda.
+          </p>
         </div>
-        
-        <div className="sp-nav-group mt-auto">
-          <div className="sp-nav-label">Support</div>
-          <Link href="/contact" className="sp-nav-item">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-            Knowledge Base
-          </Link>
-          <a href="mailto:support@ozekiread.org" className="sp-nav-item">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
-            Help & Contact
-          </a>
-        </div>
-      </aside>
+      </section>
 
-      {/* 2. Main Area */}
-      <main className="sp-main">
-        <header className="sp-header">
-          <div className="sp-search-bar hidden sm:flex">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#babcce" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
-            <input type="text" placeholder="Search for anything..." />
+      {/* 2. Public Explorer Dashboard */}
+      <SectionWrapper theme="off-white" className="!pt-12">
+        <PremiumCard className="overflow-hidden p-1 shadow-2xl border-brand-primary/10" withHover={false}>
+          <div className="bg-white rounded-[1.8rem] overflow-hidden">
+             <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-gray-100 flex items-center justify-center text-gray-400 font-medium">Loading live data explorer...</div>}>
+               <PublicImpactMapExplorer
+                  syncUrl
+                  initialPeriod={firstValue(params.period) || "FY"}
+                  initialSelection={{
+                    region: firstValue(params.region),
+                    subRegion: firstValue(params.subRegion),
+                    district: firstValue(params.district),
+                    school: firstValue(params.school) || firstValue(params.schoolId),
+                  }}
+                  initialPayload={aggregate}
+                />
+             </Suspense>
           </div>
-          <div className="sp-header-right ml-auto sm:ml-0">
-            <a href="#reports" className="sp-action-btn">
-              + Generate Report
-            </a>
-            <div className="sp-profile">
-              <div className="w-10 h-10 rounded-xl bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                <Image src="/photos/22.jpeg" alt="Avatar" width={40} height={40} className="object-cover" />
-              </div>
-              <span className="sp-profile-name hidden sm:block">Guest Explorer</span>
+        </PremiumCard>
+      </SectionWrapper>
+
+      {/* 3. Reports Downloader */}
+      <SectionWrapper theme="light" id="reports">
+        <div className="max-w-7xl mx-auto flex flex-col gap-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center mx-auto mb-6">
+              <Presentation size={32} />
             </div>
+            <h2 className="text-4xl font-bold text-brand-primary mb-4">Download Impact Reports</h2>
+            <p className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
+              Partner-ready reports generated directly from verified program data.
+              FY reports follow Uganda school-calendar sessions (Term I-III): 01 February to 30 November.
+            </p>
           </div>
-        </header>
 
-        <div className="sp-content">
-          <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-white flex items-center justify-center text-gray-400 font-medium rounded-[20px] shadow-sm">Loading real-time DB data...</div>}>
-            <PublicImpactMapExplorer
-              syncUrl
-              initialPeriod={firstValue(params.period) || "FY"}
-              initialSelection={{
-                region: firstValue(params.region),
-                subRegion: firstValue(params.subRegion),
-                district: firstValue(params.district),
-                school: firstValue(params.school) || firstValue(params.schoolId),
-              }}
-              initialPayload={aggregate}
-            />
-          </Suspense>
-
-          {/* 3. Reports Downloader strictly preserved in lower card */}
-          <div className="sp-reports-section mt-8" id="reports">
-            <div className="flex flex-col mb-8">
-              <h2 className="text-2xl font-bold text-[#2b2b36] mb-2 flex items-center gap-2">
-                 <Presentation className="text-[#6259ce]" size={24} /> Download Impact Reports
-              </h2>
-              <p className="text-[13px] text-gray-500 font-medium">
-                Partner-ready reports generated directly from verified program data.
+          {reportDataWarning ? (
+            <div className="p-4 rounded-xl bg-orange-50 border border-orange-100 text-orange-800 flex items-start gap-4 mb-4">
+              <ShieldAlert className="w-6 h-6 shrink-0 text-orange-600" />
+              <p className="text-sm font-medium">
+                Report data is temporarily unavailable in this deployment environment. Dashboard visualization remains available.
               </p>
             </div>
+          ) : null}
 
-            {reportDataWarning ? (
-              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100 text-orange-800 flex items-start gap-4 mb-6">
-                <ShieldAlert className="w-6 h-6 shrink-0 text-orange-600" />
-                <p className="text-sm font-medium">Report data is temporarily unavailable. Dashboard visualizer remains active.</p>
-              </div>
-            ) : null}
+          <PremiumCard className="p-8 md:p-12">
+            <h3 className="text-2xl font-bold text-brand-primary mb-8 border-b border-gray-100 pb-4">Configure Report</h3>
+            
+            <div className="mb-10 w-full">
+              <ImpactReportFilters
+                initialYear={selectedYear}
+                initialReportType={selectedType}
+                initialReportCategory={selectedCategory}
+                initialPeriodType={selectedPeriodType}
+                initialOutput={selectedOutput}
+                initialRegion={selectedRegion}
+                initialSubRegion={selectedSubRegion}
+                initialDistrict={selectedDistrict}
+                initialSchoolId={selectedSchoolId}
+                reportTypes={facets.reportTypes}
+                reportCategories={facets.reportCategories}
+                periodTypes={facets.periodTypes}
+                outputs={facets.outputs}
+                period={firstValue(params.period) || undefined}
+              />
+            </div>
 
-            <ImpactReportFilters
-              initialYear={selectedYear}
-              initialReportType={selectedType}
-              initialReportCategory={selectedCategory}
-              initialPeriodType={selectedPeriodType}
-              initialOutput={selectedOutput}
-              initialRegion={selectedRegion}
-              initialSubRegion={selectedSubRegion}
-              initialDistrict={selectedDistrict}
-              initialSchoolId={selectedSchoolId}
-              reportTypes={facets.reportTypes}
-              reportCategories={facets.reportCategories}
-              periodTypes={facets.periodTypes}
-              outputs={facets.outputs}
-              period={firstValue(params.period) || undefined}
-            />
-
-            <div className="pt-8 mt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
               {hasData ? (
                 <>
                   <a 
                     href={pdfDownloadUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[#6259ce] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#5048b0] transition-colors shadow-sm"
+                    className="w-full sm:w-auto px-8 py-4 rounded-full bg-brand-primary text-white font-bold flex items-center justify-center gap-2 hover:bg-brand-primary/90 transition-all shadow-lg hover:shadow-xl shadow-brand-primary/20 hover:-translate-y-0.5"
                   >
-                    <Download size={18} /> Download AI Impact Report (PDF)
+                    <Download size={20} />
+                    Download AI Impact Report (PDF)
                   </a>
-                  <p className="text-[13px] text-gray-400 font-medium text-center sm:text-right max-w-[300px]">
-                    Report generated in real-time. Wait mapping execution.
+                  <p className="text-sm text-gray-500 font-medium text-center sm:text-right max-w-[250px]">
+                    Report generated in real-time using current live data and AI synthesis.
                   </p>
                 </>
               ) : (
                 <div className="p-4 rounded-xl bg-gray-50 text-gray-500 w-full text-center font-medium">
-                  No data points available for the currently selected filters.
+                  No data is available for the currently selected filters.
                 </div>
               )}
             </div>
-          </div>
+          </PremiumCard>
         </div>
-      </main>
-    </div>
+      </SectionWrapper>
+
+      {/* 4. Privacy Notice (if school is selected) */}
+      {selectedSchoolId && (
+        <SectionWrapper theme="off-white" id="school-reading-performance">
+          <PremiumCard className="p-8 md:p-12 text-center max-w-3xl mx-auto border-dashed border-2 bg-transparent shadow-none">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert className="w-6 h-6 text-gray-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-brand-primary mb-4">Privacy Notice</h2>
+            <p className="text-gray-600 leading-relaxed mb-8">
+              Public dashboards only show aggregated school performance. Detailed school reading
+              performance reports with named learners or teachers are generated by staff on
+              request, then shared through controlled channels.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Link href="/request-support" className="px-6 py-3 rounded-full bg-gray-900 text-white font-semibold flex items-center justify-center hover:bg-gray-800 transition-colors">
+                Request Staff-Generated Report
+              </Link>
+            </div>
+          </PremiumCard>
+        </SectionWrapper>
+      )}
+
+      {/* 5. Bottom Methodology & CTA Strip */}
+      <CTAStrip 
+        heading="Understand our approach."
+        subheading="Review the data collection and synthesis methodology powering the National Literacy Intelligence Platform."
+        primaryButtonText="Read the Methodology"
+        primaryButtonHref="/impact/methodology"
+        theme="brand"
+      />
+    </>
   );
 }
