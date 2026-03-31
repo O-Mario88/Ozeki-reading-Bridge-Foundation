@@ -107,6 +107,7 @@ async function FinanceDashboardContent({ period }: { period: string }) {
 
   return (
     <PortalFinanceDashboard
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       summary={injectedSummary as any}
       totalAssets={totalAssets}
       recentInvoices={recentInvoices.slice(0, 10)}

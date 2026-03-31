@@ -1,0 +1,74 @@
+
+> ozeki-reading-bridge-foundation@1.0.0 lint
+> eslint .
+
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/actions/finance-report-actions.ts
+  51:66  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  55:11  warning  'planId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  58:63  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/portal/finance/budgets/route.ts
+  10:27  warning  'request' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/portal/finance/reports/[type]/pdf/route.ts
+  46:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  77:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/portal/finance/reports/[type]/route.ts
+  38:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  50:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/portal/finance/statements/[type]/pdf/route.ts
+   74:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   75:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   77:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  108:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  112:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  135:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  137:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/portal/finance/gl/page.tsx
+  9:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/portal/finance/page.tsx
+  110:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/portal/finance/PortalFinanceBudgetManager.tsx
+    3:33  warning  'useMemo' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+    4:23  warning  'formatDate' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+   35:62  warning  'currentUser' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+   65:57  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  120:23  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  142:21  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/portal/finance/PortalFinanceDashboard.tsx
+  3:8  warning  'Link' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/pdf/financial-report-puppeteer.ts
+  59:21  warning  'tdLabelStyle' is never reassigned. Use 'const' instead  prefer-const
+  60:21  warning  'tdValStyle' is never reassigned. Use 'const' instead    prefer-const
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/finance-budgets.ts
+  181:59  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  206:24  warning  'newStatus' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  219:28  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  234:32  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  247:33  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  254:27  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/finance-reports.ts
+  141:30  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  145:31  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  171:46  warning  'grantId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 42 problems (0 errors, 42 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

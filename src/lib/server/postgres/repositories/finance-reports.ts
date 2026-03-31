@@ -138,10 +138,12 @@ export async function getBudgetVsActual(startDate: string, endDate: string) {
   // Merge them explicitly into a dictionary
   const budgetDict: Record<string, { budget: number, actual: number }> = {};
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   budgetRes.rows.forEach((r: any) => {
     budgetDict[r.account_name] = { budget: Number(r.budget_amount), actual: 0 };
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   actualsRes.rows.forEach((r: any) => {
     const name = r.account_name || 'Uncategorized';
     if (!budgetDict[name]) budgetDict[name] = { budget: 0, actual: 0 };
@@ -168,7 +170,7 @@ export async function getBudgetVsActual(startDate: string, endDate: string) {
 /**
  * Generates Grant Utilization Report from explicit DB flags.
  */
-export async function getGrantAndDonorReport(grantId?: number) {
+export async function getGrantAndDonorReport(_grantId?: number) {
   // If no grant defined yet in DB visually, just summarize all restricted revenues.
   const res = await queryPostgres(`
     SELECT 

@@ -41,21 +41,25 @@ export async function generateFinancialReport(reportType: string, options: {
     const end = options.endDate || "2024-12-31";
     title = "Statement of Activities (Income & Expenditure)";
     period = `${start} to ${end}`;
-    dataRows = await getStatementOfActivities(startDate, endDate);
+    dataRows = await getStatementOfActivities(start, end);
     headers = ["Type", "Account Name", "Net Amount"];
   } else if (reportType === "CashFlow") {
     const start = options.startDate || "2024-01-01";
     const end = options.endDate || "2024-12-31";
     title = "Cash Flow Statement";
     period = `${start} to ${end}`;
-    dataRows = await getCashFlowStatement(startDate, endDate) as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dataRows = await getCashFlowStatement(start, end) as any;
     headers = ["Activity Category", "Account Name", "Net Cash Impact"];
   } else if (reportType === "BudgetActual") {
     const year = options.fiscalYear || new Date().getFullYear();
-    const planId = options.budgetPlanId || 1;
+    // planId is not used in getBudgetVsActual currently
     title = "Budget vs. Actual (Variance Analysis)";
     period = `Fiscal Year ${year}`;
-    dataRows = await getBudgetVsActual(startDate, endDate) as any;
+    const start = options.startDate || `${year}-01-01`;
+    const end = options.endDate || `${year}-12-31`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dataRows = await getBudgetVsActual(start, end) as any;
     headers = ["Code", "Account Name", "Budget", "Actual", "Variance", "%"];
   } else if (reportType === "Grants") {
     title = "Grant and Donor Utilization Report";
@@ -76,11 +80,12 @@ export async function generateFinancialReport(reportType: string, options: {
     organization: orgName,
     period,
     narration,
-    sections: [] [
+    sections: [
       {
-        name: "Main Ledger Summary",
+        title: "Main Ledger Summary",
         headers,
-        rows: dataRows.map(row => Object.values(row))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        rows: dataRows.map(row => Object.values(row)) as any[]
       }
     ]
   };

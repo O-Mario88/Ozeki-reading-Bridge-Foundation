@@ -43,6 +43,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
         ];
         break;
       case "budget-vs-actual":
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         rawData = await getBudgetVsActual(startDate, endDate) as any;
         title = `BUDGET VS ACTUAL (${fiscalYear})`;
         columns = [
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
         ];
         break;
       case "cash-flow":
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         rawData = await getCashFlowStatement(startDate, endDate) as any;
         title = "CASH FLOW STATEMENT (SUMMARY)";
         columns = [

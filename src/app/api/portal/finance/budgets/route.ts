@@ -7,7 +7,7 @@ import {
 } from "@/lib/server/postgres/repositories/finance-budgets";
 
 /* GET — list all operational budgets */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
 

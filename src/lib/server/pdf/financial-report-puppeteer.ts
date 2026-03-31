@@ -56,8 +56,8 @@ export async function generateFinancialPdf(data: FinancialReportData): Promise<B
             .map(
               (row) => {
                 let rowStyle = "padding: 8px 4px; border-bottom: 1px solid #f8fafc;";
-                let tdLabelStyle = "";
-                let tdValStyle = "text-align: right; font-family: monospace; font-size: 1.05rem;";
+                const tdLabelStyle = "";
+                const tdValStyle = "text-align: right; font-family: monospace; font-size: 1.05rem;";
                 
                 if (row.isSubtotal) {
                   rowStyle = "padding: 10px 4px; font-weight: 700; background-color: #f1f5f9; border-top: 1px solid #94a3b8; border-bottom: 1px solid #cbd5e1;";

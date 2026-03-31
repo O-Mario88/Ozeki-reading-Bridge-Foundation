@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getPortalUserOrRedirect } from "@/lib/auth";

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { formatMoney, formatDate } from "@/components/portal/finance/format";
+import { useState, useCallback } from "react";
+import { formatMoney } from "@/components/portal/finance/format";
 import type { FinanceOperationBudget, PortalUser } from "@/lib/types";
 
 const BUDGET_CATEGORIES = [
@@ -32,7 +32,7 @@ type Props = {
     currentUser: PortalUser;
 };
 
-export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Props) {
+export function PortalFinanceBudgetManager({ initialBudgets }: Props) {
     const [budgets, setBudgets] = useState(initialBudgets);
     const [isCreating, setIsCreating] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -62,6 +62,7 @@ export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Prop
         setItems(p => p.filter(i => i.id !== id));
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateItem = (id: string, field: string, val: any) => {
         setItems(p => p.map(i => i.id === id ? { ...i, [field]: val } : i));
     };
@@ -117,6 +118,7 @@ export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Prop
             const res = await fetch(`/api/portal/finance/budgets?id=${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Delete failed");
             await loadBudgets();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             alert(err.message);
         }
@@ -139,6 +141,7 @@ export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Prop
             setRequestingBudget(null);
             setRequestAmount('');
             await loadBudgets();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
             alert(e.message);
         } finally {

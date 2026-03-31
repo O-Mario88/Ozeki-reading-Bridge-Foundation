@@ -178,6 +178,7 @@ export async function submitFinanceFundRequestPostgres(budgetId: number, input: 
 }
 
 // Internal Helper exported downstream
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateOperationBudgetTotals(client: any, budgetId: number) {
   // Sum requests
   const reqRes = await client.query(`
@@ -201,9 +202,6 @@ export async function updateOperationBudgetTotals(client: any, budgetId: number)
   const reqAmount = Number(reqRow?.totalRequested || 0);
   const appAmount = Number(reqRow?.totalApproved || 0);
 
-  // Re-derive overall Status if applicable
-  let newStatus = "approved";
-  if (reqAmount === 0) newStatus = "submitted"; 
   // Custom logic usually happens on Approval
 
   await client.query(`
@@ -216,6 +214,7 @@ export async function updateOperationBudgetTotals(client: any, budgetId: number)
 
 // --- Row Mappers --- //
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapBudgetRow(row: any): FinanceOperationBudget {
   return {
     id: Number(row.id),
@@ -231,6 +230,7 @@ function mapBudgetRow(row: any): FinanceOperationBudget {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapBudgetItemRow(row: any): FinanceOperationBudgetItem {
   return {
     id: Number(row.id),
@@ -244,6 +244,7 @@ function mapBudgetItemRow(row: any): FinanceOperationBudgetItem {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapFundRequestRow(row: any): FinanceFundRequest {
   return {
     id: Number(row.id),
@@ -251,6 +252,7 @@ function mapFundRequestRow(row: any): FinanceFundRequest {
     requesterId: Number(row.requester_id),
     requestedAmount: Number(row.requested_amount),
     approvedAmount: row.approved_amount !== null ? Number(row.approved_amount) : undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: row.status as any,
     reviewNotes: row.review_notes,
     reviewedBy: row.reviewed_by ? Number(row.reviewed_by) : undefined,

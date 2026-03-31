@@ -35,6 +35,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
         fields = ["month", "account_type", "total_income", "total_expense"];
         break;
       case "budget-vs-actual":
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         rawData = await getBudgetVsActual(startDate, endDate) as any; 
         fields = ["account_code", "account_name", "budget_amount", "actual_amount", "variance", "variance_percentage"];
         break;
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
         fields = ["account_code", "category", "total_expense"];
         break;
       case "cash-flow":
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         rawData = await getCashFlowStatement(startDate, endDate) as any;
         fields = ["activity_category", "account_name", "net_cash_impact"];
         break;

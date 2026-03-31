@@ -6,6 +6,7 @@ import { initializeChartOfAccounts } from "@/lib/server/postgres/repositories/fi
 
 async function TrialBalanceTable() {
   const fy = new Date().getFullYear();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const trialBalance = await getTrialBalance(fy) as any;
 
   return (
