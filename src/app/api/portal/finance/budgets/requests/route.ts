@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireFinanceEditor, requireFinanceApprovalRole } from "@/app/api/portal/finance/_utils";
+import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import { submitFinanceFundRequestPostgres, getFinanceOperationBudgetPostgres } from "@/lib/server/postgres/repositories/finance-budgets";
 
 export async function POST(request: NextRequest) {

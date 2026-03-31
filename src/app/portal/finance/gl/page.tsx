@@ -6,7 +6,7 @@ import { initializeChartOfAccounts } from "@/lib/server/postgres/repositories/fi
 
 async function TrialBalanceTable() {
   const fy = new Date().getFullYear();
-  const trialBalance = await getTrialBalance(fy);
+  const trialBalance = await getTrialBalance(fy) as any;
 
   return (
     <div className="card overflow-hidden">

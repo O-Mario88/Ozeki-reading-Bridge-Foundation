@@ -21,11 +21,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
   const searchParams = request.nextUrl.searchParams;
   const startDate = searchParams.get("startDate") || "2020-01-01";
   const endDate = searchParams.get("endDate") || new Date().toISOString().split("T")[0];
-  const fiscalYear = Number(searchParams.get("fiscalYear")) || new Date().getFullYear();
   const format = searchParams.get("format");
 
   try {
-    let rawData: unknown[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let rawData: any[] = [];
     let fields: string[] = [];
     const type = params.type;
 
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
         fields = ["month", "account_type", "total_income", "total_expense"];
         break;
       case "budget-vs-actual":
-        rawData = await getBudgetVsActual(fiscalYear, 1); // MVP: Plan ID 1
+        rawData = await getBudgetVsActual(startDate, endDate) as any; 
         fields = ["account_code", "account_name", "budget_amount", "actual_amount", "variance", "variance_percentage"];
         break;
       case "project-fund":
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
         fields = ["account_code", "category", "total_expense"];
         break;
       case "cash-flow":
-        rawData = await getCashFlowStatement(startDate, endDate);
+        rawData = await getCashFlowStatement(startDate, endDate) as any;
         fields = ["activity_category", "account_name", "net_cash_impact"];
         break;
       case "receipts":

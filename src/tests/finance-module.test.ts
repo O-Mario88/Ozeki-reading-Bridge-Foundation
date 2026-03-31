@@ -190,7 +190,7 @@ test("expense posting requires evidence and creates money_out ledger", async () 
 test("monthly statement sums posted ledger entries", async () => {
   const actor = await getTestActor();
   const month = "2026-03";
-  const statement = await generateFinanceMonthlyStatement(month, "UGX", actor);
+  const statement = await generateFinanceMonthlyStatement({periodType:"monthly", month}, "UGX", actor);
   assert.equal(statement.month, month);
   assert.equal(statement.periodType, "monthly");
   assert.equal(statement.currency, "UGX");

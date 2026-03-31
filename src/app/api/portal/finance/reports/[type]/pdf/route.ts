@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
         ];
         break;
       case "budget-vs-actual":
-        rawData = await getBudgetVsActual(fiscalYear, 1);
+        rawData = await getBudgetVsActual(startDate, endDate) as any;
         title = `BUDGET VS ACTUAL (${fiscalYear})`;
         columns = [
           { key: "account_code", label: "Account Code", format: "text" },
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
         ];
         break;
       case "cash-flow":
-        rawData = await getCashFlowStatement(startDate, endDate);
+        rawData = await getCashFlowStatement(startDate, endDate) as any;
         title = "CASH FLOW STATEMENT (SUMMARY)";
         columns = [
           { key: "activity_category", label: "Activity Category", format: "text" },

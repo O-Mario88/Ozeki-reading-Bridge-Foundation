@@ -48,14 +48,14 @@ export async function generateFinancialReport(reportType: string, options: {
     const end = options.endDate || "2024-12-31";
     title = "Cash Flow Statement";
     period = `${start} to ${end}`;
-    dataRows = await getCashFlowStatement(start, end);
+    dataRows = await getCashFlowStatement(start, end) as any;
     headers = ["Activity Category", "Account Name", "Net Cash Impact"];
   } else if (reportType === "BudgetActual") {
     const year = options.fiscalYear || new Date().getFullYear();
     const planId = options.budgetPlanId || 1;
     title = "Budget vs. Actual (Variance Analysis)";
     period = `Fiscal Year ${year}`;
-    dataRows = await getBudgetVsActual(year, planId);
+    dataRows = await getBudgetVsActual(start, end) as any;
     headers = ["Code", "Account Name", "Budget", "Actual", "Variance", "%"];
   } else if (reportType === "Grants") {
     title = "Grant and Donor Utilization Report";
@@ -76,7 +76,7 @@ export async function generateFinancialReport(reportType: string, options: {
     organization: orgName,
     period,
     narration,
-    tables: [
+    sections: [] as any, tables: [
       {
         name: "Main Ledger Summary",
         headers,
