@@ -380,9 +380,8 @@ const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 export async function createPortalSession(userId: number) {
     const crypto = await import("node:crypto");
     const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
     const { createPortalSessionPostgres } = await import("@/lib/server/postgres/repositories/auth");
-    await createPortalSessionPostgres(userId, token, expiresAt);
+    await createPortalSessionPostgres(userId, token);
     return { token, maxAge: SESSION_MAX_AGE_SECONDS };
 }
 

@@ -17,7 +17,9 @@ export function LayoutOrchestrator({ children }: { children: ReactNode }) {
 
   const isPortal = pathname.startsWith("/portal");
 
-  if (isPortal) {
+  const isDashboard = pathname === "/impact/dashboard";
+
+  if (isPortal || isDashboard) {
     return <>{children}</>;
   }
 

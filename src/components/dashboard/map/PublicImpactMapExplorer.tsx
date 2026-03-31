@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { PublicImpactAggregate } from "@/lib/types";
+import { BarChart3, ShieldAlert, Presentation, Download } from "lucide-react";
 
 const UgandaImpactMapPro = dynamic(
   () => import("./UgandaImpactMapPro").then((m) => m.UgandaImpactMapPro),
@@ -42,8 +43,6 @@ function setCache(key: string, data: PublicImpactAggregate) {
   }
   responseCache.set(key, { data, timestamp: Date.now() });
 }
-import { HeadlineStatsPanel } from "./HeadlineStatsPanel";
-import { LocationNavigator, PublicMapSelection } from "./LocationNavigator";
 import {
   READING_LEVELS,
   getReadingLevelColor,
@@ -51,6 +50,13 @@ import {
   readingLevelOrdinal,
 } from "@/lib/reading-assessment-utils";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
+
+export type PublicMapSelection = {
+  region: string;
+  subRegion: string;
+  district: string;
+  school: string;
+};
 
 type PublicImpactMapExplorerProps = {
   compact?: boolean;
@@ -105,21 +111,7 @@ function scopeEndpoint(level: ScopeLevel, id: string, period: string) {
   return `/impact/school/${encodeURIComponent(id)}?period=${encodedPeriod}`;
 }
 
-function mapScopeToDetailHref(level: ScopeLevel, id: string) {
-  if (level === "school") {
-    return `/schools/${encodeURIComponent(id)}`;
-  }
-  if (level === "district") {
-    return `/districts/${encodeURIComponent(id)}`;
-  }
-  if (level === "region") {
-    return `/regions/${encodeURIComponent(id)}`;
-  }
-  if (level === "subregion") {
-    return `/sub-regions/${encodeURIComponent(id)}`;
-  }
-  return "/impact";
-}
+
 
 function DomainOutcomeCard({
   title,
@@ -283,7 +275,6 @@ export function PublicImpactMapExplorer({
   const [selection, setSelection] = useState<PublicMapSelection>(
     defaultSelection(initialSelection),
   );
-  const [selectionHistory, setSelectionHistory] = useState<PublicMapSelection[]>([]);
   const [payload, setPayload] = useState<PublicImpactAggregate | null>(initialPayload);
   const [navigatorSnapshot, setNavigatorSnapshot] = useState<PublicImpactAggregate["navigator"] | null>(initialPayload?.navigator ?? null);
   const [loading, setLoading] = useState(!initialPayload);
@@ -438,36 +429,11 @@ export function PublicImpactMapExplorer({
   }, [pathname, period, router, searchSnapshot, selection, syncUrl]);
 
   const onSelectionChange = (next: PublicMapSelection) => {
-    setSelectionHistory((previous) => [...previous.slice(-8), selection]);
     setSelection(next);
   };
 
-  const onBack = () => {
-    if (selectionHistory.length > 0) {
-      const previous = selectionHistory[selectionHistory.length - 1];
-      setSelectionHistory((current) => current.slice(0, -1));
-      setSelection(previous);
-      return;
-    }
-    if (selection.school) {
-      setSelection({ ...selection, school: "" });
-      return;
-    }
-    if (selection.district) {
-      setSelection({ ...selection, district: "", school: "" });
-      return;
-    }
-    if (selection.subRegion) {
-      setSelection({ ...selection, subRegion: "", district: "", school: "" });
-      return;
-    }
-    if (selection.region) {
-      setSelection({ region: "", subRegion: "", district: "", school: "" });
-    }
-  };
 
   const onReset = () => {
-    setSelectionHistory([]);
     setSelection({ region: "", subRegion: "", district: "", school: "" });
   };
 
@@ -482,16 +448,7 @@ export function PublicImpactMapExplorer({
     selectedSchoolName,
   ].filter((value): value is string => Boolean(value));
 
-  const detailHref = mapScopeToDetailHref(scope.level, scope.id);
-  const reportEngineQuery = useMemo(() => {
-    const query = new URLSearchParams();
-    query.set("scopeLevel", scope.level);
-    query.set("scopeId", scope.id);
-    query.set("period", period);
-    return query.toString();
-  }, [period, scope.id, scope.level]);
-  const reportEngineHtmlHref = `/api/impact/report-engine?${reportEngineQuery}&format=html`;
-  const reportEnginePdfHref = `/api/impact/report-engine?${reportEngineQuery}&format=pdf`;
+
   const districtSearchOptions = useMemo(() => {
     const districtToSubRegion = new Map<string, string>();
     navigatorSchools.forEach((school) => {
@@ -644,375 +601,269 @@ export function PublicImpactMapExplorer({
     },
   ];
 
-  const funnelStages = [
-    {
-      label: "Schools trained",
-      value: payload?.funnel?.trained ?? 0,
-      helper: "Capacity-building entry point",
-    },
-    {
-      label: "Coached / visited",
-      value: payload?.funnel?.coached ?? 0,
-      helper: "Ongoing implementation support",
-    },
-    {
-      label: "Baseline assessed",
-      value: payload?.funnel?.baselineAssessed ?? 0,
-      helper: "Initial learner evidence",
-    },
-    {
-      label: "Endline assessed",
-      value: payload?.funnel?.endlineAssessed ?? 0,
-      helper: "Measured outcome follow-through",
-    },
-    {
-      label: "Story active schools",
-      value: payload?.funnel?.storyActive ?? 0,
-      helper: "Reading culture extension",
-    },
-    {
-      label: "Online sessions reached",
-      value: payload?.kpis?.onlineSchoolsReachedCount ?? 0,
-      helper: "Schools reached via virtual sessions",
-    },
-  ];
-  const funnelBaseline = Math.max(funnelStages[0]?.value ?? 0, 1);
-  const funnelPeak = Math.max(
-    1,
-    ...funnelStages.map((item) => item.value),
-  );
-  const funnelRows = funnelStages.map((stage, index) => {
-    const previous = index === 0 ? stage.value : funnelStages[index - 1]?.value ?? 0;
-    const stepRate = previous > 0 ? (stage.value / previous) * 100 : index === 0 ? 100 : 0;
-    const cumulativeRate = (stage.value / funnelBaseline) * 100;
-    return {
-      ...stage,
-      stepRate,
-      cumulativeRate,
-      widthPct: (stage.value / funnelPeak) * 100,
-    };
-  });
 
-  const teachingTrendPoints = (payload?.teachingQuality?.trend ?? [])
-    .filter((point) => typeof point.averageScore === "number" && Number.isFinite(point.averageScore))
-    .slice(-8);
-  const teachingTrendMax = Math.max(
-    1,
-    ...teachingTrendPoints.map((point) => point.averageScore ?? 0),
-  );
+
+
+
+
+
 
   return (
-    <section className={`impact-explorer ${compact ? "impact-explorer--compact" : ""}`}>
-      {compact ? (
-        <header className="impact-explorer-header">
+    <div className={`sp-dashboard-inner ${compact ? "sp-dashboard-compact" : ""}`}>
+      {compact && (
+        <div className="mb-6 p-6 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2>Live Literacy Impact Dashboard</h2>
-            <p>Aggregated, privacy-protected classroom data. Updated regularly.</p>
+            <h2 className="text-xl font-bold text-[#2b2b36]">Live Literacy Impact Dashboard</h2>
+            <p className="text-sm text-gray-500 font-medium">Aggregated, privacy-protected classroom data. Updated regularly.</p>
           </div>
-          <div className="action-row">
-            <Link className="button" href="/impact">
+          <div className="flex gap-3">
+            <Link className="px-6 py-2.5 rounded-xl bg-[#6259ce] text-white font-bold text-sm" href="/impact">
               Explore Full Dashboard
             </Link>
-            <Link className="button button-ghost" href="/reports/fy-latest">
-              Download FY Report
-            </Link>
           </div>
-        </header>
-      ) : null}
+        </div>
+      )}
 
-      <div className="impact-explorer-breadcrumbs">
-        <div className="impact-explorer-status">
-          <p>{breadcrumb.join(" > ")}</p>
+      {/* Page Header Area */}
+      <div className="sp-page-header">
+        <div className="sp-page-title">
+          <h1>Analytics</h1>
+          <p>Want to see about : <strong>Audience & Impact</strong></p>
+        </div>
+        <div className="sp-filters-row">
+           <div className="sp-filter-tabs hidden sm:flex">
+             {["Term One", "Term Two", "Term Three", "FY"].map(t => (
+               <button 
+                 key={t}
+                 className={`sp-filter-tab ${period === t ? 'active' : ''}`}
+                 onClick={() => setPeriod(t)}
+               >
+                 {t}
+               </button>
+             ))}
+           </div>
+           
+           <div className="sp-date-picker" onClick={onReset} style={{cursor:'pointer'}}>
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+             {payload?.scope?.name || "Uganda"} 
+             {breadcrumb.length > 1 ? ` (${breadcrumb[breadcrumb.length-1]})` : ""}
+           </div>
+        </div>
+      </div>
+
+      {/* KPI Row (Row 1) */}
+      <div className="sp-kpi-row">
+        <div className="sp-kpi-card">
+          <div className="sp-kpi-icon-wrap blue"><BarChart3 size={24}/></div>
+          <h2 className="sp-kpi-value">{loading ? "..." : (payload?.kpis?.schoolsSupported ?? 0).toLocaleString()}</h2>
+          <span className="sp-kpi-label">Schools Supported</span>
+          <div className="sp-kpi-trend up"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> Active</div>
+        </div>
+        <div className="sp-kpi-card">
+          <div className="sp-kpi-icon-wrap purple"><ShieldAlert size={24}/></div>
+          <h2 className="sp-kpi-value">{loading ? "..." : ((payload?.kpis?.teachersSupportedMale ?? 0) + (payload?.kpis?.teachersSupportedFemale ?? 0)).toLocaleString()}</h2>
+          <span className="sp-kpi-label">Reading Teachers</span>
+          <div className="sp-kpi-trend up">Supported</div>
+        </div>
+        <div className="sp-kpi-card">
+          <div className="sp-kpi-icon-wrap orange"><Presentation size={24}/></div>
+          <h2 className="sp-kpi-value">{loading ? "..." : (payload?.kpis?.learnersAssessedUnique ?? 0).toLocaleString()}</h2>
+          <span className="sp-kpi-label">Learners Assessed</span>
           {payload?.meta?.dataCompleteness === "Complete" ? (
-            <span className="badge badge-success" title="All schools in this scope have submitted reports for this period">
-              ✓ Data Complete
-            </span>
+             <div className="sp-kpi-trend up">Complete Data</div>
           ) : (
-            <span className="badge badge-warning" title="Some schools in this scope haven't submitted report yet">
-              ⚠ Partial Data ({payload?.meta?.sampleSize} reports)
-            </span>
+             <div className="sp-kpi-trend down">Partial Data</div>
           )}
         </div>
-        <div className="impact-report-actions">
-          <a
-            className="button button-ghost"
-            href={reportEngineHtmlHref}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open Report
-          </a>
-          <a
-            className="button"
-            href={reportEnginePdfHref}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Download PDF
-          </a>
+        <div className="sp-kpi-card">
+          <div className="sp-kpi-icon-wrap green"><Download size={24}/></div>
+          <h2 className="sp-kpi-value">{loading ? "..." : typeof fluentReaderShare === "number" ? `${fluentReaderShare.toFixed(1)}%` : "0%"}</h2>
+          <span className="sp-kpi-label">Fluent Reader Share</span>
+          <div className="sp-kpi-trend up">Latest</div>
         </div>
-        <button type="button" className="impact-map-clear-link" onClick={onReset}>
-          Clear
-        </button>
       </div>
 
-      {!compact ? (
-        <div className="impact-attract-grid">
-          <article className="card impact-attract-card impact-attract-card--momentum">
-            <header>
-              <h3>What Changed This Period</h3>
-              <p>Quick momentum indicators to understand impact movement at a glance.</p>
-            </header>
-            <div className="impact-attract-momentum-grid">
-              {momentumCards.map((item) => (
-                <article key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{loading ? "Loading..." : item.value}</strong>
-                  <small>{item.helper}</small>
-                </article>
-              ))}
+      {/* Map Row & Right Right Stack (Row 2) */}
+      <div className="sp-map-row">
+        {/* Left Map */}
+        <div className="sp-card sp-map-panel">
+          <div className="sp-card-header">
+            <div>
+              <h3 className="sp-card-title">Territory Distribution Tracker</h3>
+              <p className="sp-card-subtitle">{payload?.scope?.name || "Uganda"} - Click map regions to drill down</p>
             </div>
-          </article>
-
-          <article className="card impact-attract-card impact-attract-card--funnel">
-            <header>
-              <h3>Implementation Conversion Funnel</h3>
-              <p>From initial training to measured endline outcomes and story activation.</p>
-            </header>
-            <div className="impact-attract-funnel-list">
-              {funnelRows.map((row) => (
-                <article key={row.label}>
-                  <div className="impact-attract-funnel-head">
-                    <strong>{row.label}</strong>
-                    <span>{loading ? "Loading..." : row.value.toLocaleString()}</span>
-                  </div>
-                  <div className="impact-attract-funnel-track" aria-hidden="true">
-                    <i style={{ width: `${Math.max(row.widthPct, row.value > 0 ? 6 : 0)}%` }} />
-                  </div>
-                  <p>
-                    {row.helper} • Step retention:{" "}
-                    <strong>{loading ? "Loading..." : `${row.stepRate.toFixed(1)}%`}</strong> • Cumulative:{" "}
-                    <strong>{loading ? "Loading..." : `${row.cumulativeRate.toFixed(1)}%`}</strong>
-                  </p>
-                </article>
-              ))}
-            </div>
-          </article>
-
-          <article className="card impact-attract-card impact-attract-card--trust">
-            <header>
-              <h3>Data Trust & Action Center</h3>
-              <p>Transparency details and next actions for partners and supporters.</p>
-            </header>
-            <div className="impact-attract-trust-stats">
-              <p>
-                Completeness:{" "}
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : payload?.meta?.dataCompleteness === "Complete"
-                      ? "Complete"
-                      : "Partial"}
-                </strong>
-              </p>
-              <p>
-                Sample size (n):{" "}
-                <strong>{loading ? "Loading..." : (payload?.meta?.sampleSize ?? 0).toLocaleString()}</strong>
-              </p>
-              <p>
-                Last updated:{" "}
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : payload?.meta?.lastUpdated
-                      ? new Date(payload.meta.lastUpdated).toLocaleString("en-GB")
-                      : "Data not available"}
-                </strong>
-              </p>
-            </div>
-            {teachingTrendPoints.length > 0 ? (
-              <div
-                className="impact-attract-trend"
-                role="img"
-                aria-label="Teaching quality trend over recent periods"
-              >
-                {teachingTrendPoints.map((point) => {
-                  const average = point.averageScore ?? 0;
-                  const heightPct = (average / teachingTrendMax) * 100;
-                  return (
-                    <div key={point.period} className="impact-attract-trend-bar">
-                      <i style={{ height: `${Math.max(heightPct, 8)}%` }} />
-                      <span>{point.period}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="impact-mini-footer">Trend data not available for this scope/period.</p>
+            {selection.region && (
+              <button className="px-4 py-2 rounded-lg bg-gray-50 text-gray-600 font-semibold text-xs border border-gray-100 hover:bg-gray-100" onClick={onReset}>
+                Zoom Out
+              </button>
             )}
-            <p className="impact-mini-footer">
-              {teachingLearningAlignment?.caveat ?? "Data is aggregated from verified submissions only."}
-            </p>
-            <div className="impact-attract-actions">
-              <Link className="button" href="/sponsor-a-district">
-                Sponsor a District
-              </Link>
-              <Link className="button button-ghost" href="/impact#reports">
-                Download Reports
-              </Link>
-              <Link className="inline-download-link" href="/impact/case-studies">
-                Read Change Stories
-              </Link>
-            </div>
-          </article>
-
-
-        </div>
-      ) : null}
-
-      <div className="impact-explorer-layout">
-        <div className="impact-explorer-left-column" style={{ display: 'flex', flexDirection: 'column', gap: '0.52rem' }}>
-          <LocationNavigator
-            period={period}
-            onPeriodChange={setPeriod}
-            selection={selection}
-            navigatorSchools={navigatorSchools}
-            onSelectionChange={onSelectionChange}
-            onReset={onReset}
-            onBack={onBack}
-          />
-
-          <HeadlineStatsPanel
-            data={payload}
-            loading={loading}
-            detailHref={detailHref}
-            compact={compact}
-          />
-
-          {error ? (
-            <article className="card impact-error-card">
-              <h3>Stats temporarily unavailable</h3>
-              <p>Please try again. You can still explore using filters.</p>
-            </article>
-          ) : null}
-
-          {payload && payload.kpis.schoolsSupported === 0 ? (
-            <article className="card impact-empty-card">
-              <h3>No published data yet</h3>
-              <p>
-                We don&apos;t have reported activity for {payload.scope.name} in {payload.period.label}. Try
-                another district or check back later.
-              </p>
-            </article>
-          ) : null}
+          </div>
+          <div className="sp-map-wrapper relative">
+            {error ? (
+              <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center flex-col gap-2 rounded-xl">
+                <span className="text-xl font-bold text-red-500">Stats temporarily unavailable</span>
+                <span className="text-sm font-medium text-gray-500">Please try again</span>
+              </div>
+            ) : null}
+            {!loading && payload && payload.kpis.schoolsSupported === 0 ? (
+              <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center flex-col gap-2 rounded-xl text-center px-6">
+                <span className="text-xl font-bold text-gray-700">No published data yet</span>
+                <span className="text-sm font-medium text-gray-500">We don&apos;t have reported activity for {payload.scope.name} in this period.</span>
+              </div>
+            ) : null}
+            
+            <UgandaImpactMapPro
+              periodLabel={period}
+              selection={{
+                region: selection.region,
+                subRegion: selection.subRegion,
+                district: selection.district,
+                school: selection.school,
+              }}
+              activeSchoolName={navigatorSchools.find((s) => s.id.toString() === selection.school)?.name}
+              onSelectionChange={(next) =>
+                onSelectionChange({
+                  region: next.region,
+                  subRegion: next.subRegion,
+                  district: next.district,
+                  school: next.school ?? "",
+                })
+              }
+              districtSearchOptions={districtSearchOptions}
+              compact={compact}
+            />
+          </div>
         </div>
 
-        <div className="impact-map-column" style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem' }}>
-          {!compact ? (
-          <article className="card impact-attract-card impact-attract-card--progress">
-            <header>
-              <h3>Reading Progress Tracker</h3>
-              <p>Assessment-domain evidence tied directly to reading stages and benchmark status.</p>
-            </header>
-            <div className="impact-attract-progress-grid">
-              <article>
-                <span>Fluent reader share</span>
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : typeof fluentReaderShare === "number"
-                      ? `${fluentReaderShare.toFixed(1)}%`
-                      : "Data not available"}
-                </strong>
-                <small>Latest reading-level distribution</small>
-              </article>
-              <article>
-                <span>At / above benchmark</span>
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : typeof benchmarkShare === "number"
-                      ? `${benchmarkShare.toFixed(1)}%`
-                      : "Data not available"}
-                </strong>
-                <small>Expected-vs-actual status from the DB</small>
-              </article>
-              <article>
-                <span>Moved up 1+ level</span>
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : typeof movedUpShare === "number"
-                      ? `${movedUpShare.toFixed(1)}%`
-                      : "Data not available"}
-                </strong>
-                <small>Matched learners only</small>
-              </article>
-              <article>
-                <span>Tracked reading stages</span>
-                <strong>{loading ? "Loading..." : readingStageDistribution.length.toLocaleString()}</strong>
-                <small>Stage bands currently computed</small>
-              </article>
-            </div>
-            <div className="impact-attract-progress-lists">
-              <div>
-                <h4>Strongest Mastery Domains</h4>
-                {masteryDomainRows.length > 0 ? (
-                  masteryDomainRows.map((row) => (
-                    <div key={row.key} className="impact-attract-progress-row">
-                      <strong>{row.label}</strong>
-                      <span>
-                        Green {row.green.toFixed(1)}% • Amber {row.amber.toFixed(1)}% • Red {row.red.toFixed(1)}%
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="impact-mini-footer">Domain mastery data not available for this scope.</p>
-                )}
-              </div>
-              <div>
-                <h4>Latest Reading Stage Mix</h4>
-                {topReadingStages.length > 0 ? (
-                  topReadingStages.map((row) => (
-                    <div key={row.label} className="impact-attract-progress-row">
-                      <strong>{row.label}</strong>
-                      <span>
-                        {row.percent.toFixed(1)}% • n={row.count.toLocaleString()}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="impact-mini-footer">Reading stage distribution is not available yet.</p>
-                )}
-              </div>
-            </div>
-          </article>
-          ) : null}
-          <UgandaImpactMapPro
-            periodLabel={period}
-            selection={{
-              region: selection.region,
-              subRegion: selection.subRegion,
-              district: selection.district,
-              school: selection.school,
-            }}
-            activeSchoolName={navigatorSchools.find((s) => s.id.toString() === selection.school)?.name}
-            onSelectionChange={(next) =>
-              onSelectionChange({
-                region: next.region,
-                subRegion: next.subRegion,
-                district: next.district,
-                school: next.school ?? "",
-              })
-            }
-            districtSearchOptions={districtSearchOptions}
-            compact={compact}
-          />
+        <div className="sp-right-stack">
+           <div className="sp-card sp-trust-card flex flex-col">
+             <div className="sp-card-header mb-0">
+               <div>
+                 <h3 className="sp-card-title">Data Trust Center</h3>
+                 <p className="sp-card-subtitle">Analytics Transparency</p>
+               </div>
+             </div>
+             <div className="sp-trust-grid mt-2 mb-2">
+                <div className="sp-trust-item">
+                  <span className="sp-trust-item-label">Assessments (B / P / E)</span>
+                  <span className="sp-trust-item-value">{loading ? "..." : `${payload?.kpis?.assessmentsBaselineCount ?? 0} / ${payload?.kpis?.assessmentsProgressCount ?? 0} / ${payload?.kpis?.assessmentsEndlineCount ?? 0}`}</span>
+                </div>
+                <div className="sp-trust-item bg-blue-50/50">
+                  <span className="sp-trust-item-label">Sample size (n)</span>
+                  <span className="sp-trust-item-value">{loading ? "..." : (payload?.meta?.sampleSize ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="sp-trust-item">
+                  <span className="sp-trust-item-label">Data Completeness</span>
+                  <span className="sp-trust-item-value">{loading ? "..." : payload?.meta?.dataCompleteness === "Complete" ? "Complete" : "Partial"}</span>
+                </div>
+                <div className="sp-trust-item">
+                  <span className="sp-trust-item-label">Last updated</span>
+                  <span className="sp-trust-item-value text-xs">{loading ? "..." : payload?.meta?.lastUpdated ? new Date(payload.meta.lastUpdated).toLocaleString("en-GB") : "Not available"}</span>
+                </div>
+             </div>
+           </div>
+           
+           <div className="sp-card">
+             <div className="sp-card-header mb-4">
+               <div>
+                 <h3 className="sp-card-title">Momentum Indicators</h3>
+                 <p className="sp-card-subtitle">Changes This Period</p>
+               </div>
+             </div>
+             <div className="flex flex-col gap-2">
+               {momentumCards.slice(0, 3).map((item) => (
+                 <div key={item.label} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0 last:pb-0">
+                   <span className="text-[13px] font-semibold text-gray-500">{item.label}</span>
+                   <strong className="text-[14px] font-bold text-[#2b2b36]">{loading ? "..." : item.value}</strong>
+                 </div>
+               ))}
+             </div>
+           </div>
         </div>
       </div>
 
+      {/* Analytics Lower Cards (Row 3) - derived from legacy charts */}
+      {!compact && (masteryDomainRows.length > 0 || topReadingStages.length > 0 || (payload?.funnel?.trained ?? 0) > 0) && (
+        <div className="sp-lower-row">
+           {/* Card 1: Map the top reading progress domains */}
+           {masteryDomainRows.length > 0 && (
+             <div className="sp-card flex flex-col justify-between">
+                <div>
+                  <h3 className="sp-card-title">Strongest Mastery Domains</h3>
+                  <p className="sp-card-subtitle">Traffic-light distribution across {payload?.scope?.name}</p>
+                  <div className="sp-top-list mt-6">
+                    {masteryDomainRows.slice(0, 3).map((row, idx) => (
+                      <div className="sp-top-item" key={row.key}>
+                        <div className="sp-top-val-row">
+                          <div className="sp-top-val-left">
+                            <strong>{row.green.toFixed(1)}%</strong>
+                            <span>{row.label}</span>
+                          </div>
+                        </div>
+                        <div className="sp-top-bar">
+                          <div className={`sp-top-bar-fill sp-color-${(idx % 4) + 1}`} style={{ width: `${row.green}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+             </div>
+           )}
 
+           {/* Card 2: Reading Stage Mix */}
+           {topReadingStages.length > 0 && (
+             <div className="sp-card flex flex-col justify-between">
+                 <div>
+                   <h3 className="sp-card-title">Latest Reading Stage Mix</h3>
+                   <p className="sp-card-subtitle">Distribution of learners</p>
+                   <div className="sp-top-list mt-6">
+                    {topReadingStages.slice(0, 3).map((row, idx) => (
+                      <div className="sp-top-item" key={row.label}>
+                        <div className="sp-top-val-row">
+                          <div className="sp-top-val-left">
+                            <strong>{row.percent.toFixed(1)}%</strong>
+                            <span>{row.label.split(' ')[0]}</span>
+                          </div>
+                          <span className="text-[11px] font-bold text-gray-400">n={row.count}</span>
+                        </div>
+                        <div className="sp-top-bar">
+                          <div className={`sp-top-bar-fill sp-color-${((idx+2) % 4) + 1}`} style={{ width: `${row.percent}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                   </div>
+                 </div>
+             </div>
+           )}
 
+           {/* Card 3: Implementation Funnel Snapshot */}
+           {(payload?.funnel?.trained ?? 0) > 0 && (
+             <div className="sp-card flex flex-col justify-between">
+                 <div>
+                   <h3 className="sp-card-title">Implementation Snapshot</h3>
+                   <p className="sp-card-subtitle">Coaching & Training Funnel</p>
+                   <div className="flex flex-col gap-3 mt-6">
+                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                        <span className="text-[13px] font-semibold text-gray-500">Schools Trained</span>
+                        <strong className="text-[14px] font-bold text-[#6259ce]">{loading ? "..." : (payload?.funnel?.trained ?? 0).toLocaleString()}</strong>
+                     </div>
+                     <div className="flex justify-between items-center p-3 bg-[#f3f4f9] rounded-xl">
+                        <span className="text-[13px] font-semibold text-gray-500">Coached / Visited</span>
+                        <strong className="text-[14px] font-bold text-[#6259ce]">{loading ? "..." : (payload?.funnel?.coached ?? 0).toLocaleString()}</strong>
+                     </div>
+                     <div className="flex justify-between items-center p-3 bg-[#f3f4f9] rounded-xl">
+                        <span className="text-[13px] font-semibold text-gray-500">1001 Story Active</span>
+                        <strong className="text-[14px] font-bold text-[#6259ce]">{loading ? "..." : (payload?.funnel?.storyActive ?? 0).toLocaleString()}</strong>
+                     </div>
+                   </div>
+                 </div>
+             </div>
+           )}
+        </div>
+      )}
+
+      {/* Keep existing deep drill-down tabs preserved visually at bottom */}
+      <h3 className="text-xl font-bold text-[#2b2b36] mt-8 mb-4 border-t border-gray-100 pt-8">Detailed Analytics Sandbox</h3>
       <div className="impact-tabs">
         <button
           className={activeTab === "outcomes" ? "active" : ""}
@@ -1611,6 +1462,6 @@ export function PublicImpactMapExplorer({
           </article>
         )}
       </div>
-    </section>
+    </div>
   );
 }
