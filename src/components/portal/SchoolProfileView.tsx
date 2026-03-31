@@ -972,7 +972,7 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
         /* ── STAT COUNTER CARDS ── */
         .sp-stats-row {
           display: grid;
-          grid-template-columns: repeat(6, 1fr);
+          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
           gap: 0.85rem;
         }
         .sp-stat-card {
@@ -1025,11 +1025,13 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           display: grid;
           gap: 1.25rem;
           align-content: start;
+          min-width: 0;
         }
         .sp-sidebar {
           display: grid;
           gap: 1.25rem;
           align-content: start;
+          min-width: 0;
         }
 
         /* ── CARDS ── */
@@ -1039,6 +1041,8 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           background: #ffffff;
           box-shadow: 0 2px 12px rgba(0,0,0,0.04);
           padding: 1.5rem;
+          min-width: 0;
+          overflow-wrap: break-word;
         }
         .sp-card header h2 {
           margin: 0;
@@ -1273,9 +1277,6 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           .sp-layout {
             grid-template-columns: 1fr;
           }
-          .sp-stats-row {
-            grid-template-columns: repeat(3, 1fr);
-          }
         }
         @media (max-width: 768px) {
           .sp-hero {
@@ -1285,14 +1286,21 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           .sp-details-grid {
             grid-template-columns: 1fr;
           }
-          .sp-stats-row {
-            grid-template-columns: repeat(2, 1fr);
-          }
           .sp-activity-item {
             flex-direction: column;
           }
           .sp-activity-meta {
             text-align: left;
+          }
+        }
+        @media (max-width: 480px) {
+          .sp-hero-actions {
+            flex-direction: column;
+            width: 100%;
+          }
+          .sp-hero-actions .sp-btn {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

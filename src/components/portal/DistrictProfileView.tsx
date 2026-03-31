@@ -293,6 +293,7 @@ export function DistrictProfileView({ stats, initialSupportStatuses, initialScho
           display: flex;
           gap: 2rem;
           padding-top: 0.5rem;
+          flex-wrap: wrap;
         }
 
         .highlight-item {

@@ -563,6 +563,7 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
           display: grid;
           gap: 1.25rem;
           align-content: start;
+          min-width: 0;
         }
 
         /* ── CARDS ── */
@@ -572,6 +573,8 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
           background: #ffffff;
           box-shadow: 0 2px 12px rgba(0,0,0,0.04);
           padding: 1.5rem;
+          min-width: 0;
+          overflow-wrap: break-word;
         }
         .portal-crm-card header h2 {
           margin: 0;
@@ -785,13 +788,15 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
             text-align: left;
             min-width: auto;
           }
-          .portal-crm-stats-row {
-            grid-template-columns: repeat(3, 1fr);
-          }
         }
         @media (max-width: 480px) {
-          .portal-crm-stats-row {
-            grid-template-columns: repeat(2, 1fr);
+          .portal-crm-hero-actions {
+            flex-direction: column;
+            width: 100%;
+          }
+          .portal-crm-hero-actions .portal-crm-button {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

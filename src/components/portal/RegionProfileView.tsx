@@ -248,6 +248,7 @@ export function RegionProfileView({ stats, initialSupportStatuses }: RegionProfi
           display: flex;
           gap: 2rem;
           padding-top: 0.5rem;
+          flex-wrap: wrap;
         }
 
         .highlight-item {
