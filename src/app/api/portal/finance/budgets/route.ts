@@ -1,32 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import {
-    upsertMonthlyBudget,
-    listMonthlyBudgets,
-    getBudgetVsActual,
-} from "@/services/financeService";
-import type { FinanceCurrency } from "@/lib/types";
+  listFinanceOperationBudgetsPostgres,
+  upsertFinanceOperationBudgetPostgres,
+  deleteFinanceOperationBudgetPostgres
+} from "@/lib/server/postgres/repositories/finance-budgets";
 
-/* GET — list budgets or budget vs actual for a month */
+/* GET — list all operational budgets */
 export async function GET(request: NextRequest) {
     const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
 
-    const url = new URL(request.url);
-    const month = url.searchParams.get("month") || new Date().toISOString().slice(0, 7);
-    const currency = (url.searchParams.get("currency") || "UGX") as FinanceCurrency;
-    const mode = url.searchParams.get("mode");
-
-    if (mode === "variance") {
-        const lines = getBudgetVsActual(Number(month), Number(currency));
-        return NextResponse.json({ month, currency, lines });
-    }
-
-    const budgets = await listMonthlyBudgets(month, currency);
-    return NextResponse.json({ month, currency, budgets });
+    // We can fetch globally, but typically let's just show all for this prototype
+    const budgets = await listFinanceOperationBudgetsPostgres();
+    return NextResponse.json({ budgets });
 }
 
-/* POST — upsert a budget line */
+/* POST — create or update a full budget */
 export async function POST(request: NextRequest) {
     const { error, actor } = await requireFinanceEditor();
     if (error || !actor) return error!;
@@ -34,13 +24,36 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     try {
-        const record = await upsertMonthlyBudget({
-            month: body.month,
-            currency: body.currency || "UGX",
-            subcategory: body.subcategory,
-            budgetAmount: Number(body.budgetAmount),
-        }, actor.id);
+        const id = body.id ? Number(body.id) : null;
+        
+        const record = await upsertFinanceOperationBudgetPostgres({
+            title: body.title,
+            period: body.period,
+            submit: body.submit,
+            items: body.items
+        }, id, actor.id);
+        
         return NextResponse.json({ budget: record });
+    } catch (err) {
+        return NextResponse.json(
+            { error: err instanceof Error ? err.message : "Unknown error" },
+            { status: 400 },
+        );
+    }
+}
+
+/* DELETE — remove a draft budget */
+export async function DELETE(request: NextRequest) {
+    const { error, actor } = await requireFinanceEditor();
+    if (error || !actor) return error!;
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get("id");
+        if (!id) throw new Error("Missing budget id");
+
+        await deleteFinanceOperationBudgetPostgres(Number(id));
+        return NextResponse.json({ success: true });
     } catch (err) {
         return NextResponse.json(
             { error: err instanceof Error ? err.message : "Unknown error" },

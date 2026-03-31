@@ -5,6 +5,7 @@ export * from "@/lib/server/postgres/repositories/finance-v2";
 export * from "@/lib/server/postgres/repositories/finance-documents";
 export * from "@/lib/server/postgres/repositories/finance-assets";
 export * from "@/lib/server/postgres/repositories/finance-liabilities";
+export * from "@/lib/server/postgres/repositories/finance-budgets";
 
 // ── Aliased re-exports (pages import without "Postgres" suffix) ──────
 export {

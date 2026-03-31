@@ -12,12 +12,17 @@ import type {
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
 
 type PortalFinanceDashboardProps = {
-  summary: FinanceDashboardSummary;
+  summary: FinanceDashboardSummary & {
+    pendingFunds: number;
+    committedFunds: number;
+    availableBalance: number;
+  };
   totalAssets: number;
   recentInvoices: FinanceInvoiceRecord[];
   recentReceipts: FinanceReceiptRecord[];
   recentExpenses: FinanceExpenseRecord[];
   period?: string;
+  startDate?: string;
 };
 
 function todayIsoDate() {
@@ -31,6 +36,7 @@ export function PortalFinanceDashboard({
   recentReceipts,
   recentExpenses,
   period = "fy",
+  startDate,
 }: PortalFinanceDashboardProps) {
   const router = useRouter();
   const [txnFilter, setTxnFilter] = useState<
@@ -94,6 +100,7 @@ export function PortalFinanceDashboard({
     }> = [];
 
     recentInvoices.forEach((item) => {
+      if (startDate && item.issueDate < startDate) return;
       rows.push({
         id: `invoice-${item.id}`,
         type: "Invoice",
@@ -106,6 +113,7 @@ export function PortalFinanceDashboard({
     });
 
     recentReceipts.forEach((item) => {
+      if (startDate && item.receiptDate < startDate) return;
       rows.push({
         id: `receipt-${item.id}`,
         type: "Receipt",
@@ -118,6 +126,7 @@ export function PortalFinanceDashboard({
     });
 
     recentExpenses.forEach((item) => {
+      if (startDate && item.date < startDate) return;
       rows.push({
         id: `expense-${item.id}`,
         type: "Expense",
@@ -235,57 +244,34 @@ export function PortalFinanceDashboard({
                 fontSize: "2.4rem",
                 fontWeight: 800,
                 color: "#111827",
-                margin: "0.5rem 0 2rem",
+                margin: "0.5rem 0 1.5rem",
                 letterSpacing: "-0.03em",
               }}
             >
               {formatMoney(summary.currency, totalAssets)}
             </div>
+            
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
                 gap: "0.75rem",
+                fontSize: "0.9rem",
+                borderTop: "1px solid #f3f4f6",
+                paddingTop: "1.25rem"
               }}
             >
-              <Link
-                href="/portal/finance/receipts"
-                style={{
-                  background: "#4f46e5",
-                  color: "white",
-                  padding: "0.85rem",
-                  borderRadius: "12px",
-                  textAlign: "center",
-                  fontWeight: 600,
-                  fontSize: "0.9rem",
-                  textDecoration: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                }}
-              >
-                <span style={{ fontSize: "1.1rem" }}>⤓</span> Transfer
-              </Link>
-              <Link
-                href="/portal/finance/invoices"
-                style={{
-                  background: "#e0e7ff",
-                  color: "#4f46e5",
-                  padding: "0.85rem",
-                  borderRadius: "12px",
-                  textAlign: "center",
-                  fontWeight: 600,
-                  fontSize: "0.9rem",
-                  textDecoration: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                }}
-              >
-                <span style={{ fontSize: "1.1rem" }}>↗</span> Request
-              </Link>
+              <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280" }}>
+                <span>Pending Requests</span>
+                <span style={{ fontWeight: 600 }}>{formatMoney(summary.currency, summary.pendingFunds)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280" }}>
+                <span>Committed Funds</span>
+                <span style={{ fontWeight: 600 }}>{formatMoney(summary.currency, summary.committedFunds)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", color: "var(--ds-primary)", fontWeight: 700, marginTop: "0.25rem" }}>
+                <span>Available Balance</span>
+                <span>{formatMoney(summary.currency, summary.availableBalance)}</span>
+              </div>
             </div>
           </div>
 

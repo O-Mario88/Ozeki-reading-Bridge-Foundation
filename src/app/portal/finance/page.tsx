@@ -40,7 +40,8 @@ async function FinanceDashboardContent({ period }: { period: string }) {
     ytdTotals,
     recentInvoices,
     recentReceipts,
-    recentExpenses
+    recentExpenses,
+    budgetStats
   ] = await Promise.all([
     getFinanceDashboardSummaryPostgres(new Date().toISOString().slice(0, 7), "UGX"),
 
@@ -59,7 +60,16 @@ async function FinanceDashboardContent({ period }: { period: string }) {
 
     listFinanceInvoicesPostgres(),
     listFinanceReceiptsPostgres(),
-    listFinanceExpensesPostgres()
+    listFinanceExpensesPostgres(),
+    
+    // Aggregation for the new budget metrics
+    queryPostgres(
+      `SELECT 
+         COALESCE(SUM(CASE WHEN status IN ('submitted', 'under_review') THEN requested_amount ELSE 0 END), 0) as pending,
+         COALESCE(SUM(approved_amount - spent_amount), 0) as committed
+       FROM finance_operation_budgets
+       WHERE status NOT IN ('draft', 'closed', 'rejected')`
+    )
   ]);
 
   const ytdRow = ytdTotals.rows[0] as Record<string, unknown> | undefined;
@@ -80,22 +90,30 @@ async function FinanceDashboardContent({ period }: { period: string }) {
     totalAssets = Number((assetsResult.rows[0] as Record<string, unknown>)?.netAssets ?? 0);
   } catch { /* fallback to 0 */ }
 
+  const pendingFunds = Number(budgetStats.rows[0]?.pending || 0);
+  const committedFunds = Number(budgetStats.rows[0]?.committed || 0);
+  const availableBalance = totalAssets - committedFunds;
+
   // Inject the period's numbers so the dashboard shows period data natively
   const injectedSummary = {
     ...dbSummary,
     moneyIn: incomeYtd,
     moneyOut: expensesYtd,
-    net: incomeYtd - expensesYtd
+    net: incomeYtd - expensesYtd,
+    pendingFunds,
+    committedFunds,
+    availableBalance
   };
 
   return (
     <PortalFinanceDashboard
-      summary={injectedSummary}
+      summary={injectedSummary as any}
       totalAssets={totalAssets}
       recentInvoices={recentInvoices.slice(0, 10)}
       recentReceipts={recentReceipts.slice(0, 10)}
       recentExpenses={recentExpenses.slice(0, 10)}
       period={period}
+      startDate={startDate}
     />
   );
 }
@@ -111,7 +129,7 @@ export default async function FinancePage(props: { searchParams: SearchParams })
       activeHref="/portal/finance" 
       title="Finance Workspace"
     >
-      <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading accurate financial metrics...</div>}>
+      <Suspense key={period} fallback={<div className="p-8 text-center text-gray-500">Loading accurate financial metrics...</div>}>
         <FinanceDashboardContent period={period} />
       </Suspense>
     </FinanceShell>

@@ -4059,3 +4059,50 @@ export interface SchoolLiteracyImpactRecord {
   recordedById: number;
   createdAt: string;
 }
+
+export type FinanceBudgetStatus = 
+  | "draft" | "submitted" | "under_review" | "approved" | "rejected" | "partially_funded" | "funded" | "closed";
+
+export interface FinanceOperationBudget {
+  id: number;
+  title: string;
+  period: string; // e.g. "Q1 2026", "Month of March", "Fiscal 2026"
+  ownerId: number | null;
+  status: FinanceBudgetStatus;
+  requestedAmount: number;
+  approvedAmount: number;
+  spentAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Relations
+  items?: FinanceOperationBudgetItem[];
+  requests?: FinanceFundRequest[];
+}
+
+export interface FinanceOperationBudgetItem {
+  id: number;
+  budgetId: number;
+  category: string;
+  description: string;
+  quantity?: number;
+  unitCost?: number;
+  totalCost: number;
+  createdAt: string;
+}
+
+export type FinanceFundRequestStatus = 
+  | "submitted" | "under_review" | "approved" | "partially_approved" | "rejected";
+
+export interface FinanceFundRequest {
+  id: number;
+  budgetId: number;
+  requesterId: number;
+  requestedAmount: number;
+  approvedAmount?: number;
+  status: FinanceFundRequestStatus;
+  reviewNotes?: string;
+  reviewedBy?: number;
+  submittedAt: string;
+  reviewedAt?: string;
+}
