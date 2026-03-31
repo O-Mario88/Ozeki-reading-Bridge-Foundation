@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authenticatePortalUserPostgres as authenticatePortalUser, createPortalSessionPostgres as createPortalSession } from "@/lib/server/postgres/repositories/auth";
+import { 
+  authenticatePortalUserPostgres as authenticatePortalUser, 
+  createPortalSessionPostgres as createPortalSession,
+  getRecentFailedLoginAttemptsPostgres,
+  recordLoginAttemptPostgres,
+  generateMfaOtpPostgres
+} from "@/lib/server/postgres/repositories/auth";
+import { logAuditEventPostgres } from "@/lib/server/postgres/repositories/audit";
 import { getPortalHomePath, PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { clearRateLimit, consumeRateLimit } from "@/lib/rate-limit";
+import { sendMfaEmail } from "@/lib/mfa-email";
 
 export const runtime = "nodejs";
 
@@ -16,48 +24,68 @@ export async function POST(request: Request) {
     const payload = loginSchema.parse(await request.json());
     const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     const loginIdentifier = payload.identifier.trim().toLowerCase();
+    
+    // 1. IP+Identifier memory-fast rate limit
     const rateLimitKey = `portal-login:${ipAddress}:${loginIdentifier}`;
-    const rateLimit = consumeRateLimit(rateLimitKey, {
-      maxRequests: 5,
-      windowMs: 15 * 60 * 1000,
-    });
-
+    const rateLimit = consumeRateLimit(rateLimitKey, { maxRequests: 8, windowMs: 15 * 60 * 1000 });
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: "Too many login attempts. Please wait and try again.",
-          retryAfterSeconds: rateLimit.retryAfterSeconds,
-        },
-        { status: 429 },
-      );
+      return NextResponse.json({ error: "Too many login attempts. Please wait.", retryAfterSeconds: rateLimit.retryAfterSeconds }, { status: 429 });
     }
 
+    // 2. Strict Database Brute-Force limit
+    const dbFailures = await getRecentFailedLoginAttemptsPostgres(loginIdentifier, 15);
+    if (dbFailures >= 5) {
+      return NextResponse.json({ error: "Account temporarily locked due to repeated failed attempts. Please wait 15 minutes." }, { status: 429 });
+    }
+
+    // 3. Authenticate
     const user = await authenticatePortalUser(payload.identifier, payload.password);
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Invalid email/phone or password.", remaining: rateLimit.remaining },
-        { status: 401 },
-      );
+      await recordLoginAttemptPostgres(loginIdentifier, ipAddress, false);
+      try {
+        await logAuditEventPostgres(0, loginIdentifier, "LOGIN_FAILED", "portal_users", null, null, null, "Invalid credentials", ipAddress);
+      } catch (_e) { /* ignore */ }
+      return NextResponse.json({ error: "Invalid email/phone or password.", remaining: rateLimit.remaining }, { status: 401 });
     }
 
+    await recordLoginAttemptPostgres(loginIdentifier, ipAddress, true);
+
+    // 4. MFA Trigger for Privileged Users
+    const isPrivileged = user.isSuperAdmin || user.isAdmin || user.isME || user.isSupervisor;
+    if (isPrivileged) {
+      const mfaCode = await generateMfaOtpPostgres(user.id);
+      await sendMfaEmail(user.email, { fullName: user.fullName, otpCode: mfaCode });
+      
+      try {
+        await logAuditEventPostgres(user.id, user.fullName, "LOGIN_MFA_CHALLENGE", "portal_users", String(user.id), null, null, "MFA code generated and dispatched", ipAddress);
+      } catch (_e) { /* ignore */ }
+
+      return NextResponse.json({
+        ok: true,
+        requiresMfa: true,
+        userId: user.id // Send back temporary reference to continue MFA flow
+      });
+    }
+
+    // 5. Standard Direct Session Creation
     const session = await createPortalSession(user.id);
+    
+    try {
+      await logAuditEventPostgres(user.id, user.fullName, "LOGIN_SUCCESS", "portal_sessions", session.token.substring(0, 8), null, null, "Standard login passed", ipAddress);
+    } catch (_e) { /* ignore */ }
     clearRateLimit(rateLimitKey);
     const redirectTo = user.mustChangePassword ? "/portal/change-password" : getPortalHomePath(user);
     const response = NextResponse.json({
       ok: true,
       redirectTo,
-      user: {
-        fullName: user.fullName,
-        role: user.role,
-        mustChangePassword: user.mustChangePassword,
-      },
+      user: { fullName: user.fullName, role: user.role, mustChangePassword: user.mustChangePassword },
     });
 
     response.cookies.set({
       name: PORTAL_SESSION_COOKIE,
       value: session.token,
-      maxAge: 604_800, // 7 days – matches DB session expiry
+      maxAge: session.maxAge,
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",

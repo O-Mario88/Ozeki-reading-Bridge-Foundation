@@ -1,22 +1,29 @@
 import type { PortalUserRole, PortalUserStatus } from "@/lib/types";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
-import bcrypt from "bcryptjs";
+import * as argon2 from "argon2";
 import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 
-const BCRYPT_ROUNDS = 12;
+/** Detect whether a stored hash is Argon2id. */
+function isArgon2Hash(hash: string): boolean {
+  return hash.startsWith("$argon2id$");
+}
 
 /** Detect whether a stored hash is bcrypt ($2a$/$2b$ prefix, 60 chars). */
 function isBcryptHash(hash: string): boolean {
   return /^\$2[aby]?\$\d{2}\$.{53}$/.test(hash);
 }
 
-/** Hash a raw password with bcrypt. */
+/** Hash a raw password with Argon2id. */
 export async function hashPassword(plain: string): Promise<string> {
-  return bcrypt.hash(plain, BCRYPT_ROUNDS);
+  return argon2.hash(plain, { type: argon2.argon2id });
 }
 
-/** Verify a raw password against a stored hash (bcrypt or legacy SHA256). */
+/** Verify a raw password against a stored hash (Argon2id, bcrypt, or legacy SHA256). */
 export async function verifyPassword(plain: string, storedHash: string): Promise<boolean> {
+  if (isArgon2Hash(storedHash)) {
+    return argon2.verify(storedHash, plain);
+  }
   if (isBcryptHash(storedHash)) {
     return bcrypt.compare(plain, storedHash);
   }
@@ -183,12 +190,12 @@ export async function authenticatePortalUserPostgres(identifier: string, rawPass
   if (!auth) return null;
   if (auth.status === "deactivated") return null;
 
-  // Verify password (bcrypt or legacy SHA256)
+  // Verify password (Argon2id, bcrypt, or legacy SHA256)
   const valid = await verifyPassword(rawPassword, auth.passwordHash);
   if (!valid) return null;
 
-  // Transparent migration: upgrade SHA256 → bcrypt on successful login
-  if (!isBcryptHash(auth.passwordHash)) {
+  // Transparent migration: upgrade to Argon2id on successful login
+  if (!isArgon2Hash(auth.passwordHash)) {
     const upgraded = await hashPassword(rawPassword);
     await queryPostgres(
       `UPDATE portal_users SET password_hash = $1 WHERE id = $2`,
@@ -205,12 +212,20 @@ export async function authenticatePortalUserPostgres(identifier: string, rawPass
   return user;
 }
 
-export async function createPortalSessionPostgres(userId: number, token?: string, expiresAt?: string) {
+export async function createPortalSessionPostgres(userId: number, token?: string) {
   const resolvedToken = token ?? crypto.randomBytes(32).toString("hex");
-  const maxAgeSec = 7 * 24 * 60 * 60; // 7 days
-  const resolvedExpiresAt = expiresAt ?? new Date(Date.now() + maxAgeSec * 1000).toISOString();
+  
+  // Calculate expiry boundaries
+  const authRow = await findPortalUserAuthByIdPostgres(userId);
+  const isPrivileged = authRow && (authRow.isSuperAdmin || authRow.isAdmin || authRow.isME || authRow.isSupervisor);
+  
+  // Absolute lifetime: 8 hrs privileged, 12 hrs standard
+  const maxAgeSec = isPrivileged ? 8 * 60 * 60 : 12 * 60 * 60; 
+  const resolvedExpiresAt = new Date(Date.now() + maxAgeSec * 1000).toISOString();
+  
   await insertPortalSessionPostgres(userId, resolvedToken, resolvedExpiresAt);
-  return { token: resolvedToken, expiresAt: resolvedExpiresAt, userId, maxAge: maxAgeSec };
+  // Default to cookies being maxAgeSec so they expire cleanly locally too
+  return { token: resolvedToken, expiresAt: resolvedExpiresAt, userId, maxAge: maxAgeSec, isPrivileged };
 }
 
 export async function findPortalUserAuthByIdPostgres(userId: number) {
@@ -267,24 +282,28 @@ export async function findPortalUserByEmailPostgres(email: string) {
   return result.rows[0] ? mapPortalUserSessionRow(result.rows[0]) : null;
 }
 
-export async function insertPortalSessionPostgres(userId: number, token: string, expiresAt: string) {
+export async function insertPortalSessionPostgres(userId: number, token: string, expiresAt: string, isMfaVerified: boolean = false) {
   await queryPostgres(
     `
-      INSERT INTO portal_sessions (user_id, token, expires_at)
-      VALUES ($1, $2, $3::timestamptz)
+      INSERT INTO portal_sessions (user_id, token, expires_at, is_mfa_verified)
+      VALUES ($1, $2, $3::timestamptz, $4)
       ON CONFLICT (token) DO UPDATE SET
         user_id = EXCLUDED.user_id,
-        expires_at = EXCLUDED.expires_at
+        expires_at = EXCLUDED.expires_at,
+        is_mfa_verified = EXCLUDED.is_mfa_verified
     `,
-    [userId, token, expiresAt],
+    [userId, token, expiresAt, isMfaVerified],
   );
 }
 
 export async function deleteExpiredPortalSessionsPostgres() {
   await queryPostgres("DELETE FROM portal_sessions WHERE expires_at <= NOW()");
+  // Also delete idle sessions across the system (30 minutes max buffer for non-privileged, 15m is checked actively)
+  await queryPostgres("DELETE FROM portal_sessions WHERE last_active_at < NOW() - INTERVAL '30 minutes'");
 }
 
 export async function findPortalUserBySessionTokenPostgres(token: string) {
+  // 1. Fetch the raw session and user details
   const result = await queryPostgres(
     `
       SELECT
@@ -300,7 +319,8 @@ export async function findPortalUserBySessionTokenPostgres(token: string) {
         u.is_supervisor AS "isSupervisor",
         u.is_me AS "isME",
         u.is_admin AS "isAdmin",
-        u.is_superadmin AS "isSuperAdmin"
+        u.is_superadmin AS "isSuperAdmin",
+        s.last_active_at AS "lastActiveAt"
       FROM portal_sessions s
       JOIN portal_users u ON u.id = s.user_id
       WHERE s.token = $1
@@ -310,9 +330,89 @@ export async function findPortalUserBySessionTokenPostgres(token: string) {
     `,
     [token],
   );
-  return result.rows[0] ? mapPortalUserSessionRow(result.rows[0]) : null;
+
+  if (!result.rows[0]) return null;
+
+  const row = result.rows[0];
+  const isPrivileged = row.isSuperAdmin || row.isAdmin || row.isME || row.isSupervisor;
+  const idleMaxMinutes = isPrivileged ? 15 : 30;
+
+  // 2. Validate Idle Timeout mathematically from last_active_at
+  const lastActive = new Date(row.lastActiveAt).getTime();
+  const idleMillis = Date.now() - lastActive;
+  if (idleMillis > idleMaxMinutes * 60 * 1000) {
+    // Delete the expired idle session so it can't be reused
+    await deletePortalSessionPostgres(token);
+    return null;
+  }
+
+  // 3. Slide the idle window by updating last_active_at
+  // We do this asynchronously to avoid blocking the main auth read loop
+  queryPostgres("UPDATE portal_sessions SET last_active_at = NOW() WHERE token = $1", [token]).catch(() => {});
+
+  const { lastActiveAt: _, ...userRow } = row;
+  return mapPortalUserSessionRow(userRow);
 }
 
 export async function deletePortalSessionPostgres(token: string) {
   await queryPostgres("DELETE FROM portal_sessions WHERE token = $1", [token]);
+}
+
+export async function recordLoginAttemptPostgres(identifier: string, ipAddress: string, success: boolean) {
+  await queryPostgres(
+    `INSERT INTO login_attempts (identifier, ip_address, success) VALUES ($1, $2, $3)`,
+    [identifier.trim().toLowerCase(), ipAddress, success]
+  );
+}
+
+export async function getRecentFailedLoginAttemptsPostgres(identifier: string, minutes: number = 15): Promise<number> {
+  const result = await queryPostgres(
+    `
+      SELECT COUNT(*) as count 
+      FROM login_attempts 
+      WHERE identifier = $1 
+        AND success = false 
+        AND attempt_time > NOW() - INTERVAL '${minutes} minutes'
+    `,
+    [identifier.trim().toLowerCase()]
+  );
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+export async function generateMfaOtpPostgres(userId: number): Promise<string> {
+  const code = Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join("");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins expiry
+  
+  await queryPostgres(
+    `
+      INSERT INTO portal_user_mfa (user_id, secret_code, expires_at)
+      VALUES ($1, $2, $3::timestamptz)
+      ON CONFLICT (user_id) DO UPDATE SET
+        secret_code = EXCLUDED.secret_code,
+        expires_at = EXCLUDED.expires_at,
+        created_at = NOW()
+    `,
+    [userId, code, expiresAt]
+  );
+  return code;
+}
+
+export async function verifyMfaOtpPostgres(userId: number, code: string): Promise<boolean> {
+  const result = await queryPostgres(
+    `
+      SELECT id 
+      FROM portal_user_mfa 
+      WHERE user_id = $1 
+        AND secret_code = $2 
+        AND expires_at > NOW()
+    `,
+    [userId, code]
+  );
+  
+  if (result.rows.length > 0) {
+    // Consume the OTP
+    await queryPostgres(`DELETE FROM portal_user_mfa WHERE user_id = $1`, [userId]);
+    return true;
+  }
+  return false;
 }

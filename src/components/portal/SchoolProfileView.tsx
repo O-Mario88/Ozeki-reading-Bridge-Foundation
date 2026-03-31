@@ -12,6 +12,7 @@ import { LiteracyImpactFormModal } from "./LiteracyImpactFormModal";
 import { NewContactModal } from "./NewContactModal";
 import type { SchoolEnrollmentRecord, SchoolLiteracyImpactRecord } from "@/lib/types";
 import { GraduationReviewModal } from "./GraduationReviewModal";
+import { ReAuthModal } from "@/components/auth/ReAuthModal";
 
 type SupervisorOption = {
   id: number;
@@ -282,13 +283,12 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           <Link className="sp-btn" href={`/portal/events`}>Online Training</Link>
           <Link className="sp-btn" href={`/portal/visits?new=1&schoolId=${school.id}`}>New Visit</Link>
           <Link className="sp-btn" href={`/portal/assessments?new=1&schoolId=${school.id}`}>New Assessment</Link>
-          <button
-            className="sp-btn sp-btn--danger"
-            type="button"
-            onClick={() => { setDeleteConfirmOpen(true); setDeleteConfirmName(""); setDeleteError(""); }}
-          >
-            Delete School
-          </button>
+          <ReAuthModal
+            triggerLabel="Delete School"
+            actionName="Delete School"
+            triggerClassName="sp-btn sp-btn--danger"
+            onVerify={() => { setDeleteConfirmOpen(true); setDeleteConfirmName(""); setDeleteError(""); }}
+          />
         </div>
       </section>
 

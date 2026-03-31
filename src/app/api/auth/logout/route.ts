@@ -10,6 +10,16 @@ export async function POST() {
   const token = cookieStore.get(PORTAL_SESSION_COOKIE)?.value;
 
   if (token) {
+    const { findPortalUserBySessionTokenPostgres } = await import("@/lib/server/postgres/repositories/auth");
+    const { logAuditEventPostgres } = await import("@/lib/server/postgres/repositories/audit");
+    
+    try {
+      const user = await findPortalUserBySessionTokenPostgres(token);
+      if (user) {
+        await logAuditEventPostgres(user.id, user.fullName, "LOGOUT_SUCCESS", "portal_sessions", token.substring(0, 8), null, null, "Explicit session termination");
+      }
+    } catch (_e) { /* ignore */ }
+    
     await deletePortalSession(token);
   }
 

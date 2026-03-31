@@ -82,6 +82,12 @@ export function PortalLoginForm() {
         throw new Error(errorMsg);
       }
 
+      if (data.requiresMfa) {
+        setState({ status: "success", message: "Verification required. Redirecting..." });
+        window.location.href = `/portal/mfa-verify?userId=${data.userId}`;
+        return;
+      }
+
       setState({ status: "success", message: "Sign-in successful. Redirecting..." });
       window.location.href = (data.redirectTo as string) ?? "/portal/dashboard";
     } catch (error) {
