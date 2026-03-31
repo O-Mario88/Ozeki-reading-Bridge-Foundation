@@ -55,6 +55,7 @@ export function PortalSchoolsManager({
   const [createSubRegion, setCreateSubRegion] = useState("");
   const [createDistrict, setCreateDistrict] = useState("");
   const [filterRegion, setFilterRegion] = useState("");
+  const [filterSubRegion, setFilterSubRegion] = useState("");
   const [districtFilter, setDistrictFilter] = useState("");
   const [queryFilter, setQueryFilter] = useState("");
 
@@ -96,9 +97,11 @@ export function PortalSchoolsManager({
     : createRegion
       ? getDistrictsByRegion(createRegion)
       : allUgandaDistricts;
-  const filterDistrictOptions = filterRegion
-    ? getDistrictsByRegion(filterRegion)
-    : allUgandaDistricts;
+  const filterDistrictOptions = filterSubRegion
+    ? getDistrictsByRegion(filterSubRegion)
+    : filterRegion
+      ? getDistrictsByRegion(filterRegion)
+      : allUgandaDistricts;
 
   const selectedSchool = useMemo(
     () => schools.find((school) => school.id === selectedSchoolId) ?? null,
@@ -1180,6 +1183,7 @@ export function PortalSchoolsManager({
                 const nextRegion = event.target.value;
                 const options = nextRegion ? getDistrictsByRegion(nextRegion) : allUgandaDistricts;
                 setFilterRegion(nextRegion);
+                setFilterSubRegion("");
                 setDistrictFilter((current) => (options.includes(current) ? current : ""));
               }}
             >
@@ -1187,6 +1191,29 @@ export function PortalSchoolsManager({
               {ugandaRegions.map((entry) => (
                 <option key={entry.region} value={entry.region}>
                   {entry.region}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="portal-field-label">Sub-Region</span>
+            <select
+              value={filterSubRegion}
+              onChange={(event) => {
+                const nextSubRegion = event.target.value;
+                setFilterSubRegion(nextSubRegion);
+                const options = nextSubRegion 
+                  ? getDistrictsByRegion(nextSubRegion) 
+                  : filterRegion 
+                    ? getDistrictsByRegion(filterRegion)
+                    : allUgandaDistricts;
+                setDistrictFilter((current) => (options.includes(current) ? current : ""));
+              }}
+            >
+              <option value="">All sub-regions</option>
+              {getSubRegionsByRegion(filterRegion).map((sr) => (
+                <option key={sr.subRegion} value={sr.subRegion}>
+                  {sr.subRegion}
                 </option>
               ))}
             </select>
@@ -1219,6 +1246,7 @@ export function PortalSchoolsManager({
               type="button"
               onClick={() => {
                 setFilterRegion("");
+                setFilterSubRegion("");
                 setDistrictFilter("");
                 setQueryFilter("");
                 void fetchSchools("", "");
