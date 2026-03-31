@@ -84,6 +84,8 @@ export function FinanceShell({
               backgroundColor: "#111827",
               padding: "2.5rem 2.5rem 6.5rem 2.5rem",
               color: "white",
+              position: "relative",
+              zIndex: 1,
             }}
           >
             <h1
