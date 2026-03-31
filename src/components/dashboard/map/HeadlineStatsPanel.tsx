@@ -93,51 +93,55 @@ export function HeadlineStatsPanel({
         />
       </div>
 
-      <div className="headline-stats-subsection">
-        <h4>1001 Story Statistics</h4>
-        <div className="headline-stats-grid">
-          <MetricCard
-            label="Story-active schools"
-            value={storyActiveSchools.toLocaleString()}
-            helper={storyCoverage}
-            loading={loading}
-          />
-          <MetricCard
-            label="Story sessions logged"
-            value={storySessionsTotal.toLocaleString()}
-            loading={loading}
-          />
-          <MetricCard
-            label="Stories published"
-            value={storiesPublishedTotal.toLocaleString()}
-            loading={loading}
-          />
+      {(storyActiveSchools > 0 || storySessionsTotal > 0 || storiesPublishedTotal > 0) && (
+        <div className="headline-stats-subsection">
+          <h4>1001 Story Statistics</h4>
+          <div className="headline-stats-grid">
+            <MetricCard
+              label="Story-active schools"
+              value={storyActiveSchools.toLocaleString()}
+              helper={storyCoverage}
+              loading={loading}
+            />
+            <MetricCard
+              label="Story sessions logged"
+              value={storySessionsTotal.toLocaleString()}
+              loading={loading}
+            />
+            <MetricCard
+              label="Stories published"
+              value={storiesPublishedTotal.toLocaleString()}
+              loading={loading}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="headline-stats-subsection">
-        <h4>Online Training</h4>
-        <div className="headline-stats-grid">
-          <MetricCard
-            label="Online sessions held"
-            value={(kpis?.onlineLiveSessionsCovered ?? 0).toLocaleString()}
-            helper="Live & completed virtual sessions"
-            loading={loading}
-          />
-          <MetricCard
-            label="Online participants"
-            value={(kpis?.onlineTeachersSupported ?? 0).toLocaleString()}
-            helper="Teachers trained online"
-            loading={loading}
-          />
-          <MetricCard
-            label="Schools reached online"
-            value={(kpis?.onlineSchoolsReachedCount ?? 0).toLocaleString()}
-            helper="Unique schools with online participants"
-            loading={loading}
-          />
+      {((kpis?.onlineLiveSessionsCovered ?? 0) > 0 || (kpis?.onlineTeachersSupported ?? 0) > 0) && (
+        <div className="headline-stats-subsection">
+          <h4>Online Training</h4>
+          <div className="headline-stats-grid">
+            <MetricCard
+              label="Online sessions held"
+              value={(kpis?.onlineLiveSessionsCovered ?? 0).toLocaleString()}
+              helper="Live & completed virtual sessions"
+              loading={loading}
+            />
+            <MetricCard
+              label="Online participants"
+              value={(kpis?.onlineTeachersSupported ?? 0).toLocaleString()}
+              helper="Teachers trained online"
+              loading={loading}
+            />
+            <MetricCard
+              label="Schools reached online"
+              value={(kpis?.onlineSchoolsReachedCount ?? 0).toLocaleString()}
+              helper="Unique schools with online participants"
+              loading={loading}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="headline-stats-actions">
         <Link className="button" href={detailHref}>

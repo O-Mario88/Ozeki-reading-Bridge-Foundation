@@ -954,38 +954,36 @@ export function PublicImpactMapExplorer({
                 <small>Stage bands currently computed</small>
               </article>
             </div>
-            <div className="impact-attract-progress-lists">
-              <div>
-                <h4>Strongest Mastery Domains</h4>
-                {masteryDomainRows.length > 0 ? (
-                  masteryDomainRows.map((row) => (
-                    <div key={row.key} className="impact-attract-progress-row">
-                      <strong>{row.label}</strong>
-                      <span>
-                        Green {row.green.toFixed(1)}% • Amber {row.amber.toFixed(1)}% • Red {row.red.toFixed(1)}%
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="impact-mini-footer">Domain mastery data not available for this scope.</p>
+            {(masteryDomainRows.length > 0 || topReadingStages.length > 0) && (
+              <div className="impact-attract-progress-lists">
+                {masteryDomainRows.length > 0 && (
+                  <div>
+                    <h4>Strongest Mastery Domains</h4>
+                    {masteryDomainRows.map((row) => (
+                      <div key={row.key} className="impact-attract-progress-row">
+                        <strong>{row.label}</strong>
+                        <span>
+                          Green {row.green.toFixed(1)}% • Amber {row.amber.toFixed(1)}% • Red {row.red.toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {topReadingStages.length > 0 && (
+                  <div>
+                    <h4>Latest Reading Stage Mix</h4>
+                    {topReadingStages.map((row) => (
+                      <div key={row.label} className="impact-attract-progress-row">
+                        <strong>{row.label}</strong>
+                        <span>
+                          {row.percent.toFixed(1)}% • n={row.count.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-              <div>
-                <h4>Latest Reading Stage Mix</h4>
-                {topReadingStages.length > 0 ? (
-                  topReadingStages.map((row) => (
-                    <div key={row.label} className="impact-attract-progress-row">
-                      <strong>{row.label}</strong>
-                      <span>
-                        {row.percent.toFixed(1)}% • n={row.count.toLocaleString()}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="impact-mini-footer">Reading stage distribution is not available yet.</p>
-                )}
-              </div>
-            </div>
+            )}
           </article>
           ) : null}
           <UgandaImpactMapPro
