@@ -16,7 +16,7 @@ export default async function PartnerDataRoomPage() {
 
     return (
         <>
-            <section className="page-hero">
+            <section className="page-hero" style={{ backgroundImage: "url('/photos/Training%20In%20Agago%20Lukole%20Sub-County.jpg')" }}>
                 <div className="container">
                     <p className="kicker">Partner Data Room</p>
                     <h1>Evidence &amp; Data Center</h1>

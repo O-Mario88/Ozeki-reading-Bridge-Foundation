@@ -17,7 +17,7 @@ export default async function NewsletterIndexPage() {
 
   return (
     <>
-      <section className="page-hero">
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/22.jpeg')" }}>
         <div className="container">
           <p className="kicker">Newsletter</p>
           <h1>Ozeki Reading Bridge Newsletter</h1>

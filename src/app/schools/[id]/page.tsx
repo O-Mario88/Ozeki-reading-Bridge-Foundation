@@ -87,7 +87,7 @@ export default async function SchoolPage({ params }: { params: Params }) {
 
   return (
     <>
-      <section className="page-hero">
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/12.jpeg')" }}>
         <div className="container">
           <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
             <Link href="/impact/dashboard">Dashboard</Link>

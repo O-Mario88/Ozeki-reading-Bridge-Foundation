@@ -38,7 +38,7 @@ export default async function ParishPage({ params }: { params: Params }) {
 
     return (
         <>
-            <section className="page-hero">
+            <section className="page-hero" style={{ backgroundImage: "url('/photos/PXL_20260218_124653516.MP.jpg')" }}>
                 <div className="container">
                     <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
                         <Link href="/impact/dashboard">Dashboard</Link>

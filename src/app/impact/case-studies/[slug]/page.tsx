@@ -48,7 +48,7 @@ export default async function ImpactCaseStudyDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
-      <section className="page-hero">
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/17.jpeg')" }}>
         <div className="container">
           <p className="kicker">Change story</p>
           <h1>{story.title}</h1>

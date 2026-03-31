@@ -10285,7 +10285,9 @@ body.app-has-modal {
    ========================================================================== */
 
 .page-hero {
-  background-color: #006b61 !important;
+  background-color: #111827; /* Fallback */
+  background-size: cover;
+  background-position: center;
   color: #ffffff !important;
   padding: 6rem 0 5rem !important;
   margin: 0 !important;
@@ -10297,8 +10299,14 @@ body.app-has-modal {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.1), transparent);
+  background: rgba(0, 0, 0, 0.65);
   pointer-events: none;
+  z-index: 1;
+}
+
+.page-hero > * {
+  position: relative;
+  z-index: 2;
 }
 
 .page-hero h1 {

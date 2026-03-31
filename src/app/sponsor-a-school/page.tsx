@@ -73,7 +73,7 @@ const PARTNER_EVIDENCE = [
 export default function SponsorSchoolPage() {
   return (
     <>
-      <section className="page-hero">
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/Amolatar%20District%20Literacy.jpg')" }}>
         <div className="container">
           <p className="kicker">Sponsor package</p>
           <h1>Sponsor a School - $1,100 (2-Year Full Literacy Support Package)</h1>

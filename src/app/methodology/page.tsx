@@ -22,7 +22,7 @@ export default async function MethodologyPage() {
 
   return (
     <>
-      <section className="page-hero">
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/10.jpeg')" }}>
         <div className="container">
           <p className="kicker">Methodology</p>
           <h1>How Ozeki Measures Literacy Impact</h1>
