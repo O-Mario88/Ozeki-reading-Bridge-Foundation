@@ -166,7 +166,7 @@ export function EventSignUpForm({
 
         {/* Contacts */}
         <div className="full-width">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
             <span className="portal-field-label" style={{ marginBottom: 0 }}>Attendees</span>
             <button className="button button-ghost" type="button" onClick={addContact} style={{ fontSize: "0.85rem", padding: "0.25rem 0.5rem" }}>
               + Add attendee

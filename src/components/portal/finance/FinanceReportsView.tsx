@@ -45,7 +45,7 @@ function ReportCard({ report }: { report: typeof REPORT_TYPES[0] }) {
 
   return (
     <div className="ds-card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "1rem" }}>
         <div style={{ padding: "0.75rem", background: "#eff6ff", borderRadius: "12px", color: "#2563eb" }}>
           <report.icon size={24} />
         </div>
@@ -60,7 +60,7 @@ function ReportCard({ report }: { report: typeof REPORT_TYPES[0] }) {
       <div style={{ background: "#f8fafc", padding: "1rem", borderRadius: "8px", border: "1px solid #e2e8f0", marginTop: "auto" }}>
         <h4 style={{ margin: "0 0 0.5rem 0", fontSize: "0.85rem", fontWeight: 600, color: "#475569" }}>Reporting Period</h4>
         
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
           <button 
             onClick={() => setFilterType("monthly")}
             style={{ flex: 1, padding: "0.4rem", fontSize: "0.8rem", borderRadius: "6px", border: "1px solid", fontWeight: 500, background: filterType === "monthly" ? "#2563eb" : "#fff", color: filterType === "monthly" ? "#fff" : "#475569", borderColor: filterType === "monthly" ? "#2563eb" : "#cbd5e1", cursor: "pointer" }}
@@ -113,7 +113,7 @@ function ReportCard({ report }: { report: typeof REPORT_TYPES[0] }) {
         href={downloadUrl}
         target="_blank"
         className="finance-btn finance-btn-primary"
-        style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", textDecoration: "none", marginTop: "0.5rem" }}
+        style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "0.5rem", textDecoration: "none", marginTop: "0.5rem" }}
       >
         <LucideDownload size={18} />
         Render A4 Statement

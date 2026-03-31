@@ -233,13 +233,10 @@ export function StoryLibraryManager({
   return (
     <div style={{ marginTop: "1rem" }}>
       <div
-        style={{
-          display: "flex",
-          gap: "1rem",
+        style={{ display: "flex", flexWrap: "wrap", gap: "1rem",
           borderBottom: "1px solid var(--md-sys-color-outline-variant)",
           paddingBottom: "0.5rem",
-          marginBottom: "1rem",
-        }}
+          marginBottom: "1rem", }}
       >
         <button
           className={`button ${activeTab === "stories" ? "" : "button-ghost"}`}
@@ -528,7 +525,7 @@ export function StoryLibraryManager({
               </div>
             </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <label style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}>
               <input
                 type="checkbox"
                 checked={aFeatured}

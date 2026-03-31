@@ -27,7 +27,7 @@ export default function PortalError({
       <p style={{ color: "#555", marginBottom: "1.5rem" }}>
         We&apos;re experiencing a temporary issue connecting to our services. Please try again in a moment.
       </p>
-      <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", justifyContent: "center" }}>
         <button
           onClick={reset}
           style={{

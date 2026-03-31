@@ -49,14 +49,11 @@ export function FinanceShell({
             <Link
               href="/portal/dashboard"
               className="finance-btn finance-btn-outline"
-              style={{
-                display: "flex",
-                alignItems: "center",
+              style={{ display: "flex", flexWrap: "wrap", alignItems: "center",
                 padding: "6px 12px",
                 fontSize: 13,
                 gap: 6,
-                textDecoration: "none",
-              }}
+                textDecoration: "none", }}
             >
               ← Portal
             </Link>

@@ -230,7 +230,7 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
               notImplement={dashboard.kpis.schoolsNotImplementingPercent} 
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", paddingBottom: "1rem" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "1.5rem", paddingBottom: "1rem" }}>
             <div style={{ fontSize: "0.8125rem", color: "#6b7280", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#5e72e4", display: "inline-block" }}></span> Implementing
             </div>

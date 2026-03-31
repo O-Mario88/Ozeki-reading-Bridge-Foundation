@@ -58,17 +58,14 @@ export function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualP
             <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
                 {/* Baseline Row */}
                 <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: "0.5rem" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "end", marginBottom: "0.5rem" }}>
                         <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#666" }}>BASELINE</span>
                         <span style={{ fontSize: "0.75rem", color: "#999" }}>n={baseline.n}</span>
                     </div>
-                    <div style={{
-                        display: "flex",
-                        height: "32px",
+                    <div style={{ display: "flex", flexWrap: "wrap", height: "32px",
                         borderRadius: "8px",
                         overflow: "hidden",
-                        background: "#f0f0f0"
-                    }}>
+                        background: "#f0f0f0" }}>
                         {levels.map(level => {
                             const pct = baseline.percents[level.label] || 0;
                             if (pct === 0) return null;
@@ -96,31 +93,25 @@ export function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualP
                 </div>
 
                 {/* Mid-point Transition Indicators (Arrows) */}
-                <div style={{
-                    display: "flex",
-                    justifyContent: "center",
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center",
                     margin: "-1rem 0",
                     color: "var(--md-sys-color-primary, #2563eb)",
                     fontSize: "1.2rem",
-                    opacity: 0.6
-                }}>
+                    opacity: 0.6 }}>
                     ↓↓↓
                 </div>
 
                 {/* Latest Row */}
                 <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: "0.5rem" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "end", marginBottom: "0.5rem" }}>
                         <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--md-sys-color-primary, #2563eb)" }}>LATEST</span>
                         <span style={{ fontSize: "0.75rem", color: "#999" }}>n={latest.n}</span>
                     </div>
-                    <div style={{
-                        display: "flex",
-                        height: "40px",
+                    <div style={{ display: "flex", flexWrap: "wrap", height: "40px",
                         borderRadius: "8px",
                         overflow: "hidden",
                         background: "#f0f0f0",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-                    }}>
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
                         {levels.map(level => {
                             const pct = latest.percents[level.label] || 0;
                             if (pct === 0) return null;
@@ -158,7 +149,7 @@ export function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualP
                 borderTop: "1px solid #f0f0f0"
             }}>
                 {levels.map(level => (
-                    <div key={`legend-${level.level}`} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <div key={`legend-${level.level}`} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.4rem" }}>
                         <div style={{ width: "12px", height: "12px", borderRadius: "3px", background: levelColors[level.label] || "#eee" }}></div>
                         <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#555" }}>{level.label}</span>
                     </div>

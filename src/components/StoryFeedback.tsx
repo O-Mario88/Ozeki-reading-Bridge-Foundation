@@ -79,8 +79,8 @@ export function StoryFeedback({ slug, initialStats, initialComments }: Props) {
                 {/* Rating Area */}
                 <div className="card" style={{ flex: "1 1 300px", padding: "1.5rem" }}>
                     <h4 style={{ marginTop: 0 }}>Rate this Story</h4>
-                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", margin: "1rem 0" }}>
-                        <div style={{ display: "flex", gap: "0.2rem", fontSize: "2rem", cursor: hasRated ? "default" : "pointer" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "1rem", margin: "1rem 0" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.2rem", fontSize: "2rem", cursor: hasRated ? "default" : "pointer" }}>
                             {[1, 2, 3, 4, 5].map(star => (
                                 <span
                                     key={star}
@@ -125,7 +125,7 @@ export function StoryFeedback({ slug, initialStats, initialComments }: Props) {
                                 style={{ width: "100%" }}
                             />
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "1rem" }}>
                             <button type="submit" className="button" disabled={submitting || !commentText.trim()}>
                                 {submitting ? "Posting..." : "Post Comment"}
                             </button>
@@ -144,7 +144,7 @@ export function StoryFeedback({ slug, initialStats, initialComments }: Props) {
                     <div style={{ display: "grid", gap: "1.5rem", marginTop: "1.5rem" }}>
                         {comments.map(c => (
                             <div key={c.id} style={{ padding: "1rem", backgroundColor: "var(--md-sys-color-surface-variant)", borderRadius: "8px" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                                     <strong>{c.displayName || "Anonymous Reader"}</strong>
                                     <small style={{ opacity: 0.7 }}>{new Date(c.createdAt).toLocaleDateString("en-GB")}</small>
                                 </div>

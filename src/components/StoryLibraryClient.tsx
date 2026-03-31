@@ -40,16 +40,16 @@ function StoryCard({ story }: { story: PublishedStory }) {
                     <p className="story-card-excerpt">{story.excerpt.length > 120 ? `${story.excerpt.slice(0, 120)}…` : story.excerpt}</p>
                 )}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", fontSize: "0.80rem", color: "var(--md-sys-color-on-surface-variant)", marginTop: "0.5rem" }}>
-                    <span title="Reads" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                    <span title="Reads" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.3rem" }}>
                         👁️ {story.viewCount || 0}
                     </span>
                     {story.averageStars ? (
-                        <span title="Average Rating" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                        <span title="Average Rating" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.3rem" }}>
                             ⭐ {story.averageStars.toFixed(1)} {story.ratingCount ? <span style={{ opacity: 0.6 }}>({story.ratingCount})</span> : ""}
                         </span>
                     ) : null}
                     {story.commentCount ? (
-                        <span title="Comments" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                        <span title="Comments" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.3rem" }}>
                             💬 {story.commentCount}
                         </span>
                     ) : null}
@@ -84,7 +84,7 @@ function AnthologyCard({ anthology }: { anthology: AnthologyRecord }) {
                 </div>
             )}
             <div className="story-card-body">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h3 className="story-card-title">{anthology.title}</h3>
                     {anthology.featured && <span title="Featured" style={{ fontSize: "1.2rem" }}>⭐</span>}
                 </div>
@@ -161,7 +161,7 @@ export function StoryLibraryClient({ initialStories, initialTotal, initialAnthol
 
     return (
         <>
-            <div style={{ display: "flex", gap: "1rem", borderBottom: "1px solid var(--md-sys-color-outline-variant)", paddingBottom: "0.5rem", marginBottom: "2rem" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", borderBottom: "1px solid var(--md-sys-color-outline-variant)", paddingBottom: "0.5rem", marginBottom: "2rem" }}>
                 <button
                     className={`button ${activeTab === "stories" ? "" : "button-ghost"}`}
                     onClick={() => setActiveTab("stories")}

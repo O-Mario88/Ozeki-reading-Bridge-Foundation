@@ -170,7 +170,7 @@ export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Prop
     return (
         <div style={{ maxWidth: "1200px", margin: "0 auto", paddingBottom: "4rem" }}>
             {/* Header Toolbar */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
                 <div>
                     <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0, color: "#111827" }}>Budget Tracking Workspace</h1>
                     <p style={{ margin: "4px 0 0 0", color: "#6b7280", fontSize: "0.95rem" }}>
@@ -213,7 +213,7 @@ export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Prop
                     return (
                         <div key={b.id} className="ds-card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
                             {/* Card Header */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start" }}>
                                 <div>
                                     <h3 style={{ margin: "0 0 0.2rem 0", fontSize: "1.1rem", fontWeight: 700, color: "#111827" }}>{b.title}</h3>
                                     <span style={{ fontSize: "0.85rem", color: "#6b7280", background: "#f3f4f6", padding: "0.15rem 0.5rem", borderRadius: "12px" }}>
@@ -274,7 +274,7 @@ export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Prop
                             </div>
 
                             {/* Actions */}
-                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto", paddingTop: "0.5rem" }}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "auto", paddingTop: "0.5rem" }}>
                                 <button className="finance-btn finance-btn-outline" style={{ flex: 1 }}>Details</button>
                                 
                                 {b.status === "draft" && (
@@ -322,7 +322,7 @@ export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Prop
                                 style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                             />
                         </div>
-                        <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", justifyContent: "flex-end" }}>
                             <button onClick={() => setRequestingBudget(null)} className="finance-btn finance-btn-outline" disabled={saving}>Cancel</button>
                             <button onClick={() => handleFundRequest(requestingBudget)} className="finance-btn finance-btn-primary" disabled={saving || !requestAmount}>
                                 {saving ? "Submitting..." : "Submit Verification"}
@@ -476,7 +476,7 @@ export function PortalFinanceBudgetManager({ initialBudgets, currentUser }: Prop
                             >
                                 Cancel
                             </button>
-                            <div style={{ display: "flex", gap: "1rem" }}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
                                 <button 
                                     className="finance-btn finance-btn-outline" 
                                     onClick={() => handleSave(false)}

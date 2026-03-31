@@ -88,7 +88,7 @@ export default async function EditContactPage(props: {
   return (
     <div className="crm-workspace" style={{ padding: "1.5rem 2rem", maxWidth: 900, margin: "0 auto" }}>
       <header className="crm-workspace-header" style={{ marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "1rem" }}>
           <Link
             href={`/portal/contacts/${contactId}`}
             style={{ color: "#4b5563", textDecoration: "none", fontWeight: 500 }}

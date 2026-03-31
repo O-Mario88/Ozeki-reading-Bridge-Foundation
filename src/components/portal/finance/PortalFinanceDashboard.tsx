@@ -165,7 +165,7 @@ export function PortalFinanceDashboard({
       className="compact-finance-ui"
       style={{ minWidth: 0, paddingBottom: "2rem" }}
     >
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", marginBottom: "1rem" }}>
         <select
           value={period}
           onChange={(e) => router.push(`/portal/finance?period=${e.target.value}`)}
@@ -212,12 +212,9 @@ export function PortalFinanceDashboard({
             }}
           >
             <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
+              style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: "1rem",
-              }}
+                marginBottom: "1rem", }}
             >
               <span
                 style={{
@@ -260,15 +257,15 @@ export function PortalFinanceDashboard({
                 paddingTop: "1.25rem"
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", color: "#6b7280" }}>
                 <span>Pending Requests</span>
                 <span style={{ fontWeight: 600 }}>{formatMoney(summary.currency, summary.pendingFunds)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", color: "#6b7280" }}>
                 <span>Committed Funds</span>
                 <span style={{ fontWeight: 600 }}>{formatMoney(summary.currency, summary.committedFunds)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", color: "var(--ds-primary)", fontWeight: 700, marginTop: "0.25rem" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", color: "var(--ds-primary)", fontWeight: 700, marginTop: "0.25rem" }}>
                 <span>Available Balance</span>
                 <span>{formatMoney(summary.currency, summary.availableBalance)}</span>
               </div>
@@ -286,12 +283,9 @@ export function PortalFinanceDashboard({
             }}
           >
             <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
+              style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: "1.5rem",
-              }}
+                marginBottom: "1.5rem", }}
             >
               <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: 0 }}>
                 Action Items
@@ -312,12 +306,9 @@ export function PortalFinanceDashboard({
               {dueSoon.slice(0, 3).map((item, i) => (
                 <div key={item.id}>
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
+                    style={{ display: "flex", flexWrap: "wrap", alignItems: "center",
                       gap: "1rem",
-                      marginBottom: "0.75rem",
-                    }}
+                      marginBottom: "0.75rem", }}
                   >
                     <div
                       style={{
@@ -336,11 +327,8 @@ export function PortalFinanceDashboard({
                     </div>
                     <div style={{ flex: 1 }}>
                       <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginBottom: "0.1rem",
-                        }}
+                        style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
+                          marginBottom: "0.1rem", }}
                       >
                         <span
                           style={{
@@ -368,14 +356,11 @@ export function PortalFinanceDashboard({
                   </div>
                   {/* Progress Bar Mock */}
                   <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
+                    style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
                       marginBottom: "0.4rem",
                       fontSize: "0.8rem",
                       fontWeight: 600,
-                      color: "#111827",
-                    }}
+                      color: "#111827", }}
                   >
                     <span>{formatMoney(item.currency, item.balanceDue)}</span>
                     <span style={{ color: "#9ca3af", fontWeight: 500 }}>
@@ -443,11 +428,8 @@ export function PortalFinanceDashboard({
               }}
             >
               <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                }}
+                style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
+                  alignItems: "flex-start", }}
               >
                 <div>
                   <span
@@ -511,19 +493,13 @@ export function PortalFinanceDashboard({
               }}
             >
               <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                }}
+                style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
+                  alignItems: "flex-start", }}
               >
                 <div style={{ width: "100%" }}>
                   <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
+                    style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
+                      alignItems: "center", }}
                   >
                     <span
                       style={{
@@ -547,12 +523,9 @@ export function PortalFinanceDashboard({
                     </span>
                   </div>
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "baseline",
+                    style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline",
                       gap: "0.5rem",
-                      margin: "1.25rem 0 1rem",
-                    }}
+                      margin: "1.25rem 0 1rem", }}
                   >
                     <span
                       style={{
@@ -600,11 +573,8 @@ export function PortalFinanceDashboard({
               }}
             >
               <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                }}
+                style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
+                  alignItems: "flex-start", }}
               >
                 <div>
                   <span
@@ -668,11 +638,8 @@ export function PortalFinanceDashboard({
               }}
             >
               <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
+                style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
+                  alignItems: "center", }}
               >
                 <span
                   style={{
@@ -696,15 +663,12 @@ export function PortalFinanceDashboard({
                 </span>
               </div>
               <div
-                style={{
-                  display: "flex",
-                  gap: "4px",
+                style={{ display: "flex", flexWrap: "wrap", gap: "4px",
                   marginTop: "1.75rem",
                   marginBottom: "1rem",
                   height: "8px",
                   borderRadius: "4px",
-                  overflow: "hidden",
-                }}
+                  overflow: "hidden", }}
               >
                 <div
                   style={{
@@ -719,7 +683,7 @@ export function PortalFinanceDashboard({
                   style={{ flex: overdue.length || 1, background: "#bfdbfe" }}
                 ></div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between" }}>
                 <div>
                   <div
                     style={{
@@ -817,23 +781,17 @@ export function PortalFinanceDashboard({
             }}
           >
             <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
+              style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: "1.5rem",
-              }}
+                marginBottom: "1.5rem", }}
             >
               <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: 0 }}>
                 Transactions History
               </h3>
               <div
-                style={{
-                  display: "flex",
-                  gap: "0.5rem",
+                style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem",
                   alignItems: "center",
-                  position: "relative",
-                }}
+                  position: "relative", }}
               >
                 <button
                   onClick={() => setShowFilters(!showFilters)}

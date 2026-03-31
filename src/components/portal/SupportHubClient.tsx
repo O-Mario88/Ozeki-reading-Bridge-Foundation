@@ -245,14 +245,14 @@ export default function SupportHubClient({ user, initialRequests, staffMembers }
                     const colors = ["blue", "pink", "orange", "green", "purple"];
                     const color = colors[i % colors.length];
                     return (
-                      <div key={i} className={`ds-metric-card ${color}`} style={{ display: "flex", gap: "1rem", alignItems: "flex-start", justifyContent: "flex-start", background: "white", border: "1px solid #f3f4f6" }}>
+                      <div key={i} className={`ds-metric-card ${color}`} style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "flex-start", justifyContent: "flex-start", background: "white", border: "1px solid #f3f4f6" }}>
                         <div className="ds-metric-icon" style={{ width: "48px", height: "48px" }}>
                           <mod.icon className="w-6 h-6" />
                         </div>
                         <div className="ds-metric-content">
                           <span className="ds-metric-title" style={{ fontSize: "0.9rem", color: "var(--ds-text-primary)", fontWeight: 700 }}>{mod.title}</span>
                           <span className="ds-metric-sub" style={{ marginTop: "0.25rem", lineHeight: 1.4, whiteSpace: "normal" }}>{mod.desc}</span>
-                          <button className="ds-card-action" style={{ display: "flex", alignItems: "center", gap: "0.25rem", marginTop: "0.5rem", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                          <button className="ds-card-action" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.25rem", marginTop: "0.5rem", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
                             View guide <ChevronRight className="w-3 h-3" />
                           </button>
                         </div>

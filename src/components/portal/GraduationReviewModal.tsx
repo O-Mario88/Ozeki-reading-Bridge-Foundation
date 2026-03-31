@@ -272,7 +272,7 @@ export function GraduationReviewModal({
             <ul className="portal-list" style={{ listStyle: "none", paddingLeft: 0 }}>
               {checklistItems.map((item) => (
                 <li key={item} style={{ marginBottom: "0.5rem" }}>
-                  <label style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", cursor: "pointer" }}>
+                  <label style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: "0.5rem", cursor: "pointer" }}>
                     <input
                       type="checkbox"
                       checked={checklistAnswers[item] === true}

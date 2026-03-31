@@ -145,7 +145,7 @@ export default function SupportManager({ initialRequests, staffMembers }: Props)
                                         </select>
                                     </td>
                                     <td>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}>
                                             <select
                                                 value={req.status}
                                                 onChange={(e) => handleUpdate(req.id, { status: e.target.value as SupportRequestStatus })}

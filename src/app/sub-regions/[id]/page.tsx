@@ -95,7 +95,7 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                         <h3 style={{ marginTop: 0 }}>Fidelity Drivers</h3>
                         {fidelity.drivers.map((d) => (
                             <div key={d.driver} style={{ marginBottom: "0.75rem" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", fontSize: "0.85rem" }}>
                                     <span style={{ fontWeight: 600 }}>{d.label}</span>
                                     <span style={{ fontWeight: 700, color: d.score >= 75 ? "#FA7D15" : d.score >= 50 ? "#e8a317" : "#dc2626" }}>{d.score}%</span>
                                 </div>

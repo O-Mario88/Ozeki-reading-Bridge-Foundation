@@ -27,7 +27,7 @@ export default function RootError({
       <p style={{ color: "#555", marginBottom: "1.5rem" }}>
         We encountered an unexpected error loading this page. Our team has been notified.
       </p>
-      <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", justifyContent: "center" }}>
         <button
           onClick={reset}
           style={{

@@ -136,21 +136,21 @@ export function StoryReader({
                     {title} <span style={{ opacity: 0.5 }}>by {author}</span>
                 </div>
 
-                <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center" }}>
                     {/* Font Size */}
-                    <div style={{ display: "flex", background: activeTheme.ui, borderRadius: "6px", padding: "2px" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", background: activeTheme.ui, borderRadius: "6px", padding: "2px" }}>
                         <button onClick={() => setFontSize(f => Math.max(14, f - 2))} style={{ background: "none", border: "none", padding: "0.2rem 0.6rem", cursor: "pointer", color: activeTheme.text }}>A-</button>
                         <button onClick={() => setFontSize(f => Math.min(32, f + 2))} style={{ background: "none", border: "none", padding: "0.2rem 0.6rem", cursor: "pointer", color: activeTheme.text }}>A+</button>
                     </div>
 
                     {/* Font Family */}
-                    <div style={{ display: "flex", background: activeTheme.ui, borderRadius: "6px", padding: "2px" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", background: activeTheme.ui, borderRadius: "6px", padding: "2px" }}>
                         <button onClick={() => setFontFamily("sans")} style={{ background: fontFamily === "sans" ? activeTheme.bg : "none", border: "none", padding: "0.2rem 0.6rem", borderRadius: "4px", cursor: "pointer", color: activeTheme.text, fontFamily: "var(--font-lexend), sans-serif" }}>Sans</button>
                         <button onClick={() => setFontFamily("serif")} style={{ background: fontFamily === "serif" ? activeTheme.bg : "none", border: "none", padding: "0.2rem 0.6rem", borderRadius: "4px", cursor: "pointer", color: activeTheme.text, fontFamily: "'Merriweather', serif" }}>Serif</button>
                     </div>
 
                     {/* Theme */}
-                    <div style={{ display: "flex", gap: "0.3rem" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
                         <button onClick={() => setTheme("light")} style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#ffffff", border: theme === "light" ? "2px solid #000" : "1px solid #ccc", cursor: "pointer" }} title="Light Mode" />
                         <button onClick={() => setTheme("sepia")} style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#fbf0d9", border: theme === "sepia" ? "2px solid #5f4b32" : "1px solid #ccc", cursor: "pointer" }} title="Sepia Mode" />
                         <button onClick={() => setTheme("night")} style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#121212", border: theme === "night" ? "2px solid #fff" : "1px solid #333", cursor: "pointer" }} title="Night Mode" />
@@ -196,7 +196,7 @@ export function StoryReader({
                                         style={{ width: "100%", padding: "0.5rem", fontFamily: "inherit", fontSize: "0.9em" }}
                                         autoFocus
                                     />
-                                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                                         <button className="button" onClick={() => onSaveEditBlock(i)}>Save</button>
                                         <button className="button button-ghost" onClick={onCancelEditBlock}>Cancel</button>
                                     </div>

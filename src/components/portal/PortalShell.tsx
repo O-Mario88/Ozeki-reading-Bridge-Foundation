@@ -230,6 +230,7 @@ export function PortalShell({
               <details className="ds-create-menu">
                 <summary className="ds-topbar-icon-btn" title="Create new">✚</summary>
                 <div className="ds-create-menu-list">
+                  <Link href="/portal/schools?new=1">New School</Link>
                   <Link href="/portal/visits?new=1">New Visit</Link>
                   <Link href="/portal/assessments?new=1">New Assessment</Link>
                   <Link href="/portal/trainings?new=1">New Training</Link>
