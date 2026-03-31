@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type {
   FinanceDashboardSummary,
   FinanceExpenseRecord,
@@ -16,6 +17,7 @@ type PortalFinanceDashboardProps = {
   recentInvoices: FinanceInvoiceRecord[];
   recentReceipts: FinanceReceiptRecord[];
   recentExpenses: FinanceExpenseRecord[];
+  period?: string;
 };
 
 function todayIsoDate() {
@@ -28,7 +30,9 @@ export function PortalFinanceDashboard({
   recentInvoices,
   recentReceipts,
   recentExpenses,
+  period = "fy",
 }: PortalFinanceDashboardProps) {
+  const router = useRouter();
   const [txnFilter, setTxnFilter] = useState<
     "all" | "Invoice" | "Receipt" | "Expense"
   >("all");
@@ -152,6 +156,30 @@ export function PortalFinanceDashboard({
       className="compact-finance-ui"
       style={{ minWidth: 0, paddingBottom: "2rem" }}
     >
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+        <select
+          value={period}
+          onChange={(e) => router.push(`/portal/finance?period=${e.target.value}`)}
+          style={{
+            padding: "0.5rem 1rem",
+            borderRadius: "10px",
+            border: "1px solid #e5e7eb",
+            fontSize: "0.85rem",
+            background: "white",
+            outline: "none",
+            cursor: "pointer",
+            fontWeight: 500,
+            color: "#111827",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+          }}
+        >
+          <option value="week">Past 7 Days</option>
+          <option value="month">This Month</option>
+          <option value="fy">Financial Year (YTD)</option>
+          <option value="all">All Time</option>
+        </select>
+      </div>
+
       {/* Main Grid Setup */}
       <div
         style={{

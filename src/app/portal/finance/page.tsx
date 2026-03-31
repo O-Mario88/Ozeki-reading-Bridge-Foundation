@@ -10,11 +10,30 @@ import {
 } from "@/lib/server/postgres/repositories/finance";
 import { PortalFinanceDashboard } from "@/components/portal/finance/PortalFinanceDashboard";
 
-async function FinanceDashboardContent() {
-  const fy = new Date().getFullYear();
-  const firstDayOfYear = `${fy}-01-01`;
-  const today = new Date().toISOString().split("T")[0];
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+async function FinanceDashboardContent({ period }: { period: string }) {
+  const todayDate = new Date();
+  const today = todayDate.toISOString().split("T")[0];
   
+  let startDate = "1970-01-01";
+  
+  if (period === "week") {
+    const past = new Date(todayDate);
+    past.setDate(past.getDate() - 7);
+    startDate = past.toISOString().split("T")[0];
+  } else if (period === "month") {
+    startDate = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-01`;
+  } else if (period === "fy") {
+    startDate = `${todayDate.getFullYear()}-01-01`;
+  } else if (period === "all") {
+    startDate = "1970-01-01";
+  } else {
+    // Default to FY
+    period = "fy";
+    startDate = `${todayDate.getFullYear()}-01-01`;
+  }
+
   // Fetch everything concurrently
   const [
     dbSummary,
@@ -25,7 +44,7 @@ async function FinanceDashboardContent() {
   ] = await Promise.all([
     getFinanceDashboardSummaryPostgres(new Date().toISOString().slice(0, 7), "UGX"),
 
-    // YTD income & expenses from the actual ledger
+    // Income & expenses from the actual ledger governed by the selected period
     queryPostgres(
       `SELECT
         COALESCE(SUM(CASE WHEN txn_type = 'money_in' THEN amount ELSE 0 END), 0) AS "incomeYtd",
@@ -35,7 +54,7 @@ async function FinanceDashboardContent() {
         AND currency = 'UGX'
         AND date >= $1
         AND date <= $2`,
-      [firstDayOfYear, today],
+      [startDate, today],
     ),
 
     listFinanceInvoicesPostgres(),
@@ -61,7 +80,7 @@ async function FinanceDashboardContent() {
     totalAssets = Number((assetsResult.rows[0] as Record<string, unknown>)?.netAssets ?? 0);
   } catch { /* fallback to 0 */ }
 
-  // Inject the YTD numbers so the dashboard shows real data
+  // Inject the period's numbers so the dashboard shows period data natively
   const injectedSummary = {
     ...dbSummary,
     moneyIn: incomeYtd,
@@ -76,12 +95,15 @@ async function FinanceDashboardContent() {
       recentInvoices={recentInvoices.slice(0, 10)}
       recentReceipts={recentReceipts.slice(0, 10)}
       recentExpenses={recentExpenses.slice(0, 10)}
+      period={period}
     />
   );
 }
 
-export default async function FinancePage() {
+export default async function FinancePage(props: { searchParams: SearchParams }) {
+  const searchParams = await props.searchParams;
   const user = await getPortalUserOrRedirect();
+  const period = typeof searchParams.period === "string" ? searchParams.period : "fy";
   
   return (
     <FinanceShell 
@@ -90,7 +112,7 @@ export default async function FinancePage() {
       title="Finance Workspace"
     >
       <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading accurate financial metrics...</div>}>
-        <FinanceDashboardContent />
+        <FinanceDashboardContent period={period} />
       </Suspense>
     </FinanceShell>
   );
