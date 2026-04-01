@@ -348,9 +348,9 @@ export async function getCostEffectivenessDataPostgres(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
-  const emptyDashboard = {
+const _getPortalDashboardDataPostgres = unstable_cache(
+  async () => {
+    const emptyDashboard = {
     kpis: {
       learnersReached: 0,
       trainingsLogged: 0,
@@ -431,6 +431,11 @@ export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
   } catch {
     return emptyDashboard;
   }
+}, ["portal-dashboard-postgres"], { revalidate: 60, tags: ["portal-dashboard"] });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
+  return _getPortalDashboardDataPostgres();
 }
 
 export type PerformanceCascadeRow = {
@@ -445,8 +450,9 @@ export type PerformanceCascadeRow = {
   scoreEnvironment: number;
 };
 
-export async function getPerformanceCascadeDataPostgres(): Promise<PerformanceCascadeRow[]> {
-  try {
+const _getPerformanceCascadeDataPostgres = unstable_cache(
+  async (): Promise<PerformanceCascadeRow[]> => {
+    try {
     const result = await queryPostgres(`
       SELECT DISTINCT ON (pr.school_id)
         pr.school_id AS "schoolId",
@@ -469,6 +475,10 @@ export async function getPerformanceCascadeDataPostgres(): Promise<PerformanceCa
   } catch {
     return [];
   }
+}, ["performance-cascade-postgres"], { revalidate: 60, tags: ["performance-cascade"] });
+
+export async function getPerformanceCascadeDataPostgres(): Promise<PerformanceCascadeRow[]> {
+  return _getPerformanceCascadeDataPostgres();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -92,7 +92,7 @@ export function getPostgresPool() {
   if (!globalForPg.__orbfPgPool) {
     globalForPg.__orbfPgPool = new Pool({
       connectionString: databaseUrl,
-      max: Number(process.env.DATABASE_POOL_MAX ?? 2),
+      max: Number(process.env.DATABASE_POOL_MAX ?? 10),
       idleTimeoutMillis: Number(process.env.DATABASE_IDLE_TIMEOUT_MS ?? 15_000),
       connectionTimeoutMillis: Number(process.env.DATABASE_CONNECT_TIMEOUT_MS ?? 5_000),
       statement_timeout: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS ?? 10_000),
