@@ -5,7 +5,7 @@ import { CTAStrip } from "@/components/public/CTAStrip";
 import { PageHero } from "@/components/public/PageHero";
 
 export const metadata = {
-  title: "Our Story | Ozeki Reading Bridge Foundation",
+  title: "Our Story",
   description:
     "Understand the literacy problem in Uganda and how Ozeki's National Literacy Intelligence Platform turns evidence into sustained classroom improvement.",
 };

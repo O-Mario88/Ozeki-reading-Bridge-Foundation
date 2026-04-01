@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 export default function DonateRedirectPage() {
-  redirect("/partner-with-us");
+  permanentRedirect("/partner-with-us");
 }

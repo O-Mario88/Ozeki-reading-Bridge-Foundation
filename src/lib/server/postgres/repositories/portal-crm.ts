@@ -4,6 +4,7 @@ import type {
   PortalCrmListViewModel,
   PortalCrmProfileViewModel,
 } from "@/lib/portal-crm-types";
+import { unstable_cache } from "next/cache";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { displayRegion } from "@/lib/uganda-locations";
 
@@ -262,8 +263,9 @@ export async function listTrainingCrmRows(): Promise<PortalCrmListViewModel> {
   };
 }
 
-export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfileViewModel | null> {
-  const row = await getPortalRecordBase("training", id);
+export const getTrainingCrmProfile = unstable_cache(
+  async (id: number): Promise<PortalCrmProfileViewModel | null> => {
+    const row = await getPortalRecordBase("training", id);
   if (!row) {
     return null;
   }
@@ -631,7 +633,7 @@ export async function getTrainingCrmProfile(id: number): Promise<PortalCrmProfil
       },
     ],
   };
-}
+}, ["crm-training"], { revalidate: 3600, tags: ["crm-training"] });
 
 export async function listContactCrmRows(): Promise<PortalCrmListViewModel> {
   const result = await queryPostgres(
@@ -691,7 +693,8 @@ export async function listContactCrmRows(): Promise<PortalCrmListViewModel> {
   };
 }
 
-export async function getContactCrmProfile(id: number): Promise<PortalCrmProfileViewModel | null> {
+export const getContactCrmProfile = unstable_cache(
+  async (id: number): Promise<PortalCrmProfileViewModel | null> => {
   const baseResult = await queryPostgres(
     `
       SELECT
@@ -909,7 +912,7 @@ export async function getContactCrmProfile(id: number): Promise<PortalCrmProfile
       },
     ],
   };
-}
+}, ["crm-contact"], { revalidate: 3600, tags: ["crm-contact"] });
 
 export async function listAssessmentCrmRows(): Promise<PortalCrmListViewModel> {
   const result = await queryPostgres(
@@ -975,8 +978,9 @@ export async function listAssessmentCrmRows(): Promise<PortalCrmListViewModel> {
   };
 }
 
-export async function getAssessmentCrmProfile(id: number): Promise<PortalCrmProfileViewModel | null> {
-  const result = await queryPostgres(
+export const getAssessmentCrmProfile = unstable_cache(
+  async (id: number): Promise<PortalCrmProfileViewModel | null> => {
+    const result = await queryPostgres(
     `
       SELECT
         s.id,
@@ -1134,7 +1138,7 @@ export async function getAssessmentCrmProfile(id: number): Promise<PortalCrmProf
       },
     ],
   };
-}
+}, ["crm-assessment"], { revalidate: 3600, tags: ["crm-assessment"] });
 
 export async function listVisitCrmRows(): Promise<PortalCrmListViewModel> {
   const result = await queryPostgres(
@@ -1197,8 +1201,9 @@ export async function listVisitCrmRows(): Promise<PortalCrmListViewModel> {
   };
 }
 
-export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileViewModel | null> {
-  const row = await getPortalRecordBase("visit", id);
+export const getVisitCrmProfile = unstable_cache(
+  async (id: number): Promise<PortalCrmProfileViewModel | null> => {
+    const row = await getPortalRecordBase("visit", id);
   if (!row) {
     return null;
   }
@@ -1480,7 +1485,7 @@ export async function getVisitCrmProfile(id: number): Promise<PortalCrmProfileVi
       },
     ],
   };
-}
+}, ["crm-visit"], { revalidate: 3600, tags: ["crm-visit"] });
 
 export async function listStoryProjectCrmRows(): Promise<PortalCrmListViewModel> {
   const result = await queryPostgres(

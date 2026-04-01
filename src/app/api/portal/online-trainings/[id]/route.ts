@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { updateOnlineTrainingSessionOutcomesPostgres } from "@/lib/server/postgres/repositories/training";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
@@ -59,6 +60,7 @@ export async function PATCH(
       id: eventId,
     };
     
+    revalidateTag("events");
     return NextResponse.json({ ok: true, event });
   } catch (error) {
     if (error instanceof z.ZodError) {

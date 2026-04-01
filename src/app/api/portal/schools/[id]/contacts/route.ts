@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { withPostgresClient, queryPostgres } from "@/lib/server/postgres/client";
 import type { PoolClient } from "pg";
 
 export const runtime = "nodejs";
+
+const sanitizePhone = (val: string) => {
+  const cleaned = val.replace(/[^\d+]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("0")) return `+256${cleaned.slice(1)}`;
+  if (cleaned.length === 9) return `+256${cleaned}`;
+  if (!cleaned.startsWith("+") && cleaned.startsWith("256")) return `+${cleaned}`;
+  return cleaned;
+};
 
 const contactSchema = z.object({
   fullName: z.string().trim().min(2, "Name must be at least 2 characters."),
@@ -18,9 +28,9 @@ const contactSchema = z.object({
     "Other",
   ]),
   gender: z.enum(["Male", "Female", "Other"]).optional().default("Other"),
-  phone: z.string().trim().optional().default(""),
+  phone: z.string().trim().default("").transform(sanitizePhone),
   email: z.string().trim().email().optional().or(z.literal("")).default(""),
-  whatsapp: z.string().trim().optional().default(""),
+  whatsapp: z.string().trim().default("").transform(sanitizePhone),
   isPrimaryContact: z.boolean().optional().default(false),
 });
 
@@ -148,6 +158,7 @@ export async function POST(
         );
 
         await client.query("COMMIT");
+        revalidateTag("crm-contact");
         return newContactId;
       } catch (error) {
         await client.query("ROLLBACK");

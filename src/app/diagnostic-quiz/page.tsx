@@ -11,7 +11,7 @@ export const metadata = {
 export default function DiagnosticQuizPage() {
   return (
     <>
-      <PageHero
+      <PageHero imageUrl="/photos/21.jpeg"
         kicker="School self-check"
         title="Free Phonics Diagnostic Quiz"
         description="Assess current reading instruction systems in seven quick questions and get immediate recommendations."

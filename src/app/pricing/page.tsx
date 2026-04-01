@@ -10,7 +10,7 @@ export const metadata = {
 export default function PricingPage() {
   return (
     <>
-      <PageHero
+      <PageHero imageUrl="/photos/25.jpeg"
         kicker="Simple and credible"
         title="Pricing"
         description="A clear structure for individual teachers, schools, and multi-school partners."

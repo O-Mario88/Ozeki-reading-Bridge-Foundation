@@ -7,7 +7,7 @@ interface ReadingLevelMovementVisualProps {
     data: ReadingLevelsBlock;
 }
 
-export function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualProps) {
+export const ReadingLevelMovementVisual = React.memo(function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualProps) {
     const levels = data.levels.sort((a, b) => a.level - b.level);
 
     // Find baseline and latest/endline distributions
@@ -184,4 +184,4 @@ export function ReadingLevelMovementVisual({ data }: ReadingLevelMovementVisualP
             )}
         </div>
     );
-}
+});

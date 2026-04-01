@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { unstable_cache } from "next/cache";
 import type {
   OnlineTrainingSessionRecord,
   TrainingArtifactRecord,
@@ -130,35 +131,37 @@ function mapArtifact(row: Record<string, unknown>): TrainingArtifactRecord {
   };
 }
 
-export async function listOnlineTrainingSessionsPostgres(
-  options: ListOnlineTrainingSessionsOptions = {},
-) {
-  const params: unknown[] = [];
-  const clauses: string[] = [];
-  const limit = Math.min(Math.max(Math.trunc(options.limit ?? 60), 1), 500);
+export const listOnlineTrainingSessionsPostgres = unstable_cache(
+  async (options: ListOnlineTrainingSessionsOptions = {}) => {
+    const params: unknown[] = [];
+    const clauses: string[] = [];
+    const limit = Math.min(Math.max(Math.trunc(options.limit ?? 60), 1), 500);
 
-  if (!options.includeDrafts) {
-    clauses.push(`status IN ('scheduled', 'live', 'completed')`);
-  }
+    if (!options.includeDrafts) {
+      clauses.push(`status IN ('scheduled', 'live', 'completed')`);
+    }
 
-  if (options.hostUserId) {
-    params.push(options.hostUserId);
-    clauses.push(`host_user_id = $${params.length}`);
-  }
+    if (options.hostUserId) {
+      params.push(options.hostUserId);
+      clauses.push(`host_user_id = $${params.length}`);
+    }
 
-  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
-  const result = await queryPostgres(
-    `
-      ${SESSION_SELECT}
-      FROM online_training_sessions
-      ${whereClause}
-      ORDER BY start_time DESC, id DESC
-      LIMIT ${limit}
-    `,
-    params,
-  );
-  return result.rows.map((row) => mapSession(row));
-}
+    const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+    const result = await queryPostgres(
+      `
+        ${SESSION_SELECT}
+        FROM online_training_sessions
+        ${whereClause}
+        ORDER BY start_time DESC, id DESC
+        LIMIT ${limit}
+      `,
+      params,
+    );
+    return result.rows.map((row) => mapSession(row));
+  },
+  ["online-training-sessions"],
+  { revalidate: 3600, tags: ["events"] }
+);
 
 export async function getOnlineTrainingSessionPostgres(sessionId: number) {
   const result = await queryPostgres(

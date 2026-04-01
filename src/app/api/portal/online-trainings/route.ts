@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { getPortalUserFromSession } from "@/services/dataService";
@@ -161,6 +162,7 @@ export async function POST(request: Request) {
       meetLink,
     };
 
+    revalidateTag("events");
     return NextResponse.json({
       ok: true,
       event: eventResponse,

@@ -187,11 +187,11 @@ export async function getImpactReportByCodeAsyncPostgres(code: string, _context?
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getImpactReportFilterFacetsAsyncPostgres(): Promise<any> {
+export const getImpactReportFilterFacetsAsyncPostgres = unstable_cache(
+  async (): Promise<any> => {
     const [regions, districts] = await Promise.all([
-        queryPostgres(`SELECT DISTINCT region FROM schools_directory ORDER BY region`),
-        queryPostgres(`SELECT DISTINCT district FROM schools_directory ORDER BY district`)
+        queryPostgres(`SELECT DISTINCT region FROM schools_directory WHERE trim(COALESCE(region, '')) != '' ORDER BY region`),
+        queryPostgres(`SELECT DISTINCT district FROM schools_directory WHERE trim(COALESCE(district, '')) != '' ORDER BY district`)
     ]);
 
     const reportTypes = [
@@ -242,14 +242,17 @@ export async function getImpactReportFilterFacetsAsyncPostgres(): Promise<any> {
         outputs,
         years,
         dataYears: years,
-        regions: regions.rows.map(r => r.region),
-        districts: districts.rows.map(r => r.district),
+        regions: regions.rows.map(r => r.region).filter(Boolean),
+        districts: districts.rows.map(r => r.district).filter(Boolean),
         scopeTypes: ["National", "Region", "Sub-region", "District", "Sub-county", "Parish", "School"],
         scopeValues: [],
         subRegions: [],
         schools: [],
     };
-}
+  },
+  ["impact-report-filter-facets-postgres"],
+  { revalidate: 3600, tags: ["impact"] }
+);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getReportPreviewStatsPostgres(_filters: any): Promise<any> {
@@ -291,62 +294,66 @@ export async function runImpactCalculatorPostgres(_input: any): Promise<any> {
     };
 }
 
-export async function getCostEffectivenessDataPostgres(
-  scopeType: string,
-  scopeValue: string,
-  period?: string,
-): Promise<CostEffectivenessData> {
-  const conditions: string[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const params: any[] = [];
+export const getCostEffectivenessDataPostgres = unstable_cache(
+  async (
+    scopeType: string,
+    scopeValue: string,
+    period?: string,
+  ): Promise<CostEffectivenessData> => {
+    const conditions: string[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const params: any[] = [];
 
-  if (scopeType && scopeType !== "country") {
-    params.push(scopeType.toLowerCase());
-    conditions.push(`lower(scope_type) = $${params.length}`);
-    params.push(scopeValue.toLowerCase().trim());
-    conditions.push(`lower(trim(scope_value)) = $${params.length}`);
-  }
-  if (period) {
-    params.push(period);
-    conditions.push(`period = $${params.length}`);
-  }
+    if (scopeType && scopeType !== "country") {
+      params.push(scopeType.toLowerCase());
+      conditions.push(`lower(scope_type) = $${params.length}`);
+      params.push(scopeValue.toLowerCase().trim());
+      conditions.push(`lower(trim(scope_value)) = $${params.length}`);
+    }
+    if (period) {
+      params.push(period);
+      conditions.push(`period = $${params.length}`);
+    }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  const totalsResult = await queryPostgres(
-    `
-      SELECT COALESCE(SUM(amount), 0)::float8 AS total, category
-      FROM cost_entries
-      ${where}
-      GROUP BY category
-    `,
-    params,
-  );
-  
-  const totals = totalsResult.rows as Array<{ total: number; category: CostCategory }>;
-  const totalCost = totals.reduce((sum, row) => sum + Number(row.total ?? 0), 0);
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const totalsResult = await queryPostgres(
+      `
+        SELECT COALESCE(SUM(amount), 0)::float8 AS total, category
+        FROM cost_entries
+        ${where}
+        GROUP BY category
+      `,
+      params,
+    );
+    
+    const totals = totalsResult.rows as Array<{ total: number; category: CostCategory }>;
+    const totalCost = totals.reduce((sum, row) => sum + Number(row.total ?? 0), 0);
 
-  const aggregate = await getPublicImpactAggregatePostgres(
-    scopeType,
-    scopeType === "country" ? "Uganda" : scopeValue,
-    period,
-  );
-  
-  const schoolCount = aggregate.kpis.schoolsSupported;
-  const teacherCount = (aggregate.kpis.teachersSupportedMale || 0) + (aggregate.kpis.teachersSupportedFemale || 0);
-  const learnerCount = aggregate.kpis.learnersAssessedUnique;
+    const aggregate = await getPublicImpactAggregatePostgres(
+      scopeType,
+      scopeType === "country" ? "Uganda" : scopeValue,
+      period,
+    );
+    
+    const schoolCount = aggregate.kpis.schoolsSupported;
+    const teacherCount = (aggregate.kpis.teachersSupportedMale || 0) + (aggregate.kpis.teachersSupportedFemale || 0);
+    const learnerCount = aggregate.kpis.learnersAssessedUnique;
 
-  return {
-    totalCost,
-    costPerSchool: schoolCount > 0 ? Math.round((totalCost / schoolCount) * 100) / 100 : null,
-    costPerTeacher: teacherCount > 0 ? Math.round((totalCost / teacherCount) * 100) / 100 : null,
-    costPerLearnerAssessed: learnerCount > 0 ? Math.round((totalCost / learnerCount) * 100) / 100 : null,
-    costPerLearnerImproved: null,
-    period: period ?? "All time",
-    scopeType,
-    scopeValue,
-    breakdown: totals.map((t) => ({ category: t.category, amount: Number(t.total ?? 0) })),
-  };
-}
+    return {
+      totalCost,
+      costPerSchool: schoolCount > 0 ? Math.round((totalCost / schoolCount) * 100) / 100 : null,
+      costPerTeacher: teacherCount > 0 ? Math.round((totalCost / teacherCount) * 100) / 100 : null,
+      costPerLearnerAssessed: learnerCount > 0 ? Math.round((totalCost / learnerCount) * 100) / 100 : null,
+      costPerLearnerImproved: null,
+      period: period ?? "All time",
+      scopeType,
+      scopeValue,
+      breakdown: totals.map((t) => ({ category: t.category, amount: Number(t.total ?? 0) })),
+    };
+  },
+  ["cost-effectiveness-postgres"],
+  { revalidate: 3600, tags: ["impact", "cost"] }
+);
 
 const _getPortalDashboardDataPostgres = unstable_cache(
   async () => {
@@ -489,12 +496,17 @@ export async function getTableRowCountsPostgres(): Promise<any[]> {
     "material_distributions", "consent_records"
   ];
   
-  const counts = await chunkedPromiseAll(tables.map(table => async () => {
-    const res = await queryPostgres(`SELECT COUNT(*)::int AS total FROM ${table}`);
-    return { table, count: toNumber(res.rows[0]?.total) };
-  }), 2);
-
-  return counts;
+  const query = tables.map(t => `SELECT '${t}' AS table, COUNT(*)::int AS count FROM ${t}`).join(" UNION ALL ");
+  
+  try {
+    const res = await queryPostgres(query);
+    return res.rows.map(row => ({
+      table: String(row.table),
+      count: toNumber(row.count)
+    }));
+  } catch {
+    return tables.map(table => ({ table, count: 0 }));
+  }
 }
 
 export async function purgeAllDataPostgres(): Promise<void> {

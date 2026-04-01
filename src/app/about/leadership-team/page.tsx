@@ -6,7 +6,7 @@ import { listPortalLeadershipTeamMembersPostgres } from "@/lib/server/postgres/r
 import { CTAStrip } from "@/components/public/CTAStrip";
 
 export const metadata = {
-  title: "Meet The Leadership Team | Ozeki Reading Bridge Foundation",
+  title: "Meet The Leadership Team",
   description:
     "Meet the dedicated team behind Ozeki Reading Bridge Foundation — the people driving literacy implementation across schools and communities.",
 };

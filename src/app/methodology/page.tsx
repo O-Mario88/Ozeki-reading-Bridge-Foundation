@@ -1,5 +1,10 @@
-import Link from "next/link";
+
 import { getPublicImpactAggregate } from "@/services/dataService";
+import { PageHero } from "@/components/public/PageHero";
+import { SectionWrapper } from "@/components/public/SectionWrapper";
+import { PremiumCard } from "@/components/public/PremiumCard";
+import { CTAStrip } from "@/components/public/CTAStrip";
+import { Info, ShieldCheck, RefreshCw, AlertTriangle } from "lucide-react";
 
 export const metadata = {
   title: "Methodology",
@@ -21,102 +26,100 @@ export default async function MethodologyPage() {
   const toolVersion = aggregate.readingLevels?.definition_version || "RLv1.0";
 
   return (
-    <>
-      <section className="page-hero" style={{ backgroundImage: "url('/photos/10.jpeg')" }}>
-        <div className="container">
-          <p className="kicker">Methodology</p>
-          <h1>How Ozeki Measures Literacy Impact</h1>
-          <p>Simple definitions, transparent limits, and privacy-protected public reporting.</p>
-        </div>
-      </section>
+    <div className="pt-[72px] md:pt-20">
+      <PageHero
+        tagline="How We Measure"
+        title="Impact Methodology"
+        subtitle="Simple definitions, transparent limits, and privacy-protected public reporting."
+        imageSrc="/photos/10.jpeg"
+      />
 
-      <section className="section">
-        <div className="container cards-grid">
-          <article className="card">
-            <h2>Indicators</h2>
-            <ul>
-              <li>Letter sounds: learner ability to identify and produce target phonemes.</li>
-              <li>Decoding: ability to blend sounds to read real and made-up words.</li>
-              <li>Fluency: story reading pace and accuracy in connected text.</li>
-              <li>Comprehension: ability to answer meaning questions from read text.</li>
+      <SectionWrapper theme="charius-beige">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <div className="w-12 h-12 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center mb-6">
+              <Info size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111] mb-4">Indicators</h2>
+            <ul className="space-y-3 text-gray-500">
+              <li className="flex gap-2"><strong>Letter sounds:</strong> ability to identify and produce target phonemes.</li>
+              <li className="flex gap-2"><strong>Decoding:</strong> ability to blend sounds to read real and made-up words.</li>
+              <li className="flex gap-2"><strong>Fluency:</strong> story reading pace and accuracy in connected text.</li>
+              <li className="flex gap-2"><strong>Comprehension:</strong> ability to answer meaning questions from read text.</li>
             </ul>
-          </article>
+          </PremiumCard>
 
-          <article className="card">
-            <h2>Reading Levels</h2>
-            <ul>
-              <li>Classification uses versioned rules: {toolVersion}.</li>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <div className="w-12 h-12 rounded-xl bg-[#FA7D15]/10 text-[#FA7D15] flex items-center justify-center mb-6">
+              <RefreshCw size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111] mb-4">Reading Levels</h2>
+            <ul className="space-y-3 text-gray-500">
+              <li>Classification uses versioned rules: <strong className="text-[#111]">{toolVersion}</strong>.</li>
               <li>Levels are computed from observed reading-domain performance bands.</li>
               <li>Movement compares matched learners across baseline and endline/latest cycles.</li>
             </ul>
-          </article>
+          </PremiumCard>
 
-          <article className="card">
-            <h2>Sample Size (n assessed)</h2>
-            <ul>
-              <li>n assessed = unique learners included in the selected aggregate scope.</li>
-              <li>Current FY country sample: {aggregate.meta.sampleSize.toLocaleString()}.</li>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <div className="w-12 h-12 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center mb-6">
+              <Info size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111] mb-4">Sample Size (n)</h2>
+            <ul className="space-y-3 text-gray-500">
+              <li>Unique learners included in the selected aggregate scope.</li>
+              <li>Current FY country sample: <strong className="text-[#111]">{aggregate.meta.sampleSize.toLocaleString()}</strong>.</li>
               <li>Larger n improves confidence and reduces volatility of reported percentages.</li>
             </ul>
-          </article>
-        </div>
-      </section>
+          </PremiumCard>
 
-      <section className="section">
-        <div className="container cards-grid">
-          <article className="card">
-            <h2>Assessment Cycles</h2>
-            <ul>
-              <li>Baseline: start-of-cycle snapshot.</li>
-              <li>Progress: during-cycle checks.</li>
-              <li>Endline/Latest: latest verified outcome snapshot in the cycle.</li>
-            </ul>
-          </article>
-
-          <article className="card">
-            <h2>Privacy and Public Safety</h2>
-            <ul>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <div className="w-12 h-12 rounded-xl bg-[#006b61]/10 text-[#006b61] flex items-center justify-center mb-6">
+              <ShieldCheck size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111] mb-4">Privacy & Safety</h2>
+            <ul className="space-y-3 text-gray-500">
               <li>Public views are aggregated and read-only.</li>
               <li>No learner identities or personal child data are published.</li>
               <li>Role-based controls protect internal detail views and staff workflows.</li>
             </ul>
-          </article>
+          </PremiumCard>
 
-          <article className="card">
-            <h2>Tool Version + Update Handling</h2>
-            <ul>
-              <li>Current tool/rule version: {toolVersion}.</li>
+          <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
+            <div className="w-12 h-12 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center mb-6">
+              <RefreshCw size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111] mb-4">Update Handling</h2>
+            <ul className="space-y-3 text-gray-500">
+              <li>Current tool/rule version: <strong className="text-[#111]">{toolVersion}</strong>.</li>
               <li>Version changes are disclosed in data trust widgets and reports.</li>
-              <li>Last aggregate refresh: {formatDate(aggregate.meta.lastUpdated)}.</li>
+              <li>Last aggregate refresh: <strong className="text-[#111]">{formatDate(aggregate.meta.lastUpdated)}</strong>.</li>
             </ul>
-          </article>
-        </div>
-      </section>
+          </PremiumCard>
 
-      <section className="section">
-        <div className="container cards-grid">
-          <article className="card">
-            <h2>Limitations</h2>
-            <ul>
+          <PremiumCard variant="charius" className="p-8 flex flex-col border-red-100 bg-red-50" withHover>
+            <div className="w-12 h-12 rounded-xl bg-red-100 text-red-500 flex items-center justify-center mb-6">
+              <AlertTriangle size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111] mb-4">Limitations</h2>
+            <ul className="space-y-3 text-gray-500">
               <li>Incomplete baseline/endline coverage reduces trend confidence.</li>
               <li>Some scope-period combinations may show "Data not available".</li>
               <li>Comparisons are constrained to verified submissions in the selected period.</li>
             </ul>
-          </article>
-
-          <article className="card">
-            <h2>Quick Links</h2>
-            <div className="action-row">
-              <Link className="button" href="/impact">
-                Open Live Impact Dashboard
-              </Link>
-              <Link className="button button-ghost" href="/impact#reports">
-                View Reports
-              </Link>
-            </div>
-          </article>
+          </PremiumCard>
         </div>
-      </section>
-    </>
+      </SectionWrapper>
+
+      <CTAStrip 
+        heading="Explore Live Impact Data"
+        subheading="See our methodology applied in real-time across districts and schools in Uganda."
+        primaryButtonText="Open Live Impact Dashboard"
+        primaryButtonHref="/impact/dashboard"
+        secondaryButtonText="View Reports"
+        secondaryButtonHref="/impact#reports"
+        theme="charius"
+      />
+    </div>
   );
 }

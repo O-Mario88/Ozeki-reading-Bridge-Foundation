@@ -79,6 +79,7 @@ export default async function HomePage() {
           alt="Learners reading in class"
           fill
           className="object-cover object-[center_30%] opacity-40"
+          sizes="100vw"
           priority
         />
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
@@ -206,7 +207,7 @@ export default async function HomePage() {
           {/* Card 1 */}
           <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow">
             <div className="relative h-64 w-full">
-              <Image src="/photos/10.jpeg" alt="Program" fill className="object-cover" />
+              <Image src="/photos/10.jpeg" alt="Program" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
             </div>
             <div className="p-8">
               <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
@@ -225,7 +226,7 @@ export default async function HomePage() {
           {/* Card 2 */}
           <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow">
             <div className="relative h-64 w-full">
-              <Image src="/photos/11.jpeg" alt="Program" fill className="object-cover" />
+              <Image src="/photos/11.jpeg" alt="Program" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
             </div>
             <div className="p-8">
               <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
@@ -244,7 +245,7 @@ export default async function HomePage() {
           {/* Card 3 */}
           <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow">
             <div className="relative h-64 w-full">
-              <Image src="/photos/12.jpeg" alt="Program" fill className="object-cover" />
+              <Image src="/photos/12.jpeg" alt="Program" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
             </div>
             <div className="p-8">
               <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
@@ -333,7 +334,7 @@ export default async function HomePage() {
             {/* Event 1 */}
             <div className="bg-white rounded-xl overflow-hidden shadow-lg group cursor-pointer hover:-translate-y-2 transition-transform">
                <div className="relative h-48">
-                  <Image src="/photos/13.jpeg" alt="Event" fill className="object-cover" />
+                  <Image src="/photos/13.jpeg" alt="Event" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   <div className="absolute top-4 left-4 bg-charius-orange w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
                      <span className="text-xl font-bold leading-none">22</span>
                      <span className="text-[10px] uppercase font-semibold">Jan</span>
@@ -351,7 +352,7 @@ export default async function HomePage() {
             {/* Event 2 */}
             <div className="bg-white rounded-xl overflow-hidden shadow-lg group cursor-pointer hover:-translate-y-2 transition-transform">
                <div className="relative h-48">
-                  <Image src="/photos/14.jpeg" alt="Event" fill className="object-cover" />
+                  <Image src="/photos/14.jpeg" alt="Event" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   <div className="absolute top-4 left-4 bg-[#006b61] w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
                      <span className="text-xl font-bold leading-none">15</span>
                      <span className="text-[10px] uppercase font-semibold">Feb</span>
@@ -369,7 +370,7 @@ export default async function HomePage() {
             {/* Event 3 */}
             <div className="bg-white rounded-xl overflow-hidden shadow-lg group cursor-pointer hover:-translate-y-2 transition-transform">
                <div className="relative h-48">
-                  <Image src="/photos/15.jpeg" alt="Event" fill className="object-cover" />
+                  <Image src="/photos/15.jpeg" alt="Event" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   <div className="absolute top-4 left-4 bg-red-500 w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
                      <span className="text-xl font-bold leading-none">05</span>
                      <span className="text-[10px] uppercase font-semibold">Mar</span>

@@ -9,7 +9,7 @@ export const metadata = {
 export default function ForSchoolsPage() {
   return (
     <>
-      <PageHero
+      <PageHero imageUrl="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg"
         kicker="School package"
         title="For Schools"
         description="School Plus enables leadership teams to track teacher progress and literacy implementation at scale."

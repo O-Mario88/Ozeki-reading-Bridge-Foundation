@@ -31,7 +31,7 @@ export default async function MediaPage() {
 
   return (
     <>
-      <PageHero
+      <PageHero imageUrl="/photos/PXL_20260217_110739688.jpg"
         kicker="Media"
         title="Media & Press"
         description="A high-volume photo and video evidence hub from trainings, school visits, assessments, and 1001 Story activities."

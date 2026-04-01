@@ -11,7 +11,7 @@ export const metadata = {
 export default function AcademyPage() {
   return (
     <>
-      <PageHero
+      <PageHero imageUrl="/photos/classroom-learners-writing.jpg"
         kicker="Premium platform"
         title="Ozeki Literacy Academy"
         description="A teacher and school portal for courses, coaching, certifications, and implementation reporting."

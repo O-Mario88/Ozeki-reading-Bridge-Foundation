@@ -39,6 +39,8 @@ export async function DELETE(
 
     const deleted = await deleteContactPostgres(contactId);
     if (deleted) {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("crm-contact");
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(
