@@ -6317,10 +6317,11 @@ nav[aria-label="Staff navigation"] {
 }
 
 .impact-tab-content > .card > h3 {
+  font-family: system-ui, -apple-system, sans-serif;
   margin: 0 0 1.25rem 0;
-  font-size: 0.85rem;
+  font-size: 1.05rem;
   font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #111111;
 }
 
 /* Headline Stats Container (Horizontal Scrollable) */
@@ -6365,19 +6366,23 @@ nav[aria-label="Staff navigation"] {
 }
 
 .impact-horizontal-metrics-tray > article span {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
-  margin-bottom: 0.25rem;
+  font-family: system-ui, -apple-system, sans-serif !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  color: #1a1a1a !important;
+  margin-bottom: 0.2rem;
   line-height: 1.2;
+  text-align: left;
 }
 
 .impact-horizontal-metrics-tray > article strong {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--md-sys-color-on-surface);
-  line-height: 1.1;
-  margin-top: 0.15rem;
+  font-family: system-ui, -apple-system, sans-serif !important;
+  font-size: 2.2rem !important;
+  font-weight: 300 !important; /* extremely light weight */
+  color: #000000 !important;
+  line-height: 1;
+  margin: 0;
+  text-align: left;
 }
 
 .impact-horizontal-metrics-tray > article small {
@@ -6399,7 +6404,7 @@ nav[aria-label="Staff navigation"] {
 
 .location-navigator header,
 .headline-stats-panel header {
-  margin-bottom: 0.52rem;
+  margin-bottom: 0.75rem;
   min-width: 0;
 }
 
@@ -6407,9 +6412,10 @@ nav[aria-label="Staff navigation"] {
 .location-navigator h3,
 .headline-stats-panel h2,
 .headline-stats-panel h3 {
-  font-size: 0.85rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1.05rem;
   font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #111111;
   margin: 0 0 0.18rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -6419,8 +6425,8 @@ nav[aria-label="Staff navigation"] {
 .location-navigator p,
 .headline-stats-panel p {
   margin: 0;
-  font-size: 0.72rem;
-  color: var(--md-sys-color-outline);
+  font-size: 0.8rem;
+  color: var(--md-sys-color-on-surface-variant);
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -7320,76 +7326,69 @@ nav[aria-label="Staff navigation"] {
 
 
 .impact-attract-card header h3 {
+  font-family: system-ui, -apple-system, sans-serif;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 1.05rem;
   font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #111111;
 }
 
 .impact-attract-card header p {
-  margin: 0.18rem 0 0;
-  font-size: 0.72rem;
-  color: var(--md-sys-color-outline);
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .impact-attract-momentum-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-  gap: 0.35rem;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1.25rem 0.75rem;
 }
 
 .impact-attract-momentum-grid article {
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--md-sys-color-surface-container) 78%, white);
-  padding: 0.4rem 0.46rem;
-  display: grid;
-  gap: 0.09rem;
-  transition: all 250ms ease;
-  cursor: default;
-}
-
-.impact-attract-momentum-grid article:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .impact-attract-momentum-grid span {
-  font-size: 0.67rem;
-  color: var(--md-sys-color-on-surface-variant);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  text-align: left;
 }
 
 .impact-attract-momentum-grid strong {
-  font-size: 0.93rem;
-  color: var(--md-sys-color-on-surface);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1.8rem;
+  font-weight: 300;
+  color: #000000;
+  text-align: left;
+  line-height: 1.1;
 }
 
 .impact-attract-momentum-grid small {
-  font-size: 0.62rem;
+  font-size: 0.65rem;
   color: var(--md-sys-color-on-surface-variant);
+  text-align: left;
 }
 
 .impact-attract-funnel-list {
   display: grid;
-  gap: 0.35rem;
+  gap: 1.25rem;
 }
 
 .impact-attract-funnel-list article {
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 10px;
-  padding: 0.36rem 0.45rem;
-  background: color-mix(in srgb, var(--md-sys-color-surface-container) 75%, white);
-  display: grid;
-  gap: 0.16rem;
-  transition: all 250ms ease;
-  cursor: default;
-}
-
-.impact-attract-funnel-list article:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .impact-attract-funnel-head {
