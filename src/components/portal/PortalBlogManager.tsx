@@ -752,6 +752,7 @@ export function PortalBlogManager({
   const [editorHtml, setEditorHtml] = useState(() => bodyBlocksToRichHtml(INITIAL_FORM.bodyBlocks));
   const [editorVersion, setEditorVersion] = useState(0);
   const [showComposer, setShowComposer] = useState(initialCompose);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -1219,29 +1220,6 @@ export function PortalBlogManager({
                 />
               </label>
 
-              <label>
-                Slug *
-                <input
-                  required
-                  value={form.slug}
-                  onChange={(event) => {
-                    setSlugTouched(true);
-                    updateForm("slug", slugify(event.target.value));
-                  }}
-                  placeholder="article-slug"
-                />
-              </label>
-
-              <label className="full-width">
-                Subtitle / Dek
-                <textarea
-                  rows={2}
-                  value={form.subtitle}
-                  onChange={(event) => updateForm("subtitle", event.target.value)}
-                  placeholder="Optional subtitle shown beneath title"
-                />
-              </label>
-
               <label className="full-width">
                 Excerpt / Summary *
                 <textarea
@@ -1265,50 +1243,6 @@ export function PortalBlogManager({
               </label>
 
               <label>
-                Secondary Categories
-                <input
-                  value={form.secondaryCategoriesCsv}
-                  onChange={(event) => updateForm("secondaryCategoriesCsv", event.target.value)}
-                  placeholder="Education, Resources"
-                />
-              </label>
-
-              <label>
-                Article Type
-                <select
-                  value={form.articleType}
-                  onChange={(event) => updateForm("articleType", event.target.value as BlogArticleType)}
-                >
-                  {ARTICLE_TYPE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Publish Date *
-                <input
-                  type="date"
-                  required
-                  value={form.publishDate}
-                  onChange={(event) => updateForm("publishDate", event.target.value)}
-                />
-              </label>
-
-              <label>
-                Read Time (auto: {autoReadTimeMinutes} min)
-                <input
-                  type="number"
-                  min={1}
-                  value={form.readTimeOverrideMinutes}
-                  onChange={(event) => updateForm("readTimeOverrideMinutes", event.target.value)}
-                  placeholder="Leave blank for auto"
-                />
-              </label>
-
-              <label>
                 Author Name *
                 <input
                   required
@@ -1319,34 +1253,7 @@ export function PortalBlogManager({
                 />
               </label>
 
-              <label>
-                Author Role *
-                <input
-                  required
-                  list="blog-role-options"
-                  value={form.authorRole}
-                  onChange={(event) => updateForm("authorRole", event.target.value)}
-                  placeholder="Author role/title"
-                />
-              </label>
-
-
-              <label className="full-width">
-                Author Bio
-                <textarea
-                  rows={3}
-                  value={form.authorBio}
-                  onChange={(event) => updateForm("authorBio", event.target.value)}
-                  placeholder="Short author biography"
-                />
-              </label>
-
-              <h4 className="full-width" style={{ margin: "1rem 0 0.2rem" }}>
-                B) Visual Header / Hero Settings
-              </h4>
-
-
-              <label className="full-width">
+              <label className="full-width" style={{ marginTop: "0.5rem" }}>
                 Featured Image URL *
                 <div style={{ display: "grid", gap: "0.45rem" }}>
                   <input
@@ -1368,7 +1275,7 @@ export function PortalBlogManager({
                 </div>
               </label>
 
-              <label>
+              <label className="full-width">
                 Featured Image Alt *
                 <input
                   required={Boolean(form.featuredImageUrl.trim())}
@@ -1378,48 +1285,8 @@ export function PortalBlogManager({
                 />
               </label>
 
-              <label>
-                Featured Image Caption
-                <input
-                  value={form.featuredImageCaption}
-                  onChange={(event) => updateForm("featuredImageCaption", event.target.value)}
-                  placeholder="Optional caption"
-                />
-              </label>
-
-              <label>
-                Featured Image Credit
-                <input
-                  value={form.featuredImageCredit}
-                  onChange={(event) => updateForm("featuredImageCredit", event.target.value)}
-                  placeholder="Source / credit"
-                />
-              </label>
-
-              <label className="full-width">
-                Sidebar Thumbnail (Optional)
-                <div style={{ display: "grid", gap: "0.45rem" }}>
-                  <input
-                    value={form.sidebarThumbnailUrl}
-                    onChange={(event) => updateForm("sidebarThumbnailUrl", event.target.value)}
-                    placeholder="Optional fallback thumbnail URL"
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) {
-                        void uploadAndSetImage(file, "sidebarThumbnailUrl");
-                      }
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </div>
-              </label>
-
               <h4 className="full-width" style={{ margin: "1rem 0 0.2rem" }}>
-                C) Article Body Content
+                B) Article Body Content
               </h4>
 
 
@@ -1568,83 +1435,228 @@ export function PortalBlogManager({
               </div>
 
 
-              <h4 className="full-width" style={{ margin: "1rem 0 0.2rem" }}>
-                F) SEO / Social / Publishing
-              </h4>
-
-              <label>
-                Workflow Status
-                <select
-                  value={form.workflowStatus}
-                  onChange={(event) => updateForm("workflowStatus", event.target.value as WorkflowStatus)}
+              <div className="full-width" style={{ marginTop: "1rem" }}>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() => setShowAdvanced((prev) => !prev)}
                 >
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                  <option value="scheduled">Scheduled</option>
-                </select>
-              </label>
+                  {showAdvanced ? "[-]" : "[+]"} Advanced Settings
+                </button>
+              </div>
 
+              {showAdvanced ? (
+                <>
+                  <h4 className="full-width" style={{ margin: "1rem 0 0.2rem", paddingTop: "1rem", borderTop: "1px solid var(--md-sys-color-outline-variant)" }}>
+                    C) Advanced Header / Settings
+                  </h4>
 
-              <label className="full-width">
-                Tags (comma-separated)
-                <input
-                  value={form.tagsCsv}
-                  onChange={(event) => updateForm("tagsCsv", event.target.value)}
-                  placeholder="literacy, coaching, advocacy"
-                />
-              </label>
+                  <label className="full-width">
+                    Subtitle / Dek
+                    <textarea
+                      rows={2}
+                      value={form.subtitle}
+                      onChange={(event) => updateForm("subtitle", event.target.value)}
+                      placeholder="Optional subtitle shown beneath title"
+                    />
+                  </label>
 
-              <label className="full-width">
-                SEO Title
-                <input
-                  value={form.seoTitle}
-                  onChange={(event) => updateForm("seoTitle", event.target.value)}
-                  placeholder="Optional SEO title"
-                />
-              </label>
+                  <label>
+                    Slug *
+                    <input
+                      required
+                      value={form.slug}
+                      onChange={(event) => {
+                        setSlugTouched(true);
+                        updateForm("slug", slugify(event.target.value));
+                      }}
+                      placeholder="article-slug"
+                    />
+                  </label>
 
-              <label className="full-width">
-                Meta Description
-                <textarea
-                  rows={2}
-                  value={form.metaDescription}
-                  onChange={(event) => updateForm("metaDescription", event.target.value)}
-                  placeholder="Optional meta description"
-                />
-              </label>
+                  <label>
+                    Read Time (auto: {autoReadTimeMinutes} min)
+                    <input
+                      type="number"
+                      min={1}
+                      value={form.readTimeOverrideMinutes}
+                      onChange={(event) => updateForm("readTimeOverrideMinutes", event.target.value)}
+                      placeholder="Leave blank for auto"
+                    />
+                  </label>
 
-              <label className="full-width">
-                Social Share Image
-                <div style={{ display: "grid", gap: "0.45rem" }}>
-                  <input
-                    value={form.socialImageUrl}
-                    onChange={(event) => updateForm("socialImageUrl", event.target.value)}
-                    placeholder="https://..."
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) {
-                        void uploadAndSetImage(file, "socialImageUrl");
-                      }
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </div>
-              </label>
+                  <label>
+                    Publish Date *
+                    <input
+                      type="date"
+                      required
+                      value={form.publishDate}
+                      onChange={(event) => updateForm("publishDate", event.target.value)}
+                    />
+                  </label>
 
-              <label className="full-width">
-                Canonical URL
-                <input
-                  value={form.canonicalUrl}
-                  onChange={(event) => updateForm("canonicalUrl", event.target.value)}
-                  placeholder="https://example.com/blog/..."
-                />
-              </label>
+                  <label>
+                    Article Type
+                    <select
+                      value={form.articleType}
+                      onChange={(event) => updateForm("articleType", event.target.value as BlogArticleType)}
+                    >
+                      {ARTICLE_TYPE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-              <div className="action-row full-width" style={{ marginTop: "1rem" }}>
+                  <label>
+                    Workflow Status
+                    <select
+                      value={form.workflowStatus}
+                      onChange={(event) => updateForm("workflowStatus", event.target.value as WorkflowStatus)}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="scheduled">Scheduled</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Secondary Categories
+                    <input
+                      value={form.secondaryCategoriesCsv}
+                      onChange={(event) => updateForm("secondaryCategoriesCsv", event.target.value)}
+                      placeholder="Education, Resources"
+                    />
+                  </label>
+
+                  <label>
+                    Author Role *
+                    <input
+                      required
+                      list="blog-role-options"
+                      value={form.authorRole}
+                      onChange={(event) => updateForm("authorRole", event.target.value)}
+                      placeholder="Author role/title"
+                    />
+                  </label>
+
+                  <label className="full-width">
+                    Author Bio
+                    <textarea
+                      rows={3}
+                      value={form.authorBio}
+                      onChange={(event) => updateForm("authorBio", event.target.value)}
+                      placeholder="Short author biography"
+                    />
+                  </label>
+
+                  <label>
+                    Featured Image Caption
+                    <input
+                      value={form.featuredImageCaption}
+                      onChange={(event) => updateForm("featuredImageCaption", event.target.value)}
+                      placeholder="Optional caption"
+                    />
+                  </label>
+
+                  <label>
+                    Featured Image Credit
+                    <input
+                      value={form.featuredImageCredit}
+                      onChange={(event) => updateForm("featuredImageCredit", event.target.value)}
+                      placeholder="Source / credit"
+                    />
+                  </label>
+
+                  <label className="full-width">
+                    Sidebar Thumbnail (Optional)
+                    <div style={{ display: "grid", gap: "0.45rem" }}>
+                      <input
+                        value={form.sidebarThumbnailUrl}
+                        onChange={(event) => updateForm("sidebarThumbnailUrl", event.target.value)}
+                        placeholder="Optional fallback thumbnail URL"
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            void uploadAndSetImage(file, "sidebarThumbnailUrl");
+                          }
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </div>
+                  </label>
+
+                  <h4 className="full-width" style={{ margin: "1rem 0 0.2rem" }}>
+                    D) SEO / Social Overrides
+                  </h4>
+
+                  <label className="full-width">
+                    Tags (comma-separated)
+                    <input
+                      value={form.tagsCsv}
+                      onChange={(event) => updateForm("tagsCsv", event.target.value)}
+                      placeholder="literacy, coaching, advocacy"
+                    />
+                  </label>
+
+                  <label className="full-width">
+                    SEO Title
+                    <input
+                      value={form.seoTitle}
+                      onChange={(event) => updateForm("seoTitle", event.target.value)}
+                      placeholder="Optional SEO title"
+                    />
+                  </label>
+
+                  <label className="full-width">
+                    Meta Description
+                    <textarea
+                      rows={2}
+                      value={form.metaDescription}
+                      onChange={(event) => updateForm("metaDescription", event.target.value)}
+                      placeholder="Optional meta description"
+                    />
+                  </label>
+
+                  <label className="full-width">
+                    Social Share Image
+                    <div style={{ display: "grid", gap: "0.45rem" }}>
+                      <input
+                        value={form.socialImageUrl}
+                        onChange={(event) => updateForm("socialImageUrl", event.target.value)}
+                        placeholder="https://..."
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            void uploadAndSetImage(file, "socialImageUrl");
+                          }
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </div>
+                  </label>
+
+                  <label className="full-width">
+                    Canonical URL
+                    <input
+                      value={form.canonicalUrl}
+                      onChange={(event) => updateForm("canonicalUrl", event.target.value)}
+                      placeholder="https://example.com/blog/..."
+                    />
+                  </label>
+                </>
+              ) : null}
+
+              <div className="action-row full-width" style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--md-sys-color-outline-variant)" }}>
                 <button type="button" className="button button-ghost" onClick={resetComposer} disabled={saveDisabled}>
                   Reset
                 </button>
