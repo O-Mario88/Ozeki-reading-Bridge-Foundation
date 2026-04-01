@@ -952,6 +952,16 @@ export function PortalBlogManager({
       throw new Error("Add at least one body block.");
     }
 
+    if (!form.slug.trim()) {
+      throw new Error("Article slug is required (check Advanced Settings).");
+    }
+    if (!form.publishDate.trim()) {
+      throw new Error("Publish date is required (check Advanced Settings).");
+    }
+    if (form.authorRole.trim().length < 2) {
+      throw new Error("Author role is required (check Advanced Settings).");
+    }
+
 
 
     if (targetStatus === "scheduled") {
@@ -1002,8 +1012,8 @@ export function PortalBlogManager({
         subtitle: form.subtitle.trim() || undefined,
         excerpt: form.excerpt.trim(),
         category: form.primaryCategory.trim(),
-        author: form.authorName.trim() || "Editorial Team",
-        role: form.authorRole.trim() || "Editorial Team",
+        author: form.authorName.trim(),
+        role: form.authorRole.trim(),
         publishedAt: publishIso,
         readTime: `${readTimeMinutes} min read`,
         readTimeMinutes,
