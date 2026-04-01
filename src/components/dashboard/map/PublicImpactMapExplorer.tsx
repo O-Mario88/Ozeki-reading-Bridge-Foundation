@@ -13,9 +13,23 @@ const UgandaImpactMapPro = dynamic(
     loading: () => (
       <div className="impact-map-skeleton" aria-busy="true">
         <div className="impact-map-skeleton-inner">
-          <div className="impact-skeleton-pulse" style={{ width: '60%', height: 16, borderRadius: 8, marginBottom: 12 }} />
-          <div className="impact-skeleton-pulse" style={{ width: '100%', height: 320, borderRadius: 16 }} />
-          <div className="impact-skeleton-pulse" style={{ width: '40%', height: 14, borderRadius: 8, marginTop: 12 }} />
+          <div
+            className="impact-skeleton-pulse"
+            style={{
+              width: "60%",
+              height: 16,
+              borderRadius: 8,
+              marginBottom: 12,
+            }}
+          />
+          <div
+            className="impact-skeleton-pulse"
+            style={{ width: "100%", height: 320, borderRadius: 16 }}
+          />
+          <div
+            className="impact-skeleton-pulse"
+            style={{ width: "40%", height: 14, borderRadius: 8, marginTop: 12 }}
+          />
         </div>
       </div>
     ),
@@ -24,7 +38,10 @@ const UgandaImpactMapPro = dynamic(
 
 /** Client-side response cache with TTL to avoid redundant API calls */
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const responseCache = new Map<string, { data: PublicImpactAggregate; timestamp: number }>();
+const responseCache = new Map<
+  string,
+  { data: PublicImpactAggregate; timestamp: number }
+>();
 function getCached(key: string): PublicImpactAggregate | null {
   const entry = responseCache.get(key);
   if (!entry) return null;
@@ -63,7 +80,9 @@ type PublicImpactMapExplorerProps = {
 
 type ScopeLevel = "country" | "region" | "subregion" | "district" | "school";
 
-function defaultSelection(initial?: Partial<PublicMapSelection>): PublicMapSelection {
+function defaultSelection(
+  initial?: Partial<PublicMapSelection>,
+): PublicMapSelection {
   return {
     region: initial?.region ?? "",
     subRegion: initial?.subRegion ?? "",
@@ -72,7 +91,10 @@ function defaultSelection(initial?: Partial<PublicMapSelection>): PublicMapSelec
   };
 }
 
-function resolveScope(selection: PublicMapSelection): { level: ScopeLevel; id: string } {
+function resolveScope(selection: PublicMapSelection): {
+  level: ScopeLevel;
+  id: string;
+} {
   if (selection.school) {
     return { level: "school", id: selection.school };
   }
@@ -137,16 +159,23 @@ function DomainOutcomeCard({
     <article className="impact-domain-mini-card">
       <h4>
         {title}{" "}
-        <span title={description} aria-label={description} style={{ cursor: "help" }}>
+        <span
+          title={description}
+          aria-label={description}
+          style={{ cursor: "help" }}
+        >
           (i)
         </span>
       </h4>
       <p>
-        <strong>{domain.latest ?? domain.endline ?? "Data not available"}</strong>
+        <strong>
+          {domain.latest ?? domain.endline ?? "Data not available"}
+        </strong>
       </p>
       <p className="impact-domain-mini-meta">
         Baseline: {domain.baseline ?? "Data not available"} | Change:{" "}
-        {typeof domain.latest === "number" && typeof domain.baseline === "number"
+        {typeof domain.latest === "number" &&
+        typeof domain.baseline === "number"
           ? `${change > 0 ? "+" : ""}${change.toFixed(1)}`
           : "Data not available"}
       </p>
@@ -178,7 +207,9 @@ function formatCompositeScore(value: number | null) {
   return `${value.toFixed(1)}/10`;
 }
 
-function deriveReadingLevelsFromOutcomes(outcomes?: PublicImpactAggregate["outcomes"] | null) {
+function deriveReadingLevelsFromOutcomes(
+  outcomes?: PublicImpactAggregate["outcomes"] | null,
+) {
   if (!outcomes) {
     return null;
   }
@@ -202,28 +233,39 @@ function deriveReadingLevelsFromOutcomes(outcomes?: PublicImpactAggregate["outco
 
   const baselineValues = domainRows
     .map((row) => row.baseline)
-    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .filter(
+      (value): value is number =>
+        typeof value === "number" && Number.isFinite(value),
+    )
     .map(normalizeDomainScoreForReadingLevel);
   const latestValues = domainRows
     .map((row) => row.latest)
-    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .filter(
+      (value): value is number =>
+        typeof value === "number" && Number.isFinite(value),
+    )
     .map(normalizeDomainScoreForReadingLevel);
 
   const baselineAverage =
     baselineValues.length > 0
-      ? baselineValues.reduce((sum, value) => sum + value, 0) / baselineValues.length
+      ? baselineValues.reduce((sum, value) => sum + value, 0) /
+        baselineValues.length
       : null;
   const latestAverage =
     latestValues.length > 0
-      ? latestValues.reduce((sum, value) => sum + value, 0) / latestValues.length
+      ? latestValues.reduce((sum, value) => sum + value, 0) /
+        latestValues.length
       : null;
 
-  const baselineLevel = baselineAverage !== null ? readingLevelFromAverage(baselineAverage) : null;
-  const latestLevel = latestAverage !== null ? readingLevelFromAverage(latestAverage) : null;
+  const baselineLevel =
+    baselineAverage !== null ? readingLevelFromAverage(baselineAverage) : null;
+  const latestLevel =
+    latestAverage !== null ? readingLevelFromAverage(latestAverage) : null;
 
   let movementLabel = "Data not available";
   if (baselineLevel && latestLevel) {
-    const movement = readingLevelOrdinal(latestLevel) - readingLevelOrdinal(baselineLevel);
+    const movement =
+      readingLevelOrdinal(latestLevel) - readingLevelOrdinal(baselineLevel);
     if (movement > 0) {
       movementLabel = `Moved up by ${movement} level${movement > 1 ? "s" : ""}`;
     } else if (movement < 0) {
@@ -247,7 +289,14 @@ function readingLevelColor(label: string, index: number) {
   if ((READING_LEVELS as string[]).includes(label)) {
     return getReadingLevelColor(label as (typeof READING_LEVELS)[number]);
   }
-  const fallback = ["#c0392b", "#e67e22", "#f1c40f", "#D96A0F", "#1f5fbf", "#6b7280"];
+  const fallback = [
+    "#c0392b",
+    "#e67e22",
+    "#f1c40f",
+    "#D96A0F",
+    "#1f5fbf",
+    "#6b7280",
+  ];
   return fallback[index % fallback.length];
 }
 
@@ -283,12 +332,25 @@ export function PublicImpactMapExplorer({
   const [selection, setSelection] = useState<PublicMapSelection>(
     defaultSelection(initialSelection),
   );
-  const [selectionHistory, setSelectionHistory] = useState<PublicMapSelection[]>([]);
-  const [payload, setPayload] = useState<PublicImpactAggregate | null>(initialPayload);
-  const [navigatorSnapshot, setNavigatorSnapshot] = useState<PublicImpactAggregate["navigator"] | null>(initialPayload?.navigator ?? null);
+  const [selectionHistory, setSelectionHistory] = useState<
+    PublicMapSelection[]
+  >([]);
+  const [payload, setPayload] = useState<PublicImpactAggregate | null>(
+    initialPayload,
+  );
+  const [navigatorSnapshot, setNavigatorSnapshot] = useState<
+    PublicImpactAggregate["navigator"] | null
+  >(initialPayload?.navigator ?? null);
   const [loading, setLoading] = useState(!initialPayload);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"outcomes" | "readingLevels" | "implementation" | "teaching" | "equity" | "quality">("outcomes");
+  const [activeTab, setActiveTab] = useState<
+    | "outcomes"
+    | "readingLevels"
+    | "implementation"
+    | "teaching"
+    | "equity"
+    | "quality"
+  >("outcomes");
   const initialPayloadUsed = useRef(!!initialPayload);
 
   const scope = useMemo(() => resolveScope(selection), [selection]);
@@ -317,7 +379,9 @@ export function PublicImpactMapExplorer({
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(scopeEndpoint(scope.level, scope.id, period));
+        const response = await fetch(
+          scopeEndpoint(scope.level, scope.id, period),
+        );
         if (!response.ok) {
           throw new Error("stats-unavailable");
         }
@@ -366,7 +430,9 @@ export function PublicImpactMapExplorer({
         return;
       }
       try {
-        const response = await fetch(`/api/impact/country?period=${encodeURIComponent(period)}`);
+        const response = await fetch(
+          `/api/impact/country?period=${encodeURIComponent(period)}`,
+        );
         if (!response.ok) return;
         const json = (await response.json()) as PublicImpactAggregate;
         setCache(cacheKey, json);
@@ -378,7 +444,9 @@ export function PublicImpactMapExplorer({
       }
     }
     fetchNavigatorSnapshot();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [period, navigatorSnapshot]);
 
   useEffect(() => {
@@ -471,9 +539,11 @@ export function PublicImpactMapExplorer({
     setSelection({ region: "", subRegion: "", district: "", school: "" });
   };
 
-  const navigatorSchools = navigatorSnapshot?.schools ?? payload?.navigator?.schools ?? [];
+  const navigatorSchools =
+    navigatorSnapshot?.schools ?? payload?.navigator?.schools ?? [];
   const selectedSchoolName = selection.school
-    ? navigatorSchools.find((school) => String(school.id) === selection.school)?.name ?? null
+    ? (navigatorSchools.find((school) => String(school.id) === selection.school)
+        ?.name ?? null)
     : null;
   const breadcrumb = [
     selection.region || "All locations",
@@ -512,34 +582,45 @@ export function PublicImpactMapExplorer({
     [payload?.outcomes],
   );
   const readingLevelsBaselineCycle =
-    payload?.readingLevels?.distribution.find((item) => item.cycle === "baseline") ?? null;
+    payload?.readingLevels?.distribution.find(
+      (item) => item.cycle === "baseline",
+    ) ?? null;
   const readingLevelsLatestCycle =
-    payload?.readingLevels?.distribution.find((item) => item.cycle === "endline") ??
-    payload?.readingLevels?.distribution.find((item) => item.cycle === "latest") ??
+    payload?.readingLevels?.distribution.find(
+      (item) => item.cycle === "endline",
+    ) ??
+    payload?.readingLevels?.distribution.find(
+      (item) => item.cycle === "latest",
+    ) ??
     null;
   const masteryDomains = payload?.masteryDomains ?? null;
   const readingStageDistribution = payload?.readingStageDistribution ?? [];
   const benchmarkStatus = payload?.benchmarkStatus ?? null;
   const trafficLightExplanations = payload?.publicExplanation ?? {
     green: "Green means the learner has mastered the skill.",
-    amber: "Amber means the learner is developing but needs more speed or consistency.",
+    amber:
+      "Amber means the learner is developing but needs more speed or consistency.",
     red: "Red means the learner needs targeted support.",
   };
   const readingLevelLabels =
-    payload?.readingLevels?.levels?.map((item) => item.label) ??
-    READING_LEVELS;
+    payload?.readingLevels?.levels?.map((item) => item.label) ?? READING_LEVELS;
   const fluentReaderShare =
     readingLevelsLatestCycle?.percents?.Fluent ??
     readingLevelsLatestCycle?.percents?.["Transitional"] ??
     null;
   const benchmarkShare = benchmarkStatus
-    ? (benchmarkStatus.atExpected.percent ?? 0) + (benchmarkStatus.aboveExpected.percent ?? 0)
+    ? (benchmarkStatus.atExpected.percent ?? 0) +
+      (benchmarkStatus.aboveExpected.percent ?? 0)
     : null;
-  const movedUpShare = payload?.readingLevels?.movement?.moved_up_1plus_percent ?? null;
+  const movedUpShare =
+    payload?.readingLevels?.movement?.moved_up_1plus_percent ?? null;
   const masteryDomainRows = Object.entries(masteryDomains ?? {})
     .map(([key, value]) => ({
       key,
-      label: LEARNING_DOMAIN_DICTIONARY[key as keyof typeof LEARNING_DOMAIN_DICTIONARY]?.label_short ?? key,
+      label:
+        LEARNING_DOMAIN_DICTIONARY[
+          key as keyof typeof LEARNING_DOMAIN_DICTIONARY
+        ]?.label_short ?? key,
       green: value.green.percent,
       amber: value.amber.percent,
       red: value.red.percent,
@@ -550,7 +631,8 @@ export function PublicImpactMapExplorer({
   const topReadingStages = readingStageDistribution.slice(0, 4);
   const teachingQuality = payload?.teachingQuality;
   const teachingLearningAlignment = payload?.teachingLearningAlignment;
-  const teachingLearningAlignmentPoints = teachingLearningAlignment?.points ?? [];
+  const teachingLearningAlignmentPoints =
+    teachingLearningAlignment?.points ?? [];
   const fidelityDrivers = payload?.fidelity?.drivers ?? [];
   const mostImprovedRankings = payload?.rankings?.mostImproved ?? [];
   const prioritySupportRankings = payload?.rankings?.prioritySupport ?? [];
@@ -560,15 +642,20 @@ export function PublicImpactMapExplorer({
   const alignmentSummary = teachingLearningAlignment?.summary;
   const latestAlignmentPoint =
     teachingLearningAlignmentPoints.length > 0
-      ? teachingLearningAlignmentPoints[teachingLearningAlignmentPoints.length - 1]
+      ? teachingLearningAlignmentPoints[
+          teachingLearningAlignmentPoints.length - 1
+        ]
       : null;
   const previousAlignmentPoint =
     teachingLearningAlignmentPoints.length > 1
-      ? teachingLearningAlignmentPoints[teachingLearningAlignmentPoints.length - 2]
+      ? teachingLearningAlignmentPoints[
+          teachingLearningAlignmentPoints.length - 2
+        ]
       : null;
   const storySessionsDelta =
     latestAlignmentPoint && previousAlignmentPoint
-      ? latestAlignmentPoint.storySessionsCount - previousAlignmentPoint.storySessionsCount
+      ? latestAlignmentPoint.storySessionsCount -
+        previousAlignmentPoint.storySessionsCount
       : null;
 
   const momentumCards = [
@@ -614,7 +701,9 @@ export function PublicImpactMapExplorer({
         typeof storySessionsDelta === "number"
           ? formatSignedDelta(storySessionsDelta, { digits: 0 })
           : "Data not available",
-      helper: previousAlignmentPoint ? "Latest period vs prior period" : "Need at least 2 periods",
+      helper: previousAlignmentPoint
+        ? "Latest period vs prior period"
+        : "Need at least 2 periods",
     },
     {
       label: "Assessment completion",
@@ -677,13 +766,12 @@ export function PublicImpactMapExplorer({
     },
   ];
   const funnelBaseline = Math.max(funnelStages[0]?.value ?? 0, 1);
-  const funnelPeak = Math.max(
-    1,
-    ...funnelStages.map((item) => item.value),
-  );
+  const funnelPeak = Math.max(1, ...funnelStages.map((item) => item.value));
   const funnelRows = funnelStages.map((stage, index) => {
-    const previous = index === 0 ? stage.value : funnelStages[index - 1]?.value ?? 0;
-    const stepRate = previous > 0 ? (stage.value / previous) * 100 : index === 0 ? 100 : 0;
+    const previous =
+      index === 0 ? stage.value : (funnelStages[index - 1]?.value ?? 0);
+    const stepRate =
+      previous > 0 ? (stage.value / previous) * 100 : index === 0 ? 100 : 0;
     const cumulativeRate = (stage.value / funnelBaseline) * 100;
     return {
       ...stage,
@@ -694,7 +782,11 @@ export function PublicImpactMapExplorer({
   });
 
   const teachingTrendPoints = (payload?.teachingQuality?.trend ?? [])
-    .filter((point) => typeof point.averageScore === "number" && Number.isFinite(point.averageScore))
+    .filter(
+      (point) =>
+        typeof point.averageScore === "number" &&
+        Number.isFinite(point.averageScore),
+    )
     .slice(-8);
   const teachingTrendMax = Math.max(
     1,
@@ -702,12 +794,16 @@ export function PublicImpactMapExplorer({
   );
 
   return (
-    <section className={`impact-explorer ${compact ? "impact-explorer--compact" : ""}`}>
+    <section
+      className={`impact-explorer ${compact ? "impact-explorer--compact" : ""}`}
+    >
       {compact ? (
         <header className="impact-explorer-header">
           <div>
             <h2>Live Literacy Impact Dashboard</h2>
-            <p>Aggregated, privacy-protected classroom data. Updated regularly.</p>
+            <p>
+              Aggregated, privacy-protected classroom data. Updated regularly.
+            </p>
           </div>
           <div className="action-row">
             <Link className="button" href="/impact">
@@ -724,11 +820,17 @@ export function PublicImpactMapExplorer({
         <div className="impact-explorer-status">
           <p>{breadcrumb.join(" > ")}</p>
           {payload?.meta?.dataCompleteness === "Complete" ? (
-            <span className="badge badge-success" title="All schools in this scope have submitted reports for this period">
+            <span
+              className="badge badge-success"
+              title="All schools in this scope have submitted reports for this period"
+            >
               ✓ Data Complete
             </span>
           ) : (
-            <span className="badge badge-warning" title="Some schools in this scope haven't submitted report yet">
+            <span
+              className="badge badge-warning"
+              title="Some schools in this scope haven't submitted report yet"
+            >
               ⚠ Partial Data ({payload?.meta?.sampleSize} reports)
             </span>
           )}
@@ -751,124 +853,14 @@ export function PublicImpactMapExplorer({
             Download PDF
           </a>
         </div>
-        <button type="button" className="impact-map-clear-link" onClick={onReset}>
+        <button
+          type="button"
+          className="impact-map-clear-link"
+          onClick={onReset}
+        >
           Clear
         </button>
       </div>
-
-      {!compact ? (
-        <div className="impact-attract-grid">
-          <article className="card impact-attract-card impact-attract-card--momentum">
-            <header>
-              <h3>What Changed This Period</h3>
-              <p>Quick momentum indicators to understand impact movement at a glance.</p>
-            </header>
-            <div className="impact-attract-momentum-grid">
-              {momentumCards.map((item) => (
-                <article key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{loading ? "Loading..." : item.value}</strong>
-                  <small>{item.helper}</small>
-                </article>
-              ))}
-            </div>
-          </article>
-
-          <article className="card impact-attract-card impact-attract-card--funnel">
-            <header>
-              <h3>Implementation Conversion Funnel</h3>
-              <p>From initial training to measured endline outcomes and story activation.</p>
-            </header>
-            <div className="impact-attract-funnel-list">
-              {funnelRows.map((row) => (
-                <article key={row.label}>
-                  <div className="impact-attract-funnel-head">
-                    <strong>{row.label}</strong>
-                    <span>{loading ? "Loading..." : row.value.toLocaleString()}</span>
-                  </div>
-                  <div className="impact-attract-funnel-track" aria-hidden="true">
-                    <i style={{ width: `${Math.max(row.widthPct, row.value > 0 ? 6 : 0)}%` }} />
-                  </div>
-                  <p>
-                    {row.helper} • Step retention:{" "}
-                    <strong>{loading ? "Loading..." : `${row.stepRate.toFixed(1)}%`}</strong> • Cumulative:{" "}
-                    <strong>{loading ? "Loading..." : `${row.cumulativeRate.toFixed(1)}%`}</strong>
-                  </p>
-                </article>
-              ))}
-            </div>
-          </article>
-
-          <article className="card impact-attract-card impact-attract-card--trust">
-            <header>
-              <h3>Data Trust & Action Center</h3>
-              <p>Transparency details and next actions for partners and supporters.</p>
-            </header>
-            <div className="impact-attract-trust-stats">
-              <p>
-                Completeness:{" "}
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : payload?.meta?.dataCompleteness === "Complete"
-                      ? "Complete"
-                      : "Partial"}
-                </strong>
-              </p>
-              <p>
-                Sample size (n):{" "}
-                <strong>{loading ? "Loading..." : (payload?.meta?.sampleSize ?? 0).toLocaleString()}</strong>
-              </p>
-              <p>
-                Last updated:{" "}
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : payload?.meta?.lastUpdated
-                      ? new Date(payload.meta.lastUpdated).toLocaleString("en-GB")
-                      : "Data not available"}
-                </strong>
-              </p>
-            </div>
-            {teachingTrendPoints.length > 0 ? (
-              <div
-                className="impact-attract-trend"
-                role="img"
-                aria-label="Teaching quality trend over recent periods"
-              >
-                {teachingTrendPoints.map((point) => {
-                  const average = point.averageScore ?? 0;
-                  const heightPct = (average / teachingTrendMax) * 100;
-                  return (
-                    <div key={point.period} className="impact-attract-trend-bar">
-                      <i style={{ height: `${Math.max(heightPct, 8)}%` }} />
-                      <span>{point.period}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="impact-mini-footer">Trend data not available for this scope/period.</p>
-            )}
-            <p className="impact-mini-footer">
-              {teachingLearningAlignment?.caveat ?? "Data is aggregated from verified submissions only."}
-            </p>
-            <div className="impact-attract-actions">
-              <Link className="button" href="/sponsor-a-district">
-                Sponsor a District
-              </Link>
-              <Link className="button button-ghost" href="/impact#reports">
-                Download Reports
-              </Link>
-              <Link className="inline-download-link" href="/impact/case-studies">
-                Read Change Stories
-              </Link>
-            </div>
-          </article>
-
-
-        </div>
-      ) : null}
 
       <div className="impact-explorer-layout">
         <div className="mb-2">
@@ -880,8 +872,8 @@ export function PublicImpactMapExplorer({
           />
         </div>
 
-        <div className="impact-dashboard-core">
-          <div className="impact-sidebar">
+        <div className="impact-dashboard-core-v2">
+          <div className="impact-main-panel">
             <LocationNavigator
               period={period}
               onPeriodChange={setPeriod}
@@ -891,167 +883,343 @@ export function PublicImpactMapExplorer({
               onReset={onReset}
               onBack={onBack}
             />
-
             {error ? (
               <article className="card impact-error-card mt-3">
                 <h3>Stats temporarily unavailable</h3>
                 <p>Please try again. You can still explore using filters.</p>
               </article>
             ) : null}
-
             {payload && payload.kpis.schoolsSupported === 0 ? (
               <article className="card impact-empty-card mt-3">
                 <h3>No published data yet</h3>
                 <p>
-                  We don&apos;t have reported activity for {payload.scope.name} in {payload.period.label}. Try
-                  another district or check back later.
+                  We don&apos;t have reported activity for {payload.scope.name}{" "}
+                  in {payload.period.label}. Try another district or check back
+                  later.
                 </p>
+              </article>
+            ) : null}
+
+            <UgandaImpactMapPro
+              periodLabel={period}
+              selection={{
+                region: selection.region,
+                subRegion: selection.subRegion,
+                district: selection.district,
+                school: selection.school,
+              }}
+              activeSchoolName={
+                navigatorSchools.find(
+                  (s) => s.id.toString() === selection.school,
+                )?.name
+              }
+              onSelectionChange={(next) =>
+                onSelectionChange({
+                  region: next.region,
+                  subRegion: next.subRegion,
+                  district: next.district,
+                  school: next.school ?? "",
+                })
+              }
+              districtSearchOptions={districtSearchOptions}
+              compact={compact}
+            />
+
+            {!compact ? (
+              <article className="card impact-attract-card impact-attract-card--momentum">
+                <header>
+                  <h3>What Changed This Period</h3>
+                  <p>
+                    Quick momentum indicators to understand impact movement at a
+                    glance.
+                  </p>
+                </header>
+                <div className="impact-attract-momentum-grid">
+                  {momentumCards.map((item) => (
+                    <article key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{loading ? "Loading..." : item.value}</strong>
+                      <small>{item.helper}</small>
+                    </article>
+                  ))}
+                </div>
               </article>
             ) : null}
           </div>
 
-          <div className="impact-main-panel">
-          {!compact ? (
-          <article className="card impact-attract-card impact-attract-card--progress">
-            <header>
-              <h3>Reading Progress Tracker</h3>
-              <p>Assessment-domain evidence tied directly to reading stages and benchmark status.</p>
-            </header>
-            <div className="impact-attract-progress-grid">
-              <article>
-                <span>Fluent reader share</span>
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : typeof fluentReaderShare === "number"
-                      ? `${fluentReaderShare.toFixed(1)}%`
-                      : "Data not available"}
-                </strong>
-                <small>Latest reading-level distribution</small>
+          <div className="impact-sidebar-panel">
+            {!compact ? (
+              <article className="card impact-attract-card impact-attract-card--trust">
+                <header>
+                  <h3>Data Trust & Action Center</h3>
+                  <p>
+                    Transparency details and next actions for partners and
+                    supporters.
+                  </p>
+                </header>
+                <div className="impact-attract-trust-stats">
+                  <p>
+                    Completeness:{" "}
+                    <strong>
+                      {loading
+                        ? "Loading..."
+                        : payload?.meta?.dataCompleteness === "Complete"
+                          ? "Complete"
+                          : "Partial"}
+                    </strong>
+                  </p>
+                  <p>
+                    Sample size (n):{" "}
+                    <strong>
+                      {loading
+                        ? "Loading..."
+                        : (payload?.meta?.sampleSize ?? 0).toLocaleString()}
+                    </strong>
+                  </p>
+                  <p>
+                    Last updated:{" "}
+                    <strong>
+                      {loading
+                        ? "Loading..."
+                        : payload?.meta?.lastUpdated
+                          ? new Date(payload.meta.lastUpdated).toLocaleString(
+                              "en-GB",
+                            )
+                          : "Data not available"}
+                    </strong>
+                  </p>
+                </div>
+                {teachingTrendPoints.length > 0 ? (
+                  <div
+                    className="impact-attract-trend"
+                    role="img"
+                    aria-label="Teaching quality trend over recent periods"
+                  >
+                    {teachingTrendPoints.map((point) => {
+                      const average = point.averageScore ?? 0;
+                      const heightPct = (average / teachingTrendMax) * 100;
+                      return (
+                        <div
+                          key={point.period}
+                          className="impact-attract-trend-bar"
+                        >
+                          <i style={{ height: `${Math.max(heightPct, 8)}%` }} />
+                          <span>{point.period}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="impact-mini-footer">
+                    Trend data not available for this scope/period.
+                  </p>
+                )}
+                <p className="impact-mini-footer">
+                  {teachingLearningAlignment?.caveat ??
+                    "Data is aggregated from verified submissions only."}
+                </p>
+                <div className="impact-attract-actions">
+                  <Link className="button" href="/sponsor-a-district">
+                    Sponsor a District
+                  </Link>
+                  <Link className="button button-ghost" href="/impact#reports">
+                    Download Reports
+                  </Link>
+                  <Link
+                    className="inline-download-link"
+                    href="/impact/case-studies"
+                  >
+                    Read Change Stories
+                  </Link>
+                </div>
               </article>
-              <article>
-                <span>At / above benchmark</span>
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : typeof benchmarkShare === "number"
-                      ? `${benchmarkShare.toFixed(1)}%`
-                      : "Data not available"}
-                </strong>
-                <small>Expected-vs-actual status from the DB</small>
+            ) : null}
+
+            {!compact ? (
+              <article className="card impact-attract-card impact-attract-card--funnel">
+                <header>
+                  <h3>Implementation Conversion Funnel</h3>
+                  <p>
+                    From initial training to measured endline outcomes and story
+                    activation.
+                  </p>
+                </header>
+                <div className="impact-attract-funnel-list">
+                  {funnelRows.map((row) => (
+                    <article key={row.label}>
+                      <div className="impact-attract-funnel-head">
+                        <strong>{row.label}</strong>
+                        <span>
+                          {loading ? "Loading..." : row.value.toLocaleString()}
+                        </span>
+                      </div>
+                      <div
+                        className="impact-attract-funnel-track"
+                        aria-hidden="true"
+                      >
+                        <i
+                          style={{
+                            width: `${Math.max(row.widthPct, row.value > 0 ? 6 : 0)}%`,
+                          }}
+                        />
+                      </div>
+                      <p>
+                        {row.helper} • Step retention:{" "}
+                        <strong>
+                          {loading
+                            ? "Loading..."
+                            : `${row.stepRate.toFixed(1)}%`}
+                        </strong>{" "}
+                        • Cumulative:{" "}
+                        <strong>
+                          {loading
+                            ? "Loading..."
+                            : `${row.cumulativeRate.toFixed(1)}%`}
+                        </strong>
+                      </p>
+                    </article>
+                  ))}
+                </div>
               </article>
-              <article>
-                <span>Moved up 1+ level</span>
-                <strong>
-                  {loading
-                    ? "Loading..."
-                    : typeof movedUpShare === "number"
-                      ? `${movedUpShare.toFixed(1)}%`
-                      : "Data not available"}
-                </strong>
-                <small>Matched learners only</small>
-              </article>
-              <article>
-                <span>Tracked reading stages</span>
-                <strong>{loading ? "Loading..." : readingStageDistribution.length.toLocaleString()}</strong>
-                <small>Stage bands currently computed</small>
-              </article>
+            ) : null}
+
+            <div className="impact-tabs">
+              <button
+                className={activeTab === "outcomes" ? "active" : ""}
+                onClick={() => setActiveTab("outcomes")}
+              >
+                Learning Outcomes
+              </button>
+              <button
+                className={activeTab === "readingLevels" ? "active" : ""}
+                onClick={() => setActiveTab("readingLevels")}
+              >
+                Reading Levels
+              </button>
+              <button
+                className={activeTab === "implementation" ? "active" : ""}
+                onClick={() => setActiveTab("implementation")}
+              >
+                Implementation Funnel
+              </button>
+              <button
+                className={activeTab === "teaching" ? "active" : ""}
+                onClick={() => setActiveTab("teaching")}
+              >
+                Teaching Quality
+              </button>
+              <button
+                className={activeTab === "equity" ? "active" : ""}
+                onClick={() => setActiveTab("equity")}
+              >
+                Equity & Segments
+              </button>
+              <button
+                className={activeTab === "quality" ? "active" : ""}
+                onClick={() => setActiveTab("quality")}
+              >
+                Data Completeness
+              </button>
             </div>
-            {(masteryDomainRows.length > 0 || topReadingStages.length > 0) && (
-              <div className="impact-attract-progress-lists">
-                {masteryDomainRows.length > 0 && (
-                  <div>
-                    <h4>Strongest Mastery Domains</h4>
-                    {masteryDomainRows.map((row) => (
-                      <div key={row.key} className="impact-attract-progress-row">
-                        <strong>{row.label}</strong>
-                        <span>
-                          Green {row.green.toFixed(1)}% • Amber {row.amber.toFixed(1)}% • Red {row.red.toFixed(1)}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {topReadingStages.length > 0 && (
-                  <div>
-                    <h4>Latest Reading Stage Mix</h4>
-                    {topReadingStages.map((row) => (
-                      <div key={row.label} className="impact-attract-progress-row">
-                        <strong>{row.label}</strong>
-                        <span>
-                          {row.percent.toFixed(1)}% • n={row.count.toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </article>
-          ) : null}
-          <UgandaImpactMapPro
-            periodLabel={period}
-            selection={{
-              region: selection.region,
-              subRegion: selection.subRegion,
-              district: selection.district,
-              school: selection.school,
-            }}
-            activeSchoolName={navigatorSchools.find((s) => s.id.toString() === selection.school)?.name}
-            onSelectionChange={(next) =>
-              onSelectionChange({
-                region: next.region,
-                subRegion: next.subRegion,
-                district: next.district,
-                school: next.school ?? "",
-              })
-            }
-            districtSearchOptions={districtSearchOptions}
-            compact={compact}
-          />
           </div>
         </div>
-      </div>
 
-
-
-      <div className="impact-tabs">
-        <button
-          className={activeTab === "outcomes" ? "active" : ""}
-          onClick={() => setActiveTab("outcomes")}
-        >
-          Learning Outcomes
-        </button>
-        <button
-          className={activeTab === "readingLevels" ? "active" : ""}
-          onClick={() => setActiveTab("readingLevels")}
-        >
-          Reading Levels
-        </button>
-        <button
-          className={activeTab === "implementation" ? "active" : ""}
-          onClick={() => setActiveTab("implementation")}
-        >
-          Implementation Funnel
-        </button>
-        <button
-          className={activeTab === "teaching" ? "active" : ""}
-          onClick={() => setActiveTab("teaching")}
-        >
-          Teaching Quality
-        </button>
-        <button
-          className={activeTab === "equity" ? "active" : ""}
-          onClick={() => setActiveTab("equity")}
-        >
-          Equity & Segments
-        </button>
-        <button
-          className={activeTab === "quality" ? "active" : ""}
-          onClick={() => setActiveTab("quality")}
-        >
-          Data Completeness
-        </button>
+        {!compact ? (
+          <div className="impact-tracker-banner">
+            <article className="card impact-attract-card impact-attract-card--progress">
+              <header>
+                <h3>Reading Progress Tracker</h3>
+                <p>
+                  Assessment-domain evidence tied directly to reading stages and
+                  benchmark status.
+                </p>
+              </header>
+              <div className="impact-attract-progress-grid">
+                <article>
+                  <span>Fluent reader share</span>
+                  <strong>
+                    {loading
+                      ? "Loading..."
+                      : typeof fluentReaderShare === "number"
+                        ? `${fluentReaderShare.toFixed(1)}%`
+                        : "Data not available"}
+                  </strong>
+                  <small>Latest reading-level distribution</small>
+                </article>
+                <article>
+                  <span>At / above benchmark</span>
+                  <strong>
+                    {loading
+                      ? "Loading..."
+                      : typeof benchmarkShare === "number"
+                        ? `${benchmarkShare.toFixed(1)}%`
+                        : "Data not available"}
+                  </strong>
+                  <small>Expected-vs-actual status from the DB</small>
+                </article>
+                <article>
+                  <span>Moved up 1+ level</span>
+                  <strong>
+                    {loading
+                      ? "Loading..."
+                      : typeof movedUpShare === "number"
+                        ? `${movedUpShare.toFixed(1)}%`
+                        : "Data not available"}
+                  </strong>
+                  <small>Matched learners only</small>
+                </article>
+                <article>
+                  <span>Tracked reading stages</span>
+                  <strong>
+                    {loading
+                      ? "Loading..."
+                      : readingStageDistribution.length.toLocaleString()}
+                  </strong>
+                  <small>Stage bands currently computed</small>
+                </article>
+              </div>
+              {(masteryDomainRows.length > 0 ||
+                topReadingStages.length > 0) && (
+                <div className="impact-attract-progress-lists">
+                  {masteryDomainRows.length > 0 && (
+                    <div>
+                      <h4>Strongest Mastery Domains</h4>
+                      {masteryDomainRows.map((row) => (
+                        <div
+                          key={row.key}
+                          className="impact-attract-progress-row"
+                        >
+                          <strong>{row.label}</strong>
+                          <span>
+                            Green {row.green.toFixed(1)}% • Amber{" "}
+                            {row.amber.toFixed(1)}% • Red {row.red.toFixed(1)}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {topReadingStages.length > 0 && (
+                    <div>
+                      <h4>Latest Reading Stage Mix</h4>
+                      {topReadingStages.map((row) => (
+                        <div
+                          key={row.label}
+                          className="impact-attract-progress-row"
+                        >
+                          <strong>{row.label}</strong>
+                          <span>
+                            {row.percent.toFixed(1)}% • n=
+                            {row.count.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </article>
+          </div>
+        ) : null}
       </div>
 
       <div className="impact-tab-content">
@@ -1079,14 +1247,20 @@ export function PublicImpactMapExplorer({
               })}
             </div>
             <p className="impact-mini-footer">
-              Scores reflect average learner performance. Benchmark interpretation follows mastery progression by domain.
+              Scores reflect average learner performance. Benchmark
+              interpretation follows mastery progression by domain.
             </p>
             {masteryDomains ? (
               <>
-                <h4 style={{ marginTop: "1rem" }}>Mastery Traffic-Light Distribution</h4>
+                <h4 style={{ marginTop: "1rem" }}>
+                  Mastery Traffic-Light Distribution
+                </h4>
                 <div className="impact-domain-mini-grid">
                   {OUTCOME_DOMAIN_CONFIG.map((item) => {
-                    const domainMap: Record<string, keyof typeof masteryDomains> = {
+                    const domainMap: Record<
+                      string,
+                      keyof typeof masteryDomains
+                    > = {
                       letterNames: "phonemic_awareness",
                       letterSounds: "grapheme_phoneme_correspondence",
                       realWords: "blending_decoding",
@@ -1098,31 +1272,48 @@ export function PublicImpactMapExplorer({
                     const mastery = masteryDomains[masteryKey];
                     if (!mastery) return null;
                     return (
-                      <article className="impact-domain-mini-card" key={`mastery-${item.key}`}>
-                        <h4>{LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short}</h4>
+                      <article
+                        className="impact-domain-mini-card"
+                        key={`mastery-${item.key}`}
+                      >
+                        <h4>
+                          {
+                            LEARNING_DOMAIN_DICTIONARY[item.domainKey]
+                              .label_short
+                          }
+                        </h4>
                         <p className="impact-domain-mini-meta">
-                          Green: <strong>{mastery.green.percent}%</strong> ({mastery.green.count})
+                          Green: <strong>{mastery.green.percent}%</strong> (
+                          {mastery.green.count})
                         </p>
                         <p className="impact-domain-mini-meta">
-                          Amber: <strong>{mastery.amber.percent}%</strong> ({mastery.amber.count})
+                          Amber: <strong>{mastery.amber.percent}%</strong> (
+                          {mastery.amber.count})
                         </p>
                         <p className="impact-domain-mini-meta">
-                          Red: <strong>{mastery.red.percent}%</strong> ({mastery.red.count})
+                          Red: <strong>{mastery.red.percent}%</strong> (
+                          {mastery.red.count})
                         </p>
-                        <p className="impact-domain-mini-meta">n = {mastery.n.toLocaleString()}</p>
+                        <p className="impact-domain-mini-meta">
+                          n = {mastery.n.toLocaleString()}
+                        </p>
                       </article>
                     );
                   })}
                 </div>
                 {benchmarkStatus ? (
                   <p className="impact-mini-footer">
-                    Benchmark status: Below expected {benchmarkStatus.belowExpected.percent}%,
-                    At expected {benchmarkStatus.atExpected.percent}%,
-                    Above expected {benchmarkStatus.aboveExpected.percent}% (n={benchmarkStatus.n}).
+                    Benchmark status: Below expected{" "}
+                    {benchmarkStatus.belowExpected.percent}%, At expected{" "}
+                    {benchmarkStatus.atExpected.percent}%, Above expected{" "}
+                    {benchmarkStatus.aboveExpected.percent}% (n=
+                    {benchmarkStatus.n}).
                   </p>
                 ) : null}
                 <p className="impact-mini-footer">
-                  {trafficLightExplanations.green} {trafficLightExplanations.amber} {trafficLightExplanations.red}
+                  {trafficLightExplanations.green}{" "}
+                  {trafficLightExplanations.amber}{" "}
+                  {trafficLightExplanations.red}
                 </p>
               </>
             ) : null}
@@ -1149,26 +1340,40 @@ export function PublicImpactMapExplorer({
                 ) : null}
                 {benchmarkStatus ? (
                   <p className="impact-mini-footer">
-                    Expected benchmark alignment: Below {benchmarkStatus.belowExpected.percent}%,
-                    At {benchmarkStatus.atExpected.percent}%,
-                    Above {benchmarkStatus.aboveExpected.percent}%.
+                    Expected benchmark alignment: Below{" "}
+                    {benchmarkStatus.belowExpected.percent}%, At{" "}
+                    {benchmarkStatus.atExpected.percent}%, Above{" "}
+                    {benchmarkStatus.aboveExpected.percent}%.
                   </p>
                 ) : null}
                 <div className="impact-reading-level-summary-grid">
                   <article>
                     <span>Baseline level</span>
-                    <strong>{derivedReadingLevels.baselineLevel ?? "Data not available"}</strong>
-                    <small>{formatCompositeScore(derivedReadingLevels.baselineAverage)}</small>
+                    <strong>
+                      {derivedReadingLevels.baselineLevel ??
+                        "Data not available"}
+                    </strong>
+                    <small>
+                      {formatCompositeScore(
+                        derivedReadingLevels.baselineAverage,
+                      )}
+                    </small>
                   </article>
                   <article>
                     <span>Latest level</span>
-                    <strong>{derivedReadingLevels.latestLevel ?? "Data not available"}</strong>
-                    <small>{formatCompositeScore(derivedReadingLevels.latestAverage)}</small>
+                    <strong>
+                      {derivedReadingLevels.latestLevel ?? "Data not available"}
+                    </strong>
+                    <small>
+                      {formatCompositeScore(derivedReadingLevels.latestAverage)}
+                    </small>
                   </article>
                   <article>
                     <span>Movement</span>
                     <strong>{derivedReadingLevels.movementLabel}</strong>
-                    <small>Derived from baseline vs latest domain profile</small>
+                    <small>
+                      Derived from baseline vs latest domain profile
+                    </small>
                   </article>
                 </div>
 
@@ -1177,11 +1382,18 @@ export function PublicImpactMapExplorer({
                     <div>
                       <div className="impact-reading-level-distribution-head">
                         <span>Baseline distribution</span>
-                        <strong>n={readingLevelsBaselineCycle.n.toLocaleString()}</strong>
+                        <strong>
+                          n={readingLevelsBaselineCycle.n.toLocaleString()}
+                        </strong>
                       </div>
-                      <div className="impact-reading-level-stack" role="img" aria-label="Baseline reading-level distribution">
+                      <div
+                        className="impact-reading-level-stack"
+                        role="img"
+                        aria-label="Baseline reading-level distribution"
+                      >
                         {readingLevelLabels.map((label, index) => {
-                          const percent = readingLevelsBaselineCycle.percents[label] ?? 0;
+                          const percent =
+                            readingLevelsBaselineCycle.percents[label] ?? 0;
                           return (
                             <i
                               key={`baseline-${label}`}
@@ -1198,11 +1410,18 @@ export function PublicImpactMapExplorer({
                     <div>
                       <div className="impact-reading-level-distribution-head">
                         <span>Latest distribution</span>
-                        <strong>n={readingLevelsLatestCycle.n.toLocaleString()}</strong>
+                        <strong>
+                          n={readingLevelsLatestCycle.n.toLocaleString()}
+                        </strong>
                       </div>
-                      <div className="impact-reading-level-stack" role="img" aria-label="Latest reading-level distribution">
+                      <div
+                        className="impact-reading-level-stack"
+                        role="img"
+                        aria-label="Latest reading-level distribution"
+                      >
                         {readingLevelLabels.map((label, index) => {
-                          const percent = readingLevelsLatestCycle.percents[label] ?? 0;
+                          const percent =
+                            readingLevelsLatestCycle.percents[label] ?? 0;
                           return (
                             <i
                               key={`latest-${label}`}
@@ -1219,7 +1438,11 @@ export function PublicImpactMapExplorer({
                     <div className="impact-reading-level-legend">
                       {readingLevelLabels.map((label, index) => (
                         <span key={`legend-${label}`}>
-                          <i style={{ background: readingLevelColor(label, index) }} />
+                          <i
+                            style={{
+                              background: readingLevelColor(label, index),
+                            }}
+                          />
                           {label}
                         </span>
                       ))}
@@ -1240,8 +1463,16 @@ export function PublicImpactMapExplorer({
                       {derivedReadingLevels.domainRows.map((row) => (
                         <tr key={row.label}>
                           <td>{row.label}</td>
-                          <td>{typeof row.baseline === "number" ? row.baseline.toFixed(1) : "Data not available"}</td>
-                          <td>{typeof row.latest === "number" ? row.latest.toFixed(1) : "Data not available"}</td>
+                          <td>
+                            {typeof row.baseline === "number"
+                              ? row.baseline.toFixed(1)
+                              : "Data not available"}
+                          </td>
+                          <td>
+                            {typeof row.latest === "number"
+                              ? row.latest.toFixed(1)
+                              : "Data not available"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1249,10 +1480,11 @@ export function PublicImpactMapExplorer({
                 </div>
 
                 <p className="impact-mini-footer">
-                  Reading levels are computed from the six assessment outcome domains:
-                  {" "}
+                  Reading levels are computed from the six assessment outcome
+                  domains:{" "}
                   {OUTCOME_DOMAIN_CONFIG.map(
-                    (item) => LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short,
+                    (item) =>
+                      LEARNING_DOMAIN_DICTIONARY[item.domainKey].label_short,
                   ).join(", ")}
                   .
                 </p>
@@ -1270,42 +1502,56 @@ export function PublicImpactMapExplorer({
               <div>
                 <span>Schools Trained</span>
                 <strong>
-                  {loading ? "Loading..." : (payload?.funnel?.trained ?? 0).toLocaleString()}
+                  {loading
+                    ? "Loading..."
+                    : (payload?.funnel?.trained ?? 0).toLocaleString()}
                 </strong>
                 <span>Direct capacity building</span>
               </div>
               <div>
                 <span>Coached / Visited</span>
                 <strong>
-                  {loading ? "Loading..." : (payload?.funnel?.coached ?? 0).toLocaleString()}
+                  {loading
+                    ? "Loading..."
+                    : (payload?.funnel?.coached ?? 0).toLocaleString()}
                 </strong>
                 <span>Ongoing field support</span>
               </div>
               <div>
                 <span>Baseline Assessed</span>
                 <strong>
-                  {loading ? "Loading..." : (payload?.funnel?.baselineAssessed ?? 0).toLocaleString()}
+                  {loading
+                    ? "Loading..."
+                    : (payload?.funnel?.baselineAssessed ?? 0).toLocaleString()}
                 </strong>
                 <span>Initial learner data</span>
               </div>
               <div>
                 <span>Endline Assessed</span>
                 <strong>
-                  {loading ? "Loading..." : (payload?.funnel?.endlineAssessed ?? 0).toLocaleString()}
+                  {loading
+                    ? "Loading..."
+                    : (payload?.funnel?.endlineAssessed ?? 0).toLocaleString()}
                 </strong>
                 <span>Impact measurement</span>
               </div>
               <div>
                 <span>1001 Story Active</span>
                 <strong>
-                  {loading ? "Loading..." : (payload?.funnel?.storyActive ?? 0).toLocaleString()}
+                  {loading
+                    ? "Loading..."
+                    : (payload?.funnel?.storyActive ?? 0).toLocaleString()}
                 </strong>
                 <span>Creative literacy extension</span>
               </div>
               <div>
                 <span>Online Sessions</span>
                 <strong>
-                  {loading ? "Loading..." : (payload?.kpis?.onlineLiveSessionsCovered ?? 0).toLocaleString()}
+                  {loading
+                    ? "Loading..."
+                    : (
+                        payload?.kpis?.onlineLiveSessionsCovered ?? 0
+                      ).toLocaleString()}
                 </strong>
                 <span>Virtual training sessions held</span>
               </div>
@@ -1317,14 +1563,17 @@ export function PublicImpactMapExplorer({
           <article className="card impact-teaching-card">
             <h3>Teaching Quality (Lesson Evaluations)</h3>
             <p className="impact-mini-footer impact-teaching-scope">
-              Scope: {payload?.scope?.name ?? "Uganda"} ({payload?.scope?.level ?? "country"})
+              Scope: {payload?.scope?.name ?? "Uganda"} (
+              {payload?.scope?.level ?? "country"})
             </p>
             {teachingQuality?.evaluationsCount ? (
               <div className="impact-teaching-quality-grid">
                 <article className="impact-domain-mini-card">
                   <h4>Evaluations</h4>
                   <p>
-                    <strong>{teachingQuality.evaluationsCount.toLocaleString()}</strong>
+                    <strong>
+                      {teachingQuality.evaluationsCount.toLocaleString()}
+                    </strong>
                   </p>
                   <p className="impact-domain-mini-meta">
                     Average score:{" "}
@@ -1335,7 +1584,9 @@ export function PublicImpactMapExplorer({
                   <p className="impact-domain-mini-meta">
                     Last updated:{" "}
                     {teachingQuality.lastUpdated
-                      ? new Date(teachingQuality.lastUpdated).toLocaleDateString("en-GB")
+                      ? new Date(
+                          teachingQuality.lastUpdated,
+                        ).toLocaleDateString("en-GB")
                       : "Data not available"}
                   </p>
                 </article>
@@ -1343,33 +1594,68 @@ export function PublicImpactMapExplorer({
                 <article className="impact-domain-mini-card">
                   <h4>Overall Levels</h4>
                   <p className="impact-domain-mini-meta">
-                    Strong: <strong>{teachingQuality.levelDistribution?.strong?.percent ?? 0}%</strong>
+                    Strong:{" "}
+                    <strong>
+                      {teachingQuality.levelDistribution?.strong?.percent ?? 0}%
+                    </strong>
                   </p>
                   <p className="impact-domain-mini-meta">
-                    Good: <strong>{teachingQuality.levelDistribution?.good?.percent ?? 0}%</strong>
+                    Good:{" "}
+                    <strong>
+                      {teachingQuality.levelDistribution?.good?.percent ?? 0}%
+                    </strong>
                   </p>
                   <p className="impact-domain-mini-meta">
                     Developing:{" "}
-                    <strong>{teachingQuality.levelDistribution?.developing?.percent ?? 0}%</strong>
+                    <strong>
+                      {teachingQuality.levelDistribution?.developing?.percent ??
+                        0}
+                      %
+                    </strong>
                   </p>
                   <p className="impact-domain-mini-meta">
                     Needs support:{" "}
-                    <strong>{teachingQuality.levelDistribution?.needsSupport?.percent ?? 0}%</strong>
+                    <strong>
+                      {teachingQuality.levelDistribution?.needsSupport
+                        ?.percent ?? 0}
+                      %
+                    </strong>
                   </p>
                 </article>
 
                 <article className="impact-domain-mini-card">
                   <h4>Domain Averages (/4)</h4>
                   {[
-                    ["Setup & Review", teachingQuality.domainAverages?.setup ?? null],
-                    ["New Sound/Skill", teachingQuality.domainAverages?.newSound ?? null],
-                    ["Decoding", teachingQuality.domainAverages?.decoding ?? null],
-                    ["Reading Practice", teachingQuality.domainAverages?.readingPractice ?? null],
-                    ["Tricky Words", teachingQuality.domainAverages?.trickyWords ?? null],
-                    ["Check & Next Steps", teachingQuality.domainAverages?.checkNext ?? null],
+                    [
+                      "Setup & Review",
+                      teachingQuality.domainAverages?.setup ?? null,
+                    ],
+                    [
+                      "New Sound/Skill",
+                      teachingQuality.domainAverages?.newSound ?? null,
+                    ],
+                    [
+                      "Decoding",
+                      teachingQuality.domainAverages?.decoding ?? null,
+                    ],
+                    [
+                      "Reading Practice",
+                      teachingQuality.domainAverages?.readingPractice ?? null,
+                    ],
+                    [
+                      "Tricky Words",
+                      teachingQuality.domainAverages?.trickyWords ?? null,
+                    ],
+                    [
+                      "Check & Next Steps",
+                      teachingQuality.domainAverages?.checkNext ?? null,
+                    ],
                   ].map(([label, value]) => (
                     <p className="impact-domain-mini-meta" key={label}>
-                      {label}: <strong>{typeof value === "number" ? value.toFixed(2) : "N/A"}</strong>
+                      {label}:{" "}
+                      <strong>
+                        {typeof value === "number" ? value.toFixed(2) : "N/A"}
+                      </strong>
                     </p>
                   ))}
                 </article>
@@ -1377,13 +1663,17 @@ export function PublicImpactMapExplorer({
                 <article className="impact-domain-mini-card">
                   <h4>Top Coaching Focus Areas</h4>
                   {(teachingQuality.topCoachingFocusAreas ?? []).length > 0 ? (
-                    (teachingQuality.topCoachingFocusAreas ?? []).map((area) => (
-                      <p className="impact-domain-mini-meta" key={area}>
-                        • {area}
-                      </p>
-                    ))
+                    (teachingQuality.topCoachingFocusAreas ?? []).map(
+                      (area) => (
+                        <p className="impact-domain-mini-meta" key={area}>
+                          • {area}
+                        </p>
+                      ),
+                    )
                   ) : (
-                    <p className="impact-domain-mini-meta">Data not available</p>
+                    <p className="impact-domain-mini-meta">
+                      Data not available
+                    </p>
                   )}
                 </article>
 
@@ -1392,7 +1682,8 @@ export function PublicImpactMapExplorer({
                   <p className="impact-domain-mini-meta">
                     Teachers improved:{" "}
                     <strong>
-                      {typeof teachingQuality.improvedTeachersPercent === "number"
+                      {typeof teachingQuality.improvedTeachersPercent ===
+                      "number"
                         ? `${teachingQuality.improvedTeachersPercent.toFixed(1)}%`
                         : "Data not available"}
                     </strong>
@@ -1408,7 +1699,8 @@ export function PublicImpactMapExplorer({
                   <p className="impact-domain-mini-meta">
                     Schools improving:{" "}
                     <strong>
-                      {typeof teachingQuality.schoolsImprovedPercent === "number"
+                      {typeof teachingQuality.schoolsImprovedPercent ===
+                      "number"
                         ? `${teachingQuality.schoolsImprovedPercent.toFixed(1)}%`
                         : "Data not available"}
                     </strong>
@@ -1418,12 +1710,30 @@ export function PublicImpactMapExplorer({
                 <article className="impact-domain-mini-card">
                   <h4>Domain Change (Baseline → Latest)</h4>
                   {[
-                    ["Setup & Review", teachingQuality.domainDeltas?.setup ?? null],
-                    ["New Sound/Skill", teachingQuality.domainDeltas?.newSound ?? null],
-                    ["Decoding", teachingQuality.domainDeltas?.decoding ?? null],
-                    ["Reading Practice", teachingQuality.domainDeltas?.readingPractice ?? null],
-                    ["Tricky Words", teachingQuality.domainDeltas?.trickyWords ?? null],
-                    ["Check & Next Steps", teachingQuality.domainDeltas?.checkNext ?? null],
+                    [
+                      "Setup & Review",
+                      teachingQuality.domainDeltas?.setup ?? null,
+                    ],
+                    [
+                      "New Sound/Skill",
+                      teachingQuality.domainDeltas?.newSound ?? null,
+                    ],
+                    [
+                      "Decoding",
+                      teachingQuality.domainDeltas?.decoding ?? null,
+                    ],
+                    [
+                      "Reading Practice",
+                      teachingQuality.domainDeltas?.readingPractice ?? null,
+                    ],
+                    [
+                      "Tricky Words",
+                      teachingQuality.domainDeltas?.trickyWords ?? null,
+                    ],
+                    [
+                      "Check & Next Steps",
+                      teachingQuality.domainDeltas?.checkNext ?? null,
+                    ],
                   ].map(([label, value]) => (
                     <p className="impact-domain-mini-meta" key={label}>
                       {label}:{" "}
@@ -1437,10 +1747,14 @@ export function PublicImpactMapExplorer({
                 </article>
               </div>
             ) : (
-              <p>Data not available for lesson evaluations in this scope/period.</p>
+              <p>
+                Data not available for lesson evaluations in this scope/period.
+              </p>
             )}
 
-            <h3 className="impact-teaching-subtitle">Teaching → Learning Alignment</h3>
+            <h3 className="impact-teaching-subtitle">
+              Teaching → Learning Alignment
+            </h3>
             {teachingLearningAlignmentPoints.length ? (
               <div className="impact-domain-mini-grid impact-domain-mini-grid--teaching">
                 <article className="impact-domain-mini-card impact-domain-mini-card--compact">
@@ -1448,7 +1762,8 @@ export function PublicImpactMapExplorer({
                   <p className="impact-domain-mini-meta">
                     Teaching quality delta:{" "}
                     <strong>
-                      {typeof teachingLearningAlignment?.summary?.teachingDelta === "number"
+                      {typeof teachingLearningAlignment?.summary
+                        ?.teachingDelta === "number"
                         ? `${teachingLearningAlignment.summary.teachingDelta > 0 ? "+" : ""}${teachingLearningAlignment.summary.teachingDelta.toFixed(2)}`
                         : "Data not available"}
                     </strong>
@@ -1456,7 +1771,8 @@ export function PublicImpactMapExplorer({
                   <p className="impact-domain-mini-meta">
                     Non-reader reduction:{" "}
                     <strong>
-                      {typeof teachingLearningAlignment?.summary?.nonReaderReductionPp === "number"
+                      {typeof teachingLearningAlignment?.summary
+                        ?.nonReaderReductionPp === "number"
                         ? `${teachingLearningAlignment.summary.nonReaderReductionPp.toFixed(2)} pp`
                         : "Data not available"}
                     </strong>
@@ -1464,14 +1780,18 @@ export function PublicImpactMapExplorer({
                   <p className="impact-domain-mini-meta">
                     20+ CWPM delta:{" "}
                     <strong>
-                      {typeof teachingLearningAlignment?.summary?.cwpm20PlusDeltaPp === "number"
+                      {typeof teachingLearningAlignment?.summary
+                        ?.cwpm20PlusDeltaPp === "number"
                         ? `${teachingLearningAlignment.summary.cwpm20PlusDeltaPp > 0 ? "+" : ""}${teachingLearningAlignment.summary.cwpm20PlusDeltaPp.toFixed(2)} pp`
                         : "Data not available"}
                     </strong>
                   </p>
                   <p className="impact-domain-mini-meta">
                     1001 Story sessions (latest):{" "}
-                    <strong>{teachingLearningAlignment?.summary?.storySessionsLatest ?? 0}</strong>
+                    <strong>
+                      {teachingLearningAlignment?.summary
+                        ?.storySessionsLatest ?? 0}
+                    </strong>
                   </p>
                 </article>
 
@@ -1485,8 +1805,16 @@ export function PublicImpactMapExplorer({
                           <th>Teaching quality</th>
                           <th>Decoding</th>
                           <th>Fluency</th>
-                          <th title={LEARNING_DOMAIN_DICTIONARY.comprehension.description}>
-                            {LEARNING_DOMAIN_DICTIONARY.comprehension.label_short}
+                          <th
+                            title={
+                              LEARNING_DOMAIN_DICTIONARY.comprehension
+                                .description
+                            }
+                          >
+                            {
+                              LEARNING_DOMAIN_DICTIONARY.comprehension
+                                .label_short
+                            }
                           </th>
                           <th>Non-reader %</th>
                           <th>20+ CWPM %</th>
@@ -1494,46 +1822,76 @@ export function PublicImpactMapExplorer({
                         </tr>
                       </thead>
                       <tbody>
-                        {teachingLearningAlignmentPoints.slice(-8).map((point) => (
-                          <tr key={point.period}>
-                            <td>{point.period}</td>
-                            <td>
-                              {typeof point.teachingQualityAvg === "number"
-                                ? point.teachingQualityAvg.toFixed(2)
-                                : "N/A"}
-                            </td>
-                            <td>{typeof point.decodingAvg === "number" ? point.decodingAvg.toFixed(2) : "N/A"}</td>
-                            <td>{typeof point.fluencyAvg === "number" ? point.fluencyAvg.toFixed(2) : "N/A"}</td>
-                            <td>
-                              {typeof point.comprehensionAvg === "number"
-                                ? point.comprehensionAvg.toFixed(2)
-                                : "N/A"}
-                            </td>
-                            <td>{typeof point.nonReaderPct === "number" ? `${point.nonReaderPct.toFixed(1)}%` : "N/A"}</td>
-                            <td>{typeof point.cwpm20PlusPct === "number" ? `${point.cwpm20PlusPct.toFixed(1)}%` : "N/A"}</td>
-                            <td>{point.storySessionsCount.toLocaleString()}</td>
-                          </tr>
-                        ))}
+                        {teachingLearningAlignmentPoints
+                          .slice(-8)
+                          .map((point) => (
+                            <tr key={point.period}>
+                              <td>{point.period}</td>
+                              <td>
+                                {typeof point.teachingQualityAvg === "number"
+                                  ? point.teachingQualityAvg.toFixed(2)
+                                  : "N/A"}
+                              </td>
+                              <td>
+                                {typeof point.decodingAvg === "number"
+                                  ? point.decodingAvg.toFixed(2)
+                                  : "N/A"}
+                              </td>
+                              <td>
+                                {typeof point.fluencyAvg === "number"
+                                  ? point.fluencyAvg.toFixed(2)
+                                  : "N/A"}
+                              </td>
+                              <td>
+                                {typeof point.comprehensionAvg === "number"
+                                  ? point.comprehensionAvg.toFixed(2)
+                                  : "N/A"}
+                              </td>
+                              <td>
+                                {typeof point.nonReaderPct === "number"
+                                  ? `${point.nonReaderPct.toFixed(1)}%`
+                                  : "N/A"}
+                              </td>
+                              <td>
+                                {typeof point.cwpm20PlusPct === "number"
+                                  ? `${point.cwpm20PlusPct.toFixed(1)}%`
+                                  : "N/A"}
+                              </td>
+                              <td>
+                                {point.storySessionsCount.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
                   <p className="impact-mini-footer">
-                    {teachingLearningAlignment?.caveat ?? "Data reflects aligned trend points only."}
+                    {teachingLearningAlignment?.caveat ??
+                      "Data reflects aligned trend points only."}
                   </p>
                 </article>
               </div>
             ) : (
-              <p>Data not available for aligned teaching, learner, and story trends in this scope.</p>
+              <p>
+                Data not available for aligned teaching, learner, and story
+                trends in this scope.
+              </p>
             )}
 
-            <h3 className="impact-teaching-subtitle">Implementation Fidelity</h3>
+            <h3 className="impact-teaching-subtitle">
+              Implementation Fidelity
+            </h3>
             <div className="impact-auto-grid impact-auto-grid--teaching">
               <div className="impact-domain-mini-card">
                 <h4>Fidelity Score</h4>
                 <div className="flex items-center gap-4 mt-2">
-                  <div className="text-4xl font-bold">{payload?.fidelity?.score ?? 0}%</div>
+                  <div className="text-4xl font-bold">
+                    {payload?.fidelity?.score ?? 0}%
+                  </div>
                   <div
-                    className={`badge badge-${String(payload?.fidelity?.band ?? "developing")
+                    className={`badge badge-${String(
+                      payload?.fidelity?.band ?? "developing",
+                    )
                       .toLowerCase()
                       .replace(" ", "-")}`}
                   >
@@ -1541,13 +1899,19 @@ export function PublicImpactMapExplorer({
                   </div>
                 </div>
                 <p className="mt-4 text-gray-600">
-                  Combined metric of coaching coverage, assessment compliance, and observed teaching
-                  standards.
+                  Combined metric of coaching coverage, assessment compliance,
+                  and observed teaching standards.
                 </p>
               </div>
-              <div className="impact-domain-mini-card" style={{ display: "grid", gap: "0.45rem" }}>
+              <div
+                className="impact-domain-mini-card"
+                style={{ display: "grid", gap: "0.45rem" }}
+              >
                 {fidelityDrivers.map((driver) => (
-                  <div key={driver.key} className="flex justify-between p-2 bg-gray-50 rounded">
+                  <div
+                    key={driver.key}
+                    className="flex justify-between p-2 bg-gray-50 rounded"
+                  >
                     <span>{driver.label}</span>
                     <span className="font-bold">{driver.score}%</span>
                   </div>
@@ -1565,9 +1929,14 @@ export function PublicImpactMapExplorer({
                 <h4>Most Improved (by outcome)</h4>
                 <div className="mt-2 flex flex-col gap-2">
                   {mostImprovedRankings.map((item) => (
-                    <div key={item.name} className="flex justify-between p-2 border-b">
+                    <div
+                      key={item.name}
+                      className="flex justify-between p-2 border-b"
+                    >
                       <span>{item.name}</span>
-                      <span className="text-orange-600 font-bold">+{item.score} pts</span>
+                      <span className="text-orange-600 font-bold">
+                        +{item.score} pts
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1576,9 +1945,14 @@ export function PublicImpactMapExplorer({
                 <h4>Support Priority Score</h4>
                 <div className="mt-2 flex flex-col gap-2">
                   {prioritySupportRankings.map((item) => (
-                    <div key={item.name} className="flex justify-between p-2 border-b">
+                    <div
+                      key={item.name}
+                      className="flex justify-between p-2 border-b"
+                    >
                       <span>{item.name}</span>
-                      <span className="text-orange-600 font-bold">{item.score}</span>
+                      <span className="text-orange-600 font-bold">
+                        {item.score}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1593,20 +1967,31 @@ export function PublicImpactMapExplorer({
             <div className="impact-auto-grid">
               <div className="impact-domain-mini-card">
                 <h4>Sample Size (n)</h4>
-                <div className="text-3xl font-bold mt-2">{payload?.meta?.sampleSize ?? 0}</div>
-                <p className="text-gray-600">Total verified record submissions in this period.</p>
+                <div className="text-3xl font-bold mt-2">
+                  {payload?.meta?.sampleSize ?? 0}
+                </div>
+                <p className="text-gray-600">
+                  Total verified record submissions in this period.
+                </p>
               </div>
               <div className="impact-domain-mini-card">
                 <h4>Completeness Status</h4>
                 <div className="mt-2">
                   {payload?.meta?.dataCompleteness === "Complete" ? (
-                    <span className="text-orange-600 font-bold">✓ High (100% submission)</span>
+                    <span className="text-orange-600 font-bold">
+                      ✓ High (100% submission)
+                    </span>
                   ) : (
-                    <span className="text-orange-600 font-bold">⚠ Partial (Reporting in progress)</span>
+                    <span className="text-orange-600 font-bold">
+                      ⚠ Partial (Reporting in progress)
+                    </span>
                   )}
                 </div>
                 <p className="text-gray-600 mt-2">
-                  Last updated: {new Date(payload?.meta?.lastUpdated ?? "").toLocaleDateString("en-GB")}
+                  Last updated:{" "}
+                  {new Date(
+                    payload?.meta?.lastUpdated ?? "",
+                  ).toLocaleDateString("en-GB")}
                 </p>
               </div>
             </div>
