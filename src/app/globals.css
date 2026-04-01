@@ -6305,6 +6305,24 @@ nav[aria-label="Staff navigation"] {
   transform: none; /* remove hover transform for strict capsule feel */
 }
 
+/* Tab Content Cards SaaS Styling */
+.impact-tab-content > .card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.02);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+}
+
+.impact-tab-content > .card > h3 {
+  margin: 0 0 1.25rem 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
 /* Headline Stats Container (Horizontal Scrollable) */
 .impact-horizontal-metrics-tray {
   display: flex;
@@ -6389,7 +6407,9 @@ nav[aria-label="Staff navigation"] {
 .location-navigator h3,
 .headline-stats-panel h2,
 .headline-stats-panel h3 {
-  font-size: 0.86rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0 0 0.18rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -6400,6 +6420,7 @@ nav[aria-label="Staff navigation"] {
 .headline-stats-panel p {
   margin: 0;
   font-size: 0.72rem;
+  color: var(--md-sys-color-outline);
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -7300,13 +7321,15 @@ nav[aria-label="Staff navigation"] {
 
 .impact-attract-card header h3 {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .impact-attract-card header p {
   margin: 0.18rem 0 0;
-  font-size: 0.76rem;
-  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.72rem;
+  color: var(--md-sys-color-outline);
 }
 
 .impact-attract-momentum-grid {
