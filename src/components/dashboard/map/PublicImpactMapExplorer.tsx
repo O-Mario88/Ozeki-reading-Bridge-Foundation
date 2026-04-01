@@ -871,43 +871,46 @@ export function PublicImpactMapExplorer({
       ) : null}
 
       <div className="impact-explorer-layout">
-        <div className="impact-explorer-left-column" style={{ display: 'flex', flexDirection: 'column', gap: '0.52rem' }}>
-          <LocationNavigator
-            period={period}
-            onPeriodChange={setPeriod}
-            selection={selection}
-            navigatorSchools={navigatorSchools}
-            onSelectionChange={onSelectionChange}
-            onReset={onReset}
-            onBack={onBack}
-          />
-
+        <div className="mb-2">
           <HeadlineStatsPanel
             data={payload}
             loading={loading}
             detailHref={detailHref}
             compact={compact}
           />
-
-          {error ? (
-            <article className="card impact-error-card">
-              <h3>Stats temporarily unavailable</h3>
-              <p>Please try again. You can still explore using filters.</p>
-            </article>
-          ) : null}
-
-          {payload && payload.kpis.schoolsSupported === 0 ? (
-            <article className="card impact-empty-card">
-              <h3>No published data yet</h3>
-              <p>
-                We don&apos;t have reported activity for {payload.scope.name} in {payload.period.label}. Try
-                another district or check back later.
-              </p>
-            </article>
-          ) : null}
         </div>
 
-        <div className="impact-map-column" style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem' }}>
+        <div className="impact-dashboard-core">
+          <div className="impact-sidebar">
+            <LocationNavigator
+              period={period}
+              onPeriodChange={setPeriod}
+              selection={selection}
+              navigatorSchools={navigatorSchools}
+              onSelectionChange={onSelectionChange}
+              onReset={onReset}
+              onBack={onBack}
+            />
+
+            {error ? (
+              <article className="card impact-error-card mt-3">
+                <h3>Stats temporarily unavailable</h3>
+                <p>Please try again. You can still explore using filters.</p>
+              </article>
+            ) : null}
+
+            {payload && payload.kpis.schoolsSupported === 0 ? (
+              <article className="card impact-empty-card mt-3">
+                <h3>No published data yet</h3>
+                <p>
+                  We don&apos;t have reported activity for {payload.scope.name} in {payload.period.label}. Try
+                  another district or check back later.
+                </p>
+              </article>
+            ) : null}
+          </div>
+
+          <div className="impact-main-panel">
           {!compact ? (
           <article className="card impact-attract-card impact-attract-card--progress">
             <header>
@@ -1006,6 +1009,7 @@ export function PublicImpactMapExplorer({
             districtSearchOptions={districtSearchOptions}
             compact={compact}
           />
+          </div>
         </div>
       </div>
 

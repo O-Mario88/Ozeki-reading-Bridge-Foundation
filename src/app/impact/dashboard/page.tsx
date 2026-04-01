@@ -149,6 +149,7 @@ export default async function ImpactDashboardPage({
              <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-gray-100 flex items-center justify-center text-gray-400 font-medium">Loading live data explorer...</div>}>
                <PublicImpactMapExplorer
                   syncUrl
+                  compact={true}
                   initialPeriod={firstValue(params.period) || "FY"}
                   initialSelection={{
                     region: firstValue(params.region),
