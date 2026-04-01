@@ -6328,29 +6328,38 @@ nav[aria-label="Staff navigation"] {
 }
 
 .impact-horizontal-metrics-tray > article {
-  flex: 0 0 160px;
-  min-width: 160px;
-  background: var(--md-sys-color-surface);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 8px;
-  padding: 0.45rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  flex: 0 0 170px;
+  min-width: 170px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.02);
+  border-radius: 20px;
+  padding: 1.25rem 1.15rem;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.impact-horizontal-metrics-tray > article:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 44px -10px rgba(0, 0, 0, 0.08);
 }
 
 .impact-horizontal-metrics-tray > article span {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
-  margin-bottom: 0.1rem;
-  line-height: 1.1;
+  margin-bottom: 0.25rem;
+  line-height: 1.2;
 }
 
 .impact-horizontal-metrics-tray > article strong {
-  font-size: 0.95rem;
+  font-size: 1.4rem;
+  font-weight: 700;
   color: var(--md-sys-color-on-surface);
-  line-height: 1.2;
+  line-height: 1.1;
+  margin-top: 0.15rem;
 }
 
 .impact-horizontal-metrics-tray > article small {
@@ -6361,12 +6370,13 @@ nav[aria-label="Staff navigation"] {
 
 .location-navigator,
 .headline-stats-panel {
-  background: var(--md-sys-color-surface);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 12px;
-  padding: 0.45rem;
-  box-shadow: var(--elevation-1);
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.02);
+  border-radius: 20px;
+  padding: 1.25rem;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
   min-width: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .location-navigator header,
@@ -7267,14 +7277,19 @@ nav[aria-label="Staff navigation"] {
 .impact-attract-card {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
+  gap: 1.25rem;
+  padding: 1.5rem;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
   animation: slideUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.impact-attract-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 44px -10px rgba(0, 0, 0, 0.08);
 }
 
 /* Stagger card animations */
