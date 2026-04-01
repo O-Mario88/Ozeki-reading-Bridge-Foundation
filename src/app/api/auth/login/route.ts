@@ -57,7 +57,9 @@ export async function POST(request: Request) {
     
     if (isPrivileged && !bypassMfa) {
       const mfaCode = await generateMfaOtpPostgres(user.id);
+      console.log(`[LOGIN MFA] Sending MFA code to: ${user.email} | Code: ${mfaCode} | SMTP_HOST: ${process.env.SMTP_HOST} | BYPASS_MFA: ${process.env.BYPASS_MFA}`);
       const emailResult = await sendMfaEmail(user.email, { fullName: user.fullName, otpCode: mfaCode });
+      console.log(`[LOGIN MFA] Email result: status=${emailResult.status}, message=${emailResult.providerMessage}`);
       const isDev = process.env.NODE_ENV === "development";
       
       if (emailResult.status === "failed") {
