@@ -1,8 +1,9 @@
 import { queryPostgres, withPostgresClient } from "../client";
-import type { FinanceContactRecord, FinanceInvoiceRecord, FinanceReceiptRecord } from "@/lib/types";
-import { getFinanceInvoiceByIdPostgres, getFinanceReceiptByIdPostgres } from "./finance";
+import type { FinanceContactRecord, FinanceInvoiceRecord, FinanceReceiptRecord, FinancePaymentAllocationRecord } from "@/lib/types";
+import { getFinanceInvoiceByIdPostgres, getFinanceReceiptByIdPostgres, getFinanceSettingsPostgres } from "./finance";
 import { postReceiptToGl } from "./finance-v2";
 import { mapFinanceIncomeToBaseCategory } from "@/lib/finance-categories";
+import { renderInvoicePdf, renderReceiptPdf } from "@/lib/server/pdf/finance-pdf-direct";
 
 type FinanceActor = { id: number };
 
@@ -390,16 +391,29 @@ export async function sendFinanceInvoicePostgres(id: number, _actor: FinanceActo
   </table>
 </body></html>`.trim();
 
-  // 6. Send the email
+  // 6. Generate PDF attachment
+  const settings = await getFinanceSettingsPostgres();
+  const pdfBuffer = await renderInvoicePdf(invoice, invoice.lineItems || [], settings, contact ? {
+    name: contactName,
+    emails: contactEmails,
+  } : undefined);
+
+  // 7. Send the email with PDF attached
   const { sendFinanceMail } = await import("@/lib/finance-email");
   const emailResult = await sendFinanceMail({
     to: toEmails,
     cc: ccEmails,
     subject: `Invoice ${invoice.invoiceNumber} — ${formattedTotal} from Ozeki Reading Bridge Foundation`,
     html,
+    attachments: [{
+      filename: `Invoice_${invoice.invoiceNumber}.pdf`,
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any],
   });
 
-  // 7. Update invoice status
+  // 8. Update invoice status
   const sentTo = toEmails.join(", ");
   if (invoice.status === "draft") {
     await queryPostgres(
@@ -483,16 +497,46 @@ export async function sendFinanceReceiptPostgres(id: number, _actor: FinanceActo
   </table>
 </body></html>`.trim();
 
-  // 6. Send the email
+  // 6. Generate PDF attachment
+  const allocations: FinancePaymentAllocationRecord[] = [];
+  let relatedInvoice: { invoiceNumber: string; description?: string; lines?: { description: string }[] } | null = null;
+  if (receipt.relatedInvoiceId) {
+    const inv = await getFinanceInvoiceByIdPostgres(receipt.relatedInvoiceId);
+    if (inv) {
+      allocations.push({
+        id: 0,
+        paymentId: receipt.id,
+        invoiceId: inv.id,
+        allocatedAmount: receipt.amountReceived,
+        invoiceNumber: inv.invoiceNumber,
+        createdBy: receipt.createdBy,
+        createdAt: receipt.createdAt,
+      });
+      relatedInvoice = {
+        invoiceNumber: inv.invoiceNumber,
+        description: inv.notes,
+        lines: inv.lineItems?.map(li => ({ description: li.description })) || [],
+      };
+    }
+  }
+  const pdfBuffer = await renderReceiptPdf(receipt, allocations, relatedInvoice);
+
+  // 7. Send the email with PDF attached
   const { sendFinanceMail } = await import("@/lib/finance-email");
   const emailResult = await sendFinanceMail({
     to: toEmails,
     cc: ccEmails,
     subject: `Receipt ${receipt.receiptNumber} — ${formattedAmount} | Ozeki Reading Bridge Foundation`,
     html,
+    attachments: [{
+      filename: `Receipt_${receipt.receiptNumber}.pdf`,
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any],
   });
 
-  // 7. Update receipt
+  // 8. Update receipt
   const sentTo = toEmails.join(", ");
   await queryPostgres(
     "UPDATE finance_receipts SET emailed_at = NOW(), last_sent_to = $1 WHERE id = $2",

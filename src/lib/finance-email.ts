@@ -5,7 +5,8 @@ const DEFAULT_FINANCE_ALWAYS_CC = ["support@ozekiread.org", "amos@ozekiread.org"
 
 export type FinanceEmailAttachment = {
   filename: string;
-  path: string;
+  path?: string;
+  content?: Buffer;
   contentType?: string;
 };
 
