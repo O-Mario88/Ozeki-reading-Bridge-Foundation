@@ -364,11 +364,11 @@ export function UgandaImpactMapPro({
 
   /* ── Compute font size for district labels scaled inversely to zoom ── */
   const districtLabelSize = useMemo(() => {
-    // At higher zoom, shrink SVG-unit font so labels stay readable
-    if (scale >= 4) return 4;
-    if (scale >= 2.5) return 5;
-    if (scale >= 1.5) return 6;
-    return 8;
+    // Scaled up by 25% for massively improved label readability
+    if (scale >= 4) return 5;
+    if (scale >= 2.5) return 6.25;
+    if (scale >= 1.5) return 7.5;
+    return 10;
   }, [scale]);
 
   const currentTarget = pinnedTarget ?? hoveredTarget ?? getTargetFromSelection(selection);
@@ -883,7 +883,7 @@ export function UgandaImpactMapPro({
                         className="impact-map-district-label"
                         textAnchor="middle"
                         dominantBaseline="central"
-                        style={{ fontSize: selection.subRegion ? districtLabelSize : 5.5 }}
+                        style={{ fontSize: selection.subRegion ? districtLabelSize : 7 }}
                       >
                         {districtShape.name}
                       </text>
@@ -903,7 +903,7 @@ export function UgandaImpactMapPro({
                           className="impact-map-district-label"
                           textAnchor="middle"
                           dominantBaseline="central"
-                          style={{ fontSize: selection.subRegion ? districtLabelSize * 0.9 : 4.5, fill: "var(--md-sys-color-primary)", fontWeight: "bold" }}
+                          style={{ fontSize: selection.subRegion ? districtLabelSize * 0.9 : 5.75, fill: "var(--md-sys-color-primary)", fontWeight: "bold" }}
                         >
                           {activeSchoolName}
                         </text>

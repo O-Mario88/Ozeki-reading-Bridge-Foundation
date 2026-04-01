@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { Suspense } from "react";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { ImpactReportFilters } from "@/components/impact/ImpactReportFilters";
@@ -112,38 +111,20 @@ export default async function ImpactDashboardPage({
 
   return (
     <>
-      {/* 1. Impact Hero */}
-      <section className="relative overflow-hidden pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
-        <div className="absolute inset-0 pointer-events-none">
-          <Image 
-            src="/photos/22.jpeg" 
-            alt="Literacy impact in action"
-            fill
-            sizes="100vw"
-            priority
-            quality={75} 
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-white/85 backdrop-blur-[2px]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-[var(--tw-colors-brand-background,#FAFAFA)]" />
-        </div>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-primary/15 via-transparent to-transparent pointer-events-none" />
-        <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
-            <BarChart3 size={16} />
-            Data & Outcomes
-          </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-8">
+      {/* 1. Public Explorer Dashboard */}
+      <div className="bg-white pt-8 pb-3 px-4 md:px-6">
+        <div className="max-w-[1400px] mx-auto text-center">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-[#0a2a34] tracking-tight mb-2">
             Evidence-based Reading Impact
           </h1>
-          <p className="text-xl md:text-2xl text-gray-600 max-w-3xl leading-relaxed">
+          <p className="text-sm md:text-base text-gray-600 max-w-3xl mx-auto">
             Transforming literacy outcomes through continuous assessment, dedicated coaching, and community alignment. We verify every classroom milestone with real data across Uganda.
           </p>
         </div>
-      </section>
+      </div>
 
-      {/* 2. Public Explorer Dashboard */}
-      <SectionWrapper theme="off-white" className="!pt-12">
+      <SectionWrapper theme="off-white" className="!pt-6 !pb-12 border-none">
+
         <PremiumCard className="overflow-hidden p-1 shadow-2xl border-brand-primary/10" withHover={false}>
           <div className="bg-white rounded-[1.8rem] overflow-hidden">
              <Suspense fallback={<div className="h-[600px] w-full animate-pulse bg-gray-100 flex items-center justify-center text-gray-400 font-medium">Loading live data explorer...</div>}>

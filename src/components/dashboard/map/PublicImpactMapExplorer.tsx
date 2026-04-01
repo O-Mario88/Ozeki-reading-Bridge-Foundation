@@ -863,16 +863,15 @@ export function PublicImpactMapExplorer({
       </div>
 
       <div className="impact-explorer-layout">
-        <div className="mb-2">
-          <HeadlineStatsPanel
-            data={payload}
-            loading={loading}
-            detailHref={detailHref}
-            compact={compact}
-          />
-        </div>
-
         <div className="impact-top-canvas">
+          <div className="impact-map-floating-stats">
+            <HeadlineStatsPanel
+              data={payload}
+              loading={loading}
+              detailHref={detailHref}
+              compact={compact}
+            />
+          </div>
           <UgandaImpactMapPro
             periodLabel={period}
             selection={{
@@ -897,7 +896,6 @@ export function PublicImpactMapExplorer({
             compact={compact}
           />
         </div>
-
         <div className="impact-metrics-trio-wrapper">
           {error ? (
             <article className="card impact-error-card mt-3">
@@ -915,9 +913,9 @@ export function PublicImpactMapExplorer({
               </p>
             </article>
           ) : null}
-          <div className="impact-metrics-trio">
-            {/* Column 1: Location Navigator */}
-            <div className="impact-trio-col">
+          <div className="impact-asymmetric-base">
+            {/* Macro Left Column */}
+            <div className="impact-asymmetric-left">
               <LocationNavigator
                 period={period}
                 onPeriodChange={setPeriod}
@@ -927,30 +925,171 @@ export function PublicImpactMapExplorer({
                 onReset={onReset}
                 onBack={onBack}
               />
-            </div>
-
-            {/* Column 2: Momentum & Progress */}
-            <div className="impact-trio-col">
               {!compact ? (
-                <article className="card impact-attract-card impact-attract-card--momentum">
+                <article className="card impact-attract-card impact-attract-card--trust">
                   <header>
-                    <h3>What Changed This Period</h3>
+                    <h3>Data Trust & Action Center</h3>
                     <p>
-                      Quick momentum indicators to understand impact movement at
-                      a glance.
+                      Transparency details and next actions for partners and
+                      supporters.
                     </p>
                   </header>
-                  <div className="impact-attract-momentum-grid">
-                    {momentumCards.map((item) => (
-                      <article key={item.label}>
-                        <span>{item.label}</span>
-                        <strong>{loading ? "Loading..." : item.value}</strong>
-                        <small>{item.helper}</small>
-                      </article>
-                    ))}
+                  <div className="impact-attract-trust-stats">
+                    <p>
+                      Completeness:{" "}
+                      <strong>
+                        {loading
+                          ? "Loading..."
+                          : payload?.meta?.dataCompleteness === "Complete"
+                            ? "Complete"
+                            : "Partial"}
+                      </strong>
+                    </p>
+                    <p>
+                      Sample size (n):{" "}
+                      <strong>
+                        {loading
+                          ? "Loading..."
+                          : (payload?.meta?.sampleSize ?? 0).toLocaleString()}
+                      </strong>
+                    </p>
+                    <p>
+                      Last updated:{" "}
+                      <strong>
+                        {loading
+                          ? "Loading..."
+                          : payload?.meta?.lastUpdated
+                            ? new Date(payload.meta.lastUpdated).toLocaleString(
+                                "en-GB",
+                              )
+                            : "Data not available"}
+                      </strong>
+                    </p>
+                  </div>
+                  {teachingTrendPoints.length > 0 ? (
+                    <div
+                      className="impact-attract-trend"
+                      role="img"
+                      aria-label="Teaching quality trend over recent periods"
+                    >
+                      {teachingTrendPoints.map((point) => {
+                        const average = point.averageScore ?? 0;
+                        const heightPct = (average / teachingTrendMax) * 100;
+                        return (
+                          <div
+                            key={point.period}
+                            className="impact-attract-trend-bar"
+                          >
+                            <i
+                              style={{ height: `${Math.max(heightPct, 8)}%` }}
+                            />
+                            <span>{point.period}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="impact-mini-footer">
+                      Trend data not available for this scope/period.
+                    </p>
+                  )}
+                  <p className="impact-mini-footer">
+                    {teachingLearningAlignment?.caveat ??
+                      "Data is aggregated from verified submissions only."}
+                  </p>
+                  <div className="impact-attract-actions">
+                    <Link className="button" href="/sponsor-a-district">
+                      Sponsor a District
+                    </Link>
+                    <Link
+                      className="button button-ghost"
+                      href="/impact#reports"
+                    >
+                      Download Reports
+                    </Link>
+                    <Link
+                      className="inline-download-link"
+                      href="/impact/case-studies"
+                    >
+                      Read Change Stories
+                    </Link>
                   </div>
                 </article>
               ) : null}
+            </div>
+
+            {/* Macro Right Column */}
+            <div className="impact-asymmetric-right">
+              {!compact ? (
+                <div className="impact-asymmetric-top-row">
+                  <article className="card impact-attract-card impact-attract-card--momentum">
+                    <header>
+                      <h3>What Changed This Period</h3>
+                      <p>
+                        Quick momentum indicators to understand impact movement
+                        at a glance.
+                      </p>
+                    </header>
+                    <div className="impact-attract-momentum-grid">
+                      {momentumCards.map((item) => (
+                        <article key={item.label}>
+                          <span>{item.label}</span>
+                          <strong>{loading ? "Loading..." : item.value}</strong>
+                          <small>{item.helper}</small>
+                        </article>
+                      ))}
+                    </div>
+                  </article>
+                  <article className="card impact-attract-card impact-attract-card--funnel">
+                    <header>
+                      <h3>Implementation Conversion Funnel</h3>
+                      <p>
+                        From initial training to measured endline outcomes and
+                        story activation.
+                      </p>
+                    </header>
+                    <div className="impact-attract-funnel-list">
+                      {funnelRows.map((row) => (
+                        <article key={row.label}>
+                          <div className="impact-attract-funnel-head">
+                            <strong>{row.label}</strong>
+                            <span>
+                              {loading
+                                ? "Loading..."
+                                : row.value.toLocaleString()}
+                            </span>
+                          </div>
+                          <div
+                            className="impact-attract-funnel-track"
+                            aria-hidden="true"
+                          >
+                            <i
+                              style={{
+                                width: `${Math.max(row.widthPct, row.value > 0 ? 6 : 0)}%`,
+                              }}
+                            />
+                          </div>
+                          <p>
+                            {row.helper} • Step retention:{" "}
+                            <strong>
+                              {loading
+                                ? "Loading..."
+                                : `${row.stepRate.toFixed(1)}%`}
+                            </strong>{" "}
+                            • Cumulative:{" "}
+                            <strong>
+                              {loading
+                                ? "Loading..."
+                                : `${row.cumulativeRate.toFixed(1)}%`}
+                            </strong>
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  </article>
+                </div>
+              ) : null}
+
               {!compact ? (
                 <div className="impact-tracker-banner">
                   <article className="card impact-attract-card impact-attract-card--progress">
@@ -1049,188 +1188,45 @@ export function PublicImpactMapExplorer({
                 </div>
               ) : null}
             </div>
+          </div>
 
-            {/* Column 3: Trust, Funnel, Tabs */}
-            <div className="impact-trio-col">
-              {!compact ? (
-                <article className="card impact-attract-card impact-attract-card--trust">
-                  <header>
-                    <h3>Data Trust & Action Center</h3>
-                    <p>
-                      Transparency details and next actions for partners and
-                      supporters.
-                    </p>
-                  </header>
-                  <div className="impact-attract-trust-stats">
-                    <p>
-                      Completeness:{" "}
-                      <strong>
-                        {loading
-                          ? "Loading..."
-                          : payload?.meta?.dataCompleteness === "Complete"
-                            ? "Complete"
-                            : "Partial"}
-                      </strong>
-                    </p>
-                    <p>
-                      Sample size (n):{" "}
-                      <strong>
-                        {loading
-                          ? "Loading..."
-                          : (payload?.meta?.sampleSize ?? 0).toLocaleString()}
-                      </strong>
-                    </p>
-                    <p>
-                      Last updated:{" "}
-                      <strong>
-                        {loading
-                          ? "Loading..."
-                          : payload?.meta?.lastUpdated
-                            ? new Date(payload.meta.lastUpdated).toLocaleString(
-                                "en-GB",
-                              )
-                            : "Data not available"}
-                      </strong>
-                    </p>
-                  </div>
-                  {teachingTrendPoints.length > 0 ? (
-                    <div
-                      className="impact-attract-trend"
-                      role="img"
-                      aria-label="Teaching quality trend over recent periods"
-                    >
-                      {teachingTrendPoints.map((point) => {
-                        const average = point.averageScore ?? 0;
-                        const heightPct = (average / teachingTrendMax) * 100;
-                        return (
-                          <div
-                            key={point.period}
-                            className="impact-attract-trend-bar"
-                          >
-                            <i
-                              style={{ height: `${Math.max(heightPct, 8)}%` }}
-                            />
-                            <span>{point.period}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="impact-mini-footer">
-                      Trend data not available for this scope/period.
-                    </p>
-                  )}
-                  <p className="impact-mini-footer">
-                    {teachingLearningAlignment?.caveat ??
-                      "Data is aggregated from verified submissions only."}
-                  </p>
-                  <div className="impact-attract-actions">
-                    <Link className="button" href="/sponsor-a-district">
-                      Sponsor a District
-                    </Link>
-                    <Link
-                      className="button button-ghost"
-                      href="/impact#reports"
-                    >
-                      Download Reports
-                    </Link>
-                    <Link
-                      className="inline-download-link"
-                      href="/impact/case-studies"
-                    >
-                      Read Change Stories
-                    </Link>
-                  </div>
-                </article>
-              ) : null}
-              {!compact ? (
-                <article className="card impact-attract-card impact-attract-card--funnel">
-                  <header>
-                    <h3>Implementation Conversion Funnel</h3>
-                    <p>
-                      From initial training to measured endline outcomes and
-                      story activation.
-                    </p>
-                  </header>
-                  <div className="impact-attract-funnel-list">
-                    {funnelRows.map((row) => (
-                      <article key={row.label}>
-                        <div className="impact-attract-funnel-head">
-                          <strong>{row.label}</strong>
-                          <span>
-                            {loading
-                              ? "Loading..."
-                              : row.value.toLocaleString()}
-                          </span>
-                        </div>
-                        <div
-                          className="impact-attract-funnel-track"
-                          aria-hidden="true"
-                        >
-                          <i
-                            style={{
-                              width: `${Math.max(row.widthPct, row.value > 0 ? 6 : 0)}%`,
-                            }}
-                          />
-                        </div>
-                        <p>
-                          {row.helper} • Step retention:{" "}
-                          <strong>
-                            {loading
-                              ? "Loading..."
-                              : `${row.stepRate.toFixed(1)}%`}
-                          </strong>{" "}
-                          • Cumulative:{" "}
-                          <strong>
-                            {loading
-                              ? "Loading..."
-                              : `${row.cumulativeRate.toFixed(1)}%`}
-                          </strong>
-                        </p>
-                      </article>
-                    ))}
-                  </div>
-                </article>
-              ) : null}
-              <div className="impact-tabs">
-                <button
-                  className={activeTab === "outcomes" ? "active" : ""}
-                  onClick={() => setActiveTab("outcomes")}
-                >
-                  Learning Outcomes
-                </button>
-                <button
-                  className={activeTab === "readingLevels" ? "active" : ""}
-                  onClick={() => setActiveTab("readingLevels")}
-                >
-                  Reading Levels
-                </button>
-                <button
-                  className={activeTab === "implementation" ? "active" : ""}
-                  onClick={() => setActiveTab("implementation")}
-                >
-                  Implementation Funnel
-                </button>
-                <button
-                  className={activeTab === "teaching" ? "active" : ""}
-                  onClick={() => setActiveTab("teaching")}
-                >
-                  Teaching Quality
-                </button>
-                <button
-                  className={activeTab === "equity" ? "active" : ""}
-                  onClick={() => setActiveTab("equity")}
-                >
-                  Equity & Segments
-                </button>
-                <button
-                  className={activeTab === "quality" ? "active" : ""}
-                  onClick={() => setActiveTab("quality")}
-                >
-                  Data Completeness
-                </button>
-              </div>
-            </div>
+          <div className="impact-tabs">
+            <button
+              className={activeTab === "outcomes" ? "active" : ""}
+              onClick={() => setActiveTab("outcomes")}
+            >
+              Learning Outcomes
+            </button>
+            <button
+              className={activeTab === "readingLevels" ? "active" : ""}
+              onClick={() => setActiveTab("readingLevels")}
+            >
+              Reading Levels
+            </button>
+            <button
+              className={activeTab === "implementation" ? "active" : ""}
+              onClick={() => setActiveTab("implementation")}
+            >
+              Implementation Funnel
+            </button>
+            <button
+              className={activeTab === "teaching" ? "active" : ""}
+              onClick={() => setActiveTab("teaching")}
+            >
+              Teaching Quality
+            </button>
+            <button
+              className={activeTab === "equity" ? "active" : ""}
+              onClick={() => setActiveTab("equity")}
+            >
+              Equity & Segments
+            </button>
+            <button
+              className={activeTab === "quality" ? "active" : ""}
+              onClick={() => setActiveTab("quality")}
+            >
+              Data Completeness
+            </button>
           </div>
         </div>
       </div>
