@@ -7174,6 +7174,14 @@ nav[aria-label="Staff navigation"] {
   padding: 0.4rem 0.46rem;
   display: grid;
   gap: 0.09rem;
+  transition: all 250ms ease;
+  cursor: default;
+}
+
+.impact-attract-momentum-grid article:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .impact-attract-momentum-grid span {
@@ -7203,6 +7211,14 @@ nav[aria-label="Staff navigation"] {
   background: color-mix(in srgb, var(--md-sys-color-surface-container) 75%, white);
   display: grid;
   gap: 0.16rem;
+  transition: all 250ms ease;
+  cursor: default;
+}
+
+.impact-attract-funnel-list article:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .impact-attract-funnel-head {
@@ -7320,6 +7336,15 @@ nav[aria-label="Staff navigation"] {
   border-radius: 10px;
   background: color-mix(in srgb, var(--md-sys-color-surface-container) 78%, white);
   padding: 0.45rem 0.5rem;
+  transition: all 250ms ease;
+  cursor: default;
+}
+
+.impact-attract-progress-grid article:hover,
+.impact-attract-progress-row:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .impact-attract-progress-grid span,
@@ -7412,7 +7437,7 @@ nav[aria-label="Staff navigation"] {
 
 .impact-reading-level-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 0.5rem;
 }
 
@@ -7423,6 +7448,14 @@ nav[aria-label="Staff navigation"] {
   padding: 0.6rem;
   display: grid;
   gap: 0.2rem;
+  transition: all 250ms ease;
+  cursor: default;
+}
+
+.impact-reading-level-summary-grid article:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .impact-reading-level-summary-grid span {

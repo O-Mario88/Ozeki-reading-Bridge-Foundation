@@ -53,13 +53,24 @@ export async function POST(request: Request) {
 
     // 4. MFA Trigger for Privileged Users
     const isPrivileged = user.isSuperAdmin || user.isAdmin || user.isME || user.isSupervisor;
-    if (isPrivileged) {
+    const bypassMfa = process.env.NODE_ENV === "development" && process.env.BYPASS_MFA === "true";
+    
+    if (isPrivileged && !bypassMfa) {
       const mfaCode = await generateMfaOtpPostgres(user.id);
-      await sendMfaEmail(user.email, { fullName: user.fullName, otpCode: mfaCode });
+      const emailResult = await sendMfaEmail(user.email, { fullName: user.fullName, otpCode: mfaCode });
       
+      if (emailResult.status === "failed") {
+        console.error("[LOGIN MFA] Email failed to send:", emailResult.providerMessage);
+        return NextResponse.json({ error: "Failed to dispatch verification email. Please verify SMTP configuration." }, { status: 500 });
+      }
+
       try {
-        await logAuditEventPostgres(user.id, user.fullName, "LOGIN_MFA_CHALLENGE", "portal_users", String(user.id), null, null, "MFA code generated and dispatched", ipAddress);
+        await logAuditEventPostgres(user.id, user.fullName, "LOGIN_MFA_CHALLENGE", "portal_users", String(user.id), null, null, `MFA code generated and dispatched (Status: ${emailResult.status})`, ipAddress);
       } catch (_e) { /* ignore */ }
+
+      if (emailResult.status === "skipped") {
+        console.warn(`[LOGIN MFA] SMTP skipped. Generated code for ${user.email} is: ${mfaCode}`);
+      }
 
       return NextResponse.json({
         ok: true,
