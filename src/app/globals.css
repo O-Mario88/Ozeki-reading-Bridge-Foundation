@@ -6196,38 +6196,49 @@ nav[aria-label="Staff navigation"] {
   flex-wrap: wrap;
 }
 
-.impact-dashboard-core-v2 {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(360px, 400px);
-  gap: 1.5rem;
-  align-items: stretch;
+.impact-top-canvas {
+  width: 100%;
+  position: relative;
+  margin-bottom: 2rem;
 }
 
-.impact-main-panel {
+.impact-metrics-trio-wrapper {
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+.impact-metrics-trio {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.2fr) 1.5fr minmax(360px, 400px);
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.impact-trio-col {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   min-width: 0;
 }
 
-.impact-sidebar-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+@media (max-width: 1300px) {
+  .impact-metrics-trio {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
-@media (max-width: 1024px) {
-  .impact-dashboard-core-v2 {
+@media (max-width: 900px) {
+  .impact-metrics-trio {
     grid-template-columns: 1fr;
   }
 }
 
 .impact-tracker-banner {
-  margin-top: 1.5rem;
+  margin-top: 0;
 }
 
 /* Vertical Sidebar Tabs */
-.impact-sidebar-panel .impact-tabs {
+.impact-trio-col .impact-tabs {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -6238,7 +6249,7 @@ nav[aria-label="Staff navigation"] {
   margin-top: 1rem;
 }
 
-.impact-sidebar-panel .impact-tabs button {
+.impact-trio-col .impact-tabs button {
   text-align: left;
   justify-content: flex-start;
   padding: 1rem 1.25rem;
@@ -6250,12 +6261,12 @@ nav[aria-label="Staff navigation"] {
   transition: all 0.2s ease;
 }
 
-.impact-sidebar-panel .impact-tabs button:hover {
+.impact-trio-col .impact-tabs button:hover {
   background: #f8fafc;
   transform: translateX(4px);
 }
 
-.impact-sidebar-panel .impact-tabs button.active {
+.impact-trio-col .impact-tabs button.active {
   background: #0d3b4a; /* Brand dark */
   color: white;
   box-shadow: 0 8px 24px -4px rgba(13, 59, 74, 0.4);
