@@ -931,8 +931,8 @@ export function PortalBlogManager({
     if (form.primaryCategory.trim().length < 2) {
       throw new Error("Primary category is required.");
     }
-    if (form.authorName.trim().length < 2 || form.authorRole.trim().length < 2) {
-      throw new Error("Author name and role are required.");
+    if (form.authorName.trim().length < 2) {
+      throw new Error("Author name is required.");
     }
     if (!form.featuredImageUrl.trim()) {
       throw new Error("Featured image is required.");
@@ -1002,8 +1002,8 @@ export function PortalBlogManager({
         subtitle: form.subtitle.trim() || undefined,
         excerpt: form.excerpt.trim(),
         category: form.primaryCategory.trim(),
-        author: form.authorName.trim(),
-        role: form.authorRole.trim(),
+        author: form.authorName.trim() || "Editorial Team",
+        role: form.authorRole.trim() || "Editorial Team",
         publishedAt: publishIso,
         readTime: `${readTimeMinutes} min read`,
         readTimeMinutes,
@@ -1657,6 +1657,11 @@ export function PortalBlogManager({
               ) : null}
 
               <div className="action-row full-width" style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--md-sys-color-outline-variant)" }}>
+                {error ? (
+                  <p className="full-width" style={{ color: "var(--md-sys-color-error)", margin: "0 0 0.5rem 0", fontWeight: 600 }}>
+                    {error}
+                  </p>
+                ) : null}
                 <button type="button" className="button button-ghost" onClick={resetComposer} disabled={saveDisabled}>
                   Reset
                 </button>
