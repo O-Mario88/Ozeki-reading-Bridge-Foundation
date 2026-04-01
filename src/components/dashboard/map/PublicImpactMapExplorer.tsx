@@ -863,15 +863,15 @@ export function PublicImpactMapExplorer({
       </div>
 
       <div className="impact-explorer-layout">
+        <div className="mb-4">
+          <HeadlineStatsPanel
+            data={payload}
+            loading={loading}
+            detailHref={detailHref}
+            compact={compact}
+          />
+        </div>
         <div className="impact-top-canvas">
-          <div className="impact-map-floating-stats">
-            <HeadlineStatsPanel
-              data={payload}
-              loading={loading}
-              detailHref={detailHref}
-              compact={compact}
-            />
-          </div>
           <UgandaImpactMapPro
             periodLabel={period}
             selection={{
@@ -1187,46 +1187,46 @@ export function PublicImpactMapExplorer({
                   </article>
                 </div>
               ) : null}
-            </div>
-          </div>
 
-          <div className="impact-tabs">
-            <button
-              className={activeTab === "outcomes" ? "active" : ""}
-              onClick={() => setActiveTab("outcomes")}
-            >
-              Learning Outcomes
-            </button>
-            <button
-              className={activeTab === "readingLevels" ? "active" : ""}
-              onClick={() => setActiveTab("readingLevels")}
-            >
-              Reading Levels
-            </button>
-            <button
-              className={activeTab === "implementation" ? "active" : ""}
-              onClick={() => setActiveTab("implementation")}
-            >
-              Implementation Funnel
-            </button>
-            <button
-              className={activeTab === "teaching" ? "active" : ""}
-              onClick={() => setActiveTab("teaching")}
-            >
-              Teaching Quality
-            </button>
-            <button
-              className={activeTab === "equity" ? "active" : ""}
-              onClick={() => setActiveTab("equity")}
-            >
-              Equity & Segments
-            </button>
-            <button
-              className={activeTab === "quality" ? "active" : ""}
-              onClick={() => setActiveTab("quality")}
-            >
-              Data Completeness
-            </button>
+              <div className="impact-tabs">
+                <button
+                  className={activeTab === "outcomes" ? "active" : ""}
+                  onClick={() => setActiveTab("outcomes")}
+                >
+                  Learning Outcomes
+                </button>
+                <button
+                  className={activeTab === "readingLevels" ? "active" : ""}
+                  onClick={() => setActiveTab("readingLevels")}
+                >
+                  Reading Levels
+                </button>
+                <button
+                  className={activeTab === "implementation" ? "active" : ""}
+                  onClick={() => setActiveTab("implementation")}
+                >
+                  Implementation Funnel
+                </button>
+                <button
+                  className={activeTab === "teaching" ? "active" : ""}
+                  onClick={() => setActiveTab("teaching")}
+                >
+                  Teaching Quality
+                </button>
+                <button
+                  className={activeTab === "equity" ? "active" : ""}
+                  onClick={() => setActiveTab("equity")}
+                >
+                  Equity & Segments
+                </button>
+                <button
+                  className={activeTab === "quality" ? "active" : ""}
+                  onClick={() => setActiveTab("quality")}
+                >
+                  Data Completeness
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
