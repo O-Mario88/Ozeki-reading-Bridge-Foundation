@@ -7502,10 +7502,9 @@ nav[aria-label="Staff navigation"] {
 
 .impact-attract-progress-grid article,
 .impact-attract-progress-row {
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--md-sys-color-surface-container) 78%, white);
-  padding: 0.45rem 0.5rem;
+  background: transparent;
+  border: none;
+  padding: 0;
   transition: all 250ms ease;
   cursor: default;
 }
@@ -7513,8 +7512,6 @@ nav[aria-label="Staff navigation"] {
 .impact-attract-progress-grid article:hover,
 .impact-attract-progress-row:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .impact-attract-progress-grid span,
@@ -7618,10 +7615,9 @@ nav[aria-label="Staff navigation"] {
 }
 
 .impact-reading-level-summary-grid article {
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--md-sys-color-surface-container) 75%, white);
-  padding: 0.6rem;
+  background: transparent;
+  border: none;
+  padding: 0;
   display: grid;
   gap: 0.2rem;
   transition: all 250ms ease;

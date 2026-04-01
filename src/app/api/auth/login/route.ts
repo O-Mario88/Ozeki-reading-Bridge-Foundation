@@ -58,24 +58,28 @@ export async function POST(request: Request) {
     if (isPrivileged && !bypassMfa) {
       const mfaCode = await generateMfaOtpPostgres(user.id);
       const emailResult = await sendMfaEmail(user.email, { fullName: user.fullName, otpCode: mfaCode });
+      const isDev = process.env.NODE_ENV === "development";
       
       if (emailResult.status === "failed") {
         console.error("[LOGIN MFA] Email failed to send:", emailResult.providerMessage);
-        return NextResponse.json({ error: "Failed to dispatch verification email. Please verify SMTP configuration." }, { status: 500 });
+        if (!isDev) {
+          return NextResponse.json({ error: "Failed to dispatch verification email. Please verify SMTP configuration." }, { status: 500 });
+        }
       }
 
       try {
         await logAuditEventPostgres(user.id, user.fullName, "LOGIN_MFA_CHALLENGE", "portal_users", String(user.id), null, null, `MFA code generated and dispatched (Status: ${emailResult.status})`, ipAddress);
       } catch (_e) { /* ignore */ }
 
-      if (emailResult.status === "skipped") {
-        console.warn(`[LOGIN MFA] SMTP skipped. Generated code for ${user.email} is: ${mfaCode}`);
+      if (emailResult.status === "skipped" || (emailResult.status === "failed" && isDev)) {
+        console.warn(`[LOGIN MFA] SMTP skipped or failed in dev. Generated code for ${user.email} is: ${mfaCode}`);
       }
 
       return NextResponse.json({
         ok: true,
         requiresMfa: true,
-        userId: user.id // Send back temporary reference to continue MFA flow
+        userId: user.id, // Send back temporary reference to continue MFA flow
+        devOtp: isDev ? mfaCode : undefined
       });
     }
 

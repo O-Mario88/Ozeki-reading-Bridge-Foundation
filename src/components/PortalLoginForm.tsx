@@ -83,8 +83,11 @@ export function PortalLoginForm() {
       }
 
       if (data.requiresMfa) {
+        if (data.devOtp) {
+          alert(`[DEV MODE] Email delivery bypassed.\nYour MFA verification code is: ${data.devOtp}`);
+        }
         setState({ status: "success", message: "Verification required. Redirecting..." });
-        window.location.href = `/portal/mfa-verify?userId=${data.userId}`;
+        window.location.href = `/portal/mfa-verify?userId=${data.userId}${data.devOtp ? `&devOtp=${data.devOtp}` : ""}`;
         return;
       }
 

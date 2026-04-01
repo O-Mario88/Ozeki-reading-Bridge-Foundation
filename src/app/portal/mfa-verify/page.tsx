@@ -58,6 +58,7 @@ function MfaVerifyForm() {
               required
               maxLength={6}
               minLength={6}
+              defaultValue={searchParams.get("devOtp") ?? ""}
               autoComplete="one-time-code"
               placeholder="Enter 6-digit code"
               className="portal-login-input"
