@@ -35,3 +35,6 @@ yarn-error.log*
 database.sqlite
 test.pdf
 lighthouse-report.json
+
+# Local environment secrets
+.env.local
