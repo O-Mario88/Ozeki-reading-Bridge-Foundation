@@ -315,26 +315,192 @@ export async function issueFinanceReceiptPostgres(
   });
 }
 
-export async function sendFinanceInvoicePostgres(id: number, _actor: FinanceActor, _extra?: unknown) {
-  // Update status from draft to sent
-  await queryPostgres(
-    "UPDATE finance_invoices SET status = 'sent', emailed_at = NOW(), updated_at = NOW() WHERE id = $1 AND status = 'draft'",
-    [id],
+export async function sendFinanceInvoicePostgres(id: number, _actor: FinanceActor, extra?: { to?: string[]; cc?: string[] }) {
+  // 1. Get invoice with contact info
+  const invoice = await getFinanceInvoiceByIdPostgres(id);
+  if (!invoice) throw new Error("Invoice not found.");
+
+  // 2. Get contact emails
+  const contactResult = await queryPostgres(
+    `SELECT name, emails_json AS "emailsJson" FROM finance_contacts WHERE id = $1 LIMIT 1`,
+    [invoice.contactId],
   );
-  
+  const contact = contactResult.rows[0] as { name: string; emailsJson: string } | undefined;
+  const contactEmails: string[] = contact ? JSON.parse(contact.emailsJson || "[]") : [];
+  const contactName = contact?.name || "Valued Client";
+
+  // 3. Determine recipients
+  const toEmails = extra?.to && extra.to.length > 0 ? extra.to : contactEmails;
+  if (toEmails.length === 0) {
+    throw new Error("No recipient email found. Please add an email to this contact first.");
+  }
+
+  // 4. Build CC list (always include support@ and amos@)
+  const { buildFinanceCcList } = await import("@/lib/finance-email");
+  const ccEmails = buildFinanceCcList(extra?.cc);
+
+  // 5. Build email HTML
+  const currencySymbol = invoice.currency === "USD" ? "$" : "UGX ";
+  const formattedTotal = `${currencySymbol}${invoice.total.toLocaleString()}`;
+  const formattedBalance = `${currencySymbol}${invoice.balanceDue.toLocaleString()}`;
+  const lineItemsHtml = (invoice.lineItems || [])
+    .map((item) => `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">${item.description}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${item.qty}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${currencySymbol}${item.unitPrice.toLocaleString()}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${currencySymbol}${item.amount.toLocaleString()}</td></tr>`)
+    .join("");
+
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
+        <tr><td style="background:linear-gradient(135deg,#c62828,#b71c1c);padding:24px 32px;text-align:center;">
+          <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">Invoice ${invoice.invoiceNumber}</h1>
+          <p style="margin:6px 0 0;color:rgba(255,255,255,.85);font-size:13px;">Ozeki Reading Bridge Foundation</p>
+        </td></tr>
+        <tr><td style="padding:28px 32px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#1a1a1a;">Dear <strong>${contactName}</strong>,</p>
+          <p style="margin:0 0 20px;font-size:14px;color:#333;line-height:1.6;">Please find below the details of your invoice. We kindly request payment at your earliest convenience.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+            <thead><tr style="background:#f8f9fa;">
+              <th style="padding:10px 12px;text-align:left;font-size:12px;color:#666;text-transform:uppercase;">Description</th>
+              <th style="padding:10px 12px;text-align:center;font-size:12px;color:#666;text-transform:uppercase;">Qty</th>
+              <th style="padding:10px 12px;text-align:right;font-size:12px;color:#666;text-transform:uppercase;">Unit Price</th>
+              <th style="padding:10px 12px;text-align:right;font-size:12px;color:#666;text-transform:uppercase;">Amount</th>
+            </tr></thead>
+            <tbody>${lineItemsHtml}</tbody>
+            <tfoot><tr style="background:#f8f9fa;">
+              <td colspan="3" style="padding:10px 12px;text-align:right;font-weight:700;font-size:14px;">Total</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:700;font-size:14px;">${formattedTotal}</td>
+            </tr></tfoot>
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;border-radius:8px;padding:16px;margin:0 0 20px;">
+            <tr><td>
+              <p style="margin:0 0 4px;font-size:13px;color:#666;">Invoice Date: <strong>${invoice.issueDate}</strong></p>
+              <p style="margin:0 0 4px;font-size:13px;color:#666;">Due Date: <strong>${invoice.dueDate}</strong></p>
+              <p style="margin:0;font-size:14px;color:#c62828;font-weight:700;">Balance Due: ${formattedBalance}</p>
+            </td></tr>
+          </table>
+          ${invoice.notes ? `<p style="margin:0 0 16px;font-size:13px;color:#666;font-style:italic;">Note: ${invoice.notes}</p>` : ""}
+        </td></tr>
+        <tr><td style="background:#f8f9fa;padding:16px 32px;text-align:center;border-top:1px solid #eee;">
+          <p style="margin:0;font-size:12px;color:#999;">&copy; Ozeki Reading Bridge Foundation</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim();
+
+  // 6. Send the email
+  const { sendFinanceMail } = await import("@/lib/finance-email");
+  const emailResult = await sendFinanceMail({
+    to: toEmails,
+    cc: ccEmails,
+    subject: `Invoice ${invoice.invoiceNumber} — ${formattedTotal} from Ozeki Reading Bridge Foundation`,
+    html,
+  });
+
+  // 7. Update invoice status
+  const sentTo = toEmails.join(", ");
+  if (invoice.status === "draft") {
+    await queryPostgres(
+      "UPDATE finance_invoices SET status = 'sent', emailed_at = NOW(), last_sent_to = $1, updated_at = NOW() WHERE id = $2",
+      [sentTo, id],
+    );
+  } else {
+    await queryPostgres(
+      "UPDATE finance_invoices SET emailed_at = NOW(), last_sent_to = $1, updated_at = NOW() WHERE id = $2",
+      [sentTo, id],
+    );
+  }
+
   const updated = await getFinanceInvoiceByIdPostgres(id);
-  return { 
-    email: { status: 'processed', providerMessage: 'Invoice email queued successfully' }, 
-    invoice: updated 
-  };
+  return { email: { status: emailResult.status, providerMessage: emailResult.providerMessage }, invoice: updated };
 }
 
-export async function sendFinanceReceiptPostgres(id: number, _actor: FinanceActor, _extra?: unknown) {
+export async function sendFinanceReceiptPostgres(id: number, _actor: FinanceActor, extra?: { to?: string[]; cc?: string[] }) {
+  // 1. Get receipt with contact info
+  const receipt = await getFinanceReceiptByIdPostgres(id);
+  if (!receipt) throw new Error("Receipt not found.");
+
+  // 2. Get contact emails
+  const contactResult = await queryPostgres(
+    `SELECT name, emails_json AS "emailsJson" FROM finance_contacts WHERE id = $1 LIMIT 1`,
+    [receipt.contactId],
+  );
+  const contact = contactResult.rows[0] as { name: string; emailsJson: string } | undefined;
+  const contactEmails: string[] = contact ? JSON.parse(contact.emailsJson || "[]") : [];
+  const contactName = contact?.name || "Valued Client";
+
+  // 3. Determine recipients
+  const toEmails = extra?.to && extra.to.length > 0 ? extra.to : contactEmails;
+  if (toEmails.length === 0) {
+    throw new Error("No recipient email found. Please add an email to this contact first.");
+  }
+
+  // 4. Build CC list
+  const { buildFinanceCcList } = await import("@/lib/finance-email");
+  const ccEmails = buildFinanceCcList(extra?.cc);
+
+  // 5. Build email HTML
+  const currencySymbol = receipt.currency === "USD" ? "$" : "UGX ";
+  const formattedAmount = `${currencySymbol}${receipt.amountReceived.toLocaleString()}`;
+
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
+        <tr><td style="background:linear-gradient(135deg,#2e7d32,#1b5e20);padding:24px 32px;text-align:center;">
+          <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">Receipt ${receipt.receiptNumber}</h1>
+          <p style="margin:6px 0 0;color:rgba(255,255,255,.85);font-size:13px;">Ozeki Reading Bridge Foundation</p>
+        </td></tr>
+        <tr><td style="padding:28px 32px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#1a1a1a;">Dear <strong>${contactName}</strong>,</p>
+          <p style="margin:0 0 20px;font-size:14px;color:#333;line-height:1.6;">Thank you for your payment. This receipt confirms that we have received:</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f8f0;border-radius:8px;padding:20px;margin:0 0 20px;text-align:center;">
+            <tr><td>
+              <p style="margin:0 0 6px;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.05em;">Amount Received</p>
+              <p style="margin:0;font-size:28px;font-weight:700;color:#2e7d32;">${formattedAmount}</p>
+            </td></tr>
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;border-radius:8px;padding:16px;margin:0 0 20px;">
+            <tr><td>
+              <p style="margin:0 0 4px;font-size:13px;color:#666;">Receipt Date: <strong>${receipt.receiptDate}</strong></p>
+              <p style="margin:0 0 4px;font-size:13px;color:#666;">Received From: <strong>${receipt.receivedFrom}</strong></p>
+              <p style="margin:0 0 4px;font-size:13px;color:#666;">Payment Method: <strong>${receipt.paymentMethod}</strong></p>
+              ${receipt.referenceNo ? `<p style="margin:0 0 4px;font-size:13px;color:#666;">Reference: <strong>${receipt.referenceNo}</strong></p>` : ""}
+              ${receipt.description ? `<p style="margin:0;font-size:13px;color:#666;">Description: <strong>${receipt.description}</strong></p>` : ""}
+            </td></tr>
+          </table>
+          ${receipt.notes ? `<p style="margin:0 0 16px;font-size:13px;color:#666;font-style:italic;">Note: ${receipt.notes}</p>` : ""}
+        </td></tr>
+        <tr><td style="background:#f8f9fa;padding:16px 32px;text-align:center;border-top:1px solid #eee;">
+          <p style="margin:0;font-size:12px;color:#999;">&copy; Ozeki Reading Bridge Foundation</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim();
+
+  // 6. Send the email
+  const { sendFinanceMail } = await import("@/lib/finance-email");
+  const emailResult = await sendFinanceMail({
+    to: toEmails,
+    cc: ccEmails,
+    subject: `Receipt ${receipt.receiptNumber} — ${formattedAmount} | Ozeki Reading Bridge Foundation`,
+    html,
+  });
+
+  // 7. Update receipt
+  const sentTo = toEmails.join(", ");
+  await queryPostgres(
+    "UPDATE finance_receipts SET emailed_at = NOW(), last_sent_to = $1 WHERE id = $2",
+    [sentTo, id],
+  );
+
   const updated = await getFinanceReceiptByIdPostgres(id);
-  return { 
-    email: { status: 'processed', providerMessage: 'Receipt logically emailed' }, 
-    receipt: updated 
-  };
+  return { email: { status: emailResult.status, providerMessage: emailResult.providerMessage }, receipt: updated };
 }
 
 export async function recordFinancePaymentPostgres(

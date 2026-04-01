@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 
 const DEFAULT_FINANCE_FROM_EMAIL = "accounts@ozekiread.org";
-const DEFAULT_FINANCE_ALWAYS_CC = ["edwin@ozekiread.org", "amos@ozekiread.org"] as const;
+const DEFAULT_FINANCE_ALWAYS_CC = ["support@ozekiread.org", "amos@ozekiread.org"] as const;
 
 export type FinanceEmailAttachment = {
   filename: string;
