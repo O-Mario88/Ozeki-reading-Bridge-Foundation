@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
-    if (!(file instanceof File) || file.size <= 0) {
+    if (!file || typeof file === "string" || file.size <= 0) {
       return NextResponse.json({ error: "Choose an image file first." }, { status: 400 });
     }
     if (file.size > MAX_IMAGE_BYTES) {

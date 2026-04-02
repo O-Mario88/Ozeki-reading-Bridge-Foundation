@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     });
 
     const fileField = formData.get("file");
-    const uploadFile = fileField instanceof File && fileField.size > 0 ? fileField : null;
+    const uploadFile = typeof fileField !== "string" && fileField && fileField.size > 0 ? fileField : null;
 
     if (!uploadFile && !parsed.externalUrl) {
       return NextResponse.json(
