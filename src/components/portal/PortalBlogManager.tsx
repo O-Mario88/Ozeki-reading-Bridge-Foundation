@@ -1264,13 +1264,11 @@ export function PortalBlogManager({
               </label>
 
               <label className="full-width" style={{ marginTop: "0.5rem" }}>
-                Featured Image URL *
+                Featured Image (Upload) *
                 <div style={{ display: "grid", gap: "0.45rem" }}>
-                  <input
-                    value={form.featuredImageUrl}
-                    onChange={(event) => updateForm("featuredImageUrl", event.target.value)}
-                    placeholder="https://..."
-                  />
+                  {form.featuredImageUrl && (
+                    <img src={form.featuredImageUrl} alt="Featured preview" style={{ maxHeight: "120px", borderRadius: "6px", objectFit: "contain", background: "var(--md-sys-color-surface-container)", justifySelf: "start" }} />
+                  )}
                   <input
                     type="file"
                     accept="image/*"
@@ -1282,6 +1280,9 @@ export function PortalBlogManager({
                       event.currentTarget.value = "";
                     }}
                   />
+                  {form.featuredImageUrl && (
+                    <button type="button" className="button button-ghost" style={{ justifySelf: "start", fontSize: "0.8rem", padding: "0.2rem 0.5rem" }} onClick={() => updateForm("featuredImageUrl", "")}>Remove Image</button>
+                  )}
                 </div>
               </label>
 
@@ -1582,11 +1583,9 @@ export function PortalBlogManager({
                   <label className="full-width">
                     Sidebar Thumbnail (Optional)
                     <div style={{ display: "grid", gap: "0.45rem" }}>
-                      <input
-                        value={form.sidebarThumbnailUrl}
-                        onChange={(event) => updateForm("sidebarThumbnailUrl", event.target.value)}
-                        placeholder="Optional fallback thumbnail URL"
-                      />
+                      {form.sidebarThumbnailUrl && (
+                    <img src={form.sidebarThumbnailUrl} alt="Thumbnail preview" style={{ maxHeight: "120px", borderRadius: "6px", objectFit: "contain", background: "var(--md-sys-color-surface-container)", justifySelf: "start" }} />
+                  )}
                       <input
                         type="file"
                         accept="image/*"
@@ -1594,10 +1593,13 @@ export function PortalBlogManager({
                           const file = event.target.files?.[0];
                           if (file) {
                             void uploadAndSetImage(file, "sidebarThumbnailUrl");
-                          }
-                          event.currentTarget.value = "";
-                        }}
-                      />
+                      }
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                  {form.sidebarThumbnailUrl && (
+                    <button type="button" className="button button-ghost" style={{ justifySelf: "start", fontSize: "0.8rem", padding: "0.2rem 0.5rem" }} onClick={() => updateForm("sidebarThumbnailUrl", "")}>Remove Image</button>
+                  )}
                     </div>
                   </label>
 
@@ -1636,11 +1638,9 @@ export function PortalBlogManager({
                   <label className="full-width">
                     Social Share Image
                     <div style={{ display: "grid", gap: "0.45rem" }}>
-                      <input
-                        value={form.socialImageUrl}
-                        onChange={(event) => updateForm("socialImageUrl", event.target.value)}
-                        placeholder="https://..."
-                      />
+                      {form.socialImageUrl && (
+                    <img src={form.socialImageUrl} alt="Social share preview" style={{ maxHeight: "120px", borderRadius: "6px", objectFit: "contain", background: "var(--md-sys-color-surface-container)", justifySelf: "start" }} />
+                  )}
                       <input
                         type="file"
                         accept="image/*"
@@ -1648,10 +1648,13 @@ export function PortalBlogManager({
                           const file = event.target.files?.[0];
                           if (file) {
                             void uploadAndSetImage(file, "socialImageUrl");
-                          }
-                          event.currentTarget.value = "";
-                        }}
-                      />
+                      }
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                  {form.socialImageUrl && (
+                    <button type="button" className="button button-ghost" style={{ justifySelf: "start", fontSize: "0.8rem", padding: "0.2rem 0.5rem" }} onClick={() => updateForm("socialImageUrl", "")}>Remove Image</button>
+                  )}
                     </div>
                   </label>
 
