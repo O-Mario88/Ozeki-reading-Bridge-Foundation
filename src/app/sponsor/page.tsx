@@ -1,5 +1,5 @@
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import Link from "next/link";
 import { School, Map, MapPin, Globe } from "lucide-react";
 
@@ -43,7 +43,7 @@ const SPONSORSHIP_TIERS = [
 export default function SponsorLandingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
-      <Navbar />
+      <SiteHeader />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-16">
          <div className="text-center max-w-3xl mx-auto mb-16">
@@ -82,7 +82,7 @@ export default function SponsorLandingPage() {
          </div>
       </main>
 
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

@@ -36,7 +36,7 @@ export async function POST(request: Request) {
        if (user) {
           userId = user.id;
           userRole = user.role;
-          userName = user.name;
+          userName = user.fullName;
           userEmail = user.email;
        }
     }

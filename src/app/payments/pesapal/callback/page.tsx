@@ -43,10 +43,10 @@ export default function PesapalCallbackPage() {
    return (
       <div className="bg-gray-50 min-h-screen">
          <PageHero 
-           imageUrl="/photos/17.jpeg"
-           kicker="FinTech Layer"
+           imageSrc="/photos/17.jpeg"
+           tagline="FinTech Layer"
            title="Payment Verification Log"
-           description="Executing highly secure server-side handshakes traversing Mobile Money operators to validate financial integrity natively."
+           subtitle="Executing highly secure server-side handshakes traversing Mobile Money operators to validate financial integrity natively."
          />
 
          <div className="max-w-2xl mx-auto px-4 py-20">

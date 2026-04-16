@@ -63,6 +63,7 @@ export async function GET(request: Request) {
                  [lesson.id, matchedDriveFile.id, matchedDriveFile.name]
               );
 
+              if (!matchedDriveFile || !matchedDriveFile.id) continue;
               // 4b. Temporarily Expose URL
               const driveDownloadLink = await makeDriveFilePublicWithLink(matchedDriveFile.id);
 

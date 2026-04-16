@@ -129,7 +129,7 @@ async function processServiceBookingWebhook(payment: any, trackingId: string, ip
            const newlyAccumulatedPaid = Number(reqCheck.rows[0].amount_paid) + Number(payment.amount_requested);
            const remainingBalance = totalTarget - newlyAccumulatedPaid;
            
-           let newReqStatus = remainingBalance <= 0 ? 'Fully Paid' : 'Deposit Paid';
+           const newReqStatus = remainingBalance <= 0 ? 'Fully Paid' : 'Deposit Paid';
 
            await queryPostgres(
                `UPDATE service_requests SET amount_paid = $1, balance = $2, status = $3, updated_at = NOW() WHERE id = $4`,

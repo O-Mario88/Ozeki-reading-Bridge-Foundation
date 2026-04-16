@@ -25,10 +25,10 @@ export default async function EventsPage() {
   return (
     <>
       <PageHero 
-         imageUrl="/photos/PXL_20260218_131920803.MP.jpg"
-         kicker="Ozeki Literacy Events"
+         imageSrc="/photos/PXL_20260218_131920803.MP.jpg"
+         tagline="Ozeki Literacy Events"
          title="Capacity Building Core"
-         description="Join our ecosystem of continuous capability development through virtual mastery sessions and localized physical deployment workshops."
+         subtitle="Join our ecosystem of continuous capability development through virtual mastery sessions and localized physical deployment workshops."
       />
 
       <section className="py-20 px-4 bg-gray-50">

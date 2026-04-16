@@ -1,5 +1,5 @@
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { DonationWizard } from "@/components/public/DonationWizard";
 
 export const metadata = {
@@ -10,7 +10,7 @@ export const metadata = {
 export default function DonatePage() {
   return (
      <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
-       <Navbar />
+       <SiteHeader />
 
        <div className="flex-1 max-w-5xl mx-auto w-full px-6 py-12 md:py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
          {/* Left Side: Campaign Context */}
@@ -73,7 +73,7 @@ export default function DonatePage() {
          </div>
        </div>
 
-       <Footer />
+       <SiteFooter />
      </div>
   );
 }

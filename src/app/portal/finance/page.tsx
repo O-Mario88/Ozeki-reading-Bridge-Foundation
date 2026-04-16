@@ -1,7 +1,7 @@
 import { PortalShell } from "@/components/portal/PortalShell";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
-import { CreditCard, Search, ArrowRightLeft, ShieldBan } from "lucide-react";
+import { CreditCard, Search, ArrowRightLeft, ShieldBan, CheckCircle, Clock } from "lucide-react";
 
 export const metadata = { title: "Finance Reconciliation | Ozeki Portal" };
 

@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     let watchedLongEnough = false;
     // Note: To be fully accurate, we compare max_position_seconds to lesson total duration
     // But as an MVP fallback, we flag true if the system logged at least 300 seconds (5 mins).
-    if (viewTrackerRes.rowCount > 0 && viewTrackerRes.rows[0].max_position_seconds > 300) {
+    if (viewTrackerRes.rowCount && viewTrackerRes.rowCount > 0 && viewTrackerRes.rows[0].max_position_seconds > 300) {
        watchedLongEnough = true;
     }
 

@@ -91,7 +91,7 @@ export async function POST(request: Request) {
             teacherEmail: user.email // Maps the staff member implicitly
          });
          googleCalendarEventId = calRes.eventId;
-         googleMeetLink = calRes.meetLink;
+         googleMeetLink = calRes.meetLink || undefined;
          googleMeetConferenceId = calRes.conferenceId;
       } catch (calErr) {
          console.warn("[recorded-lessons] Failed to create Google Calendar Block:", calErr);

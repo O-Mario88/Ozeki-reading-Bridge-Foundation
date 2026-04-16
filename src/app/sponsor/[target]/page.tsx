@@ -1,5 +1,5 @@
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SponsorshipWizard } from "@/components/public/SponsorshipWizard";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -42,7 +42,7 @@ export default function SponsorshipDetailPage({ params }: { params: { target: st
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
-      <Navbar />
+      <SiteHeader />
 
       <div className="flex-1 max-w-5xl mx-auto w-full px-6 py-12 md:py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
          
@@ -83,7 +83,7 @@ export default function SponsorshipDetailPage({ params }: { params: { target: st
          </div>
       </div>
 
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

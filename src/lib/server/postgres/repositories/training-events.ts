@@ -18,7 +18,6 @@ export type TrainingEventRow = {
   subCounty: string | null;
   parish: string | null;
   village: string | null;
-  village: string | null;
   maxSchools: number | null;
   maxParticipants: number | null;
   fundingType: 'Sponsored Training' | 'Paid Training' | 'Free Ozeki Event' | null;

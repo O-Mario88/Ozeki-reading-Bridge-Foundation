@@ -14,10 +14,10 @@ export default async function ServiceRequestPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <PageHero
-        imageUrl="/photos/IMG-20241030-WA0013.jpg"
-        kicker="Ozeki Support Services"
+        imageSrc="/photos/IMG-20241030-WA0013.jpg"
+        tagline="Ozeki Support Services"
         title="Request Ozeki School Services"
-        description="OzekiRead provides professional literacy and phonics support services for schools, including teacher training, lesson observation, coaching, and learner assessment. Complete the form below to request a quotation and schedule support for your school."
+        subtitle="OzekiRead provides professional literacy and phonics support services for schools, including teacher training, lesson observation, coaching, and learner assessment. Complete the form below to request a quotation and schedule support for your school."
       />
       
       <div className="max-w-7xl mx-auto px-4 py-16 grid grid-cols-1 lg:grid-cols-12 gap-12">
