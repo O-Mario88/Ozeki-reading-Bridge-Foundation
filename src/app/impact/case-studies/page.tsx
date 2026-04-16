@@ -22,7 +22,7 @@ export default async function ImpactCaseStudiesPage() {
 
   return (
     <>
-      <section className="page-hero" style={{ backgroundImage: "url('/photos/classroom-learners-writing.jpg')" }}>
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/PXL_20260218_140338031.jpg')" }}>
         <div className="container">
           <p className="kicker">Impact</p>
           <h1>Stories of measurable change</h1>

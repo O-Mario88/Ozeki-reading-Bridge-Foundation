@@ -1,5 +1,5 @@
 import Image from "next/image";
-import storyProjectPhoto from "../../../public/photos/PXL_20260217_124359226.jpg";
+import storyProjectPhoto from "../../../public/photos/PXL_20260218_135704961.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

@@ -10,7 +10,7 @@ export const metadata = {
 export default function BookVisitPage() {
   return (
     <>
-      <PageHero imageUrl="/photos/26.jpeg"
+      <PageHero imageUrl="/photos/PXL_20260217_124358059.jpg"
         kicker="Booking"
         title="Book a School Visit"
         description="Choose a service, share your school context, and request your preferred date and time."

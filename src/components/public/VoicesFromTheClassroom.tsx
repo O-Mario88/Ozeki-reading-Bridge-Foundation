@@ -22,7 +22,7 @@ export async function VoicesFromTheClassroom() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <PremiumCard className="p-8 flex flex-col items-center text-center" withHover>
             <div className="w-24 h-24 rounded-full overflow-hidden mb-6 border-4 border-brand-primary/10 shadow-lg">
-              <Image src="/photos/PXL_20260218_140233638.jpg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
+              <Image src="/photos/24.jpeg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
             </div>
             <p className="text-gray-600 italic mb-6 leading-relaxed">"The phonics routines have completely transformed how my learners decode words. I see progress every single day."</p>
             <h4 className="font-bold text-brand-primary text-lg">Madam Sarah</h4>
@@ -31,7 +31,7 @@ export async function VoicesFromTheClassroom() {
           
           <PremiumCard className="p-8 flex flex-col items-center text-center" withHover>
             <div className="w-24 h-24 rounded-full overflow-hidden mb-6 border-4 border-brand-primary/10 shadow-lg">
-              <Image src="/photos/PXL_20260218_135704961.jpg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
+              <Image src="/photos/15.jpeg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
             </div>
             <p className="text-gray-600 italic mb-6 leading-relaxed">"With the coaching support, I now know exactly how to correct blending errors instantly. My confidence has grown."</p>
             <h4 className="font-bold text-brand-primary text-lg">Mr. Daniel</h4>
@@ -40,7 +40,7 @@ export async function VoicesFromTheClassroom() {
 
           <PremiumCard className="p-8 flex flex-col items-center text-center" withHover>
             <div className="w-24 h-24 rounded-full overflow-hidden mb-6 border-4 border-brand-primary/10 shadow-lg">
-              <Image src="/photos/PXL_20260218_134438769.jpg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
+              <Image src="/photos/21.jpeg" alt="Teacher" width={96} height={96} className="w-full h-full object-cover" />
             </div>
             <p className="text-gray-600 italic mb-6 leading-relaxed">"Our school's reading levels have improved dramatically since we implemented the daily reading routines."</p>
             <h4 className="font-bold text-brand-primary text-lg">Madam Grace</h4>

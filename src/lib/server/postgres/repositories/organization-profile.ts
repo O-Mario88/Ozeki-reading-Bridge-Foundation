@@ -57,7 +57,7 @@ function fallbackProfile(): OrganizationProfileRecord {
     email: officialContact.email,
     tin: officialContact.tin,
     registrationNumber: officialContact.regNo,
-    logoStorageUrl: "/photos/logo.png",
+    logoStorageUrl: "/photos/25.jpeg",
     isActive: true,
     createdAt: now,
     updatedAt: now,

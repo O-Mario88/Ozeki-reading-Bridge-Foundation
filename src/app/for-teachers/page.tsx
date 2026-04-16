@@ -9,7 +9,7 @@ export const metadata = {
 export default function ForTeachersPage() {
   return (
     <>
-      <PageHero imageUrl="/photos/Phonics Session for Teachers in Namasale Sub-County Amolatar.jpg"
+      <PageHero imageUrl="/photos/24.jpeg"
         kicker="Teacher pathway"
         title="For Teachers"
         description="Build practical reading instruction skills through structured courses, coaching, and resource packs."

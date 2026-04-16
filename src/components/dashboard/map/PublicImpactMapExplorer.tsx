@@ -1603,7 +1603,7 @@ export function PublicImpactMapExplorer({
                 <article className="impact-domain-mini-card">
                   <h4>Overall Levels</h4>
                   <p className="impact-domain-mini-meta">
-                    Strong:{" "}
+                    Exemplary:{" "}
                     <strong>
                       {teachingQuality.levelDistribution?.strong?.percent ?? 0}%
                     </strong>
@@ -1636,28 +1636,16 @@ export function PublicImpactMapExplorer({
                   <h4>Domain Averages (/4)</h4>
                   {[
                     [
-                      "Setup & Review",
-                      teachingQuality.domainAverages?.setup ?? null,
+                      "Phoneme-Grapheme (GPC)",
+                      teachingQuality.domainAverages?.gpc ?? null,
                     ],
                     [
-                      "New Sound/Skill",
-                      teachingQuality.domainAverages?.newSound ?? null,
+                      "Blending & Teaching",
+                      teachingQuality.domainAverages?.blending ?? null,
                     ],
                     [
-                      "Decoding",
-                      teachingQuality.domainAverages?.decoding ?? null,
-                    ],
-                    [
-                      "Reading Practice",
-                      teachingQuality.domainAverages?.readingPractice ?? null,
-                    ],
-                    [
-                      "Tricky Words",
-                      teachingQuality.domainAverages?.trickyWords ?? null,
-                    ],
-                    [
-                      "Check & Next Steps",
-                      teachingQuality.domainAverages?.checkNext ?? null,
+                      "Learner Engagement",
+                      teachingQuality.domainAverages?.engagement ?? null,
                     ],
                   ].map(([label, value]) => (
                     <p className="impact-domain-mini-meta" key={label}>
@@ -1720,28 +1708,16 @@ export function PublicImpactMapExplorer({
                   <h4>Domain Change (Baseline → Latest)</h4>
                   {[
                     [
-                      "Setup & Review",
-                      teachingQuality.domainDeltas?.setup ?? null,
+                      "Phoneme-Grapheme (GPC)",
+                      teachingQuality.domainDeltas?.gpc ?? null,
                     ],
                     [
-                      "New Sound/Skill",
-                      teachingQuality.domainDeltas?.newSound ?? null,
+                      "Blending & Teaching",
+                      teachingQuality.domainDeltas?.blending ?? null,
                     ],
                     [
-                      "Decoding",
-                      teachingQuality.domainDeltas?.decoding ?? null,
-                    ],
-                    [
-                      "Reading Practice",
-                      teachingQuality.domainDeltas?.readingPractice ?? null,
-                    ],
-                    [
-                      "Tricky Words",
-                      teachingQuality.domainDeltas?.trickyWords ?? null,
-                    ],
-                    [
-                      "Check & Next Steps",
-                      teachingQuality.domainDeltas?.checkNext ?? null,
+                      "Learner Engagement",
+                      teachingQuality.domainDeltas?.engagement ?? null,
                     ],
                   ].map(([label, value]) => (
                     <p className="impact-domain-mini-meta" key={label}>

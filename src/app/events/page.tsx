@@ -65,7 +65,7 @@ export default async function OnlineTrainingPage() {
         tagline={<><Sparkles className="w-4 h-4 inline" /> Ozeki Capability Building</>}
         title="Join Ozeki Online Training Sessions"
         subtitle="Learn, grow, and strengthen your literacy practice alongside industry experts. Sign up for free, interactive sessions tailored for teachers and school leaders."
-        imageSrc="/photos/PXL_20260218_124656123.jpg"
+        imageSrc="/photos/17.jpeg"
       >
         <a href="#sessions" className="px-8 py-4 rounded-full bg-[#FA7D15] text-white font-bold text-lg hover:bg-[#E86D0B] transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center">
           Explore Upcoming Trainings

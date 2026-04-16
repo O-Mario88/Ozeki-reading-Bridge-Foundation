@@ -1,5 +1,5 @@
 import Image from "next/image";
-import assessmentPhoto from "../../../public/photos/PXL_20260218_133343618.jpg";
+import assessmentPhoto from "../../../public/photos/18.jpeg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

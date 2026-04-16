@@ -136,7 +136,7 @@ export default async function TransparencyPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
-      <section className="section donor-trust-hero" style={{ backgroundImage: "url('/photos/16.jpeg')", backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
+      <section className="section donor-trust-hero" style={{ backgroundImage: "url('/photos/WhatsApp%20Image%202026-03-11%20at%2022.23.57.jpeg')", backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
         <div className="container">
           <article className="card donor-trust-hero-card">
             <p className="kicker">Donor assurance</p>

@@ -339,7 +339,7 @@ export default function ImpactCalculatorPage() {
 
   return (
     <>
-      <section className="page-hero" style={{ backgroundImage: "url('/photos/11.jpeg')" }}>
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/22.jpeg')" }}>
         <div className="container">
           <p className="kicker">Impact</p>
           <h1>Impact Calculator</h1>

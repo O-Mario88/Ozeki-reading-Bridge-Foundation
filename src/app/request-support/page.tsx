@@ -10,7 +10,7 @@ export default function RequestSupportPage() {
                 tagline="Ozeki Bridge Foundation"
                 title={<>Supporting Your School&apos;s <br />Literacy Journey</>}
                 subtitle="Need training, resources, or guidance? Submit a request and our team will partner with you to improve reading outcomes."
-                imageSrc="/photos/Amolatar%20District%20Literacy.jpg"
+                imageSrc="/photos/Literacy%20Training%20in%20Loro%20-%20Oyam%20District.jpg"
             />
             <SectionWrapper theme="charius-beige" className="!pt-12 !pb-24">
                 <SupportRequestForm />

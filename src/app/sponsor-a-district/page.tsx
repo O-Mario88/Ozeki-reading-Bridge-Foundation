@@ -69,7 +69,7 @@ const PARTNER_EVIDENCE_PACK = [
 export default function SponsorDistrictPage() {
   return (
     <>
-      <section className="page-hero" style={{ backgroundImage: "url('/photos/17.jpeg')" }}>
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/16.jpeg')" }}>
         <div className="container">
           <p className="kicker">District partnership package</p>
           <h1>Sponsor Literacy in a District (2-Year Partnership)</h1>

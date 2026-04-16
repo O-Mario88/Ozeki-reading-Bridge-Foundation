@@ -114,12 +114,9 @@ export type TeachingImprovementSettingsRow = {
 
 function emptyLessonDomainScores(): Record<LessonEvaluationDomainKey, number | null> {
   return {
-    setup: null,
-    new_sound: null,
-    decoding: null,
-    reading_practice: null,
-    tricky_words: null,
-    check_next: null,
+    gpc: null,
+    blending: null,
+    engagement: null,
   };
 }
 
@@ -131,15 +128,11 @@ function parseLessonEvaluationDomainScoresJson(
     return empty;
   }
   try {
-    const parsed = JSON.parse(value) as Partial<Record<LessonEvaluationDomainKey, number | null>>;
+    const parsed = JSON.parse(value) as Partial<Record<string, number | null>>;
     return {
-      setup: typeof parsed.setup === "number" ? Number(parsed.setup) : null,
-      new_sound: typeof parsed.new_sound === "number" ? Number(parsed.new_sound) : null,
-      decoding: typeof parsed.decoding === "number" ? Number(parsed.decoding) : null,
-      reading_practice:
-        typeof parsed.reading_practice === "number" ? Number(parsed.reading_practice) : null,
-      tricky_words: typeof parsed.tricky_words === "number" ? Number(parsed.tricky_words) : null,
-      check_next: typeof parsed.check_next === "number" ? Number(parsed.check_next) : null,
+      gpc: typeof parsed.gpc === "number" ? Number(parsed.gpc) : null,
+      blending: typeof parsed.blending === "number" ? Number(parsed.blending) : null,
+      engagement: typeof parsed.engagement === "number" ? Number(parsed.engagement) : null,
     };
   } catch {
     return empty;
@@ -562,7 +555,7 @@ export async function listLessonEvaluationItemsForPublicImpactPostgres(
     [evaluationIds],
   );
   return result.rows.map((row) => ({
-    domainKey: String(row.domainKey ?? "setup") as LessonEvaluationDomainKey,
+    domainKey: String(row.domainKey ?? "gpc") as LessonEvaluationDomainKey,
     score: Number(row.score ?? 0),
   }));
 }
@@ -694,8 +687,8 @@ export async function listLessonEvaluationRecordsForPublicImpactPostgres(filters
     const evaluationId = Number(row.evaluationId);
     const bucket = itemMap.get(evaluationId) ?? [];
     bucket.push({
-      domainKey: String(row.domainKey ?? "setup") as LessonEvaluationDomainKey,
-      itemKey: String(row.itemKey ?? "A1") as LessonEvaluationItemInput["itemKey"],
+      domainKey: String(row.domainKey ?? "gpc") as LessonEvaluationDomainKey,
+      itemKey: String(row.itemKey ?? "C1a") as LessonEvaluationItemInput["itemKey"],
       score: Math.max(1, Math.min(4, Number(row.score ?? 1))) as 1 | 2 | 3 | 4,
       note: row.note ? String(row.note) : null,
     });
@@ -725,8 +718,10 @@ export async function listLessonEvaluationRecordsForPublicImpactPostgres(filters
       classSize: row.classSize === null || row.classSize === undefined ? null : Number(row.classSize),
       lessonDate: String(row.lessonDate ?? ""),
       lessonFocus,
+      lessonDurationMinutes: null,
       observerId: Number(row.observerId ?? 0),
       observerName: row.observerName ? String(row.observerName) : "Observer",
+      observerNameText: null,
       visitId: row.visitId === null || row.visitId === undefined ? null : Number(row.visitId),
       overallScore: Number(row.overallScore ?? 0),
       overallLevel: String(row.overallLevel ?? "Needs Support") as LessonEvaluationOverallLevel,
@@ -734,6 +729,11 @@ export async function listLessonEvaluationRecordsForPublicImpactPostgres(filters
       topGapDomain: row.topGapDomain ? String(row.topGapDomain) as LessonEvaluationDomainKey : null,
       topStrengthDomain:
         row.topStrengthDomain ? String(row.topStrengthDomain) as LessonEvaluationDomainKey : null,
+      lessonStructure: [],
+      strengthsList: [],
+      areasForDevelopmentList: [],
+      actionPlan: null,
+      postObservationRating: null,
       strengthsText: String(row.strengthsText ?? ""),
       priorityGapText: String(row.priorityGapText ?? ""),
       nextCoachingAction: String(row.nextCoachingAction ?? ""),
@@ -1029,7 +1029,7 @@ export async function buildPublicImpactAggregatePostgres(
   };
 
   const domainAverages = {
-    setup: null, newSound: null, decoding: null, readingPractice: null, trickyWords: null, checkNext: null
+    gpc: null, blending: null, engagement: null
   };
 
   const result: PublicImpactAggregate = {

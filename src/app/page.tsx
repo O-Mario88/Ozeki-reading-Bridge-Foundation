@@ -72,50 +72,6 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
       />
 
-      {/* 1. Hero Section (Charius Dark Overlay Hero) */}
-      <section className="relative w-full min-h-[85vh] flex items-center bg-[#006b61] overflow-hidden pt-20">
-        <Image
-          src="/photos/classroom-learners-writing.jpg"
-          alt="Learners reading in class"
-          fill
-          className="object-cover object-[center_30%] opacity-40"
-          sizes="100vw"
-          priority
-        />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-        <div className="absolute inset-y-0 left-0 w-3/4 bg-gradient-to-r from-black/60 via-black/20 to-transparent pointer-events-none" />
-        
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="max-w-2xl">
-            <span className="text-white/80 font-medium tracking-widest uppercase text-sm mb-4 block">
-              Give them a chance.
-            </span>
-            <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.1] mb-8 tracking-tight">
-              Give The Child The Gift Of Reading.
-            </h1>
-            <p className="text-xl text-white/90 mb-10 max-w-lg leading-relaxed font-light">
-              Ozeki Reading Bridge empowers teachers with phonics skills to build confident readers across Uganda.
-            </p>
-            
-            <div className="flex items-center gap-6">
-              <Link 
-                href="/impact/dashboard"
-                className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-charius-orange text-white font-bold tracking-wide hover:bg-[#e06b0b] transition-colors"
-              >
-                Join Our Mission
-              </Link>
-              <div className="hidden sm:flex items-center">
-                {/* Simulated clustered avatars like the Charius button block */}
-                {[1,2,3,4].map((i) => (
-                  <div key={i} className={`w-10 h-10 rounded-full border-2 border-transparent bg-white/20 backdrop-blur-sm -ml-3 first:ml-0 flex items-center justify-center text-xs font-bold text-white`}>
-                     O
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* 2. Overlapping Pill Section (You're the Hope of Others) */}
       <SectionWrapper theme="light" className="overflow-hidden py-24">
@@ -123,7 +79,7 @@ export default async function HomePage() {
           {/* Left: Component with diagonal pills */}
           <div className="relative w-full">
             <ChariusPillImage 
-              src="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg" 
+              src="/photos/PXL_20260217_110748302.jpg" 
               alt="Reading Session" 
             />
           </div>
@@ -205,9 +161,9 @@ export default async function HomePage() {
         
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {/* Card 1 */}
-          <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow">
+          <Link href="/phonics-training" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
             <div className="relative h-64 w-full">
-              <Image src="/photos/10.jpeg" alt="Program" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+              <Image src="/photos/26.jpeg" alt="Phonics Training" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
             </div>
             <div className="p-8">
               <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
@@ -221,12 +177,12 @@ export default async function HomePage() {
                 <span>Goal: $10,000</span>
               </div>
             </div>
-          </div>
+          </Link>
           
           {/* Card 2 */}
-          <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow">
+          <Link href="/in-school-coaching-mentorship" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
             <div className="relative h-64 w-full">
-              <Image src="/photos/11.jpeg" alt="Program" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+              <Image src="/photos/Phonics%20Session%20for%20Teachers%20in%20Namasale%20Sub-County%20Amolatar.jpg" alt="In-school coaching" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
             </div>
             <div className="p-8">
               <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
@@ -240,12 +196,12 @@ export default async function HomePage() {
                 <span>Goal: 100%</span>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Card 3 */}
-          <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow">
+          <Link href="/story-project" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
             <div className="relative h-64 w-full">
-              <Image src="/photos/12.jpeg" alt="Program" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+              <Image src="/photos/Amolatar%20District%20Literacy.jpg" alt="1001 Story Project" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
             </div>
             <div className="p-8">
               <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
@@ -259,7 +215,7 @@ export default async function HomePage() {
                 <span>Goal: 1,000</span>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
       </SectionWrapper>
 
@@ -277,7 +233,7 @@ export default async function HomePage() {
         {/* Circular Avatars Row */}
         <div className="flex flex-wrap justify-center gap-8 md:gap-16 mb-16">
           {testimonialRows.length > 0 ? testimonialRows.map((q) => (
-             <div key={q.id} className="flex flex-col items-center group cursor-pointer">
+             <div key={q.id} className="flex flex-col items-center group">
                 <div className="w-24 h-24 rounded-full overflow-hidden mb-4 border-2 border-transparent group-hover:border-charius-orange transition-all shadow-md">
                    {/* Fallback avatar block for real data */}
                    <div className="w-full h-full bg-[#006b61]/10 flex items-center justify-center text-2xl font-bold text-[#006b61]">
@@ -332,58 +288,58 @@ export default async function HomePage() {
          
          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6 relative z-20">
             {/* Event 1 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-lg group cursor-pointer hover:-translate-y-2 transition-transform">
+            <Link href="/events" className="bg-white rounded-xl overflow-hidden shadow-lg group hover:-translate-y-2 transition-transform block">
                <div className="relative h-48">
-                  <Image src="/photos/13.jpeg" alt="Event" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                  <Image src="/photos/12.jpeg" alt="Phonics Training Workshop" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   <div className="absolute top-4 left-4 bg-charius-orange w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
                      <span className="text-xl font-bold leading-none">22</span>
                      <span className="text-[10px] uppercase font-semibold">Jan</span>
                   </div>
                </div>
                <div className="p-6">
-                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">School Rally Above Poor Children</h3>
+                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">Phonics Training Workshop — Northern Uganda</h3>
                  <p className="text-gray-500 text-sm flex items-center gap-2 font-medium">
                     <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">⏰</span>
                     9:00am - 4:00pm
                  </p>
                </div>
-            </div>
+            </Link>
 
             {/* Event 2 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-lg group cursor-pointer hover:-translate-y-2 transition-transform">
+            <Link href="/events" className="bg-white rounded-xl overflow-hidden shadow-lg group hover:-translate-y-2 transition-transform block">
                <div className="relative h-48">
-                  <Image src="/photos/14.jpeg" alt="Event" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                  <Image src="/photos/17.jpeg" alt="Reading Assessment Day" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   <div className="absolute top-4 left-4 bg-[#006b61] w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
                      <span className="text-xl font-bold leading-none">15</span>
                      <span className="text-[10px] uppercase font-semibold">Feb</span>
                   </div>
                </div>
                <div className="p-6">
-                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">Solve the Water Problem of World</h3>
+                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">Learner Reading Assessment Day — District Cluster</h3>
                  <p className="text-gray-500 text-sm flex items-center gap-2 font-medium">
                     <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">⏰</span>
                     10:00am - 2:00pm
                  </p>
                </div>
-            </div>
+            </Link>
 
             {/* Event 3 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-lg group cursor-pointer hover:-translate-y-2 transition-transform">
+            <Link href="/events" className="bg-white rounded-xl overflow-hidden shadow-lg group hover:-translate-y-2 transition-transform block">
                <div className="relative h-48">
-                  <Image src="/photos/15.jpeg" alt="Event" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                  <Image src="/photos/13.jpeg" alt="Coaching and Mentorship Visit" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   <div className="absolute top-4 left-4 bg-red-500 w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
                      <span className="text-xl font-bold leading-none">05</span>
                      <span className="text-[10px] uppercase font-semibold">Mar</span>
                   </div>
                </div>
                <div className="p-6">
-                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">How Old Cloths Can Make Happiness</h3>
+                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">In-School Coaching & Mentorship Visit</h3>
                  <p className="text-gray-500 text-sm flex items-center gap-2 font-medium">
                     <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">⏰</span>
                     8:00am - 12:00pm
                  </p>
                </div>
-            </div>
+            </Link>
          </div>
       </section>
 

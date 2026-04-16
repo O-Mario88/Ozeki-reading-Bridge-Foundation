@@ -78,7 +78,7 @@ export function OrganizationProfileManager() {
   const logoPreviewUrl = useMemo(() => {
     const value = profile.logoStorageUrl?.trim();
     if (!value) {
-      return "/photos/logo.png";
+      return "/photos/PXL_20260217_124415441.MP.jpg";
     }
     return value;
   }, [profile.logoStorageUrl]);
@@ -195,7 +195,7 @@ export function OrganizationProfileManager() {
         <label className="portal-field-label">
           Logo URL (optional)
           <input
-            placeholder="https://... or /photos/logo.png"
+            placeholder="https://... or /photos/14.jpeg"
             value={profile.logoStorageUrl ?? ""}
             onChange={(event) =>
               setProfile((prev) => ({

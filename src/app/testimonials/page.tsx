@@ -32,7 +32,7 @@ export default async function TestimonialsPage() {
 
   return (
     <>
-      <PageHero imageUrl="/photos/PXL_20260218_134438769.jpg"
+      <PageHero imageUrl="/photos/PXL_20260219_095934420.jpg"
         kicker="Trust builders"
         title="Testimonials"
         description="Voices from teachers and school leaders, now supported with photo and video evidence from implementation sites."

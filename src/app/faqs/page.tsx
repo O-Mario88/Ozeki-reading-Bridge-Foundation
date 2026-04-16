@@ -53,7 +53,7 @@ export default function FaqPage() {
           tagline={<><HelpCircle className="w-4 h-4 inline" /> Support</>}
           title="Frequently Asked Questions"
           subtitle="Quick answers about school support requests, partnerships, reporting, and accountability."
-          imageSrc="/photos/PXL_20260219_095934420.jpg"
+          imageSrc="/photos/PXL_20260218_133341852.jpg"
         />
 
         <SectionWrapper theme="charius-beige">

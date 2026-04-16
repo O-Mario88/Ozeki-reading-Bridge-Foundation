@@ -241,50 +241,55 @@ function mapStoryComment(row: Record<string, unknown>): StoryComment {
 export async function listPublishedPortalTestimonialsPostgres(
   limit = 180,
 ): Promise<PortalTestimonialRecord[]> {
-  const result = await queryPostgres<Record<string, unknown>>(
-    `
-      SELECT
-        pt.id,
-        pt.storyteller_name AS "storytellerName",
-        pt.storyteller_role AS "storytellerRole",
-        pt.school_id AS "schoolId",
-        pt.school_name AS "schoolName",
-        pt.district,
-        pt.story_text AS "storyText",
-        pt.video_source_type AS "videoSourceType",
-        pt.video_file_name AS "videoFileName",
-        pt.video_stored_path AS "videoStoredPath",
-        pt.video_mime_type AS "videoMimeType",
-        pt.video_size_bytes AS "videoSizeBytes",
-        pt.youtube_video_id AS "youtubeVideoId",
-        pt.youtube_video_title AS "youtubeVideoTitle",
-        pt.youtube_channel_title AS "youtubeChannelTitle",
-        pt.youtube_thumbnail_url AS "youtubeThumbnailUrl",
-        pt.youtube_embed_url AS "youtubeEmbedUrl",
-        pt.youtube_watch_url AS "youtubeWatchUrl",
-        pt.photo_file_name AS "photoFileName",
-        pt.photo_stored_path AS "photoStoredPath",
-        pt.photo_mime_type AS "photoMimeType",
-        pt.photo_size_bytes AS "photoSizeBytes",
-        pt.is_published AS "isPublished",
-        pt.moderation_status AS "moderationStatus",
-        pt.source_type AS "sourceType",
-        pt.source_training_feedback_id AS "sourceTrainingFeedbackId",
-        pt.source_training_record_id AS "sourceTrainingRecordId",
-        pt.quote_field AS "quoteField",
-        pt.created_by_user_id AS "createdByUserId",
-        pu.full_name AS "createdByName",
-        pt.created_at::text AS "createdAt"
-      FROM portal_testimonials pt
-      JOIN portal_users pu ON pu.id = pt.created_by_user_id
-      WHERE pt.is_published IS TRUE
-        AND COALESCE(pt.moderation_status, 'approved') = 'approved'
-      ORDER BY pt.created_at DESC
-      LIMIT $1
-    `,
-    [limit],
-  );
-  return result.rows.map(mapPortalTestimonial);
+  try {
+    const result = await queryPostgres<Record<string, unknown>>(
+      `
+        SELECT
+          pt.id,
+          pt.storyteller_name AS "storytellerName",
+          pt.storyteller_role AS "storytellerRole",
+          pt.school_id AS "schoolId",
+          pt.school_name AS "schoolName",
+          pt.district,
+          pt.story_text AS "storyText",
+          pt.video_source_type AS "videoSourceType",
+          pt.video_file_name AS "videoFileName",
+          pt.video_stored_path AS "videoStoredPath",
+          pt.video_mime_type AS "videoMimeType",
+          pt.video_size_bytes AS "videoSizeBytes",
+          pt.youtube_video_id AS "youtubeVideoId",
+          pt.youtube_video_title AS "youtubeVideoTitle",
+          pt.youtube_channel_title AS "youtubeChannelTitle",
+          pt.youtube_thumbnail_url AS "youtubeThumbnailUrl",
+          pt.youtube_embed_url AS "youtubeEmbedUrl",
+          pt.youtube_watch_url AS "youtubeWatchUrl",
+          pt.photo_file_name AS "photoFileName",
+          pt.photo_stored_path AS "photoStoredPath",
+          pt.photo_mime_type AS "photoMimeType",
+          pt.photo_size_bytes AS "photoSizeBytes",
+          pt.is_published AS "isPublished",
+          pt.moderation_status AS "moderationStatus",
+          pt.source_type AS "sourceType",
+          pt.source_training_feedback_id AS "sourceTrainingFeedbackId",
+          pt.source_training_record_id AS "sourceTrainingRecordId",
+          pt.quote_field AS "quoteField",
+          pt.created_by_user_id AS "createdByUserId",
+          pu.full_name AS "createdByName",
+          pt.created_at::text AS "createdAt"
+        FROM portal_testimonials pt
+        JOIN portal_users pu ON pu.id = pt.created_by_user_id
+        WHERE pt.is_published IS TRUE
+          AND COALESCE(pt.moderation_status, 'approved') = 'approved'
+        ORDER BY pt.created_at DESC
+        LIMIT $1
+      `,
+      [limit],
+    );
+    return result.rows.map(mapPortalTestimonial);
+  } catch (error) {
+    console.error("[listPublishedPortalTestimonialsPostgres] Error:", error);
+    return [];
+  }
 }
 
 export async function getPublishedPortalTestimonialByIdPostgres(

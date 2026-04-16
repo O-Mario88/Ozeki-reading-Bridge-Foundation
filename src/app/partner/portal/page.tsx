@@ -9,7 +9,7 @@ export const metadata = {
 export default function PartnerPortalAccessPage() {
   return (
     <>
-      <section className="page-hero" style={{ backgroundImage: "url('/photos/24.jpeg')" }}>
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/PXL_20260218_133702555.jpg')" }}>
         <div className="container">
           <p className="kicker">Partner portal</p>
           <h1>Partner Portal</h1>

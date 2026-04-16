@@ -1,5 +1,5 @@
 import Image from "next/image";
-import trainingPhoto from "../../../public/photos/PXL_20260218_124648833.MP.jpg";
+import trainingPhoto from "../../../public/photos/PXL_20260217_110748302.jpg";
 import { signatureProgram } from "@/lib/content";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";

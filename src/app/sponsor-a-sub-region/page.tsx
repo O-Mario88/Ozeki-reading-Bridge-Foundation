@@ -96,7 +96,7 @@ export default function SponsorSubRegionPage() {
       <section className="relative overflow-hidden pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
         <div className="absolute inset-0 pointer-events-none">
           <Image
-            src="/photos/22.jpeg"
+            src="/photos/PXL_20260219_095934420.jpg"
             alt="Literacy coaching session in a Ugandan classroom"
             fill
             sizes="100vw"
@@ -203,7 +203,7 @@ export default function SponsorSubRegionPage() {
             <div className="absolute inset-0 bg-brand-primary/5 rounded-[2.5rem] transform rotate-3 scale-105" />
             <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] shadow-2xl">
               <Image
-                src="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg"
+                src="/photos/Reading%20Session%20in%20Dokolo%20Greater%20Bata%20Cluster.jpeg"
                 alt="Learners showing reading progress during a sub-region assessment"
                 fill
                 className="object-cover"

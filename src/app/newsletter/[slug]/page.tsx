@@ -31,7 +31,7 @@ export default async function NewsletterIssuePage({ params }: NewsletterIssuePag
 
   return (
     <>
-      <section className="page-hero" style={{ backgroundImage: "url('/photos/22.jpeg')" }}>
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/12.jpeg')" }}>
         <div className="container">
           <p className="kicker">Newsletter issue</p>
           <h1>{issue.title}</h1>

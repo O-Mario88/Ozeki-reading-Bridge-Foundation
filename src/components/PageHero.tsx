@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MotionReveal } from "@/components/ui/MotionReveal";
 
 interface PageHeroProps {
   kicker?: string;
@@ -9,39 +8,30 @@ interface PageHeroProps {
   children?: ReactNode;
 }
 
-export function PageHero({ kicker, title, description, imageUrl, children }: PageHeroProps) {
+export function PageHero({ kicker, title, description, children }: PageHeroProps) {
   return (
-    <section
-      className="w-full relative pt-32 pb-24 overflow-hidden"
-      style={{
-        backgroundColor: "#006b61",
-        ...(imageUrl
-          ? {
-              backgroundImage: `url('${imageUrl}')`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-            }
-          : {}),
-      }}
-    >
-      {imageUrl && <div className="absolute inset-0 bg-black/60 pointer-events-none z-0" />}
-      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/10 to-transparent pointer-events-none z-0" />
-      <div className="container mx-auto px-6 max-w-5xl flex flex-col items-center text-center relative z-10">
-        <MotionReveal className="flex flex-col items-center gap-6">
-          {kicker ? (
-            <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase">
-              {kicker}
-            </span>
-          ) : null}
-          <h1 className="text-[40px] md:text-[56px] text-white font-bold tracking-tight leading-[1.15] m-0">
-            {title}
-          </h1>
-          <p className="m-0 text-[18px] md:text-[20px] text-white/90 leading-relaxed max-w-3xl font-light drop-shadow-sm">
-            {description}
-          </p>
-          {children && <div className="mt-4">{children}</div>}
-        </MotionReveal>
+    <section className="relative overflow-hidden bg-brand-background pt-32 pb-20 md:pt-40 md:pb-28 border-b border-gray-100">
+      {/* Subtle decorative elements */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#FA7D15]/8 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#006b61]/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/3 pointer-events-none" />
+
+      <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 flex flex-col items-center text-center">
+        {kicker ? (
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-8 shadow-sm border border-[#FA7D15]/20">
+            <span className="w-2 h-2 rounded-full bg-[#FA7D15] animate-pulse" />
+            {kicker}
+          </div>
+        ) : null}
+
+        <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-[1.1] max-w-4xl mb-6">
+          {title}
+        </h1>
+
+        <p className="text-xl md:text-2xl text-gray-500 max-w-3xl mx-auto mb-10 leading-relaxed">
+          {description}
+        </p>
+
+        {children && <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">{children}</div>}
       </div>
     </section>
   );

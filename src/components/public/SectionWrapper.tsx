@@ -21,7 +21,7 @@ export function SectionWrapper({
     brand: "bg-[#006b61] text-white",
     "off-white": "bg-charius-beige text-[#111]",
     "charius-beige": "bg-charius-beige text-[#111]",
-    "charius-dark": "bg-charius-dark text-white",
+    "charius-dark": "bg-brand-primary text-white",
   };
 
   return (

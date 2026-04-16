@@ -44,7 +44,7 @@ export function TeacherEvaluationPerformanceCards({
           <article className="impact-domain-mini-card">
             <h4>Overall Levels</h4>
             <p className="impact-domain-mini-meta">
-              Strong: <strong>{teachingQuality.levelDistribution.strong.percent}%</strong>
+              Exemplary: <strong>{teachingQuality.levelDistribution.strong.percent}%</strong>
             </p>
             <p className="impact-domain-mini-meta">
               Good: <strong>{teachingQuality.levelDistribution.good.percent}%</strong>
@@ -80,19 +80,16 @@ export function TeacherEvaluationPerformanceCards({
           <article className="impact-domain-mini-card">
             <h4>Domain Averages (/4)</h4>
             <p className="impact-domain-mini-meta">
-              Setup & Review:{" "}
-              <strong>{teachingQuality.domainAverages.setup?.toFixed(2) ?? "N/A"}</strong>
+              Phoneme-Grapheme (GPC):{" "}
+              <strong>{teachingQuality.domainAverages.gpc?.toFixed(2) ?? "N/A"}</strong>
             </p>
             <p className="impact-domain-mini-meta">
-              New Sound/Skill:{" "}
-              <strong>{teachingQuality.domainAverages.newSound?.toFixed(2) ?? "N/A"}</strong>
+              Blending & Teaching:{" "}
+              <strong>{teachingQuality.domainAverages.blending?.toFixed(2) ?? "N/A"}</strong>
             </p>
             <p className="impact-domain-mini-meta">
-              Decoding: <strong>{teachingQuality.domainAverages.decoding?.toFixed(2) ?? "N/A"}</strong>
-            </p>
-            <p className="impact-domain-mini-meta">
-              Reading Practice:{" "}
-              <strong>{teachingQuality.domainAverages.readingPractice?.toFixed(2) ?? "N/A"}</strong>
+              Learner Engagement:{" "}
+              <strong>{teachingQuality.domainAverages.engagement?.toFixed(2) ?? "N/A"}</strong>
             </p>
           </article>
 

@@ -196,7 +196,7 @@ export function PartnerFundingPage() {
         <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           <div style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
             <p className="kicker">Partner with us</p>
-            <h1 className="partner-hero-title">
+            <h1 className="partner-hero-title text-brand-primary">
               Fund Literacy That Shows Results - by Country, Region, or District
             </h1>
             <p className="partner-hero-intro">

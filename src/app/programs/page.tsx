@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getImpactSummary } from "@/services/dataService";
 import { PROGRAM_DIRECTORY_DETAILS } from "@/lib/home-static-data";
-import { PageHero } from "@/components/public/PageHero";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
@@ -55,12 +54,41 @@ export default async function ProgramsPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(programsSchema) }}
       />
       {/* 1. Hero Section */}
-      <PageHero
-        tagline="What We Do"
-        title="Programs & Services"
-        subtitle="Our full implementation support stack for nursery and primary literacy improvement. Evidence-backed and scalable."
-        imageSrc="/photos/PXL_20260218_125340158.jpg"
-      />
+      <section className="relative overflow-hidden bg-brand-background pt-32 pb-20 md:pt-40 md:pb-28 border-b border-gray-100">
+        {/* Subtle radial glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#FA7D15]/8 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#006b61]/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/3 pointer-events-none" />
+
+        <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-8 shadow-sm border border-[#FA7D15]/20">
+            <span className="w-2 h-2 rounded-full bg-[#FA7D15] animate-pulse" />
+            What We Do
+          </div>
+
+          <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-[1.1] mb-6">
+            Programs &amp; Services
+          </h1>
+
+          <p className="text-xl md:text-2xl text-gray-500 max-w-3xl mx-auto leading-relaxed mb-10">
+            Our full implementation support stack for nursery and primary literacy improvement. Evidence-backed and scalable.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              href="#directory"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-[#FA7D15] text-white font-bold tracking-wide hover:bg-[#e06b0b] transition-colors shadow-md hover:shadow-xl"
+            >
+              Browse Programs <ArrowRight size={18} />
+            </Link>
+            <Link
+              href="/partner-with-us"
+              className="inline-flex items-center justify-center px-8 py-4 rounded-full border-2 border-gray-200 text-[#111] font-bold tracking-wide hover:border-[#FA7D15] hover:text-[#FA7D15] transition-colors"
+            >
+              Partner With Us
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* 2. Real-time Impact Metrics */}
       <SectionWrapper theme="charius-beige">

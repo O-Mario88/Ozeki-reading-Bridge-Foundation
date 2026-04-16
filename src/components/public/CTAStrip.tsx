@@ -1,7 +1,8 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 interface CTAStripProps {
-  heading: string;
+  heading: string | ReactNode;
   subheading?: string;
   primaryButtonText?: string;
   primaryButtonHref?: string;
@@ -25,7 +26,7 @@ export function CTAStrip({
 }: CTAStripProps) {
   const themes = {
     brand: "bg-[#006b61] text-white", // Deep Green for Charius
-    dark: "bg-[#09110D] text-white", // Dark mode
+    dark: "bg-brand-primary text-white", // Changed from black to system brand
     light: "bg-charius-beige text-[#111]", // Charius beige
     charius: "bg-charius-beige text-[#111] border-t border-gray-200", // Refined from black to neutral tone
   };
@@ -43,7 +44,7 @@ export function CTAStrip({
   return (
     <section className={`py-16 md:py-24 ${themes[theme]}`}>
       <div className="container mx-auto px-4 md:px-6 max-w-4xl text-center">
-        <h2 className={`text-[32px] md:text-5xl font-bold mb-6 tracking-tight ${(theme === 'light' || theme === 'charius') ? 'text-[#111]' : 'text-white'}`}>
+        <h2 className={`text-[32px] md:text-5xl font-bold mb-6 tracking-tight ${(theme === 'light' || theme === 'charius') ? 'text-brand-primary' : 'text-white'}`}>
           {heading}
         </h2>
         {subheading && (

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import remedialPhoto from "../../../public/photos/PXL_20260217_124358059.jpg";
+import remedialPhoto from "../../../public/photos/PXL_20260217_124455266.MP.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

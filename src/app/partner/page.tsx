@@ -48,7 +48,7 @@ export default function PartnerPage() {
         tagline="Partner with us"
         title="Fund literacy that shows results"
         subtitle="Choose a sponsorship package and submit a partnership request. Every package is tracked in NLIP with measurable implementation and reporting."
-        imageSrc="/photos/PXL_20260218_133701748.jpg"
+        imageSrc="/photos/10.jpeg"
       >
         <Link className="px-8 py-3.5 rounded-full bg-[#FA7D15] text-white font-semibold hover:bg-[#E86D0B] shadow-lg transition-all" href="/impact-reports">
           Explore Impact

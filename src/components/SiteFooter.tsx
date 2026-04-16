@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { officialContact, officialContactLinks } from "@/lib/contact";
+import { officialContact, officialContactLinks, socialLinks } from "@/lib/contact";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import { Facebook, Instagram, Twitter, Youtube, Send, Mail, Phone, MapPin } from "lucide-react";
 
@@ -75,10 +75,10 @@ export function SiteFooter() {
               An innovative and engaging educational platform designed to make learning fun and accessible for children and practical phonics for teachers.
             </p>
             <div className="footer-v2-social">
-              <a href="#" aria-label="Facebook"><Facebook size={18} /></a>
-              <a href="#" aria-label="Instagram"><Instagram size={18} /></a>
-              <a href="#" aria-label="Twitter"><Twitter size={18} /></a>
-              <a href="#" aria-label="YouTube"><Youtube size={18} /></a>
+              <a href={socialLinks.facebook} target="_blank" rel="noreferrer" aria-label="Facebook"><Facebook size={18} /></a>
+              <a href={socialLinks.instagram} target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={18} /></a>
+              <a href={socialLinks.twitter} target="_blank" rel="noreferrer" aria-label="Twitter / X"><Twitter size={18} /></a>
+              <a href={socialLinks.youtube} target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube size={18} /></a>
             </div>
             <p className="footer-v2-note">
               <strong>TIN:</strong> {officialContact.tin}

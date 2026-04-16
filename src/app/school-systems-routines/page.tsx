@@ -1,5 +1,5 @@
 import Image from "next/image";
-import schoolSystemsPhoto from "../../../public/photos/Amolatar District Literacy.jpg";
+import schoolSystemsPhoto from "../../../public/photos/PXL_20260219_095935084.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

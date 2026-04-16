@@ -230,7 +230,7 @@ export default async function ImpactDashboardPage({
               request, then shared through controlled channels.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link href="/request-support" className="px-6 py-3 rounded-full bg-gray-900 text-white font-semibold flex items-center justify-center hover:bg-gray-800 transition-colors">
+              <Link href="/request-support" className="px-6 py-3 rounded-full bg-brand-primary text-white font-semibold flex items-center justify-center hover:bg-[#005a52] transition-colors">
                 Request Staff-Generated Report
               </Link>
             </div>

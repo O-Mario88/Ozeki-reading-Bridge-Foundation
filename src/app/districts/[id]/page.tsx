@@ -38,7 +38,7 @@ export default async function DistrictPage({ params }: { params: Params }) {
 
     return (
         <>
-            <section className="page-hero" style={{ backgroundImage: "url('/photos/Literacy%20Training%20in%20Loro%20-%20Oyam%20District.jpg')" }}>
+            <section className="page-hero" style={{ backgroundImage: "url('/photos/Reading%20Session%20in%20Dokolo%20Greater%20Bata%20Cluster.jpeg')" }}>
                 <div className="container">
                     <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
                         <Link href="/impact/dashboard">Dashboard</Link>

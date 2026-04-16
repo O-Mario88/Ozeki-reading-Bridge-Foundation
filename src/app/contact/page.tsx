@@ -18,7 +18,7 @@ export default function ContactPage() {
         tagline="Get in touch"
         title="Contact Us"
         subtitle="Reach out for school support, partnerships, media requests, or general inquiries."
-        imageSrc="/photos/PXL_20260218_133341852.jpg"
+        imageSrc="/photos/PXL_20260218_140338031.jpg"
       />
 
       <SectionWrapper theme="charius-beige">

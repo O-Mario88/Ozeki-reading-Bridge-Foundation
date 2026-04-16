@@ -18,7 +18,7 @@ export default function OurStoryPage() {
           tagline={<><BookOpen className="w-4 h-4 inline mr-1" /> About Us</>}
           title="Our Story"
           subtitle="A clear national pathway from literacy challenge to measurable, school-level improvement."
-          imageSrc="/photos/PXL_20260218_140233638.jpg"
+          imageSrc="/photos/21.jpeg"
         />
 
         {/* The Problem Section */}

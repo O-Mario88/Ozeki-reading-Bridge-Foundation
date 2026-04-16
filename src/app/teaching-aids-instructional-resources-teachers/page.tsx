@@ -1,5 +1,5 @@
 import Image from "next/image";
-import teachingAidsPhoto from "../../../public/photos/PXL_20260218_124653516.MP.jpg";
+import teachingAidsPhoto from "../../../public/photos/Phonics Session for Teachers in Namasale Sub-County Amolatar.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

@@ -35,7 +35,7 @@ export default async function SubCountyPage({ params }: { params: Params }) {
 
     return (
         <>
-            <section className="page-hero" style={{ backgroundImage: "url('/photos/Literacy%20Training%20in%20Loro%20-%20Oyam%20District.jpg')" }}>
+            <section className="page-hero" style={{ backgroundImage: "url('/photos/PXL_20260217_124357146.jpg')" }}>
                 <div className="container">
                     <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
                         <Link href="/impact/dashboard">Dashboard</Link>

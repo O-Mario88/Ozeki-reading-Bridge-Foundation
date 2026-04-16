@@ -2,7 +2,7 @@ export const LESSON_EVALUATION_SCORE_LABELS = {
   1: "Needs Support",
   2: "Developing",
   3: "Good",
-  4: "Strong",
+  4: "Exemplary",
 } as const;
 
 export type LessonEvaluationScore = keyof typeof LESSON_EVALUATION_SCORE_LABELS;
@@ -17,48 +17,78 @@ export const LESSON_FOCUS_OPTIONS = [
 
 export type LessonFocusOption = (typeof LESSON_FOCUS_OPTIONS)[number];
 
+/* ─── Lesson Structure Checklist (Section B — Yes/No) ─────── */
+
+export type LessonStructureItemKey = "LS1" | "LS2" | "LS3" | "LS4" | "LS5";
+
+export interface LessonStructureItemDefinition {
+  itemKey: LessonStructureItemKey;
+  label: string;
+  prompt: string;
+}
+
+export const LESSON_STRUCTURE_ITEMS: LessonStructureItemDefinition[] = [
+  {
+    itemKey: "LS1",
+    label: "Revision",
+    prompt: "Quick review of known sounds/blending of words daily.",
+  },
+  {
+    itemKey: "LS2",
+    label: "Teach New Sound",
+    prompt: "Clear introduction of the new sound/phoneme.",
+  },
+  {
+    itemKey: "LS3",
+    label: "Reading Activities",
+    prompt: "Applying knowledge to decode words.",
+  },
+  {
+    itemKey: "LS4",
+    label: "Teach Tricky Word",
+    prompt: "Introducing a high-frequency, non-decodable word.",
+  },
+  {
+    itemKey: "LS5",
+    label: "Writing Activities",
+    prompt: "Encoding practice via segmenting.",
+  },
+];
+
+export const LESSON_STRUCTURE_ITEM_KEYS = LESSON_STRUCTURE_ITEMS.map(
+  (item) => item.itemKey,
+) as readonly LessonStructureItemKey[];
+
+/* ─── Scored Domains (Section C & D — 1–4 scale) ─────────── */
+
 export type LessonEvaluationDomainKey =
-  | "setup"
-  | "new_sound"
-  | "decoding"
-  | "reading_practice"
-  | "tricky_words"
-  | "check_next";
+  | "gpc"
+  | "blending"
+  | "engagement";
 
 export type LessonEvaluationItemKey =
-  | "A1"
-  | "A2"
-  | "A3"
-  | "B4"
-  | "B5"
-  | "B6"
-  | "B7"
-  | "B8"
-  | "C9"
-  | "C10"
-  | "C11"
-  | "C12"
-  | "D13"
-  | "D14"
-  | "D15"
-  | "D16"
-  | "E17"
-  | "E18"
-  | "F19"
-  | "F20"
-  | "F21";
+  | "C1a"
+  | "C1b"
+  | "C1c"
+  | "C2a"
+  | "C2b"
+  | "C2c"
+  | "C2d"
+  | "C2e"
+  | "C2f"
+  | "D1"
+  | "D2"
+  | "D3"
+  | "D4";
 
 export type LessonEvaluationGrade = "P1" | "P2" | "P3" | "P4" | "P5" | "P6" | "P7";
 
-export type LessonEvaluationOverallLevel = "Strong" | "Good" | "Developing" | "Needs Support";
+export type LessonEvaluationOverallLevel = "Exemplary" | "Good" | "Developing" | "Needs Support";
 
 export const LESSON_EVALUATION_DOMAIN_LABELS: Record<LessonEvaluationDomainKey, string> = {
-  setup: "A) Setup & Review",
-  new_sound: "B) New Sound/Skill",
-  decoding: "C) Decoding & Phonemic Skills",
-  reading_practice: "D) Reading Practice & Fluency",
-  tricky_words: "E) Tricky Words",
-  check_next: "F) Check for Understanding & Next Steps",
+  gpc: "C1) Phoneme–Grapheme Correspondence (GPC)",
+  blending: "C2) Blending (Reading) and Teaching Practices",
+  engagement: "D) Learner Engagement & Assessment",
 };
 
 export type LessonEvaluationItemDefinition = {
@@ -68,110 +98,73 @@ export type LessonEvaluationItemDefinition = {
 };
 
 export const LESSON_EVALUATION_ITEMS: LessonEvaluationItemDefinition[] = [
+  // C1) Phoneme–Grapheme Correspondence (GPC)
   {
-    domainKey: "setup",
-    itemKey: "A1",
-    prompt: "Lesson routine starts on time with a clear review of prior sounds/skills.",
+    domainKey: "gpc",
+    itemKey: "C1a",
+    prompt: 'Uses "Pure Sounds": Produces accurate sounds without adding vowel sounds (e.g., /m/ not "muh").',
   },
   {
-    domainKey: "setup",
-    itemKey: "A2",
-    prompt: "Teacher has required lesson resources prepared and organized.",
+    domainKey: "gpc",
+    itemKey: "C1b",
+    prompt: "Integrates Multi-Sensory Approaches: Uses the trained actions and letter form together.",
   },
   {
-    domainKey: "setup",
-    itemKey: "A3",
-    prompt: "Learners are engaged quickly and understand the lesson objective.",
+    domainKey: "gpc",
+    itemKey: "C1c",
+    prompt: "Correct Level Order: Following the strict Level 1–3 progression sequence.",
+  },
+  // C2) Blending (Reading) and Teaching Practices
+  {
+    domainKey: "blending",
+    itemKey: "C2a",
+    prompt: "Modeling Blending: Models sounding out and merging smoothly (not robotically).",
   },
   {
-    domainKey: "new_sound",
-    itemKey: "B4",
-    prompt: "Teacher models the new sound/skill accurately and clearly.",
+    domainKey: "blending",
+    itemKey: "C2b",
+    prompt: "Gradual Release (I Do, We Do, You Do): Teacher models, guides practice, then allows independent practice.",
   },
   {
-    domainKey: "new_sound",
-    itemKey: "B5",
-    prompt: "Teacher checks articulation/formation and corrects errors promptly.",
+    domainKey: "blending",
+    itemKey: "C2c",
+    prompt: "Use of Sound Buttons: Accurately uses dots (dots) for single sounds and lines (dashes) for digraphs/trigraphs.",
   },
   {
-    domainKey: "new_sound",
-    itemKey: "B6",
-    prompt: "Learners practice the new sound/skill through guided repetition.",
+    domainKey: "blending",
+    itemKey: "C2d",
+    prompt: "Uses Made-Up (Pseudo) Words: Effectively uses made-up words to assess true decoding ability (Level 1 extended/Level 2+).",
   },
   {
-    domainKey: "new_sound",
-    itemKey: "B7",
-    prompt: "Examples used are appropriate to learner level and prior knowledge.",
+    domainKey: "blending",
+    itemKey: "C2e",
+    prompt: 'Tricky Word Strategy: Identifies the "tricky part" rather than teaching the word solely as a whole unit.',
   },
   {
-    domainKey: "new_sound",
-    itemKey: "B8",
-    prompt: "Teacher links the new sound/skill to previously learned content.",
+    domainKey: "blending",
+    itemKey: "C2f",
+    prompt: "Error Correction: Guides learners to self-correct (re-blending/re-segmenting) rather than giving the answer.",
+  },
+  // D) Learner Engagement & Assessment
+  {
+    domainKey: "engagement",
+    itemKey: "D1",
+    prompt: "Oral Repetition: Learners are actively saying the sounds, songs, and blending aloud.",
   },
   {
-    domainKey: "decoding",
-    itemKey: "C9",
-    prompt: "Learners blend sounds to decode words with teacher support.",
+    domainKey: "engagement",
+    itemKey: "D2",
+    prompt: "Partner Practice Routine: Learners are successfully using the trained Speaker/Checker roles.",
   },
   {
-    domainKey: "decoding",
-    itemKey: "C10",
-    prompt: "Teacher prompts segmenting and blending during reading tasks.",
+    domainKey: "engagement",
+    itemKey: "D3",
+    prompt: "Continuous Assessment: Teacher circulates, listens for pure sounds, and provides immediate feedback.",
   },
   {
-    domainKey: "decoding",
-    itemKey: "C11",
-    prompt: "Error correction during decoding is immediate and supportive.",
-  },
-  {
-    domainKey: "decoding",
-    itemKey: "C12",
-    prompt: "Most learners attempt decoding independently before teacher reading.",
-  },
-  {
-    domainKey: "reading_practice",
-    itemKey: "D13",
-    prompt: "Learners read in pairs/groups/whole class with adequate practice time.",
-  },
-  {
-    domainKey: "reading_practice",
-    itemKey: "D14",
-    prompt: "Teacher monitors pacing and ensures broad learner participation.",
-  },
-  {
-    domainKey: "reading_practice",
-    itemKey: "D15",
-    prompt: "Fluency practice includes repetition, phrasing, and accuracy checks.",
-  },
-  {
-    domainKey: "reading_practice",
-    itemKey: "D16",
-    prompt: "Teacher uses materials/resources effectively to support reading practice.",
-  },
-  {
-    domainKey: "tricky_words",
-    itemKey: "E17",
-    prompt: "Teacher explicitly teaches or revises tricky (non-decodable) words.",
-  },
-  {
-    domainKey: "tricky_words",
-    itemKey: "E18",
-    prompt: "Learners recognize and use tricky words by sight in context.",
-  },
-  {
-    domainKey: "check_next",
-    itemKey: "F19",
-    prompt: "Teacher checks understanding across the class before lesson close.",
-  },
-  {
-    domainKey: "check_next",
-    itemKey: "F20",
-    prompt: "Lesson ends with clear feedback and next-step targets for learners.",
-  },
-  {
-    domainKey: "check_next",
-    itemKey: "F21",
-    prompt: "Teacher and coach align on practical next coaching focus.",
+    domainKey: "engagement",
+    itemKey: "D4",
+    prompt: "Differentiation: Teacher provides simplified or advanced work based on learner needs.",
   },
 ];
 
@@ -180,17 +173,38 @@ export const LESSON_EVALUATION_ITEM_LOOKUP = new Map(
 );
 
 export const LESSON_EVALUATION_DOMAIN_KEYS = [
-  "setup",
-  "new_sound",
-  "decoding",
-  "reading_practice",
-  "tricky_words",
-  "check_next",
+  "gpc",
+  "blending",
+  "engagement",
 ] as const;
 
 export const LESSON_EVALUATION_ITEM_KEYS = LESSON_EVALUATION_ITEMS.map(
   (item) => item.itemKey,
 ) as readonly LessonEvaluationItemKey[];
+
+/* ─── Overall Post-Observation Rating (Section E) ─────────── */
+
+export type PostObservationRating =
+  | "implemented_with_fidelity"
+  | "partial_implementation"
+  | "low_implementation";
+
+export const POST_OBSERVATION_RATING_LABELS: Record<PostObservationRating, string> = {
+  implemented_with_fidelity: "Implemented with Fidelity",
+  partial_implementation: "Partial Implementation",
+  low_implementation: "Low Implementation",
+};
+
+export const POST_OBSERVATION_RATING_DESCRIPTIONS: Record<PostObservationRating, string> = {
+  implemented_with_fidelity:
+    "Teaching largely reflects what they were trained on.",
+  partial_implementation:
+    "Trained strategies are present but inconsistent or contain inaccuracies.",
+  low_implementation:
+    "Major trained strategies (pure sounds, lesson structure) are missing or incorrect.",
+};
+
+/* ─── Helpers ─────────────────────────────────────────────── */
 
 export function scoreLabel(score: number): LessonEvaluationOverallLevel {
   const numeric = Number(score);
@@ -198,7 +212,7 @@ export function scoreLabel(score: number): LessonEvaluationOverallLevel {
     return "Needs Support";
   }
   if (numeric >= 3.5) {
-    return "Strong";
+    return "Exemplary";
   }
   if (numeric >= 2.75) {
     return "Good";
@@ -208,3 +222,4 @@ export function scoreLabel(score: number): LessonEvaluationOverallLevel {
   }
   return "Needs Support";
 }
+

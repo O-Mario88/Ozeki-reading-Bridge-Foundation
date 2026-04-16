@@ -38,7 +38,7 @@ export default async function RegionPage({ params }: { params: Params }) {
 
     return (
         <>
-            <section className="page-hero" style={{ backgroundImage: "url('/photos/Reading%20Session%20in%20Dokolo%20Greater%20Bata%20Cluster.jpeg')" }}>
+            <section className="page-hero" style={{ backgroundImage: "url('/photos/PXL_20260217_124359226.jpg')" }}>
                 <div className="container">
                     <nav className="impact-dash-breadcrumb" aria-label="Drill-down">
                         <Link href="/impact/dashboard">Dashboard</Link>

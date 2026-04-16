@@ -1,5 +1,5 @@
 import Image from "next/image";
-import leadershipPhoto from "../../../public/photos/PXL_20260217_124357146.jpg";
+import leadershipPhoto from "../../../public/photos/23.jpeg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

@@ -49,7 +49,7 @@ export default async function GovernmentViewPage() {
 
     return (
         <>
-            <section className="page-hero" style={{ backgroundImage: "url('/photos/14.jpeg')" }}>
+            <section className="page-hero" style={{ backgroundImage: "url('/photos/19.jpeg')" }}>
                 <div className="container">
                     <p className="kicker">National Literacy Intelligence System</p>
                     <h1>Government &amp; Policy View</h1>

@@ -16,6 +16,13 @@ export const officialContactLinks = {
   whatsapp: `https://wa.me/${whatsappNumber}`,
 } as const;
 
+export const socialLinks = {
+  facebook: "https://www.facebook.com/ozekiread",
+  instagram: "https://www.instagram.com/ozekiread",
+  twitter: "https://x.com/ozekiread",
+  youtube: "https://www.youtube.com/@ozekiread",
+} as const;
+
 export const workspaceCalendarRecipients = [
   "amos@ozekiread.org",
   "support@ozekiread.org",

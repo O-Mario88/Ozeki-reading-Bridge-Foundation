@@ -43,7 +43,7 @@ export default async function AnthologyPage({ params }: { params: Params }) {
 
     return (
         <>
-            <section className="page-hero" style={{ backgroundImage: "url('/photos/classroom-learners-writing.jpg')", paddingBottom: "2rem" }}>
+            <section className="page-hero" style={{ backgroundImage: "url('/photos/22.jpeg')", paddingBottom: "2rem" }}>
                 <div className="container">
                     <nav className="impact-dash-breadcrumb" aria-label="Breadcrumb">
                         <Link href="/stories">1001 Story Library</Link>

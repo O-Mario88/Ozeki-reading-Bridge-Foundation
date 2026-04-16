@@ -48,7 +48,7 @@ export default async function StoriesPage() {
                     tagline={<><BookOpen className="w-4 h-4 inline" /> 1001 Story Project</>}
                     title="Story Library"
                     subtitle="Read stories written by primary school learners across Uganda. Every story is a step toward confidence, literacy, and voice."
-                    imageSrc="/photos/PXL_20260219_100227181.jpg"
+                    imageSrc="/photos/27.jpeg"
                 />
 
                 {anthologies.length > 0 && anthologies[0].featured && (

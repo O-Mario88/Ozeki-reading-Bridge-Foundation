@@ -5,6 +5,19 @@ const fullPageLinks: Record<string, string> = {
   "Teaching Aids & Instructional Resources (Teachers)":
     "/teaching-aids-instructional-resources-teachers",
   "The 1001 Story Project (Learner Authors -> Published Books)": "/story-project",
+  "Teacher Professional Development": "/teacher-professional-development",
+  "In-School Coaching & Mentorship": "/in-school-coaching-mentorship",
+  "Learner Reading Assessments & Progress Tracking":
+    "/learner-reading-assessments-progress-tracking",
+  "Remedial & Catch-Up Reading Interventions":
+    "/remedial-catch-up-reading-interventions",
+  "Reading Materials Development (Learners)": "/reading-materials-development",
+  "School Systems & Routines": "/school-systems-routines",
+  "Instructional Leadership Support": "/instructional-leadership-support",
+  "Monitoring, Evaluation & Reporting": "/monitoring-evaluation-reporting",
+  "Literacy Content Creation & Advocacy":
+    "/literacy-content-creation-advocacy",
+  "Teacher Training & School Support in Reading Using Phonics": "/phonics-training",
 };
 
 export function ProgramCard({

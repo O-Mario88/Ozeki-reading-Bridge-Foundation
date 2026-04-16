@@ -1,5 +1,5 @@
 import Image from "next/image";
-import mAndEPhoto from "../../../public/photos/PXL_20260218_133341852.jpg";
+import mAndEPhoto from "../../../public/photos/20.jpeg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

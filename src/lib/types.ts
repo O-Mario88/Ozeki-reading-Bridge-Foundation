@@ -396,47 +396,55 @@ export interface ObservationRubricRecord extends Omit<ObservationRubricInput, "i
   createdAt: string;
 }
 
-/* ─── Lesson Evaluation (Coaching Standard) ───────── */
+/* ─── Lesson Evaluation (Phonics Observation Form) ───────── */
 
 export type LessonEvaluationDomainKey =
-  | "setup"
-  | "new_sound"
-  | "decoding"
-  | "reading_practice"
-  | "tricky_words"
-  | "check_next";
+  | "gpc"
+  | "blending"
+  | "engagement";
 
 export type LessonEvaluationItemKey =
-  | "A1"
-  | "A2"
-  | "A3"
-  | "B4"
-  | "B5"
-  | "B6"
-  | "B7"
-  | "B8"
-  | "C9"
-  | "C10"
-  | "C11"
-  | "C12"
-  | "D13"
-  | "D14"
-  | "D15"
-  | "D16"
-  | "E17"
-  | "E18"
-  | "F19"
-  | "F20"
-  | "F21";
+  | "C1a"
+  | "C1b"
+  | "C1c"
+  | "C2a"
+  | "C2b"
+  | "C2c"
+  | "C2d"
+  | "C2e"
+  | "C2f"
+  | "D1"
+  | "D2"
+  | "D3"
+  | "D4";
+
+export type LessonStructureItemKey = "LS1" | "LS2" | "LS3" | "LS4" | "LS5";
+
+export type PostObservationRating =
+  | "implemented_with_fidelity"
+  | "partial_implementation"
+  | "low_implementation";
 
 export type LessonEvaluationGrade = "P1" | "P2" | "P3" | "P4" | "P5" | "P6" | "P7";
-export type LessonEvaluationOverallLevel = "Strong" | "Good" | "Developing" | "Needs Support";
+export type LessonEvaluationOverallLevel = "Exemplary" | "Good" | "Developing" | "Needs Support";
+
+export interface LessonStructureItemInput {
+  itemKey: LessonStructureItemKey;
+  observed: boolean;
+  note?: string | null;
+}
 
 export interface LessonEvaluationItemInput {
   domainKey: LessonEvaluationDomainKey;
   itemKey: LessonEvaluationItemKey;
   score: 1 | 2 | 3 | 4;
   note?: string | null;
+}
+
+export interface ActionPlanEntry {
+  urgentAction: string;
+  resourcesNeeded: string;
+  reviewDate: string;
 }
 
 export interface LessonEvaluationInput {
@@ -447,9 +455,16 @@ export interface LessonEvaluationInput {
   classSize?: number | null;
   lessonDate: string;
   lessonFocus: string[];
+  lessonDurationMinutes?: number | null;
   observerId?: number | null;
+  observerNameText?: string | null;
   visitId?: number | null;
+  lessonStructure: LessonStructureItemInput[];
   items: LessonEvaluationItemInput[];
+  strengthsList: string[];
+  areasForDevelopmentList: string[];
+  actionPlan?: ActionPlanEntry | null;
+  postObservationRating?: PostObservationRating | null;
   strengthsText: string;
   priorityGapText: string;
   nextCoachingAction: string;
@@ -471,14 +486,21 @@ export interface LessonEvaluationRecord {
   classSize: number | null;
   lessonDate: string;
   lessonFocus: string[];
+  lessonDurationMinutes: number | null;
   observerId: number;
   observerName: string;
+  observerNameText: string | null;
   visitId: number | null;
   overallScore: number;
   overallLevel: LessonEvaluationOverallLevel;
   domainScores: Record<LessonEvaluationDomainKey, number | null>;
   topGapDomain: LessonEvaluationDomainKey | null;
   topStrengthDomain: LessonEvaluationDomainKey | null;
+  lessonStructure: LessonStructureItemInput[];
+  strengthsList: string[];
+  areasForDevelopmentList: string[];
+  actionPlan: ActionPlanEntry | null;
+  postObservationRating: PostObservationRating | null;
   strengthsText: string;
   priorityGapText: string;
   nextCoachingAction: string;
@@ -495,12 +517,9 @@ export interface LessonEvaluationRecord {
 export type TeacherImprovementStatus = "improved" | "flat" | "declined";
 
 export interface TeacherImprovementDomainDelta {
-  setup: number | null;
-  newSound: number | null;
-  decoding: number | null;
-  readingPractice: number | null;
-  trickyWords: number | null;
-  checkNext: number | null;
+  gpc: number | null;
+  blending: number | null;
+  engagement: number | null;
 }
 
 export interface TeacherImprovementItemDelta {
@@ -1237,20 +1256,14 @@ export interface PublicTeachingQualitySummary {
     needsSupport: { count: number; percent: number };
   };
   domainAverages: {
-    setup: number | null;
-    newSound: number | null;
-    decoding: number | null;
-    readingPractice: number | null;
-    trickyWords: number | null;
-    checkNext: number | null;
+    gpc: number | null;
+    blending: number | null;
+    engagement: number | null;
   };
   domainDeltas: {
-    setup: number | null;
-    newSound: number | null;
-    decoding: number | null;
-    readingPractice: number | null;
-    trickyWords: number | null;
-    checkNext: number | null;
+    gpc: number | null;
+    blending: number | null;
+    engagement: number | null;
   };
   trend: Array<{
     period: string;
@@ -3083,12 +3096,9 @@ export interface ImpactReportTeacherEvaluationBlock {
     needsSupport: number;
   };
   domainAverages: {
-    setup: number | null;
-    newSound: number | null;
-    decoding: number | null;
-    readingPractice: number | null;
-    trickyWords: number | null;
-    checkNext: number | null;
+    gpc: number | null;
+    blending: number | null;
+    engagement: number | null;
   };
   topGapDomains: string[];
   passA: LessonEvaluationPassA;

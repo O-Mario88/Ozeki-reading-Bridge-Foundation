@@ -96,7 +96,7 @@ export default function SponsorRegionPage() {
       <section className="relative overflow-hidden pt-24 pb-20 md:pt-32 md:pb-32 border-b border-gray-100">
         <div className="absolute inset-0 pointer-events-none">
           <Image
-            src="/photos/22.jpeg"
+            src="/photos/PXL_20260218_133701748.jpg"
             alt="Teachers and learners in a literacy coaching session"
             fill
             sizes="100vw"
@@ -220,7 +220,7 @@ export default function SponsorRegionPage() {
             <div className="absolute inset-0 bg-brand-primary/5 rounded-[2.5rem] transform -rotate-3 scale-105" />
             <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] shadow-2xl">
               <Image
-                src="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg"
+                src="/photos/25.jpeg"
                 alt="Reading session showing literacy improvement in a Ugandan school"
                 fill
                 className="object-cover"

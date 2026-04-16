@@ -9,10 +9,18 @@ import {
   LESSON_EVALUATION_ITEM_KEYS,
   LESSON_EVALUATION_SCORE_LABELS,
   LESSON_FOCUS_OPTIONS,
+  LESSON_STRUCTURE_ITEMS,
+  LESSON_STRUCTURE_ITEM_KEYS,
+  POST_OBSERVATION_RATING_LABELS,
+  POST_OBSERVATION_RATING_DESCRIPTIONS,
   LessonEvaluationItemKey,
+  LessonStructureItemKey,
+  PostObservationRating,
 } from "@/lib/lesson-evaluation";
 import {
   LessonEvaluationRecord,
+  LessonStructureItemInput,
+  ActionPlanEntry,
   SchoolTeachingQualityImprovementSummary,
   TeacherImprovementProfile,
 } from "@/lib/types";
@@ -46,6 +54,11 @@ type ItemDraft = {
   note: string;
 };
 
+type StructureDraft = {
+  observed: boolean;
+  note: string;
+};
+
 type FormDraft = {
   id: number | null;
   teacherUid: string;
@@ -54,7 +67,17 @@ type FormDraft = {
   classSize: string;
   lessonDate: string;
   lessonFocus: string[];
+  lessonDurationMinutes: string;
+  observerNameText: string;
   visitId: string;
+  lessonStructure: Record<LessonStructureItemKey, StructureDraft>;
+  items: Record<LessonEvaluationItemKey, ItemDraft>;
+  strengthsList: [string, string, string, string];
+  areasForDevelopmentList: [string, string, string, string];
+  actionPlanUrgentAction: string;
+  actionPlanResourcesNeeded: string;
+  actionPlanReviewDate: string;
+  postObservationRating: PostObservationRating | "";
   strengthsText: string;
   priorityGapText: string;
   nextCoachingAction: string;
@@ -62,17 +85,13 @@ type FormDraft = {
   catchupEstimateCount: string;
   catchupEstimatePercent: string;
   nextVisitDate: string;
-  items: Record<LessonEvaluationItemKey, ItemDraft>;
 };
 
 const GRADE_OPTIONS: Array<FormDraft["grade"]> = ["P1", "P2", "P3", "P4", "P5", "P6", "P7"];
 const DOMAIN_DELTA_LABELS: Record<string, string> = {
-  setup: "Setup & Review",
-  newSound: "New Sound/Skill",
-  decoding: "Decoding",
-  readingPractice: "Reading Practice",
-  trickyWords: "Tricky Words",
-  checkNext: "Check & Next Steps",
+  gpc: "Phoneme-Grapheme (GPC)",
+  blending: "Blending & Teaching",
+  engagement: "Learner Engagement",
 };
 
 function todayIsoDate() {
@@ -90,6 +109,17 @@ function createItemDraft(): Record<LessonEvaluationItemKey, ItemDraft> {
   return draft;
 }
 
+function createStructureDraft(): Record<LessonStructureItemKey, StructureDraft> {
+  const draft = {} as Record<LessonStructureItemKey, StructureDraft>;
+  LESSON_STRUCTURE_ITEM_KEYS.forEach((itemKey) => {
+    draft[itemKey] = {
+      observed: false,
+      note: "",
+    };
+  });
+  return draft;
+}
+
 function createDefaultDraft(defaultVisitId?: number | null): FormDraft {
   return {
     id: null,
@@ -99,7 +129,17 @@ function createDefaultDraft(defaultVisitId?: number | null): FormDraft {
     classSize: "",
     lessonDate: todayIsoDate(),
     lessonFocus: ["Sounds"],
+    lessonDurationMinutes: "",
+    observerNameText: "",
     visitId: defaultVisitId && defaultVisitId > 0 ? String(defaultVisitId) : "",
+    lessonStructure: createStructureDraft(),
+    items: createItemDraft(),
+    strengthsList: ["", "", "", ""],
+    areasForDevelopmentList: ["", "", "", ""],
+    actionPlanUrgentAction: "",
+    actionPlanResourcesNeeded: "",
+    actionPlanReviewDate: "",
+    postObservationRating: "",
     strengthsText: "",
     priorityGapText: "",
     nextCoachingAction: "",
@@ -107,7 +147,6 @@ function createDefaultDraft(defaultVisitId?: number | null): FormDraft {
     catchupEstimateCount: "",
     catchupEstimatePercent: "",
     nextVisitDate: "",
-    items: createItemDraft(),
   };
 }
 
@@ -123,7 +162,37 @@ function fromEvaluationRecord(
   draft.classSize = record.classSize === null ? "" : String(record.classSize);
   draft.lessonDate = record.lessonDate;
   draft.lessonFocus = record.lessonFocus.length > 0 ? record.lessonFocus : ["Sounds"];
+  draft.lessonDurationMinutes =
+    record.lessonDurationMinutes === null ? "" : String(record.lessonDurationMinutes);
+  draft.observerNameText = record.observerNameText ?? "";
   draft.visitId = record.visitId ? String(record.visitId) : draft.visitId;
+  // Lesson structure
+  (record.lessonStructure ?? []).forEach((ls) => {
+    if (draft.lessonStructure[ls.itemKey as LessonStructureItemKey]) {
+      draft.lessonStructure[ls.itemKey as LessonStructureItemKey] = {
+        observed: ls.observed,
+        note: ls.note ?? "",
+      };
+    }
+  });
+  // Scored items
+  record.items.forEach((item) => {
+    if (draft.items[item.itemKey as LessonEvaluationItemKey]) {
+      draft.items[item.itemKey as LessonEvaluationItemKey] = {
+        score: String(item.score) as ItemDraft["score"],
+        note: item.note ?? "",
+      };
+    }
+  });
+  // Coaching notes
+  const sl = record.strengthsList ?? [];
+  draft.strengthsList = [sl[0] ?? "", sl[1] ?? "", sl[2] ?? "", sl[3] ?? ""];
+  const adl = record.areasForDevelopmentList ?? [];
+  draft.areasForDevelopmentList = [adl[0] ?? "", adl[1] ?? "", adl[2] ?? "", adl[3] ?? ""];
+  draft.actionPlanUrgentAction = record.actionPlan?.urgentAction ?? "";
+  draft.actionPlanResourcesNeeded = record.actionPlan?.resourcesNeeded ?? "";
+  draft.actionPlanReviewDate = record.actionPlan?.reviewDate ?? "";
+  draft.postObservationRating = record.postObservationRating ?? "";
   draft.strengthsText = record.strengthsText;
   draft.priorityGapText = record.priorityGapText;
   draft.nextCoachingAction = record.nextCoachingAction;
@@ -133,12 +202,6 @@ function fromEvaluationRecord(
   draft.catchupEstimatePercent =
     record.catchupEstimatePercent === null ? "" : String(record.catchupEstimatePercent);
   draft.nextVisitDate = record.nextVisitDate ?? "";
-  record.items.forEach((item) => {
-    draft.items[item.itemKey] = {
-      score: String(item.score) as ItemDraft["score"],
-      note: item.note ?? "",
-    };
-  });
   return draft;
 }
 
@@ -401,7 +464,31 @@ export function LessonEvaluationPanel({
       classSize,
       lessonDate: draft.lessonDate,
       lessonFocus: draft.lessonFocus,
+      lessonDurationMinutes: parseOptionalNumber(draft.lessonDurationMinutes),
+      observerNameText: draft.observerNameText.trim() || null,
       visitId: parseOptionalNumber(draft.visitId),
+      lessonStructure: LESSON_STRUCTURE_ITEMS.map((ls) => ({
+        itemKey: ls.itemKey,
+        observed: draft.lessonStructure[ls.itemKey].observed,
+        note: draft.lessonStructure[ls.itemKey].note.trim() || null,
+      })),
+      items: LESSON_EVALUATION_ITEMS.map((item) => ({
+        domainKey: item.domainKey,
+        itemKey: item.itemKey,
+        score: Number(draft.items[item.itemKey].score),
+        note: draft.items[item.itemKey].note.trim() || null,
+      })),
+      strengthsList: draft.strengthsList.map((s) => s.trim()).filter(Boolean),
+      areasForDevelopmentList: draft.areasForDevelopmentList.map((s) => s.trim()).filter(Boolean),
+      actionPlan:
+        draft.actionPlanUrgentAction.trim()
+          ? {
+              urgentAction: draft.actionPlanUrgentAction.trim(),
+              resourcesNeeded: draft.actionPlanResourcesNeeded.trim(),
+              reviewDate: draft.actionPlanReviewDate,
+            }
+          : null,
+      postObservationRating: draft.postObservationRating || null,
       strengthsText: draft.strengthsText.trim(),
       priorityGapText: draft.priorityGapText.trim(),
       nextCoachingAction: draft.nextCoachingAction.trim(),
@@ -409,12 +496,6 @@ export function LessonEvaluationPanel({
       catchupEstimateCount: catchupCount,
       catchupEstimatePercent: catchupPercent,
       nextVisitDate: draft.nextVisitDate || null,
-      items: LESSON_EVALUATION_ITEMS.map((item) => ({
-        domainKey: item.domainKey,
-        itemKey: item.itemKey,
-        score: Number(draft.items[item.itemKey].score),
-        note: draft.items[item.itemKey].note.trim() || null,
-      })),
     };
 
     setSaving(true);
@@ -865,14 +946,14 @@ export function LessonEvaluationPanel({
           }}
         >
           <fieldset className="portal-fieldset full-width">
-            <legend>Context</legend>
+            <legend>A. Administrative Details</legend>
             <div className="form-grid-3">
               <label>
                 <span className="portal-field-label">School</span>
                 <input value={schoolName ?? `School #${schoolId}`} readOnly />
               </label>
               <label>
-                <span className="portal-field-label">Teacher</span>
+                <span className="portal-field-label">Teacher Name</span>
                 <select
                   value={draft.teacherUid}
                   onChange={(event) =>
@@ -890,7 +971,17 @@ export function LessonEvaluationPanel({
                 </select>
               </label>
               <label>
-                <span className="portal-field-label">Class/Grade Observed</span>
+                <span className="portal-field-label">Observer Name</span>
+                <input
+                  value={draft.observerNameText}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, observerNameText: event.target.value }))
+                  }
+                  placeholder="Coach / Observer"
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Class Level</span>
                 <select
                   value={draft.grade}
                   onChange={(event) =>
@@ -913,7 +1004,7 @@ export function LessonEvaluationPanel({
                 />
               </label>
               <label>
-                <span className="portal-field-label">Class size (optional)</span>
+                <span className="portal-field-label">Number of Learners Present</span>
                 <input
                   inputMode="numeric"
                   value={draft.classSize}
@@ -923,7 +1014,7 @@ export function LessonEvaluationPanel({
                 />
               </label>
               <label>
-                <span className="portal-field-label">Lesson date</span>
+                <span className="portal-field-label">Date</span>
                 <input
                   type="date"
                   value={draft.lessonDate}
@@ -931,6 +1022,17 @@ export function LessonEvaluationPanel({
                     setDraft((prev) => ({ ...prev, lessonDate: event.target.value }))
                   }
                   required
+                />
+              </label>
+              <label>
+                <span className="portal-field-label">Lesson Duration (minutes)</span>
+                <input
+                  inputMode="numeric"
+                  value={draft.lessonDurationMinutes}
+                  onChange={(event) =>
+                    setDraft((prev) => ({ ...prev, lessonDurationMinutes: event.target.value }))
+                  }
+                  placeholder="e.g. 30"
                 />
               </label>
               <label>
@@ -944,7 +1046,7 @@ export function LessonEvaluationPanel({
             </div>
 
             <div className="lesson-focus-grid">
-              <span className="portal-field-label">Lesson focus</span>
+              <span className="portal-field-label">Lesson Focus</span>
               <div className="lesson-focus-options">
                 {LESSON_FOCUS_OPTIONS.map((focus) => {
                   const checked = draft.lessonFocus.includes(focus);
@@ -974,9 +1076,66 @@ export function LessonEvaluationPanel({
           </fieldset>
 
           <fieldset className="portal-fieldset full-width">
-            <legend>Observation Items (1-4 scale)</legend>
+            <legend>B. Overall Lesson Structure</legend>
             <p className="portal-muted">
-              1 = Needs Support • 2 = Developing • 3 = Good • 4 = Strong
+              <em>Referencing the Phonics Lesson Planning Framework</em> — Did the lesson follow the trained structure?
+            </p>
+            <div className="lesson-structure-checklist">
+              {LESSON_STRUCTURE_ITEMS.map((ls) => (
+                <article key={ls.itemKey} className="lesson-structure-item">
+                  <div className="lesson-structure-item-row">
+                    <label className="lesson-structure-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={draft.lessonStructure[ls.itemKey].observed}
+                        onChange={(event) =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            lessonStructure: {
+                              ...prev.lessonStructure,
+                              [ls.itemKey]: {
+                                ...prev.lessonStructure[ls.itemKey],
+                                observed: event.target.checked,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                      <span>
+                        <strong>{ls.label}:</strong> {ls.prompt}
+                      </span>
+                    </label>
+                    <span className="lesson-structure-badge">
+                      {draft.lessonStructure[ls.itemKey].observed ? "Yes" : "No"}
+                    </span>
+                  </div>
+                  <textarea
+                    rows={1}
+                    value={draft.lessonStructure[ls.itemKey].note}
+                    onChange={(event) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        lessonStructure: {
+                          ...prev.lessonStructure,
+                          [ls.itemKey]: {
+                            ...prev.lessonStructure[ls.itemKey],
+                            note: event.target.value,
+                          },
+                        },
+                      }))
+                    }
+                    placeholder="Observer notes & evidence"
+                    className="lesson-structure-note"
+                  />
+                </article>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="portal-fieldset full-width">
+            <legend>C/D. Teaching Methodology & Learner Engagement (1–4 scale)</legend>
+            <p className="portal-muted">
+              4 = Exemplary • 3 = Good • 2 = Developing • 1 = Needs Support
             </p>
             {[...groupedItems.entries()].map(([domainKey, items]) => (
               <div key={domainKey} className="lesson-evaluation-domain-block">
@@ -1015,7 +1174,7 @@ export function LessonEvaluationPanel({
                         </select>
                       </label>
                       <label>
-                        <span className="portal-field-label">Note (optional)</span>
+                        <span className="portal-field-label">Observer Notes & Evidence</span>
                         <textarea
                           rows={2}
                           value={draft.items[item.itemKey].note}
@@ -1031,7 +1190,7 @@ export function LessonEvaluationPanel({
                               },
                             }))
                           }
-                          placeholder="Optional evidence note"
+                          placeholder="Observer notes & evidence"
                         />
                       </label>
                     </article>
@@ -1042,17 +1201,124 @@ export function LessonEvaluationPanel({
           </fieldset>
 
           <fieldset className="portal-fieldset full-width">
-            <legend>Coaching Notes</legend>
+            <legend>E. Coaching Summary & Action Plan</legend>
+
+            <div className="form-grid-2">
+              <div>
+                <span className="portal-field-label">Strengths Observed (1-4 specific practices)</span>
+                {draft.strengthsList.map((val, idx) => (
+                  <input
+                    key={`strength-${idx}`}
+                    value={val}
+                    onChange={(event) =>
+                      setDraft((prev) => {
+                        const next = [...prev.strengthsList] as [string, string, string, string];
+                        next[idx] = event.target.value;
+                        return { ...prev, strengthsList: next };
+                      })
+                    }
+                    placeholder={`${idx + 1}. Strength`}
+                    style={{ marginBottom: "6px" }}
+                  />
+                ))}
+              </div>
+              <div>
+                <span className="portal-field-label">Areas for Development (1-4 specific issues)</span>
+                {draft.areasForDevelopmentList.map((val, idx) => (
+                  <input
+                    key={`area-${idx}`}
+                    value={val}
+                    onChange={(event) =>
+                      setDraft((prev) => {
+                        const next = [...prev.areasForDevelopmentList] as [string, string, string, string];
+                        next[idx] = event.target.value;
+                        return { ...prev, areasForDevelopmentList: next };
+                      })
+                    }
+                    placeholder={`${idx + 1}. Area for development`}
+                    style={{ marginBottom: "6px" }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="lesson-action-plan-section">
+              <span className="portal-field-label">Agreed Action Plan for Next Visit</span>
+              <div className="form-grid-3">
+                <label>
+                  <span className="portal-field-label">Urgent Action to Take</span>
+                  <textarea
+                    rows={2}
+                    value={draft.actionPlanUrgentAction}
+                    onChange={(event) =>
+                      setDraft((prev) => ({ ...prev, actionPlanUrgentAction: event.target.value }))
+                    }
+                    placeholder="What needs to happen before the next visit"
+                  />
+                </label>
+                <label>
+                  <span className="portal-field-label">Resources Needed</span>
+                  <textarea
+                    rows={2}
+                    value={draft.actionPlanResourcesNeeded}
+                    onChange={(event) =>
+                      setDraft((prev) => ({ ...prev, actionPlanResourcesNeeded: event.target.value }))
+                    }
+                    placeholder="Materials, support, etc."
+                  />
+                </label>
+                <label>
+                  <span className="portal-field-label">Review Date</span>
+                  <input
+                    type="date"
+                    value={draft.actionPlanReviewDate}
+                    onChange={(event) =>
+                      setDraft((prev) => ({ ...prev, actionPlanReviewDate: event.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="lesson-post-observation-rating">
+              <span className="portal-field-label">Overall Post-Observation Rating</span>
+              <div className="lesson-rating-options">
+                {(Object.entries(POST_OBSERVATION_RATING_LABELS) as Array<[PostObservationRating, string]>).map(
+                  ([key, label]) => (
+                    <label key={key} className="lesson-rating-option">
+                      <input
+                        type="radio"
+                        name="postObservationRating"
+                        value={key}
+                        checked={draft.postObservationRating === key}
+                        onChange={() =>
+                          setDraft((prev) => ({ ...prev, postObservationRating: key }))
+                        }
+                      />
+                      <span>
+                        <strong>{label}:</strong> {POST_OBSERVATION_RATING_DESCRIPTIONS[key]}
+                      </span>
+                    </label>
+                  ),
+                )}
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="portal-fieldset full-width">
+            <legend>Legacy Coaching Notes</legend>
+            <p className="portal-muted">
+              Additional coaching notes (backward-compatible fields).
+            </p>
             <div className="form-grid-2">
               <label>
-                <span className="portal-field-label">Strengths observed</span>
+                <span className="portal-field-label">Strengths text (summary)</span>
                 <textarea
                   rows={2}
                   value={draft.strengthsText}
                   onChange={(event) =>
                     setDraft((prev) => ({ ...prev, strengthsText: event.target.value }))
                   }
-                  required
                 />
               </label>
               <label>
@@ -1063,7 +1329,6 @@ export function LessonEvaluationPanel({
                   onChange={(event) =>
                     setDraft((prev) => ({ ...prev, priorityGapText: event.target.value }))
                   }
-                  required
                 />
               </label>
               <label>
@@ -1074,7 +1339,6 @@ export function LessonEvaluationPanel({
                   onChange={(event) =>
                     setDraft((prev) => ({ ...prev, nextCoachingAction: event.target.value }))
                   }
-                  required
                 />
               </label>
               <label>
@@ -1084,27 +1348,6 @@ export function LessonEvaluationPanel({
                   value={draft.teacherCommitment}
                   onChange={(event) =>
                     setDraft((prev) => ({ ...prev, teacherCommitment: event.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label>
-                <span className="portal-field-label">Catch-up estimate count (optional)</span>
-                <input
-                  inputMode="numeric"
-                  value={draft.catchupEstimateCount}
-                  onChange={(event) =>
-                    setDraft((prev) => ({ ...prev, catchupEstimateCount: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                <span className="portal-field-label">Catch-up estimate % (optional)</span>
-                <input
-                  inputMode="decimal"
-                  value={draft.catchupEstimatePercent}
-                  onChange={(event) =>
-                    setDraft((prev) => ({ ...prev, catchupEstimatePercent: event.target.value }))
                   }
                 />
               </label>

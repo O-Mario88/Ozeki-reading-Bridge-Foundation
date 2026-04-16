@@ -9,7 +9,7 @@ export const metadata = {
 export default function PartnersPage() {
   return (
     <>
-      <PageHero imageUrl="/photos/15.jpeg"
+      <PageHero imageUrl="/photos/Training%20In%20Agago%20Lukole%20Sub-County.jpg"
         kicker="Partnership ecosystem"
         title="Partners & Supporters"
         description="Collaboration structures that support implementation, accountability, and scale."

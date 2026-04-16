@@ -19,7 +19,7 @@ export default async function ImpactMethodologyPage() {
 
   return (
     <>
-      <section className="page-hero" style={{ backgroundImage: "url('/photos/Phonics%20Session%20for%20Teachers%20in%20Namasale%20Sub-County%20Amolatar.jpg')" }}>
+      <section className="page-hero" style={{ backgroundImage: "url('/photos/PXL_20260217_124359226.jpg')" }}>
         <div className="container">
           <p className="kicker">Impact</p>
           <h1>How we measure literacy improvement</h1>

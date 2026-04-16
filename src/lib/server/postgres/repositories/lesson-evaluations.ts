@@ -9,6 +9,18 @@ export type CreateLessonEvaluationItem = {
   note?: string | null;
 };
 
+export type CreateLessonStructureItem = {
+  itemKey: string;
+  observed: boolean;
+  note?: string | null;
+};
+
+export type CreateActionPlan = {
+  urgentAction: string;
+  resourcesNeeded: string;
+  reviewDate: string;
+};
+
 export type CreateLessonEvaluationInput = {
   schoolId: number;
   teacherUid: string;
@@ -17,8 +29,15 @@ export type CreateLessonEvaluationInput = {
   classSize?: number | null;
   lessonDate: string;
   lessonFocus: string[];
+  lessonDurationMinutes?: number | null;
+  observerNameText?: string | null;
   visitId?: number | null;
+  lessonStructure?: CreateLessonStructureItem[];
   items: CreateLessonEvaluationItem[];
+  strengthsList?: string[];
+  areasForDevelopmentList?: string[];
+  actionPlan?: CreateActionPlan | null;
+  postObservationRating?: string | null;
   strengthsText: string;
   priorityGapText: string;
   nextCoachingAction: string;
@@ -94,18 +113,24 @@ export async function createLessonEvaluationPostgres(
   const result = await queryPostgres<{ id: number }>(
     `INSERT INTO lesson_evaluations (
        school_id, teacher_uid, grade, stream, class_size, lesson_date,
-       lesson_focus_json, observer_id, visit_id, overall_score, overall_level,
-       domain_scores_json, top_gap_domain, top_strength_domain, strengths_text,
-       priority_gap_text, next_coaching_action, teacher_commitment,
+       lesson_focus_json, lesson_duration_minutes, observer_id, observer_name_text,
+       visit_id, overall_score, overall_level,
+       domain_scores_json, top_gap_domain, top_strength_domain,
+       lesson_structure_json, strengths_list_json, areas_for_development_list_json,
+       action_plan_json, post_observation_rating,
+       strengths_text, priority_gap_text, next_coaching_action, teacher_commitment,
        catchup_estimate_count, catchup_estimate_percent, next_visit_date,
        status, created_at, updated_at
      )
      VALUES (
        $1, $2, $3, $4, $5, $6,
-       $7, $8, $9, $10, $11,
-       $12, $13, $14, $15,
-       $16, $17, $18,
-       $19, $20, $21,
+       $7, $8, $9, $10,
+       $11, $12, $13,
+       $14, $15, $16,
+       $17, $18, $19,
+       $20, $21,
+       $22, $23, $24, $25,
+       $26, $27, $28,
        'active', NOW(), NOW()
      )
      RETURNING id`,
@@ -117,13 +142,20 @@ export async function createLessonEvaluationPostgres(
       input.classSize ?? null,
       input.lessonDate,
       JSON.stringify(input.lessonFocus || []),
+      input.lessonDurationMinutes ?? null,
       observerId,
+      input.observerNameText ?? null,
       input.visitId ?? null,
       analytics.overallScore,
       analytics.overallLevel,
       JSON.stringify(analytics.domainScores),
       analytics.topGapDomain,
       analytics.topStrengthDomain,
+      JSON.stringify(input.lessonStructure || []),
+      JSON.stringify(input.strengthsList || []),
+      JSON.stringify(input.areasForDevelopmentList || []),
+      input.actionPlan ? JSON.stringify(input.actionPlan) : null,
+      input.postObservationRating ?? null,
       input.strengthsText,
       input.priorityGapText,
       input.nextCoachingAction,
@@ -197,13 +229,17 @@ export async function updateLessonEvaluationPostgres(
     `UPDATE lesson_evaluations
      SET
        school_id = $1, teacher_uid = $2, grade = $3, stream = $4, class_size = $5,
-       lesson_date = $6, lesson_focus_json = $7, visit_id = $8,
-       overall_score = $9, overall_level = $10, domain_scores_json = $11,
-       top_gap_domain = $12, top_strength_domain = $13,
-       strengths_text = $14, priority_gap_text = $15, next_coaching_action = $16,
-       teacher_commitment = $17, catchup_estimate_count = $18, catchup_estimate_percent = $19,
-       next_visit_date = $20, updated_at = NOW()
-     WHERE id = $21`,
+       lesson_date = $6, lesson_focus_json = $7, lesson_duration_minutes = $8,
+       observer_name_text = $9, visit_id = $10,
+       overall_score = $11, overall_level = $12, domain_scores_json = $13,
+       top_gap_domain = $14, top_strength_domain = $15,
+       lesson_structure_json = $16, strengths_list_json = $17,
+       areas_for_development_list_json = $18, action_plan_json = $19,
+       post_observation_rating = $20,
+       strengths_text = $21, priority_gap_text = $22, next_coaching_action = $23,
+       teacher_commitment = $24, catchup_estimate_count = $25, catchup_estimate_percent = $26,
+       next_visit_date = $27, updated_at = NOW()
+     WHERE id = $28`,
     [
       input.schoolId,
       input.teacherUid,
@@ -212,12 +248,19 @@ export async function updateLessonEvaluationPostgres(
       input.classSize ?? null,
       input.lessonDate,
       JSON.stringify(input.lessonFocus || []),
+      input.lessonDurationMinutes ?? null,
+      input.observerNameText ?? null,
       input.visitId ?? null,
       analytics.overallScore,
       analytics.overallLevel,
       JSON.stringify(analytics.domainScores),
       analytics.topGapDomain,
       analytics.topStrengthDomain,
+      JSON.stringify(input.lessonStructure || []),
+      JSON.stringify(input.strengthsList || []),
+      JSON.stringify(input.areasForDevelopmentList || []),
+      input.actionPlan ? JSON.stringify(input.actionPlan) : null,
+      input.postObservationRating ?? null,
       input.strengthsText,
       input.priorityGapText,
       input.nextCoachingAction,
@@ -302,8 +345,6 @@ export async function getLessonEvaluationByIdPostgres(id: number) {
       score: Number(ir.score),
       note: ir.note ? String(ir.note) : undefined,
     })),
-    // Map backwards compatibility for UI "data" wrapper optionally if needed,
-    // though the UI correctly accesses top-level props based on LessonEvaluationRecord schema.
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : "",
     createdByUserId: row.observer_id ? Number(row.observer_id) : 0,
   };

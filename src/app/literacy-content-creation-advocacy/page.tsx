@@ -1,5 +1,5 @@
 import Image from "next/image";
-import contentAdvocacyPhoto from "../../../public/photos/PXL_20260217_124415441.MP.jpg";
+import contentAdvocacyPhoto from "../../../public/photos/PXL_20260218_140233638.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

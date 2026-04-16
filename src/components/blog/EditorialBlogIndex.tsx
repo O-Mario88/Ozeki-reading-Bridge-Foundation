@@ -131,7 +131,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
                         
                         <Link 
                           href={`/blog/${featured.slug}`} 
-                          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gray-900 text-white font-bold hover:bg-gray-800 transition-colors shadow-md hover:shadow-lg"
+                          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-primary text-white font-bold hover:bg-[#005a52] transition-colors shadow-md hover:shadow-lg"
                         >
                           Read feature
                           <ArrowRight size={18} />

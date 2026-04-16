@@ -1,5 +1,5 @@
 import Image from "next/image";
-import readingMaterialsPhoto from "../../../public/photos/PXL_20260217_110748302.jpg";
+import readingMaterialsPhoto from "../../../public/photos/Phonics training in Alebtong.jpg";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";

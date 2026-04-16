@@ -5,6 +5,7 @@ import {
   LESSON_EVALUATION_ITEM_KEYS,
   LESSON_EVALUATION_ITEMS,
   LESSON_FOCUS_OPTIONS,
+  LESSON_STRUCTURE_ITEM_KEYS,
 } from "@/lib/lesson-evaluation";
 import {
   createLessonEvaluationAsync,
@@ -17,6 +18,7 @@ export const runtime = "nodejs";
 
 const lessonDomainSchema = z.enum(LESSON_EVALUATION_DOMAIN_KEYS);
 const lessonItemSchema = z.enum(LESSON_EVALUATION_ITEM_KEYS);
+const lessonStructureKeySchema = z.enum(LESSON_STRUCTURE_ITEM_KEYS);
 const gradeSchema = z.enum(["P1", "P2", "P3", "P4", "P5", "P6", "P7"]);
 const lessonFocusSchema = z.enum(LESSON_FOCUS_OPTIONS);
 
@@ -27,6 +29,18 @@ const evaluationItemSchema = z.object({
   note: z.string().trim().max(600).optional().nullable(),
 });
 
+const lessonStructureItemSchema = z.object({
+  itemKey: lessonStructureKeySchema,
+  observed: z.boolean(),
+  note: z.string().trim().max(600).optional().nullable(),
+});
+
+const actionPlanSchema = z.object({
+  urgentAction: z.string().trim().max(500),
+  resourcesNeeded: z.string().trim().max(500),
+  reviewDate: z.string().trim().max(20),
+}).optional().nullable();
+
 const createSchema = z.object({
   schoolId: z.coerce.number().int().positive(),
   teacherUid: z.string().trim().min(1),
@@ -35,12 +49,23 @@ const createSchema = z.object({
   classSize: z.coerce.number().int().min(0).max(300).optional().nullable(),
   lessonDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
   lessonFocus: z.array(lessonFocusSchema).min(1).max(LESSON_FOCUS_OPTIONS.length),
+  lessonDurationMinutes: z.coerce.number().int().min(1).max(300).optional().nullable(),
+  observerNameText: z.string().trim().max(200).optional().nullable(),
   visitId: z.coerce.number().int().positive().optional().nullable(),
+  lessonStructure: z.array(lessonStructureItemSchema).optional().default([]),
   items: z.array(evaluationItemSchema).length(LESSON_EVALUATION_ITEMS.length),
-  strengthsText: z.string().trim().min(3).max(800),
-  priorityGapText: z.string().trim().min(3).max(500),
-  nextCoachingAction: z.string().trim().min(3).max(500),
-  teacherCommitment: z.string().trim().min(3).max(500),
+  strengthsList: z.array(z.string().trim().max(300)).max(4).optional().default([]),
+  areasForDevelopmentList: z.array(z.string().trim().max(300)).max(4).optional().default([]),
+  actionPlan: actionPlanSchema,
+  postObservationRating: z.enum([
+    "implemented_with_fidelity",
+    "partial_implementation",
+    "low_implementation",
+  ]).optional().nullable(),
+  strengthsText: z.string().trim().max(800).optional().default(""),
+  priorityGapText: z.string().trim().max(500).optional().default(""),
+  nextCoachingAction: z.string().trim().max(500).optional().default(""),
+  teacherCommitment: z.string().trim().max(500).optional().default(""),
   catchupEstimateCount: z.coerce.number().int().min(0).max(2000).optional().nullable(),
   catchupEstimatePercent: z.coerce.number().min(0).max(100).optional().nullable(),
   nextVisitDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),

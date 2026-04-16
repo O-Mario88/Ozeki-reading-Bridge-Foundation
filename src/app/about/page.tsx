@@ -59,9 +59,9 @@ export default function AboutPage() {
     <>
       <PageHero
         tagline="Who we are"
-        title={organizationName}
+        title={<span className="text-brand-primary">{organizationName}</span>}
         subtitle="A literacy-focused organization based in Gulu City, Northern Uganda, strengthening how reading is taught in primary schools through practical classroom support and measurable outcomes."
-        imageSrc="/photos/Phonics%20training%20in%20Alebtong.jpg"
+        imageSrc="/photos/15.jpeg"
       />
 
       {/* 2. Quick Navigation Buttons */}
@@ -74,9 +74,9 @@ export default function AboutPage() {
               </a>
             </li>
             <li>
-              <Link href="/about/leadership-team" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+              <a href="#leadership-team" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
                 Leadership Team
-              </Link>
+              </a>
             </li>
             <li>
               <a href="#core-values" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
@@ -155,22 +155,108 @@ export default function AboutPage() {
 
         {/* Values CTA */}
         <div className="mt-16 max-w-4xl mx-auto">
-          <PremiumCard variant="charius" className="p-8 md:p-12 bg-gray-900 text-white flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex-1 text-center md:text-left">
-              <h3 className="text-2xl font-bold mb-4">Evidence-led values in practice</h3>
-              <p className="text-gray-400 text-lg">
-                See how these values translate into classroom support, measurable
-                learning outcomes, and partner accountability.
-              </p>
-            </div>
-            <Link href="/impact" className="px-8 py-4 rounded-full bg-brand-primary text-white font-semibold hover:bg-brand-primary/90 transition-all shrink-0">
-              Explore the Impact Hub
-            </Link>
-          </PremiumCard>
+            <PremiumCard variant="charius" className="p-8 md:p-12 bg-brand-primary text-white flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-2xl font-bold mb-4">Evidence-led values in practice</h3>
+                <p className="text-white/80 text-lg">
+                  See how these values translate into classroom support, measurable
+                  learning outcomes, and partner accountability.
+                </p>
+              </div>
+              <Link href="/impact" className="px-8 py-4 rounded-full bg-white text-brand-primary font-bold hover:bg-gray-100 transition-all shrink-0">
+                Explore the Impact Hub
+              </Link>
+            </PremiumCard>
         </div>
       </SectionWrapper>
 
 
+      {/* 5. Leadership Team */}
+      <SectionWrapper theme="light" id="leadership-team">
+        <div className="max-w-3xl mx-auto text-center mb-20">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-brand-primary mb-6">
+            Meet Our <span className="relative inline-block">Team<span className="absolute -bottom-2 left-0 w-full h-[4px] bg-[#FA7D15] rounded-full"></span></span>
+          </h2>
+          <p className="text-lg md:text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto mt-8">
+            Meet the dedicated individuals driving our mission to strengthen early-grade literacy.
+          </p>
+        </div>
+
+        <div className="max-w-6xl mx-auto px-4 md:px-0">
+          
+          {/* Main Bio - Moved above to let Experience align with photo */}
+          <div className="max-w-4xl mb-12">
+            <h3 className="text-4xl font-bold text-brand-primary mb-4 tracking-tight">Ojok Amos</h3>
+            <p className="text-gray-500 text-lg md:text-xl leading-relaxed">
+              Ojok Amos is the Co-Founder and Team Lead of Ozeki Reading Bridge Foundation. He is deeply committed to improving children's reading skills and ensuring every learner has the opportunity to become a confident reader through practical, community-centered literacy approaches.
+            </p>
+            <hr className="border-t border-gray-100 mt-8" />
+          </div>
+
+          <div className="grid md:grid-cols-[2fr_3fr] gap-12 lg:gap-20 items-start">
+            
+            {/* Left Column: Image and Title */}
+            <div className="flex flex-col justify-start">
+              <div className="relative rounded-xl bg-brand-primary/10 overflow-hidden aspect-square md:aspect-[4/5] shadow-sm w-full">
+                <img 
+                  src="/photos/ojok_amos.png?v=2" 
+                  alt="Ojok Amos" 
+                  className="absolute inset-0 w-full h-full object-cover object-top"
+                />
+              </div>
+              <div className="mt-5 text-center px-4">
+                <p className="text-base font-bold text-gray-600 uppercase tracking-widest">Co-Founder & Team Lead</p>
+              </div>
+            </div>
+            
+            {/* Right Column: Experience */}
+            <div className="flex flex-col text-left py-2">
+              <h4 className="text-3xl font-bold text-brand-primary mb-4 tracking-tight">Amos's Experience</h4>
+              
+              <div className="text-gray-500 text-base md:text-lg leading-relaxed mb-6">
+                <p>
+                  A qualified primary school teacher by profession, Amos brings extensive experience in early-grade literacy, teacher training, and structured phonics instruction across diverse communities.
+                </p>
+              </div>
+
+              <ul className="space-y-4">
+                <li className="flex items-start gap-4">
+                  <div className="w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-600 text-base md:text-lg"><strong className="text-gray-800 font-bold">Read for Life:</strong> Trained for three years, specializing heavily in reading instruction with a dedicated focus on structured phonics and letter sounds.</span>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-600 text-base md:text-lg"><strong className="text-gray-800 font-bold">African Revival:</strong> Worked for three years providing in-school literacy training, supporting classroom teachers, and training future educators and tutors at Kitgum Core Primary Teachers’ College.</span>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-600 text-base md:text-lg"><strong className="text-gray-800 font-bold">Refugee Education:</strong> Contributed to community literacy implementation by supporting critical reading programs in Rhino and Imvepi Refugee Camps under Plan International and ZOA.</span>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-600 text-base md:text-lg"><strong className="text-gray-800 font-bold">Restore International:</strong> Since 2019, pioneered literacy training for inmate teachers who support fellow inmates in Uganda Prisons, extending opportunities in correctional settings.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </SectionWrapper>
 
       {/* 6. Bottom CTA */}
       <CTAStrip 

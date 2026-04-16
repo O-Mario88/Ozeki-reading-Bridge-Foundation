@@ -31,7 +31,7 @@ export default async function MethodologyPage() {
         tagline="How We Measure"
         title="Impact Methodology"
         subtitle="Simple definitions, transparent limits, and privacy-protected public reporting."
-        imageSrc="/photos/10.jpeg"
+        imageSrc="/photos/PXL_20260217_124415441.MP.jpg"
       />
 
       <SectionWrapper theme="charius-beige">

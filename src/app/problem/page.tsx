@@ -63,7 +63,7 @@ const causes = [
 export default function ProblemPage() {
   return (
     <>
-      <PageHero imageUrl="/photos/PXL_20260217_124357146.jpg"
+      <PageHero imageUrl="/photos/14.jpeg"
         kicker="Northern Uganda literacy recovery"
         title="The Problem: Why Reading?"
         description="When children can’t read, they can’t learn, no matter how hard teachers try."

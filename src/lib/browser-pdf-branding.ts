@@ -59,7 +59,7 @@ export async function buildBrowserPdfBranding(
   input: BrowserPdfBrandingInput,
 ): Promise<BrowserPdfBrandingPayload> {
   const profile = await getActiveOrganizationProfile();
-  const logoDataUri = await logoToDataUri(profile.logoStorageUrl || "/photos/logo.png").catch(() => null);
+  const logoDataUri = await logoToDataUri(profile.logoStorageUrl || "/photos/PXL_20260218_133701748.jpg").catch(() => null);
   const pdfThemeCss = await getPdfThemeCss();
   const safeTitle = escapeHtml(input.title);
   const safeSubtitle = input.subtitle ? escapeHtml(input.subtitle) : "";

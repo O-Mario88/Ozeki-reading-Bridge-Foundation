@@ -35,7 +35,7 @@ export default async function DonorPackPage() {
         tagline="Donor resources"
         title="Download Donor Pack"
         subtitle="Get a complete overview of our work, evidence standards, controls, and funding pathways, packaged for due diligence and fast decision-making."
-        imageSrc="/photos/PXL_20260218_133448048.jpg"
+        imageSrc="/photos/PXL_20260219_095927917.jpg"
       >
         <a className="px-8 py-3.5 rounded-full bg-[#FA7D15] text-white font-semibold hover:bg-[#E86D0B] shadow-lg transition-all" href="/downloads/donor-trust/ozeki-donor-pack.pdf">
           Download Donor Pack (PDF Bundle)
