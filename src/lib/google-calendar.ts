@@ -110,3 +110,41 @@ export function buildDateRangeFromDateAndTime(
     endDateTime,
   };
 }
+
+export async function addAttendeeToCalendarEvent(eventId: string, email: string) {
+  if (!isGoogleCalendarConfigured()) return false;
+  
+  const calendarId = getRequiredEnv("GOOGLE_CALENDAR_ID");
+  const calendar = createGoogleCalendarClient();
+
+  try {
+    const event = await calendar.events.get({
+      calendarId,
+      eventId,
+    });
+
+    const currentAttendees = event.data.attendees || [];
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Avoid duplicating users
+    if (currentAttendees.some(a => a.email === cleanEmail)) {
+      return true;
+    }
+
+    currentAttendees.push({ email: cleanEmail });
+
+    await calendar.events.patch({
+      calendarId,
+      eventId,
+      sendUpdates: "all",
+      requestBody: {
+        attendees: currentAttendees,
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`[google-calendar] Failed to add attendee ${email}:`, error);
+    return false;
+  }
+}

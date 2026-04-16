@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Maximize, Minimize, Video, Radio, ExternalLink } from "lucide-react";
+import { Maximize, Minimize, Video, Radio, ExternalLink, Mail, CheckCircle2, Loader2 } from "lucide-react";
 import type { OnlineTrainingSessionRecord } from "@/lib/types";
 
 interface SessionVideoPanelProps {
@@ -12,6 +12,10 @@ interface SessionVideoPanelProps {
 
 export function SessionVideoPanel({ session, trainerName = "Ozeki Trainer" }: SessionVideoPanelProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [rsvpEmail, setRsvpEmail] = useState("");
+  const [rsvpName, setRsvpName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rsvpStatus, setRsvpStatus] = useState<"idle" | "success" | "error">("idle");
 
   const handleFullscreenToggle = () => {
     const videoContainer = document.getElementById("session-video-container");
@@ -52,11 +56,70 @@ export function SessionVideoPanel({ session, trainerName = "Ozeki Trainer" }: Se
           <p className="text-gray-400 max-w-md mx-auto">
             {isLive
               ? "This session is currently live in Google Meet. Join below to participate, and keep this page open for resources and notes."
-              : "This session is scheduled. The Meet room will open shortly before start time."}
+              : session.status === "scheduled"
+                ? "This session is upcoming. Confirm your attendance below to get an official calendar invite."
+                : "This session has concluded."}
           </p>
         </div>
 
-        {session.meetJoinUrl ? (
+        {session.status === "scheduled" ? (
+           rsvpStatus === "success" ? (
+             <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-6 py-4 rounded-xl flex flex-col items-center gap-2 max-w-md w-full">
+               <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+               <p className="font-bold">Attendance Confirmed!</p>
+               <p className="text-sm text-center">An official Google Calendar invite has been sent to your email with the secure Meet link attached.</p>
+             </div>
+           ) : (
+             <form 
+               onSubmit={async (e) => {
+                 e.preventDefault();
+                 setIsSubmitting(true);
+                 setRsvpStatus("idle");
+                 try {
+                   const res = await fetch(`/api/training/${session.id}/rsvp`, {
+                     method: "POST",
+                     headers: { "Content-Type": "application/json" },
+                     body: JSON.stringify({ name: rsvpName, email: rsvpEmail })
+                   });
+                   if (res.ok) setRsvpStatus("success");
+                   else setRsvpStatus("error");
+                 } catch {
+                   setRsvpStatus("error");
+                 } finally {
+                   setIsSubmitting(false);
+                 }
+               }}
+               className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 w-full max-w-md flex flex-col gap-4"
+             >
+               <h3 className="font-bold text-lg text-white">Confirm Attendance</h3>
+               {rsvpStatus === "error" && <p className="text-red-400 text-sm">Failed to confirm attendance. Please try again.</p>}
+               <input 
+                 type="text" 
+                 placeholder="Your Name" 
+                 required 
+                 value={rsvpName}
+                 onChange={e => setRsvpName(e.target.value)}
+                 className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500" 
+               />
+               <input 
+                 type="email" 
+                 placeholder="Your Email Address" 
+                 required 
+                 value={rsvpEmail}
+                 onChange={e => setRsvpEmail(e.target.value)}
+                 className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500" 
+               />
+               <button 
+                 type="submit" 
+                 disabled={isSubmitting}
+                 className="bg-[#4A7C59] hover:bg-[#3d664a] text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 transition-colors disabled:opacity-50"
+               >
+                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
+                 Send Calendar Invite
+               </button>
+             </form>
+           )
+        ) : session.meetJoinUrl ? (
           <a
             href={session.meetJoinUrl}
             target="_blank"

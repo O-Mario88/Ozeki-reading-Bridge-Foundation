@@ -51,48 +51,54 @@ function NodeCard({ node, expanded, onToggle }: { node: PerformanceNode; expande
     return (
         <div className={`border rounded-lg mb-2 overflow-hidden ${isSchool ? "ml-4 border-l-4 border-l-blue-500" : "bg-white"}`}>
             <div
-                className={`p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 ${isSchool ? "bg-slate-50" : ""}`}
+                className={`p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 ${isSchool ? "bg-slate-50" : ""}`}
                 onClick={onToggle}
             >
-                <div className="flex items-center gap-3">
-                    <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getLevelColor(node.level)}`}>
-                        {node.level}
+                <div className="flex justify-between items-center w-full sm:w-auto">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getLevelColor(node.level)}`}>
+                            {node.level}
+                        </span>
+                        <span className="font-semibold text-slate-800 break-all sm:break-normal">{node.name}</span>
+                        {!isSchool && <span className="text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">({node.schoolCount} schools)</span>}
+                    </div>
+                    {/* Move the toggle arrow to top-right on mobile */}
+                    <span className="text-slate-400 sm:hidden ml-2 flex-shrink-0">
+                        {expanded ? "▼" : "▶"}
                     </span>
-                    <span className="font-semibold text-slate-800">{node.name}</span>
-                    {!isSchool && <span className="text-xs text-slate-500 whitespace-nowrap">({node.schoolCount} schools)</span>}
                 </div>
 
-                <div className="flex items-center gap-5 ml-4">
-                    <div className="flex gap-3 text-xs text-slate-600">
-                        <div className="flex flex-col items-center w-12">
-                            <span className="mb-1 whitespace-nowrap">Instr.</span>
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 w-full sm:w-auto sm:ml-4 overflow-x-auto pb-1 sm:pb-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div className="flex gap-2 sm:gap-3 text-xs text-slate-600 flex-nowrap shrink-0">
+                        <div className="flex flex-col items-center w-10 sm:w-12 shrink-0">
+                            <span className="mb-1 whitespace-nowrap text-[10px] sm:text-xs">Instr.</span>
                             <ScoreBadge score={node.scores.instruction} />
                         </div>
-                        <div className="flex flex-col items-center w-12">
-                            <span className="mb-1 whitespace-nowrap">Outc.</span>
+                        <div className="flex flex-col items-center w-10 sm:w-12 shrink-0">
+                            <span className="mb-1 whitespace-nowrap text-[10px] sm:text-xs">Outc.</span>
                             <ScoreBadge score={node.scores.outcomes} />
                         </div>
-                        <div className="flex flex-col items-center w-12">
-                            <span className="mb-1 whitespace-nowrap">Lead.</span>
+                        <div className="flex flex-col items-center w-10 sm:w-12 shrink-0">
+                            <span className="mb-1 whitespace-nowrap text-[10px] sm:text-xs">Lead.</span>
                             <ScoreBadge score={node.scores.leadership} />
                         </div>
-                        <div className="flex flex-col items-center w-12">
-                            <span className="mb-1 whitespace-nowrap">Comm.</span>
+                        <div className="flex flex-col items-center w-10 sm:w-12 shrink-0">
+                            <span className="mb-1 whitespace-nowrap text-[10px] sm:text-xs">Comm.</span>
                             <ScoreBadge score={node.scores.community} />
                         </div>
-                        <div className="flex flex-col items-center w-12">
-                            <span className="mb-1 whitespace-nowrap">Env.</span>
+                        <div className="flex flex-col items-center w-10 sm:w-12 shrink-0">
+                            <span className="mb-1 whitespace-nowrap text-[10px] sm:text-xs">Env.</span>
                             <ScoreBadge score={node.scores.environment} />
                         </div>
                     </div>
 
                     {isSchool && node.isWeaningEligible && (
-                        <span className="bg-orange-600 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-full animate-pulse">
+                        <span className="bg-orange-600 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-full animate-pulse shrink-0">
                             Wean Ready
                         </span>
                     )}
 
-                    <span className="text-slate-400">
+                    <span className="text-slate-400 hidden sm:block shrink-0">
                         {expanded ? "▼" : "▶"}
                     </span>
                 </div>

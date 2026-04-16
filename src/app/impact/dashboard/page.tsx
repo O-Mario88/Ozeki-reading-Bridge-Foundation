@@ -114,7 +114,7 @@ export default async function ImpactDashboardPage({
       {/* 1. Public Explorer Dashboard */}
       <div className="bg-white pt-8 pb-3 px-4 md:px-6">
         <div className="max-w-[1400px] mx-auto text-center">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[#0a2a34] tracking-tight mb-2">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-brand-primary tracking-tight mb-2">
             Evidence-based Reading Impact
           </h1>
           <p className="text-sm md:text-base text-gray-600 max-w-3xl mx-auto">

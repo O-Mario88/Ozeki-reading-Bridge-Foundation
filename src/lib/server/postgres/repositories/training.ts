@@ -557,3 +557,40 @@ export async function saveTrainingSession(input: any, userId: number): Promise<a
     );
     return { id: result.rows[0].id, ...input, createdAt: result.rows[0].createdAt };
 }
+
+export async function addAttendeeToOnlineTrainingSessionPostgres(sessionId: number, email: string) {
+  // Fetch existing
+  const existing = await queryPostgres(
+    `SELECT attendee_emails_json, calendar_event_id FROM online_training_sessions WHERE id = $1`,
+    [sessionId]
+  );
+  if (!existing.rows[0]) return null;
+
+  const currentEmailsJson = existing.rows[0].attendee_emails_json || "[]";
+  let emails: string[] = [];
+  try {
+    emails = JSON.parse(currentEmailsJson);
+  } catch (e) {
+    emails = [];
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  
+  // Only push if not already in array
+  if (!emails.includes(cleanEmail)) {
+    emails.push(cleanEmail);
+    // Add to attendee_count
+    await queryPostgres(
+      `
+      UPDATE online_training_sessions 
+      SET attendee_emails_json = $2,
+          attendee_count = attendee_count + 1,
+          updated_at = NOW()
+      WHERE id = $1
+      `,
+      [sessionId, JSON.stringify(emails)]
+    );
+  }
+
+  return existing.rows[0].calendar_event_id as string | null;
+}
