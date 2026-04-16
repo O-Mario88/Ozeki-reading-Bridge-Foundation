@@ -4,6 +4,7 @@ export const GOOGLE_WORKSPACE_REQUIRED_SCOPES = [
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/meetings.space.readonly",
+  "https://www.googleapis.com/auth/drive.readonly",
 ] as const;
 
 export type GoogleWorkspaceDiagnostics = {
@@ -83,6 +84,79 @@ export function createGoogleCalendarClient() {
 
 export function createGoogleMeetClient() {
   return google.meet({ version: "v2", auth: createGoogleOAuthClient() });
+}
+
+export function createGoogleDriveClient() {
+  return google.drive({ version: "v3", auth: createGoogleOAuthClient() });
+}
+
+export async function listRecordingFilesFromDrive(folderId?: string) {
+  const drive = createGoogleDriveClient();
+  let query = "mimeType='video/mp4'";
+  if (folderId) {
+    query += ` and '${folderId}' in parents`;
+  }
+  
+  const res = await drive.files.list({
+    q: query,
+    fields: "files(id, name, webViewLink, createdTime, size, videoMediaMetadata)",
+    orderBy: "createdTime desc",
+    pageSize: 50
+  });
+  
+  return res.data.files || [];
+}
+
+export async function makeDriveFilePublicWithLink(fileId: string) {
+  const drive = createGoogleDriveClient();
+  // Grant temporary reader block for anyone with link
+  await drive.permissions.create({
+    fileId,
+    requestBody: {
+      role: 'reader',
+      type: 'anyone'
+    }
+  });
+
+  return `https://drive.google.com/uc?export=download&id=${fileId}`;
+}
+
+export async function createOzekiCalendarEventWithMeet(params: {
+  title: string;
+  lessonCode: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  teacherEmail?: string;
+}) {
+  const calendar = createGoogleCalendarClient();
+  const config = getGoogleWorkspaceConfig();
+  
+  const event = {
+    summary: `${params.lessonCode} | ${params.title}`,
+    description: `${params.description || 'Live Lesson'}\n\nNotice: This session may be recorded for educational and training purposes. Recordings may be made available through the OzekiRead Recorded Lessons Library.\n\nLesson Code: ${params.lessonCode}`,
+    start: { dateTime: params.startTime },
+    end: { dateTime: params.endTime },
+    attendees: params.teacherEmail ? [{ email: params.teacherEmail }] : [],
+    conferenceData: {
+      createRequest: {
+        requestId: params.lessonCode.replace(/[^a-zA-Z0-9]/g, ""),
+        conferenceSolutionKey: { type: "hangoutsMeet" }
+      }
+    }
+  };
+
+  const response = await calendar.events.insert({
+    calendarId: config.calendarId || "primary",
+    conferenceDataVersion: 1,
+    requestBody: event
+  });
+
+  return {
+    eventId: response.data.id,
+    meetLink: response.data.hangoutLink,
+    conferenceId: response.data.conferenceData?.conferenceId
+  };
 }
 
 function normalizeScopes(value: string | null | undefined) {

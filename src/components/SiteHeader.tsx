@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import siteLogo from "../../assets/photos/PXL_20260217_124357146.jpg";
+import siteLogo from "../../assets/photos/logo.png";
 
 function chunkArray<T>(items: T[], chunkSize: number): T[][] {
   const chunks: T[][] = [];

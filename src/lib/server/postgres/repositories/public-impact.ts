@@ -994,6 +994,36 @@ export async function buildPublicImpactAggregatePostgres(
     listOnlineSessionStatsForPublicImpactPostgres(schoolIds, year)
   ]);
 
+  // Telemetry Aggregation (Global Level currently)
+  let recordedLessonsViews = 0;
+  let recordedLessonsCertificates = 0;
+  try {
+    const telemetryResult = await queryPostgres(`
+      SELECT 
+        (SELECT COALESCE(SUM(completion_rate), 0)::int FROM lesson_view_summary) AS "totalViews",
+        (SELECT COUNT(*)::int FROM lesson_completion) AS "totalCertificates"
+    `);
+    recordedLessonsViews = Number(telemetryResult.rows[0]?.totalViews ?? 0);
+    recordedLessonsCertificates = Number(telemetryResult.rows[0]?.totalCertificates ?? 0);
+  } catch (e) {
+    // Ignore if tables do not exist yet
+  }
+
+  // Finance Aggregation (UGX -> USD Conversion)
+  let totalUgxReceived = 0;
+  let totalUsdEquivalent = 0;
+  try {
+    const financeResult = await queryPostgres(`
+      SELECT COALESCE(SUM(amount), 0)::numeric AS "totalReceived" 
+      FROM finance_receipts 
+      WHERE status = 'issued' OR status = 'paid'
+    `);
+    totalUgxReceived = Number(financeResult.rows[0]?.totalReceived ?? 0);
+    totalUsdEquivalent = Math.round(totalUgxReceived / 3750); // Baseline static conversion 1 USD = 3750 UGX
+  } catch (e) {
+    // Ignore if tables do not exist yet
+  }
+
   const uniqueLearners = new Set(assessmentRows.map(r => r.learnerUid).filter(Boolean));
   
   let coachingVisitsCompleted = 0;
@@ -1028,8 +1058,21 @@ export async function buildPublicImpactAggregatePostgres(
     };
   };
 
+  let gpcTotal = 0, gpcCount = 0;
+  let blendingTotal = 0, blendingCount = 0;
+  let engagementTotal = 0, engagementCount = 0;
+  
+  for (const evalRec of lessonEvals) {
+    const scores = evalRec.domainScores;
+    if (scores.gpc !== null && scores.gpc !== undefined) { gpcTotal += scores.gpc; gpcCount++; }
+    if (scores.blending !== null && scores.blending !== undefined) { blendingTotal += scores.blending; blendingCount++; }
+    if (scores.engagement !== null && scores.engagement !== undefined) { engagementTotal += scores.engagement; engagementCount++; }
+  }
+  
   const domainAverages = {
-    gpc: null, blending: null, engagement: null
+    gpc: gpcCount > 0 ? Number((gpcTotal / gpcCount).toFixed(2)) : null,
+    blending: blendingCount > 0 ? Number((blendingTotal / blendingCount).toFixed(2)) : null,
+    engagement: engagementCount > 0 ? Number((engagementTotal / engagementCount).toFixed(2)) : null,
   };
 
   const result: PublicImpactAggregate = {
@@ -1061,6 +1104,8 @@ export async function buildPublicImpactAggregatePostgres(
       assessmentsBaselineCount: baselineAssessments.length,
       assessmentsProgressCount: progressAssessments.length,
       assessmentsEndlineCount: endlineAssessments.length,
+      recordedLessonsViews,
+      recordedLessonsCertificates,
     },
     outcomes: {
       letterNames: calcDomain("letterIdentificationScore"),
@@ -1079,6 +1124,10 @@ export async function buildPublicImpactAggregatePostgres(
     },
     fidelity: {
       score: 0, band: "Developing", drivers: []
+    },
+    financials: {
+      totalUgxReceived,
+      totalUsdEquivalent,
     },
     rankings: {
       mostImproved: [], prioritySupport: [], mostActive: []

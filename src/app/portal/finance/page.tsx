@@ -1,138 +1,117 @@
-import { Suspense } from "react";
-import { FinanceShell } from "@/components/portal/finance/FinanceShell";
-import { getPortalUserOrRedirect } from "@/lib/auth";
-import { queryPostgres, chunkedPromiseAll } from "@/lib/server/postgres/client";
-import { 
-  getFinanceDashboardSummaryPostgres,
-  listFinanceInvoicesPostgres,
-  listFinanceReceiptsPostgres,
-  listFinanceExpensesPostgres
-} from "@/lib/server/postgres/repositories/finance";
-import { PortalFinanceDashboard } from "@/components/portal/finance/PortalFinanceDashboard";
+import { PortalShell } from "@/components/portal/PortalShell";
+import { requirePortalStaffUser } from "@/lib/auth";
+import { queryPostgres } from "@/lib/server/postgres/client";
+import { CreditCard, Search, ArrowRightLeft, ShieldBan } from "lucide-react";
 
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+export const metadata = { title: "Finance Reconciliation | Ozeki Portal" };
 
-async function FinanceDashboardContent({ period }: { period: string }) {
-  const todayDate = new Date();
-  const today = todayDate.toISOString().split("T")[0];
-  
-  let startDate = "1970-01-01";
-  
-  if (period === "week") {
-    const past = new Date(todayDate);
-    past.setDate(past.getDate() - 7);
-    startDate = past.toISOString().split("T")[0];
-  } else if (period === "month") {
-    startDate = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-01`;
-  } else if (period === "fy") {
-    startDate = `${todayDate.getFullYear()}-01-01`;
-  } else if (period === "all") {
-    startDate = "1970-01-01";
-  } else {
-    // Default to FY
-    period = "fy";
-    startDate = `${todayDate.getFullYear()}-01-01`;
-  }
+export default async function FinanceLedgerDashboard() {
+  const user = await requirePortalStaffUser();
 
-  // Fetch everything concurrently
-  const [
-    dbSummary,
-    ytdTotals,
-    recentInvoices,
-    recentReceipts,
-    recentExpenses,
-    budgetStats
-  ] = await chunkedPromiseAll([
-    () => getFinanceDashboardSummaryPostgres(new Date().toISOString().slice(0, 7), "UGX"),
-
-    // Income & expenses from the actual ledger governed by the selected period
-    () => queryPostgres(
-      `SELECT
-        COALESCE(SUM(CASE WHEN txn_type = 'money_in' THEN amount ELSE 0 END), 0) AS "incomeYtd",
-        COALESCE(SUM(CASE WHEN txn_type = 'money_out' THEN amount ELSE 0 END), 0) AS "expensesYtd"
-      FROM finance_transactions_ledger
-      WHERE posted_status = 'posted'
-        AND currency = 'UGX'
-        AND date >= $1
-        AND date <= $2`,
-      [startDate, today],
-    ),
-
-    () => listFinanceInvoicesPostgres(),
-    () => listFinanceReceiptsPostgres(),
-    () => listFinanceExpensesPostgres(),
-    
-    // Aggregation for the new budget metrics
-    () => queryPostgres(
-      `SELECT 
-         COALESCE(SUM(CASE WHEN status IN ('submitted', 'under_review') THEN requested_amount ELSE 0 END), 0) as pending,
-         COALESCE(SUM(approved_amount - spent_amount), 0) as committed
-       FROM finance_operation_budgets
-       WHERE status NOT IN ('draft', 'closed', 'rejected')`
-    ).catch(() => ({ rows: [{ pending: 0, committed: 0 }] }))
-  ], 2);
-
-  const ytdRow = ytdTotals.rows[0] as Record<string, unknown> | undefined;
-  const incomeYtd = Number(ytdRow?.incomeYtd ?? 0);
-  const expensesYtd = Number(ytdRow?.expensesYtd ?? 0);
-
-  // Total Assets = all-time net cash position (total money in - total money out)
-  let totalAssets = 0;
-  try {
-    const assetsResult = await queryPostgres(
-      `SELECT
-        COALESCE(SUM(CASE WHEN txn_type = 'money_in' THEN amount ELSE 0 END), 0) -
-        COALESCE(SUM(CASE WHEN txn_type = 'money_out' THEN amount ELSE 0 END), 0) AS "netAssets"
-      FROM finance_transactions_ledger
-      WHERE posted_status = 'posted'
-        AND currency = 'UGX'`,
-    );
-    totalAssets = Number((assetsResult.rows[0] as Record<string, unknown>)?.netAssets ?? 0);
-  } catch { /* fallback to 0 */ }
-
-  const pendingFunds = Number(budgetStats.rows[0]?.pending || 0);
-  const committedFunds = Number(budgetStats.rows[0]?.committed || 0);
-  const availableBalance = totalAssets - committedFunds;
-
-  // Inject the period's numbers so the dashboard shows period data natively
-  const injectedSummary = {
-    ...dbSummary,
-    moneyIn: incomeYtd,
-    moneyOut: expensesYtd,
-    net: incomeYtd - expensesYtd,
-    pendingFunds,
-    committedFunds,
-    availableBalance
-  };
-
-  return (
-    <PortalFinanceDashboard
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      summary={injectedSummary as any}
-      totalAssets={totalAssets}
-      recentInvoices={recentInvoices.slice(0, 10)}
-      recentReceipts={recentReceipts.slice(0, 10)}
-      recentExpenses={recentExpenses.slice(0, 10)}
-      period={period}
-      startDate={startDate}
-    />
+  const ledgersQuery = await queryPostgres(
+    \`SELECT sp.id, sp.provider, sp.payment_method, sp.amount_requested, sp.amount_paid, sp.currency,
+            sp.payment_type, sp.payment_status, sp.pesapal_merchant_reference, sp.pesapal_order_tracking_id,
+            sp.verified, sp.payment_initiated_at, sp.payment_confirmed_at,
+            s.name AS school_name, pr.receipt_number
+     FROM service_payments sp
+     LEFT JOIN schools_directory s ON s.id = sp.school_id
+     LEFT JOIN payment_receipts pr ON pr.id = sp.receipt_id
+     ORDER BY sp.created_at DESC LIMIT 100\`
   );
-}
 
-export default async function FinancePage(props: { searchParams: SearchParams }) {
-  const searchParams = await props.searchParams;
-  const user = await getPortalUserOrRedirect();
-  const period = typeof searchParams.period === "string" ? searchParams.period : "fy";
-  
+  const ledgers = ledgersQuery.rows;
+
   return (
-    <FinanceShell 
-      user={user} 
-      activeHref="/portal/finance" 
-      title="Finance Workspace"
+    <PortalShell
+      user={user}
+      activeHref="/portal/finance"
+      title="Global Fintech Ledger"
+      description="Raw transactional matrix orchestrating real-time telemetries against the Pesapal banking infrastructure."
     >
-      <Suspense key={period} fallback={<div className="p-8 text-center text-gray-500">Loading accurate financial metrics...</div>}>
-        <FinanceDashboardContent period={period} />
-      </Suspense>
-    </FinanceShell>
+      <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+         <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+               <CreditCard className="w-5 h-5 text-gray-400" />
+               Transaction Matrix
+            </h2>
+            <div className="relative">
+               <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+               <input placeholder="Search Reference Hash..." className="pl-9 pr-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-[#FA7D15] outline-none" />
+            </div>
+         </div>
+
+         <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
+               <thead>
+                  <tr className="bg-white text-xs uppercase tracking-wider text-gray-500 border-b-2">
+                     <th className="p-5 font-bold">Transaction Cryptography & Source</th>
+                     <th className="p-5 font-bold">Gateway Origin</th>
+                     <th className="p-5 font-bold text-center">Intent Volume</th>
+                     <th className="p-5 font-bold text-center">IPN Webhook Status</th>
+                     <th className="p-5 font-bold text-right">Audit Record</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-gray-100">
+                  {ledgers.map((tx: any) => (
+                     <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="p-5">
+                           <div className="font-bold text-gray-900 border border-gray-200 px-2 py-1 rounded inline-block bg-white shadow-sm mb-2 text-xs font-mono select-all">
+                              {tx.pesapal_merchant_reference}
+                           </div>
+                           <div className="text-sm font-bold mt-1 text-[#006b61]">{tx.school_name || 'Unknown School Entity'}</div>
+                           <div className="text-[10px] text-gray-400 mt-0.5">TK: {tx.pesapal_order_tracking_id || 'AWAITING HASH'}</div>
+                        </td>
+                        <td className="p-5">
+                           <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                              <ArrowRightLeft className="w-4 h-4 text-blue-500" />
+                              {tx.provider}
+                           </div>
+                           <div className="text-xs text-gray-500 mt-1">{tx.payment_method || 'Awaiting Method Confirmation'}</div>
+                        </td>
+                        <td className="p-5 text-center">
+                           <div className="text-lg font-black text-gray-900 leading-tight">
+                              {tx.currency} {Number(tx.amount_requested).toLocaleString()}
+                           </div>
+                           <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest mt-1 inline-block">
+                              {tx.payment_type}
+                           </span>
+                        </td>
+                        <td className="p-5 text-center">
+                           <div className={\`inline-flex items-center justify-center px-3 py-1.5 rounded-xl border text-xs font-bold whitespace-nowrap
+                              \${tx.verified ? 'bg-green-50 border-green-200 text-green-700' : 
+                                tx.payment_status === 'Pending Customer Action' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+                                'bg-red-50 border-red-200 text-red-700'}
+                           \`}>
+                              {tx.verified && <CheckCircle className="w-3 h-3 mr-1.5 inline" />}
+                              {!tx.verified && tx.payment_status === 'Pending Customer Action' && <Clock className="w-3 h-3 mr-1.5 inline animate-pulse" />}
+                              {!tx.verified && tx.payment_status !== 'Pending Customer Action' && <ShieldBan className="w-3 h-3 mr-1.5 inline" />}
+                              {tx.payment_status}
+                           </div>
+                        </td>
+                        <td className="p-5 text-right whitespace-nowrap">
+                           {tx.receipt_number ? (
+                              <span className="text-xs font-bold text-[#FA7D15] bg-[#FA7D15]/10 px-3 py-1.5 rounded-lg border border-[#FA7D15]/20 font-mono">
+                                 {tx.receipt_number}
+                              </span>
+                           ) : (
+                              <span className="text-xs text-gray-400 italic">No Cryptographic Receipt</span>
+                           )}
+                           <div className="text-[10px] text-gray-400 mt-2">
+                             Initiated: {tx.payment_initiated_at ? new Date(tx.payment_initiated_at).toLocaleTimeString() : new Date().toLocaleTimeString()}
+                           </div>
+                        </td>
+                     </tr>
+                  ))}
+               </tbody>
+            </table>
+            {ledgers.length === 0 && (
+               <div className="p-16 flex flex-col items-center justify-center text-gray-400">
+                  <CreditCard className="w-12 h-12 mb-4 opacity-20" />
+                  <p>The Ledger is perfectly quiet.</p>
+               </div>
+            )}
+         </div>
+      </div>
+    </PortalShell>
   );
 }

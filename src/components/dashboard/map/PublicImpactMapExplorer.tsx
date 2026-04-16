@@ -731,6 +731,18 @@ export function PublicImpactMapExplorer({
       value: (kpis?.onlineLiveSessionsCovered ?? 0).toLocaleString(),
       helper: "Live & completed virtual sessions",
     },
+    {
+      label: "Recorded Lesson Views",
+      value: (kpis?.recordedLessonsViews ?? 0).toLocaleString(),
+      helper: "Total video telemetry tracking",
+    },
+    {
+      label: "Funds Received (USD)",
+      value: typeof payload?.financials?.totalUsdEquivalent === 'number' 
+        ? `$${payload.financials.totalUsdEquivalent.toLocaleString()}` 
+        : "Data not available",
+      helper: "Public funding footprint tracker",
+    },
   ];
 
   const funnelStages = [

@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
 import { getCurrentPortalUser } from "@/lib/auth";
-import { 
-  listOnlineTrainingSessionsPostgres, 
-  listOnlineTrainingResourcesPostgres 
-} from "@/lib/server/postgres/repositories/training";
-import { queryPostgres } from "@/lib/server/postgres/client";
-import { EventCard } from "@/components/events/EventCard";
+import { PageHero } from "@/components/public/PageHero";
+import { listTrainingEventsPostgres } from "@/lib/server/postgres/repositories/training-events";
+import { Video, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
+import Link from "next/link";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { CTAStrip } from "@/components/public/CTAStrip";
-import { PageHero } from "@/components/public/PageHero";
-import { Users, MonitorPlay, Sparkles, Calendar, CheckCircle2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -18,133 +14,113 @@ export const metadata: Metadata = {
   description: "Join expert-led literacy, assessment, and phonics training sessions. Free capability building for educators.",
 };
 
-export default async function OnlineTrainingPage() {
-  const user = await getCurrentPortalUser();
-  const allSessions = await listOnlineTrainingSessionsPostgres({ includeDrafts: false });
-  
-  const now = Date.now();
-  const upcoming = allSessions
-    .filter(s => new Date(s.startTime).getTime() >= now)
-    .sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-    
-  // Sub-select the sessions to display
-  const displaySessions = upcoming.length > 0 ? upcoming : allSessions.slice(0, 12);
+export default async function EventsPage() {
+  // Master unification fetch
+  const allEvents = await listTrainingEventsPostgres('Published');
 
-  // Hydrate sessions with resources and current user's signup state
-  const sessionsData = await Promise.all(displaySessions.map(async (s) => {
-    const resources = await listOnlineTrainingResourcesPostgres(s.id);
-    let isSignedUp = false;
-    if (user) {
-       const check = await queryPostgres(
-         `SELECT 1 FROM online_training_participants WHERE session_id = $1 AND teacher_user_id = $2 LIMIT 1`,
-         [s.id, user.id]
-       );
-       isSignedUp = check.rows.length > 0;
-    }
-    return {
-      id: s.id,
-      title: s.title,
-      description: s.description,
-      audience: s.audience,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      meetJoinUrl: s.meetJoinUrl,
-      resources: resources.map(r => ({ id: r.id, title: r.title })),
-      isSignedUp
-    };
-  }));
-
-  // Fetch true live metrics from the PostgreSQL tracker
-  const totalSessions = allSessions.length;
-  const attendanceRes = await queryPostgres(`SELECT SUM(attendee_count) as total FROM online_training_sessions`);
-  const totalAttendees = Number(attendanceRes.rows[0]?.total || 0);
+  // We could separate them entirely, but the unified grid is powerful
+  const scheduledEvents = allEvents.filter(e => new Date(e.startDatetime!) > new Date());
+  const pastEvents = allEvents.filter(e => new Date(e.startDatetime!) <= new Date());
 
   return (
-    <div className="bg-charius-beige min-h-screen">
-      <PageHero
-        tagline={<><Sparkles className="w-4 h-4 inline" /> Ozeki Capability Building</>}
-        title="Join Ozeki Online Training Sessions"
-        subtitle="Learn, grow, and strengthen your literacy practice alongside industry experts. Sign up for free, interactive sessions tailored for teachers and school leaders."
-        imageSrc="/photos/17.jpeg"
-      >
-        <a href="#sessions" className="px-8 py-4 rounded-full bg-[#FA7D15] text-white font-bold text-lg hover:bg-[#E86D0B] transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center">
-          Explore Upcoming Trainings
-        </a>
-      </PageHero>
+    <>
+      <PageHero 
+         imageUrl="/photos/PXL_20260218_131920803.MP.jpg"
+         kicker="Ozeki Literacy Events"
+         title="Capacity Building Core"
+         description="Join our ecosystem of continuous capability development through virtual mastery sessions and localized physical deployment workshops."
+      />
 
-      {/* 2. Stats Band */}
-      <section className="bg-[#006b61] py-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/patterns/topography.svg')] opacity-10" />
-        <div className="container mx-auto px-4 relative z-10 max-w-7xl">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-white/10">
-            <div className="text-center md:text-left md:pl-8 flex items-center justify-center md:justify-start gap-4">
-              <div className="p-4 bg-white/5 rounded-2xl backdrop-blur-sm border border-white/10">
-                <MonitorPlay className="w-8 h-8 text-[#FA7D15]" />
-              </div>
-              <div>
-                <p className="text-4xl font-extrabold text-white">{totalSessions}+</p>
-                <p className="text-gray-400 font-medium uppercase tracking-wider text-sm mt-1">Sessions Held</p>
-              </div>
-            </div>
-            <div className="text-center md:text-left md:pl-16 pt-8 md:pt-0 flex items-center justify-center md:justify-start gap-4">
-              <div className="p-4 bg-white/5 rounded-2xl backdrop-blur-sm border border-white/10">
-                <Users className="w-8 h-8 text-[#FA7D15]" />
-              </div>
-              <div>
-                 <p className="text-4xl font-extrabold text-white">{totalAttendees.toLocaleString()}+</p>
-                 <p className="text-gray-400 font-medium uppercase tracking-wider text-sm mt-1">Teachers Reached</p>
-              </div>
-            </div>
-            <div className="text-center md:text-left md:pl-16 pt-8 md:pt-0 flex items-center justify-center md:justify-start gap-4">
-              <div className="p-4 bg-white/5 rounded-2xl backdrop-blur-sm border border-white/10">
-                <CheckCircle2 className="w-8 h-8 text-[#FA7D15]" />
-              </div>
-              <div>
-                 <p className="text-4xl font-extrabold text-white">100%</p>
-                 <p className="text-gray-400 font-medium uppercase tracking-wider text-sm mt-1">Free Access</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <section className="py-20 px-4 bg-gray-50">
+         <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl font-extrabold text-center mb-12 text-[#006b61]">Join Our Upcoming Events</h2>
+            
+            {scheduledEvents.length > 0 ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {scheduledEvents.map(event => (
+                     <div key={event.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all border border-gray-100 overflow-hidden group flex flex-col h-full">
+                        <div className={`px-6 py-4 border-b flex justify-between items-center ${event.deliveryType === 'online' ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
+                           <span className={`text-xs font-black tracking-widest uppercase ${event.deliveryType === 'online' ? 'text-blue-700' : 'text-[#FA7D15]'}`}>
+                              {event.deliveryType === 'online' ? "ONLINE LIVE SESSION" : "IN-PERSON TRAINING"}
+                           </span>
+                           {event.deliveryType === 'online' ? <Video className="w-5 h-5 text-blue-400" /> : <MapPin className="w-5 h-5 text-[#FA7D15]/60" />}
+                        </div>
+                        
+                        <div className="p-6 flex-1 flex flex-col">
+                           <h3 className="text-xl font-bold text-gray-900 group-hover:text-[#006b61] transition-colors leading-tight mb-4">{event.title}</h3>
+                           
+                           <div className="space-y-3 mb-6 text-sm text-gray-600 flex-1">
+                              <div className="flex items-center gap-3">
+                                 <Calendar className="w-4 h-4 text-gray-400" />
+                                 <span className="font-medium text-gray-900">{new Date(event.startDatetime!).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                 <Clock className="w-4 h-4 text-gray-400" />
+                                 <span>{new Date(event.startDatetime!).toLocaleTimeString()}</span>
+                              </div>
+                              
+                              {/* DYNAMIC MIDDLE LAYER */}
+                              {event.deliveryType === 'online' ? (
+                                <>
+                                  <div className="flex items-center gap-3 mt-4 pt-4 border-t border-dashed">
+                                     <Video className="w-4 h-4 text-blue-400" />
+                                     <span className="font-medium text-blue-900">Platform: Google Meet</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                     <span className="w-4 h-4 rounded-full bg-green-100 border border-green-300 flex items-center justify-center text-[10px] text-green-700 font-bold">✓</span>
+                                     <span>Access Level: Open Public Link</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-3 mt-4 pt-4 border-t border-dashed">
+                                     <MapPin className="w-4 h-4 text-[#FA7D15]" />
+                                     <span className="font-medium text-gray-900 line-clamp-1">{event.venueName}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                     <span className="w-4 h-4" /> {/* Spacer */}
+                                     <span className="text-gray-500 uppercase tracking-wide text-xs">{event.district}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3 mt-4">
+                                     <CreditCard className={`w-4 h-4 ${event.fundingType === 'Free Ozeki Event' || event.fundingType === 'Sponsored Training' ? 'text-green-500' : 'text-orange-500'}`} />
+                                     <span className={`font-bold ${event.fundingType === 'Paid Training' ? 'text-orange-700' : 'text-green-700'}`}>
+                                        {event.fundingType === 'Paid Training' ? `Fee: ${event.currency} ${event.trainingFeeAmount?.toLocaleString()} per teacher` : 'Fee: Free'}
+                                     </span>
+                                  </div>
+                                  {event.fundingType === 'Sponsored Training' && (
+                                     <div className="flex items-center gap-3">
+                                       <span className="w-4 h-4" />
+                                       <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded border border-yellow-200">Sponsored by: {event.sponsoringPartnerName}</span>
+                                     </div>
+                                  )}
+                                </>
+                              )}
+                           </div>
+                           
+                           {event.deliveryType === 'online' ? (
+                             <a href={event.googleMeetLink || "#"} className="w-full text-center py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-sm">
+                                Join Google Meet Now
+                             </a>
+                           ) : (
+                             <Link href={`/events/physical/${event.slug}`} className="w-full text-center py-3 bg-[#006b61] hover:opacity-90 text-white font-bold rounded-xl transition-all shadow-sm">
+                                Register School Now
+                             </Link>
+                           )}
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            ) : (
+               <div className="p-12 text-center border-2 border-dashed border-gray-200 rounded-3xl bg-white">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <Calendar className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No Upcoming Events</h3>
+                  <p className="text-gray-500">Check back later for new dates and capacity-building workshops.</p>
+               </div>
+            )}
+         </div>
       </section>
-
-      {/* 3. Session Discovery Grid */}
-      <SectionWrapper theme="charius-beige" id="sessions" className="py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 md:px-0">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12">
-            <div>
-              <h2 className="text-4xl font-bold text-[#111] mb-4">Explore Top Sessions</h2>
-              <p className="text-lg text-gray-500">
-                Enroll in upcoming webinars to gain access to exclusive presentation materials and live coaching.
-              </p>
-            </div>
-          </div>
-
-          {sessionsData.length === 0 ? (
-            <div className="bg-white rounded-[2rem] p-12 text-center shadow-sm">
-              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Calendar className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-[#111] mb-2">No upcoming sessions</h3>
-              <p className="text-gray-500 max-w-md mx-auto">
-                Check back soon! Our staff are scheduling new literacy masterclasses right now.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {sessionsData.map((session) => (
-                <EventCard 
-                  key={session.id} 
-                  session={session} 
-                  resources={session.resources} 
-                  isSignedUp={session.isSignedUp} 
-                  isLoggedIn={!!user}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </SectionWrapper>
 
       {/* 4. Support Footer Strip */}
       <CTAStrip 

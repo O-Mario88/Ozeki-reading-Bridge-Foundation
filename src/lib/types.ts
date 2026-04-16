@@ -1304,6 +1304,8 @@ export interface PublicImpactAggregate {
     assessmentsBaselineCount: number;
     assessmentsProgressCount: number;
     assessmentsEndlineCount: number;
+    recordedLessonsViews?: number;
+    recordedLessonsCertificates?: number;
   };
   outcomes: {
     letterNames: PublicImpactDomainAggregate;
@@ -1312,6 +1314,10 @@ export interface PublicImpactAggregate {
     madeUpWords: PublicImpactDomainAggregate;
     storyReading: PublicImpactDomainAggregate;
     comprehension: PublicImpactDomainAggregate;
+  };
+  financials?: {
+    totalUgxReceived: number;
+    totalUsdEquivalent: number;
   };
   masteryDomains?: Record<
     MasteryDomainKey,

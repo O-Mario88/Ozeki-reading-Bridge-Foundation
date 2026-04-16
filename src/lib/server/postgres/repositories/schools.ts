@@ -639,7 +639,7 @@ async function syncSchoolPrimaryContactPostgres(
   );
 }
 
-async function ensureTeacherRosterPostgres(
+export async function ensureTeacherRosterPostgres(
   client: { query: (text: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> },
   input: {
     teacherUid?: string | null;
