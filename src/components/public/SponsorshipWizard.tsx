@@ -39,7 +39,7 @@ export function SponsorshipWizard({ level }: { level: string }) {
       return;
     }
     if (!targetName) {
-      setError(\`Please define the target \${level} name.\`);
+      setError(`Please define the target ${level} name.`);
       return;
     }
 
@@ -110,7 +110,7 @@ export function SponsorshipWizard({ level }: { level: string }) {
                <div className="space-y-4 mb-6">
                   <input 
                      type="text" 
-                     placeholder={\`Enter Name of \${level}...\`} 
+                     placeholder={`Enter Name of ${level}...`} 
                      value={targetName} onChange={e=>setTargetName(e.target.value)} 
                      className="w-full p-4 rounded-xl border-2 border-gray-100 font-bold outline-none focus:border-[#006b61]" 
                   />
@@ -165,7 +165,7 @@ export function SponsorshipWizard({ level }: { level: string }) {
                   {['Organization', 'Partner/Donor', 'Individual'].map(t => (
                      <button
                         key={t} onClick={() => setDonorType(t)}
-                        className={\`flex-1 py-2 text-xs font-bold rounded-lg border \${donorType === t ? 'bg-[#006b61]/10 border-[#006b61] text-[#006b61]' : 'border-gray-200 text-gray-500'}\`}
+                        className={`flex-1 py-2 text-xs font-bold rounded-lg border ${donorType === t ? 'bg-[#006b61]/10 border-[#006b61] text-[#006b61]' : 'border-gray-200 text-gray-500'}`}
                      >
                         {t}
                      </button>

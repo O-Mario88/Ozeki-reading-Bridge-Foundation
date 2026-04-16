@@ -110,8 +110,8 @@ export function BookingWizard({ catalog }: { catalog: ServiceCatalogRow[] }) {
        {/* Wizard Header Progress Array */}
        <div className="bg-gray-50 border-b flex p-4 overflow-x-auto gap-4 scrollbar-hide">
           {[1,2,3,4,5].map(i => (
-             <div key={i} className={\`flex items-center gap-2 whitespace-nowrap \${step >= i ? 'text-[#006b61]' : 'text-gray-400'}\`}>
-                <div className={\`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm \${step >= i ? 'bg-[#006b61] text-white' : 'bg-gray-200'}\`}>
+             <div key={i} className={`flex items-center gap-2 whitespace-nowrap ${step >= i ? 'text-[#006b61]' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${step >= i ? 'bg-[#006b61] text-white' : 'bg-gray-200'}`}>
                    {step > i ? <CheckCircle className="w-5 h-5"/> : i}
                 </div>
                 <span className="font-bold text-sm hidden md:inline">
@@ -173,7 +173,7 @@ export function BookingWizard({ catalog }: { catalog: ServiceCatalogRow[] }) {
               
               <div className="space-y-4">
                  {catalog.map(service => (
-                    <label key={service.id} className={\`p-4 border-2 rounded-2xl cursor-pointer flex items-center gap-4 transition-all \${selectedServiceIds.includes(service.id) ? 'border-[#FA7D15] bg-[#FA7D15]/5' : 'border-gray-200 hover:border-gray-300'}\`}>
+                    <label key={service.id} className={`p-4 border-2 rounded-2xl cursor-pointer flex items-center gap-4 transition-all ${selectedServiceIds.includes(service.id) ? 'border-[#FA7D15] bg-[#FA7D15]/5' : 'border-gray-200 hover:border-gray-300'}`}>
                        <input 
                          type="checkbox" 
                          className="w-5 h-5 accent-[#FA7D15]"
@@ -340,7 +340,7 @@ export function BookingWizard({ catalog }: { catalog: ServiceCatalogRow[] }) {
               </div>
 
               <div className="space-y-4">
-                 <label className={\`block p-6 rounded-2xl border-2 cursor-pointer transition-all \${paymentChoice === 'deposit' ? 'border-[#006b61] bg-[#006b61]/5 shadow-md' : 'border-gray-200'}\`}>
+                 <label className={`block p-6 rounded-2xl border-2 cursor-pointer transition-all ${paymentChoice === 'deposit' ? 'border-[#006b61] bg-[#006b61]/5 shadow-md' : 'border-gray-200'}`}>
                     <div className="flex justify-between items-center mb-2">
                        <div className="flex items-center gap-3">
                           <input type="radio" className="w-5 h-5 accent-[#006b61]" checked={paymentChoice === 'deposit'} onChange={()=>setPaymentChoice('deposit')} />
@@ -351,7 +351,7 @@ export function BookingWizard({ catalog }: { catalog: ServiceCatalogRow[] }) {
                     <p className="text-sm text-gray-500 pl-8">Secures your booking date immediately. The remaining UGX {(quotation.total - quotation.requiredDeposit).toLocaleString()} balance carries over to service deployment date.</p>
                  </label>
 
-                 <label className={\`block p-6 rounded-2xl border-2 cursor-pointer transition-all \${paymentChoice === 'full' ? 'border-[#006b61] bg-[#006b61]/5 shadow-md' : 'border-gray-200'}\`}>
+                 <label className={`block p-6 rounded-2xl border-2 cursor-pointer transition-all ${paymentChoice === 'full' ? 'border-[#006b61] bg-[#006b61]/5 shadow-md' : 'border-gray-200'}`}>
                     <div className="flex justify-between items-center mb-2">
                        <div className="flex items-center gap-3">
                           <input type="radio" className="w-5 h-5 accent-[#006b61]" checked={paymentChoice === 'full'} onChange={()=>setPaymentChoice('full')} />

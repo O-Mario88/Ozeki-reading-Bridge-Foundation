@@ -29,7 +29,7 @@ export function EventRegistrationForm({ eventId, eventTitle }: { eventId: number
 
   const handleTeacherChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const newTeachers = [...teachers];
-    // @ts-ignore
+    // @ts-expect-error type inference mismatch on dynamic assignment
     newTeachers[index][e.target.name] = e.target.value;
     setTeachers(newTeachers);
   };
@@ -102,9 +102,9 @@ export function EventRegistrationForm({ eventId, eventTitle }: { eventId: number
   return (
     <div className="event-registration-form max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-sm border border-[var(--border-color)]">
       <div className="steps flex items-center mb-8 justify-between">
-        <div className={\`step flex-1 text-center font-bold \${step === 1 ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)] pb-2' : 'text-gray-400 pb-2'}\`}>1. School Info</div>
-        <div className={\`step flex-1 text-center font-bold \${step === 2 ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)] pb-2' : 'text-gray-400 pb-2'}\`}>2. Teacher Roster</div>
-        <div className={\`step flex-1 text-center font-bold \${step === 3 ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)] pb-2' : 'text-gray-400 pb-2'}\`}>3. Confirm</div>
+        <div className={`step flex-1 text-center font-bold ${step === 1 ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)] pb-2' : 'text-gray-400 pb-2'}`}>1. School Info</div>
+        <div className={`step flex-1 text-center font-bold ${step === 2 ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)] pb-2' : 'text-gray-400 pb-2'}`}>2. Teacher Roster</div>
+        <div className={`step flex-1 text-center font-bold ${step === 3 ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)] pb-2' : 'text-gray-400 pb-2'}`}>3. Confirm</div>
       </div>
 
       {error && <div className="p-4 mb-6 bg-red-50 text-red-700 rounded-md border border-red-200">{error}</div>}
@@ -197,7 +197,7 @@ export function EventRegistrationForm({ eventId, eventTitle }: { eventId: number
           <div className="review-block bg-gray-50 p-4 rounded-lg border">
             <h4 className="font-bold text-gray-700 tracking-wide uppercase text-sm mb-2">School Information</h4>
             <p className="text-lg"><strong>{school.schoolName}</strong> {school.district && <span className="text-gray-500">({school.district})</span>}</p>
-            <p className="text-sm mt-1 text-gray-600">Registered by: {school.registeredByName} {school.registeredByPhone && \`- \${school.registeredByPhone}\`}</p>
+            <p className="text-sm mt-1 text-gray-600">Registered by: {school.registeredByName} {school.registeredByPhone && `- ${school.registeredByPhone}`}</p>
           </div>
 
           <div className="review-block bg-gray-50 p-4 rounded-lg border">
@@ -218,7 +218,7 @@ export function EventRegistrationForm({ eventId, eventTitle }: { eventId: number
           <div className="flex justify-between mt-8">
             <button onClick={() => setStep(2)} className="px-6 py-2 border rounded-lg text-gray-600 hover:bg-gray-50" disabled={isSubmitting}>Back</button>
             <button onClick={submitForm} disabled={isSubmitting} className="bg-[var(--primary-color)] text-white px-8 py-3 rounded-lg hover:opacity-90 font-bold shadow-md shadow-[var(--primary-color)]/20 transition-all flex items-center justify-center min-w-[200px]">
-              {isSubmitting ? "Registering..." : \`Register \${teachers.length} Teachers\`}
+              {isSubmitting ? "Registering..." : `Register ${teachers.length} Teachers`}
             </button>
           </div>
         </div>

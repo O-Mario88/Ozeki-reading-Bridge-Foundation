@@ -15,8 +15,8 @@ export async function POST(request: Request) {
     // 1. Resolve School Entity
     let targetSchoolId = null;
     const schoolLookup = await queryPostgres(
-      \`SELECT id FROM schools_directory WHERE name ILIKE $1 AND district ILIKE $2 LIMIT 1\`,
-      [\`%\${schoolDetails.schoolName}%\`, \`%\${schoolDetails.district}%\`]
+      `SELECT id FROM schools_directory WHERE name ILIKE $1 AND district ILIKE $2 LIMIT 1`,
+      [`%${schoolDetails.schoolName}%`, `%${schoolDetails.district}%`]
     );
 
     if (schoolLookup.rows.length > 0) {
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     } else {
        // Upsert new school
        const newSchool = await queryPostgres(
-         \`INSERT INTO schools_directory (name, district, school_type, ownership, emis_number, phone_number, head_teacher_name, head_teacher_phone)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id\`,
+         `INSERT INTO schools_directory (name, district, school_type, ownership, emis_number, phone_number, head_teacher_name, head_teacher_phone)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
          [schoolDetails.schoolName, schoolDetails.district, schoolDetails.schoolType, schoolDetails.ownership, schoolDetails.emisNumber, schoolDetails.schoolPhone, schoolDetails.headTeacherName, schoolDetails.headTeacherPhone]
        );
        targetSchoolId = newSchool.rows[0].id;
@@ -36,12 +36,12 @@ export async function POST(request: Request) {
     const serviceRequestId = await createServiceRequestPostgres(payload);
 
     // 3. Initiate the Service Payments FinTech Ledger Table
-    const merchantReference = \`OZK-MERCHANT-\${Date.now()}\`;
+    const merchantReference = `OZK-MERCHANT-${Date.now()}`;
     const payLedger = await queryPostgres(
-      \`INSERT INTO service_payments (
+      `INSERT INTO service_payments (
         service_request_id, school_id, provider, amount_due, required_deposit_amount, amount_requested,
         payment_type, payment_status, pesapal_merchant_reference, payer_phone
-      ) VALUES ($1, $2, 'Pesapal V3', $3, $4, $5, $6, 'Payment Initiated', $7, $8) RETURNING id\`,
+      ) VALUES ($1, $2, 'Pesapal V3', $3, $4, $5, $6, 'Payment Initiated', $7, $8) RETURNING id`,
       [
         serviceRequestId, targetSchoolId, estimatedTotal, requiredDepositAmount, paymentAmount,
         paymentIntent === 'deposit' ? '50% Deposit' : 'Full Payment',

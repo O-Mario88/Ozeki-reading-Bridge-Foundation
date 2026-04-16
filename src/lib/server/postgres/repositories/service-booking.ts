@@ -249,10 +249,10 @@ export type SponsoredServiceSupportRow = {
 // 1. Service Catalog Extractor
 export async function listServiceCatalogPostgres(): Promise<ServiceCatalogRow[]> {
   const result = await queryPostgres(
-    \`SELECT id, service_name, description, pricing_model, unit_price, currency 
+    `SELECT id, service_name, description, pricing_model, unit_price, currency 
      FROM service_catalog 
      WHERE active = true 
-     ORDER BY id ASC\`
+     ORDER BY id ASC`
   );
   
   return result.rows.map(r => ({
@@ -270,14 +270,14 @@ export async function createServiceRequestPostgres(payload: any): Promise<number
   await queryPostgres('BEGIN');
   try {
     // A. Generate Unique SRV Code
-    const requestCode = \`OZK-SRV-\${new Date().getFullYear()}-\${Math.random().toString().substring(2,8)}\`;
+    const requestCode = `OZK-SRV-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;
 
     // B. Create the Request Row
     const reqRes = await queryPostgres(
-      \`INSERT INTO service_requests (
+      `INSERT INTO service_requests (
         request_code, school_id, requester_name, requester_role, requester_phone, requester_email,
         estimated_total, required_deposit_amount, balance, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Awaiting Deposit') RETURNING id\`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Awaiting Deposit') RETURNING id`,
       [
         requestCode, 
         payload.schoolId || null, 
@@ -295,10 +295,10 @@ export async function createServiceRequestPostgres(payload: any): Promise<number
     // C. Map Cart Items into schema
     for (const item of payload.cartItems) {
       await queryPostgres(
-        \`INSERT INTO service_request_items (
+        `INSERT INTO service_request_items (
           service_request_id, service_id, quantity, unit_price, total_price, 
           required_deposit_amount, service_details_json
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)\`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           serviceRequestId,
           item.serviceId,

@@ -19,9 +19,9 @@ export function PortalPhysicalEventsManager({ events }: { events: TrainingEventR
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
          {events.map((event) => (
-            <Link key={event.id} href={\`/portal/events/physical/\${event.id}\`} className="bg-white p-6 rounded-xl border border-gray-200 hover:border-[var(--accent-color)] hover:shadow-md transition-all group block">
+            <Link key={event.id} href={`/portal/events/physical/${event.id}`} className="bg-white p-6 rounded-xl border border-gray-200 hover:border-[var(--accent-color)] hover:shadow-md transition-all group block">
                <div className="flex justify-between items-start mb-4">
-                  <span className={\`px-2 py-1 text-xs font-bold rounded-full \${event.status === 'Published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}\`}>
+                  <span className={`px-2 py-1 text-xs font-bold rounded-full ${event.status === 'Published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                      {event.status}
                   </span>
                   <span className="text-xs text-gray-400 font-mono">#{event.eventCode || event.id}</span>
@@ -40,7 +40,7 @@ export function PortalPhysicalEventsManager({ events }: { events: TrainingEventR
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Users className="w-4 h-4 mr-2" />
-                    <span>{event.maxParticipants ? \`Capacity: \${event.maxParticipants}\` : "Open Capacity"}</span>
+                    <span>{event.maxParticipants ? `Capacity: ${event.maxParticipants}` : "Open Capacity"}</span>
                   </div>
                </div>
             </Link>

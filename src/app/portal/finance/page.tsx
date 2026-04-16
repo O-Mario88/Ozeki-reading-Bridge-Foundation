@@ -9,14 +9,14 @@ export default async function FinanceLedgerDashboard() {
   const user = await requirePortalStaffUser();
 
   const ledgersQuery = await queryPostgres(
-    \`SELECT sp.id, sp.provider, sp.payment_method, sp.amount_requested, sp.amount_paid, sp.currency,
+    `SELECT sp.id, sp.provider, sp.payment_method, sp.amount_requested, sp.amount_paid, sp.currency,
             sp.payment_type, sp.payment_status, sp.pesapal_merchant_reference, sp.pesapal_order_tracking_id,
             sp.verified, sp.payment_initiated_at, sp.payment_confirmed_at,
             s.name AS school_name, pr.receipt_number
      FROM service_payments sp
      LEFT JOIN schools_directory s ON s.id = sp.school_id
      LEFT JOIN payment_receipts pr ON pr.id = sp.receipt_id
-     ORDER BY sp.created_at DESC LIMIT 100\`
+     ORDER BY sp.created_at DESC LIMIT 100`
   );
 
   const ledgers = ledgersQuery.rows;
@@ -77,11 +77,11 @@ export default async function FinanceLedgerDashboard() {
                            </span>
                         </td>
                         <td className="p-5 text-center">
-                           <div className={\`inline-flex items-center justify-center px-3 py-1.5 rounded-xl border text-xs font-bold whitespace-nowrap
-                              \${tx.verified ? 'bg-green-50 border-green-200 text-green-700' : 
+                           <div className={`inline-flex items-center justify-center px-3 py-1.5 rounded-xl border text-xs font-bold whitespace-nowrap
+                              ${tx.verified ? 'bg-green-50 border-green-200 text-green-700' : 
                                 tx.payment_status === 'Pending Customer Action' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
                                 'bg-red-50 border-red-200 text-red-700'}
-                           \`}>
+                           `}>
                               {tx.verified && <CheckCircle className="w-3 h-3 mr-1.5 inline" />}
                               {!tx.verified && tx.payment_status === 'Pending Customer Action' && <Clock className="w-3 h-3 mr-1.5 inline animate-pulse" />}
                               {!tx.verified && tx.payment_status !== 'Pending Customer Action' && <ShieldBan className="w-3 h-3 mr-1.5 inline" />}

@@ -62,7 +62,7 @@ export default function SponsorLandingPage() {
             {SPONSORSHIP_TIERS.map((tier) => (
                <Link href={tier.href} key={tier.title} className="group">
                   <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
-                     <div className={\`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 \${tier.color}\`}>
+                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${tier.color}`}>
                         <tier.icon className="w-7 h-7" />
                      </div>
                      <h3 className="text-xl font-black text-gray-900 mb-3">{tier.title}</h3>

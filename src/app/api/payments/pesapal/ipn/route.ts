@@ -15,8 +15,8 @@ export async function POST(request: Request) {
 
       // 1. Probe the Service Bookings Ledger
       const servicePaymentCheck = await queryPostgres(
-         \`SELECT id, service_request_id, school_id, amount_requested, currency, payment_type, payment_status, pesapal_merchant_reference
-          FROM service_payments WHERE pesapal_order_tracking_id = $1 LIMIT 1\`,
+         `SELECT id, service_request_id, school_id, amount_requested, currency, payment_type, payment_status, pesapal_merchant_reference
+          FROM service_payments WHERE pesapal_order_tracking_id = $1 LIMIT 1`,
          [trackingId]
       );
 
@@ -26,8 +26,8 @@ export async function POST(request: Request) {
 
       // 2. Probe the Philanthropic Donations Ledger
       const donationCheck = await queryPostgres(
-         \`SELECT id, amount, currency, payment_status, pesapal_merchant_reference, donation_reference, donor_name, email, donation_purpose 
-          FROM donations WHERE pesapal_order_tracking_id = $1 LIMIT 1\`,
+         `SELECT id, amount, currency, payment_status, pesapal_merchant_reference, donation_reference, donor_name, email, donation_purpose 
+          FROM donations WHERE pesapal_order_tracking_id = $1 LIMIT 1`,
          [trackingId]
       );
 
@@ -69,20 +69,20 @@ async function processDonationWebhook(donation: any, trackingId: string, ipnPayl
        await queryPostgres('BEGIN');
        try {
            await queryPostgres(
-               \`UPDATE donations 
+               `UPDATE donations 
                 SET payment_status = 'Completed', payment_method = $1, 
                     ipn_payload_json = $2, status_response_json = $3, updated_at = NOW(),
                     paid_at = NOW()
-                WHERE id = $4\`,
+                WHERE id = $4`,
                [gatewayVerification.payment_method, JSON.stringify(ipnPayload), JSON.stringify(gatewayVerification), donation.id]
            );
 
-           const receiptHash = \`OZK-DON-RCT-\${new Date().getFullYear()}-\${Math.random().toString().substring(2,8)}\`;
+           const receiptHash = `OZK-DON-RCT-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;
            const receiptRes = await queryPostgres(
-               \`INSERT INTO donation_receipts (
+               `INSERT INTO donation_receipts (
                  receipt_number, donation_id, donation_reference, donor_name, donor_email,
                  amount, currency, donation_purpose, payment_method, pesapal_order_tracking_id, status
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Issued') RETURNING id\`,
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Issued') RETURNING id`,
                [
                  receiptHash, donation.id, donation.donation_reference, donation.donor_name, donation.email,
                  donation.amount, donation.currency, donation.donation_purpose, 
@@ -90,7 +90,7 @@ async function processDonationWebhook(donation: any, trackingId: string, ipnPayl
                ]
            );
 
-           await queryPostgres(\`UPDATE donations SET receipt_id = $1 WHERE id = $2\`, [receiptRes.rows[0].id, donation.id]);
+           await queryPostgres(`UPDATE donations SET receipt_id = $1 WHERE id = $2`, [receiptRes.rows[0].id, donation.id]);
            await queryPostgres('COMMIT');
            return NextResponse.json({ success: true, message: "Donation Hook Successfully Reconciled" });
 
@@ -116,15 +116,15 @@ async function processServiceBookingWebhook(payment: any, trackingId: string, ip
        await queryPostgres('BEGIN');
        try {
            await queryPostgres(
-               \`UPDATE service_payments 
+               `UPDATE service_payments 
                 SET payment_status = 'Completed', amount_paid = $1, payment_method = $2, 
                     ipn_payload_json = $3, status_response_json = $4, updated_at = NOW(),
                     payment_confirmed_at = NOW(), verified = true
-                WHERE id = $5\`,
+                WHERE id = $5`,
                [payment.amount_requested, gatewayVerification.payment_method, JSON.stringify(ipnPayload), JSON.stringify(gatewayVerification), payment.id]
            );
 
-           const reqCheck = await queryPostgres(\`SELECT final_total, estimated_total, amount_paid FROM service_requests WHERE id = $1\`, [payment.service_request_id]);
+           const reqCheck = await queryPostgres(`SELECT final_total, estimated_total, amount_paid FROM service_requests WHERE id = $1`, [payment.service_request_id]);
            const totalTarget = Number(reqCheck.rows[0].final_total) > 0 ? Number(reqCheck.rows[0].final_total) : Number(reqCheck.rows[0].estimated_total);
            const newlyAccumulatedPaid = Number(reqCheck.rows[0].amount_paid) + Number(payment.amount_requested);
            const remainingBalance = totalTarget - newlyAccumulatedPaid;
@@ -132,28 +132,28 @@ async function processServiceBookingWebhook(payment: any, trackingId: string, ip
            let newReqStatus = remainingBalance <= 0 ? 'Fully Paid' : 'Deposit Paid';
 
            await queryPostgres(
-               \`UPDATE service_requests SET amount_paid = $1, balance = $2, status = $3, updated_at = NOW() WHERE id = $4\`,
+               `UPDATE service_requests SET amount_paid = $1, balance = $2, status = $3, updated_at = NOW() WHERE id = $4`,
                [newlyAccumulatedPaid, remainingBalance, newReqStatus, payment.service_request_id]
            );
 
-           const receiptHash = \`OZK-RCT-\${new Date().getFullYear()}-\${Math.random().toString().substring(2,8)}\`;
+           const receiptHash = `OZK-RCT-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;
            const receiptRes = await queryPostgres(
-               \`INSERT INTO payment_receipts (
+               `INSERT INTO payment_receipts (
                  receipt_number, service_payment_id, service_request_id, school_id, receipt_type,
                  amount_paid, quotation_total, balance, currency, payment_method, pesapal_order_tracking_id, status
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'Issued') RETURNING id\`,
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'Issued') RETURNING id`,
                [receiptHash, payment.id, payment.service_request_id, payment.school_id, payment.payment_type.includes('Deposit') ? 'Deposit Receipt' : 'Full Payment Receipt', payment.amount_requested, totalTarget, remainingBalance, payment.currency, gatewayVerification.payment_method, trackingId]
            );
            
-           await queryPostgres(\`UPDATE service_payments SET receipt_id = $1 WHERE id = $2\`, [receiptRes.rows[0].id, payment.id]);
+           await queryPostgres(`UPDATE service_payments SET receipt_id = $1 WHERE id = $2`, [receiptRes.rows[0].id, payment.id]);
 
-           const schoolFetch = await queryPostgres(\`SELECT name FROM schools_directory WHERE id = $1\`, [payment.school_id]);
+           const schoolFetch = await queryPostgres(`SELECT name FROM schools_directory WHERE id = $1`, [payment.school_id]);
            const schoolName = schoolFetch.rows[0]?.name || 'Unknown School';
 
            await queryPostgres(
-               \`INSERT INTO ozeki_tasks (task_type, title, description, school_id, service_request_id, priority, status)
-                VALUES ($1, $2, $3, $4, $5, 'High', 'Pending Follow-Up')\`,
-               ["Service Payment Coordination", \`Follow up: \${schoolName} - \${payment.payment_type} Secured\`, \`\${schoolName} has liquidated UGX \${payment.amount_requested}.\`, payment.school_id, payment.service_request_id]
+               `INSERT INTO ozeki_tasks (task_type, title, description, school_id, service_request_id, priority, status)
+                VALUES ($1, $2, $3, $4, $5, 'High', 'Pending Follow-Up')`,
+               ["Service Payment Coordination", `Follow up: ${schoolName} - ${payment.payment_type} Secured`, `${schoolName} has liquidated UGX ${payment.amount_requested}.`, payment.school_id, payment.service_request_id]
            );
 
            await queryPostgres('COMMIT');

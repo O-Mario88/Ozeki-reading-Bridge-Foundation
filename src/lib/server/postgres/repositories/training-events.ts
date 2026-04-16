@@ -187,7 +187,7 @@ export type EventAttendeeRow = {
 
 export async function listRegistrationsForEventPostgres(eventId: number): Promise<EventAttendeeRow[]> {
   const result = await queryPostgres(
-    \`SELECT 
+    `SELECT 
       ert.id AS registration_teacher_id,
       t.id AS teacher_id,
       t.teacher_uid,
@@ -204,7 +204,7 @@ export async function listRegistrationsForEventPostgres(eventId: number): Promis
     JOIN event_registrations er ON er.id = ert.event_registration_id
     JOIN schools_directory s ON s.id = er.school_id
     WHERE ert.training_event_id = $1
-    ORDER BY s.name ASC, t.full_name ASC\`,
+    ORDER BY s.name ASC, t.full_name ASC`,
     [eventId]
   );
   
@@ -225,9 +225,9 @@ export async function listRegistrationsForEventPostgres(eventId: number): Promis
 
 export async function updateTeacherAttendanceStatusPostgres(registrationTeacherId: number, status: string) {
   await queryPostgres(
-    \`UPDATE event_registration_teachers 
+    `UPDATE event_registration_teachers 
      SET attendance_status = $1, updated_at = NOW() 
-     WHERE id = $2\`,
+     WHERE id = $2`,
     [status, registrationTeacherId]
   );
 }
@@ -260,20 +260,20 @@ export async function finalizeEventAndGeneratePathsPostgres(
 
   for (const teacher of eligible) {
     // Generate a unique, unguessable cert hash
-    const certHash = \`cert_\${Date.now()}_\${Math.random().toString(36).substring(2, 9)}_\${teacher.teacherId}\`;
+    const certHash = `cert_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${teacher.teacherId}`;
     
     // A. Issue Certificate
     await queryPostgres(
-      \`INSERT INTO event_certificates (teacher_id, training_event_id, certificate_hash, issued_at)
-       VALUES ($1, $2, $3, NOW())\`,
+      `INSERT INTO event_certificates (teacher_id, training_event_id, certificate_hash, issued_at)
+       VALUES ($1, $2, $3, NOW())`,
       [teacher.teacherId, eventId, certHash]
     );
 
     // B. Build the Recommended Learning Journey Loop
     for (const lessonId of recommendedLessonIds) {
       await queryPostgres(
-        \`INSERT INTO teacher_learning_journey (teacher_id, training_event_id, recommended_lesson_id, journey_stage)
-         VALUES ($1, $2, $3, 'Recommended')\`,
+        `INSERT INTO teacher_learning_journey (teacher_id, training_event_id, recommended_lesson_id, journey_stage)
+         VALUES ($1, $2, $3, 'Recommended')`,
         [teacher.teacherId, eventId, lessonId]
       );
     }
@@ -281,7 +281,7 @@ export async function finalizeEventAndGeneratePathsPostgres(
 
   // Set the overall Event status to Completed
   await queryPostgres(
-    \`UPDATE training_events SET status = 'Completed', updated_at = NOW() WHERE id = $1\`,
+    `UPDATE training_events SET status = 'Completed', updated_at = NOW() WHERE id = $1`,
     [eventId]
   );
 
@@ -291,7 +291,7 @@ export async function finalizeEventAndGeneratePathsPostgres(
 export async function getTeacherImpactProfilePostgres(teacherUid: string) {
   // Get teacher core
   const teacherQuery = await queryPostgres(
-    \`SELECT id, full_name, phone, role_title, school_id FROM teacher_roster WHERE teacher_uid = $1 LIMIT 1\`,
+    `SELECT id, full_name, phone, role_title, school_id FROM teacher_roster WHERE teacher_uid = $1 LIMIT 1`,
     [teacherUid]
   );
   if (teacherQuery.rows.length === 0) return null;
@@ -299,31 +299,31 @@ export async function getTeacherImpactProfilePostgres(teacherUid: string) {
 
   // Get physical attendance history
   const historyQuery = await queryPostgres(
-    \`SELECT te.title, te.start_datetime, ert.attendance_status 
+    `SELECT te.title, te.start_datetime, ert.attendance_status 
      FROM event_registration_teachers ert
      JOIN training_events te ON te.id = ert.training_event_id
      WHERE ert.teacher_id = $1 AND ert.attendance_status = 'Present'
-     ORDER BY te.start_datetime DESC\`,
+     ORDER BY te.start_datetime DESC`,
     [teacher.id]
   );
 
   // Get current journey recommendations (Now mapping internally within the unified training_events ecosystem)
   const recommendationsQuery = await queryPostgres(
-    \`SELECT rl.id, rl.title, rl.slug, rl.vimeo_embed_url AS thumbnail_url, tlj.journey_stage
+    `SELECT rl.id, rl.title, rl.slug, rl.vimeo_embed_url AS thumbnail_url, tlj.journey_stage
      FROM teacher_learning_journey tlj
      JOIN training_events rl ON rl.id = tlj.recommended_lesson_id
      WHERE tlj.teacher_id = $1 AND tlj.journey_stage != 'Completed' AND rl.delivery_type = 'online'
-     ORDER BY tlj.id DESC\`,
+     ORDER BY tlj.id DESC`,
     [teacher.id]
   );
 
   // Get certificates
   const certsQuery = await queryPostgres(
-    \`SELECT ec.certificate_hash, ec.issued_at, te.title AS event_title
+    `SELECT ec.certificate_hash, ec.issued_at, te.title AS event_title
      FROM event_certificates ec
      JOIN training_events te ON te.id = ec.training_event_id
      WHERE ec.teacher_id = $1
-     ORDER BY ec.issued_at DESC\`,
+     ORDER BY ec.issued_at DESC`,
     [teacher.id]
   );
 

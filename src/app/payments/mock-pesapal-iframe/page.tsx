@@ -29,7 +29,7 @@ export default function MockPesapalIframePage() {
 
          // Push user to callback waiting room just like Pesapal naturally redirects
          setTimeout(() => {
-            router.push(\`/payments/pesapal/callback?OrderTrackingId=\${trackingId}&OrderMerchantReference=\${merchantRef}\`);
+            router.push(`/payments/pesapal/callback?OrderTrackingId=${trackingId}&OrderMerchantReference=${merchantRef}`);
          }, 1500);
 
       } catch (e) {

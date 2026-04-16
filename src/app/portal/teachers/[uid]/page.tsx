@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ uid: stri
   const resolvedParams = await params;
   const profile = await getTeacherImpactProfilePostgres(resolvedParams.uid);
   return {
-    title: profile ? \`\${profile.fullName} | Impact Profile\` : "Teacher Profile",
+    title: profile ? `${profile.fullName} | Impact Profile` : "Teacher Profile",
   };
 }
 
@@ -114,7 +114,7 @@ export default async function StaffTeacherProfilePage({ params }: { params: Prom
                 <div className="space-y-4">
                   {profile.recommendations.map((rec) => (
                     <div key={rec.id} className="flex gap-4 p-3 bg-gray-50 rounded-xl border items-center">
-                       <div className="w-12 h-12 bg-gray-200 rounded-lg shrink-0 flex items-center justify-center bg-cover bg-center overflow-hidden" style={rec.thumbnailUrl ? { backgroundImage: \`url(\${rec.thumbnailUrl})\` } : {}}>
+                       <div className="w-12 h-12 bg-gray-200 rounded-lg shrink-0 flex items-center justify-center bg-cover bg-center overflow-hidden" style={rec.thumbnailUrl ? { backgroundImage: `url(${rec.thumbnailUrl})` } : {}}>
                           {!rec.thumbnailUrl && <PlayCircle className="w-5 h-5 text-gray-400" />}
                        </div>
                        <div className="flex-1 py-1">

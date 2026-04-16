@@ -1,0 +1,207 @@
+
+> ozeki-reading-bridge-foundation@1.0.0 lint
+> eslint .
+
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/run_phase4_migration.ts
+  5:24  error  Parsing error: Invalid character
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/about/page.tsx
+  201:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/cron/sync-recordings/route.ts
+  47:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/events/admin/attendance/route.ts
+  22:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/events/admin/finalize/route.ts
+  29:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/events/register/route.ts
+    2:10  warning  'queryPostgres' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+    3:10  warning  'createEventRegistrationPostgres' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+    3:43  warning  'addTeacherToEventRegistrationPostgres' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  142:19  warning  Unexpected any. Specify a different type                                                                 @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/events/schedule/route.ts
+  85:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/migrate/donations/route.ts
+  75:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/migrate/historical/route.ts
+  69:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/migrate/register-ipn/route.ts
+  55:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/migrate/route.ts
+  18:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/migrate/services/route.ts
+  335:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/migrate/sponsorships/route.ts
+  80:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/payments/pesapal/donation/initiate/route.ts
+  53:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/payments/pesapal/ipn/route.ts
+   52:15  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+   61:49  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+   61:86  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+  108:54  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+  108:91  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+  132:16  warning  'newReqStatus' is never reassigned. Use 'const' instead  prefer-const
+  173:57  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+  173:94  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/payments/pesapal/sponsor/initiate/route.ts
+  56:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/payments/verify/route.ts
+  71:12  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/api/services/request/route.ts
+  61:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/events/page.tsx
+  133:6  error  Parsing error: Expected corresponding closing tag for JSX fragment
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/impact/dashboard/page.tsx
+  10:33  warning  'BarChart3' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/impact/gallery/page.tsx
+  1:8  warning  'Image' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/payments/mock-pesapal-iframe/page.tsx
+  35:16  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/payments/pesapal/callback/page.tsx
+  14:49  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  33:18  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/portal/donations/page.tsx
+  22:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  90:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/portal/events/physical/[id]/page.tsx
+  5:3  warning  'getTrainingEventBySlugPostgres' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/portal/finance/page.tsx
+  55:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/portal/services/requests/page.tsx
+  35:85  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  63:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/app/portal/sponsorships/page.tsx
+  22:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  89:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/portal/LessonEvaluationPanel.tsx
+  22:3  warning  'LessonStructureItemInput' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  23:3  warning  'ActionPlanEntry' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/portal/PortalBlogManager.tsx
+  1270:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  1587:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  1642:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/portal/PortalRecordedLessonsManager.tsx
+  17:19  warning  'setLessons' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  21:48  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  47:13  warning  'data' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  86:14  warning  'err' is defined but never used. Allowed unused caught errors must match /^_/u         @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/portal/events/PortalPhysicalEventDetails.tsx
+  77:13  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/portal/events/PortalUnifiedEventsForm.tsx
+    5:10   warning  'Calendar' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+   20:26   warning  'setTargetAudience' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   21:17   warning  'setLevel' is assigned a value but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+   24:24   warning  'setContactEmail' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   30:22   warning  'setMaxSchools' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+   31:10   warning  'maxTeachersPerSchool' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   31:32   warning  'setMaxTeachersPerSchool' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  181:106  warning  Unexpected any. Specify a different type                                                            @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/public/BookingWizard.tsx
+  24:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/public/DonationWizard.tsx
+  38:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  82:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/public/LessonQuizForm.tsx
+   52:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  103:65  error    Empty block statement                     no-empty
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/public/LessonRatingForm.tsx
+  42:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/public/SponsorshipWizard.tsx
+   9:9   warning  'isRegion' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  73:17  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/public/TelemetryPlayer.tsx
+  28:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  31:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  60:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  65:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  69:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  75:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/components/public/events/EventRegistrationForm.tsx
+  32:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  85:19  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/payments/pesapal.ts
+  43:146  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/donations.ts
+  54:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/metrics.ts
+  191:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/public-impact.ts
+  1008:12  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  1023:12  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/recorded-lessons.ts
+  82:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/service-booking.ts
+  269:61  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  323:47  warning  'serviceRequestId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  323:73  warning  'amountPaid' is defined but never used. Allowed unused args must match /^_/u        @typescript-eslint/no-unused-vars
+  323:93  warning  'trackingId' is defined but never used. Allowed unused args must match /^_/u        @typescript-eslint/no-unused-vars
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/sponsorships.ts
+  59:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/training-events.ts
+   91:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  133:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  211:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  335:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/omario/Desktop/Notebook LM/Ozeki reading Bridge Foundation/src/lib/server/postgres/repositories/training.ts
+  573:12  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 101 problems (4 errors, 97 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

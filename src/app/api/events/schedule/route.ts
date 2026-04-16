@@ -7,13 +7,13 @@ import { createTrainingEventPostgres } from "@/lib/server/postgres/repositories/
 function generateGoogleWorkflowHashes(deliveryType: string, eventCode: string) {
   if (deliveryType === "online") {
     return {
-      googleCalendarEventId: \`gcal_evt_\${eventCode}_\${Date.now()}\`,
-      googleMeetLink: \`https://meet.google.com/ozk-\${eventCode.toLowerCase()}-abc\`,
+      googleCalendarEventId: `gcal_evt_${eventCode}_${Date.now()}`,
+      googleMeetLink: `https://meet.google.com/ozk-${eventCode.toLowerCase()}-abc`,
       recordingConsentNotice: true
     };
   } else {
     return {
-      googleCalendarEventId: \`gcal_evt_physical_\${eventCode}_\${Date.now()}\`,
+      googleCalendarEventId: `gcal_evt_physical_${eventCode}_${Date.now()}`,
       googleMeetLink: null,
       recordingConsentNotice: false
     };
@@ -36,12 +36,12 @@ export async function POST(request: Request) {
        return NextResponse.json({ message: "Missing offline required fields." }, { status: 400 });
     }
 
-    const eventCode = \`OZEKI-\${Math.random().toString(36).substring(2,6).toUpperCase()}\`;
-    const slug = \`\${payload.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-\${eventCode.toLowerCase()}\`;
+    const eventCode = `OZEKI-${Math.random().toString(36).substring(2,6).toUpperCase()}`;
+    const slug = `${payload.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${eventCode.toLowerCase()}`;
 
     // Calculate dates securely
-    const startDatetime = new Date(\`\${payload.date}T\${payload.startTime}\`).toISOString();
-    const endDatetime = new Date(\`\${payload.date}T\${payload.endTime}\`).toISOString();
+    const startDatetime = new Date(`${payload.date}T${payload.startTime}`).toISOString();
+    const endDatetime = new Date(`${payload.date}T${payload.endTime}`).toISOString();
 
     // EXPLICIT AUTOMATION SAFETY RULE
     const googleArtifacts = generateGoogleWorkflowHashes(payload.deliveryType, eventCode);
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       success: true, 
       id: newId, 
       artifacts: googleArtifacts,
-      message: \`Event \${eventCode} Scheduled via unified system.\`
+      message: `Event ${eventCode} Scheduled via unified system.`
     });
 
   } catch (error: any) {

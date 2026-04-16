@@ -90,9 +90,9 @@ export function PortalUnifiedEventsForm() {
        <div className="p-8 border-b border-gray-100 bg-gray-50/50">
           <h2 className="text-xl font-bold mb-4">Select Master Delivery Type</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <label className={\`cursor-pointer border-2 rounded-xl p-4 flex items-start gap-4 transition-all \${deliveryType === 'online' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-gray-200 hover:border-gray-300'}\`}>
+             <label className={`cursor-pointer border-2 rounded-xl p-4 flex items-start gap-4 transition-all ${deliveryType === 'online' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-gray-200 hover:border-gray-300'}`}>
                 <input type="radio" className="sr-only" checked={deliveryType === 'online'} onChange={() => setDeliveryType('online')} />
-                <div className={\`p-3 rounded-full \${deliveryType === 'online' ? 'bg-[var(--accent-color)] text-white' : 'bg-gray-100 text-gray-500'}\`}>
+                <div className={`p-3 rounded-full ${deliveryType === 'online' ? 'bg-[var(--accent-color)] text-white' : 'bg-gray-100 text-gray-500'}`}>
                    <Globe className="w-6 h-6" />
                 </div>
                 <div>
@@ -101,9 +101,9 @@ export function PortalUnifiedEventsForm() {
                 </div>
              </label>
 
-             <label className={\`cursor-pointer border-2 rounded-xl p-4 flex items-start gap-4 transition-all \${deliveryType === 'in_person' ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5' : 'border-gray-200 hover:border-gray-300'}\`}>
+             <label className={`cursor-pointer border-2 rounded-xl p-4 flex items-start gap-4 transition-all ${deliveryType === 'in_person' ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5' : 'border-gray-200 hover:border-gray-300'}`}>
                 <input type="radio" className="sr-only" checked={deliveryType === 'in_person'} onChange={() => setDeliveryType('in_person')} />
-                <div className={\`p-3 rounded-full \${deliveryType === 'in_person' ? 'bg-[var(--primary-color)] text-white' : 'bg-gray-100 text-gray-500'}\`}>
+                <div className={`p-3 rounded-full ${deliveryType === 'in_person' ? 'bg-[var(--primary-color)] text-white' : 'bg-gray-100 text-gray-500'}`}>
                    <Building className="w-6 h-6" />
                 </div>
                 <div>
@@ -225,7 +225,7 @@ export function PortalUnifiedEventsForm() {
        
        <div className="p-8 border-t bg-gray-50 flex justify-end">
          <button disabled={isSubmitting} type="submit" className="bg-[#FA7D15] hover:opacity-90 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition-all flex items-center gap-2">
-            {isSubmitting ? "Orchestrating Architecture..." : \`Schedule \${deliveryType === 'online' ? 'Webinar' : 'Workshop'}\`}
+            {isSubmitting ? "Orchestrating Architecture..." : `Schedule ${deliveryType === 'online' ? 'Webinar' : 'Workshop'}`}
          </button>
        </div>
     </form>

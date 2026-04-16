@@ -7,7 +7,7 @@ export async function GET() {
     await queryPostgres('BEGIN');
 
     // 1. service_catalog
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS service_catalog (
         id SERIAL PRIMARY KEY,
         service_name VARCHAR(255) NOT NULL,
@@ -20,27 +20,27 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // Seed defaults into catalog
-    await queryPostgres(\`
+    await queryPostgres(`
       INSERT INTO service_catalog (service_name, pricing_model, unit_price, currency)
       SELECT 'Teacher Training', 'per_day', 500000, 'UGX'
       WHERE NOT EXISTS (SELECT 1 FROM service_catalog WHERE service_name = 'Teacher Training');
-    \`);
-    await queryPostgres(\`
+    `);
+    await queryPostgres(`
       INSERT INTO service_catalog (service_name, pricing_model, unit_price, currency)
       SELECT 'Lesson Observation and Coaching', 'per_day', 350000, 'UGX'
       WHERE NOT EXISTS (SELECT 1 FROM service_catalog WHERE service_name = 'Lesson Observation and Coaching');
-    \`);
-    await queryPostgres(\`
+    `);
+    await queryPostgres(`
       INSERT INTO service_catalog (service_name, pricing_model, unit_price, currency)
       SELECT 'Learner Assessment, Analysis, Report and Coaching', 'per_class', 300000, 'UGX'
       WHERE NOT EXISTS (SELECT 1 FROM service_catalog WHERE service_name = 'Learner Assessment, Analysis, Report and Coaching');
-    \`);
+    `);
 
     // 2. service_requests
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS service_requests (
         id SERIAL PRIMARY KEY,
         request_code VARCHAR(100) UNIQUE NOT NULL,
@@ -61,10 +61,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 3. service_request_items
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS service_request_items (
         id SERIAL PRIMARY KEY,
         service_request_id INTEGER REFERENCES service_requests(id) ON DELETE CASCADE,
@@ -77,10 +77,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 4. service_quotations
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS service_quotations (
         id SERIAL PRIMARY KEY,
         quotation_number VARCHAR(100) UNIQUE NOT NULL,
@@ -100,10 +100,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 5. quotation_items
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS quotation_items (
         id SERIAL PRIMARY KEY,
         quotation_id INTEGER REFERENCES service_quotations(id) ON DELETE CASCADE,
@@ -115,10 +115,10 @@ export async function GET() {
         total_price NUMERIC(12,2),
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 6. payment_providers
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS payment_providers (
         id SERIAL PRIMARY KEY,
         provider_name VARCHAR(100) NOT NULL,
@@ -136,10 +136,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 7. service_payments
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS service_payments (
         id SERIAL PRIMARY KEY,
         service_request_id INTEGER REFERENCES service_requests(id),
@@ -172,10 +172,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 8. payment_receipts
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS payment_receipts (
         id SERIAL PRIMARY KEY,
         receipt_number VARCHAR(100) UNIQUE NOT NULL,
@@ -199,10 +199,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 9. ozeki_tasks
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS ozeki_tasks (
         id SERIAL PRIMARY KEY,
         task_type VARCHAR(100),
@@ -220,10 +220,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 10. service_delivery_schedules
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS service_delivery_schedules (
         id SERIAL PRIMARY KEY,
         service_request_id INTEGER REFERENCES service_requests(id),
@@ -239,10 +239,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 11. service_delivery_reports
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS service_delivery_reports (
         id SERIAL PRIMARY KEY,
         service_request_id INTEGER REFERENCES service_requests(id),
@@ -260,10 +260,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 12. service_packages
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS service_packages (
         id SERIAL PRIMARY KEY,
         package_name VARCHAR(255) NOT NULL,
@@ -275,10 +275,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 13. school_subscriptions
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS school_subscriptions (
         id SERIAL PRIMARY KEY,
         school_id INTEGER REFERENCES schools_directory(id),
@@ -293,10 +293,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 14. cluster_service_requests
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS cluster_service_requests (
         id SERIAL PRIMARY KEY,
         cluster_name VARCHAR(255),
@@ -307,10 +307,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 15. sponsored_service_support
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS sponsored_service_support (
         id SERIAL PRIMARY KEY,
         partner_id INTEGER,
@@ -323,7 +323,7 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     await queryPostgres('COMMIT');
 

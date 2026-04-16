@@ -9,11 +9,11 @@ export default async function DonationsDashboard() {
   const user = await requirePortalStaffUser();
 
   const donationsQuery = await queryPostgres(
-    \`SELECT d.id, d.donation_reference, d.donor_name, d.donor_type, d.amount, d.currency, d.donation_purpose, 
+    `SELECT d.id, d.donation_reference, d.donor_name, d.donor_type, d.amount, d.currency, d.donation_purpose, 
             d.payment_method, d.payment_status, d.paid_at, pr.receipt_number
      FROM donations d
      LEFT JOIN donation_receipts pr ON pr.id = d.receipt_id
-     ORDER BY d.created_at DESC\`
+     ORDER BY d.created_at DESC`
   );
 
   const donations = donationsQuery.rows;
@@ -108,10 +108,10 @@ export default async function DonationsDashboard() {
                            </div>
                         </td>
                         <td className="p-5 text-center">
-                           <span className={\`text-xs font-bold px-3 py-1.5 rounded-xl border inline-block
-                              \${d.payment_status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' : 
+                           <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border inline-block
+                              ${d.payment_status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' : 
                                 'bg-orange-50 text-orange-700 border-orange-200'}
-                           \`}>
+                           `}>
                               {d.payment_status}
                            </span>
                            {d.paid_at && (

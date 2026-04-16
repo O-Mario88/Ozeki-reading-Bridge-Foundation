@@ -131,15 +131,15 @@ export function PortalPhysicalEventDetails({
                    <div key={teacher.registrationTeacherId} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                      <div>
                        <div className="font-medium text-gray-900 flex items-center gap-2">
-                         <Link href={\`/portal/teachers/\${teacher.teacherUid}\`} className="hover:text-[var(--primary-color)] transition-colors hover:underline">
+                         <Link href={`/portal/teachers/${teacher.teacherUid}`} className="hover:text-[var(--primary-color)] transition-colors hover:underline">
                            {teacher.fullName}
                          </Link>
-                         <span className={\`text-[10px] px-2 py-0.5 rounded-full border uppercase font-bold \${getStatusColor(teacher.attendanceStatus)}\`}>
+                         <span className={`text-[10px] px-2 py-0.5 rounded-full border uppercase font-bold ${getStatusColor(teacher.attendanceStatus)}`}>
                            {teacher.attendanceStatus}
                          </span>
                        </div>
                        <div className="text-sm text-gray-500 mt-1">
-                         {teacher.roleTitle || "Teacher"} {teacher.phone ? \`• \${teacher.phone}\` : ""}
+                         {teacher.roleTitle || "Teacher"} {teacher.phone ? `• ${teacher.phone}` : ""}
                        </div>
                      </div>
                      
@@ -147,7 +147,7 @@ export function PortalPhysicalEventDetails({
                        <button 
                          onClick={() => updateAttendance(teacher.registrationTeacherId, 'Present')}
                          disabled={isUpdating === teacher.registrationTeacherId || teacher.attendanceStatus === 'Present'}
-                         className={\`p-2 rounded flex items-center gap-1 text-sm font-medium border \${teacher.attendanceStatus === 'Present' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-600 hover:bg-gray-100'}\`}
+                         className={`p-2 rounded flex items-center gap-1 text-sm font-medium border ${teacher.attendanceStatus === 'Present' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
                        >
                          <CheckCircle2 className="w-4 h-4" /> 
                          <span className="hidden sm:inline">Present</span>
@@ -155,14 +155,14 @@ export function PortalPhysicalEventDetails({
                        <button 
                          onClick={() => updateAttendance(teacher.registrationTeacherId, 'Absent')}
                          disabled={isUpdating === teacher.registrationTeacherId || teacher.attendanceStatus === 'Absent'}
-                         className={\`p-2 rounded flex items-center gap-1 text-sm font-medium border \${teacher.attendanceStatus === 'Absent' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-gray-600 hover:bg-gray-100'}\`}
+                         className={`p-2 rounded flex items-center gap-1 text-sm font-medium border ${teacher.attendanceStatus === 'Absent' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
                        >
                          <XCircle className="w-4 h-4" />
                        </button>
                        <button 
                          onClick={() => updateAttendance(teacher.registrationTeacherId, 'Pending')}
                          disabled={isUpdating === teacher.registrationTeacherId || teacher.attendanceStatus === 'Pending'}
-                         className={\`p-2 rounded flex items-center gap-1 text-sm font-medium border \${teacher.attendanceStatus === 'Pending' ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-white text-gray-400 hover:bg-gray-50'}\`}
+                         className={`p-2 rounded flex items-center gap-1 text-sm font-medium border ${teacher.attendanceStatus === 'Pending' ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-white text-gray-400 hover:bg-gray-50'}`}
                          title="Reset to Pending"
                        >
                          <Clock className="w-4 h-4" />

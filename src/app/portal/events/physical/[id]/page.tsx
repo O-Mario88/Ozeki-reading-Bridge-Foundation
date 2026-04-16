@@ -23,7 +23,7 @@ export default async function PhysicalEventDetailsAdminPage({ params }: { params
   const eventId = Number(resolvedParams.id);
   
   // Need to get the event title from DB (using direct query since we only have getBySlug exported)
-  const eventCheck = await queryPostgres(\`SELECT title, slug FROM training_events WHERE id = $1 LIMIT 1\`, [eventId]);
+  const eventCheck = await queryPostgres(`SELECT title, slug FROM training_events WHERE id = $1 LIMIT 1`, [eventId]);
   if (eventCheck.rows.length === 0) return notFound();
   
   const eventTitle = String(eventCheck.rows[0].title);

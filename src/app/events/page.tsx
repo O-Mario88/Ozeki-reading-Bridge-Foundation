@@ -130,6 +130,6 @@ export default async function EventsPage() {
         primaryButtonHref="/request-support"
         theme="charius"
       />
-    </div>
+    </>
   );
 }

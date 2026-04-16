@@ -18,7 +18,7 @@ export default function PesapalCallbackPage() {
 
       const pollStatus = async () => {
          try {
-            const res = await fetch(\`/api/payments/verify?trackingId=\${trackingId}\`);
+            const res = await fetch(`/api/payments/verify?trackingId=${trackingId}`);
             const data = await res.json();
             
             if (data.status === 'Completed' || data.verified) {

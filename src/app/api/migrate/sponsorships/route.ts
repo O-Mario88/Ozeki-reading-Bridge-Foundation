@@ -7,7 +7,7 @@ export async function GET() {
     await queryPostgres('BEGIN');
 
     // 1. sponsorships
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS sponsorships (
         id SERIAL PRIMARY KEY,
         sponsorship_reference VARCHAR(100) UNIQUE NOT NULL,
@@ -42,10 +42,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 2. sponsorship_receipts
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS sponsorship_receipts (
         id SERIAL PRIMARY KEY,
         receipt_number VARCHAR(100) UNIQUE NOT NULL,
@@ -68,7 +68,7 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     await queryPostgres('COMMIT');
 

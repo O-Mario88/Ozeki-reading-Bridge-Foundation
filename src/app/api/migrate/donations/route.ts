@@ -7,7 +7,7 @@ export async function GET() {
     await queryPostgres('BEGIN');
 
     // 1. donations
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS donations (
         id SERIAL PRIMARY KEY,
         donation_reference VARCHAR(100) UNIQUE NOT NULL,
@@ -39,10 +39,10 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     // 2. donation_receipts
-    await queryPostgres(\`
+    await queryPostgres(`
       CREATE TABLE IF NOT EXISTS donation_receipts (
         id SERIAL PRIMARY KEY,
         receipt_number VARCHAR(100) UNIQUE NOT NULL,
@@ -63,7 +63,7 @@ export async function GET() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
-    \`);
+    `);
 
     await queryPostgres('COMMIT');
 

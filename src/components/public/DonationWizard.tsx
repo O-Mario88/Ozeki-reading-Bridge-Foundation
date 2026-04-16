@@ -90,14 +90,14 @@ export function DonationWizard() {
        {/* Wizard Progress Header */}
        <div className="bg-gray-50 border-b p-6 flex items-center justify-between">
           <div className="flex gap-2 items-center">
-             <div className={\`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                \${step >= 1 ? 'bg-[#006b61] text-white' : 'bg-gray-200 text-gray-400'}\`}>1</div>
-             <div className={\`w-12 h-1 rounded-full \${step >= 2 ? 'bg-[#006b61]' : 'bg-gray-200'}\`} />
-             <div className={\`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                \${step >= 2 ? 'bg-[#006b61] text-white' : 'bg-gray-200 text-gray-400'}\`}>2</div>
-             <div className={\`w-12 h-1 rounded-full \${step >= 3 ? 'bg-[#006b61]' : 'bg-gray-200'}\`} />
-             <div className={\`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                \${step >= 3 ? 'bg-[#006b61] text-white' : 'bg-gray-200 text-gray-400'}\`}>3</div>
+             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                ${step >= 1 ? 'bg-[#006b61] text-white' : 'bg-gray-200 text-gray-400'}`}>1</div>
+             <div className={`w-12 h-1 rounded-full ${step >= 2 ? 'bg-[#006b61]' : 'bg-gray-200'}`} />
+             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                ${step >= 2 ? 'bg-[#006b61] text-white' : 'bg-gray-200 text-gray-400'}`}>2</div>
+             <div className={`w-12 h-1 rounded-full ${step >= 3 ? 'bg-[#006b61]' : 'bg-gray-200'}`} />
+             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                ${step >= 3 ? 'bg-[#006b61] text-white' : 'bg-gray-200 text-gray-400'}`}>3</div>
           </div>
           <div className="text-[#FA7D15] font-black text-sm uppercase tracking-widest flex items-center gap-1">
              <Heart className="w-4 h-4" /> Donate
@@ -116,10 +116,10 @@ export function DonationWizard() {
                     <button 
                       key={tier}
                       onClick={() => { setAmount(tier); setCustomAmount(""); }}
-                      className={\`py-4 rounded-2xl font-bold text-sm border-2 transition-all
-                        \${amount === tier 
+                      className={`py-4 rounded-2xl font-bold text-sm border-2 transition-all
+                        ${amount === tier 
                             ? 'border-[#006b61] bg-[#006b61]/5 text-[#006b61]' 
-                            : 'border-gray-100 hover:border-gray-200 text-gray-600'}\`}
+                            : 'border-gray-100 hover:border-gray-200 text-gray-600'}`}
                     >
                       UGX {(tier/1000)}k
                     </button>
@@ -135,8 +135,8 @@ export function DonationWizard() {
                       value={customAmount}
                       onChange={handleCustomAmountChange}
                       placeholder="Enter custom volume..."
-                      className={\`w-full pl-14 pr-4 py-4 rounded-xl border-2 font-bold text-lg outline-none
-                         \${amount === null ? 'border-[#006b61] bg-white' : 'border-gray-100 bg-gray-50'}\`}
+                      className={`w-full pl-14 pr-4 py-4 rounded-xl border-2 font-bold text-lg outline-none
+                         ${amount === null ? 'border-[#006b61] bg-white' : 'border-gray-100 bg-gray-50'}`}
                    />
                  </div>
                </div>
@@ -180,7 +180,7 @@ export function DonationWizard() {
                      <button
                         key={t}
                         onClick={() => setDonorType(t)}
-                        className={\`flex-1 py-2 text-xs font-bold rounded-lg border \${donorType === t ? 'bg-[#006b61]/10 border-[#006b61] text-[#006b61]' : 'border-gray-200 text-gray-500'}\`}
+                        className={`flex-1 py-2 text-xs font-bold rounded-lg border ${donorType === t ? 'bg-[#006b61]/10 border-[#006b61] text-[#006b61]' : 'border-gray-200 text-gray-500'}`}
                      >
                         {t}
                      </button>

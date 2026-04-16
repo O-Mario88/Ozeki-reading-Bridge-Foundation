@@ -34,7 +34,7 @@ export async function GET() {
         const ipnRes = await fetch('https://pay.pesapal.com/v3/api/URLSetup/RegisterIPN', {
             method: 'POST',
             headers: {
-                'Authorization': \`Bearer \${bearerToken}\`,
+                'Authorization': `Bearer ${bearerToken}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },

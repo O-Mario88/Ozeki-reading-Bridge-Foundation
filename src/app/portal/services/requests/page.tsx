@@ -9,11 +9,11 @@ export default async function ServiceRequestsDashboard() {
   const user = await requirePortalStaffUser();
 
   const requestsQuery = await queryPostgres(
-    \`SELECT sr.id, sr.request_code, sr.status, sr.estimated_total, sr.amount_paid, sr.balance, sr.created_at,
+    `SELECT sr.id, sr.request_code, sr.status, sr.estimated_total, sr.amount_paid, sr.balance, sr.created_at,
             s.name AS school_name, s.district
      FROM service_requests sr
      JOIN schools_directory s ON s.id = sr.school_id
-     ORDER BY sr.created_at DESC\`
+     ORDER BY sr.created_at DESC`
   );
 
   const requests = requestsQuery.rows;
@@ -80,11 +80,11 @@ export default async function ServiceRequestsDashboard() {
                            </div>
                         </td>
                         <td className="p-4">
-                           <span className={\`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap
-                              \${req.status === 'Fully Paid' ? 'bg-green-100 text-green-800 border border-green-200' :
+                           <span className={`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap
+                              ${req.status === 'Fully Paid' ? 'bg-green-100 text-green-800 border border-green-200' :
                                 req.status === 'Deposit Paid' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
                                 'bg-gray-100 text-gray-800 border border-gray-200'}
-                           \`}>
+                           `}>
                               {req.status === 'Fully Paid' && <CheckCircle className="w-3 h-3 inline mr-1" />}
                               {req.status}
                            </span>

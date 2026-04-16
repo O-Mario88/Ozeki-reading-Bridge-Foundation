@@ -34,7 +34,7 @@ export default async function PhysicalEventPage({ params }: { params: Promise<{ 
         imageSrc="/photos/18.jpeg"
       >
         {isRegistrationOpen && (
-          <Link href={\`/events/\${event.slug}/register\`} className="px-8 py-4 rounded-full bg-[var(--primary-color)] text-white font-bold text-lg hover:bg-opacity-90 transition-all shadow-lg hover:shadow-xl flex items-center justify-center">
+          <Link href={`/events/${event.slug}/register`} className="px-8 py-4 rounded-full bg-[var(--primary-color)] text-white font-bold text-lg hover:bg-opacity-90 transition-all shadow-lg hover:shadow-xl flex items-center justify-center">
             Register Your School
           </Link>
         )}
@@ -86,7 +86,7 @@ export default async function PhysicalEventPage({ params }: { params: Promise<{ 
                     <p className="font-bold text-gray-900">Venue</p>
                     <p className="text-sm text-gray-600 mt-1">{event.venueName || "To be confirmed"}</p>
                     {(event.district || event.subCounty) && (
-                      <p className="text-sm text-gray-500 mt-1">{event.subCounty ? \`\${event.subCounty},\` : ''} {event.district}</p>
+                      <p className="text-sm text-gray-500 mt-1">{event.subCounty ? `${event.subCounty},` : ''} {event.district}</p>
                     )}
                   </div>
                 </li>
@@ -98,7 +98,7 @@ export default async function PhysicalEventPage({ params }: { params: Promise<{ 
               {isRegistrationOpen ? (
                 <>
                   <p className="text-sm text-gray-600 mb-4">Slots are currently open for school administrators to register their teaching staff.</p>
-                  <Link href={\`/events/\${event.slug}/register\`} className="btn btn-primary w-full text-center py-3">Register Now</Link>
+                  <Link href={`/events/${event.slug}/register`} className="btn btn-primary w-full text-center py-3">Register Now</Link>
                 </>
               ) : (
                 <div className="bg-gray-200 text-gray-700 font-bold text-center py-3 rounded-lg w-full">Registration Closed</div>

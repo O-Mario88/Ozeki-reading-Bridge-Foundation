@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const resolvedParams = await params;
   const event = await getTrainingEventBySlugPostgres(resolvedParams.slug);
   return {
-    title: \`Register for \${event?.title || "Training Event"}\`,
+    title: `Register for ${event?.title || "Training Event"}`,
   };
 }
 
@@ -28,7 +28,7 @@ export default async function PhysicalEventRegistrationPage({ params }: { params
   return (
     <div className="bg-gray-50 min-h-screen py-12">
       <div className="max-w-3xl mx-auto px-4 mb-8">
-         <Link href={\`/events/\${event.slug}\`} className="text-gray-500 hover:text-gray-900 inline-flex items-center gap-2 font-medium transition-colors mb-6">
+         <Link href={`/events/${event.slug}`} className="text-gray-500 hover:text-gray-900 inline-flex items-center gap-2 font-medium transition-colors mb-6">
             <ArrowLeft className="w-4 h-4" /> Back to Event Details
          </Link>
          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">

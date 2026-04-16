@@ -68,7 +68,7 @@ export async function initiatePesapalOrderGateway(paymentId: number, merchantRef
    const res = await fetch(`${getPesapalBaseUrl()}/api/Transactions/SubmitOrderRequest`, {
       method: "POST",
       headers: {
-         "Authorization": \`Bearer \${token}\`,
+         "Authorization": `Bearer ${token}`,
          "Content-Type": "application/json",
          "Accept": "application/json"
       },
@@ -121,7 +121,7 @@ export async function verifyPesapalTransactionStatus(orderTrackingId: string) {
 
    const res = await fetch(`${getPesapalBaseUrl()}/api/Transactions/GetTransactionStatus?orderTrackingId=${orderTrackingId}`, {
       headers: {
-         "Authorization": \`Bearer \${token}\`,
+         "Authorization": `Bearer ${token}`,
          "Accept": "application/json",
          "Content-Type": "application/json"
       }

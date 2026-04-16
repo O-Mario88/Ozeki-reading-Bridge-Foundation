@@ -9,11 +9,11 @@ export default async function SponsorshipDashboard() {
   const user = await requirePortalStaffUser();
 
   const sponsorshipsQuery = await queryPostgres(
-    \`SELECT s.id, s.sponsorship_reference, s.donor_name, s.donor_type, s.sponsorship_type, s.sponsorship_target_name, 
+    `SELECT s.id, s.sponsorship_reference, s.donor_name, s.donor_type, s.sponsorship_type, s.sponsorship_target_name, 
             s.amount, s.currency, s.sponsorship_focus, s.payment_method, s.payment_status, s.paid_at, pr.receipt_number
      FROM sponsorships s
      LEFT JOIN sponsorship_receipts pr ON pr.id = s.receipt_id
-     ORDER BY s.created_at DESC\`
+     ORDER BY s.created_at DESC`
   );
 
   const sponsorships = sponsorshipsQuery.rows;
@@ -113,10 +113,10 @@ export default async function SponsorshipDashboard() {
                            <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">{s.payment_method || 'AWAITING PING'}</div>
                         </td>
                         <td className="p-5 text-center">
-                           <span className={\`text-xs font-bold px-3 py-1.5 rounded-xl border inline-block
-                              \${s.payment_status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' : 
+                           <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border inline-block
+                              ${s.payment_status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' : 
                                 'bg-orange-50 text-orange-700 border-orange-200'}
-                           \`}>
+                           `}>
                               {s.payment_status}
                            </span>
                            {s.paid_at && (

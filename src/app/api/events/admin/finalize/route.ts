@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      message: \`Successfully issued \${result.issuedCount} certificates and learning journeys.\` 
+      message: `Successfully issued ${result.issuedCount} certificates and learning journeys.` 
     });
 
   } catch (error: any) {
