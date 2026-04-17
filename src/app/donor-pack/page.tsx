@@ -25,9 +25,15 @@ const donorPackContents = [
 ];
 
 export default async function DonorPackPage() {
-  const donorPackUploads = (await listPublishedPortalResources(40, {
-    sections: ["Donor Pack Documents", "Compliance Documents", "Legal & Governance Documents"],
-  })).slice(0, 8);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let donorPackUploads: any[] = [];
+  try {
+    donorPackUploads = (await listPublishedPortalResources(40, {
+      sections: ["Donor Pack Documents", "Compliance Documents", "Legal & Governance Documents"],
+    })).slice(0, 8);
+  } catch (error) {
+    console.error("[DonorPackPage] failed to fetch resources at build time (DB may be offline).", error);
+  }
 
   return (
     <>

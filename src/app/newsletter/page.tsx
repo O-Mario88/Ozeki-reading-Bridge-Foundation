@@ -10,10 +10,19 @@ export const metadata = {
 export const revalidate = 300;
 
 export default async function NewsletterIndexPage() {
-  const [latest, issues] = await Promise.all([
-    getLatestPublishedNewsletterIssue(),
-    listNewsletterIssues({ status: "published", limit: 30 }),
-  ]);
+  let latest = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let issues: any[] = [];
+  try {
+    const results = await Promise.all([
+      getLatestPublishedNewsletterIssue(),
+      listNewsletterIssues({ status: "published", limit: 30 }),
+    ]);
+    latest = results[0];
+    issues = results[1];
+  } catch (error) {
+    console.error("[NewsletterIndexPage] failed to fetch issues during build:", error);
+  }
 
   return (
     <>

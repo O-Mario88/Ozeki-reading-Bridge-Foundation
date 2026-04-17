@@ -105,17 +105,23 @@ function UploadedSectionLinks({
 }
 
 export default async function TransparencyPage() {
-  const uploadedDocs = await listPublishedPortalResources(500, {
-    sections: [
-      "Compliance Documents",
-      "Financial Documents",
-      "Safeguarding Documents",
-      "Legal & Governance Documents",
-      "Donor Pack Documents",
-      "Monitoring & Evaluation Documents",
-      "Impact Report Documents",
-    ],
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let uploadedDocs: any[] = [];
+  try {
+    uploadedDocs = await listPublishedPortalResources(500, {
+      sections: [
+        "Compliance Documents",
+        "Financial Documents",
+        "Safeguarding Documents",
+        "Legal & Governance Documents",
+        "Donor Pack Documents",
+        "Monitoring & Evaluation Documents",
+        "Impact Report Documents",
+      ],
+    });
+  } catch (error) {
+    console.error("[TransparencyPage] failed to fetch resources at build time", error);
+  }
   const governanceDocs = getSectionDocuments(uploadedDocs, ["Legal & Governance Documents"]);
   const complianceDocs = getSectionDocuments(uploadedDocs, [
     "Compliance Documents",

@@ -9,7 +9,13 @@ export const metadata = {
 };
 
 export default async function ServiceRequestPage() {
-  const catalog = await listServiceCatalogPostgres();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let catalog: any[] = [];
+  try {
+    catalog = await listServiceCatalogPostgres();
+  } catch (error) {
+    console.error("[ServiceRequestPage] failed to fetch catalog at build time", error);
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen">

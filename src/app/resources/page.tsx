@@ -14,19 +14,26 @@ export const metadata = {
 };
 
 export default async function ResourcesPage() {
-  const portalResources = (await listPublishedPortalResources(250, {
-    sections: ["Resources Library"],
-  })).map((entry) => ({
-    slug: entry.slug,
-    title: entry.title,
-    description: entry.description,
-    grade: entry.grade,
-    skill: entry.skill,
-    type: entry.type,
-    section: entry.section,
-    filePath: entry.externalUrl || `/api/resources/${entry.id}/download`,
-    downloadLabel: entry.downloadLabel || undefined,
-  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let portalResources: any[] = [];
+  try {
+    const fetched = await listPublishedPortalResources(250, {
+      sections: ["Resources Library"],
+    });
+    portalResources = fetched.map((entry) => ({
+      slug: entry.slug,
+      title: entry.title,
+      description: entry.description,
+      grade: entry.grade,
+      skill: entry.skill,
+      type: entry.type,
+      section: entry.section,
+      filePath: entry.externalUrl || `/api/resources/${entry.id}/download`,
+      downloadLabel: entry.downloadLabel || undefined,
+    }));
+  } catch (error) {
+    console.error("[ResourcesPage] failed to fetch resources at build time (DB may be offline).", error);
+  }
 
   const mergedResources = [...portalResources, ...resources];
 
