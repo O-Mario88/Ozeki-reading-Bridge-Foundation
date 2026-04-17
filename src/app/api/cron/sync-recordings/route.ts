@@ -44,7 +44,7 @@ export async function GET(request: Request) {
         const lessonTitleRaw = (lesson.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
         
         // Let's attempt a naive text match against the drive file names
-        const matchedDriveFile = driveFiles.find((file: Record<string, unknown>) => {
+        const matchedDriveFile = driveFiles.find((file) => {
            const driveNameRaw = (file.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
            // Checking if the lesson title substring is inside the google meet raw output title.
            return lessonTitleRaw.length > 5 && driveNameRaw.includes(lessonTitleRaw);
