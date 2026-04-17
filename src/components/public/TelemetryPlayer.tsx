@@ -2,6 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 
+interface VimeoEventData {
+  seconds: number;
+}
+
+interface VimeoPlayerInstance {
+  on: (event: string, callback: (data: VimeoEventData) => void) => void;
+  off: (event: string) => void;
+}
+
+declare global {
+  interface Window {
+    Vimeo?: {
+      Player: new (iframe: HTMLIFrameElement) => VimeoPlayerInstance;
+    };
+  }
+}
+
 interface Props {
   vimeoEmbedUrl: string;
   lessonId: number;
@@ -25,12 +42,12 @@ export function TelemetryPlayer({ vimeoEmbedUrl, lessonId }: Props) {
     script.async = true;
     document.body.appendChild(script);
 
-    let player: any = null;
+    let player: VimeoPlayerInstance | null = null;
 
     script.onload = () => {
-      if (!iframeRef.current || !(window as any).Vimeo) return;
+      if (!iframeRef.current || !window.Vimeo) return;
 
-      player = new (window as any).Vimeo.Player(iframeRef.current);
+      player = new window.Vimeo.Player(iframeRef.current);
       let lastReportedTime = 0;
 
       // Function to send silent POST logs
@@ -57,22 +74,22 @@ export function TelemetryPlayer({ vimeoEmbedUrl, lessonId }: Props) {
       };
 
       // Player Event Hooks
-      player.on('play', (data: any) => {
+      player.on('play', (data: VimeoEventData) => {
          reportTelemetry('play', data.seconds);
          lastReportedTime = data.seconds;
       });
 
-      player.on('pause', (data: any) => {
+      player.on('pause', (data: VimeoEventData) => {
          reportTelemetry('pause', data.seconds);
       });
 
-      player.on('seeked', (data: any) => {
+      player.on('seeked', (data: VimeoEventData) => {
          reportTelemetry('seeked', data.seconds);
          lastReportedTime = data.seconds;
       });
 
       // The 15 Second Heartbeat Throttle
-      player.on('timeupdate', (data: any) => {
+      player.on('timeupdate', (data: VimeoEventData) => {
          const currentSecs = data.seconds;
          // Only log back to DB loosely every 15 absolute seconds to save server loads
          if (currentSecs - lastReportedTime >= 15 || lastReportedTime - currentSecs >= 15) {
@@ -81,7 +98,7 @@ export function TelemetryPlayer({ vimeoEmbedUrl, lessonId }: Props) {
          }
       });
       
-      player.on('ended', (data: any) => {
+      player.on('ended', (data: VimeoEventData) => {
          reportTelemetry('ended', data.seconds);
       });
     };

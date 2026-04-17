@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       message: `Successfully issued ${result.issuedCount} certificates and learning journeys.` 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Finalize Event API Error]", error);
     return NextResponse.json(
       { message: "Failed to finalize the event." },

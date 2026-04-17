@@ -19,8 +19,6 @@ import {
 } from "@/lib/lesson-evaluation";
 import {
   LessonEvaluationRecord,
-  LessonStructureItemInput,
-  ActionPlanEntry,
   SchoolTeachingQualityImprovementSummary,
   TeacherImprovementProfile,
 } from "@/lib/types";

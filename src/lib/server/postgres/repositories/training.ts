@@ -570,7 +570,7 @@ export async function addAttendeeToOnlineTrainingSessionPostgres(sessionId: numb
   let emails: string[] = [];
   try {
     emails = JSON.parse(currentEmailsJson);
-  } catch (e) {
+  } catch (_e) {
     emails = [];
   }
 

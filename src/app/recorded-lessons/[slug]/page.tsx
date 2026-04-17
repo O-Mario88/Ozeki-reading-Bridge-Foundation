@@ -35,7 +35,7 @@ export default async function RecordedLessonPlayerPage({ params }: { params: Pro
 
   // Fetch Associated Quiz block if exists for Certification
   let quizData = null;
-  let questionsData: any[] = [];
+  let questionsData: Record<string, unknown>[] = [];
   if (lesson.quizRequired || lesson.certificateEligible) {
      const quizRes = await queryPostgres(
         `SELECT id, title FROM lesson_quizzes WHERE recorded_lesson_id = $1 LIMIT 1`, 

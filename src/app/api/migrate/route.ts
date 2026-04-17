@@ -15,7 +15,7 @@ export async function GET() {
       ADD COLUMN IF NOT EXISTS google_calendar_event_id VARCHAR(255)
     `);
     return NextResponse.json({ success: true, message: "Migration applied natively via NextJS." });
-  } catch(e: any) {
-    return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+  } catch(e: unknown) {
+    return NextResponse.json({ success: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }

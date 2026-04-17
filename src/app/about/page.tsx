@@ -198,6 +198,7 @@ export default function AboutPage() {
             {/* Left Column: Image and Title */}
             <div className="flex flex-col justify-start">
               <div className="relative rounded-xl bg-brand-primary/10 overflow-hidden aspect-square md:aspect-[4/5] shadow-sm w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src="/photos/ojok_amos.png?v=2" 
                   alt="Ojok Amos" 

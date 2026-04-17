@@ -7,7 +7,7 @@ import { getImpactReportFilterFacetsAsync } from "@/services/dataService";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
-import { ShieldAlert, Download, BarChart3, Presentation } from "lucide-react";
+import { ShieldAlert, Download, Presentation } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Live Dashboard & Reports",

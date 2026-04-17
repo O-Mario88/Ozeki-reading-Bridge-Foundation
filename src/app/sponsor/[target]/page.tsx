@@ -8,8 +8,9 @@ export const metadata = {
   title: "Initiate Geospatial Sponsorship | OzekiRead"
 };
 
-export default function SponsorshipDetailPage({ params }: { params: { target: string } }) {
-  const level = params.target; // "school", "district", "sub-region", "region"
+export default async function SponsorshipDetailPage({ params }: { params: Promise<{ target: string }> }) {
+  const { target } = await params;
+  const level = target; // "school", "district", "sub-region", "region"
 
   if (!["school", "district", "sub-region", "region"].includes(level)) {
       return (

@@ -19,11 +19,11 @@ export default async function DonationsDashboard() {
   const donations = donationsQuery.rows;
 
   const totalRaised = donations
-      .filter((d: any) => d.payment_status === 'Completed')
-      .reduce((sum: number, d: any) => sum + Number(d.amount), 0);
+      .filter((d: Record<string, unknown>) => d.payment_status === 'Completed')
+      .reduce((sum: number, d: Record<string, unknown>) => sum + Number(d.amount), 0);
 
-  const successCount = donations.filter((d: any) => d.payment_status === 'Completed').length;
-  const pendingCount = donations.filter((d: any) => d.payment_status !== 'Completed').length;
+  const successCount = donations.filter((d: Record<string, unknown>) => d.payment_status === 'Completed').length;
+  const pendingCount = donations.filter((d: Record<string, unknown>) => d.payment_status !== 'Completed').length;
 
   return (
     <PortalShell
@@ -87,7 +87,7 @@ export default async function DonationsDashboard() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
-                  {donations.map((d: any) => (
+                  {donations.map((d: Record<string, unknown>) => (
                      <tr key={d.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-5">
                            <div className="font-bold text-gray-900 flex items-center gap-2">

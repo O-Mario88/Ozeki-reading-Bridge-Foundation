@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { getCurrentPortalUser } from "@/lib/auth";
 import { PageHero } from "@/components/public/PageHero";
 import { listTrainingEventsPostgres } from "@/lib/server/postgres/repositories/training-events";
 import { Video, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
 import Link from "next/link";
-import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { CTAStrip } from "@/components/public/CTAStrip";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +18,6 @@ export default async function EventsPage() {
 
   // We could separate them entirely, but the unified grid is powerful
   const scheduledEvents = allEvents.filter(e => new Date(e.startDatetime!) > new Date());
-  const pastEvents = allEvents.filter(e => new Date(e.startDatetime!) <= new Date());
 
   return (
     <>

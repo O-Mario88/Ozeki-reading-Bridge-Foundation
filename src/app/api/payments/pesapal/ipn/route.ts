@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       // 4. Unrecognized hash block
       return NextResponse.json({ message: "Transaction orphan blocked." }, { status: 404 });
 
-   } catch(e: any) {
+   } catch(e: unknown) {
       console.error("[PESAPAL IPN FATAL EXCEPTION]", e);
       return NextResponse.json({ message: "Internal Integration Fault" }, { status: 500 });
    }
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 // ==========================================
 // A. PHILANTHROPIC DONATIONS IPN LOGIC
 // ==========================================
-async function processDonationWebhook(donation: any, trackingId: string, ipnPayload: any) {
+async function processDonationWebhook(donation: Record<string, unknown>, trackingId: string, ipnPayload: Record<string, unknown>) {
    if (donation.payment_status === 'Completed') {
        return NextResponse.json({ success: true, message: "Idempotent donation hit ignored." });
    }
@@ -105,7 +105,7 @@ async function processDonationWebhook(donation: any, trackingId: string, ipnPayl
 // ==========================================
 // B. SCHOOL SERVICE BOOKINGS IPN LOGIC
 // ==========================================
-async function processServiceBookingWebhook(payment: any, trackingId: string, ipnPayload: any) {
+async function processServiceBookingWebhook(payment: Record<string, unknown>, trackingId: string, ipnPayload: Record<string, unknown>) {
    if (payment.payment_status === 'Completed') {
        return NextResponse.json({ success: true, message: "Idempotent service hit ignored." });
    }
@@ -170,7 +170,7 @@ async function processServiceBookingWebhook(payment: any, trackingId: string, ip
 // ==========================================
 // C. GEOSPATIAL SPONSORSHIPS IPN LOGIC
 // ==========================================
-async function processSponsorshipWebhook(sponsorRecord: any, trackingId: string, ipnPayload: any) {
+async function processSponsorshipWebhook(sponsorRecord: Record<string, unknown>, trackingId: string, ipnPayload: Record<string, unknown>) {
    if (sponsorRecord.payment_status === 'Completed') {
        return NextResponse.json({ success: true, message: "Idempotent sponsorship hit ignored." });
    }

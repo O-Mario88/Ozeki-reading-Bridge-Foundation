@@ -188,7 +188,7 @@ export async function getImpactReportByCodeAsyncPostgres(code: string, _context?
 }
 
 export const getImpactReportFilterFacetsAsyncPostgres = unstable_cache(
-  async (): Promise<any> => {
+  async (): Promise<Record<string, unknown>> => {
     const [regions, districts] = await Promise.all([
         queryPostgres(`SELECT DISTINCT region FROM schools_directory WHERE trim(COALESCE(region, '')) != '' ORDER BY region`),
         queryPostgres(`SELECT DISTINCT district FROM schools_directory WHERE trim(COALESCE(district, '')) != '' ORDER BY district`)
@@ -301,8 +301,7 @@ export const getCostEffectivenessDataPostgres = unstable_cache(
     period?: string,
   ): Promise<CostEffectivenessData> => {
     const conditions: string[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (scopeType && scopeType !== "country") {
       params.push(scopeType.toLowerCase());
@@ -403,8 +402,7 @@ const _getPortalDashboardDataPostgres = unstable_cache(
     const assessments = toNumber(assessmentsRes.rows[0]?.total);
     const demoVisitsConducted = toNumber(demoVisitsRes.rows[0]?.total);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mappedRecentActivity = recentRes.rows.map((r: any) => ({
+    const mappedRecentActivity = recentRes.rows.map((r: Record<string, unknown>) => ({
       id: Number(r.id),
       module: String(r.module),
       status: String(r.status),

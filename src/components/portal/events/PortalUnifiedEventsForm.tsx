@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, Video, MapPin, Globe, CreditCard, Building } from "lucide-react";
+import { Video, MapPin, Globe, CreditCard, Building } from "lucide-react";
 
 export function PortalUnifiedEventsForm() {
   const router = useRouter();
@@ -17,18 +17,18 @@ export function PortalUnifiedEventsForm() {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [targetAudience, setTargetAudience] = useState("");
-  const [level, setLevel] = useState("");
+  const [targetAudience, _setTargetAudience] = useState("");
+  const [level, _setLevel] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
+  const [contactEmail, _setContactEmail] = useState("");
 
   // In-Person Specific
   const [venueName, setVenueName] = useState("");
   const [venueAddress, setVenueAddress] = useState("");
   const [district, setDistrict] = useState("");
-  const [maxSchools, setMaxSchools] = useState<number>(0);
-  const [maxTeachersPerSchool, setMaxTeachersPerSchool] = useState<number>(0);
+  const [maxSchools, _setMaxSchools] = useState<number>(0);
+  const [_maxTeachersPerSchool, _setMaxTeachersPerSchool] = useState<number>(0);
   
   const [fundingType, setFundingType] = useState<'Sponsored Training' | 'Paid Training' | 'Free Ozeki Event' | ''>('');
   const [trainingFeeAmount, setTrainingFeeAmount] = useState<number>(0);
@@ -178,7 +178,7 @@ export function PortalUnifiedEventsForm() {
                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-1">Funding Type *</label>
-                      <select required value={fundingType} onChange={e=>setFundingType(e.target.value as any)} className="w-full border rounded-lg p-2">
+                      <select required value={fundingType} onChange={e=>setFundingType(e.target.value as typeof fundingType)} className="w-full border rounded-lg p-2">
                          <option value="">-- Select Type --</option>
                          <option value="Free Ozeki Event">Free Ozeki Event</option>
                          <option value="Sponsored Training">Sponsored Training</option>

@@ -49,8 +49,8 @@ export function LessonQuizForm({ lessonId, quizId, title, questions }: Props) {
 
        const data = await res.json();
        setResult(data);
-     } catch (err: any) {
-        setErrorMsg(err.message || "An error occurred.");
+     } catch (err: unknown) {
+        setErrorMsg(err instanceof Error ? err.message : "An error occurred.");
      } finally {
         setIsSubmitting(false);
      }
@@ -100,7 +100,7 @@ export function LessonQuizForm({ lessonId, quizId, title, questions }: Props) {
       <div className="flex flex-col gap-8">
          {questions.map((q, index) => {
             let options: string[] = [];
-            try { options = JSON.parse(q.options_json); } catch (e) { /* swallow parsing error silently */ }
+            try { options = JSON.parse(q.options_json); } catch { /* swallow parsing error silently */ }
 
             return (
                <div key={q.id} className="bg-gray-50 p-6 rounded-xl border border-gray-100">

@@ -1005,7 +1005,7 @@ export async function buildPublicImpactAggregatePostgres(
     `);
     recordedLessonsViews = Number(telemetryResult.rows[0]?.totalViews ?? 0);
     recordedLessonsCertificates = Number(telemetryResult.rows[0]?.totalCertificates ?? 0);
-  } catch (e) {
+  } catch (_e) {
     // Ignore if tables do not exist yet
   }
 
@@ -1020,7 +1020,7 @@ export async function buildPublicImpactAggregatePostgres(
     `);
     totalUgxReceived = Number(financeResult.rows[0]?.totalReceived ?? 0);
     totalUsdEquivalent = Math.round(totalUgxReceived / 3750); // Baseline static conversion 1 USD = 3750 UGX
-  } catch (e) {
+  } catch (_e) {
     // Ignore if tables do not exist yet
   }
 

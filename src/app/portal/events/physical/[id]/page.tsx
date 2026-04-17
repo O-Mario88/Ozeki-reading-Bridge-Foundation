@@ -2,7 +2,6 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { 
   listRegistrationsForEventPostgres, 
-  getTrainingEventBySlugPostgres,
   listTrainingEventsPostgres
 } from "@/lib/server/postgres/repositories/training-events";
 import { PortalPhysicalEventDetails } from "@/components/portal/events/PortalPhysicalEventDetails";

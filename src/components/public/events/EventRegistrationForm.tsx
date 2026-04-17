@@ -82,8 +82,8 @@ export function EventRegistrationForm({ eventId, eventTitle }: { eventId: number
       }
 
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Registration failed.");
     } finally {
       setIsSubmitting(false);
     }

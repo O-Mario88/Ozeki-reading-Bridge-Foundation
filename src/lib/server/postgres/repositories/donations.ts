@@ -51,7 +51,7 @@ export type DonationReceiptRow = {
 };
 
 // Orchestrates the exact insertion parameters
-export async function createDonationIntentPostgres(payload: any): Promise<{id: number, merchantReference: string}> {
+export async function createDonationIntentPostgres(payload: Record<string, unknown>): Promise<{id: number, merchantReference: string}> {
   await queryPostgres('BEGIN');
   try {
      const donationRef = `OZK-DON-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;

@@ -79,7 +79,7 @@ export async function createRecordedLessonPostgres(input: Partial<RecordedLesson
 
 export async function listRecordedLessonsPostgres(options?: { isPublished?: boolean, classLevel?: string, phonicsLevel?: string }): Promise<RecordedLessonRow[]> {
   let query = `SELECT * FROM recorded_lessons WHERE 1=1`;
-  const params: any[] = [];
+  const params: unknown[] = [];
   
   if (options?.isPublished !== undefined) {
     params.push(options.isPublished);
@@ -123,8 +123,7 @@ export async function updateRecordedLessonVimeoDetailsPostgres(
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapRecordedLessonRow(row: any): RecordedLessonRow {
+function mapRecordedLessonRow(row: Record<string, unknown>): RecordedLessonRow {
   return {
     id: row.id,
     lessonCode: row.lesson_code,

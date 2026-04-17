@@ -52,7 +52,7 @@ export async function GET() {
             ipn_id: ipnData.ipn_id
         });
 
-    } catch (err: any) {
-        return NextResponse.json({ message: "FATAL ERROR", error: err.message }, { status: 500 });
+    } catch (err: unknown) {
+        return NextResponse.json({ message: "FATAL ERROR", error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
     }
 }

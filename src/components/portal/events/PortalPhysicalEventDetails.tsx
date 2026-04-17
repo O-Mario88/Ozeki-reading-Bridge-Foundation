@@ -74,7 +74,7 @@ export function PortalPhysicalEventDetails({
       } else {
         alert(data.message || "Failed to finalize event");
       }
-    } catch(e) {
+    } catch(_e) {
       alert("Network error processing finalization");
     } finally {
       setIsFinalizing(false);

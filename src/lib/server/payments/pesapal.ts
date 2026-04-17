@@ -40,7 +40,7 @@ async function fetchBearerToken(): Promise<string> {
    return data.token;
 }
 
-export async function initiatePesapalOrderGateway(paymentId: number, merchantReference: string, amount: number, currency: string, schoolContact: any) {
+export async function initiatePesapalOrderGateway(paymentId: number, merchantReference: string, amount: number, currency: string, schoolContact: { phone?: string; email?: string }) {
    // 1. Fetch Bearer Token dynamically
    const token = await fetchBearerToken();
 

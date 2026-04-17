@@ -21,7 +21,7 @@ export function BookingWizard({ catalog }: { catalog: ServiceCatalogRow[] }) {
 
   // Step 2 & 3: Services Selected & Configuration State
   const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
-  const [serviceConfigs, setServiceConfigs] = useState<Record<number, any>>({});
+  const [serviceConfigs, setServiceConfigs] = useState<Record<number, Record<string, unknown>>>({});
 
   // Math State
   const [quotation, setQuotation] = useState({ total: 0, requiredDeposit: 0 });

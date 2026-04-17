@@ -6,7 +6,7 @@ export function SponsorshipWizard({ level }: { level: string }) {
   const isSchool = level === "school";
   const isDistrict = level === "district";
   const isSubRegion = level === "sub-region";
-  const isRegion = level === "region";
+
 
   const [step, setStep] = useState(1);
   const [amount, setAmount] = useState<string>(isSchool ? "500000" : isDistrict ? "5000000" : isSubRegion ? "15000000" : "50000000");
@@ -70,8 +70,8 @@ export function SponsorshipWizard({ level }: { level: string }) {
 
        window.location.href = data.redirectUrl;
 
-    } catch (e: any) {
-       setError(e.message);
+    } catch (e: unknown) {
+       setError(e instanceof Error ? e.message : "Gateway initialization failed.");
        setLoading(false);
     }
   };

@@ -39,8 +39,8 @@ export function LessonRatingForm({ lessonId }: { lessonId: number }) {
       }
 
       setIsSubmitted(true);
-    } catch (err: any) {
-      setErrorMsg(err.message || "An error occurred.");
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "An error occurred.");
     } finally {
       setIsSubmitting(false);
     }

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     await updateTeacherAttendanceStatusPostgres(registrationTeacherId, status);
 
     return NextResponse.json({ success: true, message: "Attendance updated." });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Attendance API Error]", error);
     return NextResponse.json(
       { message: "Failed to update attendance." },

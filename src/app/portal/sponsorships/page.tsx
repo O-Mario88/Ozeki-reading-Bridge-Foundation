@@ -19,11 +19,11 @@ export default async function SponsorshipDashboard() {
   const sponsorships = sponsorshipsQuery.rows;
 
   const totalGeospatial = sponsorships
-      .filter((d: any) => d.payment_status === 'Completed')
-      .reduce((sum: number, d: any) => sum + Number(d.amount), 0);
+      .filter((d: Record<string, unknown>) => d.payment_status === 'Completed')
+      .reduce((sum: number, d: Record<string, unknown>) => sum + Number(d.amount), 0);
 
-  const schoolCount = sponsorships.filter((d: any) => d.payment_status === 'Completed' && d.sponsorship_type === 'school').length;
-  const regionCount = sponsorships.filter((d: any) => d.payment_status === 'Completed' && d.sponsorship_type === 'region').length;
+  const schoolCount = sponsorships.filter((d: Record<string, unknown>) => d.payment_status === 'Completed' && d.sponsorship_type === 'school').length;
+  const regionCount = sponsorships.filter((d: Record<string, unknown>) => d.payment_status === 'Completed' && d.sponsorship_type === 'region').length;
 
   return (
     <PortalShell
@@ -86,7 +86,7 @@ export default async function SponsorshipDashboard() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
-                  {sponsorships.map((s: any) => (
+                  {sponsorships.map((s: Record<string, unknown>) => (
                      <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-5">
                            <div className="font-bold text-gray-900 flex items-center gap-2">

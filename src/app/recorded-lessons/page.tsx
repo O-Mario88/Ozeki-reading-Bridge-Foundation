@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export const revalidate = 60; // 1 minute cache
 
 export default async function RecordedLessonsIndex() {
-  let lessons: any[] = [];
+  let lessons: Record<string, unknown>[] = [];
   try {
     // Only fetch published ones for the public
     lessons = await listRecordedLessonsPostgres({ isPublished: true });

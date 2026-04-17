@@ -332,9 +332,9 @@ export async function GET() {
       message: "Phase 5 schema successfully deployed. 15 new tables instantiated securely." 
     });
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     await queryPostgres('ROLLBACK');
     console.error("Migration failed:", e);
-    return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
   }
 }

@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     // 5. Release Lock back to Frontend 
     return NextResponse.json({ success: true, redirectUrl: gatewayResponse.redirectUrl });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[Booking Generation Error]", err);
     return NextResponse.json({ message: "Failed to assemble Fintech Cart." }, { status: 500 });
   }

@@ -52,7 +52,7 @@ export default async function FinanceLedgerDashboard() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-100">
-                  {ledgers.map((tx: any) => (
+                  {ledgers.map((tx: Record<string, unknown>) => (
                      <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="p-5">
                            <div className="font-bold text-gray-900 border border-gray-200 px-2 py-1 rounded inline-block bg-white shadow-sm mb-2 text-xs font-mono select-all">

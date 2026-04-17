@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         redirectUrl: gatewayResponse.redirectUrl
      });
 
-   } catch (e: any) {
+   } catch (e: unknown) {
      console.error("[DONATION INIT ERROR]", e);
      return NextResponse.json({ error: "Unable to secure payment gateway. Please try again later." }, { status: 500 });
    }

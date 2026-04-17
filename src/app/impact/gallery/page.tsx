@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { isPostgresConfigured } from "@/lib/server/postgres/client";
 import { listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";

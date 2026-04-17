@@ -32,7 +32,7 @@ export default function MockPesapalIframePage() {
             router.push(`/payments/pesapal/callback?OrderTrackingId=${trackingId}&OrderMerchantReference=${merchantRef}`);
          }, 1500);
 
-      } catch (e) {
+      } catch (_e) {
          alert("Mock Network Failure");
          setIsPolling(false);
       }

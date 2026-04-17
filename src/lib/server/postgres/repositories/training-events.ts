@@ -87,7 +87,7 @@ export async function createTrainingEventPostgres(input: Partial<TrainingEventRo
 
 export async function listTrainingEventsPostgres(status?: string): Promise<TrainingEventRow[]> {
   let query = `SELECT * FROM training_events WHERE 1=1`;
-  const params: any[] = [];
+  const params: unknown[] = [];
   
   if (status) {
     params.push(status);
@@ -129,7 +129,7 @@ export async function addTeacherToEventRegistrationPostgres(registrationId: numb
   return result.rows[0].id;
 }
 
-function mapTrainingEventRow(row: any): TrainingEventRow {
+function mapTrainingEventRow(row: Record<string, unknown>): TrainingEventRow {
   return {
     id: row.id,
     eventCode: row.event_code,
@@ -207,7 +207,7 @@ export async function listRegistrationsForEventPostgres(eventId: number): Promis
     [eventId]
   );
   
-  return result.rows.map((r: any) => ({
+  return result.rows.map((r: Record<string, unknown>) => ({
     registrationTeacherId: Number(r.registration_teacher_id),
     teacherId: Number(r.teacher_id),
     teacherUid: String(r.teacher_uid),
@@ -331,7 +331,7 @@ export async function getTeacherImpactProfilePostgres(teacherUid: string) {
     fullName: String(teacher.full_name),
     role: teacher.role_title ? String(teacher.role_title) : "Teacher",
     workshopHistory: historyQuery.rows.map(r => ({ title: String(r.title), date: String(r.start_datetime) })),
-    recommendations: recommendationsQuery.rows.map((r: any) => ({
+    recommendations: recommendationsQuery.rows.map((r: Record<string, unknown>) => ({
       id: Number(r.id),
       title: String(r.title),
       slug: String(r.slug),

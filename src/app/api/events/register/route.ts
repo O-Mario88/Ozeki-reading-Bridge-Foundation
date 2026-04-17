@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
-import { createEventRegistrationPostgres, addTeacherToEventRegistrationPostgres } from "@/lib/server/postgres/repositories/training-events";
+import { withPostgresClient } from "@/lib/server/postgres/client";
 import { ensureTeacherRosterPostgres } from "@/lib/server/postgres/repositories/schools";
 import type { SchoolContactRecord } from "@/lib/types";
 
@@ -139,10 +138,10 @@ export async function POST(request: Request) {
       data: result 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Events API] Registration Error:", error);
     return NextResponse.json(
-      { message: "Server expected an error processing the registration form.", details: error?.message || String(error) }, 
+      { message: "Server expected an error processing the registration form.", details: error instanceof Error ? error.message : String(error) }, 
       { status: 500 }
     );
   }

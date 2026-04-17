@@ -1267,6 +1267,7 @@ export function PortalBlogManager({
                 Featured Image (Upload) *
                 <div style={{ display: "grid", gap: "0.45rem" }}>
                   {form.featuredImageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.featuredImageUrl} alt="Featured preview" style={{ maxHeight: "120px", borderRadius: "6px", objectFit: "contain", background: "var(--md-sys-color-surface-container)", justifySelf: "start" }} />
                   )}
                   <input
@@ -1584,6 +1585,7 @@ export function PortalBlogManager({
                     Sidebar Thumbnail (Optional)
                     <div style={{ display: "grid", gap: "0.45rem" }}>
                       {form.sidebarThumbnailUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.sidebarThumbnailUrl} alt="Thumbnail preview" style={{ maxHeight: "120px", borderRadius: "6px", objectFit: "contain", background: "var(--md-sys-color-surface-container)", justifySelf: "start" }} />
                   )}
                       <input
@@ -1639,6 +1641,7 @@ export function PortalBlogManager({
                     Social Share Image
                     <div style={{ display: "grid", gap: "0.45rem" }}>
                       {form.socialImageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.socialImageUrl} alt="Social share preview" style={{ maxHeight: "120px", borderRadius: "6px", objectFit: "contain", background: "var(--md-sys-color-surface-container)", justifySelf: "start" }} />
                   )}
                       <input

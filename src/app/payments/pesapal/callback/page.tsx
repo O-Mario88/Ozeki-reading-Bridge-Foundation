@@ -11,7 +11,7 @@ export default function PesapalCallbackPage() {
    const trackingId = searchParams.get('OrderTrackingId');
    
    const [status, setStatus] = useState<'polling'|'success'|'failed'>('polling');
-   const [verifyData, setVerifyData] = useState<any>(null);
+   const [verifyData, setVerifyData] = useState<Record<string, unknown> | null>(null);
 
    useEffect(() => {
       if (!trackingId) return;
@@ -30,7 +30,7 @@ export default function PesapalCallbackPage() {
                // Still pending Customer Action (IPN hasn't fired yet)
                setTimeout(pollStatus, 3000); 
             }
-         } catch(e) {
+         } catch(_e) {
             setTimeout(pollStatus, 3000);
          }
       };

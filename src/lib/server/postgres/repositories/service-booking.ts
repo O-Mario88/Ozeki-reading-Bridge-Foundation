@@ -266,7 +266,7 @@ export async function listServiceCatalogPostgres(): Promise<ServiceCatalogRow[]>
 }
 
 // 2. High-Level Booking Ingestion
-export async function createServiceRequestPostgres(payload: any): Promise<number> {
+export async function createServiceRequestPostgres(payload: Record<string, unknown> & { cartItems: Array<Record<string, unknown>> }): Promise<number> {
   await queryPostgres('BEGIN');
   try {
     // A. Generate Unique SRV Code
@@ -320,7 +320,7 @@ export async function createServiceRequestPostgres(payload: any): Promise<number
 }
 
 // 3. Fintech Payment Status Updater
-export async function finalizePaymentPostgres(serviceRequestId: number, amountPaid: number, trackingId: string): Promise<boolean> {
+export async function finalizePaymentPostgres(_serviceRequestId: number, _amountPaid: number, _trackingId: string): Promise<boolean> {
    // Complex IPN Verification mapped here
    return true;
 }

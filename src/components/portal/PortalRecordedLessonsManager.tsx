@@ -14,11 +14,11 @@ function formatDate(dateStr: string | null) {
 }
 
 export function PortalRecordedLessonsManager({ initialLessons }: Props) {
-  const [lessons, setLessons] = useState(initialLessons);
+  const [lessons, _setLessons] = useState(initialLessons);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [targetLessonId, setTargetLessonId] = useState<number | null>(null);
-  const [driveFiles, setDriveFiles] = useState<any[]>([]);
+  const [driveFiles, setDriveFiles] = useState<Array<{ id: string; name: string; createdTime: string; size: string }>>([]);
   const [fetchingDrive, setFetchingDrive] = useState(false);
   
   const [saving, setSaving] = useState(false);
@@ -44,7 +44,7 @@ export function PortalRecordedLessonsManager({ initialLessons }: Props) {
         throw new Error(err.error || "Failed to schedule lesson");
       }
 
-      const data = await res.json();
+      const _data = await res.json();
       
       // We do a hard refresh here for simplicity since server components handle the true state, 
       // but ideally we'd optimistic append.
@@ -83,7 +83,7 @@ export function PortalRecordedLessonsManager({ initialLessons }: Props) {
           body: JSON.stringify({ googleDriveFileId: fileId, googleDriveFileName: fileName })
        });
        if (res.ok) window.location.reload();
-    } catch (err) {
+    } catch (_err) {
        setStatusMsg("Failed to bind recording.");
     }
   }

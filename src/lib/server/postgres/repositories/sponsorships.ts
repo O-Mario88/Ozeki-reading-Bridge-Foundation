@@ -56,7 +56,7 @@ export type SponsorshipReceiptRow = {
 };
 
 // Orchestrates the exact insertion parameters logging isolated Sponsor intents
-export async function createSponsorshipIntentPostgres(payload: any): Promise<{id: number, merchantReference: string}> {
+export async function createSponsorshipIntentPostgres(payload: Record<string, unknown>): Promise<{id: number, merchantReference: string}> {
   await queryPostgres('BEGIN');
   try {
      const sponsorshipRef = `OZK-SPN-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;

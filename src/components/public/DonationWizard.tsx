@@ -35,7 +35,7 @@ export function DonationWizard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleCustomAmountChange = (e: any) => {
+  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
      setAmount(null);
      setCustomAmount(e.target.value.replace(/[^0-9]/g, ''));
   };
@@ -79,8 +79,8 @@ export function DonationWizard() {
        // Redirect physically to the Pesapal Banking iframe string mapping
        window.location.href = data.redirectUrl;
 
-    } catch (e: any) {
-       setError(e.message);
+    } catch (e: unknown) {
+       setError(e instanceof Error ? e.message : "Gateway initialization failed.");
        setLoading(false);
     }
   };

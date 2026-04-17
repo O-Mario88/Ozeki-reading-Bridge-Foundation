@@ -68,7 +68,7 @@ export async function GET(request: Request) {
       // 4. Default Unknown
       return NextResponse.json({ status: 'Polling', verified: false });
 
-   } catch(e) {
+   } catch(_e) {
       return NextResponse.json({ status: 'Polling', verified: false });
    }
 }
