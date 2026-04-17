@@ -123,7 +123,8 @@ export async function updateRecordedLessonVimeoDetailsPostgres(
   );
 }
 
-function mapRecordedLessonRow(row: Record<string, unknown>): RecordedLessonRow {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapRecordedLessonRow(row: any): RecordedLessonRow {
   return {
     id: row.id,
     lessonCode: row.lesson_code,

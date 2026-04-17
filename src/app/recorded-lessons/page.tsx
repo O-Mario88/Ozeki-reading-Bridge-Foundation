@@ -1,18 +1,19 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { PlayCircle, GraduationCap, Video } from "lucide-react";
-import { listRecordedLessonsPostgres } from "@/lib/server/postgres/repositories/recorded-lessons";
+import { listRecordedLessonsPostgres, type RecordedLessonRow } from "@/lib/server/postgres/repositories/recorded-lessons";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 
 export const metadata: Metadata = {
-  title: "Recorded Lessons Library | OzekiRead",
-  description: "Replay past phonics and literacy training sessions directly from our embedded digital library.",
+  title: "Recorded Lessons | Ozeki Reading Bridge Foundation",
+  description:
+    "Browse our library of recorded phonics training videos and classroom demonstrations.",
 };
 
 export const revalidate = 60; // 1 minute cache
 
 export default async function RecordedLessonsIndex() {
-  let lessons: Record<string, unknown>[] = [];
+  let lessons: RecordedLessonRow[] = [];
   try {
     // Only fetch published ones for the public
     lessons = await listRecordedLessonsPostgres({ isPublished: true });

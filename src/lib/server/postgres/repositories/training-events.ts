@@ -129,7 +129,8 @@ export async function addTeacherToEventRegistrationPostgres(registrationId: numb
   return result.rows[0].id;
 }
 
-function mapTrainingEventRow(row: Record<string, unknown>): TrainingEventRow {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapTrainingEventRow(row: any): TrainingEventRow {
   return {
     id: row.id,
     eventCode: row.event_code,

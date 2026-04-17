@@ -87,7 +87,8 @@ export default async function DonationsDashboard() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
-                  {donations.map((d: Record<string, unknown>) => (
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {donations.map((d: any) => (
                      <tr key={d.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-5">
                            <div className="font-bold text-gray-900 flex items-center gap-2">

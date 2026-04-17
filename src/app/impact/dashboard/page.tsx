@@ -90,7 +90,7 @@ export default async function ImpactDashboardPage({
   const activeScopeId = selectedSchoolId || selectedDistrict || selectedSubRegion || selectedRegion || "Uganda";
 
   try {
-    facets = await getImpactReportFilterFacetsAsync();
+    facets = await getImpactReportFilterFacetsAsync() as typeof facets;
     const selectedYear = resolveReportYear(selectedYearParam, facets.years);
     const { getPublicImpactAggregate } = await import("@/services/dataService");
     aggregate = await getPublicImpactAggregate(

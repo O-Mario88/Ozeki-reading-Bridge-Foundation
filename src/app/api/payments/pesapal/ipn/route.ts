@@ -142,7 +142,7 @@ async function processServiceBookingWebhook(payment: Record<string, unknown>, tr
                  receipt_number, service_payment_id, service_request_id, school_id, receipt_type,
                  amount_paid, quotation_total, balance, currency, payment_method, pesapal_order_tracking_id, status
                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'Issued') RETURNING id`,
-               [receiptHash, payment.id, payment.service_request_id, payment.school_id, payment.payment_type.includes('Deposit') ? 'Deposit Receipt' : 'Full Payment Receipt', payment.amount_requested, totalTarget, remainingBalance, payment.currency, gatewayVerification.payment_method, trackingId]
+               [receiptHash, payment.id, payment.service_request_id, payment.school_id, String(payment.payment_type).includes('Deposit') ? 'Deposit Receipt' : 'Full Payment Receipt', payment.amount_requested, totalTarget, remainingBalance, payment.currency, gatewayVerification.payment_method, trackingId]
            );
            
            await queryPostgres(`UPDATE service_payments SET receipt_id = $1 WHERE id = $2`, [receiptRes.rows[0].id, payment.id]);

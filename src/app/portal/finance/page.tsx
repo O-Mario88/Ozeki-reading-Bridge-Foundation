@@ -52,7 +52,8 @@ export default async function FinanceLedgerDashboard() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-100">
-                  {ledgers.map((tx: Record<string, unknown>) => (
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {ledgers.map((tx: any) => (
                      <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="p-5">
                            <div className="font-bold text-gray-900 border border-gray-200 px-2 py-1 rounded inline-block bg-white shadow-sm mb-2 text-xs font-mono select-all">
@@ -97,7 +98,7 @@ export default async function FinanceLedgerDashboard() {
                               <span className="text-xs text-gray-400 italic">No Cryptographic Receipt</span>
                            )}
                            <div className="text-[10px] text-gray-400 mt-2">
-                             Initiated: {tx.payment_initiated_at ? new Date(tx.payment_initiated_at).toLocaleTimeString() : new Date().toLocaleTimeString()}
+                              Initiated: {tx.payment_initiated_at ? new Date(tx.payment_initiated_at).toLocaleTimeString() : new Date().toLocaleTimeString()}
                            </div>
                         </td>
                      </tr>

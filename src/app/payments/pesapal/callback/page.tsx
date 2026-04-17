@@ -11,7 +11,8 @@ export default function PesapalCallbackPage() {
    const trackingId = searchParams.get('OrderTrackingId');
    
    const [status, setStatus] = useState<'polling'|'success'|'failed'>('polling');
-   const [verifyData, setVerifyData] = useState<Record<string, unknown> | null>(null);
+   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   const [verifyData, setVerifyData] = useState<any>(null);
 
    useEffect(() => {
       if (!trackingId) return;

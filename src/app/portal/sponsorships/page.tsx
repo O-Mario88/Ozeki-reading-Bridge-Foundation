@@ -86,7 +86,8 @@ export default async function SponsorshipDashboard() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
-                  {sponsorships.map((s: Record<string, unknown>) => (
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {sponsorships.map((s: any) => (
                      <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-5">
                            <div className="font-bold text-gray-900 flex items-center gap-2">
