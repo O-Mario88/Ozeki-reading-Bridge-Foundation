@@ -177,11 +177,10 @@ export const getPublicImpactAggregatePostgres = unstable_cache(
   { revalidate: 3600, tags: ["impact"] }
 );
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getImpactReportByCodeAsyncPostgres(code: string, _context?: unknown): Promise<any> {
+export async function getImpactReportByCodeAsyncPostgres(code: string, _context?: unknown): Promise<Record<string, unknown> | null> {
     try {
         const res = await queryPostgres(`SELECT * FROM impact_reports WHERE id::text = $1`, [code]);
-        return res.rows[0] || null;
+        return (res.rows[0] as Record<string, unknown>) || null;
     } catch {
         return null;
     }
@@ -254,8 +253,7 @@ export const getImpactReportFilterFacetsAsyncPostgres = unstable_cache(
   { revalidate: 3600, tags: ["impact"] }
 );
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getReportPreviewStatsPostgres(_filters: any): Promise<any> {
+export async function getReportPreviewStatsPostgres(_filters: Record<string, unknown>): Promise<{ reachTotal: number; improvementPct: number; costPerLearner: number }> {
     return {
         reachTotal: 0,
         improvementPct: 0,
@@ -275,19 +273,17 @@ export async function incrementImpactReportViewCountAsyncPostgres(id: string | n
     } catch { /* table may not exist */ }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function listPublicImpactReportsAsyncPostgres(limitOrFilters: number | { limit?: number; [key: string]: unknown } = 10): Promise<any[]> {
+export async function listPublicImpactReportsAsyncPostgres(limitOrFilters: number | { limit?: number; [key: string]: unknown } = 10): Promise<Record<string, unknown>[]> {
     try {
         const limit = typeof limitOrFilters === 'number' ? limitOrFilters : (limitOrFilters.limit ?? 10);
         const res = await queryPostgres(`SELECT * FROM impact_reports WHERE visibility = 'public' ORDER BY created_at DESC LIMIT $1`, [limit]);
-        return res.rows;
+        return res.rows as Record<string, unknown>[];
     } catch {
         return [];
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function runImpactCalculatorPostgres(_input: any): Promise<any> {
+export async function runImpactCalculatorPostgres(_input: Record<string, unknown>): Promise<{ projectedImpact: number; confidenceInterval: [number, number] }> {
     return {
         projectedImpact: 0,
         confidenceInterval: [0, 0]
@@ -438,9 +434,8 @@ const _getPortalDashboardDataPostgres = unstable_cache(
   }
 }, ["portal-dashboard-postgres"], { revalidate: 60, tags: ["portal-dashboard"] });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getPortalDashboardDataPostgres(_user: any): Promise<any> {
-  return _getPortalDashboardDataPostgres();
+export async function getPortalDashboardDataPostgres(_user: { id: number; role?: string }): Promise<Record<string, unknown>> {
+  return _getPortalDashboardDataPostgres() as any; // Cast back to Record
 }
 
 export type PerformanceCascadeRow = {
@@ -486,8 +481,7 @@ export async function getPerformanceCascadeDataPostgres(): Promise<PerformanceCa
   return _getPerformanceCascadeDataPostgres();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getTableRowCountsPostgres(): Promise<any[]> {
+export async function getTableRowCountsPostgres(): Promise<Record<string, unknown>[]> {
   const tables = [
     "portal_records", "schools_directory", "support_requests", "portal_users",
     "audit_logs", "cost_entries", "observation_rubrics", "intervention_groups",
@@ -501,7 +495,7 @@ export async function getTableRowCountsPostgres(): Promise<any[]> {
     return res.rows.map(row => ({
       table: String(row.table),
       count: toNumber(row.count)
-    }));
+    })) as Record<string, unknown>[];
   } catch {
     return tables.map(table => ({ table, count: 0 }));
   }

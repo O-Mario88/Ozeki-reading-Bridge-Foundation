@@ -22,8 +22,7 @@ export async function createBenchmarkProfileAsync(args: {
 }) {
   return service.upsertBenchmarkProfile({
     user: args.user,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    input: args.profile as any,
+    input: args.profile as BenchmarkProfileRecord,
   });
 }
 
@@ -34,8 +33,7 @@ export async function updateBenchmarkProfileAsync(args: {
 }) {
   return service.upsertBenchmarkProfile({
     user: args.user,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    input: args.profile as any,
+    input: args.profile as BenchmarkProfileRecord,
   });
 }
 
@@ -60,8 +58,7 @@ export async function listEducationAuditExceptionsAsync(filters: {
   return service.listEducationAuditExceptions({
     scopeType: filters.scopeType as NlisGeoScopeType,
     scopeId: filters.scopeId,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    status: filters.status as any,
+    status: filters.status as "pending" | "resolved" | "ignored",
     limit: filters.limit,
   });
 }
@@ -168,11 +165,9 @@ export async function listInterventionPlansAsync(filters: {
   limit?: number;
 }) {
   return service.listInterventionPlans({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    scopeType: filters.scopeType as any,
+    scopeType: filters.scopeType as NlisGeoScopeType,
     scopeId: filters.scopeId,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    status: filters.status as any,
+    status: filters.status as InterventionPlanRecord["status"],
     limit: filters.limit,
   });
 }
@@ -183,12 +178,14 @@ export async function getInterventionPlanByIdAsync(planId: number) {
 
 export async function upsertInterventionPlanAsync(args: {
   user: { id: number; fullName: string };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  plan: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  plan: Partial<InterventionPlanRecord>;
   actions: any[];
 }) {
-  return service.upsertInterventionPlan(args);
+  return service.upsertInterventionPlan({
+    user: args.user,
+    plan: args.plan as InterventionPlanRecord,
+    actions: args.actions
+  });
 }
 
 export async function addInterventionActionAsync(args: {
@@ -250,8 +247,11 @@ export function buildPartnerImpactCsv(data: any) {
   return service.buildPartnerImpactCsv(data);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function listNationalReportPacksAsync(filters: any) {
+export async function listNationalReportPacksAsync(filters: {
+  scopeType?: string;
+  scopeId?: string;
+  [key: string]: unknown;
+}) {
   return service.listNationalReportPacks(filters);
 }
 

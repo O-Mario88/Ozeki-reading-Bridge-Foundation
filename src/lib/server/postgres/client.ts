@@ -18,7 +18,7 @@ function getDatabaseUrlRaw() {
     if (!dbName || dbName === "default") {
       url.pathname = "/postgres";
       const fixed = url.toString();
-      console.warn("[db] DATABASE_URL database=" + (dbName || "(empty)") + " corrected to postgres");
+      console.info("[db] DATABASE_URL database=" + (dbName || "(empty)") + " corrected to postgres");
       return fixed;
     }
   } catch {

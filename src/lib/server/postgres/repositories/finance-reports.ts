@@ -138,14 +138,12 @@ export async function getBudgetVsActual(startDate: string, endDate: string) {
   // Merge them explicitly into a dictionary
   const budgetDict: Record<string, { budget: number, actual: number }> = {};
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  budgetRes.rows.forEach((r: any) => {
-    budgetDict[r.account_name] = { budget: Number(r.budget_amount), actual: 0 };
+  budgetRes.rows.forEach((r) => {
+    budgetDict[String(r.account_name)] = { budget: Number(r.budget_amount), actual: 0 };
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  actualsRes.rows.forEach((r: any) => {
-    const name = r.account_name || 'Uncategorized';
+  actualsRes.rows.forEach((r) => {
+    const name = String(r.account_name || 'Uncategorized');
     if (!budgetDict[name]) budgetDict[name] = { budget: 0, actual: 0 };
     budgetDict[name].actual = Number(r.actual_amount);
   });
@@ -188,15 +186,9 @@ export async function getGrantAndDonorReport(_grantId?: number) {
 }
 
 // Fallbacks to resolve any remaining old imports gracefully
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getTrialBalance(fiscalYear: number) { return []; }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getAccountDetail(accountId: number, startDate: string, endDate: string) { return []; }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getIncomeVsExpenseSummary(startDate: string, endDate: string) { return []; }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getProjectFundFinancialReport(startDate: string, endDate: string) { return []; }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getExpenseByCategoryReport(startDate: string, endDate: string) { return []; }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getReceiptsReport(startDate: string, endDate: string) { return []; }
+export async function getTrialBalance(_fiscalYear: number) { return []; }
+export async function getAccountDetail(_accountId: number, _startDate: string, _endDate: string) { return []; }
+export async function getIncomeVsExpenseSummary(_startDate: string, _endDate: string) { return []; }
+export async function getProjectFundFinancialReport(_startDate: string, _endDate: string) { return []; }
+export async function getExpenseByCategoryReport(_startDate: string, _endDate: string) { return []; }
+export async function getReceiptsReport(_startDate: string, _endDate: string) { return []; }

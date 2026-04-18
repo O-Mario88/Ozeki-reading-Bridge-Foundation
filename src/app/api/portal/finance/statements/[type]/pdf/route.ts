@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getPortalUserOrRedirect } from "@/lib/auth";
@@ -11,6 +10,35 @@ import {
 } from "@/lib/server/postgres/repositories/finance-reports";
 import { generateFinancialNarration } from "@/lib/server/ai/finance-narration";
 import { generateFinancialPdf, FinancialReportData } from "@/lib/server/pdf/financial-report-puppeteer";
+
+interface LedgerLine {
+  account_name: string;
+  net_amount: number | string;
+  group_name?: string;
+}
+
+interface CashFlowLine {
+  category: string;
+  account_name: string;
+  net_cash_impact: number | string;
+}
+
+interface BudgetVarianceLine {
+  account_name: string;
+  budget_amount: number;
+  actual_amount: number;
+  variance: number;
+  variance_percentage: number;
+}
+
+interface GrantUtilizationLine {
+  grant_name: string;
+  fund_name: string;
+  total_received: number | string;
+  total_spent: number | string;
+  net_available: number | string;
+}
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,13 +98,13 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
     } else if (reportType === "PnL") {
       title = "Statement of Activities";
       period = `${startDate} to ${endDate}`;
-      const dataRows = await getStatementOfActivities(startDate, endDate);
+      const dataRows = (await getStatementOfActivities(startDate, endDate)) as LedgerLine[];
       
-      const revRows = dataRows.filter((r: any) => r.group_name === "Revenue");
-      const expRows = dataRows.filter((r: any) => r.group_name === "Operating Expenses");
+      const revRows = dataRows.filter((r) => r.group_name === "Revenue");
+      const expRows = dataRows.filter((r) => r.group_name === "Operating Expenses");
 
-      const totalRev = revRows.reduce((sum: number, r: any) => sum + Number(r.net_amount), 0);
-      const totalExp = expRows.reduce((sum: number, r: any) => sum + Number(r.net_amount), 0);
+      const totalRev = revRows.reduce((sum: number, r) => sum + Number(r.net_amount), 0);
+      const totalExp = expRows.reduce((sum: number, r) => sum + Number(r.net_amount), 0);
 
       sections.push({
         title: "Support & Revenue",
@@ -105,12 +133,13 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
       title = "Cash Flow Statement";
       period = `${startDate} to ${endDate}`;
       const data = await getCashFlowStatement(startDate, endDate);
+      const lines = data.lines as CashFlowLine[];
       
-      const inflows = data.lines.filter((r: any) => r.category === "Cash Inflows");
-      const outflows = data.lines.filter((r: any) => r.category === "Cash Outflows");
+      const inflows = lines.filter((r) => r.category === "Cash Inflows");
+      const outflows = lines.filter((r) => r.category === "Cash Outflows");
 
-      const totalIn = inflows.reduce((s: number, r: any) => s + Number(r.net_cash_impact), 0);
-      const totalOut = outflows.reduce((s: number, r: any) => s + Number(r.net_cash_impact), 0);
+      const totalIn = inflows.reduce((s: number, r) => s + Number(r.net_cash_impact), 0);
+      const totalOut = outflows.reduce((s: number, r) => s + Number(r.net_cash_impact), 0);
 
       sections.push({
         headers: ["Cash Movements", "Amount (UGX)"],
@@ -131,11 +160,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
     } else if (reportType === "BudgetActual") {
       title = "Budget vs. Actual Variance Analysis";
       period = `${startDate} to ${endDate}`;
-      const dataRows = await getBudgetVsActual(startDate, endDate);
+      const dataRows = (await getBudgetVsActual(startDate, endDate)) as BudgetVarianceLine[];
 
-      const totalBudget = dataRows.reduce((s: number, r: any) => s + r.budget_amount, 0);
-      const totalActual = dataRows.reduce((s: number, r: any) => s + r.actual_amount, 0);
-      const totalVariance = dataRows.reduce((s: number, r: any) => s + r.variance, 0);
+      const totalBudget = dataRows.reduce((s: number, r) => s + r.budget_amount, 0);
+      const totalActual = dataRows.reduce((s: number, r) => s + r.actual_amount, 0);
+      const totalVariance = dataRows.reduce((s: number, r) => s + r.variance, 0);
 
       sections.push({
         headers: ["Category", "Budget", "Actual", "Variance", "%"],
@@ -155,9 +184,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ type:
     } else if (reportType === "Grants") {
       title = "Grant & Donor Utilization";
       period = "Life-to-date";
-      const dataRows = await getGrantAndDonorReport(grantId);
+      const dataRows = (await getGrantAndDonorReport(grantId)) as GrantUtilizationLine[];
 
-      const totals = dataRows.reduce((acc: any, r: any) => {
+      const totals = dataRows.reduce((acc, r) => {
         acc.recv += Number(r.total_received);
         acc.spent += Number(r.total_spent);
         acc.avail += Number(r.net_available);
