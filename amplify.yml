@@ -3,7 +3,6 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm run clean:next
         - nvm use 22 || nvm install 22
         - node -v
         - npm -v
