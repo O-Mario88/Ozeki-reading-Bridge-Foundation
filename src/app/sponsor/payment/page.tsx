@@ -46,7 +46,7 @@ function SponsorshipPaymentForm() {
         // Auto-success for MTN/Airtel Native Mobile Money triggers
         router.push(`/sponsor/success?ref=${payload.reference_id}`);
       }
-    } catch (error) {
+    } catch (_error) {
       alert("Payment simulation failed. Ensure Postgres backend is active.");
       setLoading(false);
     }

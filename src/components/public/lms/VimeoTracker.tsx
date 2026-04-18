@@ -10,7 +10,7 @@ interface VimeoTrackerProps {
 
 export function VimeoTracker({ vimeoId, lessonId, teacherId }: VimeoTrackerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<VimeoPlayerInstance | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
 
   // Load the Vimeo SDK dynamically
@@ -26,7 +26,6 @@ export function VimeoTracker({ vimeoId, lessonId, teacherId }: VimeoTrackerProps
       initPlayer();
     }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vimeoId]);
 
   const initPlayer = () => {
@@ -50,7 +49,7 @@ export function VimeoTracker({ vimeoId, lessonId, teacherId }: VimeoTrackerProps
 
     // Throttled timeupdate ping (every 10 seconds to not overwhelm DB)
     let lastPing = 0;
-    player.on("timeupdate", (data: any) => {
+    player.on("timeupdate", (data: { seconds: number; percent: number }) => {
       const current = Math.floor(data.seconds);
       if (current - lastPing >= 10) {
         lastPing = current;

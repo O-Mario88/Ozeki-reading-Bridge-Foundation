@@ -30,7 +30,7 @@ export default function NewEventPage() {
       const result = await res.json();
       alert(`Event provisioned successfully! Code: ${result.event.event_code}`);
       router.push("/portal/events");
-    } catch (err) {
+    } catch (_err) {
       alert("Error scheduling event. Please check logs.");
     } finally {
       setLoading(false);

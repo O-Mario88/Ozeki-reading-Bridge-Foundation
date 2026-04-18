@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { createGoogleCalendarEvent } from "@/lib/google-calendar";
-import crypto from "crypto";
+
 
 export async function POST(request: Request) {
   try {
@@ -98,9 +98,9 @@ export async function POST(request: Request) {
       event: result.rows[0]
     });
 
-  } catch (error) {
+  } catch (_err) {
     await queryPostgres('ROLLBACK');
-    console.error("Scheduler Creation Error:", error);
+    console.error("Scheduler Creation Error:", _err);
     return NextResponse.json({ message: "Scheduler Pipeline Failure" }, { status: 500 });
   }
 }

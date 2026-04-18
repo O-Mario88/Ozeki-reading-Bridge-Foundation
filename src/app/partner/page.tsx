@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHero } from "@/components/public/PageHero";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
-import { HomeSupportRequestModal } from "@/components/home/HomeSupportRequestModal";
+
 
 export const metadata = {
   title: "Partner With Us",

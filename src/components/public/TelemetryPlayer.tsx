@@ -11,6 +11,7 @@ interface VimeoEventData {
 interface VimeoPlayerInstance {
   on: (event: string, callback: (data: VimeoEventData) => void) => void;
   off: (event: string) => void;
+  getCurrentTime: () => Promise<number>;
 }
 
 declare global {

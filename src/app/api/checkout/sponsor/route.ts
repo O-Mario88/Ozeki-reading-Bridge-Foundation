@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     await queryPostgres('BEGIN');
 
-    const result = await queryPostgres(
+    await queryPostgres(
       `INSERT INTO donations (
         reference_id, donor_name, donor_email, target_entity_type, amount, payment_status, payment_method, message
       ) VALUES ($1, $2, $3, $4, $5, 'Pending', $6, $7) RETURNING id`,

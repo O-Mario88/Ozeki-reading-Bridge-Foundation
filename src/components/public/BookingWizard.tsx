@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronRight, CheckCircle, CreditCard, Building, ShoppingCart, Plus, Minus, FileText, Calendar, Clock, ShieldCheck } from "lucide-react";
+
+import { ChevronRight, CheckCircle, CreditCard, Building, ShoppingCart, Plus, Minus, FileText, Calendar, ShieldCheck } from "lucide-react";
 import type { ServiceCatalogRow } from "@/lib/server/postgres/repositories/service-booking";
 
 export function BookingWizard({ catalog }: { catalog: ServiceCatalogRow[] }) {
-  const router = useRouter();
+
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
