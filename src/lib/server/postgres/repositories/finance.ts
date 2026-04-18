@@ -307,6 +307,19 @@ export async function listFinanceContactsPostgres() {
   return result.rows.map((row) => mapFinanceContactRecord(row as Record<string, unknown>));
 }
 
+export async function findFinanceContactByEmailPostgres(email: string, client?: PostgresClient) {
+  const runner = client || { query: queryPostgres };
+  const result = await runner.query(
+    `SELECT id, name, emails_json AS "emailsJson", phone, address, contact_type AS "contactType", created_at AS "createdAt"
+     FROM finance_contacts
+     WHERE emails_json::jsonb @> $1::jsonb
+     LIMIT 1`,
+    [JSON.stringify([email.trim().toLowerCase()])]
+  );
+  if (result.rows.length === 0) return null;
+  return mapFinanceContactRecord(result.rows[0] as Record<string, unknown>);
+}
+
 export async function getFinanceSettingsPostgres(): Promise<FinanceSettingsRecord> {
   const result = await queryPostgres(
     `

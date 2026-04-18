@@ -1,4 +1,4 @@
-import { queryPostgres } from "@/lib/server/postgres/client";
+import { queryPostgres, type PostgresClient } from "@/lib/server/postgres/client";
 
 export type DonationRow = {
   id: number;
@@ -51,13 +51,20 @@ export type DonationReceiptRow = {
 };
 
 // Orchestrates the exact insertion parameters
-export async function createDonationIntentPostgres(payload: Record<string, unknown>): Promise<{id: number, merchantReference: string}> {
-  await queryPostgres('BEGIN');
+export async function createDonationIntentPostgres(
+  payload: Record<string, unknown>,
+  externalClient?: PostgresClient
+): Promise<{id: number, merchantReference: string}> {
+  const runner = externalClient || { query: queryPostgres };
+  
+  // If no external client, we manage our own transaction
+  if (!externalClient) await queryPostgres('BEGIN');
+  
   try {
      const donationRef = `OZK-DON-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;
      const merchantRef = `OZK-DNRC-${Date.now()}`; // Differentiate from School bookings which use OZK-MERCHANT
 
-     const res = await queryPostgres(
+     const res = await runner.query(
         `INSERT INTO donations (
           donation_reference, donor_type, donor_name, organization_name, email, phone, country, district_or_city,
           donation_purpose, supported_school_name, supported_school_district, donor_message,
@@ -71,11 +78,11 @@ export async function createDonationIntentPostgres(payload: Record<string, unkno
         ]
      );
 
-     await queryPostgres('COMMIT');
+     if (!externalClient) await queryPostgres('COMMIT');
      return { id: res.rows[0].id, merchantReference: merchantRef };
 
   } catch(e) {
-     await queryPostgres('ROLLBACK');
+     if (!externalClient) await queryPostgres('ROLLBACK');
      throw e;
   }
 }
