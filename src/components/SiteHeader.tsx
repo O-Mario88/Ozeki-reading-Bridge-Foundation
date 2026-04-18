@@ -105,7 +105,7 @@ export const navItems: NavItem[] = [
   { type: "group", key: "programs", group: programsGroup },
   { type: "link", label: "Online Training", href: "/events" },
   { type: "group", key: "impact", group: impactGroup },
-  { type: "link", label: "Blog", href: "/blog" },
+  { type: "link", label: "Book Us Now", href: "/services/request" },
   { type: "group", key: "about", group: aboutGroup },
 ];
 

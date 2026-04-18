@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 interface VimeoEventData {
   seconds: number;
+  percent?: number;
+  duration?: number;
 }
 
 interface VimeoPlayerInstance {
@@ -14,7 +16,8 @@ interface VimeoPlayerInstance {
 declare global {
   interface Window {
     Vimeo?: {
-      Player: new (iframe: HTMLIFrameElement) => VimeoPlayerInstance;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Player: new (element: HTMLElement, options?: any) => VimeoPlayerInstance;
     };
   }
 }

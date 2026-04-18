@@ -19,19 +19,135 @@ body::after {
   display: none;
 }
 
-h3,
-h4,
-h5,
-h6 {
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-plus-jakarta), var(--font-inter), sans-serif;
   font-weight: 700;
+  color: #0f172a;
 }
 
 p {
-  color: var(--md-sys-color-on-surface-variant);
+  color: #475569;
   margin: 0 0 1rem;
   font-size: 1.05rem;
   line-height: 1.6;
 }
+
+/* OZEKI GLOBAL BUTTON SYSTEM */
+.ozeki-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid transparent;
+  line-height: 1.5;
+}
+
+.ozeki-btn:focus-visible {
+  outline: 2px solid #006b61;
+  outline-offset: 2px;
+}
+
+.ozeki-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ozeki-btn-primary {
+  background-color: #006b61;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.ozeki-btn-primary:hover:not(:disabled) {
+  background-color: #008779;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.ozeki-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ozeki-btn-secondary {
+  background-color: #ffffff;
+  color: #334155;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ozeki-btn-secondary:hover:not(:disabled) {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.ozeki-btn-gold {
+  background-color: #eab308;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.ozeki-btn-gold:hover:not(:disabled) {
+  background-color: #ca8a04;
+  transform: translateY(-1px);
+}
+
+.ozeki-btn-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.ozeki-btn-danger:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.ozeki-btn-ghost {
+  background-color: transparent;
+  color: #64748b;
+}
+
+.ozeki-btn-ghost:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* OZEKI GLOBAL CARD SYSTEM */
+.ozeki-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  padding: 1.5rem;
+  transition: all 0.25s ease-in-out;
+}
+
+.ozeki-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+}
+
+/* OZEKI GLOBAL BADGES */
+.ozeki-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.ozeki-badge-success { background-color: #dcfce7; color: #166534; }
+.ozeki-badge-warning { background-color: #fef9c3; color: #854d0e; }
+.ozeki-badge-error   { background-color: #fee2e2; color: #991b1b; }
+.ozeki-badge-info    { background-color: #e0f2fe; color: #075985; }
 
 /* White text override for green (brand-primary) backgrounds */
 .bg-brand-primary,
@@ -411,7 +527,7 @@ main {
 .portal-shell {
   display: grid;
   gap: 1rem;
-  --portal-backend-font: var(--font-roboto), "Roboto", sans-serif;
+  --portal-backend-font: var(--font-inter), "Inter", sans-serif;
   font-family: var(--portal-backend-font);
 }
 
@@ -442,7 +558,7 @@ main {
 
 .portal-shell :is(h1, h2, h3) {
   line-height: 1.15;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .portal-shell h1 {

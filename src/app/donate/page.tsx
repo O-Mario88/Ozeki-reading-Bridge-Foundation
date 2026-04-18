@@ -18,7 +18,7 @@ export default function DonatePage() {
             <div className="inline-block px-4 py-1.5 rounded-full bg-[#006b61]/10 text-[#006b61] font-bold text-xs uppercase tracking-widest mb-6 w-max">
                Ozeki Philanthropy
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight mb-6">
+            <h1 className="text-4xl md:text-5xl font-black text-[#006b61] leading-tight mb-6">
                Shape the future of literacy across Uganda.
             </h1>
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">

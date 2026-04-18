@@ -225,8 +225,8 @@ export default async function HomePage() {
           <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
             Voices from the classroom
           </span>
-          <h2 className="text-[40px] font-bold text-[#111] leading-tight tracking-tight">
-            Meet Our Volunteers Behind the Success Story
+          <h2 className="text-[40px] font-bold text-[#006b61] leading-tight tracking-tight">
+            Read The Story of Change Happening in Schools
           </h2>
         </div>
 
@@ -271,6 +271,24 @@ export default async function HomePage() {
                  </div>
               </div>
            ))}
+        </div>
+
+        {/* Call to Action for Schools */}
+        <div className="mt-16 text-center flex justify-center">
+          <Link
+            href="/partner"
+            className="relative inline-flex group"
+          >
+            {/* Glowing animated backing */}
+            <div className="absolute transition-all duration-1000 opacity-60 -inset-px bg-gradient-to-r from-charius-orange via-[#FA7D15] to-[#f49342] rounded-full blur-lg group-hover:opacity-100 group-hover:-inset-1 group-hover:duration-200 animate-pulse"></div>
+            {/* Core button */}
+            <div className="relative inline-flex items-center justify-center px-10 py-5 text-lg font-bold text-white transition-all duration-200 bg-[#006b61] hover:bg-[#005a51] rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#006b61] shadow-xl shadow-[#006b61]/30">
+              Be Part of the Next Success Story!
+              <svg className="w-6 h-6 ml-2 transition-transform duration-300 group-hover:translate-x-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </div>
+          </Link>
         </div>
       </SectionWrapper>
 

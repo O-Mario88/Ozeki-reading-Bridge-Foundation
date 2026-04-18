@@ -1,4 +1,5 @@
 import { PageHero } from "@/components/PageHero";
+import Link from "next/link";
 
 export const metadata = {
   title: "For Schools",
@@ -35,6 +36,16 @@ export default function ForSchoolsPage() {
               <li>Optional digital learner assessment integration</li>
             </ul>
           </article>
+        </div>
+        
+        <div className="container" style={{ marginTop: '4rem', textAlign: 'center' }}>
+          <h3 className="mb-4">Ready to configure your package?</h3>
+          <p className="mb-6 max-w-2xl mx-auto text-gray-600">
+            Design a custom support package including teacher training and direct classroom observations. Secure checkout powered by Pesapal.
+          </p>
+          <Link href="/services/request" className="button" style={{ backgroundColor: '#006b61', color: 'white' }}>
+             Book Ozeki Services
+          </Link>
         </div>
       </section>
     </>

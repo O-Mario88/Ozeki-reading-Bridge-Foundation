@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
       // 3. Probe the Geographic Sponsorships Ledger
       const sponsorCheck = await queryPostgres(
-         `SELECT id, amount, currency, payment_status, pesapal_merchant_reference, sponsorship_reference, donor_name, donor_email, sponsorship_purpose 
+         `SELECT id, amount, currency, payment_status, pesapal_merchant_reference, sponsorship_reference, donor_name, donor_email, sponsorship_type, sponsorship_target_name, sponsorship_focus 
           FROM sponsorships WHERE pesapal_order_tracking_id = $1 LIMIT 1`,
          [trackingId]
       );
@@ -200,7 +200,7 @@ async function processSponsorshipWebhook(sponsorRecord: Record<string, unknown>,
                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'Issued') RETURNING id`,
                [
                  receiptHash, sponsorRecord.id, sponsorRecord.sponsorship_reference, sponsorRecord.donor_name, sponsorRecord.donor_email,
-                 sponsorRecord.sponsorship_type, sponsorRecord.sponsorship_target_name, sponsorRecord.sponsorship_purpose,
+                 sponsorRecord.sponsorship_type, sponsorRecord.sponsorship_target_name, sponsorRecord.sponsorship_focus,
                  sponsorRecord.amount, sponsorRecord.currency, gatewayVerification.payment_method, trackingId
                ]
            );

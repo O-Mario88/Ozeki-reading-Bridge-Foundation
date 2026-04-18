@@ -81,20 +81,18 @@ export default function PartnerPage() {
           <h2 className="text-4xl font-bold text-[#111] mb-6">Request a partnership discussion</h2>
           <p className="text-xl text-gray-600 leading-relaxed mb-10 max-w-2xl mx-auto">Share your geography focus and timeline. The partnerships team will follow up.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <HomeSupportRequestModal
-              triggerLabel="Partner With Us"
-              title="Partnership request form"
-              description="Share your partnership interest and geography focus."
-              triggerClassName="px-8 py-3.5 rounded-full bg-[#FA7D15] text-white font-semibold hover:bg-[#E86D0B] shadow-lg transition-all inline-flex items-center justify-center cursor-pointer"
-              presetMessage="I would like to partner with Ozeki Reading Bridge Foundation."
-            />
-            <HomeSupportRequestModal
-              triggerLabel="Request a concept note"
-              title="Concept note request"
-              description="Share the sponsorship scope and we will prepare a concept note."
-              triggerClassName="px-8 py-3.5 rounded-full border-2 border-gray-200 text-[#111] font-semibold hover:border-gray-300 bg-white hover:bg-gray-50 transition-all inline-flex items-center justify-center cursor-pointer"
-              presetMessage="I would like a concept note for a literacy partnership."
-            />
+            <Link
+              href="/sponsor"
+              className="px-8 py-3.5 rounded-full bg-[#FA7D15] text-white font-semibold hover:bg-[#E86D0B] shadow-lg transition-all inline-flex items-center justify-center cursor-pointer"
+            >
+              Explore Sponsorship Plans
+            </Link>
+            <Link
+              href="/donate"
+              className="px-8 py-3.5 rounded-full border-2 border-gray-200 text-[#111] font-semibold hover:border-gray-300 bg-white hover:bg-gray-50 transition-all inline-flex items-center justify-center cursor-pointer"
+            >
+              General Donation Gateway
+            </Link>
           </div>
         </div>
       </SectionWrapper>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HomeSupportRequestModal } from "@/components/home/HomeSupportRequestModal";
+import { SponsorshipWizard } from "@/components/public/SponsorshipWizard";
 
 export const metadata = {
   title: "Sponsor Literacy in a District",
@@ -89,20 +89,12 @@ export default function SponsorDistrictPage() {
             support until strong reading becomes normal classroom practice.
           </p>
           <div className="action-row">
-            <HomeSupportRequestModal
-              triggerLabel="Fund a District"
-              title="Fund a district request form"
-              description="Share your district focus and timeline, and our partnerships team will follow up."
-              triggerClassName="button"
-              presetMessage="I want to fund a district under the 2-year literacy partnership package."
-            />
-            <HomeSupportRequestModal
-              triggerLabel="Request a District Concept Note"
-              title="District concept note request"
-              description="Tell us your district focus and we will prepare a concept note."
-              triggerClassName="button button-ghost"
-              presetMessage="Please prepare a district concept note for a 2-year literacy partnership."
-            />
+            <a href="#sponsorship-checkout" className="button">
+              Fund a District
+            </a>
+            <Link className="button button-ghost" href="/partner">
+              All Partnership Options
+            </Link>
           </div>
         </div>
       </section>
@@ -165,16 +157,23 @@ export default function SponsorDistrictPage() {
           </ul>
 
           <div className="action-row">
-            <Link className="button" href="/impact/calculator">
+            <a href="#sponsorship-checkout" className="button">
+              Proceed to Secure Payment
+            </a>
+            <Link className="button button-ghost" href="/impact/calculator">
               Open Funding Calculator
-            </Link>
-            <Link className="button button-ghost" href="/sponsor-a-school">
-              Sponsor a School Package
             </Link>
             <Link className="button button-ghost" href="/partner">
               All Partnership Options
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section bg-gray-50" id="sponsorship-checkout">
+        <div className="container" style={{ maxWidth: '800px' }}>
+           <h2 className="text-center mb-8">Secure Gateway</h2>
+           <SponsorshipWizard level="district" />
         </div>
       </section>
     </>

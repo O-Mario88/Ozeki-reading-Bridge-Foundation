@@ -6,6 +6,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
+        display: ["var(--font-plus-jakarta)", "sans-serif"],
       },
       colors: {
         brand: {
@@ -15,6 +16,13 @@ const config: Config = {
           background: "var(--md-sys-color-background)",
           text: "var(--md-sys-color-on-surface)",
           muted: "var(--md-sys-color-on-surface-variant)",
+        },
+        ozeki: {
+          dark: "#0f172a",
+          slate: "#1e293b",
+          green: "#006b61",
+          mint: "#e6f0ef",
+          gold: "#eab308",
         },
         charius: {
           beige: "#FAF5EF",

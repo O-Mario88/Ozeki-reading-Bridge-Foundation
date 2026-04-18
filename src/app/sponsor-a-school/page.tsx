@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HomeSupportRequestModal } from "@/components/home/HomeSupportRequestModal";
+import { SponsorshipWizard } from "@/components/public/SponsorshipWizard";
 
 export const metadata = {
   title: "Sponsor a School",
@@ -83,13 +83,9 @@ export default function SponsorSchoolPage() {
             until reading improves.
           </p>
           <div className="action-row">
-            <HomeSupportRequestModal
-              triggerLabel="Sponsor This Package"
-              title="Sponsor a school request form"
-              description="Share your interest and our partnerships team will contact you with next steps."
-              triggerClassName="button"
-              presetMessage="I would like to sponsor one school under the $1,100 two-year full literacy support package."
-            />
+            <a href="#sponsorship-checkout" className="button">
+              Sponsor This Package
+            </a>
             <Link className="button button-ghost" href="/partner">
               Back to Partner With Us
             </Link>
@@ -199,17 +195,20 @@ export default function SponsorSchoolPage() {
           </ul>
 
           <div className="action-row">
-            <HomeSupportRequestModal
-              triggerLabel="Request this package"
-              title="Sponsor a school request form"
-              description="Tell us your timeline and geography preference, and we will send next steps."
-              triggerClassName="button"
-              presetMessage="I am requesting the Sponsor a School - $1,100 two-year full literacy support package."
-            />
+            <a href="#sponsorship-checkout" className="button">
+              Proceed to Secure Payment
+            </a>
             <Link className="button button-ghost" href="/donor-pack">
               Download Donor Pack
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section bg-gray-50" id="sponsorship-checkout">
+        <div className="container" style={{ maxWidth: '800px' }}>
+           <h2 className="text-center mb-8">Secure Gateway</h2>
+           <SponsorshipWizard level="school" />
         </div>
       </section>
     </>

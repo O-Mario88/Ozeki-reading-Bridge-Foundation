@@ -276,8 +276,8 @@ export async function createServiceRequestPostgres(payload: Record<string, unkno
     const reqRes = await queryPostgres(
       `INSERT INTO service_requests (
         request_code, school_id, requester_name, requester_role, requester_phone, requester_email,
-        estimated_total, required_deposit_amount, balance, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Awaiting Deposit') RETURNING id`,
+        estimated_total, required_deposit_amount, balance, status, admin_notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Awaiting Deposit', $10) RETURNING id`,
       [
         requestCode, 
         payload.schoolId || null, 
@@ -287,7 +287,8 @@ export async function createServiceRequestPostgres(payload: Record<string, unkno
         payload.requesterEmail,
         payload.estimatedTotal,
         payload.requiredDepositAmount,
-        payload.estimatedTotal // balance matches total until payment
+        payload.estimatedTotal, // balance matches total until payment
+        payload.assessmentData ? JSON.stringify(payload.assessmentData) : null
       ]
     );
     const serviceRequestId = reqRes.rows[0].id;

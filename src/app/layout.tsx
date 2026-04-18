@@ -6,7 +6,7 @@ import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { ModalAccessibilityManager } from "@/components/ModalAccessibilityManager";
 import { organizationName, tagline } from "@/lib/content";
 import { GradientBackground } from "@/components/ui/GradientBackground";
-import { Inter } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { LayoutOrchestrator } from "@/components/public/LayoutOrchestrator";
 import { OfflineBanner } from "@/components/public/OfflineBanner";
 
@@ -14,6 +14,12 @@ const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-plus-jakarta",
 });
 
 export const metadata: Metadata = {
@@ -53,7 +59,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans text-brand-text antialiased`} suppressHydrationWarning>
+      <body className={`${inter.variable} ${plusJakarta.variable} font-sans text-brand-text antialiased`} suppressHydrationWarning>
         <OfflineBanner />
         <GradientBackground />
         <ModalAccessibilityManager />

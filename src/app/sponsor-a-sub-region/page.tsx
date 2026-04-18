@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { HomeSupportRequestModal } from "@/components/home/HomeSupportRequestModal";
+import { SponsorshipWizard } from "@/components/public/SponsorshipWizard";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
@@ -125,20 +125,12 @@ export default function SponsorSubRegionPage() {
             $1,100 per school · 2-year commitment · NLIP-powered evidence
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <HomeSupportRequestModal
-              triggerLabel="Fund a Sub-Region"
-              title="Fund a sub-region request form"
-              description="Share your sub-region focus and timeline, and our partnerships team will follow up."
-              triggerClassName="px-8 py-4 rounded-full bg-white text-brand-primary font-bold flex items-center gap-2 hover:bg-gray-50 transition-all hover:-translate-y-0.5 shadow-lg"
-              presetMessage="I want to fund a sub-region under the 2-year literacy partnership package."
-            />
-            <HomeSupportRequestModal
-              triggerLabel="Request a Concept Note"
-              title="Sub-region concept note request"
-              description="Tell us your sub-region focus and we will prepare a concept note."
-              triggerClassName="px-8 py-4 rounded-full bg-transparent text-white font-bold flex items-center gap-2 border-2 border-white/40 hover:bg-white/10 transition-all hover:-translate-y-0.5"
-              presetMessage="Please prepare a sub-region concept note for a 2-year literacy partnership."
-            />
+            <a href="#sponsorship-checkout" className="px-8 py-4 rounded-full bg-white text-[#1a4d47] font-bold flex items-center gap-2 hover:bg-gray-50 transition-all hover:-translate-y-0.5 shadow-lg">
+              Fund a Sub-Region
+            </a>
+            <Link href="/partner" className="px-8 py-4 rounded-full bg-transparent text-white font-bold flex items-center gap-2 border-2 border-white/40 hover:bg-white/10 transition-all hover:-translate-y-0.5">
+              All Partnership Options
+            </Link>
           </div>
         </div>
       </section>
@@ -320,13 +312,19 @@ export default function SponsorSubRegionPage() {
         heading="Ready to sponsor a sub-region?"
         subheading="Your investment creates a focused proof point for literacy improvement — deep enough to transform, visible enough to inspire."
         primaryButtonText="Fund a Sub-Region"
-        primaryButtonHref="/contact"
+        primaryButtonHref="#sponsorship-checkout"
         primaryButtonColor="bg-[#FA7D15]"
         primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
         secondaryButtonText="All Partnership Options"
         secondaryButtonHref="/partner"
         theme="charius"
       />
+      <section className="section bg-gray-50 pt-16 pb-24" id="sponsorship-checkout">
+        <div className="container" style={{ maxWidth: '800px' }}>
+           <h2 className="text-center text-4xl mb-8 font-bold text-[#111]">Secure Gateway</h2>
+           <SponsorshipWizard level="sub-region" />
+        </div>
+      </section>
     </>
   );
 }

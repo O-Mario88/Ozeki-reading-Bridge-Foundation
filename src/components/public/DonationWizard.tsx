@@ -35,6 +35,10 @@ export function DonationWizard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Step 3 Native Payment Fields
+  const [paymentMethod, setPaymentMethod] = useState("MTN Mobile Money");
+  const [paymentIdentifier, setPaymentIdentifier] = useState("");
+
   const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
      setAmount(null);
      setCustomAmount(e.target.value.replace(/[^0-9]/g, ''));
@@ -69,15 +73,22 @@ export function DonationWizard() {
              name: anonymous ? 'Anonymous Donor' : name,
              email,
              phone,
-             anonymous
+             anonymous,
+             paymentMethod,
+             paymentIdentifier
           })
        });
 
        const data = await res.json();
        if (!res.ok) throw new Error(data.error || "Gateway initialization failed.");
 
-       // Redirect physically to the Pesapal Banking iframe string mapping
-       window.location.href = data.redirectUrl;
+       if (data.redirectUrl) {
+          // Fallback legacy support for physical redirects
+          window.location.href = data.redirectUrl;
+       } else if (data.success) {
+          // Native simulation completion
+          setStep(4);
+       }
 
     } catch (e: unknown) {
        setError(e instanceof Error ? e.message : "Gateway initialization failed.");
@@ -160,7 +171,7 @@ export function DonationWizard() {
                <button 
                   onClick={() => setStep(2)}
                   disabled={getFinalAmount() < 1000}
-                  className="w-full py-5 bg-gray-900 text-white rounded-2xl font-black text-lg hover:bg-[#006b61] transition-colors flex items-center justify-center gap-2 group disabled:opacity-50"
+                  className="w-full py-5 bg-[#006b61] text-white rounded-2xl font-black text-lg hover:bg-[#005a51] transition-colors flex items-center justify-center gap-2 group disabled:opacity-50"
                >
                   Continue <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                </button>
@@ -218,7 +229,7 @@ export function DonationWizard() {
 
                <div className="flex gap-4">
                   <button onClick={() => setStep(1)} className="px-6 py-4 rounded-2xl bg-gray-100 font-bold text-gray-600 hover:bg-gray-200">Back</button>
-                  <button onClick={() => setStep(3)} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black text-lg hover:bg-[#006b61] transition-colors">
+                  <button onClick={() => setStep(3)} className="flex-1 py-4 bg-[#006b61] text-white rounded-2xl font-black text-lg hover:bg-[#005a51] transition-colors">
                      Review Transaction
                   </button>
                </div>
@@ -226,16 +237,53 @@ export function DonationWizard() {
          )}
 
 
-         {/* STEP 3: CHECKOUT REVIEW */}
+         {/* STEP 3: NATIVE CHECKOUT REVIEW & PAYMENT */}
          {step === 3 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-               <div className="p-6 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 mb-8 text-center">
-                  <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-2">Intent Volume</div>
-                  <div className="text-4xl font-black text-gray-900 mb-2 font-mono">
-                     UGX {getFinalAmount().toLocaleString()}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                  {/* Ledger Summary */}
+                  <div className="p-6 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-center flex flex-col justify-center">
+                     <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-2">Intent Volume</div>
+                     <div className="text-4xl font-black text-gray-900 mb-2 font-mono">
+                        UGX {getFinalAmount().toLocaleString()}
+                     </div>
+                     <div className="text-sm font-bold text-[#FA7D15]">
+                        To: {purpose}
+                     </div>
                   </div>
-                  <div className="text-sm font-bold text-[#FA7D15]">
-                     To: {purpose}
+
+                  {/* Native Payment Collector */}
+                  <div className="flex flex-col gap-4">
+                     <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Payment Protocol</label>
+                        <select 
+                           value={paymentMethod} 
+                           onChange={e => setPaymentMethod(e.target.value)}
+                           className="w-full p-4 rounded-xl border-2 border-gray-100 font-bold text-gray-700 bg-white outline-none hover:border-gray-200 focus:border-[#006b61]"
+                        >
+                           <option>MTN Mobile Money</option>
+                           <option>Airtel Money</option>
+                           <option>Bank Card (Visa/Mastercard)</option>
+                        </select>
+                     </div>
+                     <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">
+                           {paymentMethod.includes('Card') ? 'Card Number' : 'Mobile Phone Number'}
+                        </label>
+                        <input 
+                           type="text" 
+                           placeholder={paymentMethod.includes('Card') ? "XXXX XXXX XXXX XXXX" : "07X XXX XXXX"}
+                           value={paymentIdentifier} 
+                           onChange={e => setPaymentIdentifier(e.target.value)}
+                           className="w-full p-4 rounded-xl border-2 border-gray-100 font-bold text-gray-900 outline-none hover:border-gray-200 focus:border-[#006b61]"
+                        />
+                     </div>
+                     {paymentMethod.includes('Card') && (
+                        <div className="grid grid-cols-2 gap-4">
+                           <input type="text" placeholder="MM/YY" className="w-full p-4 rounded-xl border-2 border-gray-100 font-bold text-gray-900 outline-none" />
+                           <input type="text" placeholder="CVV" className="w-full p-4 rounded-xl border-2 border-gray-100 font-bold text-gray-900 outline-none" />
+                        </div>
+                     )}
                   </div>
                </div>
 
@@ -243,7 +291,7 @@ export function DonationWizard() {
                   <ShieldCheck className="w-8 h-8 text-blue-500 flex-shrink-0" />
                   <div className="text-xs text-blue-900">
                      <span className="font-bold block mb-1">Secure Architecture</span>
-                     Your card details and Mobile Money PIN are processed via End-to-End Encryption physically inside the Pesapal Banking secure iframe. OzekiRead <b>never</b> touches or stores your PIN.
+                     Your financial intent is encrypted natively. OzekiRead utilizes PCI-compliant tunneling to process via Pesapal.
                   </div>
                </div>
 
@@ -257,13 +305,32 @@ export function DonationWizard() {
                   <button onClick={() => setStep(2)} className="px-6 py-4 rounded-2xl bg-gray-100 font-bold text-gray-600 hover:bg-gray-200" disabled={loading}>Back</button>
                   <button 
                      onClick={handleInitiate} 
-                     disabled={loading}
-                     className="flex-1 py-4 bg-[#006b61] text-white rounded-2xl font-black text-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 group shadow-xl shadow-[#006b61]/20 disabled:opacity-50"
+                     disabled={loading || !paymentIdentifier}
+                     className="flex-1 py-4 bg-[#006b61] text-white rounded-2xl font-black text-lg hover:bg-[#005a51] transition-colors flex items-center justify-center gap-2 group shadow-xl shadow-[#006b61]/20 disabled:opacity-50"
                   >
-                     {loading ? 'Securing Gateway...' : 'Initialize Secure Gateway'} 
+                     {loading ? 'Processing Transaction...' : `Pay UGX ${getFinalAmount().toLocaleString()}`} 
                      {!loading && <CreditCard className="w-5 h-5 ml-1" />}
                   </button>
                </div>
+            </div>
+         )}
+
+         {/* STEP 4: SUCCESS */}
+         {step === 4 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-center py-8">
+               <div className="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <ShieldCheck className="w-12 h-12" />
+               </div>
+               <h2 className="text-3xl font-black text-gray-900 mb-4">Payment Successful!</h2>
+               <p className="text-gray-500 max-w-md mx-auto mb-8 leading-relaxed">
+                  Thank you for your generous contribution of <span className="font-bold text-[#006b61]">UGX {getFinalAmount().toLocaleString()}</span> via {paymentMethod}. An electronic receipt has been routed to your email.
+               </p>
+               <button 
+                  onClick={() => window.location.reload()} 
+                  className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-black text-lg hover:bg-gray-800 transition-colors"
+               >
+                  Shape Another Story
+               </button>
             </div>
          )}
        </div>

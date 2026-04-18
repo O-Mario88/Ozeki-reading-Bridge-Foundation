@@ -175,7 +175,7 @@ export default function AboutPage() {
       <SectionWrapper theme="light" id="leadership-team">
         <div className="max-w-3xl mx-auto text-center mb-20">
           <h2 className="text-4xl md:text-5xl font-extrabold text-brand-primary mb-6">
-            Meet Our <span className="relative inline-block">Team<span className="absolute -bottom-2 left-0 w-full h-[4px] bg-[#FA7D15] rounded-full"></span></span>
+            Meet Our Team <span className="relative inline-block">Leader<span className="absolute -bottom-2 left-0 w-full h-[4px] bg-[#FA7D15] rounded-full"></span></span>
           </h2>
           <p className="text-lg md:text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto mt-8">
             Meet the dedicated individuals driving our mission to strengthen early-grade literacy.
@@ -184,12 +184,29 @@ export default function AboutPage() {
 
         <div className="max-w-6xl mx-auto px-4 md:px-0">
           
-          {/* Main Bio - Moved above to let Experience align with photo */}
-          <div className="max-w-4xl mb-12">
-            <h3 className="text-4xl font-bold text-brand-primary mb-4 tracking-tight">Ojok Amos</h3>
-            <p className="text-gray-500 text-lg md:text-xl leading-relaxed">
-              Ojok Amos is the Co-Founder and Team Lead of Ozeki Reading Bridge Foundation. He is deeply committed to improving children's reading skills and ensuring every learner has the opportunity to become a confident reader through practical, community-centered literacy approaches.
-            </p>
+          {/* Main Bio - Full width story */}
+          <div className="w-full mb-12">
+            <h3 className="text-4xl font-bold text-brand-primary mb-6 tracking-tight">Ojok Amos</h3>
+            <div className="text-gray-500 text-lg md:text-xl leading-relaxed space-y-6">
+              <p>
+                Ojok Amos is the Co-Founder and Team Lead of Ozeki Reading Bridge Foundation, and his story is one of resilience, purpose, and hope. Growing up in Northern Uganda during the height of the LRA war, he saw how conflict tore through communities and deeply disrupted education. Schools were unstable, learning was interrupted, and for many children, the simple chance to learn to read became painfully uncertain. In that season of fear and displacement, literacy was not only delayed—it was diminished.
+              </p>
+              <p>
+                But from that painful reality, a powerful vision was born.
+              </p>
+              <p>
+                Having witnessed how war robbed children of learning opportunities and weakened the foundation of education across the region, Amos made a personal commitment to be part of a different story—one of restoration, dignity, and transformation. He resolved to help rebuild what conflict had broken by giving children the reading skills they need to thrive, and by equipping teachers with practical tools to teach effectively, even in challenging contexts.
+              </p>
+              <p>
+                Today, that vision lives through Ozeki Reading Bridge Foundation. Amos is driven by the belief that literacy can change the future of a child, strengthen a school, and restore hope in a community. His work focuses on practical, community-centered approaches that empower teachers, support schools, and help children become confident, capable readers.
+              </p>
+              <p>
+                What makes his leadership especially compelling is that it is rooted in lived experience. He is not working to solve a distant problem—he is responding to a reality he has known personally. His mission is bigger than improving reading scores; it is about changing the literacy story of Northern Uganda and helping shape a stronger educational future for the entire country.
+              </p>
+              <p>
+                Ojok Amos leads with conviction, knowing that when a child learns to read, a new future begins. Through his work, he is helping ensure that the next generation will not be defined by the disruptions of the past, but by the opportunities they are given to learn, grow, and succeed.
+              </p>
+            </div>
             <hr className="border-t border-gray-100 mt-8" />
           </div>
 
