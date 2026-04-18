@@ -84,13 +84,11 @@ function normalizeSections(value: unknown): BlogPostSection[] {
   return value
     .map((entry, index) => {
       if (!entry || typeof entry !== "object") return null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const obj = entry as Record<string, any>;
+      const obj = entry as Record<string, unknown>;
       const heading = (typeof obj.heading === "string" ? obj.heading : "").trim().slice(0, 140);
       const paragraphs = Array.isArray(obj.paragraphs)
         ? obj.paragraphs
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .filter((p: any): p is string => typeof p === "string")
+            .filter((p: unknown): p is string => typeof p === "string")
             .map((p) => p.trim())
             .filter(Boolean)
             .map((p) => p.slice(0, 50000))
@@ -110,15 +108,13 @@ function normalizeBodyBlocks(value: unknown): BlogBodyBlock[] {
   return value
     .map((entry, index) => {
       if (!entry || typeof entry !== "object") return null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const obj = entry as Record<string, any>;
+      const obj = entry as Record<string, unknown>;
       const type = typeof obj.type === "string" && validTypes.has(obj.type as BlogBodyBlockType)
         ? (obj.type as BlogBodyBlockType) : null;
       if (!type) return null;
       const items = Array.isArray(obj.items)
         ? obj.items
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .filter((p: any): p is string => typeof p === "string")
+            .filter((p: unknown): p is string => typeof p === "string")
             .map((p) => sanitizeInlineRichText(p.trim()))
             .filter(Boolean)
             .slice(0, 30)
@@ -158,42 +154,41 @@ function inferReadTimeFromBodyBlocks(bodyBlocks: BlogBodyBlock[]) {
   return { readTimeMinutes: minutes, readTime: `${minutes} min read` };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapPortalBlogPostRow(row: any): PortalBlogPostRecord {
+function mapPortalBlogPostRow(row: Record<string, unknown>): PortalBlogPostRecord {
   return {
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    subtitle: row.subtitle,
-    excerpt: row.excerpt,
-    category: row.category,
-    author: row.authorName,
-    role: row.authorRole,
-    publishedAt: row.publishedAt,
-    readTime: row.readTime,
-    readTimeMinutes: row.readTimeMinutes,
-    tags: parseStringArrayJson(row.tagsJson),
-    sections: normalizeSections(JSON.parse(row.sectionsJson || "[]")),
-    bodyBlocks: normalizeBodyBlocks(JSON.parse(row.bodyBlocksJson || "[]")),
-    mediaImageUrl: row.mediaImageUrl,
-    mediaVideoUrl: row.mediaVideoUrl,
-    articleType: row.articleType,
-    featuredImageUrl: row.featuredImageUrl,
-    featuredImageAlt: row.featuredImageAlt,
-    featuredImageCaption: row.featuredImageCaption,
-    featuredImageCredit: row.featuredImageCredit,
-    primaryCategory: row.primaryCategory,
-    secondaryCategories: parseStringArrayJson(row.secondaryCategoriesJson),
-    authorBio: row.authorBio,
-    seoTitle: row.seoTitle,
-    metaDescription: row.metaDescription,
-    socialImageUrl: row.socialImageUrl,
-    canonicalUrl: row.canonicalUrl,
-    publishStatus: row.publishStatus,
-    createdByUserId: row.createdByUserId,
-    createdByUserName: row.createdByUserName,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    id: row.id as number,
+    slug: row.slug as string,
+    title: row.title as string,
+    subtitle: row.subtitle as string | null,
+    excerpt: row.excerpt as string,
+    category: row.category as string,
+    author: row.authorName as string,
+    role: row.authorRole as string,
+    publishedAt: row.publishedAt as string,
+    readTime: row.readTime as string,
+    readTimeMinutes: row.readTimeMinutes as number,
+    tags: parseStringArrayJson(row.tagsJson as string),
+    sections: normalizeSections(JSON.parse((row.sectionsJson as string) || "[]")),
+    bodyBlocks: normalizeBodyBlocks(JSON.parse((row.bodyBlocksJson as string) || "[]")),
+    mediaImageUrl: row.mediaImageUrl as string | null,
+    mediaVideoUrl: row.mediaVideoUrl as string | null,
+    articleType: row.articleType as string,
+    featuredImageUrl: row.featuredImageUrl as string | null,
+    featuredImageAlt: row.featuredImageAlt as string | null,
+    featuredImageCaption: row.featuredImageCaption as string | null,
+    featuredImageCredit: row.featuredImageCredit as string | null,
+    primaryCategory: row.primaryCategory as string,
+    secondaryCategories: parseStringArrayJson(row.secondaryCategoriesJson as string),
+    authorBio: row.authorBio as string | null,
+    seoTitle: row.seoTitle as string | null,
+    metaDescription: row.metaDescription as string | null,
+    socialImageUrl: row.socialImageUrl as string | null,
+    canonicalUrl: row.canonicalUrl as string | null,
+    publishStatus: row.publishStatus as PortalBlogPublishStatus,
+    createdByUserId: row.createdByUserId as number,
+    createdByUserName: row.createdByUserName as string,
+    createdAt: row.createdAt as string,
+    updatedAt: row.updatedAt as string,
   };
 }
 
@@ -263,8 +258,7 @@ async function resolveUniqueSlugAsyncPostgres(rawSlug: string | undefined, title
 
 export async function getBlogPostBySlugPostgres(slug: string): Promise<BlogPost | null> {
   requirePostgresConfigured();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await queryPostgres<any>(
+  const result = await queryPostgres<Record<string, unknown>>(
     `SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE slug = $1 AND publish_status = 'published' LIMIT 1`,
     [slug]
   );
@@ -275,8 +269,7 @@ export async function getBlogPostBySlugPostgres(slug: string): Promise<BlogPost 
 export async function listPortalBlogPostsAsyncPostgres(includeDrafts = true): Promise<PortalBlogPostRecord[]> {
   requirePostgresConfigured();
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await queryPostgres<any>(
+    const result = await queryPostgres<Record<string, unknown>>(
       `SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts ${includeDrafts ? "" : "WHERE publish_status = 'published'"} ORDER BY published_at DESC, id DESC`
     );
     return result.rows.map(mapPortalBlogPostRow);
@@ -330,35 +323,32 @@ export async function toggleBlogPostLikeAsyncPostgres(postSlug: string, sessionI
 
 export async function addBlogPostCommentAsyncPostgres(input: { postSlug: string; commentText: string; displayName?: string | null; sessionId?: string | null }) {
   requirePostgresConfigured();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await queryPostgres<any>(
+  const result = await queryPostgres<Record<string, unknown>>(
     `INSERT INTO blog_post_comments (post_slug, session_id, display_name, comment_text) VALUES ($1, $2, $3, $4) RETURNING id, post_slug, display_name, comment_text, created_at::text AS created_at`,
     [input.postSlug, input.sessionId, input.displayName || "Anonymous", input.commentText]
   );
   const row = result.rows[0];
   return {
     id: Number(row.id),
-    postSlug: row.post_slug,
-    displayName: row.display_name,
-    commentText: row.comment_text,
-    createdAt: row.created_at
+    postSlug: row.post_slug as string,
+    displayName: row.display_name as string,
+    commentText: row.comment_text as string,
+    createdAt: row.created_at as string
   } as BlogComment;
 }
 
 export async function listBlogPostCommentsAsyncPostgres(postSlug: string, limit = 50): Promise<BlogComment[]> {
   requirePostgresConfigured();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await queryPostgres<any>(
+  const result = await queryPostgres<Record<string, unknown>>(
     `SELECT id, post_slug, display_name, comment_text, created_at::text AS created_at FROM blog_post_comments WHERE post_slug = $1 AND status = 'visible' ORDER BY created_at DESC, id DESC LIMIT $2`,
     [postSlug, limit]
   );
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return result.rows.map((row: any) => ({
+  return result.rows.map((row) => ({
     id: Number(row.id),
-    postSlug: row.post_slug,
-    displayName: row.display_name,
-    commentText: row.comment_text,
-    createdAt: row.created_at
+    postSlug: row.post_slug as string,
+    displayName: row.display_name as string,
+    commentText: row.comment_text as string,
+    createdAt: row.created_at as string
   }));
 }
 
@@ -367,8 +357,7 @@ export async function getBlogPostEngagementAsyncPostgres(postSlug: string, sessi
     queryPostgres<{ count: string }>(`SELECT COUNT(*)::text AS count FROM blog_post_views WHERE post_slug = $1`, [postSlug]),
     queryPostgres<{ count: string }>(`SELECT COUNT(*)::text AS count FROM blog_post_likes WHERE post_slug = $1`, [postSlug]),
     queryPostgres<{ count: string }>(`SELECT COUNT(*)::text AS count FROM blog_post_comments WHERE post_slug = $1 AND status = 'visible'`, [postSlug]),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    sessionId ? queryPostgres<{ liked: boolean }>(`SELECT TRUE AS liked FROM blog_post_likes WHERE post_slug = $1 AND session_id = $2 LIMIT 1`, [postSlug, sessionId]) : Promise.resolve({ rows: [] } as any),
+    sessionId ? queryPostgres<{ liked: boolean }>(`SELECT TRUE AS liked FROM blog_post_likes WHERE post_slug = $1 AND session_id = $2 LIMIT 1`, [postSlug, sessionId]) : Promise.resolve({ rows: [] }),
     listBlogPostCommentsAsyncPostgres(postSlug, 120),
   ]);
   return {
@@ -381,56 +370,54 @@ export async function getBlogPostEngagementAsyncPostgres(postSlug: string, sessi
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function savePortalBlogPostAsyncPostgres(input: any, user: PortalUser): Promise<PortalBlogPostRecord> {
+export async function savePortalBlogPostAsyncPostgres(input: Record<string, unknown>, user: PortalUser): Promise<PortalBlogPostRecord> {
   requirePostgresConfigured();
   const now = new Date().toISOString();
   const publishStatus = input.publishStatus === "published" ? "published" : "draft";
 
-  const bodyBlocks = normalizeBodyBlocks(input.bodyBlocks || []);
-  const sections = normalizeSections(input.sections || []);
+  const bodyBlocks = normalizeBodyBlocks((input.bodyBlocks as BlogBodyBlock[]) || []);
+  const sections = normalizeSections((input.sections as BlogPostSection[]) || []);
   const readInfo = inferReadTimeFromBodyBlocks(bodyBlocks);
 
   let existing: PortalBlogPostRecord | null = null;
   if (input.id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await queryPostgres<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [input.id]);
+    const result = await queryPostgres<Record<string, unknown>>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [input.id]);
     existing = result.rows[0] ? mapPortalBlogPostRow(result.rows[0]) : null;
     if (!existing) throw new Error("Blog post not found.");
     const canEdit = user.isSuperAdmin || user.isAdmin || existing.createdByUserId === user.id;
     if (!canEdit) throw new Error("You do not have permission to edit this blog post.");
   }
 
-  const slug = await resolveUniqueSlugAsyncPostgres(input.slug, input.title, existing?.id);
-  const title = input.title.trim().slice(0, 220);
-  const publishedAt = input.publishedAt || (publishStatus === "published" ? now : existing?.publishedAt || now);
+  const slug = await resolveUniqueSlugAsyncPostgres(input.slug as string | undefined, input.title as string, existing?.id);
+  const title = (input.title as string).trim().slice(0, 220);
+  const publishedAt = (input.publishedAt as string) || (publishStatus === "published" ? now : existing?.publishedAt || now);
 
   const values = {
     title,
-    subtitle: (input.subtitle || "").trim().slice(0, 280) || null,
-    excerpt: (input.excerpt || "").trim().slice(0, 1500),
-    category: (input.category || "").trim().slice(0, 80),
-    authorName: (input.author || "").trim().slice(0, 120),
-    authorRole: (input.role || "").trim().slice(0, 120),
-    readTime: input.readTime || readInfo.readTime,
-    readTimeMinutes: input.readTimeMinutes || readInfo.readTimeMinutes,
+    subtitle: ((input.subtitle as string) || "").trim().slice(0, 280) || null,
+    excerpt: ((input.excerpt as string) || "").trim().slice(0, 1500),
+    category: ((input.category as string) || "").trim().slice(0, 80),
+    authorName: ((input.author as string) || "").trim().slice(0, 120),
+    authorRole: ((input.role as string) || "").trim().slice(0, 120),
+    readTime: (input.readTime as string) || readInfo.readTime,
+    readTimeMinutes: (input.readTimeMinutes as number) || readInfo.readTimeMinutes,
     tagsJson: JSON.stringify(input.tags || []),
     sectionsJson: JSON.stringify(sections),
     bodyBlocksJson: JSON.stringify(bodyBlocks),
-    mediaImageUrl: (input.mediaImageUrl || "").trim() || null,
-    mediaVideoUrl: (input.mediaVideoUrl || "").trim() || null,
-    articleType: input.articleType || "Blog Post",
-    featuredImageUrl: (input.featuredImageUrl || "").trim() || null,
-    featuredImageAlt: (input.featuredImageAlt || "").trim() || null,
-    featuredImageCaption: (input.featuredImageCaption || "").trim() || null,
-    featuredImageCredit: (input.featuredImageCredit || "").trim() || null,
-    primaryCategory: (input.primaryCategory || "").trim() || (input.category || "").trim(),
+    mediaImageUrl: ((input.mediaImageUrl as string) || "").trim() || null,
+    mediaVideoUrl: ((input.mediaVideoUrl as string) || "").trim() || null,
+    articleType: (input.articleType as string) || "Blog Post",
+    featuredImageUrl: ((input.featuredImageUrl as string) || "").trim() || null,
+    featuredImageAlt: ((input.featuredImageAlt as string) || "").trim() || null,
+    featuredImageCaption: ((input.featuredImageCaption as string) || "").trim() || null,
+    featuredImageCredit: ((input.featuredImageCredit as string) || "").trim() || null,
+    primaryCategory: ((input.primaryCategory as string) || "").trim() || ((input.category as string) || "").trim(),
     secondaryCategoriesJson: JSON.stringify(input.secondaryCategories || []),
-    authorBio: (input.authorBio || "").trim() || null,
-    seoTitle: (input.seoTitle || "").trim() || null,
-    metaDescription: (input.metaDescription || "").trim() || null,
-    socialImageUrl: (input.socialImageUrl || "").trim() || null,
-    canonicalUrl: (input.canonicalUrl || "").trim() || null,
+    authorBio: ((input.authorBio as string) || "").trim() || null,
+    seoTitle: ((input.seoTitle as string) || "").trim() || null,
+    metaDescription: ((input.metaDescription as string) || "").trim() || null,
+    socialImageUrl: ((input.socialImageUrl as string) || "").trim() || null,
+    canonicalUrl: ((input.canonicalUrl as string) || "").trim() || null,
     publishStatus,
   };
 
@@ -502,8 +489,7 @@ export async function savePortalBlogPostAsyncPostgres(input: any, user: PortalUs
         );
       }
       await client.query("COMMIT");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const finalRes = await client.query<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [finalId]);
+      const finalRes = await client.query<Record<string, unknown>>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [finalId]);
       return mapPortalBlogPostRow(finalRes.rows[0]);
     } catch (error) {
       await client.query("ROLLBACK");
@@ -541,22 +527,15 @@ export async function setPortalBlogPublishStatusAsyncPostgres(
          VALUES ($1, $2, 'update', 'portal_blog_posts', $3, $4, $5, $6)`,
         [user.id, user.fullName, String(postId), JSON.stringify({ publishStatus: post.publishStatus }), JSON.stringify({ publishStatus }), `${publishStatus === 'published' ? 'Published' : 'Unpublished'} blog post ${post.slug}`]
       );
-      await client.query("COMMIT");
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    }
-  });
+  await client.query("COMMIT");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const finalRes = await queryPostgres<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [postId]);
+  const finalRes = await queryPostgres<Record<string, unknown>>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [postId]);
   return mapPortalBlogPostRow(finalRes.rows[0]);
 }
 
 export async function deletePortalBlogPostAsyncPostgres(postId: number, user: PortalUser) {
   requirePostgresConfigured();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const postResult = await queryPostgres<any>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [postId]);
+  const postResult = await queryPostgres<Record<string, unknown>>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [postId]);
   const post = postResult.rows[0] ? mapPortalBlogPostRow(postResult.rows[0]) : null;
   if (!post) throw new Error("Blog post not found.");
 

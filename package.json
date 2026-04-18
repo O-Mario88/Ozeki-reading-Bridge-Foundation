@@ -100,5 +100,12 @@
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.55.0",
     "wtfnode": "^0.10.1"
+  },
+  "overrides": {
+    "inflight": "lru-cache@10",
+    "rimraf": "^5.0.0",
+    "glob": "^11.0.0",
+    "lodash.isequal": "node:util",
+    "node-domexception": "globalThis.DOMException"
   }
 }
