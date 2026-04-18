@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { VimeoPlayerInstance } from "../TelemetryPlayer";
 
 interface VimeoTrackerProps {
   vimeoId: string;

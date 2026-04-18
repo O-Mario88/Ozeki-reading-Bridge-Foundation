@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
-interface VimeoEventData {
+export interface VimeoEventData {
   seconds: number;
   percent?: number;
   duration?: number;
 }
 
-interface VimeoPlayerInstance {
+export interface VimeoPlayerInstance {
   on: (event: string, callback: (data: VimeoEventData) => void) => void;
   off: (event: string) => void;
   getCurrentTime: () => Promise<number>;
