@@ -380,7 +380,7 @@ export async function getRecentFailedLoginAttemptsPostgres(identifier: string, m
 }
 
 export async function generateMfaOtpPostgres(userId: number): Promise<string> {
-  const code = Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join("");
+  const code = crypto.randomInt(100000, 999999).toString();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins expiry
   
   await queryPostgres(

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import crypto from "node:crypto";
 import {
   canManagePortalUsers,
   createPortalUserAccount,
@@ -19,7 +20,7 @@ const createUserSchema = z.object({
   email: z.string().email(),
   phone: z.string().optional(),
   role: z.enum(allRoles),
-  password: z.string().min(8),
+  password: z.string().min(8).optional(),
   department: z.string().optional(),
   geographyScope: z.string().optional(),
   sendInviteEmail: z.boolean().optional(),
@@ -81,9 +82,11 @@ export async function POST(request: Request) {
 
   try {
     const payload = createUserSchema.parse(await request.json());
+    const rawPassword = payload.password || crypto.randomBytes(9).toString("base64").replace(/[+/=]/g, "x").slice(0, 12);
     const shouldInvite = payload.sendInviteEmail === true;
     await createPortalUserAccount({
       ...payload,
+      password: rawPassword,
       status: shouldInvite ? "invited" : "active",
       mustChangePassword: shouldInvite,
     }, user);
@@ -95,7 +98,7 @@ export async function POST(request: Request) {
         const baseUrl = new URL(request.url).origin;
         await sendOnboardingInviteEmail(payload.email, {
           fullName: payload.fullName,
-          temporaryPassword: payload.password,
+          temporaryPassword: rawPassword,
           loginUrl: `${baseUrl}/portal/login`,
           role: payload.role,
         });
