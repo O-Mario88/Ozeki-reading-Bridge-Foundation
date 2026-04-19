@@ -25,17 +25,26 @@ const headlineMetricLabels = [
 export default async function ProgramsPage() {
   // Graceful degradation: if DB is unreachable at build, show shell without
   // KPI values rather than crashing the whole build.
-  let summary: Awaited<ReturnType<typeof getImpactSummary>> = { metrics: [] } as Awaited<ReturnType<typeof getImpactSummary>>;
+  const now = new Date().toISOString();
+  let summary: Awaited<ReturnType<typeof getImpactSummary>> = {
+    metrics: [],
+    engagement: {
+      bookingRequests: 0,
+      partnerInquiries: 0,
+      toolkitLeads: 0,
+      newsletterSubscribers: 0,
+    },
+    generatedAt: now,
+    lastUpdated: now,
+  };
   try {
     summary = await getImpactSummary();
   } catch (err) {
     console.error("[programs] impact summary unavailable at build/request time", err);
   }
-  const headlineMetrics = summary.metrics
-    ? headlineMetricLabels
-        .map((label) => summary.metrics.find((metric) => metric.label === label))
-        .filter((metric): metric is { label: string; value: number } => Boolean(metric))
-    : [];
+  const headlineMetrics = headlineMetricLabels
+    .map((label) => summary.metrics.find((metric) => metric.label === label))
+    .filter((metric): metric is { label: string; value: number } => Boolean(metric));
 
   const programsSchema = {
     "@context": "https://schema.org",
