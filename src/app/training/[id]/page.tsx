@@ -5,6 +5,11 @@ import { SessionVideoPanel } from "@/components/training/SessionVideoPanel";
 import { SessionTabs } from "@/components/training/SessionTabs";
 import { UpNextPanel } from "@/components/training/UpNextPanel";
 import { DiscussionPanel } from "@/components/training/DiscussionPanel";
+import {
+  getTrainingSession,
+  listTrainingArtifacts,
+  listTrainingResources,
+} from "@/lib/training-db";
 
 export const revalidate = 300;
 
@@ -14,16 +19,17 @@ export const metadata = {
 
 export default async function PublicSessionRoomPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
+    const sessionId = Number(id);
+    if (!Number.isFinite(sessionId) || sessionId <= 0) notFound();
 
-    const host = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const res = await fetch(`${host}/api/training/${id}`, { cache: "no-store" });
-  
-  if (!res.ok) {
-    if (res.status === 404) return notFound();
-    return <div className="p-8 text-red-500">Error loading session data.</div>;
-  }
-
-  const { session, resources, artifacts } = await res.json();
+    // Direct repository calls — self-fetching /api/* during SSG causes build-host
+    // "socket hang up" errors.
+    const session = await getTrainingSession(sessionId);
+    if (!session) notFound();
+    const [resources, artifacts] = await Promise.all([
+      listTrainingResources(sessionId),
+      listTrainingArtifacts(sessionId),
+    ]);
 
   return (
     <div className="h-screen flex overflow-hidden bg-white font-sans text-gray-900">
@@ -45,7 +51,7 @@ export default async function PublicSessionRoomPage({ params }: { params: Promis
               
               {/* Center Column: Video + Tabs */}
               <div className="flex-1 min-w-0 flex flex-col">
-                <SessionVideoPanel session={session} isStaff={false} />
+                <SessionVideoPanel session={session} isHost={false} />
                 <SessionTabs 
                   session={session} 
                   resources={resources || []} 
@@ -61,7 +67,7 @@ export default async function PublicSessionRoomPage({ params }: { params: Promis
                    <UpNextPanel />
                  </div>
                  <div className="flex-1 min-h-[400px]">
-                   <DiscussionPanel />
+                   <DiscussionPanel sessionId={session.id} />
                  </div>
               </div>
 

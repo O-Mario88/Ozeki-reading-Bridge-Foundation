@@ -3,6 +3,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { getPortalDashboardData, getPerformanceCascadeData } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { buildPerformanceCascadeFromRows } from "@/lib/performance-utils";
+import { ObservationsDashboardWidget } from "@/components/portal/ObservationsDashboardWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,9 @@ export default async function PortalDashboardPage() {
       shellClassName="portal-dashboard-shell"
     >
       <PortalDashboardClient dashboard={dashboard} performanceData={performanceData} />
+      <div className="px-4 pb-6 max-w-sm">
+        <ObservationsDashboardWidget />
+      </div>
     </PortalShell>
   );
 }

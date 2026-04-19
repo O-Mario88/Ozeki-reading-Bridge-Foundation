@@ -58,7 +58,9 @@ const packageConfig: Record<
   },
 };
 
-const usdToUgx = 3800;
+// Note: calculator is a marketing estimator; real finance flows use the live
+// rate from currency_rates via getUgxPerUsdPostgres().
+const usdToUgx = 3750;
 const averageLearnersPerSchool = 250;
 const costPerSchoolUsd = {
   schoolVisits: 632.0,

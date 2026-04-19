@@ -6,6 +6,7 @@ import {
     listSchoolDirectoryRecords,
 } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/auth";
+import type { AnthologyRecord, StoryRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,8 @@ export default async function PortalStoriesPage() {
             description="Create, approve, and publish learner-authored stories. Manage anthologies and consent workflow."
         >
             <StoryLibraryManager
-                initialStories={stories}
-                initialAnthologies={anthologies}
+                initialStories={stories as unknown as StoryRecord[]}
+                initialAnthologies={anthologies as unknown as AnthologyRecord[]}
                 schools={schools}
                 currentUser={user}
             />

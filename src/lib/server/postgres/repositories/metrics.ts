@@ -161,6 +161,32 @@ export const getImpactSummaryPostgres = unstable_cache(
 );
 
 import { unstable_cache } from "next/cache";
+import type { ImpactReportFactPack, ImpactReportNarrative, PortalDashboardData } from "@/lib/types";
+
+export type ImpactReportRow = {
+  id: number;
+  report_code: string;
+  title: string;
+  partner_name: string | null;
+  report_type: string;
+  report_category: string | null;
+  scope_type: string;
+  scope_value: string;
+  period_type: string;
+  period_start: string;
+  period_end: string;
+  fact_pack_json: ImpactReportFactPack;
+  narrative_json: ImpactReportNarrative;
+  audience: string;
+  output: string;
+  status: string;
+  is_public: boolean;
+  version: string;
+  generated_at: string;
+  view_count: number;
+  download_count: number;
+  created_at: string;
+};
 
 export const getPublicImpactAggregatePostgres = unstable_cache(
   async (
@@ -177,10 +203,10 @@ export const getPublicImpactAggregatePostgres = unstable_cache(
   { revalidate: 3600, tags: ["impact"] }
 );
 
-export async function getImpactReportByCodeAsyncPostgres(code: string, _context?: unknown): Promise<Record<string, unknown> | null> {
+export async function getImpactReportByCodeAsyncPostgres(code: string, _context?: unknown): Promise<ImpactReportRow | null> {
     try {
-        const res = await queryPostgres(`SELECT * FROM impact_reports WHERE id::text = $1`, [code]);
-        return (res.rows[0] as Record<string, unknown>) || null;
+        const res = await queryPostgres(`SELECT * FROM impact_reports WHERE report_code = $1`, [code]);
+        return (res.rows[0] as ImpactReportRow) || null;
     } catch {
         return null;
     }
@@ -273,11 +299,11 @@ export async function incrementImpactReportViewCountAsyncPostgres(id: string | n
     } catch { /* table may not exist */ }
 }
 
-export async function listPublicImpactReportsAsyncPostgres(limitOrFilters: number | { limit?: number; [key: string]: unknown } = 10): Promise<Record<string, unknown>[]> {
+export async function listPublicImpactReportsAsyncPostgres(limitOrFilters: number | { limit?: number; [key: string]: unknown } = 10): Promise<ImpactReportRow[]> {
     try {
         const limit = typeof limitOrFilters === 'number' ? limitOrFilters : (limitOrFilters.limit ?? 10);
-        const res = await queryPostgres(`SELECT * FROM impact_reports WHERE visibility = 'public' ORDER BY created_at DESC LIMIT $1`, [limit]);
-        return res.rows as Record<string, unknown>[];
+        const res = await queryPostgres(`SELECT * FROM impact_reports WHERE is_public = true ORDER BY created_at DESC LIMIT $1`, [limit]);
+        return res.rows as ImpactReportRow[];
     } catch {
         return [];
     }
@@ -434,8 +460,8 @@ const _getPortalDashboardDataPostgres = unstable_cache(
   }
 }, ["portal-dashboard-postgres"], { revalidate: 60, tags: ["portal-dashboard"] });
 
-export async function getPortalDashboardDataPostgres(_user: { id: number; role?: string }): Promise<Record<string, unknown>> {
-  return _getPortalDashboardDataPostgres() as any; // Cast back to Record
+export async function getPortalDashboardDataPostgres(_user: { id: number; role?: string }): Promise<PortalDashboardData> {
+  return _getPortalDashboardDataPostgres() as unknown as PortalDashboardData;
 }
 
 export type PerformanceCascadeRow = {

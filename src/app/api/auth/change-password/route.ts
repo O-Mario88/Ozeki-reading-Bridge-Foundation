@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { findPortalUserAuthByIdPostgres, verifyPassword, hashPassword } from "@/lib/server/postgres/repositories/auth";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    console.error("[CHANGE-PASSWORD] Error:", error);
+    logger.error("[change-password] Unhandled error", { error: String(error) });
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

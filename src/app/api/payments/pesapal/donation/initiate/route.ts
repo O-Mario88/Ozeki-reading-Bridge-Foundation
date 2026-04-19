@@ -1,61 +1,110 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createDonationIntentPostgres } from "@/lib/server/postgres/repositories/donations";
 import { initiatePesapalOrderGateway } from "@/lib/server/payments/pesapal";
+import { consumeRateLimit } from "@/lib/rate-limit";
+import { checkIdempotency, storeIdempotencyResponse } from "@/lib/server/idempotency";
+import { logger } from "@/lib/logger";
 
-export async function POST(request: Request) {
-   try {
-     const body = await request.json();
+export const runtime = "nodejs";
 
-     if (!body.amount || body.amount < 1000) {
-        return NextResponse.json({ error: "Invalid donation amount." }, { status: 400 });
-     }
+const donationSchema = z.object({
+  amount: z.coerce.number().int().min(1000).max(999_999_999),
+  currency: z.string().trim().length(3).optional(),
+  purpose: z.string().trim().max(500).nullable().optional(),
+  schoolName: z.string().trim().max(200).nullable().optional(),
+  schoolDistrict: z.string().trim().max(100).nullable().optional(),
+  message: z.string().trim().max(2000).nullable().optional(),
+  donorType: z.enum(["individual", "organization", "company"]).nullable().optional(),
+  name: z.string().trim().max(200).nullable().optional(),
+  organizationName: z.string().trim().max(200).nullable().optional(),
+  email: z.string().trim().email().max(200).nullable().optional(),
+  phone: z.string().trim().min(6).max(32).nullable().optional(),
+  country: z.string().trim().max(100).nullable().optional(),
+  districtOrCity: z.string().trim().max(200).nullable().optional(),
+  anonymous: z.boolean().optional(),
+  consentToUpdates: z.boolean().optional(),
+});
 
-     console.log(">> Constructing Secure Donation Intent & Pinging Pesapal...");
+export async function POST(request: NextRequest) {
+  // Basic IP-based rate limit — 10 donation initiations / minute / IP.
+  // Prevents abuse while leaving room for legitimate retries.
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rl = consumeRateLimit(`donation-initiate:${ip}`, { maxRequests: 10, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many donation attempts. Please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterSeconds)) } },
+    );
+  }
 
-     // 1. Log native donation schema locally and generate Cryptographic References
-     const dbRecord = await createDonationIntentPostgres({
-        amount: body.amount,
-        purpose: body.purpose,
-        schoolName: body.schoolName,
-        schoolDistrict: body.schoolDistrict,
-        message: body.message,
-        donorType: body.donorType,
-        donorName: body.name,
-        email: body.email,
-        phone: body.phone,
-        anonymous: body.anonymous
-     });
+  try {
+    const raw = await request.json();
+    const parsed = donationSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid donation payload." },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data;
 
-     const paymentId = dbRecord.id; 
-     // Note: we are passing the `donations.id` directly into the gateway. The IPN multiplexer will know to query this table because of the merchantReference string.
-     const merchantRef = dbRecord.merchantReference;
+    // Idempotency: if the client sent Idempotency-Key and we already processed
+    // the identical payload, replay the original response instead of creating
+    // a duplicate donation record.
+    const idem = await checkIdempotency(request, "donation-initiate", body);
+    if (idem.cached) return idem.replay;
 
-     const contactPayload = {
-        phone: body.phone || '000000000',
-        email: body.email || 'donor@ozekiread.org'
-     };
+    // 1. Record donation intent — field names here must match the repository's
+    //    INSERT column order (donations.ts:155-167).
+    const dbRecord = await createDonationIntentPostgres({
+      amount: body.amount,
+      currency: body.currency ?? "UGX",
+      donationPurpose: body.purpose ?? null,
+      supportedSchoolName: body.schoolName ?? null,
+      supportedSchoolDistrict: body.schoolDistrict ?? null,
+      donorMessage: body.message ?? null,
+      donorType: body.donorType ?? null,
+      donorName: body.name ?? null,
+      organizationName: body.organizationName ?? null,
+      email: body.email ?? null,
+      phone: body.phone ?? null,
+      country: body.country ?? null,
+      districtOrCity: body.districtOrCity ?? null,
+      anonymous: Boolean(body.anonymous),
+      consentToUpdates: Boolean(body.consentToUpdates),
+    });
 
-     // 2. Transmit Secure Command to Pesapal Live V3 grid
-     const gatewayResponse = await initiatePesapalOrderGateway(
-        paymentId,
-        merchantRef,
-        body.amount,
-        "UGX",
-        contactPayload
-     );
+    // 2. Initiate Pesapal payment
+    const contactPayload = {
+      phone: body.phone ?? "000000000",
+      email: body.email ?? "donor@ozekiread.org",
+      name: body.anonymous ? undefined : body.name ?? undefined,
+    };
+    const description = body.purpose
+      ? `Donation: ${String(body.purpose).slice(0, 100)}`
+      : "OzekiRead Donation";
 
-     // Return the dynamic iframe injection URL back to the frontend wizard
-     return NextResponse.json({
-        success: true,
-        redirectUrl: gatewayResponse.redirectUrl
-     });
+    const gatewayResponse = await initiatePesapalOrderGateway(
+      dbRecord.id,
+      dbRecord.merchantReference,
+      body.amount,
+      body.currency ?? "UGX",
+      contactPayload,
+      description,
+    );
 
-   } catch (e: unknown) {
-     console.error("[DONATION INIT ERROR | DB/PESAPAL UNAVAILABLE]", e);
-     // Development / Robust Network Failover Simulator
-     // Because we shifted to a native interface, if Pesapal or Postgres are unconfigured locally,
-     // we simulate a raw success payload block to permit UI testing safely.
-     console.log(">> SIMULATING SUCCESSFUL NATIVE TRANSACTION FOR UI TESTING");
-     return NextResponse.json({ success: true, redirectUrl: null });
-   }
+    const response = NextResponse.json({
+      success: true,
+      redirectUrl: gatewayResponse.redirectUrl,
+      donationReference: dbRecord.merchantReference,
+    });
+    return storeIdempotencyResponse(idem, response);
+  } catch (e: unknown) {
+    logger.error("[donation/initiate] failed", { error: String(e) });
+    return NextResponse.json(
+      { error: "Payment gateway unavailable. Please try again or contact support." },
+      { status: 503 },
+    );
+  }
 }

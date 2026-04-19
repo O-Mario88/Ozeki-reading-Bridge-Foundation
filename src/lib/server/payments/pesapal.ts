@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { logger } from "@/lib/logger";
 
 /**
  * LIVE PESAPAL V3 FINTECH INTEGRATION LAYER
@@ -8,8 +9,7 @@ import { queryPostgres } from "@/lib/server/postgres/client";
 
 function getPesapalBaseUrl() {
    const env = process.env.PESAPAL_ENVIRONMENT || 'sandbox';
-   return env === 'live' ? 'https://pay.pesapal.com/v3' : 'https://pay.pesapal.com/v3'; 
-   // Defaulting to Live since the user stated they are production keys.
+   return env === 'live' ? 'https://pay.pesapal.com/v3' : 'https://cybqa.pesapal.com/pesapalv3';
 }
 
 async function fetchBearerToken(): Promise<string> {
@@ -40,28 +40,31 @@ async function fetchBearerToken(): Promise<string> {
    return data.token;
 }
 
-export async function initiatePesapalOrderGateway(paymentId: number, merchantReference: string, amount: number, currency: string, schoolContact: { phone?: string; email?: string }) {
+export async function initiatePesapalOrderGateway(paymentId: number, merchantReference: string, amount: number, currency: string, schoolContact: { phone?: string; email?: string; name?: string }, description?: string) {
    // 1. Fetch Bearer Token dynamically
    const token = await fetchBearerToken();
 
-   const ipnId = process.env.PESAPAL_IPN_ID || "c3b52d62-xxxx-xxxx-xxxx"; 
-   // Note: In production you must formally register an IPN URL to get an IPN ID.
+   const ipnId = process.env.PESAPAL_IPN_ID;
+   if (!ipnId) throw new Error("PESAPAL_IPN_ID is not configured. Register your IPN URL with Pesapal and set this environment variable.");
    
    const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://ozekiread.org'}/payments/pesapal/callback`;
 
    // 2. Transmit the Official SubmitOrderRequest
+   const [firstName, ...rest] = (schoolContact.name || "").trim().split(" ");
+   const lastName = rest.join(" ") || "Donor";
+
    const orderPayload = {
       id: merchantReference,
       currency: currency,
       amount: amount,
-      description: 'OzekiRead Services Booking',
+      description: description || 'OzekiRead Donation',
       callback_url: callbackUrl,
       notification_id: ipnId,
       billing_address: {
          phone_number: schoolContact.phone || "000000000",
          email_address: schoolContact.email || "finance@ozekiread.org",
-         first_name: "Ozeki",
-         last_name: "School Client"
+         first_name: firstName || "Anonymous",
+         last_name: lastName,
       }
    };
 
@@ -77,7 +80,7 @@ export async function initiatePesapalOrderGateway(paymentId: number, merchantRef
 
    if (!res.ok) {
       const errPayload = await res.text();
-      console.error("[PESAPAL TXN FAULT]", errPayload);
+      logger.error("[PESAPAL TXN FAULT]", { error: errPayload });
       throw new Error("Failed to secure Pesapal Gateway connection.");
    }
 

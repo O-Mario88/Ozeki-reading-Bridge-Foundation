@@ -61,6 +61,13 @@ function setCache(key: string, data: PublicImpactAggregate) {
 }
 import { HeadlineStatsPanel } from "./HeadlineStatsPanel";
 import { LocationNavigator, PublicMapSelection } from "./LocationNavigator";
+import { CommandCenterToolbar } from "./CommandCenterToolbar";
+import { ComparisonPanel } from "./ComparisonPanel";
+import { EmbedModal } from "./EmbedModal";
+import { TrainingIntelligencePanel } from "./TrainingIntelligencePanel";
+import { ThisPeriodHero } from "./ThisPeriodHero";
+import { FreshnessBadge } from "./FreshnessBadge";
+import { AtRiskRadar } from "./AtRiskRadar";
 import {
   READING_LEVELS,
   getReadingLevelColor,
@@ -350,8 +357,20 @@ export function PublicImpactMapExplorer({
     | "teaching"
     | "equity"
     | "quality"
+    | "intelligence"
+    | "trainingOps"
   >("outcomes");
   const initialPayloadUsed = useRef(!!initialPayload);
+
+  // Command Center state
+  const [compareScope, setCompareScope] = useState<{ level: ScopeLevel; id: string; name: string } | null>(null);
+  const [comparePayload, setComparePayload] = useState<PublicImpactAggregate | null>(null);
+  const [comparePeriod, setComparePeriod] = useState<string | null>(null);
+  const [comparePeriodPayload, setComparePeriodPayload] = useState<PublicImpactAggregate | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [embedOpen, setEmbedOpen] = useState(false);
+  const [choroplethMetric, setChoroplethMetric] = useState<string>("none");
+  const [choroplethData, setChoroplethData] = useState<{ values: Record<string, number>; min: number; max: number } | null>(null);
 
   const scope = useMemo(() => resolveScope(selection), [selection]);
 
@@ -448,6 +467,43 @@ export function PublicImpactMapExplorer({
       active = false;
     };
   }, [period, navigatorSnapshot]);
+
+  // Fetch comparison-scope aggregate
+  useEffect(() => {
+    if (!compareScope) { setComparePayload(null); return; }
+    let active = true;
+    setCompareLoading(true);
+    fetch(scopeEndpoint(compareScope.level, compareScope.id, period))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => { if (active && json) setComparePayload(json as PublicImpactAggregate); })
+      .catch(() => {})
+      .finally(() => { if (active) setCompareLoading(false); });
+    return () => { active = false; };
+  }, [compareScope, period]);
+
+  // Fetch comparison-period aggregate (same scope, different period)
+  useEffect(() => {
+    if (!comparePeriod) { setComparePeriodPayload(null); return; }
+    let active = true;
+    setCompareLoading(true);
+    fetch(scopeEndpoint(scope.level, scope.id, comparePeriod))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => { if (active && json) setComparePeriodPayload(json as PublicImpactAggregate); })
+      .catch(() => {})
+      .finally(() => { if (active) setCompareLoading(false); });
+    return () => { active = false; };
+  }, [comparePeriod, scope.level, scope.id]);
+
+  // Fetch choropleth metric data
+  useEffect(() => {
+    if (choroplethMetric === "none") { setChoroplethData(null); return; }
+    let active = true;
+    fetch(`/api/impact/choropleth?metric=${encodeURIComponent(choroplethMetric)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => { if (active && json?.values) setChoroplethData({ values: json.values, min: json.min, max: json.max }); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [choroplethMetric]);
 
   useEffect(() => {
     if (!syncUrl) {
@@ -737,6 +793,26 @@ export function PublicImpactMapExplorer({
       helper: "Total video telemetry tracking",
     },
     {
+      label: "Training Sessions",
+      value: (kpis?.trainingSessionsCount ?? 0).toLocaleString(),
+      helper: "In-person training sessions conducted",
+    },
+    {
+      label: "Teachers Trained",
+      value: (kpis?.teachersTrainedTotal ?? 0).toLocaleString(),
+      helper: `${kpis?.teachersTrainedFemale ?? 0}F / ${kpis?.teachersTrainedMale ?? 0}M unique participants`,
+    },
+    {
+      label: "School Leaders Trained",
+      value: (kpis?.schoolLeadersTrained ?? 0).toLocaleString(),
+      helper: `${kpis?.schoolLeadersTrainedFemale ?? 0}F / ${kpis?.schoolLeadersTrainedMale ?? 0}M leaders trained`,
+    },
+    {
+      label: "Certificates Issued",
+      value: (kpis?.certificatesIssued ?? 0).toLocaleString(),
+      helper: "Training completion certificates awarded",
+    },
+    {
       label: "Funds Received (USD)",
       value: typeof payload?.financials?.totalUsdEquivalent === 'number' 
         ? `$${payload.financials.totalUsdEquivalent.toLocaleString()}` 
@@ -906,6 +982,7 @@ export function PublicImpactMapExplorer({
             }
             districtSearchOptions={districtSearchOptions}
             compact={compact}
+            choropleth={choroplethData ? { metric: choroplethMetric, ...choroplethData } : null}
           />
         </div>
         <div className="impact-metrics-trio-wrapper">
@@ -1200,6 +1277,41 @@ export function PublicImpactMapExplorer({
                 </div>
               ) : null}
 
+              <div className="impact-freshness-row">
+                <FreshnessBadge lastUpdatedIso={payload?.meta?.lastUpdated ?? payload?.generatedAt ?? null} />
+              </div>
+
+              <ThisPeriodHero payload={payload} previousPayload={comparePeriodPayload} />
+
+              <AtRiskRadar />
+
+              <CommandCenterToolbar
+                payload={payload}
+                period={period}
+                availablePeriods={["FY", "Term 1", "Term 2", "Term 3", "2024", "2025", "2026"]}
+                comparePeriod={comparePeriod}
+                onComparePeriodChange={setComparePeriod}
+                compareScope={compareScope}
+                onCompareScopeChange={setCompareScope}
+                navigator={navigatorSnapshot}
+                onOpenEmbed={() => setEmbedOpen(true)}
+                choroplethMetric={choroplethMetric}
+                onChoroplethMetricChange={setChoroplethMetric}
+              />
+
+              {(compareScope || comparePeriod) && payload ? (
+                <ComparisonPanel
+                  primary={payload}
+                  comparison={comparePayload ?? comparePeriodPayload}
+                  comparisonLabel={
+                    compareScope
+                      ? `${compareScope.name} — ${period}`
+                      : `${scope.id} — ${comparePeriod}`
+                  }
+                  loading={compareLoading}
+                />
+              ) : null}
+
               <div className="impact-tabs">
                 <button
                   className={activeTab === "outcomes" ? "active" : ""}
@@ -1236,6 +1348,18 @@ export function PublicImpactMapExplorer({
                   onClick={() => setActiveTab("quality")}
                 >
                   Data Completeness
+                </button>
+                <button
+                  className={activeTab === "intelligence" ? "active" : ""}
+                  onClick={() => setActiveTab("intelligence")}
+                >
+                  Intelligence
+                </button>
+                <button
+                  className={activeTab === "trainingOps" ? "active" : ""}
+                  onClick={() => setActiveTab("trainingOps")}
+                >
+                  Training Ops
                 </button>
               </div>
             </div>
@@ -1994,7 +2118,230 @@ export function PublicImpactMapExplorer({
             </div>
           </article>
         )}
+
+        {activeTab === "intelligence" && (
+          <div className="impact-auto-grid" style={{ gap: "1.5rem" }}>
+
+            {/* Panel 1: Training → Outcome Correlation */}
+            <article className="card">
+              <h3>Training Impact on Learning Outcomes</h3>
+              <p className="text-gray-500 text-sm mb-4">
+                Average composite score gain (endline − baseline) comparing schools that received in-person training vs those that did not.
+              </p>
+              {loading ? (
+                <p>Loading...</p>
+              ) : payload?.trainingOutcomeCorrelation ? (
+                <div className="impact-auto-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+                  <div className="impact-domain-mini-card">
+                    <h4>Trained Schools</h4>
+                    <div className="text-3xl font-bold mt-2" style={{ color: "#ea580c" }}>
+                      {payload.trainingOutcomeCorrelation.trainedSchools.avgScoreDelta !== null
+                        ? `+${payload.trainingOutcomeCorrelation.trainedSchools.avgScoreDelta.toFixed(2)}`
+                        : "—"}
+                    </div>
+                    <p className="text-gray-500 text-sm">{payload.trainingOutcomeCorrelation.trainedSchools.count} schools with training</p>
+                  </div>
+                  <div className="impact-domain-mini-card">
+                    <h4>Untrained Schools</h4>
+                    <div className="text-3xl font-bold mt-2">
+                      {payload.trainingOutcomeCorrelation.untrainedSchools.avgScoreDelta !== null
+                        ? `+${payload.trainingOutcomeCorrelation.untrainedSchools.avgScoreDelta.toFixed(2)}`
+                        : "—"}
+                    </div>
+                    <p className="text-gray-500 text-sm">{payload.trainingOutcomeCorrelation.untrainedSchools.count} schools without training</p>
+                  </div>
+                  <div className="impact-domain-mini-card">
+                    <h4>Training Lift</h4>
+                    <div className="text-3xl font-bold mt-2" style={{ color: payload.trainingOutcomeCorrelation.lift !== null && payload.trainingOutcomeCorrelation.lift > 0 ? "#16a34a" : "#dc2626" }}>
+                      {payload.trainingOutcomeCorrelation.lift !== null
+                        ? `${payload.trainingOutcomeCorrelation.lift > 0 ? "+" : ""}${payload.trainingOutcomeCorrelation.lift.toFixed(2)}`
+                        : "—"}
+                    </div>
+                    <p className="text-gray-500 text-sm">Score advantage from training</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-400">Insufficient data for correlation analysis.</p>
+              )}
+            </article>
+
+            {/* Panel 2: Cohort Progression */}
+            <article className="card">
+              <h3>Learner Cohort Progression</h3>
+              <p className="text-gray-500 text-sm mb-4">
+                Tracks the same learners from baseline through endline using matched UIDs.
+              </p>
+              {loading ? (
+                <p>Loading...</p>
+              ) : payload?.cohortProgression && payload.cohortProgression.matchedLearners > 0 ? (
+                <>
+                  <div className="impact-auto-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: "1rem" }}>
+                    <div className="impact-domain-mini-card">
+                      <h4>Matched Learners</h4>
+                      <div className="text-3xl font-bold mt-2">{payload.cohortProgression.matchedLearners.toLocaleString()}</div>
+                      <p className="text-gray-500 text-sm">Both baseline &amp; endline</p>
+                    </div>
+                    <div className="impact-domain-mini-card">
+                      <h4>Baseline Avg</h4>
+                      <div className="text-3xl font-bold mt-2">{payload.cohortProgression.avgBaselineComposite?.toFixed(1) ?? "—"}</div>
+                      <p className="text-gray-500 text-sm">Composite score</p>
+                    </div>
+                    {payload.cohortProgression.avgProgressComposite !== null && (
+                      <div className="impact-domain-mini-card">
+                        <h4>Progress Avg</h4>
+                        <div className="text-3xl font-bold mt-2">{payload.cohortProgression.avgProgressComposite.toFixed(1)}</div>
+                        <p className="text-gray-500 text-sm">Mid-cycle snapshot</p>
+                      </div>
+                    )}
+                    <div className="impact-domain-mini-card">
+                      <h4>Endline Avg</h4>
+                      <div className="text-3xl font-bold mt-2" style={{ color: "#ea580c" }}>
+                        {payload.cohortProgression.avgEndlineComposite?.toFixed(1) ?? "—"}
+                      </div>
+                      <p className="text-gray-500 text-sm">
+                        {payload.cohortProgression.compositeDelta !== null
+                          ? `${payload.cohortProgression.compositeDelta > 0 ? "+" : ""}${payload.cohortProgression.compositeDelta.toFixed(2)} pts from baseline`
+                          : "Composite score"}
+                      </p>
+                    </div>
+                  </div>
+                  {payload.cohortProgression.byGrade.length > 0 && (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                          <th style={{ textAlign: "left", padding: "6px 8px" }}>Grade</th>
+                          <th style={{ textAlign: "right", padding: "6px 8px" }}>N</th>
+                          <th style={{ textAlign: "right", padding: "6px 8px" }}>Baseline</th>
+                          <th style={{ textAlign: "right", padding: "6px 8px" }}>Endline</th>
+                          <th style={{ textAlign: "right", padding: "6px 8px" }}>Delta</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payload.cohortProgression.byGrade.map((row) => (
+                          <tr key={row.grade} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ padding: "6px 8px", fontWeight: 600 }}>{row.grade}</td>
+                            <td style={{ padding: "6px 8px", textAlign: "right" }}>{row.n}</td>
+                            <td style={{ padding: "6px 8px", textAlign: "right" }}>{row.baselineAvg?.toFixed(1) ?? "—"}</td>
+                            <td style={{ padding: "6px 8px", textAlign: "right" }}>{row.endlineAvg?.toFixed(1) ?? "—"}</td>
+                            <td style={{ padding: "6px 8px", textAlign: "right", color: row.delta !== null && row.delta > 0 ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                              {row.delta !== null ? `${row.delta > 0 ? "+" : ""}${row.delta.toFixed(2)}` : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-400">No matched learner cohorts found. Learner UIDs are required for cohort tracking.</p>
+              )}
+            </article>
+
+            {/* Panel 3: At-Risk School Watch */}
+            <article className="card">
+              <h3>At-Risk School Watch</h3>
+              <p className="text-gray-500 text-sm mb-4">
+                Schools flagged for priority follow-up based on coaching gaps, missing assessments, and low reach ratios.
+              </p>
+              {loading ? (
+                <p>Loading...</p>
+              ) : (payload?.rankings?.atRisk?.length ?? 0) > 0 ? (
+                <div className="mt-2 flex flex-col gap-2">
+                  {(payload?.rankings?.atRisk ?? []).map((school) => (
+                    <div key={school.schoolId} style={{ padding: "10px 12px", borderRadius: 8, background: school.riskScore >= 4 ? "#fef2f2" : school.riskScore >= 3 ? "#fff7ed" : "#f9fafb", borderLeft: `4px solid ${school.riskScore >= 4 ? "#dc2626" : school.riskScore >= 3 ? "#ea580c" : "#6b7280"}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontWeight: 600 }}>{school.name}</span>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: school.riskScore >= 4 ? "#dc2626" : "#ea580c" }}>
+                          Risk {school.riskScore}
+                        </span>
+                      </div>
+                      <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {school.riskFactors.map((f) => (
+                          <span key={f} style={{ fontSize: "0.72rem", background: "#e5e7eb", borderRadius: 4, padding: "2px 6px" }}>{f}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400" style={{ color: "#16a34a", fontWeight: 600 }}>All schools within acceptable thresholds.</p>
+              )}
+            </article>
+
+            {/* Panel 4: Donor Impact Traceability */}
+            <article className="card">
+              <h3>Donor Impact Traceability</h3>
+              <p className="text-gray-500 text-sm mb-4">
+                Sponsorships and donations linked to this scope, with outcome visibility for funded areas.
+              </p>
+              {loading ? (
+                <p>Loading...</p>
+              ) : payload?.donorImpact ? (
+                <>
+                  <div className="impact-auto-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: "1rem" }}>
+                    <div className="impact-domain-mini-card">
+                      <h4>Sponsorships</h4>
+                      <div className="text-3xl font-bold mt-2">{payload.donorImpact.totalSponsorships}</div>
+                      <p className="text-gray-500 text-sm">Completed in this scope</p>
+                    </div>
+                    <div className="impact-domain-mini-card">
+                      <h4>Linked Schools</h4>
+                      <div className="text-3xl font-bold mt-2">{payload.donorImpact.linkedSchoolsCount}</div>
+                      <p className="text-gray-500 text-sm">Schools receiving funded support</p>
+                    </div>
+                    <div className="impact-domain-mini-card">
+                      <h4>Funded Districts</h4>
+                      <div className="text-3xl font-bold mt-2">{payload.donorImpact.fundedDistrictsCount}</div>
+                      <p className="text-gray-500 text-sm">Districts with sponsorship coverage</p>
+                    </div>
+                  </div>
+                  {payload.donorImpact.sponsorships.length > 0 ? (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                          <th style={{ textAlign: "left", padding: "6px 8px" }}>Reference</th>
+                          <th style={{ textAlign: "left", padding: "6px 8px" }}>Donor</th>
+                          <th style={{ textAlign: "left", padding: "6px 8px" }}>Target</th>
+                          <th style={{ textAlign: "right", padding: "6px 8px" }}>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payload.donorImpact.sponsorships.map((s) => (
+                          <tr key={s.reference} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", fontSize: "0.78rem" }}>{s.reference}</td>
+                            <td style={{ padding: "6px 8px" }}>{s.donorName}</td>
+                            <td style={{ padding: "6px 8px", color: "#6b7280" }}>{s.targetType}: {s.targetName}</td>
+                            <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600 }}>
+                              {s.currency} {s.amount.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="text-gray-400">No sponsorships linked to this scope yet.</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-400">No donor data available for this scope.</p>
+              )}
+            </article>
+
+          </div>
+        )}
+
+        {activeTab === "trainingOps" && (
+          <TrainingIntelligencePanel />
+        )}
       </div>
+      {payload ? (
+        <EmbedModal
+          open={embedOpen}
+          onClose={() => setEmbedOpen(false)}
+          payload={payload}
+          period={period}
+        />
+      ) : null}
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { getCurrentPortalUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   getGoogleWorkspaceConfig,
   GOOGLE_WORKSPACE_REQUIRED_SCOPES,
@@ -58,7 +59,7 @@ export async function GET() {
 
     return NextResponse.redirect(authorizeUrl);
   } catch (error) {
-    console.error("Google Workspace connect error:", error);
+    logger.error("[google-workspace/connect] OAuth initiation failed", { error: String(error) });
     return NextResponse.json({ error: "Internal error." }, { status: 500 });
   }
 }

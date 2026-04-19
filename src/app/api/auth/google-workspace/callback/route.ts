@@ -4,6 +4,7 @@ import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { getCurrentPortalUser } from "@/lib/auth";
 import { getGoogleWorkspaceConfig } from "@/lib/google-workspace";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -61,11 +62,7 @@ export async function GET(request: Request) {
     const { tokens } = await oauth2Client.getToken(code);
 
     if (!tokens.refresh_token) {
-      console.warn(
-        "Google OAuth returned tokens but no refresh_token. " +
-        "This usually means the user already granted consent previously. " +
-        "Revoke access at https://myaccount.google.com/permissions and retry.",
-      );
+      logger.warn("[google-oauth] No refresh_token returned — user likely already granted consent previously. Revoke at myaccount.google.com/permissions and retry.");
       return NextResponse.redirect(
         new URL(
           "/portal/settings?google_error=no_refresh_token",
@@ -97,9 +94,9 @@ export async function GET(request: Request) {
         );
       }
 
-      console.log("✅ GOOGLE_REFRESH_TOKEN written to .env.local");
+      logger.info("[google-oauth] GOOGLE_REFRESH_TOKEN written to .env.local");
     } catch (fsError) {
-      console.error("Could not write .env.local:", fsError);
+      logger.error("[google-oauth] Could not write .env.local", { error: String(fsError) });
       // Even if file write fails, show the token on the redirect
       return NextResponse.redirect(
         new URL(
@@ -116,7 +113,7 @@ export async function GET(request: Request) {
       new URL("/portal/settings?google_success=true", request.url),
     );
   } catch (tokenError) {
-    console.error("Google token exchange failed:", tokenError);
+    logger.error("[google-oauth] Token exchange failed", { error: String(tokenError) });
     return NextResponse.redirect(
       new URL("/portal/settings?google_error=token_exchange_failed", request.url),
     );

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { TrainingShellSidebar } from "@/components/training/TrainingShellSidebar";
 import { TrainingTopBar } from "@/components/training/TrainingTopBar";
 import { SessionVideoPanel } from "@/components/training/SessionVideoPanel";
@@ -15,10 +15,10 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Manage Session | Ozeki Online Training Portal",
+  title: "Training Session | Ozeki Online Training Portal",
 };
 
-export default async function AdminSessionRoomPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function TrainingSessionRoomPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePortalUser();
   const { id } = await params;
   const sessionId = parseInt(id, 10);
@@ -26,9 +26,15 @@ export default async function AdminSessionRoomPage({ params }: { params: Promise
   const session = await getTrainingSession(sessionId);
   if (!session) return notFound();
 
-  // Admin access check
-  if (!user.isAdmin && !user.isSuperAdmin) {
-    return <div className="p-8">Forbidden</div>;
+  const isHost =
+    user.isAdmin ||
+    user.isSuperAdmin ||
+    session.hostUserId === user.id ||
+    session.createdByUserId === user.id;
+
+  // Non-host/non-admin staff go to the participant join page
+  if (!isHost) {
+    redirect(`/portal/training/${sessionId}/join`);
   }
 
   const [resources, artifacts] = await Promise.all([
@@ -55,24 +61,34 @@ export default async function AdminSessionRoomPage({ params }: { params: Promise
             <div className="flex flex-col xl:flex-row gap-6 lg:gap-8">
 
               {/* Center Column: Video + Tabs */}
-              <div className="flex-1 min-w-0 flex flex-col">
-                <SessionVideoPanel session={session} trainerName={user.fullName} isStaff={true} />
+              <div className="flex-1 min-w-0 flex flex-col gap-6">
+                <SessionVideoPanel
+                  session={session}
+                  trainerName={user.fullName ?? "Ozeki Trainer"}
+                  isHost={true}
+                  userId={user.id}
+                />
                 <SessionTabs
                   session={session}
-                  resources={resources || []}
-                  artifacts={artifacts || []}
+                  resources={resources ?? []}
+                  artifacts={artifacts ?? []}
                   isStaff={true}
+                  isHost={true}
                 />
               </div>
 
               {/* Right Column: Playlist + Discussion */}
               <div className="w-full xl:w-80 2xl:w-96 shrink-0 flex flex-col gap-6">
-                {/* Stack Panels vertically */}
                 <div className="h-auto xl:h-[40%] min-h-[250px]">
                   <UpNextPanel />
                 </div>
                 <div className="flex-1 min-h-[400px]">
-                  <DiscussionPanel />
+                  <DiscussionPanel
+                    sessionId={session.id}
+                    currentUserId={user.id}
+                    currentUserName={user.fullName ?? user.email ?? "Staff"}
+                    isAdmin={user.isAdmin || user.isSuperAdmin}
+                  />
                 </div>
               </div>
 

@@ -25,6 +25,7 @@ const primaryNavItems: PortalNavItem[] = [
 
   // Features
   { href: "/portal/assessments", label: "Assessments", icon: "📝", roles: ["Staff", "Admin", "Volunteer", "Accountant"], section: "features" },
+  { href: "/portal/observations", label: "Observations", icon: "👁", roles: ["Staff", "Admin", "Volunteer"], section: "features" },
   { href: "/portal/visits", label: "Visits/Coaching", icon: "🚶", roles: ["Staff", "Admin", "Accountant", "Volunteer"], section: "features" },
   { href: "/portal/trainings", label: "Trainings", icon: "🎓", roles: ["Staff", "Admin", "Accountant", "Volunteer"], section: "features" },
   { href: "/portal/interventions", label: "Interventions", icon: "🎯", roles: ["Staff", "Admin", "Accountant"], section: "features" },

@@ -8,6 +8,7 @@ import {
 } from "@/services/financeService";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { csvHeaders, requireFinanceReceiptEditor } from "@/app/api/portal/finance/_utils";
+import { queryPostgres } from "@/lib/server/postgres/client";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,7 @@ const createSchema = z.object({
   receivedFrom: z.string().trim().min(2).max(200),
   receiptDate: z.string().trim().min(8),
   currency: z.enum(["UGX", "USD"]).default("UGX"),
-  amountReceived: z.coerce.number().positive(),
+  amountReceived: z.coerce.number().positive().max(999_999_999, "Amount exceeds maximum allowed per transaction."),
   paymentMethod: z.enum(["cash", "bank_transfer", "mobile_money", "cheque", "other"]),
   referenceNo: z.string().trim().max(200).optional(),
   relatedInvoiceId: z.coerce.number().int().positive().optional(),
@@ -91,6 +92,21 @@ export async function POST(request: Request) {
 
   try {
     const parsed = createSchema.parse(await request.json());
+
+    // Duplicate reference number check
+    if (parsed.referenceNo) {
+      const dupCheck = await queryPostgres(
+        `SELECT id FROM finance_receipts WHERE reference_no = $1 LIMIT 1`,
+        [parsed.referenceNo.trim()],
+      );
+      if (dupCheck.rows.length > 0) {
+        return NextResponse.json(
+          { error: `A receipt with reference "${parsed.referenceNo}" already exists (ID ${dupCheck.rows[0].id}).` },
+          { status: 409 },
+        );
+      }
+    }
+
     const created = await createFinanceReceiptAsync(
       {
         contactId: parsed.contactId,

@@ -69,7 +69,20 @@ type UgandaImpactMapProProps = {
   districtSearchOptions?: Array<{ district: string; subRegion: string }>;
   compact?: boolean;
   className?: string;
+  choropleth?: {
+    metric: string;
+    values: Record<string, number>;
+    min: number;
+    max: number;
+  } | null;
 };
+
+function intensityFill(value: number, min: number, max: number): string {
+  if (max <= min) return "rgba(249, 115, 22, 0.35)";
+  const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  const alpha = 0.15 + t * 0.75;
+  return `rgba(234, 88, 12, ${alpha.toFixed(2)})`;
+}
 
 function pathForTarget(target: MapTarget, periodLabel: string) {
   const period = encodeURIComponent(periodLabel);
@@ -261,6 +274,7 @@ export function UgandaImpactMapPro({
   districtSearchOptions = [],
   compact = false,
   className,
+  choropleth = null,
 }: UgandaImpactMapProProps) {
   const {
     containerRef,
@@ -832,7 +846,9 @@ export function UgandaImpactMapPro({
                           ? "transparent"
                           : dimmedByDistrictSelection
                             ? "rgba(148, 163, 184, 0.42)"
-                            : SUB_REGION_COLORS[districtShape.subRegion],
+                            : choropleth && choropleth.values[districtShape.name] !== undefined
+                              ? intensityFill(choropleth.values[districtShape.name], choropleth.min, choropleth.max)
+                              : SUB_REGION_COLORS[districtShape.subRegion],
                         opacity: hiddenBySubRegion ? 0.08 : dimmedByDistrictSelection ? 0.9 : undefined,
                       }}
                       data-district-id={dId}

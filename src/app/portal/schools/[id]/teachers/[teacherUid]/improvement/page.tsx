@@ -6,6 +6,8 @@ import {
   getTeacherImprovementProfileAsync,
 } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { queryPostgres } from "@/lib/server/postgres/client";
+import { getTeacherObservationTrajectoryPostgres } from "@/lib/server/postgres/repositories/coaching-qa";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,19 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
   });
 
   const comparison = profile?.teacherComparison;
+
+  // Resolve teacher's display name so we can fetch observation trajectory
+  const teacherLookup = await queryPostgres(
+    `SELECT full_name FROM teacher_roster WHERE teacher_uid = $1 LIMIT 1`,
+    [teacherUid],
+  ).catch(() => ({ rows: [] as Array<{ full_name: string }> }));
+  const teacherName = teacherLookup.rows[0]?.full_name
+    ?? comparison?.teacherName
+    ?? teacherUid;
+  const observationTrajectory = await getTeacherObservationTrajectoryPostgres({
+    teacherName,
+    schoolId,
+  });
 
   return (
     <PortalShell
@@ -113,6 +128,75 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
                 </tbody>
               </table>
             </div>
+
+            {observationTrajectory.points.length > 0 && (
+              <article className="card" style={{ display: "grid", gap: "0.75rem" }}>
+                <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <h3 style={{ margin: 0 }}>Observation Rubric Trajectory</h3>
+                  <span className={`coaching-qa-pill coaching-qa-${observationTrajectory.trajectoryBand === "improving" ? "ok" : observationTrajectory.trajectoryBand === "declining" ? "critical" : observationTrajectory.trajectoryBand === "stable" ? "neutral" : "muted"}`}>
+                    {observationTrajectory.trajectoryBand.replace("_", " ")}
+                  </span>
+                </header>
+                <p style={{ margin: 0, color: "#6b7280", fontSize: "13px" }}>
+                  {observationTrajectory.totalObservations} observations from {observationTrajectory.firstObservationDate} to {observationTrajectory.latestObservationDate}.
+                  {observationTrajectory.overallDelta !== null ? ` Overall rubric score changed by ${observationTrajectory.overallDelta > 0 ? "+" : ""}${observationTrajectory.overallDelta} points.` : ""}
+                </p>
+                <div className="portal-school-profile-kpis">
+                  <article>
+                    <span>GPC Δ</span>
+                    <strong>{observationTrajectory.gpcDelta !== null ? `${observationTrajectory.gpcDelta > 0 ? "+" : ""}${observationTrajectory.gpcDelta}` : "—"}</strong>
+                  </article>
+                  <article>
+                    <span>Blending Δ</span>
+                    <strong>{observationTrajectory.blendingDelta !== null ? `${observationTrajectory.blendingDelta > 0 ? "+" : ""}${observationTrajectory.blendingDelta}` : "—"}</strong>
+                  </article>
+                  <article>
+                    <span>Engagement Δ</span>
+                    <strong>{observationTrajectory.engagementDelta !== null ? `${observationTrajectory.engagementDelta > 0 ? "+" : ""}${observationTrajectory.engagementDelta}` : "—"}</strong>
+                  </article>
+                  <article>
+                    <span>Overall Δ</span>
+                    <strong>{observationTrajectory.overallDelta !== null ? `${observationTrajectory.overallDelta > 0 ? "+" : ""}${observationTrajectory.overallDelta}` : "—"}</strong>
+                  </article>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Observer</th>
+                        <th>Focus</th>
+                        <th>GPC</th>
+                        <th>Blending</th>
+                        <th>Engagement</th>
+                        <th>Overall</th>
+                        <th>Rating</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {observationTrajectory.points.map((p) => (
+                        <tr key={p.observationId}>
+                          <td><Link href={`/portal/observations/${p.observationId}`}>{p.observationDate}</Link></td>
+                          <td>{p.observerName}</td>
+                          <td>{p.lessonFocus}</td>
+                          <td>{p.gpcAvg ?? "—"}</td>
+                          <td>{p.blendingAvg ?? "—"}</td>
+                          <td>{p.engagementAvg ?? "—"}</td>
+                          <td><strong>{p.overallAvg ?? "—"}</strong></td>
+                          <td>
+                            {p.overallRating ? (
+                              <span className={`coaching-qa-pill coaching-qa-${p.overallRating === "fidelity" ? "ok" : p.overallRating === "partial" ? "warning" : "critical"}`}>
+                                {p.overallRating}
+                              </span>
+                            ) : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            )}
 
             {profile && (
               <>

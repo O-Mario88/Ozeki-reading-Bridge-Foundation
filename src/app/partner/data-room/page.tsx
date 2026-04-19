@@ -10,9 +10,17 @@ export const metadata = {
 export const revalidate = 300;
 
 export default async function PartnerDataRoomPage() {
-    const reports = await listPublicImpactReportsAsync({ limit: 20 });
-    const summary = await getImpactSummary();
-    const metrics = new Map(summary.metrics.map((m) => [m.label, m.value]));
+    // Fail gracefully if DB is unreachable at build time (CI without DB, first
+    // Amplify deploy before RDS is provisioned).
+    let reports: Awaited<ReturnType<typeof listPublicImpactReportsAsync>> = [];
+    let metrics = new Map<string, number>();
+    try {
+        reports = await listPublicImpactReportsAsync({ limit: 20 });
+        const summary = await getImpactSummary();
+        metrics = new Map(summary.metrics.map((m) => [m.label, m.value]));
+    } catch (err) {
+        console.error("[partner/data-room] DB unreachable at build/request time", err);
+    }
 
     return (
         <>
@@ -104,14 +112,14 @@ export default async function PartnerDataRoomPage() {
                                         {reports.map((report) => (
                                             <tr key={report.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                                                 <td style={{ padding: "0.5rem", fontWeight: 600 }}>{report.title}</td>
-                                                <td style={{ padding: "0.5rem" }}>{report.scopeType}: {report.scopeValue}</td>
+                                                <td style={{ padding: "0.5rem" }}>{report.scope_type}: {report.scope_value}</td>
                                                 <td style={{ padding: "0.5rem", fontSize: "0.8rem", color: "#666" }}>
-                                                    {report.periodStart} – {report.periodEnd}
+                                                    {report.period_start} – {report.period_end}
                                                 </td>
-                                                <td style={{ padding: "0.5rem", textAlign: "right" }}>{report.downloadCount}</td>
+                                                <td style={{ padding: "0.5rem", textAlign: "right" }}>{report.download_count}</td>
                                                 <td style={{ padding: "0.5rem" }}>
                                                     <Link
-                                                        href={`/impact-reports/${report.reportCode}`}
+                                                        href={`/impact-reports/${report.report_code}`}
                                                         className="inline-download-link"
                                                         style={{ fontSize: "0.8rem" }}
                                                     >

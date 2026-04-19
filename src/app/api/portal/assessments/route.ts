@@ -134,6 +134,19 @@ export async function POST(request: Request) {
 
     const assessment = await saveAssessmentRecordAsync(normalizedPayload, user.id);
 
+    const { publishEvent } = await import("@/lib/server/events/publish");
+    await publishEvent({
+      eventType: "assessment.submitted",
+      actorUserId: user.id,
+      entityType: "assessment",
+      entityId: (assessment as { id?: number })?.id,
+      payload: {
+        schoolId: payload.schoolId,
+        learnerUid: payload.learnerUid ?? null,
+        assessmentType: payload.assessmentType ?? null,
+      },
+    });
+
     return NextResponse.json({ ok: true, assessment });
   } catch (error) {
     if (error instanceof z.ZodError) {

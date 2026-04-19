@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { createFinanceIncomeBreakdownZero, FINANCE_INCOME_CATEGORIES, normalizeFinanceIncomeCategory } from "@/lib/finance-categories";
 import { getDefaultFinanceFromEmail, resolveFinanceFromEmail } from "@/lib/finance-email";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
+import type { PostgresClient } from "@/lib/server/postgres/client";
 import { postExpenseToGl } from "./finance-v2";
 import type {
   FinanceAuditComplianceCheckRecord,

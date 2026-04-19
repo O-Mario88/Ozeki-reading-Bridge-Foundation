@@ -323,6 +323,157 @@ export async function upsertTrainingNotes(input: {
  * online training session.  One row per contactId is inserted; if no contacts
  * are provided a single school-level row is created.
  */
+export type UpdateTrainingSessionInput = {
+  title?: string;
+  agenda?: string;
+  objectives?: string;
+  description?: string;
+  startTime?: string;
+  endTime?: string;
+  timezone?: string;
+  attendeeEmails?: string[];
+  status?: TrainingSessionStatus;
+  updatedByUserId: number;
+};
+
+export async function updateTrainingSession(
+  sessionId: number,
+  input: UpdateTrainingSessionInput,
+): Promise<void> {
+  requirePostgresConfigured();
+
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let idx = 1;
+
+  if (input.title !== undefined) { sets.push(`title = $${idx++}`); values.push(input.title); }
+  if (input.agenda !== undefined) { sets.push(`agenda = $${idx++}`); values.push(input.agenda); }
+  if (input.objectives !== undefined) { sets.push(`objectives = $${idx++}`); values.push(input.objectives); }
+  if (input.description !== undefined) { sets.push(`description = $${idx++}`); values.push(input.description); }
+  if (input.startTime !== undefined) { sets.push(`start_time = $${idx++}`); values.push(input.startTime); }
+  if (input.endTime !== undefined) { sets.push(`end_time = $${idx++}`); values.push(input.endTime); }
+  if (input.timezone !== undefined) { sets.push(`timezone = $${idx++}`); values.push(input.timezone); }
+  if (input.attendeeEmails !== undefined) { sets.push(`attendee_emails_json = $${idx++}`); values.push(JSON.stringify(input.attendeeEmails)); }
+  if (input.status !== undefined) { sets.push(`status = $${idx++}`); values.push(input.status); }
+
+  if (sets.length === 0) return;
+
+  sets.push(`updated_at = NOW()`);
+  values.push(sessionId);
+
+  await queryPostgres(
+    `UPDATE online_training_sessions SET ${sets.join(", ")} WHERE id = $${idx}`,
+    values,
+  );
+
+  await queryPostgres(
+    `INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, payload_after, detail)
+     SELECT id, full_name, 'update', 'online_training_sessions', $2, $3, $4
+     FROM portal_users WHERE id = $1`,
+    [input.updatedByUserId, String(sessionId), JSON.stringify(input), `Updated training session ${sessionId}`],
+  );
+}
+
+export async function cancelTrainingSession(
+  sessionId: number,
+  canceledByUserId: number,
+): Promise<void> {
+  requirePostgresConfigured();
+
+  await queryPostgres(
+    `UPDATE online_training_sessions SET status = 'canceled', updated_at = NOW() WHERE id = $1`,
+    [sessionId],
+  );
+
+  await queryPostgres(
+    `INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, detail)
+     SELECT id, full_name, 'cancel', 'online_training_sessions', $2, $3
+     FROM portal_users WHERE id = $1`,
+    [canceledByUserId, String(sessionId), `Canceled training session ${sessionId}`],
+  );
+}
+
+export type LiveSessionStatus = {
+  status: string;
+  meetJoinUrl: string | null;
+  liveStartedAt: string | null;
+  durationSeconds: number | null;
+  participantTotal: number;
+  joinedCount: number;
+  attendedCount: number;
+};
+
+export async function startTrainingSession(sessionId: number, userId: number): Promise<void> {
+  requirePostgresConfigured();
+  await queryPostgres(
+    `UPDATE online_training_sessions
+     SET status = 'live', live_started_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND status IN ('scheduled', 'draft')`,
+    [sessionId],
+  );
+  await queryPostgres(
+    `INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, detail)
+     SELECT id, full_name, 'start', 'online_training_sessions', $2, $3
+     FROM portal_users WHERE id = $1`,
+    [userId, String(sessionId), `Started live training session ${sessionId}`],
+  );
+}
+
+export async function endTrainingSession(sessionId: number, userId: number): Promise<void> {
+  requirePostgresConfigured();
+  await queryPostgres(
+    `UPDATE online_training_sessions
+     SET status = 'completed', attendance_captured_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND status = 'live'`,
+    [sessionId],
+  );
+  // Mark all 'joined' participants as 'attended'
+  await queryPostgres(
+    `UPDATE online_training_participants
+     SET attendance_status = 'attended', left_at = NOW()
+     WHERE session_id = $1 AND attendance_status = 'joined' AND left_at IS NULL`,
+    [sessionId],
+  );
+  await queryPostgres(
+    `INSERT INTO audit_logs (user_id, user_name, action, target_table, target_id, detail)
+     SELECT id, full_name, 'end', 'online_training_sessions', $2, $3
+     FROM portal_users WHERE id = $1`,
+    [userId, String(sessionId), `Ended live training session ${sessionId}`],
+  );
+}
+
+export async function getLiveSessionStatus(sessionId: number): Promise<LiveSessionStatus | null> {
+  requirePostgresConfigured();
+  const [sessionRes, participantRes] = await Promise.all([
+    queryPostgres(
+      `SELECT status, meet_join_url, live_started_at,
+              EXTRACT(EPOCH FROM (NOW() - live_started_at))::int AS duration_seconds
+       FROM online_training_sessions WHERE id = $1`,
+      [sessionId],
+    ),
+    queryPostgres(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE attendance_status = 'joined')::int AS joined,
+         COUNT(*) FILTER (WHERE attendance_status IN ('attended', 'left'))::int AS attended
+       FROM online_training_participants WHERE session_id = $1`,
+      [sessionId],
+    ),
+  ]);
+  const s = sessionRes.rows[0];
+  if (!s) return null;
+  const p = participantRes.rows[0];
+  return {
+    status: String(s.status),
+    meetJoinUrl: s.meet_join_url ? String(s.meet_join_url) : null,
+    liveStartedAt: s.live_started_at ? String(s.live_started_at) : null,
+    durationSeconds: s.duration_seconds != null ? Number(s.duration_seconds) : null,
+    participantTotal: Number(p?.total ?? 0),
+    joinedCount: Number(p?.joined ?? 0),
+    attendedCount: Number(p?.attended ?? 0),
+  };
+}
+
 export async function addEventParticipants(
   sessionId: number,
   schoolId: number,

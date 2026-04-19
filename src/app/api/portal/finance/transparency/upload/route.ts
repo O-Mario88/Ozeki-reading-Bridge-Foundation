@@ -28,7 +28,17 @@ export async function POST(request: Request) {
         const file = fileEntry;
 
         if (!file.name.toLowerCase().endsWith(".pdf")) {
-            return NextResponse.json({ error: "Only PDFs are allowed" }, { status: 400 });
+            return NextResponse.json({ error: "Only PDFs are allowed." }, { status: 400 });
+        }
+
+        const PDF_MIME_TYPES = new Set(["application/pdf", "application/x-pdf"]);
+        if (file.type && !PDF_MIME_TYPES.has(file.type.toLowerCase())) {
+            return NextResponse.json({ error: "Uploaded file does not appear to be a PDF." }, { status: 400 });
+        }
+
+        const MAX_SIZE = 20 * 1024 * 1024; // 20 MB for audited financial statements
+        if (file.size > MAX_SIZE) {
+            return NextResponse.json({ error: "File exceeds the 20 MB size limit." }, { status: 400 });
         }
 
         const folder = path.join(getRuntimeDataDir(), "finance", "audited");
@@ -54,7 +64,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, id });
     } catch (error: unknown) {
-        console.error("POST /api/portal/finance/transparency/upload error:", error);
+        const { logger } = await import("@/lib/logger");
+        logger.error("[finance/transparency/upload] POST failed", { error: String(error) });
         return NextResponse.json(
             { error: errorMessage(error, "Failed to upload audited statement") },
             { status: 500 }

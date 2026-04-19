@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["exceljs", "xlsx"],
+  // amplify.yml + scripts/start-standalone.mjs serve from .next/standalone/server.js;
+  // that directory is only produced when output: "standalone" is set.
+  output: "standalone",
+  serverExternalPackages: ["exceljs", "xlsx", "pg", "puppeteer", "puppeteer-core", "pdf-lib"],
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   compress: true,
@@ -29,6 +32,11 @@ const nextConfig: NextConfig = {
     SMTP_PASS: process.env.SMTP_PASS,
     SMTP_FROM: process.env.SMTP_FROM,
     FINANCE_EMAIL_FROM: process.env.FINANCE_EMAIL_FROM,
+    // Automation-layer env vars (added 2026-04)
+    CRON_SECRET_TOKEN: process.env.CRON_SECRET_TOKEN,
+    DIGEST_RECIPIENTS: process.env.DIGEST_RECIPIENTS,
+    PROGRAMMES_EMAIL_FROM: process.env.PROGRAMMES_EMAIL_FROM,
+    FINANCE_EMAIL_ALWAYS_CC: process.env.FINANCE_EMAIL_ALWAYS_CC,
   },
   outputFileTracingExcludes: {
     "*": [
@@ -74,8 +82,20 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Embed routes MUST be iframe-able from external sites (donor pages,
+      // NGO reports). Use Content-Security-Policy frame-ancestors and omit
+      // X-Frame-Options (the more specific rule wins over the global :path*).
       {
-        source: "/:path*",
+        source: "/embed/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors *;" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "public, max-age=600, stale-while-revalidate=1800" },
+        ],
+      },
+      {
+        source: "/((?!embed).*)",
         headers: [
           {
             key: "X-Frame-Options",

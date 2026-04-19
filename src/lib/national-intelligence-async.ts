@@ -58,7 +58,7 @@ export async function listEducationAuditExceptionsAsync(filters: {
   return service.listEducationAuditExceptions({
     scopeType: filters.scopeType as NlisGeoScopeType,
     scopeId: filters.scopeId,
-    status: filters.status as "pending" | "resolved" | "ignored",
+    status: filters.status as "open" | "resolved" | "overridden" | undefined,
     limit: filters.limit,
   });
 }
@@ -165,7 +165,7 @@ export async function listInterventionPlansAsync(filters: {
   limit?: number;
 }) {
   return service.listInterventionPlans({
-    scopeType: filters.scopeType as NlisGeoScopeType,
+    scopeType: filters.scopeType as "district" | "school" | undefined,
     scopeId: filters.scopeId,
     status: filters.status as InterventionPlanRecord["status"],
     limit: filters.limit,

@@ -9,9 +9,15 @@ import { MobileBottomNav } from "../MobileBottomNav";
 export function LayoutOrchestrator({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "";
   const isPortalLogin = pathname === "/portal/login";
+  const isEmbed = pathname.startsWith("/embed/");
 
   /* Full-screen immersive login — no header / footer */
   if (isPortalLogin) {
+    return <>{children}</>;
+  }
+
+  /* Iframe embeds — transparent container, no chrome */
+  if (isEmbed) {
     return <>{children}</>;
   }
 

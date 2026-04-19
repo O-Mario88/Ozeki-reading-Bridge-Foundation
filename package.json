@@ -11,6 +11,7 @@
     "test:privacy": "tsx --test src/tests/public-impact-privacy.test.ts src/tests/report-geo-cascade.test.ts src/tests/graduation-eligibility.test.ts src/tests/google-oauth-domain.test.ts",
     "test:school-first": "tsx --test src/tests/school-first-participants.test.ts",
     "test:finance": "tsx --test src/tests/finance-module.test.ts src/tests/finance-email-routing.test.ts",
+    "test:payments": "tsx --test src/tests/pesapal-payment-flows.test.ts",
     "dev": "next dev",
     "clean:next": "node -e \"require('node:fs').rmSync('.next',{ recursive: true, force: true })\"",
     "dev:clean": "npm run clean:next && next dev",

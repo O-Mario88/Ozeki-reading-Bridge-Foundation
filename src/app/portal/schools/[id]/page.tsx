@@ -50,12 +50,18 @@ export default async function SchoolProfilePage({ params }: PageProps) {
             actions={
                 <div className="action-row">
                     <Link
+                        href={`/portal/schools/${schoolId}/dossier`}
+                        className="button button-primary"
+                    >
+                        Intelligence Dossier
+                    </Link>
+                    <Link
                         href={`/portal/reports?module=all&district=${encodeURIComponent(
                             school.district,
                         )}&subCounty=${encodeURIComponent(school.subCounty)}&parish=${encodeURIComponent(
                             school.parish,
                         )}&search=${encodeURIComponent(school.name)}`}
-                        className="button button-primary"
+                        className="button button-ghost"
                     >
                         Open School Report
                     </Link>

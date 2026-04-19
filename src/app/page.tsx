@@ -24,7 +24,11 @@ function clipQuote(text: string, maxChars: number) {
 
 export default async function HomePage() {
   let testimonialRows: PortalTestimonialRecord[] = [];
-  const impactStats = { schools: "0", assessments: "0", teachers: "0" };
+  const impactStats: { schools: string | null; assessments: string | null; teachers: string | null } = {
+    schools: null,
+    assessments: null,
+    teachers: null,
+  };
 
   if (isPostgresConfigured()) {
     try {
@@ -47,9 +51,11 @@ export default async function HomePage() {
         return found && found.value > 0 ? formatStat(found.value) : null;
       };
 
-      impactStats.schools = getMetric("Schools trained") || "120+";
-      impactStats.assessments = getMetric("Learners assessed") || "15k+";
-      impactStats.teachers = getMetric("Teachers trained") || "800+";
+      // Live values only; the UI suppresses the KPI row if any is null so we
+      // never show a misleading placeholder like "120+" when the DB is empty.
+      impactStats.schools = getMetric("Schools trained");
+      impactStats.assessments = getMetric("Learners assessed");
+      impactStats.teachers = getMetric("Teachers trained");
 
     } catch (error) {
       console.error("Failed to load homepage data.", error);
@@ -124,29 +130,31 @@ export default async function HomePage() {
         </div>
       </SectionWrapper>
 
-      {/* 3. Stat Banner */}
-      <div className="w-full bg-white border-t border-gray-100 py-16">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-gray-100/50">
-            <div className="text-center px-4">
-              <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.schools}</div>
-              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Schools</div>
-            </div>
-            <div className="text-center px-4">
-              <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.assessments}</div>
-              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Assessed</div>
-            </div>
-            <div className="text-center px-4">
-              <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.teachers}</div>
-              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Happy Teachers</div>
-            </div>
-            <div className="text-center px-4">
-              <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">3</div>
-              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Years of Impact</div>
+      {/* 3. Stat Banner — only rendered when live data is available */}
+      {(impactStats.schools || impactStats.assessments || impactStats.teachers) && (
+        <div className="w-full bg-white border-t border-gray-100 py-16">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-gray-100/50">
+              <div className="text-center px-4">
+                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.schools ?? "—"}</div>
+                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Schools</div>
+              </div>
+              <div className="text-center px-4">
+                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.assessments ?? "—"}</div>
+                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Assessed</div>
+              </div>
+              <div className="text-center px-4">
+                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.teachers ?? "—"}</div>
+                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Happy Teachers</div>
+              </div>
+              <div className="text-center px-4">
+                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">3</div>
+                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Years of Impact</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 4. Find the popular cause (Programs) */}
       <SectionWrapper theme="charius-beige" className="py-24">

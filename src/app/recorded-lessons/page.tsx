@@ -6,8 +6,9 @@ export const metadata = {
   description: "Browse high-quality phonics and instructional leadership recordings for continuous professional development.",
 };
 
-// Next.js config to force dynamic fetching for Live LMS grids
-export const dynamic = "force-dynamic";
+// Recorded lessons change on publish cadence, not per-request. Cache 1 hour;
+// publishing flow can invalidate via revalidatePath when the dataset changes.
+export const revalidate = 3600;
 
 interface LessonRow {
   lesson_slug: string;

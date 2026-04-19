@@ -3,6 +3,8 @@ import { getImpactReportByCodeAsync, incrementImpactReportDownloadCountAsync } f
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { buildPublicDashboardReportModel, renderPublicDashboardReportHtml } from "@/lib/public-dashboard-report-engine";
 import { renderBrandedPdf } from "@/lib/server/pdf/render";
+import type { PublicDashboardNarrative } from "@/lib/public-dashboard-report-engine";
+import type { PublicImpactAggregate } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,11 +25,11 @@ export async function GET(
     const narrative = report.narrative_json;
     const factPack = report.fact_pack_json;
 
-    if (!narrative || !factPack || Object.keys(factPack).length === 0) {
+    if (!narrative || !factPack || Object.keys(factPack as object).length === 0) {
        return NextResponse.json({ error: "Report data is incomplete or still generating." }, { status: 422 });
     }
 
-    const reportModel = buildPublicDashboardReportModel(factPack, narrative);
+    const reportModel = buildPublicDashboardReportModel(factPack as unknown as PublicImpactAggregate, narrative as unknown as PublicDashboardNarrative);
 
     const html = renderPublicDashboardReportHtml({
       report: reportModel,

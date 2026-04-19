@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getImpactReportByCodeAsync, incrementImpactReportViewCountAsync } from "@/services/dataService";
 import { LEARNING_DOMAIN_DICTIONARY } from "@/lib/domain-dictionary";
+import type { ImpactReportFactPack, ImpactReportLearningOutcomeMetric, ImpactReportNarrative } from "@/lib/types";
 
 export const revalidate = 300;
 
@@ -123,8 +124,11 @@ export default async function ImpactReportDetailPage({
   }
   await incrementImpactReportViewCountAsync(code);
 
-  const outcomes = report.factPack.learningOutcomes;
-  const outcomeRows = [
+  const factPack = report.fact_pack_json as ImpactReportFactPack;
+  const narrative = report.narrative_json as ImpactReportNarrative;
+
+  const outcomes = factPack.learningOutcomes;
+  const outcomeRows: { label: string; description: string; value: ImpactReportLearningOutcomeMetric }[] = [
     {
       label: LEARNING_DOMAIN_DICTIONARY.letter_names.label_full,
       description: LEARNING_DOMAIN_DICTIONARY.letter_names.description,
@@ -155,18 +159,18 @@ export default async function ImpactReportDetailPage({
       description: LEARNING_DOMAIN_DICTIONARY.comprehension.description,
       value: outcomes.readingComprehension,
     },
-  ].filter((row) => row.value != null);
+  ];
 
   const trainingCount = Math.max(
     0,
-    report.factPack.coverageDelivery.teachersTrained + report.factPack.coverageDelivery.schoolLeadersTrained,
+    factPack.coverageDelivery.teachersTrained + factPack.coverageDelivery.schoolLeadersTrained,
   );
-  const visitCount = Math.max(0, report.factPack.coverageDelivery.coachingVisitsCompleted);
+  const visitCount = Math.max(0, factPack.coverageDelivery.coachingVisitsCompleted);
   const assessmentCount = Math.max(
     0,
-    report.factPack.coverageDelivery.assessmentsConducted.baseline +
-      report.factPack.coverageDelivery.assessmentsConducted.progress +
-      report.factPack.coverageDelivery.assessmentsConducted.endline,
+    factPack.coverageDelivery.assessmentsConducted.baseline +
+      factPack.coverageDelivery.assessmentsConducted.progress +
+      factPack.coverageDelivery.assessmentsConducted.endline,
   );
   const activityMixData: ChartDatum[] = [
     { label: "Trainings", value: trainingCount, color: "#0b7285", helper: "Teachers + school leaders trained" },
@@ -177,23 +181,23 @@ export default async function ImpactReportDetailPage({
   const assessmentCycleData: ChartDatum[] = [
     {
       label: "Baseline",
-      value: Math.max(0, report.factPack.coverageDelivery.assessmentsConducted.baseline),
+      value: Math.max(0, factPack.coverageDelivery.assessmentsConducted.baseline),
       color: "#468faf",
     },
     {
       label: "Progress",
-      value: Math.max(0, report.factPack.coverageDelivery.assessmentsConducted.progress),
+      value: Math.max(0, factPack.coverageDelivery.assessmentsConducted.progress),
       color: "#2a9d8f",
     },
     {
       label: "Endline",
-      value: Math.max(0, report.factPack.coverageDelivery.assessmentsConducted.endline),
+      value: Math.max(0, factPack.coverageDelivery.assessmentsConducted.endline),
       color: "#e76f51",
     },
   ];
 
-  const teachersCompared = Math.max(0, report.factPack.teacherImprovementSummary?.teachersCompared ?? 0);
-  const improvedTeachers = Math.max(0, report.factPack.teacherImprovementSummary?.improvedTeachersCount ?? 0);
+  const teachersCompared = Math.max(0, factPack.teacherImprovementSummary?.teachersCompared ?? 0);
+  const improvedTeachers = Math.max(0, factPack.teacherImprovementSummary?.improvedTeachersCount ?? 0);
   const notYetImproved = Math.max(0, teachersCompared - improvedTeachers);
   const improvementData: ChartDatum[] = [
     {
@@ -214,28 +218,28 @@ export default async function ImpactReportDetailPage({
     <>
       <section className="section">
         <div className="container card">
-          <p className="meta-pill">{report.reportType}</p>
+          <p className="meta-pill">{report.report_type}</p>
           <h1>{report.title}</h1>
-          {report.partnerName ? (
-            <p className="meta-line">Partner scope: {report.partnerName}</p>
+          {report.partner_name ? (
+            <p className="meta-line">Partner scope: {report.partner_name}</p>
           ) : null}
           <p className="meta-line">
-            {report.scopeType}: {report.scopeValue}
+            {report.scope_type}: {report.scope_value}
           </p>
           <p className="meta-line">
-            Report ID: {report.reportCode} • Version: {report.version} • Generated{" "}
-            {new Date(report.generatedAt).toLocaleString()}
+            Report ID: {report.report_code} • Version: {report.version} • Generated{" "}
+            {new Date(report.generated_at).toLocaleString()}
           </p>
           <p className="meta-line">
-            Category: {report.reportCategory ?? "Not specified"} • Period type:{" "}
-            {report.periodType ?? "FY"} • Audience: {report.audience ?? "Public-safe"} • Output:{" "}
+            Category: {report.report_category ?? "Not specified"} • Period type:{" "}
+            {report.period_type ?? "FY"} • Audience: {report.audience ?? "Public-safe"} • Output:{" "}
             {report.output ?? "PDF"}
           </p>
           <div className="action-row">
-            <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}/download`}>
+            <a className="inline-download-link" href={`/api/impact-reports/${report.report_code}/download`}>
               Download PDF
             </a>
-            <a className="inline-download-link" href={`/api/impact-reports/${report.reportCode}`}>
+            <a className="inline-download-link" href={`/api/impact-reports/${report.report_code}`}>
               View JSON Fact Pack
             </a>
             <Link className="inline-download-link" href="/impact#reports">
@@ -250,15 +254,15 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h2>Template Variant</h2>
             <p>
-              <strong>{report.narrative.variant}</strong>
+              <strong>{narrative.variant}</strong>
             </p>
-            <p className="meta-line">{report.narrative.template.masterTemplateName}</p>
-            <p className="meta-line">{report.narrative.factsLockInstruction}</p>
+            <p className="meta-line">{narrative.template?.masterTemplateName}</p>
+            <p className="meta-line">{narrative.factsLockInstruction}</p>
           </article>
           <article className="card">
             <h2>Table of Contents</h2>
             <ul>
-              {report.narrative.template.tableOfContents.map((item: string) => (
+              {(narrative.template?.tableOfContents ?? []).map((item: string) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
@@ -266,7 +270,7 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h2>AI Writing Rules</h2>
             <ul>
-              {report.narrative.template.aiWritingRules.map((rule: string) => (
+              {(narrative.template?.aiWritingRules ?? []).map((rule: string) => (
                 <li key={rule}>{rule}</li>
               ))}
             </ul>
@@ -274,12 +278,12 @@ export default async function ImpactReportDetailPage({
 
           <article className="card">
             <h2>Executive Summary</h2>
-            <p>{report.narrative.executiveSummary}</p>
+            <p>{narrative.executiveSummary}</p>
           </article>
           <article className="card">
             <h2>Biggest Improvements</h2>
             <ul>
-              {report.narrative.biggestImprovements.map((item: string) => (
+              {(narrative.biggestImprovements ?? []).map((item: string) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
@@ -287,7 +291,7 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h2>Key Challenges</h2>
             <ul>
-              {report.narrative.keyChallenges.map((item: string) => (
+              {(narrative.keyChallenges ?? []).map((item: string) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
@@ -323,7 +327,7 @@ export default async function ImpactReportDetailPage({
         <div className="container card">
           <h2>Section Narratives</h2>
           <div className="cards-grid">
-            {report.narrative.sectionNarratives.map((section: Record<string, unknown> & { sectionId: string; title: string; summary: string }) => (
+            {(narrative.sectionNarratives ?? []).map((section: { sectionId: string; title: string; summary: string }) => (
               <article className="card" key={section.sectionId}>
                 <h3>{section.title}</h3>
                 <p>{section.summary}</p>
@@ -338,20 +342,20 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h3>Coverage &amp; Delivery</h3>
             <ul>
-              <li>Schools impacted: {report.factPack.coverageDelivery.schoolsImpacted.toLocaleString()}</li>
+              <li>Schools impacted: {factPack.coverageDelivery.schoolsImpacted.toLocaleString()}</li>
               <li>
                 Schools coached/visited:{" "}
-                {report.factPack.coverageDelivery.schoolsCoachedVisited.toLocaleString()}
+                {factPack.coverageDelivery.schoolsCoachedVisited.toLocaleString()}
               </li>
-              <li>Teachers trained: {report.factPack.coverageDelivery.teachersTrained.toLocaleString()}</li>
+              <li>Teachers trained: {factPack.coverageDelivery.teachersTrained.toLocaleString()}</li>
               <li>
                 School leaders trained:{" "}
-                {report.factPack.coverageDelivery.schoolLeadersTrained.toLocaleString()}
+                {factPack.coverageDelivery.schoolLeadersTrained.toLocaleString()}
               </li>
-              <li>Learners reached: {report.factPack.coverageDelivery.learnersReached.toLocaleString()}</li>
+              <li>Learners reached: {factPack.coverageDelivery.learnersReached.toLocaleString()}</li>
               <li>
-                Coaching completion: {report.factPack.coverageDelivery.coachingVisitsCompleted}/
-                {report.factPack.coverageDelivery.coachingVisitsPlanned}
+                Coaching completion: {factPack.coverageDelivery.coachingVisitsCompleted}/
+                {factPack.coverageDelivery.coachingVisitsPlanned}
               </li>
             </ul>
           </article>
@@ -361,17 +365,17 @@ export default async function ImpactReportDetailPage({
             <ul>
               <li>
                 Baseline:{" "}
-                {report.factPack.coverageDelivery.assessmentsConducted.baseline.toLocaleString()}
+                {factPack.coverageDelivery.assessmentsConducted.baseline.toLocaleString()}
               </li>
               <li>
                 Progress:{" "}
-                {report.factPack.coverageDelivery.assessmentsConducted.progress.toLocaleString()}
+                {factPack.coverageDelivery.assessmentsConducted.progress.toLocaleString()}
               </li>
               <li>
-                Endline: {report.factPack.coverageDelivery.assessmentsConducted.endline.toLocaleString()}
+                Endline: {factPack.coverageDelivery.assessmentsConducted.endline.toLocaleString()}
               </li>
               <li>
-                Learners reached definition: {report.factPack.definitions.learnersReached}
+                Learners reached definition: {factPack.definitions.learnersReached}
               </li>
             </ul>
           </article>
@@ -381,16 +385,16 @@ export default async function ImpactReportDetailPage({
             <ul>
               <li>
                 Total resources downloaded:{" "}
-                {report.factPack.engagement.resourcesDownloaded.toLocaleString()}
+                {factPack.engagement.resourcesDownloaded.toLocaleString()}
               </li>
-              <li>Booking requests: {report.factPack.engagement.bookingRequests.toLocaleString()}</li>
+              <li>Booking requests: {factPack.engagement.bookingRequests.toLocaleString()}</li>
             </ul>
             <h4>Top downloads</h4>
             <ul>
-              {report.factPack.engagement.topDownloads.length === 0 ? (
+              {factPack.engagement.topDownloads.length === 0 ? (
                 <li>Data not available</li>
               ) : (
-                report.factPack.engagement.topDownloads.map((item: { slug: string; title: string; downloads: number }) => (
+                factPack.engagement.topDownloads.map((item: { slug: string; title: string; downloads: number }) => (
                   <li key={item.slug}>
                     {item.title}: {item.downloads.toLocaleString()}
                   </li>
@@ -452,17 +456,17 @@ export default async function ImpactReportDetailPage({
             <ul>
               <li>
                 Routine adoption rate:{" "}
-                {report.factPack.instructionQuality.routineAdoptionRate ?? "Data not available"}
+                {factPack.instructionQuality.routineAdoptionRate ?? "Data not available"}
               </li>
               <li>
                 Observation score change:{" "}
-                {report.factPack.instructionQuality.observationScoreChange ?? "Data not available"}
+                {factPack.instructionQuality.observationScoreChange ?? "Data not available"}
               </li>
             </ul>
             <h4>Top 5 gaps</h4>
             <ul>
-              {report.factPack.instructionQuality.topGaps.length > 0 ? (
-                report.factPack.instructionQuality.topGaps.map((gap: string) => <li key={gap}>{gap}</li>)
+              {factPack.instructionQuality.topGaps.length > 0 ? (
+                factPack.instructionQuality.topGaps.map((gap: string) => <li key={gap}>{gap}</li>)
               ) : (
                 <li>Data not available</li>
               )}
@@ -472,7 +476,7 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h3>Next Priorities</h3>
             <ul>
-              {report.narrative.nextPriorities.map((item: string) => (
+              {narrative.nextPriorities.map((item: string) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
@@ -481,21 +485,21 @@ export default async function ImpactReportDetailPage({
           <article className="card">
             <h3>Evidence Appendix</h3>
             <p>
-              <strong>Methods:</strong> {report.narrative.methodsNote}
+              <strong>Methods:</strong> {narrative.methodsNote}
             </p>
             <p>
-              <strong>Limitations:</strong> {report.narrative.limitations}
+              <strong>Limitations:</strong> {narrative.limitations}
             </p>
             <p>
               <strong>Data quality:</strong> approved{" "}
-              {report.factPack.dataQuality.approvedRecords.toLocaleString()} of{" "}
-              {report.factPack.dataQuality.totalRecords.toLocaleString()} records; missing payload
-              rate {report.factPack.dataQuality.missingPayloadRate}%.
+              {factPack.dataQuality.approvedRecords.toLocaleString()} of{" "}
+              {factPack.dataQuality.totalRecords.toLocaleString()} records; missing payload
+              rate {factPack.dataQuality.missingPayloadRate}%.
             </p>
             <p>
               <strong>Data trust:</strong>{" "}
-              {report.factPack.dataTrust
-                ? `n=${report.factPack.dataTrust.n.toLocaleString()}, completeness=${report.factPack.dataTrust.completenessPercent.toFixed(1)}%, tool_version=${report.factPack.dataTrust.toolVersion}, last_updated=${report.factPack.dataTrust.lastUpdated}`
+              {factPack.dataTrust
+                ? `n=${factPack.dataTrust.n.toLocaleString()}, completeness=${factPack.dataTrust.completenessPercent.toFixed(1)}%, tool_version=${factPack.dataTrust.toolVersion}, last_updated=${factPack.dataTrust.lastUpdated}`
                 : "Data not available"}
               .
             </p>

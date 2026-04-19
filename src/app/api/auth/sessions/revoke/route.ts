@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentPortalUser, PORTAL_SESSION_COOKIE } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { logAuditEventPostgres } from "@/lib/server/postgres/repositories/audit";
 import { cookies } from "next/headers";
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, count: revokedCount });
   } catch (error) {
-    console.error("[REVOKE SESSIONS ERROR]", error);
+    logger.error("[sessions/revoke] Unhandled error", { error: String(error) });
     return NextResponse.json({ error: "Server error during session revocation." }, { status: 500 });
   }
 }

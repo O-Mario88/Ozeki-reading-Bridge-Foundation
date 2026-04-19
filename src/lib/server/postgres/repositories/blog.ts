@@ -2,6 +2,7 @@ import { queryPostgres, withPostgresClient, requirePostgresConfigured } from "@/
 import { blogPosts as staticBlogPosts } from "@/lib/content";
 import { sanitizeInlineRichText, stripHtmlTags } from "@/lib/rich-text";
 import type {
+  BlogArticleType,
   BlogBodyBlock,
   BlogBodyBlockType,
   BlogComment,
@@ -130,9 +131,9 @@ function normalizeBodyBlocks(value: unknown): BlogBodyBlock[] {
         imageAlt: typeof obj.imageAlt === "string" ? stripHtmlTags(obj.imageAlt) : null,
         imageCaption: typeof obj.imageCaption === "string" ? stripHtmlTags(obj.imageCaption) : null,
         imageCredit: typeof obj.imageCredit === "string" ? stripHtmlTags(obj.imageCredit) : null,
-        imageWidthStyle: ["full", "contained", "small"].includes(obj.imageWidthStyle) ? obj.imageWidthStyle : null,
+        imageWidthStyle: typeof obj.imageWidthStyle === "string" && ["full", "contained", "small"].includes(obj.imageWidthStyle) ? obj.imageWidthStyle : null,
         calloutTitle: typeof obj.calloutTitle === "string" ? sanitizeInlineRichText(obj.calloutTitle.trim()) : null,
-        calloutTone: ["neutral", "info", "success", "warning", "critical"].includes(obj.calloutTone) ? obj.calloutTone : null,
+        calloutTone: typeof obj.calloutTone === "string" && ["neutral", "info", "success", "warning", "critical"].includes(obj.calloutTone) ? obj.calloutTone : null,
         statLabel: typeof obj.statLabel === "string" ? sanitizeInlineRichText(obj.statLabel.trim()) : null,
         statValue: typeof obj.statValue === "string" ? sanitizeInlineRichText(obj.statValue.trim()) : null,
         ctaLabel: typeof obj.ctaLabel === "string" ? sanitizeInlineRichText(obj.ctaLabel.trim()) : null,
@@ -172,7 +173,7 @@ function mapPortalBlogPostRow(row: Record<string, unknown>): PortalBlogPostRecor
     bodyBlocks: normalizeBodyBlocks(JSON.parse((row.bodyBlocksJson as string) || "[]")),
     mediaImageUrl: row.mediaImageUrl as string | null,
     mediaVideoUrl: row.mediaVideoUrl as string | null,
-    articleType: row.articleType as string,
+    articleType: row.articleType as BlogArticleType | null,
     featuredImageUrl: row.featuredImageUrl as string | null,
     featuredImageAlt: row.featuredImageAlt as string | null,
     featuredImageCaption: row.featuredImageCaption as string | null,
@@ -527,7 +528,12 @@ export async function setPortalBlogPublishStatusAsyncPostgres(
          VALUES ($1, $2, 'update', 'portal_blog_posts', $3, $4, $5, $6)`,
         [user.id, user.fullName, String(postId), JSON.stringify({ publishStatus: post.publishStatus }), JSON.stringify({ publishStatus }), `${publishStatus === 'published' ? 'Published' : 'Unpublished'} blog post ${post.slug}`]
       );
-  await client.query("COMMIT");
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
 
   const finalRes = await queryPostgres<Record<string, unknown>>(`SELECT ${SELECT_PORTAL_BLOG_COLUMNS_POSTGRES} FROM portal_blog_posts WHERE id = $1`, [postId]);
   return mapPortalBlogPostRow(finalRes.rows[0]);

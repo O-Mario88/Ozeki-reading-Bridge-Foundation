@@ -43,6 +43,7 @@ export type PublicImpactAttendanceRow = {
   gender: string | null;
   teacherUid: string | null;
   recordDate: string | null;
+  certificateStatus: string | null;
 };
 
 export type PublicImpactTeacherSupportRow = {
@@ -290,7 +291,8 @@ export async function listTrainingAttendanceForPublicImpactPostgres(
         pta.participant_role AS "participantRole",
         pta.gender,
         pta.teacher_uid AS "teacherUid",
-        pr.date::text AS "recordDate"
+        pr.date::text AS "recordDate",
+        pta.certificate_status AS "certificateStatus"
       FROM portal_training_attendance pta
       LEFT JOIN portal_records pr ON pr.id = pta.portal_record_id
       WHERE pta.school_id = ANY($1::int[])
@@ -307,6 +309,7 @@ export async function listTrainingAttendanceForPublicImpactPostgres(
     gender: row.gender ? String(row.gender) : null,
     teacherUid: row.teacherUid ? String(row.teacherUid) : null,
     recordDate: row.recordDate ? String(row.recordDate) : null,
+    certificateStatus: row.certificateStatus ? String(row.certificateStatus) : null,
   }));
 }
 
@@ -941,6 +944,65 @@ export async function listOnlineSessionStatsForPublicImpactPostgres(
   };
 }
 
+export async function listDonorImpactForPublicImpactPostgres(
+  schoolIds: number[],
+  districts: string[],
+  regions: string[],
+): Promise<{
+  sponsorships: Array<{ reference: string; donorName: string; amount: number; currency: string; targetType: string; targetName: string; district: string | null; schoolId: number | null }>;
+  donationCount: number;
+}> {
+  try {
+    const districtParams = districts.length > 0 ? districts : ["__none__"];
+    const regionParams = regions.length > 0 ? regions : ["__none__"];
+    const sponsorshipRes = await queryPostgres(
+      `SELECT
+         sponsorship_reference AS "reference",
+         COALESCE(donor_name, organization_name, 'Anonymous') AS "donorName",
+         amount::numeric AS "amount",
+         currency,
+         sponsorship_type AS "targetType",
+         sponsorship_target_name AS "targetName",
+         district,
+         school_id AS "schoolId"
+       FROM sponsorships
+       WHERE payment_status = 'Completed'
+         AND (
+           school_id = ANY($1::int[])
+           OR district = ANY($2::text[])
+           OR region = ANY($3::text[])
+         )
+       ORDER BY amount DESC
+       LIMIT 50`,
+      [schoolIds.length > 0 ? schoolIds : [-1], districtParams, regionParams],
+    );
+    const donationRes = await queryPostgres(
+      `SELECT COUNT(*)::int AS "count"
+       FROM donations
+       WHERE payment_status IN ('Completed', 'Paid')
+         AND (
+           supported_school_district = ANY($1::text[])
+         )`,
+      [districtParams],
+    );
+    return {
+      sponsorships: sponsorshipRes.rows.map((r) => ({
+        reference: String(r.reference),
+        donorName: String(r.donorName),
+        amount: Number(r.amount),
+        currency: String(r.currency),
+        targetType: String(r.targetType),
+        targetName: String(r.targetName),
+        district: r.district ? String(r.district) : null,
+        schoolId: r.schoolId ? Number(r.schoolId) : null,
+      })),
+      donationCount: Number(donationRes.rows[0]?.count ?? 0),
+    };
+  } catch (_e) {
+    return { sponsorships: [], donationCount: 0 };
+  }
+}
+
 /** In-process cache for expensive aggregate builds. Avoids re-querying
  *  8+ tables when the same scope+period is requested within 5 minutes.
  *  Safe because the outer unstable_cache already controls staleness at 1h. */
@@ -976,14 +1038,18 @@ export async function buildPublicImpactAggregatePostgres(
     endDate = `${year}-12-31`;
   }
 
+  const scopeDistricts = Array.from(new Set(scopedSchools.map(s => s.district).filter(Boolean)));
+  const scopeRegions = Array.from(new Set(scopedSchools.map(s => s.region).filter(Boolean)));
+
   const [
     portalRecords,
     assessmentRows,
     lessonEvals,
-    _attendanceRows,
+    trainingAttendanceRows,
     teacherSupport,
     teachingLearningAlignment,
-    onlineSessionStats
+    onlineSessionStats,
+    donorImpactRaw,
   ] = await Promise.all([
     listPortalRecordsForPublicImpactPostgres(schoolIds, year),
     listAssessmentRowsForPublicImpactPostgres(schoolIds, year),
@@ -991,8 +1057,155 @@ export async function buildPublicImpactAggregatePostgres(
     listTrainingAttendanceForPublicImpactPostgres(schoolIds, year),
     listTeacherSupportRowsForPublicImpactPostgres(schoolIds),
     getTeachingLearningAlignmentBySchoolIdsPostgres(schoolIds, startDate, endDate),
-    listOnlineSessionStatsForPublicImpactPostgres(schoolIds, year)
+    listOnlineSessionStatsForPublicImpactPostgres(schoolIds, year),
+    listDonorImpactForPublicImpactPostgres(schoolIds, scopeDistricts, scopeRegions),
   ]);
+
+  // Training participant breakdown from attendance records
+  const trainingSessionsCount = new Set(trainingAttendanceRows.map(r => r.portalRecordId)).size;
+  const teachers = trainingAttendanceRows.filter(r => r.participantRole === "Classroom teacher");
+  const leaders = trainingAttendanceRows.filter(r => r.participantRole === "School Leader");
+  const uniqueTeacherKeys = (rows: typeof trainingAttendanceRows) =>
+    new Set(rows.map(r => r.teacherUid ?? `${r.schoolId}::${r.participantName}`));
+  const teachersTrainedMale = uniqueTeacherKeys(teachers.filter(r => r.gender === "Male")).size;
+  const teachersTrainedFemale = uniqueTeacherKeys(teachers.filter(r => r.gender === "Female")).size;
+  const teachersTrainedTotal = uniqueTeacherKeys(teachers).size;
+  const schoolLeadersTrainedMale = uniqueTeacherKeys(leaders.filter(r => r.gender === "Male")).size;
+  const schoolLeadersTrainedFemale = uniqueTeacherKeys(leaders.filter(r => r.gender === "Female")).size;
+  const schoolLeadersTrained = uniqueTeacherKeys(leaders).size;
+  const certificatesIssued = trainingAttendanceRows.filter(r => r.certificateStatus === "Issued").length;
+
+  // ── Intelligence Feature 1: Cohort Progression ──────────────────────────
+  // Composite = mean of all non-null reading scores for a single assessment row
+  const computeComposite = (r: PublicImpactAssessmentRow): number | null => {
+    const vals = [
+      r.letterIdentificationScore, r.soundIdentificationScore, r.decodableWordsScore,
+      r.madeUpWordsScore, r.storyReadingScore, r.readingComprehensionScore,
+    ].filter((v): v is number => typeof v === "number");
+    return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  };
+  type CohortEntry = { baseline: number[]; progress: number[]; endline: number[]; grade: string | null };
+  const learnerCohortMap = new Map<string, CohortEntry>();
+  for (const row of assessmentRows) {
+    if (!row.learnerUid) continue;
+    if (!learnerCohortMap.has(row.learnerUid))
+      learnerCohortMap.set(row.learnerUid, { baseline: [], progress: [], endline: [], grade: row.classGrade });
+    const entry = learnerCohortMap.get(row.learnerUid)!;
+    const c = computeComposite(row);
+    if (c === null) continue;
+    if (row.assessmentType === "baseline") entry.baseline.push(c);
+    else if (row.assessmentType === "progress") entry.progress.push(c);
+    else if (row.assessmentType === "endline") entry.endline.push(c);
+  }
+  const avgArr = (arr: number[]) => arr.length > 0 ? Number((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2)) : null;
+  const matchedEntries = [...learnerCohortMap.values()].filter(e => e.baseline.length > 0 && e.endline.length > 0);
+  const allBaselineComposites = matchedEntries.map(e => avgArr(e.baseline)!);
+  const allProgressComposites = [...learnerCohortMap.values()].filter(e => e.progress.length > 0).map(e => avgArr(e.progress)!);
+  const allEndlineComposites = matchedEntries.map(e => avgArr(e.endline)!);
+  const cohortBaselineAvg = avgArr(allBaselineComposites);
+  const cohortProgressAvg = allProgressComposites.length > 0 ? avgArr(allProgressComposites) : null;
+  const cohortEndlineAvg = avgArr(allEndlineComposites);
+  // By-grade breakdown
+  const gradeMap = new Map<string, { baseline: number[]; endline: number[] }>();
+  for (const [uid, entry] of learnerCohortMap) {
+    if (entry.baseline.length === 0 || entry.endline.length === 0) continue;
+    const grade = learnerCohortMap.get(uid)!.grade ?? "Unknown";
+    if (!gradeMap.has(grade)) gradeMap.set(grade, { baseline: [], endline: [] });
+    gradeMap.get(grade)!.baseline.push(...entry.baseline);
+    gradeMap.get(grade)!.endline.push(...entry.endline);
+  }
+  const cohortByGrade = [...gradeMap.entries()]
+    .map(([grade, scores]) => {
+      const ba = avgArr(scores.baseline);
+      const ea = avgArr(scores.endline);
+      return { grade, n: scores.endline.length, baselineAvg: ba, endlineAvg: ea, delta: ba !== null && ea !== null ? Number((ea - ba).toFixed(2)) : null };
+    })
+    .sort((a, b) => a.grade.localeCompare(b.grade));
+  const cohortProgression = {
+    matchedLearners: matchedEntries.length,
+    avgBaselineComposite: cohortBaselineAvg,
+    avgProgressComposite: cohortProgressAvg,
+    avgEndlineComposite: cohortEndlineAvg,
+    compositeDelta: cohortBaselineAvg !== null && cohortEndlineAvg !== null ? Number((cohortEndlineAvg - cohortBaselineAvg).toFixed(2)) : null,
+    byGrade: cohortByGrade,
+  };
+
+  // ── Intelligence Feature 2: Training → Outcome Correlation ──────────────
+  const trainedSchoolIds = new Set(trainingAttendanceRows.map(r => r.schoolId));
+  const schoolScoreMap = new Map<number, { baseline: number[]; endline: number[] }>();
+  for (const row of assessmentRows) {
+    if (!schoolScoreMap.has(row.schoolId)) schoolScoreMap.set(row.schoolId, { baseline: [], endline: [] });
+    const c = computeComposite(row);
+    if (c === null) continue;
+    if (row.assessmentType === "baseline") schoolScoreMap.get(row.schoolId)!.baseline.push(c);
+    else if (row.assessmentType === "endline") schoolScoreMap.get(row.schoolId)!.endline.push(c);
+  }
+  const trainedDeltas: number[] = [];
+  const untrainedDeltas: number[] = [];
+  for (const [sid, scores] of schoolScoreMap) {
+    if (scores.baseline.length === 0 || scores.endline.length === 0) continue;
+    const delta = (scores.endline.reduce((a, b) => a + b, 0) / scores.endline.length) - (scores.baseline.reduce((a, b) => a + b, 0) / scores.baseline.length);
+    (trainedSchoolIds.has(sid) ? trainedDeltas : untrainedDeltas).push(delta);
+  }
+  const tAvg = avgArr(trainedDeltas);
+  const uAvg = avgArr(untrainedDeltas);
+  const trainingOutcomeCorrelation = {
+    trainedSchools: { count: trainedDeltas.length, avgScoreDelta: tAvg },
+    untrainedSchools: { count: untrainedDeltas.length, avgScoreDelta: uAvg },
+    lift: tAvg !== null && uAvg !== null ? Number((tAvg - uAvg).toFixed(2)) : null,
+  };
+
+  // ── Intelligence Feature 3: At-Risk School Flagging ─────────────────────
+  const lastVisitBySchool = new Map<number, string>();
+  for (const record of portalRecords) {
+    if (record.module === "visit") {
+      const existing = lastVisitBySchool.get(record.schoolId);
+      if (!existing || record.date > existing) lastVisitBySchool.set(record.schoolId, record.date);
+    }
+  }
+  const now = new Date();
+  const atRiskSchools: Array<{ name: string; schoolId: number; riskScore: number; daysSinceLastVisit: number | null; riskFactors: string[] }> = [];
+  for (const school of scopedSchools) {
+    const riskFactors: string[] = [];
+    let riskScore = 0;
+    const lastVisit = lastVisitBySchool.get(school.schoolId);
+    const daysSinceLastVisit = lastVisit
+      ? Math.floor((now.getTime() - new Date(lastVisit).getTime()) / 86400000)
+      : null;
+    if (!lastVisit) { riskFactors.push("No coaching visit on record"); riskScore += 3; }
+    else if (daysSinceLastVisit! > 90) { riskFactors.push(`${daysSinceLastVisit}d since last visit`); riskScore += 2; }
+    else if (daysSinceLastVisit! > 60) { riskFactors.push(`${daysSinceLastVisit}d since last visit`); riskScore += 1; }
+    const schoolEnd = assessmentRows.filter(r => r.schoolId === school.schoolId && r.assessmentType === "endline");
+    const schoolBase = assessmentRows.filter(r => r.schoolId === school.schoolId && r.assessmentType === "baseline");
+    if (schoolBase.length > 0 && schoolEnd.length === 0) { riskFactors.push("Baseline taken, no endline yet"); riskScore += 2; }
+    if (schoolBase.length === 0 && schoolEnd.length === 0) { riskFactors.push("No assessment data"); riskScore += 1; }
+    const impactRatio = school.enrollmentTotal > 0 ? school.directImpactTotal / school.enrollmentTotal : 0;
+    if (impactRatio < 0.3 && school.enrollmentTotal > 10) { riskFactors.push(`Low reach (${Math.round(impactRatio * 100)}% of enrolment)`); riskScore += 1; }
+    if (riskScore >= 2) {
+      atRiskSchools.push({ name: school.schoolName, schoolId: school.schoolId, riskScore, daysSinceLastVisit, riskFactors });
+    }
+  }
+  atRiskSchools.sort((a, b) => b.riskScore - a.riskScore);
+
+  // ── Intelligence Feature 4: Donor Impact ────────────────────────────────
+  const linkedSchoolIds = new Set(donorImpactRaw.sponsorships.filter(s => s.schoolId !== null).map(s => s.schoolId!));
+  const linkedDistrictSet = new Set(donorImpactRaw.sponsorships.filter(s => s.district).map(s => s.district!.toLowerCase()));
+  const linkedSchoolsFromDistricts = scopedSchools.filter(s => linkedDistrictSet.has(s.district.toLowerCase())).map(s => s.schoolId);
+  const donorLinkedSchoolCount = new Set([...linkedSchoolIds, ...linkedSchoolsFromDistricts]).size;
+  const donorImpact = {
+    totalSponsorships: donorImpactRaw.sponsorships.length,
+    totalDonations: donorImpactRaw.donationCount,
+    linkedSchoolsCount: donorLinkedSchoolCount,
+    fundedDistrictsCount: linkedDistrictSet.size,
+    sponsorships: donorImpactRaw.sponsorships.map(s => ({
+      reference: s.reference,
+      donorName: s.donorName,
+      amount: s.amount,
+      currency: s.currency,
+      targetType: s.targetType,
+      targetName: s.targetName,
+    })),
+  };
 
   // Telemetry Aggregation (Global Level currently)
   let recordedLessonsViews = 0;
@@ -1009,17 +1222,21 @@ export async function buildPublicImpactAggregatePostgres(
     // Ignore if tables do not exist yet
   }
 
-  // Finance Aggregation (UGX -> USD Conversion)
+  // Finance Aggregation (UGX -> USD Conversion, rate from currency_rates)
   let totalUgxReceived = 0;
   let totalUsdEquivalent = 0;
   try {
-    const financeResult = await queryPostgres(`
-      SELECT COALESCE(SUM(amount), 0)::numeric AS "totalReceived" 
-      FROM finance_receipts 
-      WHERE status = 'issued' OR status = 'paid'
-    `);
+    const [financeResult, { getUgxPerUsdPostgres }] = await Promise.all([
+      queryPostgres(`
+        SELECT COALESCE(SUM(amount), 0)::numeric AS "totalReceived"
+        FROM finance_receipts
+        WHERE status = 'issued' OR status = 'paid'
+      `),
+      import("@/lib/server/postgres/repositories/settings"),
+    ]);
     totalUgxReceived = Number(financeResult.rows[0]?.totalReceived ?? 0);
-    totalUsdEquivalent = Math.round(totalUgxReceived / 3750); // Baseline static conversion 1 USD = 3750 UGX
+    const rate = await getUgxPerUsdPostgres();
+    totalUsdEquivalent = rate > 0 ? Math.round(totalUgxReceived / rate) : 0;
   } catch (_e) {
     // Ignore if tables do not exist yet
   }
@@ -1106,6 +1323,14 @@ export async function buildPublicImpactAggregatePostgres(
       assessmentsEndlineCount: endlineAssessments.length,
       recordedLessonsViews,
       recordedLessonsCertificates,
+      trainingSessionsCount,
+      teachersTrainedTotal,
+      teachersTrainedMale,
+      teachersTrainedFemale,
+      schoolLeadersTrained,
+      schoolLeadersTrainedMale,
+      schoolLeadersTrainedFemale,
+      certificatesIssued,
     },
     outcomes: {
       letterNames: calcDomain("letterIdentificationScore"),
@@ -1130,8 +1355,12 @@ export async function buildPublicImpactAggregatePostgres(
       totalUsdEquivalent,
     },
     rankings: {
-      mostImproved: [], prioritySupport: [], mostActive: []
+      mostImproved: [], prioritySupport: [], mostActive: [],
+      atRisk: atRiskSchools.slice(0, 20),
     },
+    cohortProgression,
+    trainingOutcomeCorrelation,
+    donorImpact,
     teachingQuality: {
       evaluationsCount: lessonEvals.length,
       avgOverallScore: lessonEvals.length ? Number((lessonEvals.reduce((a, b) => a + Number(b.overallScore || 0), 0) / lessonEvals.length).toFixed(2)) : null,

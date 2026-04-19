@@ -209,14 +209,59 @@ export type FidelityDriver = {
     detail: string;
 };
 
-export async function calculateFidelityScore(_scopeType: string, _scopeId: string) {
-    return { 
-        overall: 0, 
-        totalScore: 0,
-        band: "Developing",
-        drivers: [] as FidelityDriver[],
-        components: [] 
-    };
+export async function calculateFidelityScore(scopeType: string, scopeId: string) {
+    const scopeFilter = scopeType === 'district'
+        ? `WHERE district = $1`
+        : scopeType === 'school'
+        ? `WHERE school_id = $1::int`
+        : scopeType === 'region'
+        ? `WHERE district IN (SELECT DISTINCT district FROM schools_directory WHERE region = $1)`
+        : '';
+
+    const [activityRows, schoolRows] = await Promise.all([
+        scopeFilter
+            ? queryPostgres(`
+                SELECT
+                    COUNT(*) FILTER (WHERE module = 'training')::int                             AS trainings,
+                    COUNT(*) FILTER (WHERE module = 'visit')::int                                AS visits,
+                    COUNT(*) FILTER (WHERE module = 'assessment')::int                           AS assessments,
+                    COUNT(*) FILTER (WHERE module IN ('story_activity','story'))::int             AS story_activities
+                FROM portal_records ${scopeFilter}`, [scopeId])
+            : queryPostgres(`
+                SELECT
+                    COUNT(*) FILTER (WHERE module = 'training')::int  AS trainings,
+                    COUNT(*) FILTER (WHERE module = 'visit')::int     AS visits,
+                    COUNT(*) FILTER (WHERE module = 'assessment')::int AS assessments,
+                    COUNT(*) FILTER (WHERE module IN ('story_activity','story'))::int AS story_activities
+                FROM portal_records`),
+        scopeFilter
+            ? queryPostgres(`SELECT COUNT(*)::int AS school_count FROM schools_directory ${scopeFilter}`, [scopeId])
+            : queryPostgres(`SELECT COUNT(*)::int AS school_count FROM schools_directory`),
+    ]);
+
+    const act = activityRows.rows[0] as Record<string, unknown> ?? {};
+    const schoolCount = Math.max(1, Number(schoolRows.rows[0]?.school_count ?? 1));
+    const trainings = Number(act.trainings ?? 0);
+    const visits = Number(act.visits ?? 0);
+    const assessments = Number(act.assessments ?? 0);
+    const storyActivities = Number(act.story_activities ?? 0);
+
+    const trainingScore = Math.min(100, Math.round((trainings / schoolCount) * 50));
+    const visitScore = Math.min(100, Math.round((visits / schoolCount) * 40));
+    const assessmentScore = Math.min(100, Math.round((assessments / schoolCount) * 30));
+    const storyScore = Math.min(100, Math.round((storyActivities / schoolCount) * 20));
+
+    const drivers: FidelityDriver[] = [
+        { driver: 'training', label: 'Training Frequency', score: trainingScore, detail: `${trainings} sessions across ${schoolCount} schools` },
+        { driver: 'coaching', label: 'Coaching Visits', score: visitScore, detail: `${visits} visits recorded` },
+        { driver: 'assessment', label: 'Assessment Compliance', score: assessmentScore, detail: `${assessments} assessments completed` },
+        { driver: 'story', label: 'Story Activity', score: storyScore, detail: `${storyActivities} story sessions` },
+    ];
+
+    const overall = Math.round((trainingScore + visitScore + assessmentScore + storyScore) / 4);
+    const band = overall >= 75 ? 'Strong' : overall >= 50 ? 'Developing' : overall >= 25 ? 'Emerging' : 'Critical';
+
+    return { overall, totalScore: overall, band, drivers, components: drivers };
 }
 
 export type LearningDomain = {
@@ -227,17 +272,159 @@ export type LearningDomain = {
     sampleSize: number;
 };
 
-export async function getLearningGainsData(_scopeType: string, _scopeId: string) {
-    return { 
-        gains: [], 
-        schoolImprovementIndex: 0,
-        domains: [] as LearningDomain[],
-        summary: null 
+export async function getLearningGainsData(scopeType: string, scopeId: string) {
+    const joinFilter = scopeType === 'district'
+        ? `JOIN schools_directory sd ON sd.id = ar.school_id WHERE sd.district = $1`
+        : scopeType === 'school'
+        ? `JOIN schools_directory sd ON sd.id = ar.school_id WHERE ar.school_id = $1::int`
+        : scopeType === 'region'
+        ? `JOIN schools_directory sd ON sd.id = ar.school_id WHERE sd.region = $1`
+        : `JOIN schools_directory sd ON sd.id = ar.school_id`;
+
+    const params = joinFilter.includes('$1') ? [scopeId] : [];
+
+    const result = await queryPostgres(`
+        SELECT
+            assessment_type,
+            AVG(letter_identification_score)   AS letter_names,
+            AVG(sound_identification_score)    AS letter_sounds,
+            AVG(decodable_words_score)         AS real_words,
+            AVG(made_up_words_score)           AS made_up_words,
+            AVG(story_reading_score)           AS story_reading,
+            AVG(reading_comprehension_score)   AS comprehension,
+            COUNT(*)::int                      AS sample_size
+        FROM assessment_records ar
+        ${joinFilter}
+        GROUP BY assessment_type`, params);
+
+    const byType = new Map(result.rows.map((r: Record<string, unknown>) => [r.assessment_type as string, r]));
+    const baseline = byType.get('baseline') ?? byType.get('Baseline');
+    const endline  = byType.get('endline')  ?? byType.get('Endline');
+
+    const domainKeys: Array<{ key: string; domain: string }> = [
+        { key: 'letter_names',   domain: 'Letter Names' },
+        { key: 'letter_sounds',  domain: 'Letter Sounds' },
+        { key: 'real_words',     domain: 'Real Words' },
+        { key: 'made_up_words',  domain: 'Made-Up Words' },
+        { key: 'story_reading',  domain: 'Story Reading' },
+        { key: 'comprehension',  domain: 'Comprehension' },
+    ];
+
+    const domains: LearningDomain[] = domainKeys.map(({ key, domain }) => {
+        const baselineAvg = baseline ? Number((baseline as Record<string, unknown>)[key] ?? null) : null;
+        const endlineAvg  = endline  ? Number((endline  as Record<string, unknown>)[key] ?? null) : null;
+        const change = baselineAvg !== null && endlineAvg !== null ? Math.round((endlineAvg - baselineAvg) * 100) / 100 : null;
+        return { domain, change, baselineAvg, endlineAvg, sampleSize: Number((endline as Record<string, unknown> | undefined)?.sample_size ?? 0) };
+    });
+
+    const gains = domains.filter(d => d.change !== null);
+    const improvingDomains = gains.filter(d => (d.change ?? 0) > 0).length;
+    const schoolImprovementIndex = gains.length > 0 ? Math.round((improvingDomains / gains.length) * 100) : 0;
+
+    return {
+        gains,
+        schoolImprovementIndex,
+        domains,
+        summary: gains.length > 0 ? {
+            baselineSampleSize: Number((baseline as Record<string, unknown> | undefined)?.sample_size ?? 0),
+            endlineSampleSize: Number((endline as Record<string, unknown> | undefined)?.sample_size ?? 0),
+            domainsImproved: improvingDomains,
+            totalDomains: gains.length,
+        } : null,
     };
 }
 
 export async function getImpactExplorerProfiles(): Promise<ImpactExplorerProfiles> {
-    return { regions: [], districts: [], schools: [] };
+    const [regionRows, schoolRows, activityRows, assessmentRows] = await Promise.all([
+        queryPostgres(`
+            SELECT region,
+                COUNT(*)::int                                                         AS school_count,
+                COALESCE(SUM(enrolled_learners),0)::int                              AS total_learners,
+                COUNT(DISTINCT district)::int                                         AS district_count
+            FROM schools_directory WHERE region IS NOT NULL GROUP BY region ORDER BY region`),
+        queryPostgres(`
+            SELECT id, school_code AS "schoolCode", name, district, sub_region AS "subRegion", region,
+                sub_county AS "subCounty", parish, village,
+                enrolled_boys AS "enrolledBoys", enrolled_girls AS "enrolledGirls",
+                enrolled_learners AS "enrolledLearners", program_status AS status
+            FROM schools_directory ORDER BY name LIMIT 500`),
+        queryPostgres(`
+            SELECT school_id,
+                COUNT(*) FILTER (WHERE module = 'training')::int      AS trainings,
+                COUNT(*) FILTER (WHERE module = 'visit')::int         AS visits,
+                COUNT(*) FILTER (WHERE module = 'assessment')::int    AS assessments,
+                COUNT(*) FILTER (WHERE module IN ('story_activity','story'))::int AS story_activities,
+                MAX(date)::text                                         AS last_activity_date
+            FROM portal_records WHERE school_id IS NOT NULL GROUP BY school_id`),
+        queryPostgres(`
+            SELECT school_id, COUNT(DISTINCT learner_uid)::int AS learners_assessed
+            FROM assessment_records GROUP BY school_id`),
+    ]);
+
+    const activityBySchool = new Map(activityRows.rows.map((r: Record<string, unknown>) => [Number(r.school_id), r]));
+    const assessmentBySchool = new Map(assessmentRows.rows.map((r: Record<string, unknown>) => [Number(r.school_id), Number(r.learners_assessed ?? 0)]));
+
+    const schools: SchoolProfile[] = schoolRows.rows.map((row: Record<string, unknown>) => {
+        const schoolId = Number(row.id);
+        const act = activityBySchool.get(schoolId) as Record<string, unknown> | undefined;
+        return {
+            schoolId,
+            id: schoolId,
+            schoolName: String(row.name ?? ''),
+            name: String(row.name ?? ''),
+            schoolCode: String(row.schoolCode ?? ''),
+            region: String(row.region ?? ''),
+            subRegion: String(row.subRegion ?? ''),
+            district: String(row.district ?? ''),
+            subCounty: String(row.subCounty ?? ''),
+            parish: String(row.parish ?? ''),
+            village: String(row.village ?? ''),
+            enrolledBoys: Number(row.enrolledBoys ?? 0),
+            enrolledGirls: Number(row.enrolledGirls ?? 0),
+            enrolledLearners: Number(row.enrolledLearners ?? 0),
+            status: String(row.status ?? 'active'),
+            trainings: Number(act?.trainings ?? 0),
+            visits: Number(act?.visits ?? 0),
+            assessments: Number(act?.assessments ?? 0),
+            storyActivities: Number(act?.story_activities ?? 0),
+            coachingCycles: Number(act?.visits ?? 0),
+            participantsTotal: 0,
+            participantsTeachers: 0,
+            participantsLeaders: 0,
+            learnersAssessed: assessmentBySchool.get(schoolId) ?? 0,
+            storiesPublished: 0,
+            evidenceUploads: 0,
+            lastActivityDate: String(act?.last_activity_date ?? ''),
+            timeline: [],
+        };
+    });
+
+    const regionActivityBySchool = new Map(schools.map(s => [s.region, s]));
+    const regions: RegionProfile[] = regionRows.rows.map((row: Record<string, unknown>) => {
+        const region = String(row.region ?? '');
+        const regionSchools = schools.filter(s => s.region === region);
+        return {
+            region,
+            schoolsSupported: regionSchools.filter(s => s.trainings > 0 || s.visits > 0).length,
+            participantsTeachers: 0,
+            participantsLeaders: 0,
+            learnersAssessed: regionSchools.reduce((s, sc) => s + sc.learnersAssessed, 0),
+            statusCounts: {
+                onTrack: regionSchools.filter(s => s.trainings >= 2 && s.visits >= 1).length,
+                needsSupport: regionSchools.filter(s => s.trainings === 1 || (s.trainings === 0 && s.visits >= 1)).length,
+                highPriority: regionSchools.filter(s => s.trainings === 0 && s.visits === 0).length,
+            },
+        };
+        void regionActivityBySchool.get(region);
+    });
+
+    const districtNames = [...new Set(schools.map(s => s.district).filter(Boolean))];
+    const districts: DistrictProfile[] = districtNames.map(district => ({
+        district,
+        region: schools.find(s => s.district === district)?.region ?? '',
+    }));
+
+    return { regions, districts, schools };
 }
 
 export async function getPortalAnalyticsData(_user: unknown) {
@@ -279,16 +466,46 @@ export async function getPortalOperationalReportsData(_user: unknown) {
     } as import("@/lib/types").PortalOperationalReportsData;
 }
 
-export async function getDistrictStats(districtName: string) {
+export async function getDistrictStats(districtName: string): Promise<import("@/lib/types").DistrictStats> {
     const result = await queryPostgres(
-        `SELECT COUNT(DISTINCT school_id) AS "schoolCount" FROM school_directory WHERE district = $1`,
+        `SELECT
+           COUNT(*)::int                                                          AS "totalSchools",
+           COUNT(*) FILTER (WHERE program_status IN ('active','graduated'))::int  AS "totalZapSchools",
+           COALESCE(SUM(enrolled_learners), 0)::int                               AS "totalLearners",
+           MAX(region)                                                             AS region
+         FROM schools_directory WHERE district = $1`,
         [districtName],
     );
-    return { schoolCount: Number(result.rows[0]?.schoolCount ?? 0), district: districtName, region: '', totalSchools: 0, totalZapSchools: 0, totalLearners: 0 } as unknown as import("@/lib/types").DistrictStats;
+    const row = result.rows[0] ?? {};
+    return {
+        district: districtName,
+        region: String(row.region ?? ''),
+        totalSchools: Number(row.totalSchools ?? 0),
+        totalZapSchools: Number(row.totalZapSchools ?? 0),
+        totalLearners: Number(row.totalLearners ?? 0),
+    };
 }
 
-export async function getRegionStats(regionName: string) {
-    return { region: regionName, schoolCount: 0, totalSchools: 0, totalDistricts: 0, totalZapSchools: 0, totalLearners: 0, districts: [] } as unknown as import("@/lib/types").RegionStats;
+export async function getRegionStats(regionName: string): Promise<import("@/lib/types").RegionStats> {
+    const result = await queryPostgres(
+        `SELECT
+           COUNT(*)::int                                                          AS "totalSchools",
+           COUNT(*) FILTER (WHERE program_status IN ('active','graduated'))::int  AS "totalZapSchools",
+           COALESCE(SUM(enrolled_learners), 0)::int                               AS "totalLearners",
+           COUNT(DISTINCT district)::int                                          AS "totalDistricts",
+           COALESCE(array_agg(DISTINCT district) FILTER (WHERE district IS NOT NULL), '{}') AS districts
+         FROM schools_directory WHERE region = $1`,
+        [regionName],
+    );
+    const row = result.rows[0] ?? {};
+    return {
+        region: regionName,
+        totalSchools: Number(row.totalSchools ?? 0),
+        totalDistricts: Number(row.totalDistricts ?? 0),
+        totalZapSchools: Number(row.totalZapSchools ?? 0),
+        totalLearners: Number(row.totalLearners ?? 0),
+        districts: (row.districts as string[]) ?? [],
+    };
 }
 
 export async function listSchoolSupportStatuses(_filters?: unknown) {
@@ -319,12 +536,84 @@ export type LeagueTableRow = {
 };
 
 export async function getGovernmentViewData(_period?: string) {
-    return { 
-        regions: [], 
-        districts: [], 
-        summary: {},
+    const [districtRows, regionRows, activityRows, assessmentRows] = await Promise.all([
+        queryPostgres(`
+            SELECT
+                district,
+                MAX(region) AS region,
+                COUNT(*)::int                                                          AS total_schools,
+                COUNT(*) FILTER (WHERE program_status IN ('active','graduated'))::int  AS zap_schools,
+                COALESCE(SUM(enrolled_learners),0)::int                               AS total_learners
+            FROM schools_directory
+            WHERE district IS NOT NULL
+            GROUP BY district
+            ORDER BY district`),
+        queryPostgres(`
+            SELECT region,
+                COUNT(DISTINCT district)::int    AS total_districts,
+                COUNT(*)::int                   AS total_schools,
+                COALESCE(SUM(enrolled_learners),0)::int AS total_learners
+            FROM schools_directory
+            WHERE region IS NOT NULL
+            GROUP BY region
+            ORDER BY region`),
+        queryPostgres(`
+            SELECT district,
+                COUNT(*) FILTER (WHERE module = 'training')::int  AS trainings,
+                COUNT(*) FILTER (WHERE module = 'visit')::int     AS visits,
+                COUNT(*) FILTER (WHERE module = 'assessment')::int AS assessments
+            FROM portal_records
+            WHERE district IS NOT NULL
+            GROUP BY district`),
+        queryPostgres(`
+            SELECT sd.district, COUNT(ar.id)::int AS learners_assessed
+            FROM assessment_records ar
+            JOIN schools_directory sd ON sd.id = ar.school_id
+            GROUP BY sd.district`),
+    ]);
+
+    const activityByDistrict = new Map(activityRows.rows.map((r: Record<string, unknown>) => [r.district as string, r]));
+    const assessmentByDistrict = new Map(assessmentRows.rows.map((r: Record<string, unknown>) => [r.district as string, Number(r.learners_assessed ?? 0)]));
+
+    const leagueTable: LeagueTableRow[] = districtRows.rows.map((row: Record<string, unknown>, i: number) => {
+        const district = row.district as string;
+        const act = activityByDistrict.get(district) as Record<string, unknown> | undefined;
+        const schoolsSupported = Number(row.zap_schools ?? 0);
+        const learnersAssessed = assessmentByDistrict.get(district) ?? 0;
+        const trainings = Number(act?.trainings ?? 0);
+        const visits = Number(act?.visits ?? 0);
+        const assessments = Number(act?.assessments ?? 0);
+        const activityScore = Math.min(100, Math.round(((trainings * 20) + (visits * 30) + (assessments * 10)) / Math.max(schoolsSupported, 1)));
+        const outcomesScore = learnersAssessed > 0 ? Math.min(100, Math.round((learnersAssessed / Math.max(Number(row.total_learners ?? 1), 1)) * 100)) : null;
+        const priorityFlag: LeagueTableRow["priorityFlag"] = activityScore >= 60 ? "on-track" : activityScore >= 30 ? "watch" : "urgent";
+        return { district, region: String(row.region ?? ''), rank: i + 1, fidelityScore: activityScore, outcomesScore, schoolsSupported, learnersAssessed, priorityFlag };
+    }).sort((a, b) => (b.fidelityScore ?? 0) - (a.fidelityScore ?? 0)).map((row, i) => ({ ...row, rank: i + 1 }));
+
+    const districts = districtRows.rows.map((r: Record<string, unknown>) => ({
+        district: r.district as string,
+        region: String(r.region ?? ''),
+        totalSchools: Number(r.total_schools ?? 0),
+        zapSchools: Number(r.zap_schools ?? 0),
+        totalLearners: Number(r.total_learners ?? 0),
+    }));
+
+    const regions = regionRows.rows.map((r: Record<string, unknown>) => ({
+        region: r.region as string,
+        totalDistricts: Number(r.total_districts ?? 0),
+        totalSchools: Number(r.total_schools ?? 0),
+        totalLearners: Number(r.total_learners ?? 0),
+    }));
+
+    return {
+        regions,
+        districts,
+        summary: {
+            totalSchools: districts.reduce((s, d) => s + d.totalSchools, 0),
+            totalDistricts: districts.length,
+            totalRegions: regions.length,
+        },
         generatedAt: new Date().toISOString(),
-        leagueTable: [] as LeagueTableRow[]
+        leagueTable,
     };
 }
 

@@ -1306,6 +1306,14 @@ export interface PublicImpactAggregate {
     assessmentsEndlineCount: number;
     recordedLessonsViews?: number;
     recordedLessonsCertificates?: number;
+    trainingSessionsCount: number;
+    teachersTrainedTotal: number;
+    teachersTrainedMale: number;
+    teachersTrainedFemale: number;
+    schoolLeadersTrained: number;
+    schoolLeadersTrainedMale: number;
+    schoolLeadersTrainedFemale: number;
+    certificatesIssued: number;
   };
   outcomes: {
     letterNames: PublicImpactDomainAggregate;
@@ -1361,6 +1369,13 @@ export interface PublicImpactAggregate {
     mostImproved: Array<{ name: string; score: number }>;
     prioritySupport: Array<{ name: string; score: number }>;
     mostActive: Array<{ name: string; score: number }>;
+    atRisk?: Array<{
+      name: string;
+      schoolId: number;
+      riskScore: number;
+      daysSinceLastVisit: number | null;
+      riskFactors: string[];
+    }>;
   };
   teachingQuality: PublicTeachingQualitySummary;
   teachingLearningAlignment: TeachingLearningAlignmentAggregate;
@@ -1398,6 +1413,39 @@ export interface PublicImpactAggregate {
       district: string;
       subRegion: string;
       region: string;
+    }>;
+  };
+  cohortProgression?: {
+    matchedLearners: number;
+    avgBaselineComposite: number | null;
+    avgProgressComposite: number | null;
+    avgEndlineComposite: number | null;
+    compositeDelta: number | null;
+    byGrade: Array<{
+      grade: string;
+      n: number;
+      baselineAvg: number | null;
+      endlineAvg: number | null;
+      delta: number | null;
+    }>;
+  };
+  trainingOutcomeCorrelation?: {
+    trainedSchools: { count: number; avgScoreDelta: number | null };
+    untrainedSchools: { count: number; avgScoreDelta: number | null };
+    lift: number | null;
+  };
+  donorImpact?: {
+    totalSponsorships: number;
+    totalDonations: number;
+    linkedSchoolsCount: number;
+    fundedDistrictsCount: number;
+    sponsorships: Array<{
+      reference: string;
+      donorName: string;
+      amount: number;
+      currency: string;
+      targetType: string;
+      targetName: string;
     }>;
   };
   generatedAt?: string;

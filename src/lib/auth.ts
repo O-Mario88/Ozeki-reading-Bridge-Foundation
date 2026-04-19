@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { findPortalUserBySessionTokenPostgres } from "@/lib/server/postgres/repositories/auth";
@@ -36,9 +37,11 @@ export function buildClearSessionCookie() {
 
 /**
  * Read the portal session cookie and return the current user, or null.
+ * Wrapped in React.cache() so repeated calls within the same render-tree
+ * (page + layout + nested components + route guards) all share one DB hit.
  * This is the single entry-point for session resolution.
  */
-export async function getCurrentPortalUser(): Promise<PortalUser | null> {
+export const getCurrentPortalUser = cache(async (): Promise<PortalUser | null> => {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(PORTAL_SESSION_COOKIE)?.value;
@@ -47,7 +50,7 @@ export async function getCurrentPortalUser(): Promise<PortalUser | null> {
   } catch {
     return null;
   }
-}
+});
 
 /** Alias kept for files that imported under this name from portal-api. */
 export const getAuthenticatedPortalUser = getCurrentPortalUser;

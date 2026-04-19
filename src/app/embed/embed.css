@@ -1,0 +1,121 @@
+/* Embed wrapper (replaces previous <html>/<body> scope).
+   Since the page is rendered INSIDE the main root layout (LayoutOrchestrator
+   returns children unwrapped for /embed/*), we reset padding/background here. */
+.embed-wrapper {
+  min-height: 100vh;
+  background: #ffffff;
+}
+.embed-wrapper body, body:has(.embed-wrapper) { background: transparent; }
+
+.embed-root {
+  padding: 20px;
+  background: #ffffff;
+  color: #111827;
+  min-height: 100vh;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.embed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 2px solid #f97316;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+.embed-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+.embed-period {
+  color: #6b7280;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.embed-grid {
+  display: grid;
+  gap: 12px;
+}
+.embed-grid-scorecard {
+  grid-template-columns: repeat(3, 1fr);
+}
+.embed-grid-kpis {
+  grid-template-columns: repeat(4, 1fr);
+}
+.embed-kpi-tile {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.embed-kpi-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  font-weight: 600;
+}
+.embed-kpi-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+.embed-kpi-helper {
+  color: #9ca3af;
+  font-size: 11px;
+}
+.embed-funnel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.embed-funnel-step {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 110px;
+}
+.embed-funnel-step span {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #9a3412;
+  font-weight: 600;
+}
+.embed-funnel-step strong {
+  font-size: 24px;
+  color: #c2410c;
+}
+.embed-funnel-arrow {
+  color: #f97316;
+  font-weight: 700;
+  font-size: 18px;
+}
+.embed-footer {
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid #f3f4f6;
+  color: #9ca3af;
+  text-align: center;
+}
+.embed-error {
+  padding: 40px;
+  text-align: center;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+}
+@media (max-width: 640px) {
+  .embed-grid-scorecard { grid-template-columns: repeat(2, 1fr); }
+  .embed-grid-kpis { grid-template-columns: repeat(2, 1fr); }
+}

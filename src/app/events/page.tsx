@@ -5,7 +5,9 @@ import { Video, MapPin, Calendar, Clock, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { CTAStrip } from "@/components/public/CTAStrip";
 
-export const dynamic = "force-dynamic";
+// Public events list changes slowly; 10-minute revalidation avoids hammering
+// the DB on every page view while still reflecting new schedules.
+export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: "Online Training Sessions",
@@ -13,11 +15,16 @@ export const metadata: Metadata = {
 };
 
 export default async function EventsPage() {
-  // Master unification fetch
-  const allEvents = await listTrainingEventsPostgres('Published');
+  // Fail gracefully if DB is unreachable during build — important for CI and
+  // Amplify's first build when the RDS instance may not yet be provisioned.
+  let allEvents: Awaited<ReturnType<typeof listTrainingEventsPostgres>> = [];
+  try {
+    allEvents = await listTrainingEventsPostgres("Published");
+  } catch (err) {
+    console.error("[events] failed to load training events (DB may be offline)", err);
+  }
 
-  // We could separate them entirely, but the unified grid is powerful
-  const scheduledEvents = allEvents.filter(e => new Date(e.startDatetime!) > new Date());
+  const scheduledEvents = allEvents.filter((e) => new Date(e.startDatetime!) > new Date());
 
   return (
     <>

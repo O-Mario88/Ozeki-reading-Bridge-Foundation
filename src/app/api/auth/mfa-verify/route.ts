@@ -6,6 +6,7 @@ import {
   findPortalUserAuthByIdPostgres
 } from "@/lib/server/postgres/repositories/auth";
 import { getPortalHomePath, PORTAL_SESSION_COOKIE } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { clearRateLimit, consumeRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
     }
-    console.error("[MFA VERIFY] Error:", error);
+    logger.error("[mfa-verify] Unhandled error", { error: String(error) });
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

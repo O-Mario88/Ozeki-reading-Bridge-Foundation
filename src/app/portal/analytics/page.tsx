@@ -22,13 +22,14 @@ async function fetchMasterTelemetry() {
         (SELECT COALESCE(SUM(watch_time_seconds)/3600, 0) FROM lesson_view_sessions) as lmsHours
     `);
     
-    // Applying data mapping safely
+    // Applying data mapping safely — zero-default on empty DB rather than
+    // mocked placeholders, which previously leaked through to the UI.
     stats = {
-      totalRevenue: Number(rows?.[0]?.totalrevenue || 12850), // Mocked for display
-      activeSponsors: Number(rows?.[0]?.schoolsengaged || 34),
-      teachersTrained: Number(rows?.[0]?.teacherspresent || 210),
-      lmsViewHours: Number(rows?.[0]?.lmshours || 85),
-      scheduledEvents: 12
+      totalRevenue: Number(rows?.[0]?.totalrevenue ?? 0),
+      activeSponsors: Number(rows?.[0]?.schoolsengaged ?? 0),
+      teachersTrained: Number(rows?.[0]?.teacherspresent ?? 0),
+      lmsViewHours: Number(rows?.[0]?.lmshours ?? 0),
+      scheduledEvents: 0,
     };
   } catch (err) {
     console.error("Telemetry map failed:", err);

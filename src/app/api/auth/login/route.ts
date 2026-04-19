@@ -11,6 +11,7 @@ import { logAuditEventPostgres } from "@/lib/server/postgres/repositories/audit"
 import { getPortalHomePath, PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { clearRateLimit, consumeRateLimit } from "@/lib/rate-limit";
 import { sendMfaEmail } from "@/lib/mfa-email";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -57,13 +58,13 @@ export async function POST(request: Request) {
     
     if (isPrivileged && !bypassMfa) {
       const mfaCode = await generateMfaOtpPostgres(user.id);
-      console.log(`[LOGIN MFA] Sending MFA code to: ${user.email} | Code: ${mfaCode} | SMTP_HOST: ${process.env.SMTP_HOST} | BYPASS_MFA: ${process.env.BYPASS_MFA}`);
+      logger.info("[login] MFA challenge dispatched", { userId: user.id, smtp: process.env.SMTP_HOST });
       const emailResult = await sendMfaEmail(user.email, { fullName: user.fullName, otpCode: mfaCode });
-      console.log(`[LOGIN MFA] Email result: status=${emailResult.status}, message=${emailResult.providerMessage}`);
+      logger.debug("[login] MFA email result", { status: emailResult.status, message: emailResult.providerMessage });
       const isDev = process.env.NODE_ENV === "development";
-      
+
       if (emailResult.status === "failed") {
-        console.error("[LOGIN MFA] Email failed to send:", emailResult.providerMessage);
+        logger.error("[login] MFA email failed", { message: emailResult.providerMessage });
         if (!isDev) {
           return NextResponse.json({ error: "Failed to dispatch verification email. Please verify SMTP configuration." }, { status: 500 });
         }
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
       } catch (_e) { /* ignore */ }
 
       if (emailResult.status === "skipped" || (emailResult.status === "failed" && isDev)) {
-        console.warn(`[LOGIN MFA] SMTP skipped or failed in dev. Generated code for ${user.email} is: ${mfaCode}`);
+        logger.warn("[login] SMTP skipped or failed in dev", { devOtp: mfaCode });
       }
 
       return NextResponse.json({
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("[LOGIN] Error:", error);
+    logger.error("[login] Unhandled error", { error: String(error) });
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }

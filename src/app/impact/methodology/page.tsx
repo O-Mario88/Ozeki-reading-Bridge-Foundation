@@ -56,10 +56,10 @@ export default async function ImpactMethodologyPage() {
             <ul>
               <li>Learners assessed: {learnersAssessed.toLocaleString()}</li>
               <li>
-                Latest report scope: {latestReport ? `${latestReport.scopeType} - ${latestReport.scopeValue}` : "Data not available"}
+                Latest report scope: {latestReport ? `${latestReport.scope_type} - ${latestReport.scope_value}` : "Data not available"}
               </li>
               <li>
-                Assessment cycle: {latestReport ? `${latestReport.periodStart} to ${latestReport.periodEnd}` : "Data not available"}
+                Assessment cycle: {latestReport ? `${latestReport.period_start} to ${latestReport.period_end}` : "Data not available"}
               </li>
             </ul>
           </article>
@@ -75,7 +75,7 @@ export default async function ImpactMethodologyPage() {
               <li>Spot-check and verification routines</li>
               <li>Missing-data and consistency checks</li>
               <li>
-                Latest public data quality note: {latestReport?.factPack.dataQuality.verificationNote ?? "Data not available"}
+                Latest public data quality note: {(latestReport?.fact_pack_json?.dataQuality as { verificationNote?: string } | undefined)?.verificationNote ?? "Data not available"}
               </li>
             </ul>
           </article>

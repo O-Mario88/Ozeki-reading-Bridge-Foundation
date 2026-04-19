@@ -86,7 +86,8 @@ export async function getMeetArtifactsMetadata(conferenceRecordId: string) {
       transcripts: transcriptsRes.data.transcripts || [],
     };
   } catch (error) {
-    console.error("Failed to fetch Meet artifacts", error);
+    const { logger } = await import("@/lib/logger");
+    logger.error("[google-meet-sync] Failed to fetch Meet artifacts", { error: String(error) });
     return { recordings: [], transcripts: [] };
   }
 }
@@ -105,7 +106,8 @@ export async function downloadTranscriptContent(transcriptName: string): Promise
     // Combine text
     return entries.map((e: Record<string, string>) => `[${e.participant}] ${e.text}`).join("\n");
   } catch (error) {
-    console.error("Failed to download transcript", error);
+    const { logger } = await import("@/lib/logger");
+    logger.error("[google-meet-sync] Failed to download transcript", { error: String(error) });
     throw error;
   }
 }

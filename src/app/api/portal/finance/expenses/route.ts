@@ -12,6 +12,7 @@ import {
   upsertFinanceExpenseReceiptsAsync,
 } from "@/services/financeService";
 import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { queryPostgres } from "@/lib/server/postgres/client";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ const receiptMetadataSchema = z.object({
   fileIndex: z.coerce.number().int().nonnegative(),
   vendorName: z.string().trim().min(2).max(200),
   receiptDate: z.string().trim().min(8),
-  receiptAmount: z.coerce.number().positive(),
+  receiptAmount: z.coerce.number().positive().max(999_999_999, "Receipt amount exceeds maximum allowed."),
   currency: z.enum(["UGX", "USD"]).default("UGX"),
   referenceNo: z.string().trim().max(120).optional(),
 });
@@ -28,7 +29,7 @@ const createSchema = z.object({
   vendorName: z.string().trim().min(2).max(200),
   date: z.string().trim().min(8),
   subcategory: z.string().trim().max(120).optional(),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().positive().max(999_999_999, "Amount exceeds maximum allowed per transaction."),
   currency: z.enum(["UGX", "USD"]).default("UGX"),
   paymentMethod: z.enum(["cash", "bank_transfer", "mobile_money", "cheque", "other"]),
   description: z.string().trim().min(2).max(2000),
@@ -161,6 +162,32 @@ export async function POST(request: NextRequest) {
       throw new Error("Failed to create expense record.");
     }
 
+    const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+    const ALLOWED_MIME_TYPES = new Set([
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ]);
+
+    for (const file of uploads) {
+      if (!file || file.size <= 0) continue;
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: `File "${file.name}" exceeds the 10 MB size limit.` },
+          { status: 400 },
+        );
+      }
+      const mime = file.type?.toLowerCase() || "";
+      if (!ALLOWED_MIME_TYPES.has(mime) && !mime.startsWith("image/")) {
+        return NextResponse.json(
+          { error: `File "${file.name}" has an unsupported type. Allowed: PDF, JPEG, PNG, WebP.` },
+          { status: 400 },
+        );
+      }
+    }
+
     const evidence = [];
     const evidenceMeta: Array<{
       fileId: number;
@@ -172,6 +199,18 @@ export async function POST(request: NextRequest) {
       }
       const bytes = Buffer.from(await file.arrayBuffer());
       const fileHashSha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+
+      // Duplicate file detection: reject if this exact file was already uploaded
+      const dupFile = await queryPostgres<{ expense_id: number }>(
+        `SELECT expense_id FROM finance_expense_receipts WHERE file_hash_sha256 = $1 LIMIT 1`,
+        [fileHashSha256],
+      );
+      if (dupFile.rows.length > 0) {
+        return NextResponse.json(
+          { error: `File "${file.name}" appears to be a duplicate of a receipt already uploaded on expense ${dupFile.rows[0].expense_id}.` },
+          { status: 409 },
+        );
+      }
       const uploaded = await createFinanceFileRecord(
         {
           sourceType: "expense",

@@ -1,16 +1,19 @@
 import Link from "next/link";
-import { 
-  ShieldCheck, FileText, PieChart, Target, Heart, Scale, 
-  BookOpen, Users, Building, Activity, LineChart, Download, 
-  CheckCircle, Shield, FileCheck, ArrowRight, BookText, ClipboardCheck
+import {
+  ShieldCheck, FileText, PieChart, Target, Heart, Scale,
+  BookOpen, Users, Building, Activity, LineChart, Download,
+  CheckCircle, Shield, FileCheck, ArrowRight, BookText, ClipboardCheck,
+  TrendingUp, Award, BarChart3
 } from "lucide-react";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { PremiumCard } from "@/components/public/PremiumCard";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { PublicReportDownloader } from "@/components/public/PublicReportDownloader";
 import type { FinanceCurrency, FinancePublicSnapshotRecord, FinanceAuditedStatementRecord } from "@/lib/types";
-
+import { getPublicObservationFidelityStatsPostgres } from "@/lib/server/postgres/repositories/phonics-observations";
+import { getTransparencyLiveStatsPostgres } from "@/lib/server/postgres/repositories/finance-intelligence";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { DollarSign, PercentCircle } from "lucide-react";
 
 export const revalidate = 300;
 
@@ -35,30 +38,75 @@ async function getLiveImpactKpis() {
     };
   } catch (err) {
     console.error("Failed to fetch transparency KPIs", err);
-    return { schools: 48, teachers: 312, learners: 14500, activities: 1205 }; // fallback
+    // Return zeros on failure rather than stale placeholder numbers; the UI
+    // treats 0 as "data unavailable" and messaging is reviewed via Sentry alerts.
+    return { schools: 0, teachers: 0, learners: 0, activities: 0 };
   }
 }
 
-async function getTransparencyData() {
-  const host = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const res = await fetch(`${host}/api/transparency/financials`, { cache: "no-store", next: { revalidate: 3600 } });
-  if (!res.ok) {
+async function getTransparencyData(): Promise<{
+  snapshots: FinancePublicSnapshotRecord[];
+  audited: FinanceAuditedStatementRecord[];
+}> {
+  // Direct repository call — self-fetching /api/* during SSG causes
+  // "socket hang up" on build hosts (no dev server running).
+  try {
+    const { listFinancePublicSnapshotsPostgres, listFinanceAuditedStatementsPostgres } =
+      await import("@/lib/server/postgres/repositories/finance");
+    const [snapshots, audited] = await Promise.all([
+      listFinancePublicSnapshotsPostgres({ publishedOnly: true }),
+      listFinanceAuditedStatementsPostgres({ publishedOnly: true }),
+    ]);
+    return {
+      snapshots: snapshots as unknown as FinancePublicSnapshotRecord[],
+      audited: audited as unknown as FinanceAuditedStatementRecord[],
+    };
+  } catch {
     return { snapshots: [], audited: [] };
   }
-  return res.json() as Promise<{
-    snapshots: FinancePublicSnapshotRecord[];
-    audited: FinanceAuditedStatementRecord[];
-  }>;
 }
 
 const formatMoney = (curr: FinanceCurrency, amt: number) => {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: curr, maximumFractionDigits: 0 }).format(amt);
 };
 
+async function getProgramEvidenceData() {
+  try {
+    const [fidelityStats, outcomeRes, trainingRes] = await Promise.all([
+      getPublicObservationFidelityStatsPostgres(),
+      queryPostgres(`
+        SELECT
+          AVG(reading_comprehension_score) FILTER (WHERE assessment_type = 'baseline')::numeric AS baseline_comp,
+          AVG(reading_comprehension_score) FILTER (WHERE assessment_type = 'endline')::numeric  AS endline_comp,
+          COUNT(*) FILTER (WHERE assessment_type = 'endline')::int AS endline_count
+        FROM assessment_records
+      `),
+      queryPostgres(`
+        SELECT COUNT(*)::int AS training_count FROM portal_records WHERE module = 'training'
+      `),
+    ]);
+    const row = outcomeRes.rows[0];
+    const b = Number(row?.baseline_comp ?? 0);
+    const e = Number(row?.endline_comp ?? 0);
+    return {
+      fidelity: fidelityStats,
+      baselineComp: Math.round(b),
+      endlineComp: Math.round(e),
+      compDelta: e > 0 && b > 0 ? Math.round(((e - b) / b) * 100) : null,
+      endlineCount: Number(row?.endline_count ?? 0),
+      trainingCount: Number(trainingRes.rows[0]?.training_count ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default async function FinancialTransparencyPage() {
-  const [{ snapshots, audited }, liveKpis] = await Promise.all([
+  const [{ snapshots, audited }, liveKpis, programEvidence, liveFinance] = await Promise.all([
     getTransparencyData(),
-    getLiveImpactKpis()
+    getLiveImpactKpis(),
+    getProgramEvidenceData(),
+    getTransparencyLiveStatsPostgres().catch(() => null),
   ]);
   const fnSnapshots = snapshots.filter(s => s.snapshotType === "fy");
 
@@ -229,7 +277,188 @@ export default async function FinancialTransparencyPage() {
           </div>
         </SectionWrapper>
 
-        {/* 7. Reports and Documents (LIVE DATA) */}
+        {/* 6B. LIVE Financial Snapshot — receipts, expenditure, cost-per-learner */}
+        {liveFinance && liveFinance.totalSpentUgx > 0 && (
+          <SectionWrapper theme="off-white">
+            <div className="max-w-4xl mx-auto text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold mb-4">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                LIVE DATA · Updated {new Date(liveFinance.updatedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-4">
+                Live Financial Snapshot
+              </h2>
+              <p className="text-xl text-gray-500 leading-relaxed">
+                Every figure below reflects the actual state of our ledger right now,
+                pulled directly from the programme database.
+              </p>
+            </div>
+
+            <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-4 mb-8">
+              <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 text-center">
+                <div className="flex items-center gap-2 justify-center mb-2">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Total Received</p>
+                </div>
+                <p className="text-2xl font-extrabold text-emerald-700">
+                  UGX {liveFinance.totalReceivedUgx.toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">≈ ${liveFinance.totalReceivedUsd.toLocaleString()}</p>
+              </div>
+              <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 text-center">
+                <div className="flex items-center gap-2 justify-center mb-2">
+                  <DollarSign className="w-4 h-4 text-blue-600" />
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Total Spent</p>
+                </div>
+                <p className="text-2xl font-extrabold text-blue-700">
+                  UGX {liveFinance.totalSpentUgx.toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">≈ ${liveFinance.totalSpentUsd.toLocaleString()}</p>
+              </div>
+              <div className="rounded-2xl bg-[#006b61] shadow-md p-5 text-center">
+                <div className="flex items-center gap-2 justify-center mb-2">
+                  <PercentCircle className="w-4 h-4 text-white/70" />
+                  <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Programme Delivery</p>
+                </div>
+                <p className="text-2xl font-extrabold text-white">
+                  {liveFinance.programmeDeliveryPct}%
+                </p>
+                <p className="text-xs text-white/70 mt-1">direct-to-classroom spend</p>
+              </div>
+              <div className="rounded-2xl bg-[#FA7D15] shadow-md p-5 text-center">
+                <div className="flex items-center gap-2 justify-center mb-2">
+                  <PercentCircle className="w-4 h-4 text-white/70" />
+                  <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Cost per Learner</p>
+                </div>
+                <p className="text-2xl font-extrabold text-white">
+                  UGX {liveFinance.costPerLearnerUgx.toLocaleString()}
+                </p>
+                <p className="text-xs text-white/70 mt-1">≈ ${liveFinance.costPerLearnerUsd.toLocaleString()} per learner assessed</p>
+              </div>
+            </div>
+
+            {/* Programme delivery bar */}
+            <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 p-6">
+              <div className="flex justify-between items-baseline mb-2">
+                <p className="text-sm font-bold text-gray-700">
+                  Programme delivery vs administration
+                </p>
+                <p className="text-xs text-gray-400">of total expenditure</p>
+              </div>
+              <div className="h-8 rounded-lg bg-gray-100 overflow-hidden flex">
+                <div
+                  className="h-full bg-[#006b61] flex items-center justify-center text-white text-xs font-bold"
+                  style={{ width: `${liveFinance.programmeDeliveryPct}%` }}
+                >
+                  {liveFinance.programmeDeliveryPct}% Programme
+                </div>
+                <div
+                  className="h-full bg-gray-400 flex items-center justify-center text-white text-xs font-bold"
+                  style={{ width: `${100 - liveFinance.programmeDeliveryPct}%` }}
+                >
+                  {100 - liveFinance.programmeDeliveryPct}% Admin / Overhead
+                </div>
+              </div>
+            </div>
+          </SectionWrapper>
+        )}
+
+        {/* 7. Program Evidence — links funding to outcomes */}
+        {programEvidence && (
+          <SectionWrapper theme="charius-beige">
+            <div className="max-w-4xl mx-auto text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#006b61]/10 text-[#006b61] text-sm font-semibold mb-4">
+                <TrendingUp className="w-4 h-4" /> Program Evidence
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-4">
+                What the Funds Deliver
+              </h2>
+              <p className="text-xl text-gray-500 leading-relaxed">
+                Financial stewardship is only meaningful when linked to real outcomes.
+                These numbers come directly from our program database.
+              </p>
+            </div>
+
+            <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 mb-8">
+              {/* Reading improvement */}
+              {programEvidence.endlineCount > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-7 text-center">
+                  <div className="w-12 h-12 rounded-full bg-[#006b61]/10 flex items-center justify-center mx-auto mb-4">
+                    <BarChart3 className="w-6 h-6 text-[#006b61]" />
+                  </div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Comprehension Gain
+                  </p>
+                  <p className="text-4xl font-extrabold text-[#006b61]">
+                    {programEvidence.compDelta !== null && programEvidence.compDelta > 0
+                      ? `+${programEvidence.compDelta}%`
+                      : `${programEvidence.endlineComp}%`}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    {programEvidence.compDelta !== null && programEvidence.compDelta > 0
+                      ? `relative improvement — ${programEvidence.endlineCount.toLocaleString()} endline assessments`
+                      : `average endline score across ${programEvidence.endlineCount.toLocaleString()} learners`}
+                  </p>
+                </div>
+              )}
+
+              {/* Teaching quality */}
+              {programEvidence.fidelity.totalSubmitted > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-7 text-center">
+                  <div className="w-12 h-12 rounded-full bg-[#FA7D15]/10 flex items-center justify-center mx-auto mb-4">
+                    <Award className="w-6 h-6 text-[#FA7D15]" />
+                  </div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Teaching Fidelity
+                  </p>
+                  <p className="text-4xl font-extrabold text-[#FA7D15]">
+                    {programEvidence.fidelity.fidelityPct}%
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    of {programEvidence.fidelity.totalSubmitted} lesson observations at full program fidelity
+                  </p>
+                  <div className="mt-4 h-2 rounded-full bg-gray-100 overflow-hidden flex">
+                    <div
+                      className="h-full bg-blue-500"
+                      style={{ width: `${(programEvidence.fidelity.fidelityCount / programEvidence.fidelity.totalSubmitted) * 100}%` }}
+                    />
+                    <div
+                      className="h-full bg-amber-400"
+                      style={{ width: `${(programEvidence.fidelity.partialCount / programEvidence.fidelity.totalSubmitted) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Training delivery */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-7 text-center">
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                  <LineChart className="w-6 h-6 text-blue-600" />
+                </div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                  Training Sessions
+                </p>
+                <p className="text-4xl font-extrabold text-blue-700">
+                  {programEvidence.trainingCount.toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  teacher training sessions delivered across schools
+                </p>
+              </div>
+            </div>
+
+            <div className="max-w-3xl mx-auto text-center">
+              <Link
+                href="/impact/overview"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#006b61] text-white font-semibold text-sm hover:bg-[#006b61]/90 transition-colors"
+              >
+                <TrendingUp className="w-4 h-4" /> Explore Full Impact Data
+              </Link>
+            </div>
+          </SectionWrapper>
+        )}
+
+        {/* 8. Reports and Documents (LIVE DATA) */}
         <SectionWrapper theme="charius-beige" id="reports">
           <div className="max-w-4xl mx-auto text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-6">Reports and Financial Documents</h2>
@@ -318,7 +547,7 @@ export default async function FinancialTransparencyPage() {
           </div>
         </SectionWrapper>
 
-        {/* 8. Accountability Approach */}
+        {/* 9. Accountability Approach */}
         <SectionWrapper theme="charius-beige">
           <div className="max-w-4xl mx-auto text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold text-[#111] mb-6">Our Accountability Approach</h2>
@@ -358,7 +587,7 @@ export default async function FinancialTransparencyPage() {
           </div>
         </SectionWrapper>
 
-        {/* 9. Continuous Improvement */}
+        {/* 10. Continuous Improvement */}
         <SectionWrapper theme="charius-beige">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-[#111] mb-6">A Continuing Commitment</h2>
@@ -368,7 +597,7 @@ export default async function FinancialTransparencyPage() {
           </div>
         </SectionWrapper>
 
-        {/* 10. CTA */}
+        {/* 11. CTA */}
         <CTAStrip 
           heading="Have questions about our financial reporting?"
           subheading="We welcome responsible inquiry and are committed to strengthening trust through openness and accountability."

@@ -50,7 +50,7 @@ export function VimeoTracker({ vimeoId, lessonId, teacherId }: VimeoTrackerProps
 
     // Throttled timeupdate ping (every 10 seconds to not overwhelm DB)
     let lastPing = 0;
-    player.on("timeupdate", (data: { seconds: number; percent: number }) => {
+    player.on("timeupdate", (data: { seconds: number; percent?: number }) => {
       const current = Math.floor(data.seconds);
       if (current - lastPing >= 10) {
         lastPing = current;
