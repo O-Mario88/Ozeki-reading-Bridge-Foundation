@@ -201,30 +201,22 @@ export async function getSponsorshipImpactDataPostgres(sponsorship: SponsorshipR
   }
 }
 
-// Orchestrates the exact insertion parameters logging isolated Sponsor intents.
-// Removed BEGIN/COMMIT wrapper — those used separate pooled clients so the
-// transaction was illusory. Single INSERT is atomic at the statement level.
 export async function createSponsorshipIntentPostgres(payload: Record<string, unknown>): Promise<{id: number, merchantReference: string}> {
-  try {
-     const sponsorshipRef = `OZK-SPN-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;
-     const merchantRef = `OZK-SPN-RCT-${Date.now()}`;
+  const sponsorshipRef = `OZK-SPN-${new Date().getFullYear()}-${Math.random().toString().substring(2,8)}`;
+  const merchantRef = `OZK-SPN-RCT-${Date.now()}`;
 
-     const res = await queryPostgres(
-        `INSERT INTO sponsorships (
-          sponsorship_reference, sponsorship_type, sponsorship_target_name, district, sub_region, region, sponsorship_focus,
-          donor_type, donor_name, organization_name, donor_email, donor_phone, donor_country, donor_message,
-          anonymous, consent_to_updates, amount, currency, payment_status, pesapal_merchant_reference
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'Pending Payment', $19) RETURNING id`,
-        [
-          sponsorshipRef, payload.sponsorshipType, payload.sponsorshipTargetName, payload.district, payload.subRegion, payload.region, payload.sponsorshipFocus,
-          payload.donorType, payload.donorName, payload.organizationName, payload.email, payload.phone, payload.country, payload.donorMessage,
-          payload.anonymous, payload.consentToUpdates, payload.amount, payload.currency || 'UGX', merchantRef
-        ]
-     );
+  const res = await queryPostgres(
+    `INSERT INTO sponsorships (
+      sponsorship_reference, sponsorship_type, sponsorship_target_name, district, sub_region, region, sponsorship_focus,
+      donor_type, donor_name, organization_name, donor_email, donor_phone, donor_country, donor_message,
+      anonymous, consent_to_updates, amount, currency, payment_status, pesapal_merchant_reference
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'Pending Payment', $19) RETURNING id`,
+    [
+      sponsorshipRef, payload.sponsorshipType, payload.sponsorshipTargetName, payload.district, payload.subRegion, payload.region, payload.sponsorshipFocus,
+      payload.donorType, payload.donorName, payload.organizationName, payload.email, payload.phone, payload.country, payload.donorMessage,
+      payload.anonymous, payload.consentToUpdates, payload.amount, payload.currency || 'UGX', merchantRef
+    ]
+  );
 
-     return { id: res.rows[0].id, merchantReference: merchantRef };
-
-  } catch(e) {
-     throw e;
-  }
+  return { id: res.rows[0].id, merchantReference: merchantRef };
 }
