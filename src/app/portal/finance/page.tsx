@@ -6,7 +6,7 @@ import { getTransparencyLiveStatsPostgres } from "@/lib/server/postgres/reposito
 import {
   CreditCard, FileText, Receipt, Wallet, ArrowRightLeft, PiggyBank,
   FileBarChart, Building2, ShieldAlert, BookOpen, Settings as SettingsIcon,
-  Eye, TrendingUp, Lock, FileCheck, DollarSign, Activity,
+  Eye, TrendingUp, Lock, FileCheck, DollarSign,
   CheckCircle, ShieldBan, Clock, Percent,
 } from "lucide-react";
 
@@ -306,5 +306,3 @@ function FinanceTile({
   );
 }
 
-// Activity icon kept as explicit import even if unused elsewhere, for future metrics.
-export const _dummy = Activity;
