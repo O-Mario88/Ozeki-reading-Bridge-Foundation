@@ -19,6 +19,14 @@ CREATE TABLE IF NOT EXISTS platform_events (
   handler_results_json JSONB NOT NULL DEFAULT '[]'
 );
 
+-- Defensive: if platform_events was created by a prior version of this migration
+-- that lacked some columns, add them now so downstream indexes never fail.
+ALTER TABLE platform_events ADD COLUMN IF NOT EXISTS event_type TEXT;
+ALTER TABLE platform_events ADD COLUMN IF NOT EXISTS occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE platform_events ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE platform_events ADD COLUMN IF NOT EXISTS entity_type TEXT;
+ALTER TABLE platform_events ADD COLUMN IF NOT EXISTS entity_id TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_platform_events_status
   ON platform_events(status, occurred_at)
   WHERE status IN ('pending', 'failed');
@@ -40,6 +48,14 @@ CREATE TABLE IF NOT EXISTS automation_logs (
   error_message TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Defensive: if automation_logs was created by an older version of this migration
+-- without handler_name, add it now so the index creation below doesn't fail.
+ALTER TABLE automation_logs ADD COLUMN IF NOT EXISTS handler_name TEXT;
+ALTER TABLE automation_logs ADD COLUMN IF NOT EXISTS event_id BIGINT;
+ALTER TABLE automation_logs ADD COLUMN IF NOT EXISTS status TEXT;
+ALTER TABLE automation_logs ADD COLUMN IF NOT EXISTS duration_ms INTEGER;
+ALTER TABLE automation_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_automation_logs_handler
   ON automation_logs(handler_name, created_at DESC);

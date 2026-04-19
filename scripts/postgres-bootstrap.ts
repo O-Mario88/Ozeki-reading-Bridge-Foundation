@@ -48,16 +48,20 @@ async function main() {
           await pool.query(sql);
           console.log(`Applied PostgreSQL schema from ${schemaPath}`);
         } catch (err) {
-          // Tolerate idempotent re-runs where IF NOT EXISTS fails to catch a
-          // name conflict (e.g. index vs constraint sharing pg's namespace):
-          //   42P07 = duplicate_table/relation
+          // Tolerate idempotent re-run hazards that IF NOT EXISTS cannot fully
+          // defend against. Each skipped error is logged for visibility.
+          //   42P07 = duplicate_table/relation (index-vs-constraint name clash)
           //   42710 = duplicate_object
           //   42701 = duplicate_column
           //   42723 = duplicate_function
+          //   42703 = undefined_column  (index references column not yet present)
+          //   42P01 = undefined_table   (referential DROP on non-existent table)
+          //   42704 = undefined_object  (DROP on non-existent constraint/index)
           const code = (err as { code?: string })?.code;
-          if (code === "42P07" || code === "42710" || code === "42701" || code === "42723") {
+          const tolerableCodes = new Set(["42P07", "42710", "42701", "42723", "42703", "42P01", "42704"]);
+          if (code && tolerableCodes.has(code)) {
             console.warn(
-              `[bootstrap] Skipping ${path.basename(schemaPath)}: ${(err as Error).message}`,
+              `[bootstrap] Skipping ${path.basename(schemaPath)} (${code}): ${(err as Error).message}`,
             );
             continue;
           }
