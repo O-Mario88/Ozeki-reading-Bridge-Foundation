@@ -8,18 +8,26 @@ export const metadata = { title: "Finance Reconciliation | Ozeki Portal" };
 export default async function FinanceLedgerDashboard() {
   const user = await requirePortalStaffUser();
 
-  const ledgersQuery = await queryPostgres(
-    `SELECT sp.id, sp.provider, sp.payment_method, sp.amount_requested, sp.amount_paid, sp.currency,
-            sp.payment_type, sp.payment_status, sp.pesapal_merchant_reference, sp.pesapal_order_tracking_id,
-            sp.verified, sp.payment_initiated_at, sp.payment_confirmed_at,
-            s.name AS school_name, pr.receipt_number
-     FROM service_payments sp
-     LEFT JOIN schools_directory s ON s.id = sp.school_id
-     LEFT JOIN payment_receipts pr ON pr.id = sp.receipt_id
-     ORDER BY sp.created_at DESC LIMIT 100`
-  );
-
-  const ledgers = ledgersQuery.rows;
+  // Graceful degradation: if payment tables are missing or the query fails,
+  // render the shell with an empty ledger instead of triggering the portal
+  // error boundary ("Portal Temporarily Unavailable").
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let ledgers: any[] = [];
+  try {
+    const ledgersQuery = await queryPostgres(
+      `SELECT sp.id, sp.provider, sp.payment_method, sp.amount_requested, sp.amount_paid, sp.currency,
+              sp.payment_type, sp.payment_status, sp.pesapal_merchant_reference, sp.pesapal_order_tracking_id,
+              sp.verified, sp.payment_initiated_at, sp.payment_confirmed_at,
+              s.name AS school_name, pr.receipt_number
+       FROM service_payments sp
+       LEFT JOIN schools_directory s ON s.id = sp.school_id
+       LEFT JOIN payment_receipts pr ON pr.id = sp.receipt_id
+       ORDER BY sp.created_at DESC LIMIT 100`
+    );
+    ledgers = ledgersQuery.rows;
+  } catch (err) {
+    console.error("[portal/finance] ledger query failed", err);
+  }
 
   return (
     <PortalShell
