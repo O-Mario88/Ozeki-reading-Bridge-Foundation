@@ -155,7 +155,7 @@ export async function generatePublicDashboardNarrative(
   reportType: string = "General Literacy Report"
 ): Promise<PublicDashboardNarrative> {
   const fallback = summarizeFallbackNarrative(aggregate);
-  const openAiConfig = getOpenAiServerConfig("gpt-5.2-mini");
+  const openAiConfig = getOpenAiServerConfig("gpt-4o-mini");
   if (!openAiConfig.configured || !openAiConfig.apiKey) {
     return fallback;
   }

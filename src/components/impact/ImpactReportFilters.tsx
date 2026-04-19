@@ -81,7 +81,7 @@ export function ImpactReportFilters({
     setYear(initialYear);
     setReportType(initialReportType);
     setReportCategory(initialReportCategory);
-    setPeriodType("This Fiscal Year");
+    setPeriodType(initialPeriodType || "This Fiscal Year");
     setOutput(initialOutput || "PDF");
     setRegion(initialRegion);
     setSubRegion(initialSubRegion);

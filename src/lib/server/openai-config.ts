@@ -40,7 +40,7 @@ function looksLikeOpenAiKey(value: string) {
   return /^sk-[A-Za-z0-9._-]{20,}$/.test(value);
 }
 
-export function getOpenAiServerConfig(defaultModel = "gpt-5.2-mini"): OpenAiServerConfig {
+export function getOpenAiServerConfig(defaultModel = "gpt-4o-mini"): OpenAiServerConfig {
   const apiKey = normalizeEnvValue(process.env.OPENAI_API_KEY);
   const model = normalizeEnvValue(process.env.OPENAI_REPORT_MODEL) || defaultModel;
 

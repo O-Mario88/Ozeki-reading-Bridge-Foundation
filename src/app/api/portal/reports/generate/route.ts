@@ -208,7 +208,7 @@ async function generateAiBackedReport(
     readingLevels: ReadingLevelsBlock | null,
     fallbackSections: ReportSection[],
 ) {
-    const openAiConfig = getOpenAiServerConfig("gpt-5.2-mini");
+    const openAiConfig = getOpenAiServerConfig("gpt-4o-mini");
     if (!openAiConfig.configured || !openAiConfig.apiKey) {
         return {
             sections: ensureDisclosureSection(fallbackSections),

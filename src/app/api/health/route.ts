@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const timestamp = new Date().toISOString();
-  const openAiConfig = getOpenAiServerConfig("gpt-5.2-mini");
+  const openAiConfig = getOpenAiServerConfig("gpt-4o-mini");
   const { searchParams } = new URL(request.url);
   const aiProbeRequested = searchParams.get("aiProbe") === "1";
   let aiProbeStatus: "not_requested" | "not_configured" | "ok" | "error" = "not_requested";
