@@ -123,6 +123,9 @@ export async function POST(request: Request) {
     else if (payload.scopeType === "Sub-region") scopeLevel = "subregion";
     else if (payload.scopeType === "District") scopeLevel = "district";
     else if (payload.scopeType === "School") scopeLevel = "school";
+    // For Sub-county and Parish, we aggregate up to the District level for the Impact Aggregate view
+    // until more granular geospatial repositories are fully indexed in the Intelligence Hub.
+    else if (payload.scopeType === "Sub-county" || payload.scopeType === "Parish") scopeLevel = "district";
     else scopeLevel = "district";
 
     const scopeId = scopeLevel === "country" ? "Uganda" : (payload.scopeValue || "Uganda");

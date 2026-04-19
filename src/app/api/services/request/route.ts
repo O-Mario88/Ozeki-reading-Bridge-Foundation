@@ -5,7 +5,7 @@ import { createServiceRequestPostgres } from "@/lib/server/postgres/repositories
 import { initiatePesapalOrderGateway } from "@/lib/server/payments/pesapal";
 import { createGoogleCalendarEvent, buildDateRangeFromDateAndTime } from "@/lib/google-calendar";
 import { sendFinanceMail } from "@/lib/finance-email";
-import { generateFinancialPdf } from "@/lib/server/pdf/financial-report-puppeteer";
+import { generateFinancialPdf } from "@/lib/server/pdf/financial-report-pdf-lib";
 import { checkIdempotency, storeIdempotencyResponse } from "@/lib/server/idempotency";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";

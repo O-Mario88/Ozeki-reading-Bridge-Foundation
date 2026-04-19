@@ -9,7 +9,7 @@ import {
   getGrantAndDonorReport 
 } from "@/lib/server/postgres/repositories/finance-reports";
 import { generateFinancialNarration } from "@/lib/server/ai/finance-narration";
-import { generateFinancialPdf, FinancialReportData } from "@/lib/server/pdf/financial-report-puppeteer";
+import { generateFinancialPdf, FinancialReportData } from "@/lib/server/pdf/financial-report-pdf-lib";
 
 export async function generateFinancialReport(reportType: string, options: { 
   startDate?: string; 

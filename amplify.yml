@@ -26,7 +26,4 @@ frontend:
     baseDirectory: .next
     files:
       - "**/*"
-cache:
-  paths:
-    - .npm/**/*
-    - .next/cache/**/*
+# No cache block for this cycle to reset Amplify state
