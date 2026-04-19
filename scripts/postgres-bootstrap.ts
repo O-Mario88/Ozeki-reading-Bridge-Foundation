@@ -44,8 +44,25 @@ async function main() {
       await pool.query("SELECT 1");
       for (const schemaPath of getSchemaPaths()) {
         const sql = fs.readFileSync(schemaPath, "utf8");
-        await pool.query(sql);
-        console.log(`Applied PostgreSQL schema from ${schemaPath}`);
+        try {
+          await pool.query(sql);
+          console.log(`Applied PostgreSQL schema from ${schemaPath}`);
+        } catch (err) {
+          // Tolerate idempotent re-runs where IF NOT EXISTS fails to catch a
+          // name conflict (e.g. index vs constraint sharing pg's namespace):
+          //   42P07 = duplicate_table/relation
+          //   42710 = duplicate_object
+          //   42701 = duplicate_column
+          //   42723 = duplicate_function
+          const code = (err as { code?: string })?.code;
+          if (code === "42P07" || code === "42710" || code === "42701" || code === "42723") {
+            console.warn(
+              `[bootstrap] Skipping ${path.basename(schemaPath)}: ${(err as Error).message}`,
+            );
+            continue;
+          }
+          throw err;
+        }
       }
       return; // success
     } catch (error) {
