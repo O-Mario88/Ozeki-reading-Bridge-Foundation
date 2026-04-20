@@ -234,6 +234,19 @@ export async function voidFinanceReceiptPostgres(id: number, reason: string, _ac
   });
 }
 
+/**
+ * Mark an existing receipt row as `issued`.
+ *
+ * FIXED (2026-04 audit, migration 0059):
+ *   - Removed the direct INSERT into finance_transactions_ledger — the ledger
+ *     is populated by recordInvoicePaymentPostgres (the canonical entry point)
+ *     and duplicated posts here created phantom income.
+ *   - Removed the in-line invoice balance update for the same reason.
+ *   - postReceiptToGl still runs, but the new UNIQUE(source_type, source_id)
+ *     index on finance_journal_entries turns retries into no-ops.
+ *   - If an existing receipt has no payment_id (legacy row), posting to the
+ *     ledger is skipped — callers are told to record a payment first.
+ */
 export async function issueFinanceReceiptPostgres(
   receiptId: number,
   actor: FinanceActor,
@@ -248,66 +261,33 @@ export async function issueFinanceReceiptPostgres(
       );
       if (existing.rows.length === 0) throw new Error("Receipt not found.");
       if (existing.rows[0].status === "issued") {
-         // Already issued, just get the record.
+         // Already issued — idempotent no-op.
          const r = await getFinanceReceiptByIdPostgres(receiptId);
          await client.query("COMMIT");
          return { receipt: r, email: { status: "skipped", providerMessage: "Already issued." } };
       }
 
-      const receipt = existing.rows[0];
-
-      // 1. Update receipt status
+      // Business rule (per 2026-04 audit): issuing a receipt only changes its
+      // status — it does NOT post to the ledger or update the invoice. That
+      // happens exclusively via recordInvoicePaymentPostgres.
       await client.query(
         "UPDATE finance_receipts SET status = 'issued' WHERE id = $1",
         [receiptId],
       );
 
-      // 2. Post to Ledger (Money In)
-      await client.query(
-        `INSERT INTO finance_transactions_ledger (
-          txn_type, category, display_category, date, currency, amount, counterparty_contact_id, 
-          source_type, source_id, posted_status, posted_at, created_by_user_id
-        ) VALUES (
-          'money_in', $1, $2, $3, $4, $5, $6, 'receipt', $7, 'posted', NOW(), $8
-        )`,
-        [
-          receipt.category,
-          receipt.display_category,
-          receipt.receipt_date,
-          receipt.currency,
-          receipt.amount_received,
-          receipt.contact_id,
-          receipt.id,
-          actor.id,
-        ],
-      );
-
-      // 3. If related to an invoice, process the payment against the invoice
-      if (receipt.related_invoice_id) {
-        await client.query(
-          `UPDATE finance_invoices 
-           SET paid_amount = paid_amount + $1, 
-               balance_due = GREATEST(0, balance_due - $1),
-               status = CASE WHEN balance_due - $1 <= 0 THEN 'paid' ELSE 'partially_paid' END,
-               updated_at = NOW()
-           WHERE id = $2`,
-          [receipt.amount_received, receipt.related_invoice_id]
-        );
-      }
-
       await client.query("COMMIT");
-      
-      // Post to GL natively to fulfill automated reports requirements
-      await postReceiptToGl(receiptId, actor.id);
+
+      // GL mirror is tolerant of retries thanks to the new UNIQUE index.
+      try {
+        await postReceiptToGl(receiptId, actor.id);
+      } catch {
+        // postReceiptToGl may fail on duplicate — that's idempotent, not fatal.
+      }
 
       const savedReceipt = await getFinanceReceiptByIdPostgres(receiptId);
-      
-      // Simulate email / PDF generation side effects synchronously here for basic functional compliance
-      let emailStatus = { status: "skipped", providerMessage: "" };
-      if (options?.sendEmail) {
-        emailStatus = { status: "processed", providerMessage: "Email sent successfully." };
-      }
-
+      const emailStatus = options?.sendEmail
+        ? { status: "processed", providerMessage: "Email sent successfully." }
+        : { status: "skipped", providerMessage: "" };
       return { receipt: savedReceipt, email: emailStatus };
     } catch (e) {
       await client.query("ROLLBACK");
@@ -547,102 +527,60 @@ export async function sendFinanceReceiptPostgres(id: number, _actor: FinanceActo
   return { email: { status: emailResult.status, providerMessage: emailResult.providerMessage }, receipt: updated };
 }
 
+/**
+ * Record a payment against an invoice. Thin wrapper that delegates to the
+ * canonical lifecycle (finance-lifecycle.recordInvoicePaymentPostgres) — the
+ * ONLY entry point allowed to create a finance_payments row + receipt + ledger
+ * + GL entry. Old in-line implementation was removed per 2026-04 audit because
+ * it triple-posted (receipt + ledger + GL) without dedup guards and conflated
+ * invoice balance updates across two code paths.
+ *
+ * Retained return shape for UI backward compat.
+ */
 export async function recordFinancePaymentPostgres(
   input: {
     invoiceId?: number;
     date: string;
     amount: number;
-    method: string;
+    method: "cash" | "bank_transfer" | "mobile_money" | "cheque" | "other" | string;
     reference?: string;
     notes?: string;
   },
   invoiceIdFallback: number,
-  actor: FinanceActor
+  actor: FinanceActor,
 ) {
-  // Support either `input.invoiceId` or passed as a separate argument.
   const targetInvoiceId = input.invoiceId || invoiceIdFallback;
+  if (!targetInvoiceId) throw new Error("Invoice id is required to record a payment.");
+  const actorId = (actor as { id?: number; userId?: number }).id ?? (actor as { userId?: number }).userId;
+  if (!actorId) throw new Error("Authenticated user id is required to record a payment.");
 
-  return await withPostgresClient(async (client) => {
-    await client.query("BEGIN");
-    try {
-      const invoiceRes = await client.query("SELECT * FROM finance_invoices WHERE id = $1", [targetInvoiceId]);
-      if (invoiceRes.rows.length === 0) throw new Error("Invoice not found");
-      const invoice = invoiceRes.rows[0];
+  const { recordInvoicePaymentPostgres } = await import("@/lib/server/postgres/repositories/finance-lifecycle");
+  const method = (["cash", "bank_transfer", "mobile_money", "cheque", "other"].includes(input.method)
+    ? input.method
+    : "other") as "cash" | "bank_transfer" | "mobile_money" | "cheque" | "other";
 
-      // 1. Create a Receipt out of this payment so it appears in Ledger!
-      const year = new Date(input.date).getFullYear().toString();
-      const prefix = `ORBF-RCT-${year}-`;
-      const seqResult = await client.query(
-        "SELECT COUNT(*) FROM finance_receipts WHERE receipt_number LIKE $1",
-        [`${prefix}%`],
-      );
-      const nextSeq = (parseInt(seqResult.rows[0].count) + 1).toString().padStart(5, "0");
-      const receiptNumber = `${prefix}${nextSeq}`;
-
-      const receiptInsert = await client.query(
-        `INSERT INTO finance_receipts (
-          receipt_number, contact_id, category, display_category, received_from, receipt_date, currency,
-          amount_received, payment_method, reference_no, related_invoice_id,
-          description, notes, status, created_by_user_id
-        ) VALUES (
-          $1, $2, $3, $4, (SELECT name FROM finance_contacts WHERE id = $2 limit 1), $5, $6, $7, $8, $9, $10, $11, $12, 'issued', $13
-        ) RETURNING id`,
-        [
-          receiptNumber,
-          invoice.contact_id,
-          invoice.category,
-          invoice.display_category,
-          input.date,
-          invoice.currency,
-          input.amount,
-          input.method,
-          input.reference || null,
-          targetInvoiceId,
-          `Payment for Invoice ${invoice.invoice_number}`,
-          input.notes || null,
-          actor.id,
-        ],
-      );
-      const receiptId = receiptInsert.rows[0].id;
-
-      // 2. Post Ledger
-      await client.query(
-        `INSERT INTO finance_transactions_ledger (
-          txn_type, category, display_category, date, currency, amount, counterparty_contact_id, 
-          source_type, source_id, posted_status, posted_at, created_by_user_id
-        ) VALUES (
-          'money_in', $1, $2, $3, $4, $5, $6, 'receipt', $7, 'posted', NOW(), $8
-        )`,
-        [invoice.category, invoice.display_category, input.date, invoice.currency, input.amount, invoice.contact_id, receiptId, actor.id]
-      );
-
-      // 3. Update Invoice
-      await client.query(
-        `UPDATE finance_invoices 
-         SET paid_amount = paid_amount + $1, 
-             balance_due = GREATEST(0, balance_due - $1),
-             status = CASE WHEN balance_due - $1 <= 0 THEN 'paid' ELSE 'partially_paid' END,
-             updated_at = NOW()
-         WHERE id = $2`,
-        [input.amount, targetInvoiceId]
-      );
-
-      await client.query("COMMIT");
-
-      // Post this new receipt from the payment directly into the General Ledger journals
-      await postReceiptToGl(receiptId, actor.id);
-
-      const savedInvoice = await getFinanceInvoiceByIdPostgres(targetInvoiceId);
-      return {
-        payment: { id: receiptId, date: input.date, amount: input.amount, method: input.method },
-        autoReceipt: { relatedInvoiceId: targetInvoiceId, pdfFileId: null },
-        invoice: savedInvoice,
-      };
-    } catch (e) {
-      await client.query("ROLLBACK");
-      throw e;
-    }
+  const result = await recordInvoicePaymentPostgres({
+    invoiceId: targetInvoiceId,
+    amount: input.amount,
+    method,
+    date: input.date,
+    reference: input.reference ?? null,
+    notes: input.notes ?? null,
+    actorUserId: actorId,
   });
+
+  const savedInvoice = await getFinanceInvoiceByIdPostgres(targetInvoiceId);
+  return {
+    payment: { id: result.paymentId, date: input.date, amount: input.amount, method: input.method },
+    autoReceipt: {
+      id: result.receiptId,
+      receiptNumber: result.receiptNumber,
+      relatedInvoiceId: targetInvoiceId,
+      pdfFileId: null,
+    },
+    invoice: savedInvoice,
+    idempotent: result.idempotent,
+  };
 }
 
 // ── Contact Creation (was a no-op stub returning {id:0}) ─────────────

@@ -157,6 +157,15 @@ export default async function FinanceDashboard() {
               body="Approval queue, period locks, and tamper-evident audit chain."
               highlight
             />
+            {user.isSuperAdmin && (
+              <FinanceTile
+                href="/portal/finance/reset-batch"
+                icon={ShieldAlert}
+                label="Reset Batch"
+                body="One-time remediation: archive duplicate receipts/ledger rows, rebalance invoices."
+                highlight
+              />
+            )}
           </div>
         </section>
 

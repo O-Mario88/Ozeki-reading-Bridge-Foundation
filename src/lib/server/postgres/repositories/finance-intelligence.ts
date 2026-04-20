@@ -36,7 +36,12 @@ export async function getCostPerLearnerPostgres(filters: {
   const rate = filters.usdRate && filters.usdRate > 0 ? filters.usdRate : await getUgxPerUsdPostgres();
 
   const params: unknown[] = [];
-  const expenseConditions: string[] = ["fe.status = 'posted'"];
+  // Archived rows are excluded from every active KPI to honour the 2026-04
+  // finance-reset remediation (migration 0059).
+  const expenseConditions: string[] = [
+    "fe.status = 'posted'",
+    "fe.archived_due_to_finance_reset IS FALSE",
+  ];
   const learnerConditions: string[] = ["ar.learner_uid IS NOT NULL"];
   let idx = 1;
 
@@ -340,7 +345,9 @@ export async function getRestrictedFundsBurnPostgres(): Promise<RestrictedFundBu
          MIN(receipt_date)::text AS first_receipt,
          COUNT(*) FILTER (WHERE receipt_date >= NOW() - INTERVAL '90 days')::int AS recent_count
        FROM finance_receipts
-       WHERE restricted_flag IS TRUE AND status IN ('issued', 'paid')
+       WHERE restricted_flag IS TRUE
+         AND status IN ('issued', 'paid')
+         AND archived_due_to_finance_reset IS FALSE
        GROUP BY COALESCE(restricted_program, ''),
                 COALESCE(restricted_geo_scope, ''),
                 COALESCE(restricted_geo_id, '')
@@ -353,7 +360,9 @@ export async function getRestrictedFundsBurnPostgres(): Promise<RestrictedFundBu
          SUM(amount)::numeric AS total_out,
          COUNT(*) FILTER (WHERE date >= NOW() - INTERVAL '90 days')::int AS recent_count
        FROM finance_expenses
-       WHERE restricted_flag IS TRUE AND status = 'posted'
+       WHERE restricted_flag IS TRUE
+         AND status = 'posted'
+         AND archived_due_to_finance_reset IS FALSE
        GROUP BY COALESCE(restricted_program, ''),
                 COALESCE(restricted_geo_scope, ''),
                 COALESCE(restricted_geo_id, '')
@@ -456,7 +465,9 @@ export async function getTransparencyLiveStatsPostgres(): Promise<TransparencyLi
   const [receiptsRes, expensesRes, learnersRes, schoolsRes, teachersRes] = await Promise.all([
     queryPostgres(
       `SELECT COALESCE(SUM(amount_received), 0)::numeric AS total
-       FROM finance_receipts WHERE status IN ('issued', 'paid')`,
+       FROM finance_receipts
+       WHERE status IN ('issued', 'paid')
+         AND archived_due_to_finance_reset IS FALSE`,
     ),
     queryPostgres(
       `SELECT
@@ -472,7 +483,9 @@ export async function getTransparencyLiveStatsPostgres(): Promise<TransparencyLi
               OR LOWER(COALESCE(subcategory, '')) LIKE '%admin%'
               OR LOWER(COALESCE(subcategory, '')) LIKE '%office%'
          ), 0)::numeric AS admin_total
-       FROM finance_expenses WHERE status = 'posted'`,
+       FROM finance_expenses
+       WHERE status = 'posted'
+         AND archived_due_to_finance_reset IS FALSE`,
     ),
     queryPostgres(
       `SELECT COUNT(DISTINCT learner_uid)::int AS n FROM assessment_records WHERE learner_uid IS NOT NULL`,
@@ -605,11 +618,17 @@ export async function getAnnualReportDataPostgres(year: number): Promise<AnnualR
     queryPostgres(
       `SELECT
         (SELECT COALESCE(SUM(amount_received), 0)::numeric FROM finance_receipts
-           WHERE status IN ('issued', 'paid') AND receipt_date >= $1::date AND receipt_date <= $2::date) AS received,
+           WHERE status IN ('issued', 'paid')
+             AND archived_due_to_finance_reset IS FALSE
+             AND receipt_date >= $1::date AND receipt_date <= $2::date) AS received,
         (SELECT COALESCE(SUM(amount), 0)::numeric FROM finance_expenses
-           WHERE status = 'posted' AND date >= $1::date AND date <= $2::date) AS spent,
+           WHERE status = 'posted'
+             AND archived_due_to_finance_reset IS FALSE
+             AND date >= $1::date AND date <= $2::date) AS spent,
         (SELECT COALESCE(SUM(amount), 0)::numeric FROM finance_expenses
-           WHERE status = 'posted' AND date >= $1::date AND date <= $2::date
+           WHERE status = 'posted'
+             AND archived_due_to_finance_reset IS FALSE
+             AND date >= $1::date AND date <= $2::date
              AND (LOWER(COALESCE(category, '')) IN ('admin', 'administration', 'operations', 'office', 'overhead')
                   OR LOWER(COALESCE(subcategory, '')) LIKE '%admin%')) AS admin`,
       [rangeStart, rangeEnd],
@@ -650,7 +669,9 @@ export async function getAnnualReportDataPostgres(year: number): Promise<AnnualR
     queryPostgres(
       `SELECT COALESCE(category, 'Other') AS category, SUM(amount)::numeric AS total
        FROM finance_expenses
-       WHERE status = 'posted' AND date >= $1::date AND date <= $2::date
+       WHERE status = 'posted'
+         AND archived_due_to_finance_reset IS FALSE
+         AND date >= $1::date AND date <= $2::date
        GROUP BY category ORDER BY total DESC LIMIT 12`,
       [rangeStart, rangeEnd],
     ),
@@ -664,6 +685,7 @@ export async function getAnnualReportDataPostgres(year: number): Promise<AnnualR
         SELECT 'Grants & Contracts' AS label,
                COALESCE((SELECT SUM(amount_received) FROM finance_receipts
                           WHERE status IN ('issued','paid')
+                            AND archived_due_to_finance_reset IS FALSE
                             AND LOWER(category) IN ('contracts','grants')
                             AND receipt_date >= $1::date AND receipt_date <= $2::date), 0)::numeric`,
       [rangeStart, rangeEnd],

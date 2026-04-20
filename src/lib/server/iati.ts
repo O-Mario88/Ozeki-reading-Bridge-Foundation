@@ -114,12 +114,18 @@ export async function buildIatiTransactionsXml(opts: { sinceDate?: string } = {}
   const [receipts, expenses] = await Promise.all([
     queryPostgres(
       `SELECT id, receipt_date::text AS receipt_date, amount_received, currency, description, received_from
-       FROM finance_receipts WHERE status IN ('issued','paid') ${sinceClause}
+       FROM finance_receipts
+       WHERE status IN ('issued','paid')
+         AND archived_due_to_finance_reset IS FALSE
+         ${sinceClause}
        ORDER BY receipt_date DESC LIMIT 5000`,
     ).catch(() => ({ rows: [] as Array<Record<string, unknown>> })),
     queryPostgres(
       `SELECT id, date::text AS expense_date, amount, currency, description, vendor_name, category
-       FROM finance_expenses WHERE status = 'posted' ${sinceExp}
+       FROM finance_expenses
+       WHERE status = 'posted'
+         AND archived_due_to_finance_reset IS FALSE
+         ${sinceExp}
        ORDER BY date DESC LIMIT 5000`,
     ).catch(() => ({ rows: [] as Array<Record<string, unknown>> })),
   ]);
