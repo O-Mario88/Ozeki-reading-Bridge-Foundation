@@ -5284,9 +5284,23 @@ textarea {
 .header__menu-link:focus-visible {
   text-underline-offset: 3px;
   text-decoration-thickness: 1.8px;
-  text-decoration-color: var(--md-sys-color-secondary);
+  text-decoration-color: var(--color-brand-orange);
   text-decoration: underline;
   background: transparent !important;
+}
+
+/* Hover text colour depends on header background so we never render
+   white-on-white. Dark hero (homepage non-sticky) keeps white; white
+   header (inner pages + sticky) uses the brand blue so it stays legible. */
+.header:not(.header__home) .header__menu-link:hover,
+.header:not(.header__home) .header__menu-link:focus-visible,
+.header.header__home.sticky .header__menu-link:hover,
+.header.header__home.sticky .header__menu-link:focus-visible {
+  color: var(--color-brand-blue) !important;
+}
+
+.header.header__home:not(.sticky) .header__menu-link:hover,
+.header.header__home:not(.sticky) .header__menu-link:focus-visible {
   color: #ffffff !important;
 }
 
@@ -5771,13 +5785,25 @@ textarea {
 
 /* Final production polish: navigation, program directory, hero vision layout */
 
-/* Keep homepage/header text visible at all times */
-.header.header__home .header__logo-text strong,
-.header.header__home .header__logo-text small,
-.header.header__home .header__menu-link,
-.header.header__home .header__dropdown-arrow svg path {
+/* Keep homepage nav/logo text visible on the dark hero gradient.
+   Once the header sticks and flips to a white background, these turn
+   back into the brand-blue base colour so they stay legible. */
+.header.header__home:not(.sticky) .header__logo-text strong,
+.header.header__home:not(.sticky) .header__logo-text small,
+.header.header__home:not(.sticky) .header__menu-link,
+.header.header__home:not(.sticky) .header__dropdown-arrow svg path {
   color: #ffffff !important;
   stroke: #ffffff !important;
+}
+
+.header.header__home.sticky .header__logo-text strong,
+.header.header__home.sticky .header__logo-text small,
+.header.header__home.sticky .header__menu-link {
+  color: var(--color-brand-blue) !important;
+}
+
+.header.header__home.sticky .header__dropdown-arrow svg path {
+  stroke: var(--color-brand-blue) !important;
 }
 
 /* Orange hover line on main and dropdown navigation links */
