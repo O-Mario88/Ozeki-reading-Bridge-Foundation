@@ -32,7 +32,12 @@
     "postgres:bootstrap": "tsx scripts/postgres-bootstrap.ts",
     "google:auth:url": "tsx scripts/google-workspace-oauth.ts url",
     "google:auth:exchange": "tsx scripts/google-workspace-oauth.ts exchange",
-    "google:status": "tsx scripts/google-workspace-diagnostics.ts"
+    "google:status": "tsx scripts/google-workspace-diagnostics.ts",
+    "gsc:ping": "tsx scripts/gsc.ts ping",
+    "gsc:list": "tsx scripts/gsc.ts list",
+    "gsc:inspect": "tsx scripts/gsc.ts inspect",
+    "gsc:analytics": "tsx scripts/gsc.ts analytics",
+    "gsc:sync": "tsx scripts/gsc.ts sync"
   },
   "repository": {
     "type": "git",
