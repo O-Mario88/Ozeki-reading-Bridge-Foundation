@@ -7962,17 +7962,17 @@ nav[aria-label="Staff navigation"] {
 .impact-tabs {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 0.5rem;
+  justify-content: space-between; /* Distribute tabs edge-to-edge */
+  gap: 0.25rem;                   /* tighter gutter */
   overflow-x: auto;
-  padding: 0.5rem;
+  padding: 0.3rem 0.4rem;         /* was 0.5rem — reclaim outer space */
   margin-top: 1.5rem;
   margin-left: 0;
   margin-right: auto;
   background: var(--md-sys-color-surface-container-high, #f4f6f9);
   border: 1px solid rgba(0,0,0,0.03);
   border-radius: 99px;
-  width: max-content;
+  width: 100%;                    /* was max-content — use the full row */
   max-width: 100%;
   -webkit-overflow-scrolling: touch;
 }
@@ -7983,8 +7983,10 @@ nav[aria-label="Staff navigation"] {
 
 .impact-tabs button {
   white-space: nowrap;
-  padding: 0.6rem 1.25rem;
-  font-size: 0.85rem;
+  /* Compact padding so all tabs fit without wrapping or horizontal scroll */
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.15;
   border-radius: 99px;
   font-weight: 600;
   background: transparent; /* No background for inactive tabs */
@@ -7992,6 +7994,21 @@ nav[aria-label="Staff navigation"] {
   color: var(--md-sys-color-on-surface-variant); /* Subtle grey */
   transition: all 0.2s ease;
   box-shadow: none;
+  flex: 0 1 auto;                 /* allow tiny shrink only if desperate */
+}
+
+/* Narrower screens: dial down further before scroll kicks in. */
+@media (max-width: 1280px) {
+  .impact-tabs button {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.78rem;
+  }
+}
+@media (max-width: 1100px) {
+  .impact-tabs button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
 }
 
 .impact-tabs button:hover {
