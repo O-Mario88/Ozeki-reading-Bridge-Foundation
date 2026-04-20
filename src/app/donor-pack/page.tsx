@@ -46,7 +46,7 @@ export default async function DonorPackPage() {
         <a className="px-8 py-3.5 rounded-full bg-[#FA7D15] text-white font-semibold hover:bg-[#E86D0B] shadow-lg transition-all" href="/downloads/donor-trust/ozeki-donor-pack.pdf">
           Download Donor Pack (PDF Bundle)
         </a>
-        <Link className="px-8 py-3.5 rounded-full border-2 border-white/20 text-white font-semibold hover:bg-white/10 transition-all" href="/partner#book-a-partner-call">
+        <Link className="px-8 py-3.5 rounded-full border-2 border-[#072734]/25 text-[#072734] font-semibold hover:bg-[#072734] hover:text-white hover:border-[#072734] transition-all" href="/partner#book-a-partner-call">
           Book a Partner Call
         </Link>
       </PageHero>
