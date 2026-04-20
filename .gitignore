@@ -38,3 +38,4 @@ lighthouse-report.json
 
 # Local environment secrets
 .env.local
+.claude/
