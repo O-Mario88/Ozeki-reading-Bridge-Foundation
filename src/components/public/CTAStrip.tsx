@@ -31,15 +31,16 @@ export function CTAStrip({
     charius: "bg-charius-beige text-[#111] border-t border-gray-200", // Refined from black to neutral tone
   };
 
-  const primaryBtnTheme = primaryButtonColor
-    ? `${primaryButtonColor} text-white ${primaryButtonHoverColor || ""}`
-    : (theme === "charius" || theme === "brand" || theme === "dark" || theme === "light")
-      ? "bg-charius-orange text-white hover:bg-[#E86D0B] shadow-lg hover:shadow-xl border border-transparent"
-      : "bg-white text-gray-900 hover:bg-gray-50 shadow-sm";
+  // Unified brand pair: primary is orange-to-green-on-hover, secondary is
+  // green-to-orange-on-hover. Both are solid fills so they stay legible on
+  // every theme (brand green, dark, beige, charius) — no more white ghosts.
+  const primaryBtnTheme = "btn-orange shadow-lg hover:shadow-xl";
+  const secondaryBtnTheme = "btn-green";
 
-  const secondaryBtnTheme = theme === "brand" || theme === "dark" 
-      ? "border-2 border-white/20 text-white hover:bg-white/10"
-      : "border-2 border-gray-200 text-[#111] hover:border-gray-300 bg-white hover:bg-gray-50";
+  // Legacy per-instance overrides are ignored so the brand palette stays
+  // consistent; left in the prop signature for backwards compatibility.
+  void primaryButtonColor;
+  void primaryButtonHoverColor;
 
   return (
     <section className={`py-16 md:py-24 ${themes[theme]}`}>

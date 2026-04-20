@@ -134,10 +134,10 @@ export default async function FinancialTransparencyPage() {
               At Ozeki, we are committed to managing resources with integrity and linking financial stewardship to meaningful educational outcomes for children, schools, and communities.
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-              <a href="#reports" className="px-8 py-4 rounded-xl bg-[#006b61] text-white font-bold hover:bg-[#006b61]/90 transition-all shadow-md flex items-center gap-2">
+              <a href="#reports" className="btn-green px-8 py-4 rounded-xl font-bold flex items-center gap-2">
                 <FileText size={18} /> View Financial Reports
               </a>
-              <Link href="/contact" className="px-8 py-4 rounded-xl bg-[#FA7D15] text-white font-bold hover:bg-[#FA7D15]/90 transition-all shadow-md">
+              <Link href="/contact" className="btn-orange px-8 py-4 rounded-xl font-bold">
                 Contact Us
               </Link>
             </div>

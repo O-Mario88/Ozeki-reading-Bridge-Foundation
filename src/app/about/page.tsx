@@ -69,32 +69,32 @@ export default function AboutPage() {
         <div className="container mx-auto px-4 max-w-5xl">
           <ul className="flex flex-wrap justify-center items-center gap-3 md:gap-4">
             <li>
-              <a href="#mission-vision" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+              <a href="#mission-vision" className="btn-green inline-block px-6 py-2.5 rounded-full text-sm font-bold">
                 Mission &amp; Vision
               </a>
             </li>
             <li>
-              <a href="#leadership-team" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+              <a href="#leadership-team" className="btn-green inline-block px-6 py-2.5 rounded-full text-sm font-bold">
                 Leadership Team
               </a>
             </li>
             <li>
-              <a href="#core-values" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+              <a href="#core-values" className="btn-green inline-block px-6 py-2.5 rounded-full text-sm font-bold">
                 Core Values
               </a>
             </li>
             <li>
-              <Link href="/transparency/financials" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+              <Link href="/transparency/financials" className="btn-green inline-block px-6 py-2.5 rounded-full text-sm font-bold">
                 Financial Transparency
               </Link>
             </li>
             <li>
-              <Link href="/faqs" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+              <Link href="/faqs" className="btn-green inline-block px-6 py-2.5 rounded-full text-sm font-bold">
                 FAQs
               </Link>
             </li>
             <li>
-              <Link href="/contact" className="inline-block px-6 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary hover:shadow-sm transition-all text-sm font-bold">
+              <Link href="/contact" className="btn-green inline-block px-6 py-2.5 rounded-full text-sm font-bold">
                 Contact
               </Link>
             </li>
@@ -163,7 +163,7 @@ export default function AboutPage() {
                   learning outcomes, and partner accountability.
                 </p>
               </div>
-              <Link href="/impact" className="px-8 py-4 rounded-full bg-white text-brand-primary font-bold hover:bg-gray-100 transition-all shrink-0">
+              <Link href="/impact" className="btn-green px-8 py-4 rounded-full font-bold shrink-0">
                 Explore the Impact Hub
               </Link>
             </PremiumCard>

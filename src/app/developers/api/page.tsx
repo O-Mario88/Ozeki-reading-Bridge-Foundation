@@ -64,7 +64,7 @@ export default function DeveloperDocsPage() {
           <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
             <Link
               href="/contact"
-              className="px-6 py-3 rounded-xl bg-white text-[#006b61] font-bold hover:bg-white/90 transition-all shadow-lg inline-flex items-center gap-2"
+              className="btn-orange px-6 py-3 rounded-xl font-bold inline-flex items-center gap-2"
             >
               <Key className="w-4 h-4" /> Request API Key
             </Link>
@@ -72,7 +72,7 @@ export default function DeveloperDocsPage() {
               href="/api/v1/openapi"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-6 py-3 rounded-xl bg-white/10 text-white font-bold border border-white/30 hover:bg-white/20 transition-all inline-flex items-center gap-2"
+              className="btn-green px-6 py-3 rounded-xl font-bold inline-flex items-center gap-2"
             >
               <Download className="w-4 h-4" /> OpenAPI Spec
             </a>

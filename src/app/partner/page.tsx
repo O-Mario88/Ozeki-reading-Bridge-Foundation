@@ -50,10 +50,10 @@ export default function PartnerPage() {
         subtitle="Choose a sponsorship package and submit a partnership request. Every package is tracked in NLIP with measurable implementation and reporting."
         imageSrc="/photos/10.jpeg"
       >
-        <Link className="px-8 py-3.5 rounded-full bg-[#FA7D15] text-white font-semibold hover:bg-[#E86D0B] shadow-lg transition-all" href="/impact-reports">
+        <Link className="btn-orange px-8 py-3.5 rounded-full font-semibold" href="/impact-reports">
           Explore Impact
         </Link>
-        <Link className="px-8 py-3.5 rounded-full border-2 border-[#072734]/25 text-[#072734] font-semibold hover:bg-[#072734] hover:text-white hover:border-[#072734] transition-all" href="/donor-pack">
+        <Link className="btn-green px-8 py-3.5 rounded-full font-semibold" href="/donor-pack">
           Download Donor Pack
         </Link>
       </PageHero>
@@ -83,13 +83,13 @@ export default function PartnerPage() {
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link
               href="/sponsor"
-              className="px-8 py-3.5 rounded-full bg-[#FA7D15] text-white font-semibold hover:bg-[#E86D0B] shadow-lg transition-all inline-flex items-center justify-center cursor-pointer"
+              className="btn-orange px-8 py-3.5 rounded-full font-semibold inline-flex items-center justify-center cursor-pointer"
             >
               Explore Sponsorship Plans
             </Link>
             <Link
               href="/donate"
-              className="px-8 py-3.5 rounded-full border-2 border-gray-200 text-[#111] font-semibold hover:border-gray-300 bg-white hover:bg-gray-50 transition-all inline-flex items-center justify-center cursor-pointer"
+              className="btn-green px-8 py-3.5 rounded-full font-semibold inline-flex items-center justify-center cursor-pointer"
             >
               General Donation Gateway
             </Link>

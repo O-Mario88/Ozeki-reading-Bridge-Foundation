@@ -335,13 +335,13 @@ export default async function DonorSelfServicePage({ params }: PageProps) {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/donate"
-            className="px-6 py-3 rounded-xl bg-[#FA7D15] text-white font-semibold text-sm hover:bg-[#FA7D15]/90 transition-colors text-center"
+            className="btn-orange px-6 py-3 rounded-xl font-semibold text-sm text-center"
           >
             Give Again
           </Link>
           <Link
             href="/impact/overview"
-            className="px-6 py-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors text-center inline-flex items-center justify-center gap-1.5"
+            className="btn-green px-6 py-3 rounded-xl font-semibold text-sm text-center inline-flex items-center justify-center gap-1.5"
           >
             See Program Impact <ChevronRight className="w-4 h-4" />
           </Link>

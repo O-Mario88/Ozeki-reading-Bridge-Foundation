@@ -43,10 +43,10 @@ export default async function DonorPackPage() {
         subtitle="Get a complete overview of our work, evidence standards, controls, and funding pathways, packaged for due diligence and fast decision-making."
         imageSrc="/photos/PXL_20260219_095927917.jpg"
       >
-        <a className="px-8 py-3.5 rounded-full bg-[#FA7D15] text-white font-semibold hover:bg-[#E86D0B] shadow-lg transition-all" href="/downloads/donor-trust/ozeki-donor-pack.pdf">
+        <a className="btn-orange px-8 py-3.5 rounded-full font-semibold" href="/downloads/donor-trust/ozeki-donor-pack.pdf">
           Download Donor Pack (PDF Bundle)
         </a>
-        <Link className="px-8 py-3.5 rounded-full border-2 border-[#072734]/25 text-[#072734] font-semibold hover:bg-[#072734] hover:text-white hover:border-[#072734] transition-all" href="/partner#book-a-partner-call">
+        <Link className="btn-green px-8 py-3.5 rounded-full font-semibold" href="/partner#book-a-partner-call">
           Book a Partner Call
         </Link>
       </PageHero>
@@ -113,7 +113,7 @@ export default async function DonorPackPage() {
               scoped implementation and reporting options.
             </p>
             <div className="flex flex-col">
-              <Link className="px-6 py-3 rounded-full bg-[#FA7D15] text-white text-center font-semibold hover:bg-[#E86D0B] shadow-lg transition-all" href="/partner#request-a-proposal">
+              <Link className="btn-orange px-6 py-3 rounded-full text-center font-semibold" href="/partner#request-a-proposal">
                 Request Concept Note
               </Link>
             </div>

@@ -125,10 +125,10 @@ export default function SponsorRegionPage() {
             $1,100 per school · 2-year commitment · NLIP-powered evidence
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <a href="#sponsorship-checkout" className="px-8 py-4 rounded-full bg-white text-[#1a4d47] font-bold flex items-center gap-2 hover:bg-gray-50 transition-all hover:-translate-y-0.5 shadow-lg">
+            <a href="#sponsorship-checkout" className="btn-orange px-8 py-4 rounded-full font-bold flex items-center gap-2">
               Fund a Region
             </a>
-            <Link href="/partner" className="px-8 py-4 rounded-full bg-transparent text-white font-bold flex items-center gap-2 border-2 border-white/40 hover:bg-white/10 transition-all hover:-translate-y-0.5">
+            <Link href="/partner" className="btn-green px-8 py-4 rounded-full font-bold flex items-center gap-2">
               All Partnership Options
             </Link>
           </div>

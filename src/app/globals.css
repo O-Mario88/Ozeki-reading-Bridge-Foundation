@@ -11268,6 +11268,58 @@ button.button,
     color: #ffffff;
 }
 
+/* =========================================================================
+   Brand button pair — used across public marketing pages.
+   Primary  (.btn-orange): orange default → green on hover
+   Secondary (.btn-green): green  default → orange on hover
+   Both use white text and a visible focus ring, so they stay legible on
+   every hero background (light cream or dark photo) without relying on
+   transparency tricks.
+   ========================================================================= */
+.btn-orange,
+.btn-green {
+    color: #ffffff !important;
+    border: 2px solid transparent;
+    transition: background-color 180ms ease, border-color 180ms ease,
+                color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn-orange {
+    background: var(--color-brand-orange) !important;
+    border-color: var(--color-brand-orange) !important;
+}
+
+.btn-orange:hover,
+.btn-orange:focus-visible {
+    background: var(--color-brand-green) !important;
+    border-color: var(--color-brand-green) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 107, 97, 0.28);
+}
+
+.btn-green {
+    background: var(--color-brand-green) !important;
+    border-color: var(--color-brand-green) !important;
+}
+
+.btn-green:hover,
+.btn-green:focus-visible {
+    background: var(--color-brand-orange) !important;
+    border-color: var(--color-brand-orange) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(254, 139, 92, 0.32);
+}
+
+.btn-orange:focus-visible,
+.btn-green:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.55);
+    outline-offset: 2px;
+}
+
 .button.button-accent,
 .header__sticky-button,
 .header .button[href="/partner-with-us"],
@@ -11613,6 +11665,8 @@ label:has(> span + :is(input, select, textarea))>:is(input, select, textarea), .
     --color-brand-orange: #fe8b5c;
     --color-brand-blue-dark: #005248;
     --color-brand-blue: #006b61;
+    --color-brand-green: #006b61;
+    --color-brand-green-dark: #005248;
   --orbf-nav-muted: rgba(255, 255, 255, 0.82);
   --orbf-nav-border: rgba(255, 255, 255, 0.22);
   --orbf-nav-footer: var(--color-brand-blue);

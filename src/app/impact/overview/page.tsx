@@ -107,13 +107,13 @@ export default async function ImpactOverviewPage() {
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link
               href="/donate"
-              className="px-8 py-4 rounded-xl bg-[#FA7D15] text-white font-bold hover:bg-[#FA7D15]/90 transition-all shadow-lg flex items-center justify-center gap-2"
+              className="btn-orange px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2"
             >
               <Heart className="w-5 h-5" /> Donate Now
             </Link>
             <Link
               href="/sponsor"
-              className="px-8 py-4 rounded-xl bg-white/10 text-white font-bold border border-white/30 hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+              className="btn-green px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2"
             >
               Sponsor a School <ChevronRight className="w-4 h-4" />
             </Link>
