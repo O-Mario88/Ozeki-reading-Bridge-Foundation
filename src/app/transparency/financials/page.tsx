@@ -14,6 +14,7 @@ import { getPublicObservationFidelityStatsPostgres } from "@/lib/server/postgres
 import { getTransparencyLiveStatsPostgres } from "@/lib/server/postgres/repositories/finance-intelligence";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { DollarSign, PercentCircle } from "lucide-react";
+import { IntegrityBadge } from "@/components/public/IntegrityBadge";
 
 export const revalidate = 300;
 
@@ -120,9 +121,12 @@ export default async function FinancialTransparencyPage() {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-[#006b61] font-semibold text-sm mb-6 shadow-sm border border-[#006b61]/10">
               <ShieldCheck className="w-4 h-4" /> Stewardship
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-[#006b61] tracking-tight leading-tight mb-8">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-[#006b61] tracking-tight leading-tight mb-6">
               Financial Transparency
             </h1>
+            <div className="mb-6">
+              <IntegrityBadge />
+            </div>
             <p className="text-xl md:text-2xl text-[#006b61]/80 max-w-3xl mx-auto leading-relaxed mb-6 font-medium">
               Responsible stewardship, clear reporting, and accountability in support of literacy impact.
             </p>

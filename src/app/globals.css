@@ -6361,6 +6361,13 @@ nav[aria-label="Staff navigation"] {
   align-items: stretch;
 }
 
+.impact-asymmetric-stack-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
 @media (max-width: 1100px) {
   .impact-asymmetric-base {
     grid-template-columns: 1fr;
@@ -6389,7 +6396,6 @@ nav[aria-label="Staff navigation"] {
    matches the grid template: 280px sidebar + 1.5rem gap = 280px + 24px.      */
 
 @media (min-width: 1101px) {
-  .impact-asymmetric-right > .impact-tracker-banner,
   .impact-asymmetric-right > .impact-freshness-row,
   .impact-asymmetric-right > .impact-hero-card,
   .impact-asymmetric-right > .at-risk-radar,
@@ -9215,8 +9221,8 @@ nav[aria-label="Staff navigation"] {
 
 .impact-attract-progress-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-  gap: 0.35rem;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
 }
 
 .impact-attract-progress-grid article,
@@ -9254,8 +9260,8 @@ nav[aria-label="Staff navigation"] {
 
 .impact-attract-progress-lists {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-  gap: 0.55rem;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
 }
 
 .impact-attract-progress-lists h4 {

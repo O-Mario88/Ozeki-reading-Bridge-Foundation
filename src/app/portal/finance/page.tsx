@@ -6,7 +6,7 @@ import { getTransparencyLiveStatsPostgres } from "@/lib/server/postgres/reposito
 import {
   CreditCard, FileText, Receipt, Wallet, ArrowRightLeft, PiggyBank,
   FileBarChart, Building2, ShieldAlert, BookOpen, Settings as SettingsIcon,
-  Eye, TrendingUp, Lock, FileCheck, DollarSign,
+  Eye, TrendingUp, Lock, FileCheck, DollarSign, ShieldCheck,
   CheckCircle, ShieldBan, Clock, Percent,
 } from "lucide-react";
 
@@ -150,6 +150,13 @@ export default async function FinanceDashboard() {
             />
             <FinanceTile href="/portal/finance/transparency" icon={Eye} label="Transparency" body="Public-facing snapshots + audited statements." />
             <FinanceTile href="/portal/finance/audit-center" icon={ShieldAlert} label="Audit Center" body="Exception queue + control testing." />
+            <FinanceTile
+              href="/portal/finance/controls"
+              icon={ShieldCheck}
+              label="Internal Controls"
+              body="Approval queue, period locks, and tamper-evident audit chain."
+              highlight
+            />
           </div>
         </section>
 

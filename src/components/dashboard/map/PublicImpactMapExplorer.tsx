@@ -1129,6 +1129,7 @@ export function PublicImpactMapExplorer({
                       ))}
                     </div>
                   </article>
+                  <div className="impact-asymmetric-stack-right">
                   <article className="card impact-attract-card impact-attract-card--funnel">
                     <header>
                       <h3>Implementation Conversion Funnel</h3>
@@ -1176,11 +1177,7 @@ export function PublicImpactMapExplorer({
                       ))}
                     </div>
                   </article>
-                </div>
-              ) : null}
-
-              {!compact ? (
-                <div className="impact-tracker-banner">
+                  <div className="impact-tracker-banner">
                   <article className="card impact-attract-card impact-attract-card--progress">
                     <header>
                       <h3>Reading Progress Tracker</h3>
@@ -1274,6 +1271,8 @@ export function PublicImpactMapExplorer({
                       </div>
                     )}
                   </article>
+                  </div>
+                  </div>
                 </div>
               ) : null}
 

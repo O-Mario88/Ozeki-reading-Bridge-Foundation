@@ -965,7 +965,62 @@ export async function voidFinanceExpensePostgres(id: number, reason: string, _ac
   });
 }
 
+export class ExpensePostingSoDError extends Error {
+  constructor() {
+    super("Segregation of duties: the user who created this expense cannot post it.");
+    this.name = "ExpensePostingSoDError";
+  }
+}
+export class ExpensePostingMissingAttachmentError extends Error {
+  constructor(thresholdUgx: number) {
+    super(`Expenses above UGX ${thresholdUgx.toLocaleString()} require at least one uploaded source document before posting.`);
+    this.name = "ExpensePostingMissingAttachmentError";
+  }
+}
+export class ExpensePostingApprovalIncompleteError extends Error {
+  constructor() {
+    super("All required approval steps must be completed before this expense can be posted.");
+    this.name = "ExpensePostingApprovalIncompleteError";
+  }
+}
+
 export async function postFinanceExpensePostgres(expenseId: number, actor: { id: number }) {
+  // ── Gate 1-3: SoD, mandatory attachment, approval completeness ──────────
+  //   These run OUTSIDE the posting transaction so their failure modes don't
+  //   interact with the UPDATE below.
+  const gateExpense = await queryPostgres(
+    `SELECT id, status, amount, created_by_user_id FROM finance_expenses WHERE id = $1`,
+    [expenseId],
+  );
+  const ge = gateExpense.rows[0] as { status: string; amount: number; created_by_user_id: number | null } | undefined;
+  if (ge && ge.status !== "posted") {
+    // SoD: creator cannot post their own expense
+    if (ge.created_by_user_id != null && Number(ge.created_by_user_id) === actor.id) {
+      throw new ExpensePostingSoDError();
+    }
+    // Mandatory source document above settings threshold
+    const { getSettingPostgres } = await import("@/lib/server/postgres/repositories/settings");
+    const threshold = await getSettingPostgres<number>("finance.mandatory_attachment_threshold_ugx", 100_000);
+    if (Number(ge.amount) >= threshold) {
+      const attachRes = await queryPostgres(
+        `SELECT COUNT(*)::int AS n FROM finance_expense_receipts WHERE expense_id = $1`,
+        [expenseId],
+      ).catch(() => ({ rows: [{ n: 0 }] }));
+      const n = Number((attachRes.rows[0] as { n?: number })?.n ?? 0);
+      if (n === 0) throw new ExpensePostingMissingAttachmentError(threshold);
+    }
+    // Approval chain must be fully approved (if any roles were required)
+    const { allApprovalsCompletePostgres } = await import("@/lib/server/postgres/repositories/finance-controls");
+    const approvalsRes = await queryPostgres(
+      `SELECT COUNT(*)::int AS n FROM finance_approvals WHERE expense_id = $1`,
+      [expenseId],
+    );
+    if (Number((approvalsRes.rows[0] as { n?: number })?.n ?? 0) > 0) {
+      const ok = await allApprovalsCompletePostgres(expenseId);
+      if (!ok) throw new ExpensePostingApprovalIncompleteError();
+    }
+  }
+
   return await withPostgresClient(async (client) => {
     await client.query("BEGIN");
     try {
