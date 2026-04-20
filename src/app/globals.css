@@ -6377,6 +6377,34 @@ nav[aria-label="Staff navigation"] {
   margin-top: 0;
 }
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Full-width rows inside .impact-asymmetric-right                            */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* The Reading Progress Tracker, ThisPeriodHero, At-Risk Radar, Command Center
+   Toolbar, Comparison Panel, tab pills, and subsequent tab content live inside
+   .impact-asymmetric-right (the 1fr column of a 260–280px sidebar grid). On
+   wide screens this left a visible empty band to the left of those sections.
+   These rules break the relevant children out so they span the full width of
+   the .impact-asymmetric-base container without touching the JSX. The offset
+   matches the grid template: 280px sidebar + 1.5rem gap = 280px + 24px.      */
+
+@media (min-width: 1101px) {
+  .impact-asymmetric-right > .impact-tracker-banner,
+  .impact-asymmetric-right > .impact-freshness-row,
+  .impact-asymmetric-right > .impact-hero-card,
+  .impact-asymmetric-right > .at-risk-radar,
+  .impact-asymmetric-right > .impact-command-toolbar,
+  .impact-asymmetric-right > .impact-comparison-panel,
+  .impact-asymmetric-right > .impact-tabs,
+  .impact-asymmetric-right > article.card,
+  .impact-asymmetric-right > .impact-training-intelligence {
+    margin-left: calc(-1 * (280px + 1.5rem));
+    width: calc(100% + 280px + 1.5rem);
+    max-width: none;
+    box-sizing: border-box;
+  }
+}
+
 /* Command Center Toolbar (export, compare, period, embed, choropleth) */
 .impact-command-toolbar {
   padding: 14px 16px;
