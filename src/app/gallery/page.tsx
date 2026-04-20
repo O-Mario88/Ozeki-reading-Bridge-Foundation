@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 export default function BasicGalleryRedirect() {
-  redirect("/impact/gallery");
+  permanentRedirect("/impact/gallery");
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { organizationName, tagline } from "@/lib/content";
 import { isPostgresConfigured } from "@/lib/server/postgres/client";
 import { listPublishedPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
@@ -10,6 +11,20 @@ import { getImpactSummary } from "@/services/dataService";
 import { ChariusPillImage } from "@/components/public/ChariusPillImage";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: `${organizationName} — Phonics Training, Reading Assessments & Teacher Coaching in Uganda`,
+  description:
+    "Ozeki Reading Bridge Foundation equips nursery and primary school teachers with evidence-based phonics training, reading assessments, in-school coaching, and decodable reading materials — so every child in Uganda can read for meaning.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: `${organizationName} — Reading outcomes for Ugandan schools`,
+    description:
+      "Evidence-based phonics training, reading assessments, coaching, and decodable materials for Uganda's nursery and primary schools.",
+    url: "https://www.ozekiread.org",
+    type: "website",
+  },
+};
 
 const TESTIMONIAL_FIELDS = new Set([
   "how_training_changed_teaching",
@@ -62,13 +77,59 @@ export default async function HomePage() {
     }
   }
 
+  const SITE_URL = "https://www.ozekiread.org";
+
   const orgSchema = {
     "@context": "https://schema.org",
-    "@type": "NonProfit",
+    "@type": "NGO",
+    name: organizationName,
+    alternateName: "Ozeki Reading Bridge",
+    legalName: organizationName,
+    description: tagline,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
+    image: `${SITE_URL}/opengraph-image`,
+    areaServed: { "@type": "Country", name: "Uganda" },
+    foundingDate: "2019",
+    knowsAbout: [
+      "Phonics instruction",
+      "Early grade reading",
+      "Teacher training",
+      "Reading assessments",
+      "Literacy coaching",
+      "Decodable readers",
+      "Remedial reading",
+    ],
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        telephone: "+256-773-397-375",
+        email: "support@ozekiread.org",
+        areaServed: "UG",
+        availableLanguage: ["en"],
+      },
+    ],
+    sameAs: [
+      "https://www.facebook.com/ozekiread",
+      "https://www.linkedin.com/company/ozeki-reading-bridge-foundation",
+      "https://x.com/ozekiread",
+    ],
+  };
+
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    url: SITE_URL,
     name: organizationName,
     description: tagline,
-    url: "https://www.ozekiread.org",
-    areaServed: "Uganda",
+    inLanguage: "en-UG",
+    publisher: { "@type": "NGO", name: organizationName, url: SITE_URL },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE_URL}/blog?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
   };
 
   return (
@@ -76,6 +137,10 @@ export default async function HomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
       />
 
 

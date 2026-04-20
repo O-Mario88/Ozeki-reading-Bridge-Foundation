@@ -80,6 +80,18 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/*": ["assets/photos/**/*"],
   },
+  async redirects() {
+    return [
+      // Canonicalise apex → www so Google does not index two copies.
+      // Using a permanent (308) redirect preserves crawl signals.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "ozekiread.org" }],
+        destination: "https://www.ozekiread.org/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       // Embed routes MUST be iframe-able from external sites (donor pages,
