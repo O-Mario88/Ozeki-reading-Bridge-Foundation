@@ -12,6 +12,10 @@ import type { PortalTestimonialRecord } from "@/lib/types";
 
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { getImpactSummary } from "@/services/dataService";
+import {
+  getHomepageProgrammeCardsPostgres,
+  type HomepageProgrammeCards,
+} from "@/lib/server/postgres/repositories/homepage-programmes";
 import { ChariusPillImage } from "@/components/public/ChariusPillImage";
 
 const FOUNDING_YEAR = 2019;
@@ -69,6 +73,7 @@ function clipQuote(text: string, maxChars: number) {
 export default async function HomePage() {
   let testimonialRows: PortalTestimonialRecord[] = [];
   let upcomingEvents: PublicUpcomingEvent[] = [];
+  let programmeCards: HomepageProgrammeCards | null = null;
   const impactStats: {
     schools: string | null;
     assessments: string | null;
@@ -83,11 +88,13 @@ export default async function HomePage() {
 
   if (isPostgresConfigured()) {
     try {
-      const [testimonialsResult, summary, events] = await Promise.all([
+      const [testimonialsResult, summary, events, cards] = await Promise.all([
         listPublishedPortalTestimonialsPostgres(90),
         getImpactSummary(),
         listUpcomingPublicEventsPostgres(3),
+        getHomepageProgrammeCardsPostgres(),
       ]);
+      programmeCards = cards;
 
       testimonialRows = testimonialsResult
         .filter(
@@ -275,7 +282,7 @@ export default async function HomePage() {
         </div>
         
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {/* Card 1 */}
+          {/* Card 1 — Phonics: amount received from partners via finance_receipts */}
           <Link href="/phonics-training" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
             <div className="relative h-64 w-full">
               <Image src="/photos/26.jpeg" alt="Phonics Training" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
@@ -285,16 +292,19 @@ export default async function HomePage() {
                 The Learners Are Waiting For Your Phonics Support.
               </h3>
               <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
-                <div className="bg-charius-orange h-1.5 rounded-full" style={{ width: '85%' }}></div>
+                <div
+                  className="bg-charius-orange h-1.5 rounded-full transition-all"
+                  style={{ width: `${programmeCards?.phonics.percent ?? 0}%` }}
+                ></div>
               </div>
               <div className="flex justify-between items-center text-[13px] font-semibold text-gray-500">
-                <span>Raised: $8,500</span>
-                <span>Goal: $10,000</span>
+                <span>Raised: {programmeCards ? programmeCards.phonics.currentLabel : "—"}</span>
+                <span>Goal: {programmeCards ? programmeCards.phonics.goalLabel : "—"}</span>
               </div>
             </div>
           </Link>
-          
-          {/* Card 2 */}
+
+          {/* Card 2 — Coaching: completed coaching visits from portal_records */}
           <Link href="/in-school-coaching-mentorship" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
             <div className="relative h-64 w-full">
               <Image src="/photos/Phonics%20Session%20for%20Teachers%20in%20Namasale%20Sub-County%20Amolatar.jpg" alt="In-school coaching" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
@@ -304,16 +314,19 @@ export default async function HomePage() {
                 Changing lives one classroom at a time.
               </h3>
               <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
-                <div className="bg-[#006b61] h-1.5 rounded-full" style={{ width: '60%' }}></div>
+                <div
+                  className="bg-[#006b61] h-1.5 rounded-full transition-all"
+                  style={{ width: `${programmeCards?.coaching.percent ?? 0}%` }}
+                ></div>
               </div>
               <div className="flex justify-between items-center text-[13px] font-semibold text-gray-500">
-                <span>Raised: 60%</span>
-                <span>Goal: 100%</span>
+                <span>Visits: {programmeCards ? programmeCards.coaching.currentLabel : "—"}</span>
+                <span>Goal: {programmeCards ? programmeCards.coaching.goalLabel : "—"}</span>
               </div>
             </div>
           </Link>
 
-          {/* Card 3 */}
+          {/* Card 3 — Story Project: teachers trained on the 1001 Story programme */}
           <Link href="/story-project" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
             <div className="relative h-64 w-full">
               <Image src="/photos/Amolatar%20District%20Literacy.jpg" alt="1001 Story Project" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
@@ -323,11 +336,14 @@ export default async function HomePage() {
                 Let&apos;s be one community in this cause.
               </h3>
               <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
-                <div className="bg-red-500 h-1.5 rounded-full" style={{ width: '45%' }}></div>
+                <div
+                  className="bg-red-500 h-1.5 rounded-full transition-all"
+                  style={{ width: `${programmeCards?.storyProject.percent ?? 0}%` }}
+                ></div>
               </div>
               <div className="flex justify-between items-center text-[13px] font-semibold text-gray-500">
-                <span>Trained: 450</span>
-                <span>Goal: 1,000</span>
+                <span>Trained: {programmeCards ? programmeCards.storyProject.currentLabel : "—"}</span>
+                <span>Goal: {programmeCards ? programmeCards.storyProject.goalLabel : "—"}</span>
               </div>
             </div>
           </Link>
