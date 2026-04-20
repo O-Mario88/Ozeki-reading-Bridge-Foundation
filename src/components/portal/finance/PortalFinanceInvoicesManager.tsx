@@ -621,29 +621,37 @@ export function PortalFinanceInvoicesManager({
                           Download PDF
                         </a>
                         {item.linkedReceipt ? (
-                          <a
-                            className="button button-ghost button-sm"
-                            href={`/api/portal/finance/receipts/${item.linkedReceipt.id}/pdf`}
-                            target="_blank"
-                            rel="noreferrer"
-                            title="Download latest Receipt PDF"
+                          <>
+                            <a
+                              className="button button-ghost button-sm"
+                              href={`/api/portal/finance/receipts/${item.linkedReceipt.id}/pdf`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Download the existing receipt PDF (no new record is created)"
+                            >
+                              Receipt PDF
+                            </a>
+                            <button
+                              type="button"
+                              className="button button-ghost button-sm"
+                              onClick={() => {
+                                if (item.linkedReceipt) {
+                                  void handleSendReceipt(item.linkedReceipt.id);
+                                }
+                              }}
+                              disabled={saving}
+                              title="Re-send the existing receipt by email (no new receipt is created)"
+                            >
+                              Send Receipt
+                            </button>
+                          </>
+                        ) : item.status !== "void" ? (
+                          <span
+                            className="portal-muted finance-receipt-hint"
+                            title="A receipt is created automatically when a payment is recorded."
                           >
-                            Receipt PDF
-                          </a>
-                        ) : null}
-                        {item.linkedReceipt ? (
-                          <button
-                            type="button"
-                            className="button button-ghost button-sm"
-                            onClick={() => {
-                              if (item.linkedReceipt) {
-                                void handleSendReceipt(item.linkedReceipt.id);
-                              }
-                            }}
-                            disabled={saving}
-                          >
-                            Send Receipt
-                          </button>
+                            Receipt unavailable until payment is recorded
+                          </span>
                         ) : null}
                       </div>
                     </td>
