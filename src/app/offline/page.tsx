@@ -17,15 +17,15 @@ export default function OfflinePage() {
       </p>
       
       <div className="flex flex-col sm:flex-row gap-4">
-        <button 
+        <button
           onClick={() => window.location.reload()}
-          className="px-6 py-2.5 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-secondary transition-colors"
+          className="btn-orange px-6 py-2.5 font-medium rounded-lg"
         >
           Try Again
         </button>
-        <button 
+        <button
           onClick={() => window.history.back()}
-          className="px-6 py-2.5 bg-white text-brand-primary border border-brand-primary font-medium rounded-lg hover:bg-brand-surface transition-colors"
+          className="btn-green px-6 py-2.5 font-medium rounded-lg"
         >
           Go Back
         </button>

@@ -4,11 +4,40 @@ import type { Metadata } from "next";
 import { organizationName, tagline } from "@/lib/content";
 import { isPostgresConfigured } from "@/lib/server/postgres/client";
 import { listPublishedPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
+import {
+  listUpcomingPublicEventsPostgres,
+  type PublicUpcomingEvent,
+} from "@/lib/server/postgres/repositories/public-events";
 import type { PortalTestimonialRecord } from "@/lib/types";
 
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { getImpactSummary } from "@/services/dataService";
 import { ChariusPillImage } from "@/components/public/ChariusPillImage";
+
+const FOUNDING_YEAR = 2019;
+const MONTH_ABBREVIATIONS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+function formatEventDate(iso: string): { day: string; month: string } {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return { day: "--", month: "---" };
+  return {
+    day: String(d.getUTCDate()).padStart(2, "0"),
+    month: MONTH_ABBREVIATIONS[d.getUTCMonth()] ?? "---",
+  };
+}
+
+function formatEventTimeRange(event: PublicUpcomingEvent): string {
+  if (event.scheduledStartTime && event.scheduledEndTime) {
+    return `${event.scheduledStartTime} – ${event.scheduledEndTime}`;
+  }
+  if (event.scheduledStartTime) return `Starts ${event.scheduledStartTime}`;
+  if (event.venue) return event.venue;
+  if (event.district) return event.district;
+  return "Details inside";
+}
 
 export const revalidate = 300;
 
@@ -39,30 +68,44 @@ function clipQuote(text: string, maxChars: number) {
 
 export default async function HomePage() {
   let testimonialRows: PortalTestimonialRecord[] = [];
-  const impactStats: { schools: string | null; assessments: string | null; teachers: string | null } = {
+  let upcomingEvents: PublicUpcomingEvent[] = [];
+  const impactStats: {
+    schools: string | null;
+    assessments: string | null;
+    teachers: string | null;
+    years: string;
+  } = {
     schools: null,
     assessments: null,
     teachers: null,
+    years: String(Math.max(1, new Date().getUTCFullYear() - FOUNDING_YEAR)),
   };
 
   if (isPostgresConfigured()) {
     try {
-      testimonialRows = (await listPublishedPortalTestimonialsPostgres(90))
+      const [testimonialsResult, summary, events] = await Promise.all([
+        listPublishedPortalTestimonialsPostgres(90),
+        getImpactSummary(),
+        listUpcomingPublicEventsPostgres(3),
+      ]);
+
+      testimonialRows = testimonialsResult
         .filter(
           (item) =>
             item.sourceType === "training_feedback" &&
             TESTIMONIAL_FIELDS.has(String(item.quoteField ?? "")),
         )
-        .slice(0, 4); // Show 4 for the circular avatar design
+        .slice(0, 4);
 
-      const summary = await getImpactSummary();
+      upcomingEvents = events;
+
       const formatStat = (val: number) => {
         if (val > 1000) return `${(val / 1000).toFixed(1)}k`;
         return val.toLocaleString();
       };
 
       const getMetric = (labelMatched: string) => {
-        const found = summary.metrics.find(m => m.label === labelMatched);
+        const found = summary.metrics.find((m) => m.label === labelMatched);
         return found && found.value > 0 ? formatStat(found.value) : null;
       };
 
@@ -71,7 +114,6 @@ export default async function HomePage() {
       impactStats.schools = getMetric("Schools trained");
       impactStats.assessments = getMetric("Learners assessed");
       impactStats.teachers = getMetric("Teachers trained");
-
     } catch (error) {
       console.error("Failed to load homepage data.", error);
     }
@@ -213,7 +255,7 @@ export default async function HomePage() {
                 <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Happy Teachers</div>
               </div>
               <div className="text-center px-4">
-                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">3</div>
+                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.years}</div>
                 <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Years of Impact</div>
               </div>
             </div>
@@ -365,74 +407,69 @@ export default async function HomePage() {
         </div>
       </SectionWrapper>
 
-      {/* 6. Upcoming Events (Charius dark green block with cards overlapping) */}
-      <section className="bg-[#006b61] py-24 relative overflow-hidden">
-         <div className="absolute inset-x-0 bottom-0 h-32 bg-charius-beige" />
-         <div className="max-w-6xl mx-auto px-6 relative z-10 text-center mb-12">
+      {/* 6. Upcoming Events — rendered only when the schedule has real rows */}
+      {upcomingEvents.length > 0 && (
+        <section className="bg-[#006b61] py-24 relative overflow-hidden">
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-charius-beige" />
+          <div className="max-w-6xl mx-auto px-6 relative z-10 text-center mb-12">
             <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
               Let&apos;s help them together
             </span>
             <h2 className="text-[40px] font-bold text-white leading-tight tracking-tight">
               Join Our Upcoming Events
             </h2>
-         </div>
-         
-         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6 relative z-20">
-            {/* Event 1 */}
-            <Link href="/events" className="bg-white rounded-xl overflow-hidden shadow-lg group hover:-translate-y-2 transition-transform block">
-               <div className="relative h-48">
-                  <Image src="/photos/12.jpeg" alt="Phonics Training Workshop" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-                  <div className="absolute top-4 left-4 bg-charius-orange w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
-                     <span className="text-xl font-bold leading-none">22</span>
-                     <span className="text-[10px] uppercase font-semibold">Jan</span>
-                  </div>
-               </div>
-               <div className="p-6">
-                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">Phonics Training Workshop — Northern Uganda</h3>
-                 <p className="text-gray-500 text-sm flex items-center gap-2 font-medium">
-                    <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">⏰</span>
-                    9:00am - 4:00pm
-                 </p>
-               </div>
-            </Link>
+          </div>
 
-            {/* Event 2 */}
-            <Link href="/events" className="bg-white rounded-xl overflow-hidden shadow-lg group hover:-translate-y-2 transition-transform block">
-               <div className="relative h-48">
-                  <Image src="/photos/17.jpeg" alt="Reading Assessment Day" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-                  <div className="absolute top-4 left-4 bg-[#006b61] w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
-                     <span className="text-xl font-bold leading-none">15</span>
-                     <span className="text-[10px] uppercase font-semibold">Feb</span>
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6 relative z-20">
+            {upcomingEvents.map((event, index) => {
+              const { day, month } = formatEventDate(event.scheduledDate);
+              const badgeColor =
+                index === 0 ? "bg-charius-orange" : index === 1 ? "bg-[#006b61]" : "bg-red-500";
+              const image =
+                index === 0
+                  ? "/photos/12.jpeg"
+                  : index === 1
+                  ? "/photos/17.jpeg"
+                  : "/photos/13.jpeg";
+              return (
+                <Link
+                  key={event.id}
+                  href="/events"
+                  className="bg-white rounded-xl overflow-hidden shadow-lg group hover:-translate-y-2 transition-transform block"
+                >
+                  <div className="relative h-48">
+                    <Image
+                      src={image}
+                      alt={event.topic}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-cover"
+                    />
+                    <div
+                      className={`absolute top-4 left-4 ${badgeColor} w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md`}
+                    >
+                      <span className="text-xl font-bold leading-none">{day}</span>
+                      <span className="text-[10px] uppercase font-semibold">{month}</span>
+                    </div>
                   </div>
-               </div>
-               <div className="p-6">
-                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">Learner Reading Assessment Day — District Cluster</h3>
-                 <p className="text-gray-500 text-sm flex items-center gap-2 font-medium">
-                    <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">⏰</span>
-                    10:00am - 2:00pm
-                 </p>
-               </div>
-            </Link>
-
-            {/* Event 3 */}
-            <Link href="/events" className="bg-white rounded-xl overflow-hidden shadow-lg group hover:-translate-y-2 transition-transform block">
-               <div className="relative h-48">
-                  <Image src="/photos/13.jpeg" alt="Coaching and Mentorship Visit" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-                  <div className="absolute top-4 left-4 bg-red-500 w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md">
-                     <span className="text-xl font-bold leading-none">05</span>
-                     <span className="text-[10px] uppercase font-semibold">Mar</span>
+                  <div className="p-6">
+                    <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">
+                      {event.topic}
+                      {event.district ? ` — ${event.district}` : ""}
+                    </h3>
+                    <p className="text-gray-500 text-sm flex items-center gap-2 font-medium">
+                      <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">
+                        ⏰
+                      </span>
+                      {formatEventTimeRange(event)}
+                    </p>
                   </div>
-               </div>
-               <div className="p-6">
-                 <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">In-School Coaching & Mentorship Visit</h3>
-                 <p className="text-gray-500 text-sm flex items-center gap-2 font-medium">
-                    <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">⏰</span>
-                    8:00am - 12:00pm
-                 </p>
-               </div>
-            </Link>
-         </div>
-      </section>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
     </>
   );
