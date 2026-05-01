@@ -2507,15 +2507,29 @@ export function PortalModuleManager({
 
   useEffect(() => {
     refreshOfflineCount();
-  }, [refreshOfflineCount]);
+    // On mount, drain any records that previous sessions/tabs left in the
+    // queue. Running them through the same sync path means today's submits
+    // and yesterday's stragglers all reach the server DB.
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      void syncOfflineQueue();
+    }
+  }, [refreshOfflineCount, syncOfflineQueue]);
 
   useEffect(() => {
     const onOnline = () => {
       void syncOfflineQueue();
     };
     window.addEventListener("online", onOnline);
+    // Periodic retry: if a sync failed (DB blip, expired session), the next
+    // tick will retry the still-pending items. Cheap when the queue is empty.
+    const interval = window.setInterval(() => {
+      if (navigator.onLine) {
+        void syncOfflineQueue();
+      }
+    }, 60_000);
     return () => {
       window.removeEventListener("online", onOnline);
+      window.clearInterval(interval);
     };
   }, [syncOfflineQueue]);
 
@@ -4414,14 +4428,27 @@ export function PortalModuleManager({
         // Best-effort evidence upload (fails silently if offline)
         await uploadEvidence(saved.id, body);
 
-        setFeedback({
-          kind: isOfflineMode ? "idle" : "success",
-          message: isOfflineMode 
-            ? "You are offline. Record cached securely to device and will background sync automatically when network returns."
-            : nextStatus === "Draft"
-               ? `Draft saved locally.`
-               : `Record submitted and queued.`,
-        });
+        // CRITICAL: when online, flush the offline queue immediately so the
+        // record actually lands in the server DB. Previously the queue only
+        // drained on the browser "online" event, which never fired for users
+        // who were already online when they submitted — silently leaving
+        // every form submission stranded in IndexedDB.
+        if (!isOfflineMode) {
+          // Fire-and-forget; user sees its result via setFeedback inside syncOfflineQueue
+          void syncOfflineQueue();
+          setFeedback({
+            kind: "success",
+            message: nextStatus === "Draft"
+              ? "Draft saved and synced."
+              : "Record submitted and synced.",
+          });
+        } else {
+          setFeedback({
+            kind: "idle",
+            message:
+              "You are offline. Record cached securely to device and will background sync automatically when network returns.",
+          });
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : "An unexpected error occurred.";
         setFeedback({ kind: "error", message });
@@ -4435,6 +4462,7 @@ export function PortalModuleManager({
       enrichVisitGps,
       formState.id,
       refreshOfflineCount,
+      syncOfflineQueue,
       uploadEvidence,
       validateForm,
     ],
