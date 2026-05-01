@@ -8,6 +8,9 @@ import {
   getFundAllocationPostgres,
   getRecentTransactionsPostgres,
   getKpiSparklinesPostgres,
+  getKpiDeltasPostgres,
+  getTransactionCountPostgres,
+  getUsdRateForDashboard,
 } from "@/lib/server/postgres/repositories/finance-dashboard";
 import { FinanceKpiCard } from "@/components/portal/finance/FinanceKpiCard";
 import { SpendingTrendChart } from "@/components/portal/finance/SpendingTrendChart";
@@ -45,19 +48,19 @@ function fmtUsdAbbrev(n: number | undefined): string {
 export default async function FinanceDashboard() {
   const user = await requirePortalStaffUser();
 
-  const [stats, trend, allocation, transactions, sparks] = await Promise.all([
+  const [stats, trend, allocation, transactions, sparks, kpiDeltas, totalTxnCount, usdRate] = await Promise.all([
     getTransparencyLiveStatsPostgres().catch(() => null),
     getSpendingTrendPostgres(90),
     getFundAllocationPostgres(),
     getRecentTransactionsPostgres(25),
     getKpiSparklinesPostgres(),
+    getKpiDeltasPostgres(),
+    getTransactionCountPostgres(),
+    getUsdRateForDashboard(),
   ]);
 
   const initials = (user.fullName ?? user.email ?? "OS")
     .split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase();
-
-  // Convert UGX to USD for the premium dashboard display
-  const usdRate = 3750;
   const totalReceivedUsd = stats?.totalReceivedUgx ? Math.round(stats.totalReceivedUgx / usdRate) : 0;
   const totalSpentUsd = stats?.totalSpentUgx ? Math.round(stats.totalSpentUgx / usdRate) : 0;
   const programmeDeliveryPct = stats?.programmeDeliveryPct ?? 0;
@@ -143,7 +146,7 @@ export default async function FinanceDashboard() {
               label="Programme Delivery"
               value={`${programmeDeliveryPct}%`}
               subline="Direct-to-classroom spend"
-              deltaPct={6.4}
+              deltaPct={kpiDeltas.programmeDeliveryDeltaPp}
               deltaPositive
               icon={PieChart}
               iconBg="#ecfdf5"
@@ -155,7 +158,7 @@ export default async function FinanceDashboard() {
               label="Cost per Learner"
               value={fmtUsd(costPerLearnerUsd)}
               subline="Per district average"
-              deltaPct={-3.1}
+              deltaPct={kpiDeltas.costPerLearnerDeltaPct}
               deltaPositive={false}
               icon={TrendingUp}
               iconBg="#fff7ed"
@@ -366,7 +369,7 @@ export default async function FinanceDashboard() {
 
             {transactions.length > 0 && (
               <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
-                <p className="text-xs text-gray-500">Showing 1 to {Math.min(5, transactions.length)} of {transactions.length} transactions</p>
+                <p className="text-xs text-gray-500">Showing 1 to {Math.min(5, transactions.length)} of {totalTxnCount.toLocaleString()} transactions</p>
                 <div className="flex items-center gap-1 text-xs">
                   <PageChip>1</PageChip>
                   <PageChip muted>2</PageChip>

@@ -266,3 +266,103 @@ export async function getKpiSparklinesPostgres(): Promise<{
 export async function getUsdRateForDashboard(): Promise<number> {
   return getUgxPerUsdPostgres();
 }
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* KPI deltas — programme delivery + cost per learner, current vs prior 30d    */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export type KpiDeltas = {
+  programmeDeliveryDeltaPp: number | null; // percentage points, current 30d vs prior 30d
+  costPerLearnerDeltaPct: number | null;   // % change in cost-per-learner
+};
+
+export async function getKpiDeltasPostgres(): Promise<KpiDeltas> {
+  try {
+    const res = await queryPostgres(
+      `WITH spend_now AS (
+         SELECT
+           COALESCE(SUM(amount), 0)::numeric AS total_now,
+           COALESCE(SUM(amount) FILTER (
+             WHERE LOWER(COALESCE(category, '')) IN ('admin','administration','operations','office','overhead')
+                OR LOWER(COALESCE(subcategory, '')) LIKE '%admin%'
+                OR LOWER(COALESCE(subcategory, '')) LIKE '%office%'
+           ), 0)::numeric AS admin_now
+         FROM finance_expenses
+         WHERE status = 'posted' AND date >= NOW() - INTERVAL '30 days'
+       ),
+       spend_prior AS (
+         SELECT
+           COALESCE(SUM(amount), 0)::numeric AS total_prior,
+           COALESCE(SUM(amount) FILTER (
+             WHERE LOWER(COALESCE(category, '')) IN ('admin','administration','operations','office','overhead')
+                OR LOWER(COALESCE(subcategory, '')) LIKE '%admin%'
+                OR LOWER(COALESCE(subcategory, '')) LIKE '%office%'
+           ), 0)::numeric AS admin_prior
+         FROM finance_expenses
+         WHERE status = 'posted'
+           AND date >= NOW() - INTERVAL '60 days'
+           AND date <  NOW() - INTERVAL '30 days'
+       ),
+       learners_now AS (
+         SELECT COUNT(DISTINCT learner_uid)::int AS n
+         FROM assessment_records
+         WHERE learner_uid IS NOT NULL
+           AND assessment_date >= NOW() - INTERVAL '30 days'
+       ),
+       learners_prior AS (
+         SELECT COUNT(DISTINCT learner_uid)::int AS n
+         FROM assessment_records
+         WHERE learner_uid IS NOT NULL
+           AND assessment_date >= NOW() - INTERVAL '60 days'
+           AND assessment_date <  NOW() - INTERVAL '30 days'
+       )
+       SELECT
+         (SELECT total_now FROM spend_now) AS total_now,
+         (SELECT admin_now FROM spend_now) AS admin_now,
+         (SELECT total_prior FROM spend_prior) AS total_prior,
+         (SELECT admin_prior FROM spend_prior) AS admin_prior,
+         (SELECT n FROM learners_now) AS learners_now,
+         (SELECT n FROM learners_prior) AS learners_prior`,
+    );
+    const r = res.rows[0] ?? {};
+    const totalNow = Number(r.total_now ?? 0);
+    const adminNow = Number(r.admin_now ?? 0);
+    const totalPrior = Number(r.total_prior ?? 0);
+    const adminPrior = Number(r.admin_prior ?? 0);
+    const learnersNow = Number(r.learners_now ?? 0);
+    const learnersPrior = Number(r.learners_prior ?? 0);
+
+    const deliveryNowPct = totalNow > 0 ? ((totalNow - adminNow) / totalNow) * 100 : null;
+    const deliveryPriorPct = totalPrior > 0 ? ((totalPrior - adminPrior) / totalPrior) * 100 : null;
+    const programmeDeliveryDeltaPp = deliveryNowPct != null && deliveryPriorPct != null
+      ? Math.round((deliveryNowPct - deliveryPriorPct) * 10) / 10
+      : null;
+
+    const cplNow = learnersNow > 0 ? totalNow / learnersNow : null;
+    const cplPrior = learnersPrior > 0 ? totalPrior / learnersPrior : null;
+    const costPerLearnerDeltaPct = cplNow != null && cplPrior != null && cplPrior > 0
+      ? Math.round(((cplNow - cplPrior) / cplPrior) * 1000) / 10
+      : null;
+
+    return { programmeDeliveryDeltaPp, costPerLearnerDeltaPct };
+  } catch {
+    return { programmeDeliveryDeltaPp: null, costPerLearnerDeltaPct: null };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Total transaction count — for pagination                                    */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export async function getTransactionCountPostgres(): Promise<number> {
+  try {
+    const res = await queryPostgres(
+      `SELECT
+        (SELECT COUNT(*)::int FROM finance_receipts WHERE status IN ('issued','paid'))
+        + (SELECT COUNT(*)::int FROM finance_expenses WHERE status = 'posted') AS total`,
+    );
+    return Number(res.rows[0]?.total ?? 0);
+  } catch {
+    return 0;
+  }
+}
