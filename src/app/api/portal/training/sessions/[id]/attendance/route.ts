@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
 import { getTrainingSession } from "@/lib/training-db";
 import { queryPostgres } from "@/lib/server/postgres/client";
@@ -7,6 +8,13 @@ import { logger } from "@/lib/logger";
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+const attendanceSchema = z.object({
+  action: z.enum(["join", "leave"]),
+  participantId: z.coerce.number().int().positive().optional(),
+  teacherUserId: z.coerce.number().int().positive().optional(),
+  schoolId: z.coerce.number().int().positive().optional(),
+});
 
 /**
  * GET /api/portal/training/sessions/[id]/attendance
@@ -81,18 +89,14 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
 
-    const body = await req.json() as {
-      action: "join" | "leave";
-      participantId?: number;
-      teacherUserId?: number;
-      schoolId?: number;
-    };
-
-    const { action, participantId, teacherUserId, schoolId } = body;
-
-    if (action !== "join" && action !== "leave") {
-      return NextResponse.json({ error: "action must be 'join' or 'leave'." }, { status: 400 });
+    const parsed = attendanceSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid attendance payload." },
+        { status: 400 },
+      );
     }
+    const { action, participantId, teacherUserId, schoolId } = parsed.data;
 
     const now = new Date().toISOString();
 
