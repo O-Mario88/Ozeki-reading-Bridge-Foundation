@@ -98,14 +98,26 @@ export async function POST(req: NextRequest) {
     const visitId = await withPostgresClient(async (client) => {
       await client.query("BEGIN");
       try {
-        // Create a portal_record for the audit trail
+        // Verify school exists first — gives a clearer error than the foreign-key
+        // violation that would otherwise trip later in the transaction.
+        const schoolCheck = await client.query(
+          `SELECT id, name FROM schools_directory WHERE id = $1 LIMIT 1`,
+          [v.schoolId],
+        );
+        const schoolRow = schoolCheck.rows[0] as { id: number; name: string } | undefined;
+        if (!schoolRow) {
+          throw new Error(`School #${v.schoolId} not found.`);
+        }
+
+        // Create a portal_record for the audit trail. payload_json is TEXT
+        // (not JSONB) per the foundation schema, so we serialise without the
+        // ::jsonb cast that previously caused the INSERT to fail silently.
         const rec = await client.query(
           `INSERT INTO portal_records
              (module, school_id, school_name, date, status, program_type, payload_json, created_by_user_id)
-           SELECT 'visit', s.id, s.name, $1::date, 'submitted', 'coaching', $2::jsonb, $3
-           FROM schools_directory s WHERE s.id = $4
+           VALUES ('visit', $1, $2, $3::date, 'submitted', 'coaching', $4, $5)
            RETURNING id`,
-          [v.visitDate, JSON.stringify(parsed.data), user.id, v.schoolId],
+          [schoolRow.id, schoolRow.name, v.visitDate, JSON.stringify(parsed.data), user.id],
         );
         const portalRecordId = Number((rec.rows[0] as { id: number }).id);
 
@@ -142,7 +154,22 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, id: visitId, visitUid }, { status: 201 });
   } catch (error) {
-    logger.error("[visits] POST failed", { error: String(error) });
-    return NextResponse.json({ error: "Internal error." }, { status: 500 });
+    // Surface the underlying message + pg error code (when available) to the
+    // client. We're not exposing connection strings or row data — only the
+    // diagnostic the operator needs to fix their input.
+    const e = error as { message?: string; code?: string; detail?: string };
+    logger.error("[visits] POST failed", {
+      error: e?.message,
+      code: e?.code,
+      detail: e?.detail,
+    });
+    return NextResponse.json(
+      {
+        error: e?.message ?? "Internal error.",
+        code: e?.code ?? null,
+        detail: e?.detail ?? null,
+      },
+      { status: 500 },
+    );
   }
 }
