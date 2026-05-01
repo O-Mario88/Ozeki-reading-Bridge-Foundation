@@ -72,7 +72,7 @@ export default async function FinanceDashboard() {
 
   return (
     <PortalShell user={user} activeHref="/portal/finance" hideFrame>
-      <div className={`${openSans.className} min-h-screen bg-[#fafaf7]`}>
+      <div className={`${openSans.className} min-h-screen bg-[#eef3ef]`}>
 
         {/* Top workspace header */}
         <header className="bg-white/70 backdrop-blur-sm border-b border-gray-100 px-6 lg:px-10 py-4">
