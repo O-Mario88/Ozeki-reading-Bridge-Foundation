@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalCrmListView } from "@/components/portal/crm/PortalCrmListView";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { listVisitCrmRows } from "@/lib/server/postgres/repositories/portal-crm";
+import { Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,21 @@ export default async function PortalVisitsPage({ searchParams }: PageProps) {
   const view = await listVisitCrmRows();
 
   return (
-    <PortalShell user={user} activeHref="/portal/visits" title={view.title} description={view.subtitle}>
+    <PortalShell
+      user={user}
+      activeHref="/portal/visits"
+      title={view.title}
+      description={view.subtitle}
+      actions={
+        <Link
+          href="/portal/visits/new"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#006b61] text-white font-semibold text-sm hover:bg-[#006b61]/90 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Visit
+        </Link>
+      }
+    >
       <PortalCrmListView view={view} />
     </PortalShell>
   );
