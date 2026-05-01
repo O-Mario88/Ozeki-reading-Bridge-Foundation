@@ -60,10 +60,12 @@ function getInitials(name: string): string {
 interface PortalShellProps {
   user: PortalUser;
   activeHref: string;
-  title: string;
+  title?: string;
   description?: string;
   actions?: ReactNode;
   shellClassName?: string;
+  /** When true, skip the default top bar + page header and let the page render its own. */
+  hideFrame?: boolean;
   children: ReactNode;
 }
 
@@ -74,6 +76,7 @@ export function PortalShell({
   description,
   actions,
   shellClassName,
+  hideFrame = false,
   children,
 }: PortalShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -203,6 +206,10 @@ export function PortalShell({
 
       {/* Main Content */}
       <div className="ds-main">
+        {hideFrame ? (
+          children
+        ) : (
+          <>
         {/* Top Navbar */}
         <header className="ds-topbar">
           <button
@@ -265,9 +272,11 @@ export function PortalShell({
             </p>
           </div>
 
-          {actions && <div style={{ marginBottom: "1rem" }}>{actions}</div>}
+          {actions && <div className="ds-actions-row">{actions}</div>}
           {children}
         </div>
+          </>
+        )}
       </div>
       </div>
     </div>
