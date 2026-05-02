@@ -97,7 +97,16 @@ export function filterNavForUser(
   });
 }
 
+/** Treat `/portal/finance/expenses` as a match for `/portal/finance`, etc. */
+export function isHrefActive(itemHref: string, activeHref: string): boolean {
+  if (activeHref === itemHref) return true;
+  if (itemHref === "/portal/dashboard") return activeHref === itemHref; // dashboard is exact-match only
+  return activeHref.startsWith(itemHref + "/");
+}
+
 export function findActiveSection(activeHref: string): GlassNavSection {
-  const match = glassNavItems.find((i) => i.href === activeHref);
+  // Prefer the longest prefix match so deeper routes win over the dashboard.
+  const sorted = [...glassNavItems].sort((a, b) => b.href.length - a.href.length);
+  const match = sorted.find((i) => isHrefActive(i.href, activeHref));
   return match?.section ?? "menu";
 }

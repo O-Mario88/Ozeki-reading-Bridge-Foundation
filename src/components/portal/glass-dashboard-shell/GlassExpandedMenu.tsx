@@ -5,6 +5,7 @@ import {
   filterNavForUser,
   getSectionMeta,
   findActiveSection,
+  isHrefActive,
   type GlassNavSection,
 } from "./nav-config";
 import type { PortalUser } from "@/lib/types";
@@ -105,7 +106,7 @@ export function GlassExpandedMenu({ user, activeHref }: Props) {
               <div className="mt-1 ml-2 pl-4 border-l border-[#14141418] flex flex-col gap-1 py-1">
                 {items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = item.href === activeHref;
+                  const isActive = isHrefActive(item.href, activeHref);
                   return (
                     <Link
                       key={item.href}

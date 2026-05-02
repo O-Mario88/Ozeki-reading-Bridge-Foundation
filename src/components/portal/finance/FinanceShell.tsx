@@ -1,8 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import { ReactNode } from "react";
 import { PortalUser } from "@/lib/types";
+import { GlassDashboardShell } from "@/components/portal/glass-dashboard-shell";
 
 type FinanceShellProps = {
   user: PortalUser;
@@ -24,15 +23,13 @@ const financeNavItems = [
   { href: "/portal/finance/transparency", label: "Transparency" },
 ];
 
-function getUserInitials(name: string) {
-  return name
-    .split(" ")
-    .map((p) => p[0] ?? "")
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
+/**
+ * Finance workspace shell — wraps the glassprism dashboard shell so finance
+ * sub-pages live inside the same charcoal frame / pale gray canvas / icon
+ * rail + expanded menu as the rest of the portal. The dark navy banner and
+ * orange-underline tab strip from the previous version are gone; tabs are
+ * now horizontal-scroll glass pills with a black active pill.
+ */
 export function FinanceShell({
   user,
   activeHref,
@@ -40,124 +37,50 @@ export function FinanceShell({
   children,
 }: FinanceShellProps) {
   return (
-    <div className="finance-shell">
-      {/* Main Content */}
-      <div className="finance-main" style={{ marginLeft: 0 }}>
-        {/* Top Bar */}
-        <header className="finance-topbar">
-          <div className="finance-topbar-left">
-            <Link
-              href="/portal/dashboard"
-              className="finance-btn finance-btn-outline"
-              style={{ display: "flex", flexWrap: "wrap", alignItems: "center",
-                padding: "6px 12px",
-                fontSize: 13,
-                gap: 6,
-                textDecoration: "none", }}
-            >
-              ← Portal
-            </Link>
-            <h1 className="finance-topbar-title">{title}</h1>
-          </div>
-
-          <div className="finance-topbar-right">
-            <div
-              className="finance-topbar-avatar"
-              title={user.fullName}
-              aria-label={`User: ${user.fullName}`}
-            >
-              {getUserInitials(user.fullName)}
-            </div>
-          </div>
+    <GlassDashboardShell user={user} activeHref={activeHref}>
+      <div className="glass-portal-shell space-y-5">
+        {/* Workspace header */}
+        <header>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#6B6E76]">
+            Finance Workspace
+          </p>
+          <h1 className="text-[24px] md:text-[28px] lg:text-[30px] font-extrabold text-[#111111] tracking-tight leading-tight mt-1">
+            {title}
+          </h1>
+          <p className="text-[13px] md:text-[14px] text-[#6B6E76] leading-snug mt-1 max-w-2xl">
+            Manage immutable posting rules and audit-safe operations.
+          </p>
         </header>
 
-        {/* Page Content */}
-        <div
-          className="finance-content"
-          style={{ padding: 0, backgroundColor: "#f9fafb", minHeight: "100vh" }}
+        {/* Tab pills — horizontal scroll on mobile, normal flex on desktop */}
+        <nav
+          aria-label="Finance sections"
+          className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1"
         >
-          <div
-            style={{
-              backgroundColor: "#111827",
-              padding: "2.5rem 2.5rem 6.5rem 2.5rem",
-              color: "white",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            <h1
-              style={{
-                fontSize: "1.75rem",
-                fontWeight: 700,
-                margin: 0,
-                color: "var(--fin-primary)",
-              }}
-            >
-              Finance Workspace
-            </h1>
-            <p
-              style={{
-                color: "#9ca3af",
-                margin: "0.25rem 0 2.5rem",
-                fontSize: "0.9rem",
-              }}
-            >
-              Welcome back! Manage immutable posting rules and audit-safe
-              operations.
-            </p>
+          {financeNavItems.map((item) => {
+            const isActive =
+              activeHref === item.href ||
+              (item.href !== "/portal/finance" &&
+                activeHref.startsWith(item.href + "/"));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch={false}
+                className={
+                  isActive
+                    ? "shrink-0 inline-flex items-center h-10 px-5 rounded-full bg-[#111111] text-white text-[13px] font-semibold whitespace-nowrap shadow-[0_14px_30px_rgba(10,10,10,0.18)]"
+                    : "shrink-0 inline-flex items-center h-10 px-5 rounded-full border border-white/70 bg-white/65 backdrop-blur-xl text-[13px] font-semibold text-[#222] whitespace-nowrap hover:bg-white transition"
+                }
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-            {/* Tab List */}
-            <div
-              style={{
-                display: "flex",
-                gap: "2rem",
-                borderBottom: "1px solid #374151",
-                whiteSpace: "nowrap",
-                overflowX: "auto",
-                WebkitOverflowScrolling: "touch",
-              }}
-            >
-              {financeNavItems.map((item) => {
-                const isActive =
-                  activeHref === item.href ||
-                  (activeHref.startsWith(item.href) &&
-                    item.href !== "/portal/finance");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    style={{
-                      color: isActive ? "var(--fin-primary)" : "#9ca3af",
-                      fontWeight: isActive ? 600 : 500,
-                      paddingBottom: "1rem",
-                      borderBottom: isActive
-                        ? "2px solid #ea580c"
-                        : "2px solid transparent",
-                      textDecoration: "none",
-                      transition: "all 0.2s",
-                      position: "relative",
-                      top: "1px",
-                    }}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          <div
-            style={{
-              padding: "0 2.5rem 2.5rem",
-              marginTop: "-3.5rem",
-              position: "relative",
-              zIndex: 10,
-            }}
-          >
-            {children}
-          </div>
-        </div>
+        {children}
       </div>
-    </div>
+    </GlassDashboardShell>
   );
 }

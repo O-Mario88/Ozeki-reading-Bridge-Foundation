@@ -12553,3 +12553,71 @@ input, select, textarea, button, img {
 /* Safe-area helpers for fixed bottom navigation on iPhone. */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
+
+/* ── Glass-portal-shell scope ──────────────────────────────────────────
+   When PortalShell wraps its content in `.glass-portal-shell`, the legacy
+   `.button` / `.button-ghost` / `.action-row` markup still used by ~77 pages
+   gets a glassprism re-skin. Original `.ds-portal-shell` rules in
+   portal-dashboard.css are dormant under this scope (different ancestor).
+   The selectors are intentionally simple so any nested .button — including
+   `<Link className="button">` — picks them up. */
+.glass-portal-shell .action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.glass-portal-shell .button,
+.glass-portal-shell a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.15rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid #111111;
+  box-shadow: 0 14px 30px rgba(10, 10, 10, 0.18);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.glass-portal-shell .button:hover,
+.glass-portal-shell a.button:hover {
+  background: #000000;
+  border-color: #000000;
+}
+.glass-portal-shell .button-ghost,
+.glass-portal-shell .button.button-ghost,
+.glass-portal-shell a.button.button-ghost {
+  background: rgba(255, 255, 255, 0.7);
+  color: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 24px rgba(10, 10, 10, 0.06);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.glass-portal-shell .button-ghost:hover,
+.glass-portal-shell .button.button-ghost:hover,
+.glass-portal-shell a.button.button-ghost:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+.glass-portal-shell .button-sm {
+  padding: 0.4rem 0.85rem;
+  height: 2.1rem;
+  font-size: 0.78rem;
+}
+/* Legacy ds-card panels look fine on the gray canvas — just soften them. */
+.glass-portal-shell .ds-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  box-shadow: 0 18px 42px rgba(10, 10, 10, 0.08);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
