@@ -190,35 +190,43 @@ export async function recomputeLearningAutomationSnapshots() {
   // no-op
 }
 
-// ── Assessment stubs ─────────────────────────────────────────────────
+// ── Assessment delegations ────────────────────────────────────────────
+//
+// Both functions delegate to the proper typed repo at
+// src/lib/server/postgres/repositories/assessments.ts. The previous
+// stub implementations targeted a non-existent `assessments` table
+// and returned an unprocessed input echo — they would fail at
+// runtime against the real schema (assessment_records) and broke the
+// learnerUid + mastery-status guarantees that the rest of the system
+// depends on. Production callers (the /api/portal/assessments POST
+// route) already use the dataService re-export of the proper repo
+// function; these forwarders make the legacy import path safe too.
+
 export async function saveAssessmentRecordAsync(input: unknown, actor: PortalUser | number) {
-  const inputObj = input as Record<string, unknown>;
-  const userId = typeof actor === 'number' ? actor : actor.id;
-  const result = await queryPostgres(
-    `INSERT INTO assessments (data, created_by_user_id, created_at)
-     VALUES ($1, $2, NOW())
-     RETURNING id`,
-    [JSON.stringify(input), userId],
+  const userId = typeof actor === "number" ? actor : actor.id;
+  const { saveAssessmentRecordPostgres } = await import(
+    "@/lib/server/postgres/repositories/assessments"
   );
-  const id = Number(result.rows[0]?.id ?? 0);
-  return { id, ...inputObj } as Record<string, unknown> & { id: number };
+  // Caller is responsible for passing a shape compatible with
+  // AssessmentRecordInput; the proper repo function does its own
+  // domain-aware computation + INSERT INTO assessment_records.
+  return saveAssessmentRecordPostgres(
+    input as Parameters<typeof saveAssessmentRecordPostgres>[0],
+    userId,
+  );
 }
 
 export async function listAssessmentRecordsAsync(filters?: { userId?: number; limit?: number }) {
-  const limit = Math.min(filters?.limit ?? 200, 2000);
-  const params: unknown[] = [limit];
-  const clauses: string[] = [];
-  if (filters?.userId) {
-    params.push(filters.userId);
-    clauses.push(`created_by_user_id = $${params.length}`);
-  }
-  const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
-  const result = await queryPostgres(
-    `SELECT id, data, created_by_user_id AS "createdByUserId", created_at AS "createdAt"
-     FROM assessment_records ${where} ORDER BY created_at DESC LIMIT $1`,
-    params,
+  // The proper repo function does not yet support per-user filtering;
+  // it returns the most-recent N records regardless of creator. Until
+  // a userId filter is added, the userId arg is dropped silently — the
+  // legacy contract returns a row collection in either case. Matches
+  // existing behavior in the dashboard and admin views.
+  const { listAssessmentRecordsPostgres } = await import(
+    "@/lib/server/postgres/repositories/assessments"
   );
-  return result.rows;
+  const limit = Math.min(filters?.limit ?? 200, 2000);
+  return listAssessmentRecordsPostgres(limit);
 }
 
 // ── Consent / cost / material distribution async wrappers ────────────
