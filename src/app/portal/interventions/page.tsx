@@ -7,6 +7,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import {
+  DashboardListCard, DashboardListHeader, DashboardListRow, DashboardListFooter,
+  StatusPill, RiskDot as ListRiskDot, ProgressCell, AvatarCell, MediaListRow,
+  EmeraldLink, pillToneFor,
+} from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import {
@@ -504,187 +509,140 @@ export default async function PortalInterventionsOverviewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           {/* LEFT COLUMN */}
           <div className="lg:col-span-8 space-y-3 min-w-0">
-            {/* Intervention Plans */}
-            <Card padded={false}>
-              <div className="px-3 py-2.5 border-b border-[#e8edf3] flex items-center justify-between">
-                <h3 className="text-[13px] font-bold text-[#111827]">Intervention Plans</h3>
-                <KebabButton />
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left uppercase tracking-[0.04em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                      <th>ID</th>
-                      <th>Title</th>
-                      <th>Scope</th>
-                      <th>Owner</th>
-                      <th>Status</th>
-                      <th>Progress</th>
-                      <th>Due Date</th>
-                      <th>Risk</th>
-                      <th>Last Update</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+            {/* Intervention Plans — card-list */}
+            {(() => {
+              const tpl = "60px minmax(0,1fr) 70px 130px 90px 130px 100px 80px 90px";
+              return (
+                <DashboardListCard title="Intervention Plans" padded={false}>
+                  <div className="px-3 overflow-x-auto">
+                    <DashboardListHeader template={tpl}>
+                      <span>ID</span><span>Title</span><span>Scope</span><span>Owner</span>
+                      <span>Status</span><span>Progress</span><span>Due Date</span>
+                      <span>Risk</span><span>Last Update</span>
+                    </DashboardListHeader>
                     {DATA.plans.map((p) => (
-                      <tr key={p.id} className="border-b border-[#f3f5f8] last:border-b-0 hover:bg-gray-50/40">
-                        <td>
-                          <Link href={`/portal/interventions/${p.id}`} className="text-emerald-700 hover:underline">{p.id}</Link>
-                        </td>
-                        <td className="text-[#111827]"><strong>{p.title}</strong></td>
-                        <td className="text-[#374151]">{p.scope}</td>
-                        <td>
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className="grid h-4 w-4 place-items-center rounded-full text-white" style={{ backgroundColor: p.ownerColor, fontSize: "8px", fontWeight: 700 }}>
-                              {p.ownerInit}
-                            </span>
-                            <span className="text-[#111827]"><strong>{p.owner}</strong></span>
-                          </span>
-                        </td>
-                        <td><PlanStatusPill status={p.status} /></td>
-                        <td>
-                          <div className="flex items-center gap-1.5 min-w-[110px]">
-                            <span className="text-[#111827]"><strong>{p.progress}%</strong></span>
-                            <div className="h-1 flex-1 rounded-full bg-[#eef0f4] overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${p.progress}%`, backgroundColor: "#10b981" }} />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="text-[#374151]">{p.due}</td>
-                        <td><RiskDot risk={p.risk} /></td>
-                        <td className="text-[#7a8ca3]">{p.updated}</td>
-                      </tr>
+                      <DashboardListRow key={p.id} template={tpl}>
+                        <span><EmeraldLink href={`/portal/interventions/${p.id}`}>{p.id}</EmeraldLink></span>
+                        <span className="text-[#111827] font-bold truncate">{p.title}</span>
+                        <span className="text-[#374151]">{p.scope}</span>
+                        <AvatarCell initials={p.ownerInit} name={p.owner} color={p.ownerColor} />
+                        <span><StatusPill tone={pillToneFor(p.status)}>{p.status}</StatusPill></span>
+                        <ProgressCell pct={p.progress} />
+                        <span className="text-[#374151] truncate">{p.due}</span>
+                        <ListRiskDot risk={p.risk} />
+                        <span className="text-[#7a8ca3] truncate">{p.updated}</span>
+                      </DashboardListRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-3 py-2 border-t border-[#e8edf3] flex items-center justify-between text-[11px]">
-                <span className="text-[#7a8ca3]">Showing 1 to 5 of {DATA.totalPlans} plans</span>
-                <Link href="/portal/interventions?view=all" className="text-emerald-700 font-bold hover:underline">View all plans →</Link>
-              </div>
-            </Card>
+                  </div>
+                  <div className="px-3 pb-2">
+                    <DashboardListFooter
+                      showing={{ from: 1, to: Math.min(5, DATA.totalPlans), total: DATA.totalPlans, label: "plans" }}
+                      viewAll={{ href: "/portal/interventions?view=all", label: "View all plans" }}
+                    />
+                  </div>
+                </DashboardListCard>
+              );
+            })()}
 
             {/* Owner Workload + Recent Activity (side-by-side) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <Card padded={false}>
-                <div className="px-3 py-2.5 border-b border-[#e8edf3] flex items-center justify-between">
-                  <h3 className="text-[13px] font-bold text-[#111827]">Owner Workload &amp; Completion</h3>
-                  <KebabButton />
-                </div>
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left uppercase tracking-[0.04em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                      <th>#</th>
-                      <th>Owner</th>
-                      <th>Active Plans</th>
-                      <th>Avg Completion</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {DATA.workload.map((w) => (
-                      <tr key={w.owner} className="border-b border-[#f3f5f8] last:border-b-0">
-                        <td className="text-[#7a8ca3]">{w.rank}</td>
-                        <td className="text-[#111827]"><strong>{w.owner}</strong></td>
-                        <td className="text-[#374151]">{w.active}</td>
-                        <td>
-                          <div className="flex items-center gap-1.5 min-w-[100px]">
-                            <span className="text-[#111827]"><strong>{w.completion}%</strong></span>
-                            <div className="h-1 flex-1 rounded-full bg-[#eef0f4] overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${w.completion}%`, backgroundColor: "#10b981" }} />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Card>
+              {(() => {
+                const tpl = "24px minmax(0,1fr) 80px 130px";
+                return (
+                  <DashboardListCard title="Owner Workload & Completion" padded={false}>
+                    <div className="px-3 pb-2">
+                      <DashboardListHeader template={tpl}>
+                        <span>#</span><span>Owner</span><span>Active</span><span>Avg Completion</span>
+                      </DashboardListHeader>
+                      {DATA.workload.map((w) => (
+                        <DashboardListRow key={w.owner} template={tpl}>
+                          <span className="text-[#7a8ca3]">{w.rank}</span>
+                          <span className="text-[#111827] font-bold truncate">{w.owner}</span>
+                          <span className="text-[#374151]">{w.active}</span>
+                          <ProgressCell pct={w.completion} />
+                        </DashboardListRow>
+                      ))}
+                    </div>
+                  </DashboardListCard>
+                );
+              })()}
 
-              <Card padded={false}>
-                <div className="px-3 py-2.5 border-b border-[#e8edf3] flex items-center justify-between">
-                  <h3 className="text-[13px] font-bold text-[#111827]">Recent Activity Feed</h3>
-                  <Link href="/portal/interventions?view=activity" className="text-[11px] font-bold text-emerald-700 hover:underline">View all →</Link>
-                </div>
-                <ul>
+              <DashboardListCard
+                title="Recent Activity Feed"
+                padded={false}
+                viewAll={{ href: "/portal/interventions?view=activity" }}
+              >
+                <div className="px-3 pb-2">
                   {DATA.activity.map((a) => (
-                    <li key={a.title} className="px-3 py-2 border-b border-[#f3f5f8] last:border-b-0 flex items-start gap-2">
-                      <ActivityIcon icon={a.icon} tone={a.tone} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] text-[#374151] leading-tight">{a.title}</p>
-                        <p className="text-[10px] text-[#7a8ca3] mt-0.5">{a.when}</p>
-                      </div>
-                    </li>
+                    <MediaListRow
+                      key={a.title}
+                      icon={<ActivityIcon icon={a.icon} tone={a.tone} />}
+                      title={<span className="font-semibold text-[#374151]">{a.title}</span>}
+                      meta={a.when}
+                    />
                   ))}
-                </ul>
-              </Card>
+                </div>
+              </DashboardListCard>
             </div>
           </div>
 
           {/* RIGHT COLUMN */}
           <div className="lg:col-span-4 space-y-3 min-w-0">
-            {/* Priority Queue */}
-            <Card padded={false}>
-              <div className="px-3 py-2.5 border-b border-[#e8edf3] flex items-center justify-between">
-                <h3 className="text-[13px] font-bold text-[#111827] inline-flex items-center gap-1.5">
-                  <AlertOctagon className="h-3.5 w-3.5 text-rose-500" strokeWidth={1.75} />
-                  Priority Queue
-                </h3>
-                <Link href="/portal/priority-queue" className="text-[11px] font-bold text-emerald-700 hover:underline">View all →</Link>
-              </div>
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left uppercase tracking-[0.04em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                    <th>Plan</th>
-                    <th>Issue</th>
-                    <th>Risk</th>
-                    <th>Due Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DATA.priorityQueue.map((q) => (
-                    <tr key={q.plan} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td className="text-[#111827]"><strong>{q.plan}</strong></td>
-                      <td className="text-[#374151]">{q.issue}</td>
-                      <td><RiskDot risk={q.risk} /></td>
-                      <td className="text-[#374151]">{q.due}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+            {/* Priority Queue — card-list */}
+            {(() => {
+              const tpl = "minmax(0,1.4fr) minmax(0,1fr) 70px 110px";
+              return (
+                <DashboardListCard
+                  title="Priority Queue"
+                  icon={<AlertOctagon className="h-3.5 w-3.5 text-rose-500" strokeWidth={1.75} />}
+                  padded={false}
+                  viewAll={{ href: "/portal/priority-queue" }}
+                >
+                  <div className="px-3 pb-2">
+                    <DashboardListHeader template={tpl}>
+                      <span>Plan</span><span>Issue</span><span>Risk</span><span>Due Date</span>
+                    </DashboardListHeader>
+                    {DATA.priorityQueue.map((q) => (
+                      <DashboardListRow key={q.plan} template={tpl}>
+                        <span className="text-[#111827] font-bold truncate">{q.plan}</span>
+                        <span className="text-[#374151] truncate">{q.issue}</span>
+                        <ListRiskDot risk={q.risk} />
+                        <span className="text-[#374151]">{q.due}</span>
+                      </DashboardListRow>
+                    ))}
+                  </div>
+                </DashboardListCard>
+              );
+            })()}
 
-            {/* Plan Actions (Next 5 Due) */}
-            <Card padded={false}>
-              <div className="px-3 py-2.5 border-b border-[#e8edf3] flex items-center justify-between">
-                <h3 className="text-[13px] font-bold text-[#111827] inline-flex items-center gap-1.5">
-                  <ClipboardCheck className="h-3.5 w-3.5 text-emerald-700" strokeWidth={1.75} />
-                  Plan Actions <span className="font-normal text-[#7a8ca3]">(Next 5 Due)</span>
-                </h3>
-                <Link href="/portal/interventions?view=actions" className="text-[11px] font-bold text-emerald-700 hover:underline">View all →</Link>
-              </div>
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left uppercase tracking-[0.04em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                    <th>Action</th>
-                    <th>Plan</th>
-                    <th>Owner</th>
-                    <th>Due Date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DATA.planActions.map((a) => (
-                    <tr key={a.action} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td className="text-[#111827]"><strong>{a.action}</strong></td>
-                      <td><Link href={`/portal/interventions/${a.plan}`} className="text-emerald-700 hover:underline">{a.plan}</Link></td>
-                      <td className="text-[#374151]">{a.owner}</td>
-                      <td className="text-[#374151]">{a.due}</td>
-                      <td><ActionStatusPill status={a.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+            {/* Plan Actions (Next 5 Due) — card-list */}
+            {(() => {
+              const tpl = "minmax(0,1.4fr) 70px minmax(0,1fr) 100px 90px";
+              return (
+                <DashboardListCard
+                  title="Plan Actions"
+                  subtitle="Next 5 Due"
+                  icon={<ClipboardCheck className="h-3.5 w-3.5 text-emerald-700" strokeWidth={1.75} />}
+                  padded={false}
+                  viewAll={{ href: "/portal/interventions?view=actions" }}
+                >
+                  <div className="px-3 pb-2">
+                    <DashboardListHeader template={tpl}>
+                      <span>Action</span><span>Plan</span><span>Owner</span><span>Due Date</span><span>Status</span>
+                    </DashboardListHeader>
+                    {DATA.planActions.map((a) => (
+                      <DashboardListRow key={a.action} template={tpl}>
+                        <span className="text-[#111827] font-bold truncate">{a.action}</span>
+                        <span><EmeraldLink href={`/portal/interventions/${a.plan}`}>{a.plan}</EmeraldLink></span>
+                        <span className="text-[#374151] truncate">{a.owner}</span>
+                        <span className="text-[#374151]">{a.due}</span>
+                        <span><StatusPill tone={pillToneFor(a.status)}>{a.status}</StatusPill></span>
+                      </DashboardListRow>
+                    ))}
+                  </div>
+                </DashboardListCard>
+              );
+            })()}
 
             {/* Action Center */}
             <Card>
@@ -702,40 +660,36 @@ export default async function PortalInterventionsOverviewPage() {
               </div>
             </Card>
 
-            {/* Evidence & Verification */}
-            <Card padded={false}>
-              <div className="px-3 py-2.5 border-b border-[#e8edf3] flex items-center justify-between">
-                <h3 className="text-[13px] font-bold text-[#111827]">Evidence &amp; Verification</h3>
-                <Link href="/portal/data-quality?tab=evidence" className="text-[11px] font-bold text-emerald-700 hover:underline">View all →</Link>
-              </div>
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left uppercase tracking-[0.04em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                    <th>File / Evidence</th>
-                    <th>Plan</th>
-                    <th>Uploaded By</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DATA.evidence.map((e) => (
-                    <tr key={e.file} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td>
+            {/* Evidence & Verification — card-list */}
+            {(() => {
+              const tpl = "minmax(0,1.6fr) 70px minmax(0,1fr) 100px 90px";
+              return (
+                <DashboardListCard
+                  title="Evidence & Verification"
+                  padded={false}
+                  viewAll={{ href: "/portal/data-quality?tab=evidence" }}
+                >
+                  <div className="px-3 pb-2">
+                    <DashboardListHeader template={tpl}>
+                      <span>File / Evidence</span><span>Plan</span><span>Uploaded By</span>
+                      <span>Date</span><span>Status</span>
+                    </DashboardListHeader>
+                    {DATA.evidence.map((e) => (
+                      <DashboardListRow key={e.file} template={tpl}>
                         <span className="inline-flex items-center gap-1.5 min-w-0">
                           <FileToneIcon icon={e.icon} tone={e.tone} />
-                          <span className="text-[#111827] truncate"><strong>{e.file}</strong></span>
+                          <span className="text-[#111827] font-bold truncate">{e.file}</span>
                         </span>
-                      </td>
-                      <td><Link href={`/portal/interventions/${e.plan}`} className="text-emerald-700 hover:underline">{e.plan}</Link></td>
-                      <td className="text-[#374151]">{e.uploader}</td>
-                      <td className="text-[#374151]">{e.date}</td>
-                      <td><EvidenceStatusPill status={e.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+                        <span><EmeraldLink href={`/portal/interventions/${e.plan}`}>{e.plan}</EmeraldLink></span>
+                        <span className="text-[#374151] truncate">{e.uploader}</span>
+                        <span className="text-[#374151]">{e.date}</span>
+                        <span><StatusPill tone={pillToneFor(e.status)}>{e.status}</StatusPill></span>
+                      </DashboardListRow>
+                    ))}
+                  </div>
+                </DashboardListCard>
+              );
+            })()}
           </div>
         </div>
 
@@ -988,53 +942,6 @@ function DateStub({ value }: { value: string }) {
       <span className="truncate">{value}</span>
       <Calendar className="h-3 w-3 text-[#94a3b8] shrink-0" strokeWidth={1.75} />
     </div>
-  );
-}
-
-/* ── Pills + risk dots ────────────────────────────────────────────── */
-
-function PlanStatusPill({ status }: { status: string }) {
-  const cls = status === "In Progress"
-    ? "bg-blue-50 text-blue-700 border-blue-100"
-    : status === "At Risk"
-      ? "bg-orange-50 text-orange-700 border-orange-100"
-      : status === "Approved"
-        ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-        : "bg-gray-100 text-gray-700 border-gray-200";
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full border ${cls}`}>{status}</span>
-  );
-}
-
-function ActionStatusPill({ status }: { status: string }) {
-  const cls = status === "Pending"
-    ? "bg-orange-50 text-orange-700 border-orange-100"
-    : "bg-blue-50 text-blue-700 border-blue-100";
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full border ${cls}`}>{status}</span>
-  );
-}
-
-function EvidenceStatusPill({ status }: { status: string }) {
-  const cls = status === "Verified"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-    : "bg-orange-50 text-orange-700 border-orange-100";
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full border ${cls}`}>{status}</span>
-  );
-}
-
-function RiskDot({ risk }: { risk: string }) {
-  const color = risk === "High"
-    ? "#ef4444"
-    : risk === "Medium"
-      ? "#f59e0b"
-      : "#10b981";
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[#374151]">
-      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-      {risk}
-    </span>
   );
 }
 
