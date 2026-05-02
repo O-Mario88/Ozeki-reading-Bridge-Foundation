@@ -8,6 +8,7 @@ import {
   getImplementationCoveragePostgres,
 } from "@/lib/server/postgres/repositories/portal-dashboard";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { PortalKpiCard } from "@/components/portal/dashboard/PortalKpiCard";
 import { ScorecardGauge, DomainScoreCircle } from "@/components/portal/dashboard/ScorecardGauge";
 import { ActivityTrendChart } from "@/components/portal/dashboard/ActivityTrendChart";
@@ -277,51 +278,40 @@ export default async function PortalDashboardPage() {
                   ))}
                 </ul>
 
-                {/* sm+: table */}
-                <div className="hidden sm:block overflow-x-auto -mx-2">
-                  <table className="w-full text-[14px] min-w-[700px]">
-                    <thead>
-                      <tr className="text-left text-[10px] uppercase tracking-widest text-gray-500 border-b border-gray-100">
-                        <th className="px-3 py-2 font-bold w-8">#</th>
-                        <th className="px-3 py-2 font-bold">School Name</th>
-                        <th className="px-3 py-2 font-bold">Type</th>
-                        <th className="px-3 py-2 font-bold">Timestamp</th>
-                        <th className="px-3 py-2 font-bold">Status</th>
-                        <th className="px-3 py-2 font-bold text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                {/* sm+: card-list (CSS-grid rows, no <table>) */}
+                {(() => {
+                  const tpl = "28px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 110px 60px";
+                  return (
+                    <div className="hidden sm:block">
+                      <DashboardListHeader template={tpl}>
+                        <span>#</span><span>School Name</span><span>Type</span>
+                        <span>Timestamp</span><span>Status</span><span className="text-right">Action</span>
+                      </DashboardListHeader>
                       {activity.map((row, i) => (
-                        <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/40">
-                          <td className="px-3 py-3 text-gray-500 text-[12px]">{i + 1}</td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="grid h-6 w-6 place-items-center rounded bg-gray-100 shrink-0">
-                                <Users className="h-3 w-3 text-gray-500" strokeWidth={1.75} />
-                              </div>
-                              <span className="font-semibold text-gray-900">{row.schoolName}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-gray-700">{row.type}</td>
-                          <td className="px-3 py-3 text-gray-500 whitespace-nowrap text-[12px]">
-                            {formatTimestamp(row.occurredAt)}
-                          </td>
-                          <td className="px-3 py-3">
-                            <StatusBadge status={row.status} />
-                          </td>
-                          <td className="px-3 py-3 text-right">
+                        <DashboardListRow key={row.id} template={tpl}>
+                          <span className="text-[#7a8ca3]">{i + 1}</span>
+                          <span className="inline-flex items-center gap-2 min-w-0">
+                            <span className="grid h-6 w-6 place-items-center rounded bg-gray-100 shrink-0">
+                              <Users className="h-3 w-3 text-gray-500" strokeWidth={1.75} />
+                            </span>
+                            <span className="text-[#111827] font-bold truncate">{row.schoolName}</span>
+                          </span>
+                          <span className="text-[#374151] truncate">{row.type}</span>
+                          <span className="text-[#7a8ca3]">{formatTimestamp(row.occurredAt)}</span>
+                          <span><StatusBadge status={row.status} /></span>
+                          <span className="text-right">
                             <Link
                               href={row.href}
-                              className="text-[12px] text-emerald-700 font-semibold hover:underline inline-flex items-center gap-0.5"
+                              className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-0.5"
                             >
                               View <ChevronRight className="h-3 w-3" strokeWidth={2} />
                             </Link>
-                          </td>
-                        </tr>
+                          </span>
+                        </DashboardListRow>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
 
