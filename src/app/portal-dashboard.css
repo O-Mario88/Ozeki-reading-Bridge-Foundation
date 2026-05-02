@@ -60,45 +60,46 @@
 
 /* ── Portal-wide table normalization ───────────────────────────────
    Every table inside the portal renders at a uniform 10px Calibri,
-   compact padding, no wrap. Header cells stay bold + uppercase;
-   body cells render as regular weight so the reader's eye lands on
-   the data, not on a wall of bold text. Per-page utility classes
-   (text-[Npx], font-bold on td) lose the cascade because the
-   element-chain selector below has higher CSS specificity than a
-   single Tailwind utility class targeting the same element.
-
-   Pills inside td cells keep their own font-weight (overridden via
-   the more-specific rule below). */
+   compact padding, no wrap, no bold body. Header cells stay bold +
+   uppercase. The rule covers `td *` and `th *` descendants too,
+   so nested spans / Links / strongs inside cells (status pills,
+   coloured labels) snap to the same baseline. !important is used
+   intentionally — this is a system-wide normalizer that needs to
+   beat every per-page Tailwind utility (text-[Npx], font-bold,
+   font-extrabold, font-semibold) without per-page edits. Pills,
+   anchor tags, and explicit <strong> still render bold via the
+   targeted overrides below. */
 .ozeki-portal-shell table {
-  font-family: Calibri, "Segoe UI", Arial, sans-serif;
-  font-size: 10px;
-  line-height: 1.35;
   border-collapse: collapse;
+  line-height: 1.35;
+}
+.ozeki-portal-shell table,
+.ozeki-portal-shell table th,
+.ozeki-portal-shell table td,
+.ozeki-portal-shell table th *,
+.ozeki-portal-shell table td * {
+  font-family: Calibri, "Segoe UI", Arial, sans-serif !important;
+  font-size: 10px !important;
 }
 .ozeki-portal-shell table th,
 .ozeki-portal-shell table td {
-  font-family: Calibri, "Segoe UI", Arial, sans-serif;
-  font-size: 10px;
-  white-space: nowrap;
-  padding: 6px 10px;
+  white-space: nowrap !important;
+  padding: 5px 9px !important;
 }
-.ozeki-portal-shell table th {
-  font-weight: 700;
-  letter-spacing: 0.04em;
+.ozeki-portal-shell table th,
+.ozeki-portal-shell table th * {
+  font-weight: 700 !important;
 }
-.ozeki-portal-shell table td {
-  font-weight: 400;
+.ozeki-portal-shell table td,
+.ozeki-portal-shell table td * {
+  font-weight: 400 !important;
 }
-/* Restore pill/chip styling inside td (pills set their own font-weight) */
-.ozeki-portal-shell table td span[class*="rounded-full"] {
-  font-size: 10px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-/* Allow per-page emphasis via a small set of explicit classes */
-.ozeki-portal-shell table td.is-emphasized,
-.ozeki-portal-shell table td a {
-  font-weight: 600;
+.ozeki-portal-shell table td a,
+.ozeki-portal-shell table td a *,
+.ozeki-portal-shell table td strong,
+.ozeki-portal-shell table td span[class*="rounded-full"],
+.ozeki-portal-shell table td .is-bold {
+  font-weight: 700 !important;
 }
 
 /* ── Compact Finance Additions ──────────────────────────────── */
