@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/auth";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getLessonContentAnalyticsPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
 
 export const dynamic = "force-dynamic";
@@ -47,59 +48,58 @@ export default async function LessonAnalyticsPage({
         </a>
       </nav>
 
-      <table className="lms-analytics-table">
-        <thead>
-          <tr>
-            <th>Lesson</th>
-            <th>Level</th>
-            <th>Views</th>
-            <th>Completion</th>
-            <th>Rewatch rate</th>
-            <th>Overall ★</th>
-            <th>Usefulness ★</th>
-            <th>Clarity ★</th>
-            <th>Pace ★</th>
-            <th>Quiz pass</th>
-            <th>Certs</th>
-            <th>Flags</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.lessonId} className={r.flags.length > 0 ? "is-flagged" : ""}>
-              <td>
-                <a href={`/recorded-lessons/${r.slug}`} target="_blank" rel="noopener">
-                  <strong>{r.title}</strong>
-                </a>
-                <br />
-                <small className="text-gray-500">{r.phonicsLevel ?? r.category ?? ""}</small>
-              </td>
-              <td>{r.classLevel ?? "—"}</td>
-              <td>{r.totalViews}<br /><small>{r.uniqueViewers} unique</small></td>
-              <td>{r.completionRate}%</td>
-              <td className={r.rewatchRate > 40 ? "lms-warn" : ""}>{r.rewatchRate}%</td>
-              <td>{r.avgOverall !== null ? `★${r.avgOverall}` : "—"}<br /><small>n={r.ratingsCount}</small></td>
-              <td className={r.avgUsefulness !== null && r.avgUsefulness < 3 ? "lms-warn" : ""}>
-                {r.avgUsefulness !== null ? `★${r.avgUsefulness}` : "—"}
-              </td>
-              <td>{r.avgClarity !== null ? `★${r.avgClarity}` : "—"}</td>
-              <td>{r.avgPace !== null ? `★${r.avgPace}` : "—"}</td>
-              <td className={r.quizPassRate !== null && r.quizPassRate < 50 ? "lms-warn" : ""}>
-                {r.quizPassRate !== null ? `${r.quizPassRate}%` : "—"}<br />
-                <small>n={r.quizAttempts}</small>
-              </td>
-              <td>{r.certificatesIssued}</td>
-              <td>
-                {r.flags.length === 0 ? <small className="text-gray-400">—</small> : (
-                  <ul className="lms-flag-list">
-                    {r.flags.map((f) => <li key={f}>{f}</li>)}
-                  </ul>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="lms-analytics-table">
+        <DashboardListHeader template="minmax(0,1.6fr) 80px 90px 100px 110px 100px 110px 90px 80px 110px 70px minmax(0,1.2fr)">
+          <span>Lesson</span>
+          <span>Level</span>
+          <span>Views</span>
+          <span>Completion</span>
+          <span>Rewatch rate</span>
+          <span>Overall ★</span>
+          <span>Usefulness ★</span>
+          <span>Clarity ★</span>
+          <span>Pace ★</span>
+          <span>Quiz pass</span>
+          <span>Certs</span>
+          <span>Flags</span>
+        </DashboardListHeader>
+        {rows.map((r) => (
+          <DashboardListRow
+            key={r.lessonId}
+            template="minmax(0,1.6fr) 80px 90px 100px 110px 100px 110px 90px 80px 110px 70px minmax(0,1.2fr)"
+            className={r.flags.length > 0 ? "is-flagged" : ""}
+          >
+            <span className="min-w-0">
+              <a href={`/recorded-lessons/${r.slug}`} target="_blank" rel="noopener">
+                <strong className="truncate inline-block max-w-full">{r.title}</strong>
+              </a>
+              <small className="block text-gray-500 truncate">{r.phonicsLevel ?? r.category ?? ""}</small>
+            </span>
+            <span>{r.classLevel ?? "—"}</span>
+            <span>{r.totalViews} <small className="block">{r.uniqueViewers} unique</small></span>
+            <span>{r.completionRate}%</span>
+            <span className={r.rewatchRate > 40 ? "lms-warn" : ""}>{r.rewatchRate}%</span>
+            <span>{r.avgOverall !== null ? `★${r.avgOverall}` : "—"} <small className="block">n={r.ratingsCount}</small></span>
+            <span className={r.avgUsefulness !== null && r.avgUsefulness < 3 ? "lms-warn" : ""}>
+              {r.avgUsefulness !== null ? `★${r.avgUsefulness}` : "—"}
+            </span>
+            <span>{r.avgClarity !== null ? `★${r.avgClarity}` : "—"}</span>
+            <span>{r.avgPace !== null ? `★${r.avgPace}` : "—"}</span>
+            <span className={r.quizPassRate !== null && r.quizPassRate < 50 ? "lms-warn" : ""}>
+              {r.quizPassRate !== null ? `${r.quizPassRate}%` : "—"}
+              <small className="block">n={r.quizAttempts}</small>
+            </span>
+            <span>{r.certificatesIssued}</span>
+            <span className="min-w-0">
+              {r.flags.length === 0 ? <small className="text-gray-400">—</small> : (
+                <ul className="lms-flag-list m-0 p-0">
+                  {r.flags.map((f) => <li key={f}>{f}</li>)}
+                </ul>
+              )}
+            </span>
+          </DashboardListRow>
+        ))}
+      </div>
     </main>
   );
 }

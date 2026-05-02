@@ -1,4 +1,5 @@
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { Map, Download, Search, CheckCircle, Globe2 } from "lucide-react";
@@ -74,71 +75,68 @@ export default async function SponsorshipDashboard() {
             </div>
          </div>
 
-         <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[1100px]">
-               <thead>
-                  <tr className="bg-white text-xs uppercase tracking-wider text-gray-400 border-b-2">
-                     <th className="p-5 font-bold">Funding Entity</th>
-                     <th className="p-5 font-bold">Geographic Target</th>
-                     <th className="p-5 font-bold text-center">Intervention Volume</th>
-                     <th className="p-5 font-bold text-center">Network Verification</th>
-                     <th className="p-5 font-bold text-right">Receipt Protocol</th>
-                  </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-50">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {sponsorships.map((s: any) => (
-                     <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="p-5">
-                           <div className="font-bold text-gray-900 flex items-center gap-2">
-                              {s.donor_name || 'Anonymous Sponsor'}
-                           </div>
-                           <div className="text-[10px] uppercase text-gray-500 font-bold mt-1">
-                              {s.donor_type}
-                           </div>
-                           <div className="text-[10px] text-gray-400 mt-1 font-mono">Ref: {s.sponsorship_reference}</div>
-                        </td>
-                        <td className="p-5">
-                           <div className="text-sm font-bold text-[#006b61]">
-                              <span className="uppercase text-[10px] font-black text-gray-400 mr-2 border rounded p-0.5">
-                                 {s.sponsorship_type}
-                              </span>
-                              {s.sponsorship_target_name}
-                           </div>
-                           <div className="text-xs text-gray-500 mt-1 truncate max-w-xs">{s.sponsorship_focus}</div>
-                        </td>
-                        <td className="p-5 text-center">
-                           <div className="text-lg font-black text-gray-900">
-                              {s.currency} {Number(s.amount).toLocaleString()}
-                           </div>
-                           <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">{s.payment_method || 'AWAITING PING'}</div>
-                        </td>
-                        <td className="p-5 text-center">
-                           <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border inline-block
-                              ${s.payment_status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' : 
-                                'bg-orange-50 text-orange-700 border-orange-200'}
-                           `}>
-                              {s.payment_status}
-                           </span>
-                           {s.paid_at && (
-                              <div className="text-[10px] text-gray-400 mt-2">
-                                 {new Date(s.paid_at).toLocaleDateString()}
-                              </div>
-                           )}
-                        </td>
-                        <td className="p-5 text-right">
-                           {s.receipt_number ? (
-                              <span className="text-xs font-bold text-[#FA7D15] bg-[#FA7D15]/10 border border-[#FA7D15]/20 px-3 py-1.5 rounded-lg font-mono">
-                                 {s.receipt_number}
-                              </span>
-                           ) : (
-                              <span className="text-xs text-gray-300 italic">No receipt generated.</span>
-                           )}
-                        </td>
-                     </tr>
-                  ))}
-               </tbody>
-            </table>
+         <div className="px-4 py-3">
+            <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1.4fr) 170px 150px minmax(0,1fr)">
+               <span>Funding Entity</span>
+               <span>Geographic Target</span>
+               <span className="text-center">Intervention Volume</span>
+               <span className="text-center">Network Verification</span>
+               <span className="text-right">Receipt Protocol</span>
+            </DashboardListHeader>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {sponsorships.map((s: any) => (
+               <DashboardListRow
+                  key={s.id}
+                  template="minmax(0,1.4fr) minmax(0,1.4fr) 170px 150px minmax(0,1fr)"
+               >
+                  <span className="min-w-0">
+                     <span className="block font-bold text-gray-900 truncate">
+                        {s.donor_name || 'Anonymous Sponsor'}
+                     </span>
+                     <span className="block text-[10px] uppercase text-gray-500 font-bold mt-1">
+                        {s.donor_type}
+                     </span>
+                     <span className="block text-[10px] text-gray-400 mt-1 font-mono truncate">Ref: {s.sponsorship_reference}</span>
+                  </span>
+                  <span className="min-w-0">
+                     <span className="block text-sm font-bold text-[#006b61] truncate">
+                        <span className="uppercase text-[10px] font-black text-gray-400 mr-2 border rounded p-0.5">
+                           {s.sponsorship_type}
+                        </span>
+                        {s.sponsorship_target_name}
+                     </span>
+                     <span className="block text-xs text-gray-500 mt-1 truncate">{s.sponsorship_focus}</span>
+                  </span>
+                  <span className="text-center">
+                     <span className="text-lg font-black text-gray-900 block">
+                        {s.currency} {Number(s.amount).toLocaleString()}
+                     </span>
+                     <span className="block text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">{s.payment_method || 'AWAITING PING'}</span>
+                  </span>
+                  <span className="text-center">
+                     <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border inline-block
+                        ${s.payment_status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                          'bg-orange-50 text-orange-700 border-orange-200'}
+                     `}>
+                        {s.payment_status}
+                     </span>
+                     {s.paid_at && (
+                        <span className="block text-[10px] text-gray-400 mt-2">
+                           {new Date(s.paid_at).toLocaleDateString()}
+                        </span>
+                     )}
+                  </span>
+                  <span className="text-right">
+                     {s.receipt_number ? (
+                        <span className="text-xs font-bold text-[#FA7D15] bg-[#FA7D15]/10 border border-[#FA7D15]/20 px-3 py-1.5 rounded-lg font-mono">
+                           {s.receipt_number}
+                        </span>
+                     ) : (
+                        <span className="text-xs text-gray-300 italic">No receipt generated.</span>
+                     )}
+                  </span>
+               </DashboardListRow>
+            ))}
             {sponsorships.length === 0 && (
                <div className="p-16 text-center text-gray-400 flex flex-col items-center justify-center">
                   <Map className="w-12 h-12 mb-4 opacity-20" />

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requirePortalUser } from "@/lib/auth";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getTeacherLearningJourneyPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
 
 export const dynamic = "force-dynamic";
@@ -73,64 +74,62 @@ export default async function MyLearningPage({
             No lessons watched yet. <Link href="/recorded-lessons">Browse the library</Link> to get started.
           </p>
         ) : (
-          <table className="lms-journey-table">
-            <thead>
-              <tr>
-                <th>Lesson</th>
-                <th>Progress</th>
-                <th>Watched</th>
-                <th>Rating</th>
-                <th>Quiz</th>
-                <th>Certificate</th>
-                <th>Last activity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {journey.lessons.map((l) => (
-                <tr key={l.lessonId}>
-                  <td>
-                    <Link href={`/recorded-lessons/${l.slug}`}>
-                      <strong>{l.title}</strong>
-                    </Link>
-                    <br />
-                    <small className="text-gray-500">{l.classLevel ?? ""}</small>
-                  </td>
-                  <td>
-                    <div className="lms-journey-progress">
-                      <div className="lms-journey-progress-bar" style={{ width: `${l.percentWatched}%` }} />
-                    </div>
-                    <small>{l.percentWatched}%</small>
-                  </td>
-                  <td>{formatTime(l.watchedSeconds)}</td>
-                  <td>{l.rating !== null ? `★${l.rating}` : "—"}</td>
-                  <td>
-                    {l.quizCompleted ? (
-                      <span className={(l.quizScore ?? 0) >= 80 ? "lms-journey-pass" : "lms-journey-fail"}>
-                        {l.quizScore}%
-                      </span>
-                    ) : (
-                      <small className="text-gray-400">—</small>
-                    )}
-                  </td>
-                  <td>
-                    {l.certificateEligible ? (
-                      <form action={`/api/portal/recorded-lessons/certificates/issue`} method="post">
-                        <input type="hidden" name="lessonId" value={l.lessonId} />
-                        <span className="lms-journey-cert-badge">🎓 Eligible</span>
-                      </form>
-                    ) : (
-                      <small className="text-gray-400">—</small>
-                    )}
-                  </td>
-                  <td>
-                    <small>
-                      {l.lastWatchedAt ? new Date(l.lastWatchedAt).toLocaleDateString("en-GB") : "—"}
-                    </small>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="lms-journey-table">
+            <DashboardListHeader template="minmax(0,1.6fr) minmax(0,1fr) 90px 80px 90px 130px 110px">
+              <span>Lesson</span>
+              <span>Progress</span>
+              <span>Watched</span>
+              <span>Rating</span>
+              <span>Quiz</span>
+              <span>Certificate</span>
+              <span>Last activity</span>
+            </DashboardListHeader>
+            {journey.lessons.map((l) => (
+              <DashboardListRow
+                key={l.lessonId}
+                template="minmax(0,1.6fr) minmax(0,1fr) 90px 80px 90px 130px 110px"
+              >
+                <span className="min-w-0">
+                  <Link href={`/recorded-lessons/${l.slug}`}>
+                    <strong className="truncate inline-block max-w-full">{l.title}</strong>
+                  </Link>
+                  <small className="block text-gray-500 truncate">{l.classLevel ?? ""}</small>
+                </span>
+                <span className="min-w-0">
+                  <span className="lms-journey-progress block">
+                    <span className="lms-journey-progress-bar block" style={{ width: `${l.percentWatched}%` }} />
+                  </span>
+                  <small>{l.percentWatched}%</small>
+                </span>
+                <span>{formatTime(l.watchedSeconds)}</span>
+                <span>{l.rating !== null ? `★${l.rating}` : "—"}</span>
+                <span>
+                  {l.quizCompleted ? (
+                    <span className={(l.quizScore ?? 0) >= 80 ? "lms-journey-pass" : "lms-journey-fail"}>
+                      {l.quizScore}%
+                    </span>
+                  ) : (
+                    <small className="text-gray-400">—</small>
+                  )}
+                </span>
+                <span>
+                  {l.certificateEligible ? (
+                    <form action={`/api/portal/recorded-lessons/certificates/issue`} method="post">
+                      <input type="hidden" name="lessonId" value={l.lessonId} />
+                      <span className="lms-journey-cert-badge">🎓 Eligible</span>
+                    </form>
+                  ) : (
+                    <small className="text-gray-400">—</small>
+                  )}
+                </span>
+                <span>
+                  <small>
+                    {l.lastWatchedAt ? new Date(l.lastWatchedAt).toLocaleDateString("en-GB") : "—"}
+                  </small>
+                </span>
+              </DashboardListRow>
+            ))}
+          </div>
         )}
       </section>
     </main>

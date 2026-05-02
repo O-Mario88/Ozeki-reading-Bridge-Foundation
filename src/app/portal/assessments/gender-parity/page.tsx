@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getGenderParityPostgres } from "@/lib/server/postgres/repositories/assessment-intelligence";
 import { Scale, Users, ChevronLeft } from "lucide-react";
 
@@ -136,35 +137,34 @@ export default async function GenderParityPage({ searchParams }: PageProps) {
             <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">
               Parity by Grade Level
             </h2>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                  <th className="py-2 px-2 font-semibold">Grade</th>
-                  <th className="py-2 px-2 font-semibold text-center">Male N</th>
-                  <th className="py-2 px-2 font-semibold text-center">Female N</th>
-                  <th className="py-2 px-2 font-semibold text-center">Male Avg</th>
-                  <th className="py-2 px-2 font-semibold text-center">Female Avg</th>
-                  <th className="py-2 px-2 font-semibold text-right">Parity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.byGrade.map((g) => {
-                  const gLabel = parityLabel(g.parityIndex);
-                  return (
-                    <tr key={g.grade} className="border-b border-gray-50">
-                      <td className="py-2.5 px-2 font-bold text-gray-800">{g.grade}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-600">{g.maleN}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-600">{g.femaleN}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-700">{g.maleComposite ?? "—"}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-700">{g.femaleComposite ?? "—"}</td>
-                      <td className={`py-2.5 px-2 text-right font-bold ${gLabel.color}`}>
-                        {g.parityIndex != null ? g.parityIndex.toFixed(2) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div>
+              <DashboardListHeader template="minmax(0,1fr) 90px 90px 100px 100px 100px">
+                <span>Grade</span>
+                <span className="text-center">Male N</span>
+                <span className="text-center">Female N</span>
+                <span className="text-center">Male Avg</span>
+                <span className="text-center">Female Avg</span>
+                <span className="text-right">Parity</span>
+              </DashboardListHeader>
+              {report.byGrade.map((g) => {
+                const gLabel = parityLabel(g.parityIndex);
+                return (
+                  <DashboardListRow
+                    key={g.grade}
+                    template="minmax(0,1fr) 90px 90px 100px 100px 100px"
+                  >
+                    <span className="font-bold text-gray-800">{g.grade}</span>
+                    <span className="text-center text-gray-600">{g.maleN}</span>
+                    <span className="text-center text-gray-600">{g.femaleN}</span>
+                    <span className="text-center text-gray-700">{g.maleComposite ?? "—"}</span>
+                    <span className="text-center text-gray-700">{g.femaleComposite ?? "—"}</span>
+                    <span className={`text-right font-bold ${gLabel.color}`}>
+                      {g.parityIndex != null ? g.parityIndex.toFixed(2) : "—"}
+                    </span>
+                  </DashboardListRow>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

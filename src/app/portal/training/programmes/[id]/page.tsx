@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import {
   getProgrammePostgres,
   listProgrammeSessionsPostgres,
@@ -188,51 +189,48 @@ export default async function ProgrammeDetailPage({ params }: PageProps) {
           {enrollments.length === 0 ? (
             <p className="text-sm text-gray-400 italic py-4 text-center">No teachers enrolled yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                    <th className="py-2 px-2 font-semibold">Teacher</th>
-                    <th className="py-2 px-2 font-semibold">School</th>
-                    <th className="py-2 px-2 font-semibold">Progress</th>
-                    <th className="py-2 px-2 font-semibold text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enrollments.map((e) => (
-                    <tr key={e.id} className="border-b border-gray-50">
-                      <td className="py-2.5 px-2 font-medium text-gray-800">
-                        {e.teacherName}
-                        {e.teacherEmail && <p className="text-xs text-gray-400 font-normal">{e.teacherEmail}</p>}
-                      </td>
-                      <td className="py-2.5 px-2 text-gray-500">{e.schoolName ?? "—"}</td>
-                      <td className="py-2.5 px-2 text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-500 transition-all"
-                              style={{ width: `${e.completionPct}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-mono text-gray-500">
-                            {e.sessionsAttended}/{e.sessionsRequired}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-2 text-right">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                          e.enrollmentStatus === "completed" ? "bg-emerald-50 text-emerald-700" :
-                          e.enrollmentStatus === "dropped" ? "bg-red-50 text-red-600" :
-                          "bg-amber-50 text-amber-700"
-                        }`}>
-                          {e.enrollmentStatus === "completed" && <CheckCircle2 className="w-3 h-3" />}
-                          {e.enrollmentStatus}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 130px">
+                <span>Teacher</span>
+                <span>School</span>
+                <span>Progress</span>
+                <span className="text-right">Status</span>
+              </DashboardListHeader>
+              {enrollments.map((e) => (
+                <DashboardListRow
+                  key={e.id}
+                  template="minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 130px"
+                >
+                  <span className="font-medium text-gray-800 min-w-0">
+                    <span className="block truncate">{e.teacherName}</span>
+                    {e.teacherEmail && <span className="block text-xs text-gray-400 font-normal truncate">{e.teacherEmail}</span>}
+                  </span>
+                  <span className="text-gray-500 truncate">{e.schoolName ?? "—"}</span>
+                  <span className="text-gray-600">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden inline-block">
+                        <span
+                          className="block h-full bg-emerald-500 transition-all"
+                          style={{ width: `${e.completionPct}%` }}
+                        />
+                      </span>
+                      <span className="text-xs font-mono text-gray-500">
+                        {e.sessionsAttended}/{e.sessionsRequired}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      e.enrollmentStatus === "completed" ? "bg-emerald-50 text-emerald-700" :
+                      e.enrollmentStatus === "dropped" ? "bg-red-50 text-red-600" :
+                      "bg-amber-50 text-amber-700"
+                    }`}>
+                      {e.enrollmentStatus === "completed" && <CheckCircle2 className="w-3 h-3" />}
+                      {e.enrollmentStatus}
+                    </span>
+                  </span>
+                </DashboardListRow>
+              ))}
             </div>
           )}
         </div>

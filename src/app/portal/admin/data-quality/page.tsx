@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePortalUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getDataQualityByDistrictPostgres } from "@/lib/server/postgres/repositories/national-intelligence";
 import { ChevronLeft, Award, Activity, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -84,54 +85,52 @@ export default async function DataQualityPage() {
               <p className="text-sm text-gray-500 font-medium">No data yet</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                    <th className="py-2 px-3 font-semibold">Rank</th>
-                    <th className="py-2 px-3 font-semibold">District</th>
-                    <th className="py-2 px-3 font-semibold text-center">Schools</th>
-                    <th className="py-2 px-3 font-semibold text-center">Baseline</th>
-                    <th className="py-2 px-3 font-semibold text-center">Endline</th>
-                    <th className="py-2 px-3 font-semibold text-center">UID %</th>
-                    <th className="py-2 px-3 font-semibold text-center">Visits/School</th>
-                    <th className="py-2 px-3 font-semibold text-center">Obs/School</th>
-                    <th className="py-2 px-3 font-semibold" colSpan={2}>Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.districts.map((d, idx) => (
-                    <tr key={d.district} className="border-b border-gray-50">
-                      <td className="py-2.5 px-3 text-gray-500 text-xs">#{idx + 1}</td>
-                      <td className="py-2.5 px-3">
-                        <p className="font-semibold text-gray-800">{d.district}</p>
-                        {d.region && <p className="text-xs text-gray-400">{d.region}</p>}
-                      </td>
-                      <td className="py-2.5 px-3 text-center text-gray-600">{d.totalSchools}</td>
-                      <td className="py-2.5 px-3 text-center text-gray-600">
-                        {d.schoolsWithBaseline} <span className="text-xs text-gray-400">({d.baselineCoveragePct}%)</span>
-                      </td>
-                      <td className="py-2.5 px-3 text-center text-gray-600">
-                        {d.schoolsWithEndline} <span className="text-xs text-gray-400">({d.endlineCoveragePct}%)</span>
-                      </td>
-                      <td className="py-2.5 px-3 text-center text-gray-600">{d.learnersWithUidPct}%</td>
-                      <td className="py-2.5 px-3 text-center text-gray-600">{d.avgVisitsPerSchool}</td>
-                      <td className="py-2.5 px-3 text-center text-gray-600">{d.avgObservationsPerSchool}</td>
-                      <td className="py-2.5 px-3">
-                        <div className="w-28 h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className={`h-full ${scoreBar(d.score)}`} style={{ width: `${d.score}%` }} />
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 pl-0">
-                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-extrabold border ${gradeColor(d.grade)}`}>
-                          {d.grade}
-                        </span>
-                        <span className="ml-2 text-xs text-gray-500 font-semibold">{d.score}/100</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-1">
+              <DashboardListHeader template="44px minmax(0,1.4fr) 70px 90px 90px 60px 90px 80px minmax(0,1fr) 110px">
+                <span>Rank</span>
+                <span>District</span>
+                <span className="text-center">Schools</span>
+                <span className="text-center">Baseline</span>
+                <span className="text-center">Endline</span>
+                <span className="text-center">UID %</span>
+                <span className="text-center">Visits/School</span>
+                <span className="text-center">Obs/School</span>
+                <span>Score</span>
+                <span />
+              </DashboardListHeader>
+              {report.districts.map((d, idx) => (
+                <DashboardListRow
+                  key={d.district}
+                  template="44px minmax(0,1.4fr) 70px 90px 90px 60px 90px 80px minmax(0,1fr) 110px"
+                >
+                  <span className="text-gray-500 text-xs">#{idx + 1}</span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-gray-800 truncate">{d.district}</span>
+                    {d.region && <span className="block text-xs text-gray-400 truncate">{d.region}</span>}
+                  </span>
+                  <span className="text-center text-gray-600">{d.totalSchools}</span>
+                  <span className="text-center text-gray-600">
+                    {d.schoolsWithBaseline} <span className="text-xs text-gray-400">({d.baselineCoveragePct}%)</span>
+                  </span>
+                  <span className="text-center text-gray-600">
+                    {d.schoolsWithEndline} <span className="text-xs text-gray-400">({d.endlineCoveragePct}%)</span>
+                  </span>
+                  <span className="text-center text-gray-600">{d.learnersWithUidPct}%</span>
+                  <span className="text-center text-gray-600">{d.avgVisitsPerSchool}</span>
+                  <span className="text-center text-gray-600">{d.avgObservationsPerSchool}</span>
+                  <span className="block">
+                    <span className="block w-28 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <span className={`block h-full ${scoreBar(d.score)}`} style={{ width: `${d.score}%` }} />
+                    </span>
+                  </span>
+                  <span>
+                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-extrabold border ${gradeColor(d.grade)}`}>
+                      {d.grade}
+                    </span>
+                    <span className="ml-2 text-xs text-gray-500 font-semibold">{d.score}/100</span>
+                  </span>
+                </DashboardListRow>
+              ))}
             </div>
           )}
         </div>

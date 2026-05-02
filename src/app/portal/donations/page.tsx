@@ -1,4 +1,5 @@
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { HeartHandshake, Download, Search, CheckCircle, AlertTriangle } from "lucide-react";
@@ -75,65 +76,62 @@ export default async function DonationsDashboard() {
             </div>
          </div>
 
-         <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
-               <thead>
-                  <tr className="bg-white text-xs uppercase tracking-wider text-gray-400 border-b-2">
-                     <th className="p-5 font-bold">Donor Entity</th>
-                     <th className="p-5 font-bold">Intent Target</th>
-                     <th className="p-5 font-bold text-center">Volume</th>
-                     <th className="p-5 font-bold text-center">Gateway Status</th>
-                     <th className="p-5 font-bold text-right">Cryptographic Receipt</th>
-                  </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-50">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {donations.map((d: any) => (
-                     <tr key={d.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="p-5">
-                           <div className="font-bold text-gray-900 flex items-center gap-2">
-                              {d.donor_name || 'Anonymous Sponsor'}
-                           </div>
-                           <div className="text-xs text-[#006b61] font-bold mt-1 bg-[#006b61]/10 px-2 py-0.5 rounded-full inline-block">
-                              {d.donor_type}
-                           </div>
-                           <div className="text-[10px] text-gray-400 mt-1 font-mono">Ref: {d.donation_reference}</div>
-                        </td>
-                        <td className="p-5">
-                           <div className="text-sm font-bold text-gray-700">{d.donation_purpose}</div>
-                           <div className="text-xs text-gray-400 mt-1">{d.payment_method || 'Awaiting Selection'}</div>
-                        </td>
-                        <td className="p-5 text-center">
-                           <div className="text-lg font-black text-gray-900">
-                              {d.currency} {Number(d.amount).toLocaleString()}
-                           </div>
-                        </td>
-                        <td className="p-5 text-center">
-                           <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border inline-block
-                              ${d.payment_status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' : 
-                                'bg-orange-50 text-orange-700 border-orange-200'}
-                           `}>
-                              {d.payment_status}
-                           </span>
-                           {d.paid_at && (
-                              <div className="text-[10px] text-gray-400 mt-2">
-                                 {new Date(d.paid_at).toLocaleDateString()}
-                              </div>
-                           )}
-                        </td>
-                        <td className="p-5 text-right">
-                           {d.receipt_number ? (
-                              <span className="text-xs font-bold text-[#FA7D15] bg-[#FA7D15]/10 border border-[#FA7D15]/20 px-3 py-1.5 rounded-lg font-mono">
-                                 {d.receipt_number}
-                              </span>
-                           ) : (
-                              <span className="text-xs text-gray-300 italic">No receipt generated.</span>
-                           )}
-                        </td>
-                     </tr>
-                  ))}
-               </tbody>
-            </table>
+         <div className="px-4 py-3">
+            <DashboardListHeader template="minmax(0,1.6fr) minmax(0,1.4fr) 160px 150px minmax(0,1fr)">
+               <span>Donor Entity</span>
+               <span>Intent Target</span>
+               <span className="text-center">Volume</span>
+               <span className="text-center">Gateway Status</span>
+               <span className="text-right">Cryptographic Receipt</span>
+            </DashboardListHeader>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {donations.map((d: any) => (
+               <DashboardListRow
+                  key={d.id}
+                  template="minmax(0,1.6fr) minmax(0,1.4fr) 160px 150px minmax(0,1fr)"
+               >
+                  <span className="min-w-0">
+                     <span className="block font-bold text-gray-900 truncate">
+                        {d.donor_name || 'Anonymous Sponsor'}
+                     </span>
+                     <span className="block text-xs text-[#006b61] font-bold mt-1 bg-[#006b61]/10 px-2 py-0.5 rounded-full max-w-fit">
+                        {d.donor_type}
+                     </span>
+                     <span className="block text-[10px] text-gray-400 mt-1 font-mono truncate">Ref: {d.donation_reference}</span>
+                  </span>
+                  <span className="min-w-0">
+                     <span className="block text-sm font-bold text-gray-700 truncate">{d.donation_purpose}</span>
+                     <span className="block text-xs text-gray-400 mt-1 truncate">{d.payment_method || 'Awaiting Selection'}</span>
+                  </span>
+                  <span className="text-center">
+                     <span className="text-lg font-black text-gray-900">
+                        {d.currency} {Number(d.amount).toLocaleString()}
+                     </span>
+                  </span>
+                  <span className="text-center">
+                     <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border inline-block
+                        ${d.payment_status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                          'bg-orange-50 text-orange-700 border-orange-200'}
+                     `}>
+                        {d.payment_status}
+                     </span>
+                     {d.paid_at && (
+                        <span className="block text-[10px] text-gray-400 mt-2">
+                           {new Date(d.paid_at).toLocaleDateString()}
+                        </span>
+                     )}
+                  </span>
+                  <span className="text-right">
+                     {d.receipt_number ? (
+                        <span className="text-xs font-bold text-[#FA7D15] bg-[#FA7D15]/10 border border-[#FA7D15]/20 px-3 py-1.5 rounded-lg font-mono">
+                           {d.receipt_number}
+                        </span>
+                     ) : (
+                        <span className="text-xs text-gray-300 italic">No receipt generated.</span>
+                     )}
+                  </span>
+               </DashboardListRow>
+            ))}
             {donations.length === 0 && (
                <div className="p-16 text-center text-gray-400 flex flex-col items-center justify-center">
                   <HeartHandshake className="w-12 h-12 mb-4 opacity-20" />

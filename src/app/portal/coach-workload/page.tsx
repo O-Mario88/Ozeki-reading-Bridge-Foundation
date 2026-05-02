@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getCoachWorkloadSummaryPostgres } from "@/lib/server/postgres/repositories/coach-workload";
 import {
   Users, Activity, AlertTriangle, CheckCircle2, Award, Clock,
@@ -91,70 +92,67 @@ export default async function CoachWorkloadPage() {
               <p className="text-sm">No coaching activity in the last 90 days.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                    <th className="py-2 px-3 font-semibold">Coach</th>
-                    <th className="py-2 px-3 font-semibold text-center">Visits 90d</th>
-                    <th className="py-2 px-3 font-semibold text-center">Schools</th>
-                    <th className="py-2 px-3 font-semibold text-center">Obs / Visit</th>
-                    <th className="py-2 px-3 font-semibold text-center">Fidelity</th>
-                    <th className="py-2 px-3 font-semibold text-center">Last Visit</th>
-                    <th className="py-2 px-3 font-semibold text-center">Status</th>
-                    <th className="py-2 px-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.coaches.map((c) => {
-                    const meta = statusMeta(c.workloadStatus);
-                    const StatusIcon = meta.icon;
-                    return (
-                      <tr key={c.userId} className="border-b border-gray-50 hover:bg-gray-50/40">
-                        <td className="py-2.5 px-3">
-                          <p className="font-semibold text-gray-800">{c.fullName}</p>
-                          <p className="text-xs text-gray-400">{c.email}{c.role ? ` · ${c.role}` : ""}</p>
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className="font-bold text-gray-800">{c.visits90d}</span>
-                          <span className="text-xs text-gray-400 ml-1">({c.visits30d} in 30d)</span>
-                        </td>
-                        <td className="py-2.5 px-3 text-center text-gray-700">{c.uniqueSchoolsVisited90d}</td>
-                        <td className="py-2.5 px-3 text-center text-gray-700">{c.avgObsPerVisit}</td>
-                        <td className="py-2.5 px-3 text-center">
-                          {c.observationsSubmitted90d > 0 ? (
-                            <span className={`text-sm font-bold ${
-                              c.fidelityPct >= 70 ? "text-emerald-700" :
-                              c.fidelityPct >= 40 ? "text-amber-700" : "text-red-600"
-                            }`}>
-                              {c.fidelityPct}%
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-300">—</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 text-center text-xs text-gray-500">
-                          {c.daysSinceLastVisit != null ? `${c.daysSinceLastVisit}d ago` : "Never"}
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${meta.color}`}>
-                            <StatusIcon className="w-3 h-3" />
-                            {meta.label}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <Link
-                            href={`/portal/coach-workload/${c.userId}`}
-                            className="text-xs text-[#006b61] font-semibold hover:underline inline-flex items-center gap-0.5"
-                          >
-                            Detail <ChevronRight className="w-3 h-3" />
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="px-2">
+              <DashboardListHeader template="minmax(0,1.6fr) 130px 80px 90px 90px 100px 130px 70px">
+                <span>Coach</span>
+                <span className="text-center">Visits 90d</span>
+                <span className="text-center">Schools</span>
+                <span className="text-center">Obs / Visit</span>
+                <span className="text-center">Fidelity</span>
+                <span className="text-center">Last Visit</span>
+                <span className="text-center">Status</span>
+                <span />
+              </DashboardListHeader>
+              {report.coaches.map((c) => {
+                const meta = statusMeta(c.workloadStatus);
+                const StatusIcon = meta.icon;
+                return (
+                  <DashboardListRow
+                    key={c.userId}
+                    template="minmax(0,1.6fr) 130px 80px 90px 90px 100px 130px 70px"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-gray-800 truncate">{c.fullName}</span>
+                      <span className="block text-xs text-gray-400 truncate">{c.email}{c.role ? ` · ${c.role}` : ""}</span>
+                    </span>
+                    <span className="text-center">
+                      <span className="font-bold text-gray-800">{c.visits90d}</span>
+                      <span className="text-xs text-gray-400 ml-1">({c.visits30d} in 30d)</span>
+                    </span>
+                    <span className="text-center text-gray-700">{c.uniqueSchoolsVisited90d}</span>
+                    <span className="text-center text-gray-700">{c.avgObsPerVisit}</span>
+                    <span className="text-center">
+                      {c.observationsSubmitted90d > 0 ? (
+                        <span className={`text-sm font-bold ${
+                          c.fidelityPct >= 70 ? "text-emerald-700" :
+                          c.fidelityPct >= 40 ? "text-amber-700" : "text-red-600"
+                        }`}>
+                          {c.fidelityPct}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </span>
+                    <span className="text-center text-xs text-gray-500">
+                      {c.daysSinceLastVisit != null ? `${c.daysSinceLastVisit}d ago` : "Never"}
+                    </span>
+                    <span className="text-center">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${meta.color}`}>
+                        <StatusIcon className="w-3 h-3" />
+                        {meta.label}
+                      </span>
+                    </span>
+                    <span className="text-right">
+                      <Link
+                        href={`/portal/coach-workload/${c.userId}`}
+                        className="text-xs text-[#006b61] font-semibold hover:underline inline-flex items-center gap-0.5"
+                      >
+                        Detail <ChevronRight className="w-3 h-3" />
+                      </Link>
+                    </span>
+                  </DashboardListRow>
+                );
+              })}
             </div>
           )}
         </div>

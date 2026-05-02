@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import {
   getAutomationHealthSummaryPostgres,
   getHandlerHealthPostgres,
@@ -66,62 +67,62 @@ export default async function AutomationHealthPage() {
 
         <section className="auto-section">
           <h2>Handler performance (last 24h)</h2>
-          <table className="auto-table">
-            <thead>
-              <tr>
-                <th>Handler</th>
-                <th>Invocations</th>
-                <th>Errors</th>
-                <th>Error rate</th>
-                <th>Avg ms</th>
-                <th>p95 ms</th>
-              </tr>
-            </thead>
-            <tbody>
-              {handlers.length === 0 ? (
-                <tr><td colSpan={6} className="auto-empty">No handler activity in the last 24 hours.</td></tr>
-              ) : handlers.map((h) => (
-                <tr key={h.handlerName} className={h.errorRatePct > 10 ? "row-alert" : h.errorRatePct > 0 ? "row-warn" : ""}>
-                  <td><code>{h.handlerName}</code></td>
-                  <td>{h.invocationsLast24h}</td>
-                  <td>{h.errorsLast24h}</td>
-                  <td>{h.errorRatePct}%</td>
-                  <td>{h.avgDurationMs ?? "—"}</td>
-                  <td>{h.p95DurationMs ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="auto-table">
+            <DashboardListHeader template="minmax(0,1.6fr) 110px 80px 100px 90px 90px">
+              <span>Handler</span>
+              <span>Invocations</span>
+              <span>Errors</span>
+              <span>Error rate</span>
+              <span>Avg ms</span>
+              <span>p95 ms</span>
+            </DashboardListHeader>
+            {handlers.length === 0 ? (
+              <div className="auto-empty py-3">No handler activity in the last 24 hours.</div>
+            ) : handlers.map((h) => (
+              <DashboardListRow
+                key={h.handlerName}
+                template="minmax(0,1.6fr) 110px 80px 100px 90px 90px"
+                className={h.errorRatePct > 10 ? "row-alert" : h.errorRatePct > 0 ? "row-warn" : ""}
+              >
+                <span className="min-w-0"><code className="truncate inline-block max-w-full">{h.handlerName}</code></span>
+                <span>{h.invocationsLast24h}</span>
+                <span>{h.errorsLast24h}</span>
+                <span>{h.errorRatePct}%</span>
+                <span>{h.avgDurationMs ?? "—"}</span>
+                <span>{h.p95DurationMs ?? "—"}</span>
+              </DashboardListRow>
+            ))}
+          </div>
         </section>
 
         <section className="auto-section">
           <h2>Recent events</h2>
-          <table className="auto-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Event type</th>
-                <th>Status</th>
-                <th>Duration</th>
-                <th>Error</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.length === 0 ? (
-                <tr><td colSpan={5} className="auto-empty">No events yet. Publish one from a write endpoint to see activity.</td></tr>
-              ) : events.map((e) => (
-                <tr key={e.id} className={e.status === "failed" ? "row-alert" : ""}>
-                  <td><small>{new Date(e.occurredAt).toLocaleTimeString()}</small></td>
-                  <td><code>{e.eventType}</code></td>
-                  <td>
-                    <span className={`auto-status auto-status-${e.status}`}>{e.status}</span>
-                  </td>
-                  <td>{e.durationMs !== null ? `${e.durationMs} ms` : "—"}</td>
-                  <td>{e.errorMessage ? <small className="auto-error">{e.errorMessage.slice(0, 120)}</small> : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="auto-table">
+            <DashboardListHeader template="100px minmax(0,1.4fr) 110px 100px minmax(0,1.6fr)">
+              <span>Time</span>
+              <span>Event type</span>
+              <span>Status</span>
+              <span>Duration</span>
+              <span>Error</span>
+            </DashboardListHeader>
+            {events.length === 0 ? (
+              <div className="auto-empty py-3">No events yet. Publish one from a write endpoint to see activity.</div>
+            ) : events.map((e) => (
+              <DashboardListRow
+                key={e.id}
+                template="100px minmax(0,1.4fr) 110px 100px minmax(0,1.6fr)"
+                className={e.status === "failed" ? "row-alert" : ""}
+              >
+                <span><small>{new Date(e.occurredAt).toLocaleTimeString()}</small></span>
+                <span className="min-w-0"><code className="truncate inline-block max-w-full">{e.eventType}</code></span>
+                <span>
+                  <span className={`auto-status auto-status-${e.status}`}>{e.status}</span>
+                </span>
+                <span>{e.durationMs !== null ? `${e.durationMs} ms` : "—"}</span>
+                <span className="min-w-0">{e.errorMessage ? <small className="auto-error truncate inline-block max-w-full">{e.errorMessage.slice(0, 120)}</small> : "—"}</span>
+              </DashboardListRow>
+            ))}
+          </div>
         </section>
 
         <section className="auto-section auto-cron-panel">

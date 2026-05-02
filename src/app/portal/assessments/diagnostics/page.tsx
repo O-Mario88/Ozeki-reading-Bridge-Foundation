@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getItemDiagnosticsPostgres } from "@/lib/server/postgres/repositories/assessment-intelligence";
 import { Microscope, AlertTriangle, Clock, ChevronLeft } from "lucide-react";
 
@@ -88,63 +89,58 @@ export default async function DiagnosticsPage({ searchParams }: PageProps) {
               Items ranked by accuracy (hardest first)
             </p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                  <th className="py-2 px-3 font-semibold">Item</th>
-                  <th className="py-2 px-3 font-semibold">Domain</th>
-                  <th className="py-2 px-3 font-semibold text-center">Accuracy</th>
-                  <th className="py-2 px-3 font-semibold text-center">Avg Latency</th>
-                  <th className="py-2 px-3 font-semibold text-center">Responses</th>
-                  <th className="py-2 px-3 font-semibold text-right">Regional Variance</th>
-                  <th className="py-2 px-3 font-semibold">Hardest Region</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((item) => (
-                  <tr key={item.itemKey} className="border-b border-gray-50">
-                    <td className="py-2.5 px-3 font-mono font-semibold text-gray-800">{item.itemKey}</td>
-                    <td className="py-2.5 px-3 text-gray-500 capitalize">{item.domainKey.replace("_", " ")}</td>
-                    <td className="py-2.5 px-3 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${accuracyColor(item.nationalAccuracyPct)}`}>
-                        {item.nationalAccuracyPct}%
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-gray-600">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-gray-300" />
-                        {(item.avgLatencyMs / 1000).toFixed(1)}s
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-gray-500">{item.responseCount.toLocaleString()}</td>
-                    <td className="py-2.5 px-3 text-right">
-                      {item.regionalVariance > 10 && (
-                        <span className="inline-flex items-center gap-1 text-amber-700 font-semibold">
-                          <AlertTriangle className="w-3 h-3" />
-                        </span>
-                      )}
-                      <span className="font-mono text-xs text-gray-600">±{item.regionalVariance} pp</span>
-                    </td>
-                    <td className="py-2.5 px-3 text-xs text-gray-500">
-                      {item.hardestRegion ? (
-                        <>
-                          <strong className="text-red-700">{item.hardestRegion.region}</strong>
-                          <span className="text-gray-400"> ({item.hardestRegion.accuracyPct}%)</span>
-                        </>
-                      ) : "—"}
-                    </td>
-                  </tr>
-                ))}
-                {data.items.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-10 text-center text-sm text-gray-400 italic">
-                      No item-level responses recorded yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="px-2">
+            <DashboardListHeader template="minmax(0,1.2fr) 130px 90px 110px 100px 130px minmax(0,1.2fr)">
+              <span>Item</span>
+              <span>Domain</span>
+              <span className="text-center">Accuracy</span>
+              <span className="text-center">Avg Latency</span>
+              <span className="text-center">Responses</span>
+              <span className="text-right">Regional Variance</span>
+              <span>Hardest Region</span>
+            </DashboardListHeader>
+            {data.items.map((item) => (
+              <DashboardListRow
+                key={item.itemKey}
+                template="minmax(0,1.2fr) 130px 90px 110px 100px 130px minmax(0,1.2fr)"
+              >
+                <span className="font-mono font-semibold text-gray-800 truncate">{item.itemKey}</span>
+                <span className="text-gray-500 capitalize truncate">{item.domainKey.replace("_", " ")}</span>
+                <span className="text-center">
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${accuracyColor(item.nationalAccuracyPct)}`}>
+                    {item.nationalAccuracyPct}%
+                  </span>
+                </span>
+                <span className="text-center text-gray-600">
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-gray-300" />
+                    {(item.avgLatencyMs / 1000).toFixed(1)}s
+                  </span>
+                </span>
+                <span className="text-center text-gray-500">{item.responseCount.toLocaleString()}</span>
+                <span className="text-right">
+                  {item.regionalVariance > 10 && (
+                    <span className="inline-flex items-center gap-1 text-amber-700 font-semibold mr-1">
+                      <AlertTriangle className="w-3 h-3" />
+                    </span>
+                  )}
+                  <span className="font-mono text-xs text-gray-600">±{item.regionalVariance} pp</span>
+                </span>
+                <span className="text-xs text-gray-500 truncate">
+                  {item.hardestRegion ? (
+                    <>
+                      <strong className="text-red-700">{item.hardestRegion.region}</strong>
+                      <span className="text-gray-400"> ({item.hardestRegion.accuracyPct}%)</span>
+                    </>
+                  ) : "—"}
+                </span>
+              </DashboardListRow>
+            ))}
+            {data.items.length === 0 && (
+              <div className="py-10 text-center text-sm text-gray-400 italic">
+                No item-level responses recorded yet.
+              </div>
+            )}
           </div>
         </div>
 

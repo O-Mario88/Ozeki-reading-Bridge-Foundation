@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getLearnerProfilePostgres } from "@/lib/server/postgres/repositories/assessment-intelligence";
 import {
   User, TrendingUp, TrendingDown, Minus, BookOpen, Target,
@@ -191,43 +192,40 @@ export default async function LearnerProfilePage({ params }: PageProps) {
           {profile.cycles.length === 0 ? (
             <p className="text-sm text-gray-400 italic text-center py-6">No assessments recorded yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                    <th className="py-2 px-2 font-semibold">Cycle</th>
-                    <th className="py-2 px-2 font-semibold">Date</th>
-                    <th className="py-2 px-2 font-semibold">Stage</th>
-                    <th className="py-2 px-2 font-semibold text-center">Letters</th>
-                    <th className="py-2 px-2 font-semibold text-center">Sounds</th>
-                    <th className="py-2 px-2 font-semibold text-center">Decoding</th>
-                    <th className="py-2 px-2 font-semibold text-center">Fluency</th>
-                    <th className="py-2 px-2 font-semibold text-center">Comp</th>
-                    <th className="py-2 px-2 font-semibold text-right">Composite</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profile.cycles.map((c) => (
-                    <tr key={c.assessmentId} className="border-b border-gray-50">
-                      <td className="py-2.5 px-2">
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
-                          {c.cycleType}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-2 text-gray-600">{c.assessmentDate}</td>
-                      <td className="py-2.5 px-2 text-gray-700 font-medium">{c.readingStageLabel ?? "—"}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-600">{c.letterIdentificationScore ?? "—"}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-600">{c.soundIdentificationScore ?? "—"}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-600">{c.decodableWordsScore ?? "—"}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-600">{c.fluencyAccuracyScore ?? "—"}</td>
-                      <td className="py-2.5 px-2 text-center text-gray-600">{c.readingComprehensionScore ?? "—"}</td>
-                      <td className="py-2.5 px-2 text-right">
-                        <strong className="text-gray-900">{c.compositeScore ?? "—"}</strong>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <DashboardListHeader template="100px 100px minmax(0,1.2fr) 70px 70px 80px 70px 70px 100px">
+                <span>Cycle</span>
+                <span>Date</span>
+                <span>Stage</span>
+                <span className="text-center">Letters</span>
+                <span className="text-center">Sounds</span>
+                <span className="text-center">Decoding</span>
+                <span className="text-center">Fluency</span>
+                <span className="text-center">Comp</span>
+                <span className="text-right">Composite</span>
+              </DashboardListHeader>
+              {profile.cycles.map((c) => (
+                <DashboardListRow
+                  key={c.assessmentId}
+                  template="100px 100px minmax(0,1.2fr) 70px 70px 80px 70px 70px 100px"
+                >
+                  <span>
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
+                      {c.cycleType}
+                    </span>
+                  </span>
+                  <span className="text-gray-600">{c.assessmentDate}</span>
+                  <span className="text-gray-700 font-medium truncate">{c.readingStageLabel ?? "—"}</span>
+                  <span className="text-center text-gray-600">{c.letterIdentificationScore ?? "—"}</span>
+                  <span className="text-center text-gray-600">{c.soundIdentificationScore ?? "—"}</span>
+                  <span className="text-center text-gray-600">{c.decodableWordsScore ?? "—"}</span>
+                  <span className="text-center text-gray-600">{c.fluencyAccuracyScore ?? "—"}</span>
+                  <span className="text-center text-gray-600">{c.readingComprehensionScore ?? "—"}</span>
+                  <span className="text-right">
+                    <strong className="text-gray-900">{c.compositeScore ?? "—"}</strong>
+                  </span>
+                </DashboardListRow>
+              ))}
             </div>
           )}
         </div>

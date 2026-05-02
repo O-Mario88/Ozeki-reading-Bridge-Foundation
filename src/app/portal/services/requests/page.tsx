@@ -1,4 +1,5 @@
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { Building, MapPin, CheckCircle, Clock, AlertTriangle } from "lucide-react";
@@ -51,64 +52,61 @@ export default async function ServiceRequestsDashboard() {
          <div className="flex justify-between items-center p-6 border-b">
             <h2 className="text-lg font-bold">Booking Logistics Queue</h2>
          </div>
-         <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-               <thead>
-                  <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-                     <th className="p-4 font-bold border-b">Booking Entity</th>
-                     <th className="p-4 font-bold border-b">Request Hash</th>
-                     <th className="p-4 font-bold border-b">Financial State</th>
-                     <th className="p-4 font-bold border-b text-right">Actions</th>
-                  </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-100">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {requests.map((req: any) => (
-                     <tr key={req.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="p-4">
-                           <div className="font-bold text-gray-900 flex items-center gap-2">
-                              <Building className="w-4 h-4 text-gray-400" />
-                              {req.school_name}
-                           </div>
-                           <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                              <MapPin className="w-3 h-3" /> {req.district} District
-                           </div>
-                        </td>
-                        <td className="p-4">
-                           <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 border border-gray-200">
-                              {req.request_code}
-                           </span>
-                           <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> {new Date(req.created_at).toLocaleDateString()}
-                           </div>
-                        </td>
-                        <td className="p-4">
-                           <span className={`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap
-                              ${req.status === 'Fully Paid' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                req.status === 'Deposit Paid' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
-                                'bg-gray-100 text-gray-800 border border-gray-200'}
-                           `}>
-                              {req.status === 'Fully Paid' && <CheckCircle className="w-3 h-3 inline mr-1" />}
-                              {req.status}
-                           </span>
-                           {req.status !== 'Awaiting Deposit' && (
-                              <div className="text-xs font-bold text-gray-900 mt-2">
-                                 Paid: <span className="text-[#006b61]">UGX {Number(req.amount_paid).toLocaleString()}</span>
-                              </div>
-                           )}
-                           <div className="text-[10px] text-gray-500 mt-0.5">
-                              Balance: UGX {Number(req.balance).toLocaleString()}
-                           </div>
-                        </td>
-                        <td className="p-4 text-right">
-                           <button className="bg-gray-900 text-white font-bold py-2 px-4 rounded-lg text-sm hover:opacity-90">
-                              Schedule Deployment
-                           </button>
-                        </td>
-                     </tr>
-                  ))}
-               </tbody>
-            </table>
+         <div className="px-4 py-3">
+            <DashboardListHeader template="minmax(0,1.6fr) minmax(0,1.2fr) minmax(0,1.4fr) 200px">
+               <span>Booking Entity</span>
+               <span>Request Hash</span>
+               <span>Financial State</span>
+               <span className="text-right">Actions</span>
+            </DashboardListHeader>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {requests.map((req: any) => (
+               <DashboardListRow
+                  key={req.id}
+                  template="minmax(0,1.6fr) minmax(0,1.2fr) minmax(0,1.4fr) 200px"
+               >
+                  <span className="min-w-0">
+                     <span className="block font-bold text-gray-900 truncate">
+                        <Building className="w-4 h-4 text-gray-400 inline mr-2" />
+                        {req.school_name}
+                     </span>
+                     <span className="block text-xs text-gray-500 mt-1 truncate">
+                        <MapPin className="w-3 h-3 inline mr-1" /> {req.district} District
+                     </span>
+                  </span>
+                  <span className="min-w-0">
+                     <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 border border-gray-200 inline-block max-w-full truncate">
+                        {req.request_code}
+                     </span>
+                     <span className="block text-xs text-gray-400 mt-1">
+                        <Clock className="w-3 h-3 inline mr-1" /> {new Date(req.created_at).toLocaleDateString()}
+                     </span>
+                  </span>
+                  <span className="min-w-0">
+                     <span className={`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap inline-block
+                        ${req.status === 'Fully Paid' ? 'bg-green-100 text-green-800 border border-green-200' :
+                          req.status === 'Deposit Paid' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                          'bg-gray-100 text-gray-800 border border-gray-200'}
+                     `}>
+                        {req.status === 'Fully Paid' && <CheckCircle className="w-3 h-3 inline mr-1" />}
+                        {req.status}
+                     </span>
+                     {req.status !== 'Awaiting Deposit' && (
+                        <span className="block text-xs font-bold text-gray-900 mt-2">
+                           Paid: <span className="text-[#006b61]">UGX {Number(req.amount_paid).toLocaleString()}</span>
+                        </span>
+                     )}
+                     <span className="block text-[10px] text-gray-500 mt-0.5">
+                        Balance: UGX {Number(req.balance).toLocaleString()}
+                     </span>
+                  </span>
+                  <span className="text-right">
+                     <button type="button" className="bg-gray-900 text-white font-bold py-2 px-4 rounded-lg text-sm hover:opacity-90">
+                        Schedule Deployment
+                     </button>
+                  </span>
+               </DashboardListRow>
+            ))}
             {requests.length === 0 && (
                <div className="p-12 text-center text-gray-500">
                   No service booking demands generated yet.

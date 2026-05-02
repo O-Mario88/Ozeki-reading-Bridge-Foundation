@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { getCoachWorkloadDetailPostgres } from "@/lib/server/postgres/repositories/coach-workload";
 import {
   Activity, Award, Calendar, ChevronLeft, School as SchoolIcon,
@@ -153,46 +154,45 @@ export default async function CoachWorkloadDetailPage({ params }: PageProps) {
               No school visits recorded in the last 90 days.
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                  <th className="py-2 px-3 font-semibold">School</th>
-                  <th className="py-2 px-3 font-semibold text-center">Visits</th>
-                  <th className="py-2 px-3 font-semibold text-center">Observations</th>
-                  <th className="py-2 px-3 font-semibold text-center">Last Visit</th>
-                  <th className="py-2 px-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.schools.map((s) => (
-                  <tr key={s.schoolId} className="border-b border-gray-50">
-                    <td className="py-2.5 px-3">
-                      <p className="font-semibold text-gray-800">{s.schoolName}</p>
-                      <p className="text-xs text-gray-400">{s.district}</p>
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-gray-700">{s.visitsLast90d}</td>
-                    <td className="py-2.5 px-3 text-center">
-                      {s.observationsLast90d > 0 ? (
-                        <span className="text-emerald-700 font-semibold">{s.observationsLast90d}</span>
-                      ) : (
-                        <span className="text-amber-700 font-semibold">0 ⚠</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-xs text-gray-500">
-                      {s.lastVisitDate} <span className="text-gray-400">({s.daysSinceLastVisit}d ago)</span>
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      <Link
-                        href={`/portal/schools/${s.schoolId}/dossier`}
-                        className="text-xs text-[#006b61] font-semibold hover:underline inline-flex items-center gap-0.5"
-                      >
-                        Dossier <ChevronRight className="w-3 h-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="px-2">
+              <DashboardListHeader template="minmax(0,1.6fr) 70px 110px 160px 80px">
+                <span>School</span>
+                <span className="text-center">Visits</span>
+                <span className="text-center">Observations</span>
+                <span className="text-center">Last Visit</span>
+                <span />
+              </DashboardListHeader>
+              {detail.schools.map((s) => (
+                <DashboardListRow
+                  key={s.schoolId}
+                  template="minmax(0,1.6fr) 70px 110px 160px 80px"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-gray-800 truncate">{s.schoolName}</span>
+                    <span className="block text-xs text-gray-400 truncate">{s.district}</span>
+                  </span>
+                  <span className="text-center text-gray-700">{s.visitsLast90d}</span>
+                  <span className="text-center">
+                    {s.observationsLast90d > 0 ? (
+                      <span className="text-emerald-700 font-semibold">{s.observationsLast90d}</span>
+                    ) : (
+                      <span className="text-amber-700 font-semibold">0 ⚠</span>
+                    )}
+                  </span>
+                  <span className="text-center text-xs text-gray-500">
+                    {s.lastVisitDate} <span className="text-gray-400">({s.daysSinceLastVisit}d ago)</span>
+                  </span>
+                  <span className="text-right">
+                    <Link
+                      href={`/portal/schools/${s.schoolId}/dossier`}
+                      className="text-xs text-[#006b61] font-semibold hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Dossier <ChevronRight className="w-3 h-3" />
+                    </Link>
+                  </span>
+                </DashboardListRow>
+              ))}
+            </div>
           )}
         </div>
       </div>

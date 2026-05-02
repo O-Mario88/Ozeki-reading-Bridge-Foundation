@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { listAssessmentWindowsPostgres } from "@/lib/server/postgres/repositories/assessment-intelligence";
 import { AssessmentScheduleBuilder } from "@/components/portal/AssessmentScheduleBuilder";
 import { ScheduleComplianceCard } from "@/components/portal/ScheduleComplianceCard";
@@ -87,36 +88,33 @@ export default async function AssessmentSchedulePage() {
         {closed.length > 0 && (
           <section>
             <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-3">Closed</h2>
-            <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                    <th className="py-2 px-3 font-semibold">Cycle</th>
-                    <th className="py-2 px-3 font-semibold">Year</th>
-                    <th className="py-2 px-3 font-semibold">Term</th>
-                    <th className="py-2 px-3 font-semibold">Window</th>
-                    <th className="py-2 px-3 font-semibold text-right">Compliance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {closed.map((w) => (
-                    <tr key={w.id} className="border-b border-gray-50">
-                      <td className="py-2.5 px-3 capitalize font-medium text-gray-800">{w.assessmentType}</td>
-                      <td className="py-2.5 px-3 text-gray-500">{w.academicYear}</td>
-                      <td className="py-2.5 px-3 text-gray-500">Term {w.termNumber}</td>
-                      <td className="py-2.5 px-3 text-xs text-gray-500">{w.windowOpen} → {w.windowClose}</td>
-                      <td className="py-2.5 px-3 text-right">
-                        <Link
-                          href={`/portal/assessments/schedule?windowId=${w.id}`}
-                          className="text-xs text-[#006b61] font-semibold hover:underline"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden px-2">
+              <DashboardListHeader template="minmax(0,1.2fr) 100px 90px minmax(0,1.6fr) 100px">
+                <span>Cycle</span>
+                <span>Year</span>
+                <span>Term</span>
+                <span>Window</span>
+                <span className="text-right">Compliance</span>
+              </DashboardListHeader>
+              {closed.map((w) => (
+                <DashboardListRow
+                  key={w.id}
+                  template="minmax(0,1.2fr) 100px 90px minmax(0,1.6fr) 100px"
+                >
+                  <span className="capitalize font-medium text-gray-800 truncate">{w.assessmentType}</span>
+                  <span className="text-gray-500">{w.academicYear}</span>
+                  <span className="text-gray-500">Term {w.termNumber}</span>
+                  <span className="text-xs text-gray-500 truncate">{w.windowOpen} → {w.windowClose}</span>
+                  <span className="text-right">
+                    <Link
+                      href={`/portal/assessments/schedule?windowId=${w.id}`}
+                      className="text-xs text-[#006b61] font-semibold hover:underline"
+                    >
+                      View
+                    </Link>
+                  </span>
+                </DashboardListRow>
+              ))}
             </div>
           </section>
         )}

@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { listWorkflowsPostgres } from "@/lib/server/postgres/repositories/workflows";
 
 export const dynamic = "force-dynamic";
@@ -49,57 +50,55 @@ export default async function WorkflowsAdminPage() {
           {workflows.length === 0 ? (
             <p className="text-gray-500">No workflows yet. Default rules should seed automatically on the next deploy.</p>
           ) : (
-            <table className="workflows-table">
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Name</th>
-                  <th>Trigger</th>
-                  <th>Conditions</th>
-                  <th>Actions</th>
-                  <th>Last fired</th>
-                  <th>Fire count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workflows.map((w) => (
-                  <tr key={w.id} className={w.isEnabled ? "" : "workflow-disabled"}>
-                    <td>
-                      <span className={`workflow-pill ${w.isEnabled ? "workflow-pill-on" : "workflow-pill-off"}`}>
-                        {w.isEnabled ? "ON" : "OFF"}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{w.name}</strong>
-                      {w.description ? <><br /><small>{w.description}</small></> : null}
-                    </td>
-                    <td><code>{w.triggerEvent}</code></td>
-                    <td>
-                      {w.conditions.length === 0 ? (
-                        <small className="text-gray-400">always</small>
-                      ) : (
-                        <ul className="workflow-list">
-                          {w.conditions.map((c, i) => (
-                            <li key={i}><code>{c.field}</code> {c.operator} {c.value !== undefined ? <code>{JSON.stringify(c.value)}</code> : ""}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                    <td>
-                      <ul className="workflow-list">
-                        {w.actions.map((a, i) => (
-                          <li key={i}><strong>{a.type}</strong></li>
+            <div className="workflows-table">
+              <DashboardListHeader template="60px minmax(0,1.4fr) minmax(0,1.1fr) minmax(0,1.4fr) minmax(0,1.2fr) 140px 80px">
+                <span>Status</span>
+                <span>Name</span>
+                <span>Trigger</span>
+                <span>Conditions</span>
+                <span>Actions</span>
+                <span>Last fired</span>
+                <span>Fire count</span>
+              </DashboardListHeader>
+              {workflows.map((w) => (
+                <DashboardListRow
+                  key={w.id}
+                  template="60px minmax(0,1.4fr) minmax(0,1.1fr) minmax(0,1.4fr) minmax(0,1.2fr) 140px 80px"
+                  className={w.isEnabled ? "" : "workflow-disabled"}
+                >
+                  <span>
+                    <span className={`workflow-pill ${w.isEnabled ? "workflow-pill-on" : "workflow-pill-off"}`}>
+                      {w.isEnabled ? "ON" : "OFF"}
+                    </span>
+                  </span>
+                  <span className="min-w-0">
+                    <strong className="block truncate">{w.name}</strong>
+                    {w.description ? <small className="block text-gray-500 truncate">{w.description}</small> : null}
+                  </span>
+                  <span className="min-w-0"><code className="truncate inline-block max-w-full">{w.triggerEvent}</code></span>
+                  <span className="min-w-0">
+                    {w.conditions.length === 0 ? (
+                      <small className="text-gray-400">always</small>
+                    ) : (
+                      <ul className="workflow-list m-0 p-0">
+                        {w.conditions.map((c, i) => (
+                          <li key={i}><code>{c.field}</code> {c.operator} {c.value !== undefined ? <code>{JSON.stringify(c.value)}</code> : ""}</li>
                         ))}
                       </ul>
-                    </td>
-                    <td>
-                      <small>{w.lastFiredAt ? new Date(w.lastFiredAt).toLocaleString() : "—"}</small>
-                    </td>
-                    <td><strong>{w.fireCount}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <ul className="workflow-list m-0 p-0">
+                      {w.actions.map((a, i) => (
+                        <li key={i}><strong>{a.type}</strong></li>
+                      ))}
+                    </ul>
+                  </span>
+                  <span><small>{w.lastFiredAt ? new Date(w.lastFiredAt).toLocaleString() : "—"}</small></span>
+                  <span><strong>{w.fireCount}</strong></span>
+                </DashboardListRow>
+              ))}
+            </div>
           )}
         </section>
 
