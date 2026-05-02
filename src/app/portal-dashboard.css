@@ -38,6 +38,26 @@
   --ds-shell-radius: 24px;
 }
 
+/* ── Portal-wide font + density hardening ──────────────────────────
+   Belt-and-braces: every element inside the Ozeki portal shell
+   inherits Calibri, including tables and form controls (which
+   browsers default to a separate font stack). Pills and chips
+   default to no-wrap so dense table rows don't break onto multiple
+   lines. Tables default to compact padding; per-page rules can
+   override locally. */
+.ozeki-portal-shell,
+.ozeki-portal-shell table,
+.ozeki-portal-shell input,
+.ozeki-portal-shell textarea,
+.ozeki-portal-shell select,
+.ozeki-portal-shell button {
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+}
+.ozeki-portal-shell .pill,
+.ozeki-portal-shell [class*="rounded-full"][class*="font-bold"] {
+  white-space: nowrap;
+}
+
 /* ── Compact Finance Additions ──────────────────────────────── */
 .compact-finance-ui {
   --ds-card-padding: 1.25rem;

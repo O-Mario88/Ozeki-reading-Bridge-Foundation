@@ -259,30 +259,30 @@ export default async function SchoolsOverviewPage() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-[12.5px] min-w-[820px]">
+              <table className="w-full text-[11px] min-w-[760px]">
                 <thead className="bg-gray-50/40">
                   <tr className="text-left text-[10px] uppercase tracking-widest text-gray-500 border-b border-gray-100">
-                    <th className="px-4 py-2.5 font-bold w-8">#</th>
-                    <th className="px-4 py-2.5 font-bold">School / District Group</th>
-                    <th className="px-4 py-2.5 font-bold">District</th>
-                    <th className="px-4 py-2.5 font-bold">Learners</th>
-                    <th className="px-4 py-2.5 font-bold">Attendance</th>
-                    <th className="px-4 py-2.5 font-bold">Assessment Score</th>
-                    <th className="px-4 py-2.5 font-bold">Reading Proficiency</th>
-                    <th className="px-4 py-2.5 font-bold">Status</th>
+                    <th className="px-3 py-2 font-bold w-8">#</th>
+                    <th className="px-3 py-2 font-bold whitespace-nowrap">School / District Group</th>
+                    <th className="px-3 py-2 font-bold whitespace-nowrap">District</th>
+                    <th className="px-3 py-2 font-bold whitespace-nowrap">Learners</th>
+                    <th className="px-3 py-2 font-bold whitespace-nowrap">Attendance</th>
+                    <th className="px-3 py-2 font-bold whitespace-nowrap">Assessment Score</th>
+                    <th className="px-3 py-2 font-bold whitespace-nowrap">Reading Proficiency</th>
+                    <th className="px-3 py-2 font-bold whitespace-nowrap">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {FALLBACK.scorecard.map((row, i) => (
                     <tr key={row.school} className="border-b border-gray-50 hover:bg-gray-50/40">
-                      <td className="px-4 py-3 text-gray-500">{i + 1}</td>
-                      <td className="px-4 py-3 text-gray-900 font-semibold">{row.school}</td>
-                      <td className="px-4 py-3 text-gray-700">{row.district}</td>
-                      <td className="px-4 py-3 text-gray-700">{row.learners.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-gray-700">{row.attendance}%</td>
-                      <td className="px-4 py-3 text-gray-700">{row.score}%</td>
-                      <td className="px-4 py-3 text-gray-700">{row.reading}%</td>
-                      <td className="px-4 py-3"><StatusPill status={row.status} /></td>
+                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
+                      <td className="px-3 py-2 text-gray-900 font-semibold whitespace-nowrap">{row.school}</td>
+                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.district}</td>
+                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.learners.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.attendance}%</td>
+                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.score}%</td>
+                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.reading}%</td>
+                      <td className="px-3 py-2 whitespace-nowrap"><StatusPill status={row.status} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -559,7 +559,7 @@ function StatusPill({ status }: { status: string }) {
         ? "bg-rose-50 text-rose-700 border-rose-100"
         : "bg-gray-50 text-gray-700 border-gray-100";
   return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
+    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border whitespace-nowrap ${cls}`}>
       {status}
     </span>
   );
