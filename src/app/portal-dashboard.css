@@ -58,6 +58,49 @@
   white-space: nowrap;
 }
 
+/* ── Portal-wide table normalization ───────────────────────────────
+   Every table inside the portal renders at a uniform 10px Calibri,
+   compact padding, no wrap. Header cells stay bold + uppercase;
+   body cells render as regular weight so the reader's eye lands on
+   the data, not on a wall of bold text. Per-page utility classes
+   (text-[Npx], font-bold on td) lose the cascade because the
+   element-chain selector below has higher CSS specificity than a
+   single Tailwind utility class targeting the same element.
+
+   Pills inside td cells keep their own font-weight (overridden via
+   the more-specific rule below). */
+.ozeki-portal-shell table {
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.35;
+  border-collapse: collapse;
+}
+.ozeki-portal-shell table th,
+.ozeki-portal-shell table td {
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  font-size: 10px;
+  white-space: nowrap;
+  padding: 6px 10px;
+}
+.ozeki-portal-shell table th {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.ozeki-portal-shell table td {
+  font-weight: 400;
+}
+/* Restore pill/chip styling inside td (pills set their own font-weight) */
+.ozeki-portal-shell table td span[class*="rounded-full"] {
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* Allow per-page emphasis via a small set of explicit classes */
+.ozeki-portal-shell table td.is-emphasized,
+.ozeki-portal-shell table td a {
+  font-weight: 600;
+}
+
 /* ── Compact Finance Additions ──────────────────────────────── */
 .compact-finance-ui {
   --ds-card-padding: 1.25rem;
