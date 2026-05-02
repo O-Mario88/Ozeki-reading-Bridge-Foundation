@@ -12554,6 +12554,66 @@ input, select, textarea, button, img {
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
 
+/* ── Ozeki-portal-shell scope ──────────────────────────────────────────
+   The new green-theme portal pages (everything except finance) wrap their
+   content in `.ozeki-portal-shell`. Legacy `.button` / `.button-ghost` /
+   `.action-row` markup gets re-skinned to match the green dashboard. */
+.ozeki-portal-shell .action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.ozeki-portal-shell .button,
+.ozeki-portal-shell a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  height: 2.4rem;
+  border-radius: 0.75rem;
+  background: #047857;
+  color: #ffffff;
+  font-size: 0.83rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid #047857;
+  box-shadow: 0 2px 6px rgba(4, 120, 87, 0.18);
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.ozeki-portal-shell .button:hover,
+.ozeki-portal-shell a.button:hover {
+  background: #065f46;
+  border-color: #065f46;
+}
+.ozeki-portal-shell .button-ghost,
+.ozeki-portal-shell .button.button-ghost,
+.ozeki-portal-shell a.button.button-ghost {
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+.ozeki-portal-shell .button-ghost:hover,
+.ozeki-portal-shell .button.button-ghost:hover,
+.ozeki-portal-shell a.button.button-ghost:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+.ozeki-portal-shell .button-sm {
+  padding: 0.35rem 0.75rem;
+  height: 2rem;
+  font-size: 0.78rem;
+}
+.ozeki-portal-shell .ds-card {
+  background: #ffffff;
+  border: 1px solid #f3f4f6;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
 /* ── Glass-portal-shell scope ──────────────────────────────────────────
    When PortalShell wraps its content in `.glass-portal-shell`, the legacy
    `.button` / `.button-ghost` / `.action-row` markup still used by ~77 pages

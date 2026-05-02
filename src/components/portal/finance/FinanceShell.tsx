@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 import { PortalUser } from "@/lib/types";
-import { GlassDashboardShell } from "@/components/portal/glass-dashboard-shell";
+import { FinanceGlassShell } from "./FinanceGlassShell";
 
 type FinanceShellProps = {
   user: PortalUser;
@@ -24,11 +24,10 @@ const financeNavItems = [
 ];
 
 /**
- * Finance workspace shell — wraps the glassprism dashboard shell so finance
- * sub-pages live inside the same charcoal frame / pale gray canvas / icon
- * rail + expanded menu as the rest of the portal. The dark navy banner and
- * orange-underline tab strip from the previous version are gone; tabs are
- * now horizontal-scroll glass pills with a black active pill.
+ * Finance workspace shell — wraps the glassprism `FinanceGlassShell` so
+ * finance sub-pages keep the dark-frame / pale-gray-canvas / frosted-menu
+ * look while the rest of the portal moved to the green Ozeki theme. The
+ * tab strip is a horizontal-scroll glass-pill bar with a black active pill.
  */
 export function FinanceShell({
   user,
@@ -37,8 +36,8 @@ export function FinanceShell({
   children,
 }: FinanceShellProps) {
   return (
-    <GlassDashboardShell user={user} activeHref={activeHref}>
-      <div className="glass-portal-shell space-y-5">
+    <FinanceGlassShell user={user} activeHref={activeHref}>
+      <div className="space-y-5">
         {/* Workspace header */}
         <header>
           <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#6B6E76]">
@@ -81,6 +80,6 @@ export function FinanceShell({
 
         {children}
       </div>
-    </GlassDashboardShell>
+    </FinanceGlassShell>
   );
 }

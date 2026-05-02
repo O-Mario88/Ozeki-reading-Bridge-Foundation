@@ -13,13 +13,13 @@ import {
 import { SpendingTrendChart } from "@/components/portal/finance/SpendingTrendChart";
 import { FundAllocationDonut } from "@/components/portal/finance/FundAllocationDonut";
 import {
-  GlassDashboardShell,
   GlassTopBar,
   GlassTopControls,
   GlassCard,
   GlassButton,
   GlassFinanceKpiCard,
 } from "@/components/portal/glass-dashboard-shell";
+import { FinanceGlassShell } from "@/components/portal/finance/FinanceGlassShell";
 import {
   Wallet, ArrowRightLeft, PieChart, TrendingUp, Shield, Download, Plus,
   FileText, Receipt, DollarSign, FileBarChart, FileCheck, Lock,
@@ -68,7 +68,7 @@ export default async function FinanceDashboard() {
   const expensesDeltaPct = trend.deltaExpensesPct;
 
   return (
-    <GlassDashboardShell user={user} activeHref="/portal/finance">
+    <FinanceGlassShell user={user} activeHref="/portal/finance">
       <div className="space-y-5">
 
         {/* Desktop top bar with welcome + controls — mobile uses shell header */}
@@ -422,7 +422,7 @@ export default async function FinanceDashboard() {
           </div>
         </GlassCard>
       </div>
-    </GlassDashboardShell>
+    </FinanceGlassShell>
   );
 }
 

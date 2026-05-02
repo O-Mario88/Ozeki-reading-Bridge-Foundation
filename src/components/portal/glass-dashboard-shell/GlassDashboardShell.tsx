@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { glassFont } from "./fonts";
-import { GlassExpandedMenu } from "./GlassExpandedMenu";
+import { OzekiSidebar } from "@/components/portal/OzekiSidebar";
 import { MobileHeader } from "./MobileHeader";
 import { MobileBottomNav } from "./MobileBottomNav";
 import type { PortalUser } from "@/lib/types";
@@ -14,26 +14,25 @@ interface Props {
 }
 
 /**
- * Outer shell for portal dashboard pages — implements the glassprism reference.
+ * Portal dashboard shell — replicates the reference dashboard screenshot.
  *
- * Desktop (`lg+`):  charcoal frame → pale gray rounded canvas → expanded
- *                   frosted menu (primary nav) + main content. The slim
- *                   icon rail was removed at the user's request — kept only
- *                   for mobile via the bottom nav.
- * Mobile (`<lg`):   light gray page → mobile header (hamburger + brand) →
- *                   stacked main content → fixed mobile bottom nav (5 items),
- *                   safe-area aware
+ * Desktop (`lg+`): deep-green fixed sidebar (Ozeki branding + nav + user
+ *                  pod) on the left, off-white canvas on the right.
+ * Mobile (`<lg`):  light gray page → mobile header (hamburger + brand) →
+ *                  stacked main content → fixed mobile bottom nav (5 items),
+ *                  safe-area aware. The mobile slide-over carries the same
+ *                  desktop sidebar so role-filtered nav stays consistent.
  *
- * The main content slot owns its own typography/cards. The shell is purely
- * chrome. Auth + role filtering are honoured via PortalUser flags.
+ * Wrapped pages (PortalShell, FinanceShell) render their own page-level
+ * header inside `children` — the shell itself is purely chrome.
  */
 export function GlassDashboardShell({ user, activeHref, mobileRightSlot, children }: Props) {
   return (
     <div
-      className={`${glassFont.variable} font-[var(--font-glass-dashboard)] text-[#111111]`}
+      className={`${glassFont.variable} font-[var(--font-glass-dashboard)] text-[#0f172a]`}
     >
       {/* Mobile layout (<lg) */}
-      <div className="lg:hidden min-h-screen bg-[#E9EBEF]">
+      <div className="lg:hidden min-h-screen bg-[#f4f6f5]">
         <div className="px-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))]">
           <MobileHeader user={user} activeHref={activeHref} rightSlot={mobileRightSlot} />
         </div>
@@ -43,16 +42,10 @@ export function GlassDashboardShell({ user, activeHref, mobileRightSlot, childre
         <MobileBottomNav activeHref={activeHref} user={user} />
       </div>
 
-      {/* Desktop layout (lg+) — expanded menu + main only, no icon rail.
-          Menu column is narrower at lg/xl so main content gets breathing
-          room on typical 1280–1440px laptops. */}
-      <div className="hidden lg:block min-h-screen bg-[#1F1F1F] p-5 xl:p-6">
-        <div className="min-h-[calc(100vh-40px)] xl:min-h-[calc(100vh-48px)] overflow-hidden rounded-[40px] xl:rounded-[48px] bg-[#D8D9DE] shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
-          <div className="grid lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)] gap-5 xl:gap-7 p-5 xl:p-7">
-            <GlassExpandedMenu user={user} activeHref={activeHref} />
-            <main className="min-w-0">{children}</main>
-          </div>
-        </div>
+      {/* Desktop layout (lg+) — deep-green sidebar + white canvas */}
+      <div className="hidden lg:flex min-h-screen bg-[#f7f8f7]">
+        <OzekiSidebar user={user} activeHref={activeHref} />
+        <main className="flex-1 min-w-0 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );
