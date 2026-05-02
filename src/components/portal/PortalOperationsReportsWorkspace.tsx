@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import {
   PortalAssessmentActivityReportRow,
   PortalEvaluationActivityReportRow,
@@ -929,197 +930,177 @@ export function PortalOperationsReportsWorkspace({
 
         {detailReportType === "training" ? (
           <div className="table-wrap portal-report-table portal-table-compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Training name</th>
-                  <th>Location</th>
-                  <th>District</th>
-                  <th>Schools attended</th>
-                  <th>Total participants</th>
-                  <th>Teachers F</th>
-                  <th>Teachers M</th>
-                  <th>Leaders F</th>
-                  <th>Leaders M</th>
-                  <th>Trainer</th>
-                  <th>Funded by</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTrainingActivities.length === 0 ? (
-                  <tr>
-                    <td colSpan={12}>No training records match the current filters.</td>
-                  </tr>
-                ) : (
-                  filteredTrainingActivities.map((row: PortalTrainingActivityReportRow) => (
-                    <tr key={row.recordId}>
-                      <td>{formatDate(row.date)}</td>
-                      <td><TableCell value={row.trainingName} className="is-wide" /></td>
-                      <td><TableCell value={row.location} className="is-wide" /></td>
-                      <td><TableCell value={row.district} /></td>
-                      <td>{row.schoolsAttended.toLocaleString()}</td>
-                      <td>{row.participantsTotal.toLocaleString()}</td>
-                      <td>{row.teachersFemale.toLocaleString()}</td>
-                      <td>{row.teachersMale.toLocaleString()}</td>
-                      <td>{row.leadersFemale.toLocaleString()}</td>
-                      <td>{row.leadersMale.toLocaleString()}</td>
-                      <td><TableCell value={row.trainerName} /></td>
-                      <td><TableCell value={row.fundedBy ?? "N/A"} /></td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DashboardListHeader template="100px minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1fr) 100px 110px 90px 90px 90px 90px minmax(0,1fr) minmax(0,1fr)">
+              <span>Date</span>
+              <span>Training name</span>
+              <span>Location</span>
+              <span>District</span>
+              <span>Schools attended</span>
+              <span>Total participants</span>
+              <span>Teachers F</span>
+              <span>Teachers M</span>
+              <span>Leaders F</span>
+              <span>Leaders M</span>
+              <span>Trainer</span>
+              <span>Funded by</span>
+            </DashboardListHeader>
+            {filteredTrainingActivities.length === 0 ? (
+              <div className="py-3">No training records match the current filters.</div>
+            ) : (
+              filteredTrainingActivities.map((row: PortalTrainingActivityReportRow) => (
+                <DashboardListRow
+                  key={row.recordId}
+                  template="100px minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1fr) 100px 110px 90px 90px 90px 90px minmax(0,1fr) minmax(0,1fr)"
+                >
+                  <span>{formatDate(row.date)}</span>
+                  <span className="min-w-0"><TableCell value={row.trainingName} className="is-wide" /></span>
+                  <span className="min-w-0"><TableCell value={row.location} className="is-wide" /></span>
+                  <span className="min-w-0"><TableCell value={row.district} /></span>
+                  <span>{row.schoolsAttended.toLocaleString()}</span>
+                  <span>{row.participantsTotal.toLocaleString()}</span>
+                  <span>{row.teachersFemale.toLocaleString()}</span>
+                  <span>{row.teachersMale.toLocaleString()}</span>
+                  <span>{row.leadersFemale.toLocaleString()}</span>
+                  <span>{row.leadersMale.toLocaleString()}</span>
+                  <span className="min-w-0"><TableCell value={row.trainerName} /></span>
+                  <span className="min-w-0"><TableCell value={row.fundedBy ?? "N/A"} /></span>
+                </DashboardListRow>
+              ))
+            )}
           </div>
         ) : null}
 
         {detailReportType === "visit" ? (
           <div className="table-wrap portal-report-table portal-table-compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>School</th>
-                  <th>District</th>
-                  <th>Visit type</th>
-                  <th>Implementation</th>
-                  <th>Pathway</th>
-                  <th>Focus areas</th>
-                  <th>Coach</th>
-                  <th>Follow-up</th>
-                  <th>Funded by</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredVisitActivities.length === 0 ? (
-                  <tr>
-                    <td colSpan={10}>No visit records match the current filters.</td>
-                  </tr>
-                ) : (
-                  filteredVisitActivities.map((row: PortalVisitActivityReportRow) => (
-                    <tr key={row.visitId}>
-                      <td>{formatDate(row.date)}</td>
-                      <td>
-                        <Link href={`/portal/schools/${row.schoolId}`}>
-                          <TableCell value={row.schoolName} className="is-wide" />
-                        </Link>
-                      </td>
-                      <td><TableCell value={row.district} /></td>
-                      <td><TableCell value={row.visitType} /></td>
-                      <td>{formatLabel(row.implementationStatus)}</td>
-                      <td>{formatLabel(row.visitPathway)}</td>
-                      <td><TableCell value={row.focusAreas} className="is-wide" /></td>
-                      <td><TableCell value={row.coachName} /></td>
-                      <td>{formatDate(row.followUpDate)}</td>
-                      <td><TableCell value={row.fundedBy ?? "N/A"} /></td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DashboardListHeader template="100px minmax(0,1.4fr) minmax(0,1fr) 110px 130px 110px minmax(0,1.4fr) minmax(0,1fr) 110px minmax(0,1fr)">
+              <span>Date</span>
+              <span>School</span>
+              <span>District</span>
+              <span>Visit type</span>
+              <span>Implementation</span>
+              <span>Pathway</span>
+              <span>Focus areas</span>
+              <span>Coach</span>
+              <span>Follow-up</span>
+              <span>Funded by</span>
+            </DashboardListHeader>
+            {filteredVisitActivities.length === 0 ? (
+              <div className="py-3">No visit records match the current filters.</div>
+            ) : (
+              filteredVisitActivities.map((row: PortalVisitActivityReportRow) => (
+                <DashboardListRow
+                  key={row.visitId}
+                  template="100px minmax(0,1.4fr) minmax(0,1fr) 110px 130px 110px minmax(0,1.4fr) minmax(0,1fr) 110px minmax(0,1fr)"
+                >
+                  <span>{formatDate(row.date)}</span>
+                  <span className="min-w-0">
+                    <Link href={`/portal/schools/${row.schoolId}`}>
+                      <TableCell value={row.schoolName} className="is-wide" />
+                    </Link>
+                  </span>
+                  <span className="min-w-0"><TableCell value={row.district} /></span>
+                  <span className="min-w-0"><TableCell value={row.visitType} /></span>
+                  <span>{formatLabel(row.implementationStatus)}</span>
+                  <span>{formatLabel(row.visitPathway)}</span>
+                  <span className="min-w-0"><TableCell value={row.focusAreas} className="is-wide" /></span>
+                  <span className="min-w-0"><TableCell value={row.coachName} /></span>
+                  <span>{formatDate(row.followUpDate)}</span>
+                  <span className="min-w-0"><TableCell value={row.fundedBy ?? "N/A"} /></span>
+                </DashboardListRow>
+              ))
+            )}
           </div>
         ) : null}
 
         {detailReportType === "evaluation" ? (
           <div className="table-wrap portal-report-table portal-table-compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>School</th>
-                  <th>Teacher</th>
-                  <th>Grade</th>
-                  <th>Class size</th>
-                  <th>Score</th>
-                  <th>Level</th>
-                  <th>Top strength</th>
-                  <th>Priority gap</th>
-                  <th>Observer</th>
-                  <th>Next coaching action</th>
-                  <th>Funded by</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEvaluationActivities.length === 0 ? (
-                  <tr>
-                    <td colSpan={12}>No evaluation records match the current filters.</td>
-                  </tr>
-                ) : (
-                  filteredEvaluationActivities.map((row: PortalEvaluationActivityReportRow) => (
-                    <tr key={row.evaluationId}>
-                      <td>{formatDate(row.date)}</td>
-                      <td>
-                        <Link href={`/portal/schools/${row.schoolId}`}>
-                          <TableCell value={row.schoolName} className="is-wide" />
-                        </Link>
-                      </td>
-                      <td><TableCell value={row.teacherName} /></td>
-                      <td>{row.grade}</td>
-                      <td>{row.classSize?.toLocaleString() ?? "N/A"}</td>
-                      <td>{numberOrDash(row.overallScore)}</td>
-                      <td>{row.overallLevel}</td>
-                      <td><TableCell value={row.topStrengthDomain ?? "N/A"} /></td>
-                      <td><TableCell value={row.topGapDomain ?? "N/A"} /></td>
-                      <td><TableCell value={row.observerName} /></td>
-                      <td><TableCell value={row.nextCoachingAction} className="is-wide" /></td>
-                      <td><TableCell value={row.fundedBy ?? "N/A"} /></td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DashboardListHeader template="100px minmax(0,1.4fr) minmax(0,1fr) 80px 90px 70px 90px minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1fr)">
+              <span>Date</span>
+              <span>School</span>
+              <span>Teacher</span>
+              <span>Grade</span>
+              <span>Class size</span>
+              <span>Score</span>
+              <span>Level</span>
+              <span>Top strength</span>
+              <span>Priority gap</span>
+              <span>Observer</span>
+              <span>Next coaching action</span>
+              <span>Funded by</span>
+            </DashboardListHeader>
+            {filteredEvaluationActivities.length === 0 ? (
+              <div className="py-3">No evaluation records match the current filters.</div>
+            ) : (
+              filteredEvaluationActivities.map((row: PortalEvaluationActivityReportRow) => (
+                <DashboardListRow
+                  key={row.evaluationId}
+                  template="100px minmax(0,1.4fr) minmax(0,1fr) 80px 90px 70px 90px minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1fr)"
+                >
+                  <span>{formatDate(row.date)}</span>
+                  <span className="min-w-0">
+                    <Link href={`/portal/schools/${row.schoolId}`}>
+                      <TableCell value={row.schoolName} className="is-wide" />
+                    </Link>
+                  </span>
+                  <span className="min-w-0"><TableCell value={row.teacherName} /></span>
+                  <span>{row.grade}</span>
+                  <span>{row.classSize?.toLocaleString() ?? "N/A"}</span>
+                  <span>{numberOrDash(row.overallScore)}</span>
+                  <span>{row.overallLevel}</span>
+                  <span className="min-w-0"><TableCell value={row.topStrengthDomain ?? "N/A"} /></span>
+                  <span className="min-w-0"><TableCell value={row.topGapDomain ?? "N/A"} /></span>
+                  <span className="min-w-0"><TableCell value={row.observerName} /></span>
+                  <span className="min-w-0"><TableCell value={row.nextCoachingAction} className="is-wide" /></span>
+                  <span className="min-w-0"><TableCell value={row.fundedBy ?? "N/A"} /></span>
+                </DashboardListRow>
+              ))
+            )}
           </div>
         ) : null}
 
         {detailReportType === "assessment" ? (
           <div className="table-wrap portal-report-table portal-table-compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>School</th>
-                  <th>District</th>
-                  <th>Assessment type</th>
-                  <th>Class</th>
-                  <th>Learners assessed</th>
-                  <th>Letter sounds</th>
-                  <th>Decoding</th>
-                  <th>Fluency</th>
-                  <th>Comprehension</th>
-                  <th>Assessor</th>
-                  <th>Funded by</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAssessmentActivities.length === 0 ? (
-                  <tr>
-                    <td colSpan={12}>No assessment records match the current filters.</td>
-                  </tr>
-                ) : (
-                  filteredAssessmentActivities.map((row: PortalAssessmentActivityReportRow) => (
-                    <tr key={row.sessionId}>
-                      <td>{formatDate(row.date)}</td>
-                      <td>
-                        <Link href={`/portal/schools/${row.schoolId}`}>
-                          <TableCell value={row.schoolName} className="is-wide" />
-                        </Link>
-                      </td>
-                      <td><TableCell value={row.district} /></td>
-                      <td>{formatLabel(row.assessmentType)}</td>
-                      <td>{row.classGrade}</td>
-                      <td>{row.learnersAssessed.toLocaleString()}</td>
-                      <td>{numberOrDash(row.averageLetterSounds)}</td>
-                      <td>{numberOrDash(row.averageDecoding)}</td>
-                      <td>{numberOrDash(row.averageFluency)}</td>
-                      <td>{numberOrDash(row.averageComprehension)}</td>
-                      <td><TableCell value={row.assessorName} /></td>
-                      <td><TableCell value={row.fundedBy ?? "N/A"} /></td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DashboardListHeader template="100px minmax(0,1.4fr) minmax(0,1fr) 130px 80px 110px 100px 100px 90px 110px minmax(0,1fr) minmax(0,1fr)">
+              <span>Date</span>
+              <span>School</span>
+              <span>District</span>
+              <span>Assessment type</span>
+              <span>Class</span>
+              <span>Learners assessed</span>
+              <span>Letter sounds</span>
+              <span>Decoding</span>
+              <span>Fluency</span>
+              <span>Comprehension</span>
+              <span>Assessor</span>
+              <span>Funded by</span>
+            </DashboardListHeader>
+            {filteredAssessmentActivities.length === 0 ? (
+              <div className="py-3">No assessment records match the current filters.</div>
+            ) : (
+              filteredAssessmentActivities.map((row: PortalAssessmentActivityReportRow) => (
+                <DashboardListRow
+                  key={row.sessionId}
+                  template="100px minmax(0,1.4fr) minmax(0,1fr) 130px 80px 110px 100px 100px 90px 110px minmax(0,1fr) minmax(0,1fr)"
+                >
+                  <span>{formatDate(row.date)}</span>
+                  <span className="min-w-0">
+                    <Link href={`/portal/schools/${row.schoolId}`}>
+                      <TableCell value={row.schoolName} className="is-wide" />
+                    </Link>
+                  </span>
+                  <span className="min-w-0"><TableCell value={row.district} /></span>
+                  <span>{formatLabel(row.assessmentType)}</span>
+                  <span>{row.classGrade}</span>
+                  <span>{row.learnersAssessed.toLocaleString()}</span>
+                  <span>{numberOrDash(row.averageLetterSounds)}</span>
+                  <span>{numberOrDash(row.averageDecoding)}</span>
+                  <span>{numberOrDash(row.averageFluency)}</span>
+                  <span>{numberOrDash(row.averageComprehension)}</span>
+                  <span className="min-w-0"><TableCell value={row.assessorName} /></span>
+                  <span className="min-w-0"><TableCell value={row.fundedBy ?? "N/A"} /></span>
+                </DashboardListRow>
+              ))
+            )}
           </div>
         ) : null}
       </section>
@@ -1137,90 +1118,65 @@ export function PortalOperationsReportsWorkspace({
         </div>
 
         <div className="table-wrap portal-report-table portal-table-compact">
-          <table>
-            <thead>
-              <tr>
-                <th>Country</th>
-                <th>Region</th>
-                <th>Sub-region</th>
-                <th>District</th>
-                <th>Sub-county</th>
-                <th>Parish</th>
-                <th>Village</th>
-                <th>School ID</th>
-                <th>School Code</th>
-                <th>Account owner</th>
-                <th>School name</th>
-                <th>Last activity</th>
-                <th>Enrollment</th>
-                <th>Status</th>
-                <th>Phone</th>
-                <th>Primary contact</th>
-                <th>Trainings</th>
-                <th>Visits</th>
-                <th>1001 story</th>
-                <th>Resources</th>
-                <th>Lesson evaluations</th>
-                <th>Teacher assessments</th>
-                <th>Learner assessments</th>
-                <th>Impl started</th>
-                <th>Impl not started</th>
-                <th>Impl partial</th>
-                <th>Demo visits</th>
-                <th>Latest impl status</th>
-                <th>Latest visit pathway</th>
-                <th>Total records</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSchools.length === 0 ? (
-                <tr>
-                  <td colSpan={30}>No schools match the selected filters.</td>
-                </tr>
-              ) : (
-                filteredSchools.map((row) => (
-                  <tr key={row.schoolId}>
-                    <td>{row.country ?? "Uganda"}</td>
-                    <td>{row.region ?? "N/A"}</td>
-                    <td>{row.subRegion ?? "N/A"}</td>
-                    <td><TableCell value={row.district} /></td>
-                    <td><TableCell value={row.subCounty ?? "N/A"} /></td>
-                    <td><TableCell value={row.parish ?? "N/A"} /></td>
-                    <td><TableCell value={row.village ?? "N/A"} /></td>
-                    <td>{row.schoolId}</td>
-                    <td><TableCell value={row.schoolCode} className="is-code" /></td>
-                    <td><TableCell value={row.accountOwner} /></td>
-                    <td>
-                      <Link href={`/portal/schools/${row.schoolId}`}>
-                        <TableCell value={row.schoolName} className="is-school-name" />
-                      </Link>
-                    </td>
-                    <td>{formatDate(row.lastActivityDate)}</td>
-                    <td>{row.currentEnrollment.toLocaleString()}</td>
-                    <td>{row.schoolStatus}</td>
-                    <td><TableCell value={row.phone ?? "N/A"} /></td>
-                    <td><TableCell value={row.primaryContact ?? "N/A"} className="is-contact" /></td>
-                    <td>{row.trainings.toLocaleString()}</td>
-                    <td>{row.schoolVisits.toLocaleString()}</td>
-                    <td>{row.storyActivities.toLocaleString()}</td>
-                    <td>{row.resourcesDistributed.toLocaleString()}</td>
-                    <td>{row.lessonEvaluations.toLocaleString()}</td>
-                    <td>{row.teacherAssessments.toLocaleString()}</td>
-                    <td>{row.learnerAssessments.toLocaleString()}</td>
-                    <td>{row.implementationStartedVisits.toLocaleString()}</td>
-                    <td>{row.implementationNotStartedVisits.toLocaleString()}</td>
-                    <td>{row.implementationPartialVisits.toLocaleString()}</td>
-                    <td>{row.demoVisits.toLocaleString()}</td>
-                    <td>{row.latestImplementationStatus ? formatLabel(row.latestImplementationStatus) : "N/A"}</td>
-                    <td>{row.latestVisitPathway ? formatLabel(row.latestVisitPathway) : "N/A"}</td>
-                    <td>
-                      <strong>{getModuleCount(row, moduleFilter).toLocaleString()}</strong>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <DashboardListHeader template="80px 100px 110px 110px 110px 110px 110px 80px 110px 110px minmax(0,1.4fr) 110px 100px 90px 110px minmax(0,1fr) 90px 80px 90px 90px 110px 110px 110px 100px 110px 100px 90px 130px 130px 100px">
+            <span>Country</span><span>Region</span><span>Sub-region</span>
+            <span>District</span><span>Sub-county</span><span>Parish</span><span>Village</span>
+            <span>School ID</span><span>School Code</span><span>Account owner</span>
+            <span>School name</span><span>Last activity</span><span>Enrollment</span>
+            <span>Status</span><span>Phone</span><span>Primary contact</span>
+            <span>Trainings</span><span>Visits</span><span>1001 story</span>
+            <span>Resources</span><span>Lesson evaluations</span><span>Teacher assessments</span>
+            <span>Learner assessments</span><span>Impl started</span><span>Impl not started</span>
+            <span>Impl partial</span><span>Demo visits</span><span>Latest impl status</span>
+            <span>Latest visit pathway</span><span>Total records</span>
+          </DashboardListHeader>
+          {filteredSchools.length === 0 ? (
+            <div className="py-3">No schools match the selected filters.</div>
+          ) : (
+            filteredSchools.map((row) => (
+              <DashboardListRow
+                key={row.schoolId}
+                template="80px 100px 110px 110px 110px 110px 110px 80px 110px 110px minmax(0,1.4fr) 110px 100px 90px 110px minmax(0,1fr) 90px 80px 90px 90px 110px 110px 110px 100px 110px 100px 90px 130px 130px 100px"
+              >
+                <span>{row.country ?? "Uganda"}</span>
+                <span>{row.region ?? "N/A"}</span>
+                <span>{row.subRegion ?? "N/A"}</span>
+                <span><TableCell value={row.district} /></span>
+                <span><TableCell value={row.subCounty ?? "N/A"} /></span>
+                <span><TableCell value={row.parish ?? "N/A"} /></span>
+                <span><TableCell value={row.village ?? "N/A"} /></span>
+                <span>{row.schoolId}</span>
+                <span><TableCell value={row.schoolCode} className="is-code" /></span>
+                <span><TableCell value={row.accountOwner} /></span>
+                <span className="min-w-0">
+                  <Link href={`/portal/schools/${row.schoolId}`}>
+                    <TableCell value={row.schoolName} className="is-school-name" />
+                  </Link>
+                </span>
+                <span>{formatDate(row.lastActivityDate)}</span>
+                <span>{row.currentEnrollment.toLocaleString()}</span>
+                <span>{row.schoolStatus}</span>
+                <span><TableCell value={row.phone ?? "N/A"} /></span>
+                <span className="min-w-0"><TableCell value={row.primaryContact ?? "N/A"} className="is-contact" /></span>
+                <span>{row.trainings.toLocaleString()}</span>
+                <span>{row.schoolVisits.toLocaleString()}</span>
+                <span>{row.storyActivities.toLocaleString()}</span>
+                <span>{row.resourcesDistributed.toLocaleString()}</span>
+                <span>{row.lessonEvaluations.toLocaleString()}</span>
+                <span>{row.teacherAssessments.toLocaleString()}</span>
+                <span>{row.learnerAssessments.toLocaleString()}</span>
+                <span>{row.implementationStartedVisits.toLocaleString()}</span>
+                <span>{row.implementationNotStartedVisits.toLocaleString()}</span>
+                <span>{row.implementationPartialVisits.toLocaleString()}</span>
+                <span>{row.demoVisits.toLocaleString()}</span>
+                <span>{row.latestImplementationStatus ? formatLabel(row.latestImplementationStatus) : "N/A"}</span>
+                <span>{row.latestVisitPathway ? formatLabel(row.latestVisitPathway) : "N/A"}</span>
+                <span>
+                  <strong>{getModuleCount(row, moduleFilter).toLocaleString()}</strong>
+                </span>
+              </DashboardListRow>
+            ))
+          )}
         </div>
       </section>
     </section>

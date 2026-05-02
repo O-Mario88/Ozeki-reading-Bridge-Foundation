@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type {
   FinanceAuditComplianceCheckRecord,
   FinanceAuditExceptionRecord,
@@ -253,60 +254,57 @@ export function PortalFinanceAuditCenterManager({
             <p>No open exceptions.</p>
           ) : (
             <div className="table-wrap finance-table-compact">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Entity</th>
-                    <th>Rule</th>
-                    <th>Severity</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredExceptions.map((item) => (
-                    <tr key={item.id}>
-                      <td>{formatDate(item.createdAt)}</td>
-                      <td>{item.entityType} #{item.entityId}</td>
-                      <td title={item.message}>{item.ruleCode}</td>
-                      <td><span className={`finance-status-tag finance-status-${item.severity}`}>{item.severity}</span></td>
-                      <td>{item.amount !== undefined ? formatMoney(item.currency || "UGX", item.amount) : "—"}</td>
-                      <td><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></td>
-                      <td>
-                        <div className="action-row finance-row-actions">
-                          <button
-                            type="button"
-                            className="button button-ghost button-sm"
-                            onClick={() => setSelectedMessage(item.message)}
-                          >
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            className="button button-ghost button-sm"
-                            onClick={() => handleExceptionAction(item.id, "resolved")}
-                            disabled={loading}
-                          >
-                            Resolve
-                          </button>
-                          {canOverride ? (
-                            <button
-                              type="button"
-                              className="button button-ghost button-sm finance-row-danger"
-                              onClick={() => handleExceptionAction(item.id, "overridden")}
-                              disabled={loading}
-                            >
-                              Override
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DashboardListHeader template="100px minmax(0,1fr) minmax(0,1.2fr) 100px 130px 110px 240px">
+                <span>Date</span>
+                <span>Entity</span>
+                <span>Rule</span>
+                <span>Severity</span>
+                <span>Amount</span>
+                <span>Status</span>
+                <span>Actions</span>
+              </DashboardListHeader>
+              {filteredExceptions.map((item) => (
+                <DashboardListRow
+                  key={item.id}
+                  template="100px minmax(0,1fr) minmax(0,1.2fr) 100px 130px 110px 240px"
+                >
+                  <span>{formatDate(item.createdAt)}</span>
+                  <span className="truncate">{item.entityType} #{item.entityId}</span>
+                  <span className="truncate" title={item.message}>{item.ruleCode}</span>
+                  <span><span className={`finance-status-tag finance-status-${item.severity}`}>{item.severity}</span></span>
+                  <span>{item.amount !== undefined ? formatMoney(item.currency || "UGX", item.amount) : "—"}</span>
+                  <span><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></span>
+                  <span>
+                    <span className="action-row finance-row-actions">
+                      <button
+                        type="button"
+                        className="button button-ghost button-sm"
+                        onClick={() => setSelectedMessage(item.message)}
+                      >
+                        View
+                      </button>
+                      <button
+                        type="button"
+                        className="button button-ghost button-sm"
+                        onClick={() => handleExceptionAction(item.id, "resolved")}
+                        disabled={loading}
+                      >
+                        Resolve
+                      </button>
+                      {canOverride ? (
+                        <button
+                          type="button"
+                          className="button button-ghost button-sm finance-row-danger"
+                          onClick={() => handleExceptionAction(item.id, "overridden")}
+                          disabled={loading}
+                        >
+                          Override
+                        </button>
+                      ) : null}
+                    </span>
+                  </span>
+                </DashboardListRow>
+              ))}
             </div>
           )
         ) : null}
@@ -316,30 +314,27 @@ export function PortalFinanceAuditCenterManager({
             <p>No receipt records found.</p>
           ) : (
             <div className="table-wrap finance-table-compact">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Vendor</th>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Expense</th>
-                    <th>Hash</th>
-                    <th>Flags</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRegistry.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.vendorName}</td>
-                      <td>{formatDate(item.receiptDate)}</td>
-                      <td>{formatMoney(item.currency, item.receiptAmount)}</td>
-                      <td>{item.expenseNumber || `#${item.expenseId}`}</td>
-                      <td><code>{item.fileHashSha256.slice(0, 14)}...</code></td>
-                      <td>{item.flags.length > 0 ? item.flags.join(", ") : "ok"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DashboardListHeader template="minmax(0,1.4fr) 100px 130px 130px 180px minmax(0,1fr)">
+                <span>Vendor</span>
+                <span>Date</span>
+                <span>Amount</span>
+                <span>Expense</span>
+                <span>Hash</span>
+                <span>Flags</span>
+              </DashboardListHeader>
+              {filteredRegistry.map((item) => (
+                <DashboardListRow
+                  key={item.id}
+                  template="minmax(0,1.4fr) 100px 130px 130px 180px minmax(0,1fr)"
+                >
+                  <span className="truncate">{item.vendorName}</span>
+                  <span>{formatDate(item.receiptDate)}</span>
+                  <span>{formatMoney(item.currency, item.receiptAmount)}</span>
+                  <span className="truncate">{item.expenseNumber || `#${item.expenseId}`}</span>
+                  <span><code>{item.fileHashSha256.slice(0, 14)}...</code></span>
+                  <span className="truncate">{item.flags.length > 0 ? item.flags.join(", ") : "ok"}</span>
+                </DashboardListRow>
+              ))}
             </div>
           )
         ) : null}
@@ -349,26 +344,23 @@ export function PortalFinanceAuditCenterManager({
             <p>No risk scores available.</p>
           ) : (
             <div className="table-wrap finance-table-compact">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Entity</th>
-                    <th>Risk Score</th>
-                    <th>Signals</th>
-                    <th>Computed</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRisk.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.entityType} #{item.entityId}</td>
-                      <td>{item.riskScore}</td>
-                      <td>{item.signals.join(", ") || "—"}</td>
-                      <td>{formatDate(item.computedAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DashboardListHeader template="minmax(0,1.2fr) 110px minmax(0,1.6fr) 130px">
+                <span>Entity</span>
+                <span>Risk Score</span>
+                <span>Signals</span>
+                <span>Computed</span>
+              </DashboardListHeader>
+              {filteredRisk.map((item) => (
+                <DashboardListRow
+                  key={item.id}
+                  template="minmax(0,1.2fr) 110px minmax(0,1.6fr) 130px"
+                >
+                  <span className="truncate">{item.entityType} #{item.entityId}</span>
+                  <span>{item.riskScore}</span>
+                  <span className="truncate">{item.signals.join(", ") || "—"}</span>
+                  <span>{formatDate(item.computedAt)}</span>
+                </DashboardListRow>
+              ))}
             </div>
           )
         ) : null}
@@ -378,26 +370,23 @@ export function PortalFinanceAuditCenterManager({
             <p>No active compliance issues.</p>
           ) : (
             <div className="table-wrap finance-table-compact">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Rule</th>
-                    <th>Title</th>
-                    <th>Severity</th>
-                    <th>Open Count</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {complianceChecks.map((item) => (
-                    <tr key={item.ruleCode}>
-                      <td>{item.ruleCode}</td>
-                      <td>{item.title}</td>
-                      <td><span className={`finance-status-tag finance-status-${item.severity}`}>{item.severity}</span></td>
-                      <td>{item.openCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DashboardListHeader template="160px minmax(0,1.6fr) 110px 110px">
+                <span>Rule</span>
+                <span>Title</span>
+                <span>Severity</span>
+                <span>Open Count</span>
+              </DashboardListHeader>
+              {complianceChecks.map((item) => (
+                <DashboardListRow
+                  key={item.ruleCode}
+                  template="160px minmax(0,1.6fr) 110px 110px"
+                >
+                  <span className="truncate">{item.ruleCode}</span>
+                  <span className="truncate">{item.title}</span>
+                  <span><span className={`finance-status-tag finance-status-${item.severity}`}>{item.severity}</span></span>
+                  <span>{item.openCount}</span>
+                </DashboardListRow>
+              ))}
             </div>
           )
         ) : null}

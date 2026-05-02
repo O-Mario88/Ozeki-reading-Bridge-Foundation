@@ -1,5 +1,6 @@
 import { requirePortalUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import {
   listActionPlanFollowUpsPostgres,
   getCoachingCycleStatusPostgres,
@@ -90,45 +91,51 @@ export default async function CoachingQaDashboardPage() {
           {followUps.length === 0 ? (
             <p className="text-gray-400">No action plans with review dates yet.</p>
           ) : (
-            <table className="coaching-qa-table">
-              <thead>
-                <tr>
-                  <th>Review</th>
-                  <th>Teacher / School</th>
-                  <th>Observer</th>
-                  <th>Observation</th>
-                  <th>Action agreed</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {followUps.map((f) => (
-                  <tr key={f.observationId} className={statusClass(f.status)}>
-                    <td>
-                      {f.reviewDate ? (
-                        <>
-                          <strong>{f.reviewDate}</strong><br />
-                          <small>
-                            {f.daysUntilReview !== null
-                              ? f.daysUntilReview < 0
-                                ? `${Math.abs(f.daysUntilReview)}d overdue`
-                                : `in ${f.daysUntilReview}d`
-                              : ""}
-                          </small>
-                        </>
-                      ) : <small className="text-gray-400">no date</small>}
-                    </td>
-                    <td><strong>{f.teacherName}</strong><br /><small>{f.schoolName}</small></td>
-                    <td>{f.coachName ?? "—"}</td>
-                    <td><code>{f.observationCode}</code><br /><small>{f.observationDate}</small></td>
-                    <td className="coaching-qa-action-text">{f.actionToTake || <small className="text-gray-400">—</small>}</td>
-                    <td><span className={`coaching-qa-pill ${statusClass(f.status)}`}>{f.status.replace("_", " ")}</span></td>
-                    <td><a href={`/portal/observations/${f.observationId}`}>Open →</a></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="coaching-qa-table">
+              <DashboardListHeader template="120px minmax(0,1.2fr) 110px 130px minmax(0,1.6fr) 110px 70px">
+                <span>Review</span>
+                <span>Teacher / School</span>
+                <span>Observer</span>
+                <span>Observation</span>
+                <span>Action agreed</span>
+                <span>Status</span>
+                <span />
+              </DashboardListHeader>
+              {followUps.map((f) => (
+                <DashboardListRow
+                  key={f.observationId}
+                  template="120px minmax(0,1.2fr) 110px 130px minmax(0,1.6fr) 110px 70px"
+                  className={statusClass(f.status)}
+                >
+                  <span>
+                    {f.reviewDate ? (
+                      <>
+                        <strong className="block">{f.reviewDate}</strong>
+                        <small>
+                          {f.daysUntilReview !== null
+                            ? f.daysUntilReview < 0
+                              ? `${Math.abs(f.daysUntilReview)}d overdue`
+                              : `in ${f.daysUntilReview}d`
+                            : ""}
+                        </small>
+                      </>
+                    ) : <small className="text-gray-400">no date</small>}
+                  </span>
+                  <span className="min-w-0">
+                    <strong className="block truncate">{f.teacherName}</strong>
+                    <small className="block truncate">{f.schoolName}</small>
+                  </span>
+                  <span className="truncate">{f.coachName ?? "—"}</span>
+                  <span className="min-w-0">
+                    <code className="block truncate">{f.observationCode}</code>
+                    <small>{f.observationDate}</small>
+                  </span>
+                  <span className="coaching-qa-action-text truncate">{f.actionToTake || <small className="text-gray-400">—</small>}</span>
+                  <span><span className={`coaching-qa-pill ${statusClass(f.status)}`}>{f.status.replace("_", " ")}</span></span>
+                  <span><a href={`/portal/observations/${f.observationId}`}>Open →</a></span>
+                </DashboardListRow>
+              ))}
+            </div>
           )}
         </section>
 
@@ -138,40 +145,40 @@ export default async function CoachingQaDashboardPage() {
           <p className="text-gray-500 text-sm">
             Target: 4 visits per term per school. Schools falling behind are at risk of losing programme fidelity.
           </p>
-          <table className="coaching-qa-table">
-            <thead>
-              <tr>
-                <th>School</th>
-                <th>District</th>
-                <th>Visits this term</th>
-                <th>Progress</th>
-                <th>Last visit</th>
-                <th>Assigned coach</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cycleStatus.slice(0, 50).map((s) => (
-                <tr key={s.schoolId} className={statusClass(s.status)}>
-                  <td><a href={`/portal/schools/${s.schoolId}`}><strong>{s.schoolName}</strong></a></td>
-                  <td>{s.district}</td>
-                  <td>{s.visitsThisTerm} / {s.targetVisitsPerTerm}</td>
-                  <td>
-                    <div className="coaching-qa-progress">
-                      <div className="coaching-qa-progress-bar" style={{ width: `${s.completionPct}%` }} />
-                    </div>
-                    <small>{s.completionPct}%</small>
-                  </td>
-                  <td>
-                    {s.lastVisitDate ?? <small className="text-gray-400">never</small>}
-                    {s.daysSinceLastVisit !== null ? <><br /><small>{s.daysSinceLastVisit}d ago</small></> : null}
-                  </td>
-                  <td>{s.assignedCoachName ?? <small className="text-gray-400">—</small>}</td>
-                  <td><span className={`coaching-qa-pill ${statusClass(s.status)}`}>{s.status.replace("_", " ")}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="coaching-qa-table">
+            <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1fr) 110px 140px 130px minmax(0,1fr) 110px">
+              <span>School</span>
+              <span>District</span>
+              <span>Visits this term</span>
+              <span>Progress</span>
+              <span>Last visit</span>
+              <span>Assigned coach</span>
+              <span>Status</span>
+            </DashboardListHeader>
+            {cycleStatus.slice(0, 50).map((s) => (
+              <DashboardListRow
+                key={s.schoolId}
+                template="minmax(0,1.4fr) minmax(0,1fr) 110px 140px 130px minmax(0,1fr) 110px"
+                className={statusClass(s.status)}
+              >
+                <span className="min-w-0"><a href={`/portal/schools/${s.schoolId}`}><strong className="truncate inline-block max-w-full">{s.schoolName}</strong></a></span>
+                <span className="truncate">{s.district}</span>
+                <span>{s.visitsThisTerm} / {s.targetVisitsPerTerm}</span>
+                <span>
+                  <span className="coaching-qa-progress block">
+                    <span className="coaching-qa-progress-bar block" style={{ width: `${s.completionPct}%` }} />
+                  </span>
+                  <small>{s.completionPct}%</small>
+                </span>
+                <span>
+                  {s.lastVisitDate ?? <small className="text-gray-400">never</small>}
+                  {s.daysSinceLastVisit !== null ? <small className="block">{s.daysSinceLastVisit}d ago</small> : null}
+                </span>
+                <span className="truncate">{s.assignedCoachName ?? <small className="text-gray-400">—</small>}</span>
+                <span><span className={`coaching-qa-pill ${statusClass(s.status)}`}>{s.status.replace("_", " ")}</span></span>
+              </DashboardListRow>
+            ))}
+          </div>
           {cycleStatus.length > 50 ? <small className="text-gray-400">Showing first 50 of {cycleStatus.length} schools.</small> : null}
         </section>
 
@@ -184,33 +191,36 @@ export default async function CoachingQaDashboardPage() {
           {interRater.length === 0 ? (
             <p className="text-gray-400">Not enough data yet. Once 2+ observers visit the same school, variance will be computed here.</p>
           ) : (
-            <table className="coaching-qa-table">
-              <thead>
-                <tr>
-                  <th>School</th>
-                  <th>Observers</th>
-                  <th>Avg score</th>
-                  <th>Range</th>
-                  <th>Std dev</th>
-                  <th>Flag</th>
-                </tr>
-              </thead>
-              <tbody>
-                {interRater.map((r) => (
-                  <tr key={r.schoolId} className={statusClass(r.flag)}>
-                    <td><a href={`/portal/schools/${r.schoolId}`}><strong>{r.schoolName}</strong></a><br /><small>{r.district}</small></td>
-                    <td>
-                      <strong>{r.observersCount}</strong> across {r.observationsCount} observations<br />
-                      <small>{r.observers.map((o) => `${o.observerName} (${o.observationsCount} obs · ★${o.avgScore})`).join(" · ")}</small>
-                    </td>
-                    <td>{r.avgRubricScore !== null ? `★${r.avgRubricScore}` : "—"}</td>
-                    <td>{r.rangeLow !== null && r.rangeHigh !== null ? `${r.rangeLow} – ${r.rangeHigh}` : "—"}</td>
-                    <td><strong>{r.stdDevScore ?? "—"}</strong></td>
-                    <td><span className={`coaching-qa-pill ${statusClass(r.flag)}`}>{r.flag.replace("_", " ")}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="coaching-qa-table">
+              <DashboardListHeader template="minmax(0,1.4fr) minmax(0,2fr) 100px 120px 90px 130px">
+                <span>School</span>
+                <span>Observers</span>
+                <span>Avg score</span>
+                <span>Range</span>
+                <span>Std dev</span>
+                <span>Flag</span>
+              </DashboardListHeader>
+              {interRater.map((r) => (
+                <DashboardListRow
+                  key={r.schoolId}
+                  template="minmax(0,1.4fr) minmax(0,2fr) 100px 120px 90px 130px"
+                  className={statusClass(r.flag)}
+                >
+                  <span className="min-w-0">
+                    <a href={`/portal/schools/${r.schoolId}`}><strong className="block truncate">{r.schoolName}</strong></a>
+                    <small className="block truncate">{r.district}</small>
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block"><strong>{r.observersCount}</strong> across {r.observationsCount} observations</span>
+                    <small className="block truncate">{r.observers.map((o) => `${o.observerName} (${o.observationsCount} obs · ★${o.avgScore})`).join(" · ")}</small>
+                  </span>
+                  <span>{r.avgRubricScore !== null ? `★${r.avgRubricScore}` : "—"}</span>
+                  <span>{r.rangeLow !== null && r.rangeHigh !== null ? `${r.rangeLow} – ${r.rangeHigh}` : "—"}</span>
+                  <span><strong>{r.stdDevScore ?? "—"}</strong></span>
+                  <span><span className={`coaching-qa-pill ${statusClass(r.flag)}`}>{r.flag.replace("_", " ")}</span></span>
+                </DashboardListRow>
+              ))}
+            </div>
           )}
         </section>
 
@@ -220,34 +230,37 @@ export default async function CoachingQaDashboardPage() {
           <p className="text-gray-500 text-sm">
             Target: 20 visits per coach per term. Rebalance overloaded coaches; activate those under-utilised.
           </p>
-          <table className="coaching-qa-table">
-            <thead>
-              <tr>
-                <th>Coach</th>
-                <th>Visits</th>
-                <th>Observations</th>
-                <th>Schools</th>
-                <th>Districts</th>
-                <th>Avg score given</th>
-                <th>Last visit</th>
-                <th>Utilisation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {workload.map((c) => (
-                <tr key={c.coachUserId} className={statusClass(c.utilizationStatus)}>
-                  <td><strong>{c.coachName}</strong><br /><small>{c.email ?? ""}</small></td>
-                  <td>{c.visitsThisTerm}</td>
-                  <td>{c.observationsThisTerm}</td>
-                  <td>{c.schoolsCovered}</td>
-                  <td>{c.districtsCovered}</td>
-                  <td>{c.avgRubricScoreGiven !== null ? `★${c.avgRubricScoreGiven}` : "—"}</td>
-                  <td>{c.lastVisitDate ?? <small className="text-gray-400">—</small>}</td>
-                  <td><span className={`coaching-qa-pill ${statusClass(c.utilizationStatus)}`}>{c.utilizationStatus}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="coaching-qa-table">
+            <DashboardListHeader template="minmax(0,1.4fr) 80px 110px 80px 90px 110px 130px 130px">
+              <span>Coach</span>
+              <span>Visits</span>
+              <span>Observations</span>
+              <span>Schools</span>
+              <span>Districts</span>
+              <span>Avg score given</span>
+              <span>Last visit</span>
+              <span>Utilisation</span>
+            </DashboardListHeader>
+            {workload.map((c) => (
+              <DashboardListRow
+                key={c.coachUserId}
+                template="minmax(0,1.4fr) 80px 110px 80px 90px 110px 130px 130px"
+                className={statusClass(c.utilizationStatus)}
+              >
+                <span className="min-w-0">
+                  <strong className="block truncate">{c.coachName}</strong>
+                  <small className="block truncate">{c.email ?? ""}</small>
+                </span>
+                <span>{c.visitsThisTerm}</span>
+                <span>{c.observationsThisTerm}</span>
+                <span>{c.schoolsCovered}</span>
+                <span>{c.districtsCovered}</span>
+                <span>{c.avgRubricScoreGiven !== null ? `★${c.avgRubricScoreGiven}` : "—"}</span>
+                <span>{c.lastVisitDate ?? <small className="text-gray-400">—</small>}</span>
+                <span><span className={`coaching-qa-pill ${statusClass(c.utilizationStatus)}`}>{c.utilizationStatus}</span></span>
+              </DashboardListRow>
+            ))}
+          </div>
         </section>
 
         {/* 5. District Coverage */}
@@ -256,35 +269,35 @@ export default async function CoachingQaDashboardPage() {
           <p className="text-gray-500 text-sm">
             Uncovered districts have zero coaching visits this term. Prioritise coach reassignment.
           </p>
-          <table className="coaching-qa-table">
-            <thead>
-              <tr>
-                <th>District</th>
-                <th>Region</th>
-                <th>Schools</th>
-                <th>Visited</th>
-                <th>Coverage</th>
-                <th>Coaches</th>
-              </tr>
-            </thead>
-            <tbody>
-              {coverage.map((d) => (
-                <tr key={`${d.district}-${d.region}`} className={d.schoolsVisitedThisTerm === 0 ? "coaching-qa-critical" : d.coveragePct < 40 ? "coaching-qa-warning" : ""}>
-                  <td><strong>{d.district}</strong></td>
-                  <td>{d.region}</td>
-                  <td>{d.schoolsTotal}</td>
-                  <td>{d.schoolsVisitedThisTerm}</td>
-                  <td>
-                    <div className="coaching-qa-progress">
-                      <div className="coaching-qa-progress-bar" style={{ width: `${d.coveragePct}%` }} />
-                    </div>
-                    <small>{d.coveragePct}%</small>
-                  </td>
-                  <td>{d.coachNames.length > 0 ? d.coachNames.join(", ") : <small className="text-gray-400">none assigned</small>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="coaching-qa-table">
+            <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1fr) 90px 90px 140px minmax(0,1.4fr)">
+              <span>District</span>
+              <span>Region</span>
+              <span>Schools</span>
+              <span>Visited</span>
+              <span>Coverage</span>
+              <span>Coaches</span>
+            </DashboardListHeader>
+            {coverage.map((d) => (
+              <DashboardListRow
+                key={`${d.district}-${d.region}`}
+                template="minmax(0,1.4fr) minmax(0,1fr) 90px 90px 140px minmax(0,1.4fr)"
+                className={d.schoolsVisitedThisTerm === 0 ? "coaching-qa-critical" : d.coveragePct < 40 ? "coaching-qa-warning" : ""}
+              >
+                <span className="truncate"><strong>{d.district}</strong></span>
+                <span className="truncate">{d.region}</span>
+                <span>{d.schoolsTotal}</span>
+                <span>{d.schoolsVisitedThisTerm}</span>
+                <span>
+                  <span className="coaching-qa-progress block">
+                    <span className="coaching-qa-progress-bar block" style={{ width: `${d.coveragePct}%` }} />
+                  </span>
+                  <small>{d.coveragePct}%</small>
+                </span>
+                <span className="truncate">{d.coachNames.length > 0 ? d.coachNames.join(", ") : <small className="text-gray-400">none assigned</small>}</span>
+              </DashboardListRow>
+            ))}
+          </div>
         </section>
       </div>
     </PortalShell>
