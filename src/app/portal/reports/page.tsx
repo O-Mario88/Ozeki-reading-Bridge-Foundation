@@ -95,17 +95,18 @@ export default async function ReportsPage() {
               Create, analyze, and export reports to drive data-informed decisions.
             </p>
           </div>
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          <div className="flex items-center justify-center md:justify-end gap-2 shrink-0 mt-3 md:mt-0">
             <Link
               href="/portal/reports?action=schedule"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50 whitespace-nowrap"
             >
               <Calendar className="h-4 w-4" strokeWidth={1.75} />
-              Schedule Report
+              <span className="hidden md:inline">Schedule Report</span>
+              <span className="md:hidden">Schedule</span>
             </Link>
             <Link
               href="/portal/reports?action=new"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800 whitespace-nowrap"
             >
               <Plus className="h-4 w-4" strokeWidth={2} />
               New Report
@@ -165,14 +166,14 @@ export default async function ReportsPage() {
 
         {/* Filter bar */}
         <section className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <FilterField label="Date Range" value={dateRangeLabel} icon={Calendar} />
-            <FilterField label="Report Category" value="All Categories" />
+            <FilterField label="Category" mdLabel="Report Category" value="All Categories" />
             <FilterField label="School" value="All Schools" />
             <FilterField label="Format" value="All Formats" />
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-2 h-[58px] px-4 rounded-xl border border-gray-200 bg-white text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+              className="hidden lg:inline-flex items-center justify-center gap-2 h-[58px] px-4 rounded-xl border border-gray-200 bg-white text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
             >
               <Filter className="h-4 w-4" strokeWidth={1.75} />
               Filters
@@ -191,22 +192,22 @@ export default async function ReportsPage() {
               View all reports <ArrowUpRight className="h-3.5 w-3.5 ml-0.5" strokeWidth={2} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-3 lg:grid-cols-5 gap-2.5 lg:gap-3">
             {QUICK_REPORTS.map((qr) => (
               <Link
                 key={qr.title}
                 href={qr.href}
-                className="group rounded-2xl bg-white border border-gray-100 shadow-sm p-4 flex flex-col items-center text-center gap-3 hover:shadow-md hover:border-gray-200 transition"
+                className="group rounded-2xl bg-white border border-gray-100 shadow-sm p-3 lg:p-4 flex flex-col items-center text-center gap-2 lg:gap-3 hover:shadow-md hover:border-gray-200 transition"
               >
                 <span
-                  className="grid h-12 w-12 place-items-center rounded-2xl"
+                  className="grid h-10 w-10 lg:h-12 lg:w-12 place-items-center rounded-xl lg:rounded-2xl"
                   style={{ backgroundColor: qr.iconBg }}
                 >
-                  <qr.icon className="h-5 w-5" style={{ color: qr.iconColor }} strokeWidth={1.75} />
+                  <qr.icon className="h-4 w-4 lg:h-5 lg:w-5" style={{ color: qr.iconColor }} strokeWidth={1.75} />
                 </span>
                 <div className="min-w-0 w-full">
-                  <p className="text-[13px] font-bold text-gray-900 leading-tight truncate">{qr.title}</p>
-                  <p className="text-[11px] text-gray-500 leading-snug mt-1 line-clamp-2">{qr.body}</p>
+                  <p className="text-[11px] lg:text-[13px] font-bold text-gray-900 leading-tight line-clamp-2">{qr.title}</p>
+                  <p className="hidden lg:block text-[11px] text-gray-500 leading-snug mt-1 line-clamp-2">{qr.body}</p>
                 </div>
               </Link>
             ))}
@@ -226,30 +227,60 @@ export default async function ReportsPage() {
           </div>
 
           {/* Mobile: stacked rows */}
-          <ul className="lg:hidden divide-y divide-gray-100">
-            {RECENT_REPORTS.map((r, i) => (
-              <li key={`m-${i}`} className="px-4 py-3 flex items-start gap-3">
-                <div className="grid place-items-center h-11 w-11 rounded-xl bg-gray-50 border border-gray-100 shrink-0">
-                  <FormatIcon format={r.format} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[13px] font-bold text-gray-900 leading-tight truncate">{r.name}</p>
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 whitespace-nowrap shrink-0">
-                      {r.status}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-gray-500 leading-tight mt-0.5 truncate">{r.category}</p>
-                  <div className="flex items-center justify-between gap-2 mt-1.5">
-                    <span className="text-[11px] text-gray-500 truncate">{r.date}</span>
-                    <button type="button" className="grid h-7 w-7 place-items-center rounded-full hover:bg-gray-100 text-gray-500 shrink-0" aria-label="Download">
-                      <Download className="h-3.5 w-3.5" strokeWidth={2} />
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="lg:hidden">
+            {/* Compact mobile header row matching the screenshot */}
+            <div className="px-4 py-2 grid grid-cols-[1.7fr_1fr_1fr_auto_auto] gap-2 text-[9.5px] font-bold uppercase tracking-widest text-gray-500 border-b border-gray-100">
+              <span>Report Name</span>
+              <span>Category</span>
+              <span>Generated By</span>
+              <span aria-hidden />
+              <span aria-hidden />
+            </div>
+            <ul className="divide-y divide-gray-50">
+              {RECENT_REPORTS.slice(0, 5).map((r, i) => {
+                const time = r.date.split("•")[1]?.trim() ?? "";
+                return (
+                  <li
+                    key={`m-${i}`}
+                    className="px-4 py-3 grid grid-cols-[1.7fr_1fr_1fr_auto_auto] items-center gap-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-bold text-gray-900 leading-tight line-clamp-2">{r.name}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-gray-700 leading-tight line-clamp-2">{r.category}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-gray-700 leading-tight truncate">{r.generatedBy}</p>
+                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5 truncate">{time}</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <FormatIcon format={r.format} />
+                      <span className="inline-flex px-1.5 py-px rounded-full text-[8.5px] font-bold bg-emerald-50 text-emerald-700 whitespace-nowrap">
+                        {r.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center shrink-0">
+                      <button
+                        type="button"
+                        className="grid h-7 w-7 place-items-center rounded-full hover:bg-gray-100 text-gray-500"
+                        aria-label="Download report"
+                      >
+                        <Download className="h-3.5 w-3.5" strokeWidth={1.75} />
+                      </button>
+                      <button
+                        type="button"
+                        className="grid h-7 w-7 place-items-center rounded-full hover:bg-gray-100 text-gray-500"
+                        aria-label="More options"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" strokeWidth={1.75} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
           {/* Desktop: table */}
           <div className="hidden lg:block overflow-x-auto">
@@ -299,12 +330,25 @@ export default async function ReportsPage() {
             </table>
           </div>
 
-          {/* Pagination row */}
-          <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
-            <p className="text-[12px] text-gray-500">
-              Showing 1 to 8 of 128 reports
+          {/* Pagination row — mobile shows 5/page (26 pages), desktop 8/page (16 pages) */}
+          <div className="px-4 lg:px-5 py-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
+            <p className="text-[11.5px] lg:text-[12px] text-gray-500">
+              <span className="lg:hidden">Showing 1 to 5 of 128 reports</span>
+              <span className="hidden lg:inline">Showing 1 to 8 of 128 reports</span>
             </p>
-            <div className="flex items-center gap-1 text-[12px]">
+            {/* Mobile pagination */}
+            <div className="lg:hidden flex items-center gap-1 text-[11.5px]">
+              <PageBtn aria-label="Previous"><ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} /></PageBtn>
+              <PageBtn active>1</PageBtn>
+              <PageBtn>2</PageBtn>
+              <PageBtn>3</PageBtn>
+              <PageBtn>4</PageBtn>
+              <span className="text-gray-400 px-1">…</span>
+              <PageBtn>26</PageBtn>
+              <PageBtn aria-label="Next"><ChevronRight className="h-3.5 w-3.5" strokeWidth={2} /></PageBtn>
+            </div>
+            {/* Desktop pagination */}
+            <div className="hidden lg:flex items-center gap-1 text-[12px]">
               <PageBtn aria-label="Previous"><ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} /></PageBtn>
               <PageBtn active>1</PageBtn>
               <PageBtn>2</PageBtn>
@@ -390,17 +434,25 @@ function ReportsKpi({
 }
 
 function FilterField({
-  label, value, icon: Icon,
+  label, value, icon: Icon, mdLabel,
 }: {
-  label: string; value: string; icon?: LucideIcon;
+  label: string;
+  value: string;
+  icon?: LucideIcon;
+  /** Optional longer label shown on md+ widths (e.g. "Report Category"
+   *  on desktop vs "Category" on mobile). */
+  mdLabel?: string;
 }) {
   return (
     <button
       type="button"
-      className="flex flex-col items-start text-left gap-0.5 h-[58px] px-3.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm justify-center min-w-0"
+      className="flex flex-col items-start text-left gap-0.5 h-[58px] px-3.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm justify-center min-w-0 w-full"
     >
-      <span className="text-[10.5px] font-semibold text-gray-500 uppercase tracking-wide truncate">{label}</span>
-      <span className="flex items-center gap-2 w-full text-[13px] font-semibold text-gray-900 truncate">
+      <span className="text-[10.5px] font-semibold text-gray-500 uppercase tracking-wide truncate w-full">
+        <span className="md:hidden">{label}</span>
+        <span className="hidden md:inline">{mdLabel ?? label}</span>
+      </span>
+      <span className="flex items-center gap-2 w-full text-[12.5px] lg:text-[13px] font-semibold text-gray-900 truncate">
         {Icon && <Icon className="h-3.5 w-3.5 text-gray-400 shrink-0" strokeWidth={1.75} />}
         <span className="truncate flex-1">{value}</span>
         <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" strokeWidth={2} />
