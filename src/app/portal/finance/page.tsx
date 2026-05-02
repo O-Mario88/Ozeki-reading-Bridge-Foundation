@@ -11,6 +11,7 @@ import {
   getUsdRateForDashboard,
 } from "@/lib/server/postgres/repositories/finance-dashboard";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { SpendingTrendChart } from "@/components/portal/finance/SpendingTrendChart";
 import { FundAllocationDonut } from "@/components/portal/finance/FundAllocationDonut";
 import { Sparkline } from "@/components/portal/finance/Sparkline";
@@ -444,52 +445,49 @@ export default async function FinanceDashboard() {
             })}
           </ul>
 
-          {/* Desktop: full data table with horizontal scroll fallback */}
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full text-[13px] min-w-[1000px]">
-              <thead className="bg-gray-50/50">
-                <tr className="text-left text-[10px] uppercase tracking-widest text-gray-500 border-b border-gray-100">
-                  <th className="px-5 py-3 font-bold">Date</th>
-                  <th className="px-5 py-3 font-bold">Description</th>
-                  <th className="px-5 py-3 font-bold">Type</th>
-                  <th className="px-5 py-3 font-bold">Category</th>
-                  <th className="px-5 py-3 font-bold text-right">Amount</th>
-                  <th className="px-5 py-3 font-bold">Status</th>
-                  <th className="px-5 py-3 font-bold">Reference</th>
-                  <th className="px-5 py-3 font-bold">Recorded By</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactionsRows.slice(0, 5).map((t, i) => (
-                  <tr key={`${t.reference}-${i}`} className="border-b border-gray-50 hover:bg-gray-50/40">
-                    <td className="px-5 py-3.5 text-gray-700 whitespace-nowrap">{t.date}</td>
-                    <td className="px-5 py-3.5 text-gray-900 font-medium">{t.description}</td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          t.type === "income"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-orange-50 text-orange-700"
-                        }`}
-                      >
-                        {t.type === "income" ? "Income" : "Expense"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-700">{t.category}</td>
-                    <td className="px-5 py-3.5 text-right text-gray-900 font-bold">
-                      {fmtUsdMoney(typeof t.amount === "number" ? t.amount : 0)}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                        Completed
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-500 font-mono text-[11px]">{t.reference}</td>
-                    <td className="px-5 py-3.5 text-gray-700">{t.recordedBy}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Desktop: card-list (CSS grid, not <table>) */}
+          <div className="hidden lg:block px-3">
+            <DashboardListHeader template="100px minmax(0,1.6fr) 86px minmax(0,1fr) 110px 110px 130px minmax(0,1fr)">
+              <span>Date</span>
+              <span>Description</span>
+              <span>Type</span>
+              <span>Category</span>
+              <span className="text-right">Amount</span>
+              <span>Status</span>
+              <span>Reference</span>
+              <span>Recorded By</span>
+            </DashboardListHeader>
+            {transactionsRows.slice(0, 5).map((t, i) => (
+              <DashboardListRow
+                key={`${t.reference}-${i}`}
+                template="100px minmax(0,1.6fr) 86px minmax(0,1fr) 110px 110px 130px minmax(0,1fr)"
+              >
+                <span className="text-[13px] text-gray-700 whitespace-nowrap">{t.date}</span>
+                <span className="text-[13px] text-gray-900 font-medium truncate">{t.description}</span>
+                <span>
+                  <span
+                    className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                      t.type === "income"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-orange-50 text-orange-700"
+                    }`}
+                  >
+                    {t.type === "income" ? "Income" : "Expense"}
+                  </span>
+                </span>
+                <span className="text-[13px] text-gray-700 truncate">{t.category}</span>
+                <span className="text-[13px] text-gray-900 font-bold text-right">
+                  {fmtUsdMoney(typeof t.amount === "number" ? t.amount : 0)}
+                </span>
+                <span>
+                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                    Completed
+                  </span>
+                </span>
+                <span className="text-[11px] text-gray-500 font-mono truncate">{t.reference}</span>
+                <span className="text-[13px] text-gray-700 truncate">{t.recordedBy}</span>
+              </DashboardListRow>
+            ))}
           </div>
 
           <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
