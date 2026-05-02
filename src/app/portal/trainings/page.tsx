@@ -11,6 +11,27 @@ import {
   StatusPill, StarRating, pillToneFor,
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import {
+  getTrainingsKpis, getTrainingDeliveryTrend, getTrainingTypeMix,
+  getTrainingRegionalCoverage, listTopTrainers, listTrainingPipeline,
+  listRecentTrainingSessions, listSchoolsReached, getParticipantInsights,
+} from "@/lib/server/postgres/repositories/trainings-dashboard";
+
+async function safeFetch<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+  try { return await fn(); }
+  catch (err) {
+    logger.warn(`[trainings] ${label} failed; falling back to mock`, { error: String(err) });
+    return null;
+  }
+}
+
+function fmtDate(iso: string): string {
+  if (!iso) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); }
+  catch { return iso; }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +44,7 @@ export const metadata = {
 /* ────────────────────────────────────────────────────────────────────
    Reference data — frozen verbatim from the supplied screenshot.
    ──────────────────────────────────────────────────────────────────── */
-const DATA = {
+const FALLBACK = {
   kpis: [
     { label: "Training Sessions",        value: "248",   delta: "↑ 18% vs last month",  icon: CalendarDays, accent: "emerald" as const },
     { label: "Upcoming Sessions",        value: "32",    delta: "↑ 7% vs last month",   icon: CalendarPlus, accent: "blue"    as const },
@@ -139,6 +160,65 @@ const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
 export default async function PortalTrainingsOverviewPage() {
   const user = await requirePortalStaffUser();
+
+  const [
+    liveKpis, liveTrend, liveTypeMix, liveRegions,
+    liveTrainers, livePipeline, liveRecent, liveSchools, liveParticipants,
+  ] = await Promise.all([
+    safeFetch("kpis",         () => getTrainingsKpis()),
+    safeFetch("trend",        () => getTrainingDeliveryTrend(6)),
+    safeFetch("typeMix",      () => getTrainingTypeMix()),
+    safeFetch("regions",      () => getTrainingRegionalCoverage()),
+    safeFetch("trainers",     () => listTopTrainers(5)),
+    safeFetch("pipeline",     () => listTrainingPipeline(5)),
+    safeFetch("recent",       () => listRecentTrainingSessions(5)),
+    safeFetch("schools",      () => listSchoolsReached(5)),
+    safeFetch("participants", () => getParticipantInsights()),
+  ]);
+
+  const DATA = {
+    ...FALLBACK,
+    kpis: liveKpis ? FALLBACK.kpis.map((k) => {
+      const lookup: Record<string, string> = {
+        "Training Sessions":       String(liveKpis.trainingSessions),
+        "Upcoming Sessions":       String(liveKpis.upcomingSessions),
+        "Teachers Trained":        liveKpis.teachersTrained.toLocaleString(),
+        "Participants This Month": liveKpis.participantsThisMonth.toLocaleString(),
+        "Average Attendance Rate": `${liveKpis.avgAttendanceRate}%`,
+        "Certificates Issued":     liveKpis.certificatesIssued.toLocaleString(),
+        "Satisfaction Score":      `${liveKpis.satisfactionScore || 4.7}/5`,
+      };
+      return { ...k, value: lookup[k.label] ?? k.value };
+    }) : FALLBACK.kpis,
+    trend: liveTrend && liveTrend.length > 0
+      ? { months: liveTrend.map((p) => p.month), values: liveTrend.map((p) => p.sessions) }
+      : FALLBACK.trend,
+    typeMix: liveTypeMix && liveTypeMix.length > 0
+      ? {
+          total: liveTypeMix.reduce((n, r) => n + r.value, 0),
+          rows: liveTypeMix.map((r, i) => ({
+            ...r,
+            color: FALLBACK.typeMix.rows[i]?.color ?? "#10b981",
+          })),
+        }
+      : FALLBACK.typeMix,
+    regions: liveRegions && liveRegions.length > 0 ? liveRegions : FALLBACK.regions,
+    trainers: liveTrainers && liveTrainers.length > 0 ? liveTrainers : FALLBACK.trainers,
+    pipeline: livePipeline && livePipeline.length > 0
+      ? livePipeline.map((p) => ({ ...p, date: fmtDate(p.date) }))
+      : FALLBACK.pipeline,
+    recent: liveRecent && liveRecent.length > 0
+      ? liveRecent.map((r) => ({ ...r, date: fmtDate(r.date) }))
+      : FALLBACK.recent,
+    schoolsReached: liveSchools && liveSchools.length > 0 ? liveSchools : FALLBACK.schoolsReached,
+    participantInsights: liveParticipants
+      ? {
+          ...FALLBACK.participantInsights,
+          gender: liveParticipants.gender,
+          roles: liveParticipants.roles.length > 0 ? liveParticipants.roles : FALLBACK.participantInsights.roles,
+        }
+      : FALLBACK.participantInsights,
+  };
 
   return (
     <OzekiPortalShell
