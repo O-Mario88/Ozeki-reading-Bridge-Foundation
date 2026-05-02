@@ -12,6 +12,40 @@ import {
   StatusPill, pillToneFor,
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import {
+  getStoriesKpis, getStoryStatusBreakdown, getStoryLanguageMix,
+  getStoryGenreMix, getStorySubmissionTrend, getStoryEngagementTrend,
+  listTopPerformingSchools, listCurationQueue, listRecentStorySubmissions,
+  listFeaturedStories, listStorySessions,
+} from "@/lib/server/postgres/repositories/stories-dashboard";
+
+async function safeFetch<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+  try { return await fn(); }
+  catch (err) {
+    logger.warn(`[stories] ${label} failed; falling back to mock`, { error: String(err) });
+    return null;
+  }
+}
+
+function fmtDate(iso: string): string {
+  if (!iso) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try {
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+  } catch { return iso; }
+}
+
+function fmtDateTime(iso: string): string {
+  if (!iso) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      month: "short", day: "2-digit", year: "numeric",
+      hour: "numeric", minute: "2-digit",
+    }).replace(",", "");
+  } catch { return iso; }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +59,7 @@ export const metadata = {
    Reference data — frozen from the supplied screenshot. The dashboard
    renders these exact numbers per the pixel-faithful spec.
    ──────────────────────────────────────────────────────────────────── */
-const DATA = {
+const FALLBACK = {
   kpis: {
     storiesCollected: 12486, storiesCollectedDelta: 18,
     publishedStories: 8214, publishedStoriesDelta: 15,
@@ -126,6 +160,112 @@ const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
 export default async function PortalStoryOverviewPage() {
   const user = await requirePortalStaffUser();
+
+  const [
+    liveKpis, liveStatus, liveLang, liveGenre, liveTrend, liveEngagement,
+    liveTopSchools, liveCuration, liveRecent, liveFeatured, liveSessions,
+  ] = await Promise.all([
+    safeFetch("kpis",        () => getStoriesKpis()),
+    safeFetch("status",      () => getStoryStatusBreakdown()),
+    safeFetch("language",    () => getStoryLanguageMix()),
+    safeFetch("genre",       () => getStoryGenreMix()),
+    safeFetch("trend",       () => getStorySubmissionTrend(6)),
+    safeFetch("engagement",  () => getStoryEngagementTrend(6)),
+    safeFetch("topSchools",  () => listTopPerformingSchools(5)),
+    safeFetch("curation",    () => listCurationQueue(5)),
+    safeFetch("recent",      () => listRecentStorySubmissions(5)),
+    safeFetch("featured",    () => listFeaturedStories(5)),
+    safeFetch("sessions",    () => listStorySessions(5)),
+  ]);
+
+  /* Overlay live data onto FALLBACK; null/[] keeps the screenshot value. */
+  const DATA = {
+    ...FALLBACK,
+    kpis: liveKpis ? {
+      storiesCollected: liveKpis.storiesCollected,
+      storiesCollectedDelta: FALLBACK.kpis.storiesCollectedDelta,
+      publishedStories: liveKpis.publishedStories,
+      publishedStoriesDelta: FALLBACK.kpis.publishedStoriesDelta,
+      pendingReview: liveKpis.pendingReview,
+      pendingReviewDelta: FALLBACK.kpis.pendingReviewDelta,
+      activeStorytellers: liveKpis.activeStorytellers,
+      activeStorytellersDelta: FALLBACK.kpis.activeStorytellersDelta,
+      schoolsContributing: liveKpis.schoolsContributing,
+      schoolsContributingDelta: FALLBACK.kpis.schoolsContributingDelta,
+      learnersReached: liveKpis.learnersReached,
+      learnersReachedDelta: FALLBACK.kpis.learnersReachedDelta,
+      anthologiesCreated: liveKpis.anthologiesCreated,
+      anthologiesCreatedDelta: FALLBACK.kpis.anthologiesCreatedDelta,
+    } : FALLBACK.kpis,
+    trend: liveTrend && liveTrend.length > 0
+      ? {
+          months: liveTrend.map((p) => p.month),
+          submissions: liveTrend.map((p) => p.submissions),
+          delta: FALLBACK.trend.delta,
+        }
+      : FALLBACK.trend,
+    status: liveStatus
+      ? {
+          total: liveStatus.total,
+          segments: liveStatus.segments.map((s, i) => ({
+            ...s,
+            color: FALLBACK.status.segments[i]?.color ?? "#10b981",
+          })),
+        }
+      : FALLBACK.status,
+    language: liveLang && liveLang.length > 0
+      ? liveLang.map((l, i) => ({ ...l, color: FALLBACK.language[i]?.color ?? "#10b981" }))
+      : FALLBACK.language,
+    genre: liveGenre && liveGenre.length > 0
+      ? liveGenre.map((g, i) => ({ ...g, color: FALLBACK.genre[i]?.color ?? "#10b981" }))
+      : FALLBACK.genre,
+    engagement: liveEngagement && liveEngagement.length > 0
+      ? {
+          months: liveEngagement.map((p) => p.month),
+          reads: liveEngagement.map((p) => p.reads),
+          completion: liveEngagement.map((p) => p.completionPct),
+          readsLabel: FALLBACK.engagement.readsLabel,
+          completionLabel: `${liveEngagement[liveEngagement.length - 1]?.completionPct ?? 0}%`,
+        }
+      : FALLBACK.engagement,
+    topSchools: liveTopSchools && liveTopSchools.length > 0 ? liveTopSchools : FALLBACK.topSchools,
+    curation: liveCuration && liveCuration.length > 0
+      ? liveCuration.map((c) => {
+          const fb = FALLBACK.curation[0];
+          return {
+            title: c.title,
+            school: c.school,
+            language: c.language,
+            status: c.reviewerStatus,
+            statusTone: "muted",
+            urgency: c.urgency,
+            icon: fb.icon,
+          };
+        })
+      : FALLBACK.curation,
+    recent: liveRecent && liveRecent.length > 0
+      ? liveRecent.map((r) => ({
+          date: fmtDate(r.date),
+          title: r.title,
+          school: r.school,
+          storyteller: r.storyteller,
+          status: r.status,
+        }))
+      : FALLBACK.recent,
+    featured: liveFeatured && liveFeatured.length > 0 ? liveFeatured : FALLBACK.featured,
+    sessions: liveSessions && liveSessions.length > 0
+      ? liveSessions.map((s, i) => {
+          const fb = FALLBACK.sessions[i] ?? FALLBACK.sessions[0];
+          return {
+            activity: s.activity,
+            school: s.school,
+            when: fmtDateTime(s.whenIso),
+            icon: fb.icon,
+            tone: fb.tone,
+          };
+        })
+      : FALLBACK.sessions,
+  };
 
   return (
     <OzekiPortalShell
