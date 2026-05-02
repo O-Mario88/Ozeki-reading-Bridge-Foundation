@@ -81,8 +81,6 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
 
   // Real numbers where the DB has them — fallback otherwise.
   const learnersEnrolled = school.enrolledLearners || school.enrollmentTotal || 842;
-  const boys = school.enrolledBoys || 420;
-  const girls = school.enrolledGirls || 422;
 
   const district = school.district || "Kampala District";
   const region = school.region || "Central Region";
@@ -98,9 +96,9 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
   const totalLearners = learnersEnrolled;
   const readingLevels = [
     { label: "Proficient", pct: Math.round(profile.progress?.fluentReaderPct ?? 24), color: "#22c55e" },
-    { label: "Developing", pct: 38, color: "#facc15" },
-    { label: "Emerging",   pct: 26, color: "#3b82f6" },
-    { label: "Beginning",  pct: 12, color: "#a855f7" },
+    { label: "Developing", pct: 38, color: "#f59e0b" },
+    { label: "Emerging",   pct: 26, color: "#2563eb" },
+    { label: "Beginning",  pct: 12, color: "#8b5cf6" },
   ];
 
   return (
@@ -197,12 +195,12 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
 
         {/* KPI strip — 6 cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <SchoolKpi label="LEARNERS ENROLLED" value={learnersEnrolled.toLocaleString()} sub={`${boys} Boys, ${girls} Girls`} delta={FALLBACK.enrolledDelta} icon={Users} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" />
-          <SchoolKpi label="ATTENDANCE RATE" value={`${FALLBACK.attendanceRate}%`} sub="This term average" delta={FALLBACK.attendanceDelta} icon={Calendar} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
-          <SchoolKpi label="READING PROFICIENCY" value={`${FALLBACK.readingProficiency}%`} sub="Above grade-level" delta={FALLBACK.readingDelta} icon={BookOpen} cardBg="#faf5ff" borderColor="#e9d5ff" iconBg="#f3e8ff" iconColor="#7c3aed" />
-          <SchoolKpi label="ASSESSMENT SCORE" value={`${FALLBACK.assessmentScore}%`} sub="Cohort average" delta={FALLBACK.assessmentDelta} icon={ClipboardCheck} cardBg="#fff7ed" borderColor="#fed7aa" iconBg="#ffedd5" iconColor="#c2410c" />
-          <SchoolKpi label="ACTIVE TEACHERS" value={String(FALLBACK.activeTeachers)} sub="Teaching staff" delta={FALLBACK.activeTeachersDelta} deltaSuffix="" icon={GraduationCap} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
-          <SchoolKpi label="DATA QUALITY" value={`${FALLBACK.dataQuality}%`} sub="Records complete" delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" />
+          <SchoolKpi label="LEARNERS ENROLLED" value={learnersEnrolled.toLocaleString()} delta={FALLBACK.enrolledDelta} icon={Users} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" />
+          <SchoolKpi label="ATTENDANCE RATE" value={`${FALLBACK.attendanceRate}%`} delta={FALLBACK.attendanceDelta} icon={Calendar} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
+          <SchoolKpi label="READING PROFICIENCY" value={`${FALLBACK.readingProficiency}%`} delta={FALLBACK.readingDelta} icon={BookOpen} cardBg="#faf5ff" borderColor="#e9d5ff" iconBg="#f3e8ff" iconColor="#7c3aed" />
+          <SchoolKpi label="ASSESSMENT SCORE" value={`${FALLBACK.assessmentScore}%`} delta={FALLBACK.assessmentDelta} icon={ClipboardCheck} cardBg="#fff7ed" borderColor="#fed7aa" iconBg="#ffedd5" iconColor="#c2410c" />
+          <SchoolKpi label="ACTIVE TEACHERS" value={String(FALLBACK.activeTeachers)} delta={FALLBACK.activeTeachersDelta} deltaSuffix="" icon={GraduationCap} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
+          <SchoolKpi label="DATA QUALITY" value={`${FALLBACK.dataQuality}%`} delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" />
         </div>
 
         {/* Analytics row — 4 cards */}
@@ -395,15 +393,14 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
 
           <section className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
             <h3 className="text-[15px] font-bold text-gray-900 mb-3">About the School</h3>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[11.5px]">
+            <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-[11.5px]">
               <AboutItem label="School Type" value="Day School" />
               <AboutItem label="Ownership"   value="Government Aided" />
               <AboutItem label="Boarding Facilities" value="No" />
               <AboutItem label="No. of Classrooms" value="18" />
               <AboutItem label="No. of Toilets" value="12" />
               <AboutItem label="Water Source" value="Borehole" />
-              <AboutItem label="Has Library" value="Yes" />
-              <AboutItem label="Electricity" value="Yes" />
+              <AboutItem label="No. of Toilets" value="Yes" />
             </dl>
           </section>
         </div>
@@ -442,14 +439,14 @@ function ContactItem({ icon: Icon, label, value, mono = false }: {
 }
 
 function SchoolKpi({
-  label, value, sub, delta, deltaSuffix = "%", icon: Icon, cardBg, borderColor, iconBg, iconColor,
+  label, value, delta, deltaSuffix = "%", icon: Icon, cardBg, borderColor, iconBg, iconColor,
 }: {
-  label: string; value: string; sub: string; delta: number; deltaSuffix?: string;
+  label: string; value: string; delta: number; deltaSuffix?: string;
   icon: LucideIcon; cardBg: string; borderColor: string; iconBg: string; iconColor: string;
 }) {
   return (
     <div
-      className="rounded-2xl border shadow-sm p-3.5 flex flex-col gap-2 min-h-[120px]"
+      className="rounded-2xl border shadow-sm p-3.5 flex flex-col gap-2 min-h-[104px]"
       style={{ backgroundColor: cardBg, borderColor }}
     >
       <div className="flex items-center gap-2.5">
@@ -459,7 +456,6 @@ function SchoolKpi({
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-tight truncate">{label}</p>
       </div>
       <p className="text-[24px] lg:text-[26px] font-extrabold text-gray-900 leading-none tracking-tight truncate">{value}</p>
-      <p className="text-[11px] text-gray-500 truncate">{sub}</p>
       <p className="text-[10.5px] text-emerald-700 font-semibold mt-auto inline-flex items-center gap-0.5">
         <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
         {delta}{deltaSuffix} <span className="text-gray-500 font-medium ml-0.5">vs last term</span>
