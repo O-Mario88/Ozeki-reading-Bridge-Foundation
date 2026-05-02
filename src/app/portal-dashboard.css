@@ -102,6 +102,43 @@
   font-weight: 700 !important;
 }
 
+/* ── In-table progress bars + avatars + emerald links ──────────────
+   Locks down the remaining contract items so every dashboard table —
+   regardless of how the per-page Tailwind utility classes are
+   written — renders progress bars, avatar circles, and "View all"
+   links at the same compact baseline as the Interventions reference.
+   These rules use scoped descendant selectors so they do NOT touch
+   pills, KPI cards, or any element outside <table>. */
+
+/* Progress-bar TRACK inside a table cell — cap height so per-page
+   h-1 / h-1.5 / h-2 utilities all collapse to the reference 6px. */
+.ozeki-portal-shell table td > div[class*="rounded-full"][class*="overflow-hidden"],
+.ozeki-portal-shell table td div[class*="flex"] > div[class*="rounded-full"][class*="overflow-hidden"] {
+  height: 6px !important;
+  max-height: 6px;
+}
+
+/* Avatar / initial circles inside a table cell — cap to 20px so
+   per-page h-4/h-5/h-6/h-7 utilities don't make rows tall. */
+.ozeki-portal-shell table td > span[class*="grid"][class*="rounded-full"],
+.ozeki-portal-shell table td span[class*="inline-flex"] > span[class*="grid"][class*="rounded-full"] {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+/* "View all" / "View All" / "View report" / "View calendar" footer
+   links inside dashboard cards — always emerald, always 11px bold.
+   Targets the <a> in card-header right slot or card-footer right slot. */
+.ozeki-portal-shell section[class*="rounded-2xl"] a[href*="view"],
+.ozeki-portal-shell section[class*="rounded-xl"] a[href*="view"],
+.ozeki-portal-shell section[class*="rounded-2xl"] a[href*="manage"],
+.ozeki-portal-shell section[class*="rounded-xl"] a[href*="manage"] {
+  color: #00856F;
+  font-weight: 700;
+}
+
 /* ── Compact Finance Additions ──────────────────────────────── */
 .compact-finance-ui {
   --ds-card-padding: 1.25rem;
