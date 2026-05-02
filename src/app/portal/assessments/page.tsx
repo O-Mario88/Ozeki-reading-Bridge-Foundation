@@ -12,6 +12,28 @@ import {
   StatusPill, ProgressCell, AvatarCell, EmeraldLink, pillToneFor,
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import {
+  getAssessmentsKpis, getAssessmentTrend, getScoreDistribution,
+  getAssessmentRegionalCoverage, listRecentAssessmentSessions,
+  listAtRiskSchools, listUpcomingAssessmentWindows, listAssessorWorkload,
+  getDomainMastery,
+} from "@/lib/server/postgres/repositories/assessments-dashboard";
+
+async function safeFetch<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+  try { return await fn(); }
+  catch (err) {
+    logger.warn(`[assessments] ${label} failed; falling back to mock`, { error: String(err) });
+    return null;
+  }
+}
+
+function fmtDate(iso: string): string {
+  if (!iso) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); }
+  catch { return iso; }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +47,7 @@ export const metadata = {
    Frozen reference data — values and ordering taken verbatim from the
    supplied screenshot. The dashboard renders these exact figures.
    ──────────────────────────────────────────────────────────────────── */
-const DATA = {
+const FALLBACK = {
   kpis: {
     totalAssessments: 4820, totalAssessmentsDelta: 12.4,
     learnersAssessed: 68420, learnersAssessedDelta: 9.8,
@@ -110,6 +132,66 @@ const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
 export default async function PortalAssessmentsPage() {
   const user = await requirePortalStaffUser();
+
+  const [
+    liveKpis, liveTrend, liveDist, liveCoverage,
+    liveRecent, liveAtRisk, liveWindows, liveWorkload, liveDomains,
+  ] = await Promise.all([
+    safeFetch("kpis",         () => getAssessmentsKpis()),
+    safeFetch("trend",        () => getAssessmentTrend(6)),
+    safeFetch("distribution", () => getScoreDistribution()),
+    safeFetch("coverage",     () => getAssessmentRegionalCoverage()),
+    safeFetch("recent",       () => listRecentAssessmentSessions(5)),
+    safeFetch("atRisk",       () => listAtRiskSchools(4)),
+    safeFetch("windows",      () => listUpcomingAssessmentWindows(3)),
+    safeFetch("workload",     () => listAssessorWorkload(5)),
+    safeFetch("domains",      () => getDomainMastery()),
+  ]);
+
+  const DATA = {
+    ...FALLBACK,
+    kpis: liveKpis ? {
+      totalAssessments:        liveKpis.totalAssessments,
+      totalAssessmentsDelta:   FALLBACK.kpis.totalAssessmentsDelta,
+      learnersAssessed:        liveKpis.learnersAssessed,
+      learnersAssessedDelta:   FALLBACK.kpis.learnersAssessedDelta,
+      activeSchools:           liveKpis.activeSchools,
+      activeSchoolsDelta:      FALLBACK.kpis.activeSchoolsDelta,
+      assessmentWindowsOpen:   liveKpis.windowsOpen,
+      assessmentWindowsDelta:  FALLBACK.kpis.assessmentWindowsDelta,
+      completionRate:          liveKpis.completionRatePct,
+      completionRateDelta:     FALLBACK.kpis.completionRateDelta,
+      averageScore:            liveKpis.averageScorePct,
+      averageScoreDelta:       FALLBACK.kpis.averageScoreDelta,
+      dataQuality:             liveKpis.dataQualityPct,
+      dataQualityDelta:        FALLBACK.kpis.dataQualityDelta,
+    } : FALLBACK.kpis,
+    trend: liveTrend && liveTrend.length > 0
+      ? { months: liveTrend.map((p) => p.month), values: liveTrend.map((p) => p.value) }
+      : FALLBACK.trend,
+    scoreDistribution: liveDist
+      ? {
+          total: liveDist.total,
+          segments: liveDist.segments.map((s, i) => ({
+            ...s,
+            color: FALLBACK.scoreDistribution.segments[i]?.color ?? "#10b981",
+          })),
+        }
+      : FALLBACK.scoreDistribution,
+    regionCoverage: liveCoverage && liveCoverage.length > 0 ? liveCoverage : FALLBACK.regionCoverage,
+    recentSessions: liveRecent && liveRecent.length > 0
+      ? liveRecent.map((r) => ({ ...r, date: fmtDate(r.date) }))
+      : FALLBACK.recentSessions,
+    atRisk: liveAtRisk && liveAtRisk.length > 0 ? liveAtRisk : FALLBACK.atRisk,
+    upcomingWindows: liveWindows && liveWindows.length > 0 ? liveWindows : FALLBACK.upcomingWindows,
+    assessors: liveWorkload && liveWorkload.length > 0 ? liveWorkload : FALLBACK.assessors,
+    domains: liveDomains && liveDomains.length > 0
+      ? liveDomains.map((d, i) => {
+          const fb = FALLBACK.domains[i] ?? FALLBACK.domains[0];
+          return { ...d, delta: fb.delta, icon: fb.icon };
+        })
+      : FALLBACK.domains,
+  };
 
   return (
     <OzekiPortalShell
