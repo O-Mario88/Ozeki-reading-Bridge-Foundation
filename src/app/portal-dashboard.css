@@ -139,6 +139,59 @@
   font-weight: 700;
 }
 
+/* ── Card-list visual skin for legacy <table> markup ──────────────────
+   Ensures every remaining <table> in the portal (62 files: list pages,
+   manager components, finance subroutes) renders with the same card-list
+   look as the DashboardListCard primitives — without rewriting source.
+   Only the visual layer changes; sortable/filterable/editable behavior
+   in interactive manager components is preserved.
+
+   Targets only tables that look like data tables (have a thead+tbody),
+   so accidental matches in tooltip/markdown rendering are avoided. */
+.ozeki-portal-shell table thead tr {
+  background: transparent;
+}
+.ozeki-portal-shell table thead th {
+  color: #7A8CA3 !important;
+  text-transform: uppercase;
+  border-bottom: 1px solid #E8EDF3 !important;
+  background: transparent !important;
+  vertical-align: middle;
+}
+.ozeki-portal-shell table tbody tr {
+  border-bottom: 1px solid #EEF2F6;
+  transition: background-color 80ms ease;
+}
+.ozeki-portal-shell table tbody tr:last-child {
+  border-bottom: none;
+}
+.ozeki-portal-shell table tbody tr:hover {
+  background-color: rgba(248, 250, 252, 0.6);
+}
+.ozeki-portal-shell table tbody td {
+  vertical-align: middle;
+  color: #344054 !important;
+}
+
+/* Anchor tags inside td cells (Visit IDs, Plan IDs, Assessment Nos,
+   "View" links inline in rows) — emerald, no underline by default. */
+.ozeki-portal-shell table td a {
+  color: #00856F !important;
+  text-decoration: none;
+}
+.ozeki-portal-shell table td a:hover {
+  text-decoration: underline;
+}
+
+/* Containers wrapping a table — drop the heavy default table chrome so
+   the parent card's rounded corners + border read as the visual frame
+   (matches the DashboardListCard treatment). */
+.ozeki-portal-shell table {
+  background: transparent;
+  border: none;
+  width: 100%;
+}
+
 /* ── Compact Finance Additions ──────────────────────────────── */
 .compact-finance-ui {
   --ds-card-padding: 1.25rem;
