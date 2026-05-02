@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ReactNode, useState, useEffect } from "react";
 import { Menu, BookOpenText, X, Bell } from "lucide-react";
 import type { PortalUser } from "@/lib/types";
-import { GlassExpandedMenu } from "./GlassExpandedMenu";
 import { OzekiSidebar } from "@/components/portal/OzekiSidebar";
 
 interface Props {
@@ -12,11 +11,6 @@ interface Props {
   activeHref: string;
   /** Right-side action — defaults to a notifications bell linking to /portal/support. */
   rightSlot?: ReactNode;
-  /** Which sidebar to render inside the slide-over.
-   *   "ozeki" (default) → green Ozeki sidebar — used by main portal pages.
-   *   "glass"           → frosted glass menu — used by finance pages.
-   */
-  variant?: "ozeki" | "glass";
   /** Notification count badge on the bell. 0 hides the badge. */
   notificationCount?: number;
 }
@@ -25,7 +19,7 @@ interface Props {
  * Mobile-only top header (`<lg`). Renders the deep-green Ozeki branded strip
  * matching the mobile reference: hamburger left, OZEKI book+wordmark
  * centered, notification bell with red badge right. Tapping the hamburger
- * opens a slide-over containing the primary navigation.
+ * opens a slide-over containing the OzekiSidebar.
  *
  * The container is full-bleed (no rounded edges) so the green strip
  * reaches both screen edges and meets the safe-area inset cleanly. Renders
@@ -35,7 +29,6 @@ export function MobileHeader({
   user,
   activeHref,
   rightSlot,
-  variant = "ozeki",
   notificationCount = 3,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -50,8 +43,6 @@ export function MobileHeader({
       document.body.style.overflow = "";
     };
   }, [open]);
-
-  const slideoverWrapperBg = variant === "glass" ? "bg-[#D8D9DE]" : "bg-[#0d4b3a]";
 
   return (
     <>
@@ -108,9 +99,7 @@ export function MobileHeader({
             tabIndex={-1}
             aria-label="Close menu"
           />
-          <div
-            className={`w-[88vw] max-w-[300px] h-full overflow-y-auto ${slideoverWrapperBg}`}
-          >
+          <div className="w-[88vw] max-w-[300px] h-full overflow-y-auto bg-[#0d4b3a]">
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -119,13 +108,7 @@ export function MobileHeader({
             >
               <X className="h-4 w-4" strokeWidth={2} />
             </button>
-            {variant === "glass" ? (
-              <div className="p-4">
-                <GlassExpandedMenu user={user} activeHref={activeHref} />
-              </div>
-            ) : (
-              <OzekiSidebar user={user} activeHref={activeHref} forceVisible />
-            )}
+            <OzekiSidebar user={user} activeHref={activeHref} forceVisible />
           </div>
         </div>
       )}
