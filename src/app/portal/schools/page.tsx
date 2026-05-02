@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { listSchoolDirectoryRecordsPostgres } from "@/lib/server/postgres/repositories/schools";
+import {
+  getSchoolsOverviewKpis,
+  listRecentSchoolVisits,
+  getImplementationFunnel,
+} from "@/lib/server/postgres/repositories/schools-dashboard";
 import { logger } from "@/lib/logger";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import {
@@ -82,19 +87,58 @@ const FALLBACK = {
 export default async function SchoolsOverviewPage() {
   const user = await requirePortalStaffUser();
 
-  // Try to derive at least the schools-reached / active-schools KPIs from the
-  // real directory. Everything else falls back to screenshot values.
-  let schoolsReached = FALLBACK.schoolsReached;
-  let activeSchools = FALLBACK.activeSchools;
+  /* Pull live KPI aggregates + recent visits + implementation funnel
+     from Postgres. Each repo function returns null/[] on miss; per-card
+     code below falls back to FALLBACK constants when the live result
+     is empty. Errors are logged once and do not take the page down. */
+  let liveKpis: Awaited<ReturnType<typeof getSchoolsOverviewKpis>> = null;
+  let liveVisits: Awaited<ReturnType<typeof listRecentSchoolVisits>> = [];
+  let liveFunnel: Awaited<ReturnType<typeof getImplementationFunnel>> = [];
+  try { liveKpis = await getSchoolsOverviewKpis(); }
+  catch (e) { logger.warn("[schools/overview] kpis failed", { error: String(e) }); }
+  try { liveVisits = await listRecentSchoolVisits(5); }
+  catch (e) { logger.warn("[schools/overview] visits failed", { error: String(e) }); }
+  try { liveFunnel = await getImplementationFunnel(); }
+  catch (e) { logger.warn("[schools/overview] funnel failed", { error: String(e) }); }
+
+  /* Schools-reached / active still derived from the directory list as a
+     belt-and-braces redundancy in case the aggregate query fails. */
+  let directoryCount = 0;
+  let activeFromDirectory = 0;
   try {
     const all = await listSchoolDirectoryRecordsPostgres();
-    if (all.length > 0) {
-      schoolsReached = all.length;
-      activeSchools = all.filter((s) => s.schoolActive === true).length || all.length;
-    }
+    directoryCount = all.length;
+    activeFromDirectory = all.filter((s) => s.schoolActive === true).length || all.length;
   } catch (e) {
-    logger.error("[schools/overview] live KPI fallback", { error: String(e) });
+    logger.error("[schools/overview] directory list fallback", { error: String(e) });
   }
+
+  const schoolsReached    = liveKpis?.schoolsReached       ?? (directoryCount   || FALLBACK.schoolsReached);
+  const activeSchools     = liveKpis?.activeSchools        ?? (activeFromDirectory || FALLBACK.activeSchools);
+  const teachersEvaluated = liveKpis?.teachersEvaluated    || FALLBACK.teachersEvaluated;
+  const assessmentsDone   = liveKpis?.assessmentsCompleted || FALLBACK.assessmentsCompleted;
+  const coachingVisits    = liveKpis?.coachingVisits       || FALLBACK.coachingVisits;
+  const storyActivities   = liveKpis?.storyActivities      || FALLBACK.storyActivities;
+  const dataQuality       = liveKpis?.dataQualityPct       || FALLBACK.dataQuality;
+
+  const recentVisits = liveVisits.length > 0
+    ? liveVisits.map((v) => ({
+        date: v.date
+          ? new Date(v.date).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+          : "—",
+        school: v.school,
+        district: v.district,
+        coach: v.coach,
+        status: v.status,
+      }))
+    : FALLBACK.recentVisits;
+
+  const funnel = liveFunnel.length > 0
+    ? liveFunnel.map((f, i) => ({
+        ...f,
+        color: FALLBACK.funnel[i]?.color ?? "#10b981",
+      }))
+    : FALLBACK.funnel;
 
   return (
     <OzekiPortalShell
@@ -155,11 +199,11 @@ export default async function SchoolsOverviewPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-3">
           <SchoolsKpi label="SCHOOLS REACHED" value={schoolsReached.toLocaleString()} delta={FALLBACK.schoolsReachedDelta} icon={SchoolIcon} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" />
           <SchoolsKpi label="ACTIVE SCHOOLS" value={activeSchools.toLocaleString()} delta={FALLBACK.activeSchoolsDelta} icon={Building2} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
-          <SchoolsKpi label="TEACHERS EVALUATED" value={FALLBACK.teachersEvaluated.toLocaleString()} delta={FALLBACK.teachersEvaluatedDelta} icon={Users} cardBg="#faf5ff" borderColor="#e9d5ff" iconBg="#f3e8ff" iconColor="#7c3aed" />
-          <SchoolsKpi label="ASSESSMENTS COMPLETED" value={FALLBACK.assessmentsCompleted.toLocaleString()} delta={FALLBACK.assessmentsCompletedDelta} icon={ClipboardCheck} cardBg="#fff7ed" borderColor="#fed7aa" iconBg="#ffedd5" iconColor="#c2410c" />
-          <SchoolsKpi label="COACHING VISITS" value={FALLBACK.coachingVisits.toLocaleString()} delta={FALLBACK.coachingVisitsDelta} icon={MapPin} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
-          <SchoolsKpi label="STORY ACTIVITIES" value={FALLBACK.storyActivities.toLocaleString()} delta={FALLBACK.storyActivitiesDelta} icon={BookOpen} cardBg="#fef2f2" borderColor="#fecaca" iconBg="#fee2e2" iconColor="#b91c1c" />
-          <SchoolsKpi label="DATA QUALITY" value={`${FALLBACK.dataQuality}%`} delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" className="col-span-2 sm:col-span-3 lg:col-span-4 2xl:col-span-1" />
+          <SchoolsKpi label="TEACHERS EVALUATED" value={teachersEvaluated.toLocaleString()} delta={FALLBACK.teachersEvaluatedDelta} icon={Users} cardBg="#faf5ff" borderColor="#e9d5ff" iconBg="#f3e8ff" iconColor="#7c3aed" />
+          <SchoolsKpi label="ASSESSMENTS COMPLETED" value={assessmentsDone.toLocaleString()} delta={FALLBACK.assessmentsCompletedDelta} icon={ClipboardCheck} cardBg="#fff7ed" borderColor="#fed7aa" iconBg="#ffedd5" iconColor="#c2410c" />
+          <SchoolsKpi label="COACHING VISITS" value={coachingVisits.toLocaleString()} delta={FALLBACK.coachingVisitsDelta} icon={MapPin} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
+          <SchoolsKpi label="STORY ACTIVITIES" value={storyActivities.toLocaleString()} delta={FALLBACK.storyActivitiesDelta} icon={BookOpen} cardBg="#fef2f2" borderColor="#fecaca" iconBg="#fee2e2" iconColor="#b91c1c" />
+          <SchoolsKpi label="DATA QUALITY" value={`${dataQuality}%`} delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" className="col-span-2 sm:col-span-3 lg:col-span-4 2xl:col-span-1" />
         </div>
 
         {/* Analytics row — 4 cards */}
@@ -310,7 +354,7 @@ export default async function SchoolsOverviewPage() {
               <Info className="h-3.5 w-3.5 text-gray-300" strokeWidth={1.75} />
             </div>
             <ul className="space-y-3">
-              {FALLBACK.funnel.map((row) => (
+              {funnel.map((row) => (
                 <FunnelRow key={row.label} {...row} />
               ))}
             </ul>
@@ -337,7 +381,7 @@ export default async function SchoolsOverviewPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {FALLBACK.recentVisits.map((v) => (
+                  {recentVisits.map((v) => (
                     <tr key={`${v.date}-${v.school}`} className="border-b border-gray-50">
                       <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap text-[11px]">{v.date}</td>
                       <td className="px-4 py-2.5 text-gray-900 font-semibold truncate">{v.school}</td>
