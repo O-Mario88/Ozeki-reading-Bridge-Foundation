@@ -10,6 +10,7 @@ import type {
 import { EnrollmentFormModal } from "./EnrollmentFormModal";
 import { LiteracyImpactFormModal } from "./LiteracyImpactFormModal";
 import { NewContactModal } from "./NewContactModal";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type { SchoolEnrollmentRecord, SchoolLiteracyImpactRecord } from "@/lib/types";
 import { GraduationReviewModal } from "./GraduationReviewModal";
 import { ReAuthModal } from "@/components/auth/ReAuthModal";
@@ -399,28 +400,25 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                     <p className="sp-empty">No historical general enrollment snapshot records found.</p>
                   ) : (
                     <div className="sp-table-wrap">
-                      <table className="sp-table">
-                        <thead>
-                          <tr>
-                            <th>Date Recorded</th>
-                            <th>Total Enrollment</th>
-                            <th>Boys</th>
-                            <th>Girls</th>
-                            <th>Source</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {enrollments.map((env) => (
-                            <tr key={env.id}>
-                              <td>{formatDateTime(env.createdAt)}</td>
-                              <td><strong>{formatNumber(env.totalEnrollment)}</strong></td>
-                              <td>{formatNumber(env.boysCount)}</td>
-                              <td>{formatNumber(env.girlsCount)}</td>
-                              <td>{env.updatedFrom}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <DashboardListHeader template="160px 140px 90px 90px minmax(0,1fr)">
+                        <span>Date Recorded</span>
+                        <span>Total Enrollment</span>
+                        <span>Boys</span>
+                        <span>Girls</span>
+                        <span>Source</span>
+                      </DashboardListHeader>
+                      {enrollments.map((env) => (
+                        <DashboardListRow
+                          key={env.id}
+                          template="160px 140px 90px 90px minmax(0,1fr)"
+                        >
+                          <span>{formatDateTime(env.createdAt)}</span>
+                          <span><strong>{formatNumber(env.totalEnrollment)}</strong></span>
+                          <span>{formatNumber(env.boysCount)}</span>
+                          <span>{formatNumber(env.girlsCount)}</span>
+                          <span className="truncate">{env.updatedFrom}</span>
+                        </DashboardListRow>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -433,34 +431,31 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
                     <p className="sp-empty">No literacy impact snapshots have been verified yet.</p>
                   ) : (
                     <div className="sp-table-wrap">
-                      <table className="sp-table">
-                        <thead>
-                          <tr>
-                            <th>Date Recorded</th>
-                            <th>Total Impacted</th>
-                            <th>Baby</th>
-                            <th>Middle</th>
-                            <th>Top</th>
-                            <th>P1</th>
-                            <th>P2</th>
-                            <th>P3</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {literacyImpacts.map((imp) => (
-                            <tr key={imp.id}>
-                              <td>{formatDateTime(imp.createdAt)}</td>
-                              <td><strong>{formatNumber(imp.totalImpacted)}</strong></td>
-                              <td>{formatNumber(imp.babyClassImpacted)}</td>
-                              <td>{formatNumber(imp.middleClassImpacted)}</td>
-                              <td>{formatNumber(imp.topClassImpacted)}</td>
-                              <td>{formatNumber(imp.p1Impacted)}</td>
-                              <td>{formatNumber(imp.p2Impacted)}</td>
-                              <td>{formatNumber(imp.p3Impacted)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <DashboardListHeader template="160px 130px 80px 80px 70px 60px 60px 60px">
+                        <span>Date Recorded</span>
+                        <span>Total Impacted</span>
+                        <span>Baby</span>
+                        <span>Middle</span>
+                        <span>Top</span>
+                        <span>P1</span>
+                        <span>P2</span>
+                        <span>P3</span>
+                      </DashboardListHeader>
+                      {literacyImpacts.map((imp) => (
+                        <DashboardListRow
+                          key={imp.id}
+                          template="160px 130px 80px 80px 70px 60px 60px 60px"
+                        >
+                          <span>{formatDateTime(imp.createdAt)}</span>
+                          <span><strong>{formatNumber(imp.totalImpacted)}</strong></span>
+                          <span>{formatNumber(imp.babyClassImpacted)}</span>
+                          <span>{formatNumber(imp.middleClassImpacted)}</span>
+                          <span>{formatNumber(imp.topClassImpacted)}</span>
+                          <span>{formatNumber(imp.p1Impacted)}</span>
+                          <span>{formatNumber(imp.p2Impacted)}</span>
+                          <span>{formatNumber(imp.p3Impacted)}</span>
+                        </DashboardListRow>
+                      ))}
                     </div>
                   )}
                 </div>

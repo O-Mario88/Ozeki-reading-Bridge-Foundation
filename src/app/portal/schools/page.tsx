@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/postgres/repositories/schools-dashboard";
 import { logger } from "@/lib/logger";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import {
   Building2, School as SchoolIcon, Users, ClipboardCheck, MapPin, BookOpen,
   ShieldCheck, ArrowUpRight, ChevronDown, ChevronRight, Download, Plus,
@@ -310,35 +311,32 @@ export default async function SchoolsOverviewPage() {
                 <Info className="h-3.5 w-3.5 text-gray-300" strokeWidth={1.75} />
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[11px] min-w-[760px]">
-                <thead className="bg-gray-50/40">
-                  <tr className="text-left text-[10px] uppercase tracking-widest text-gray-500 border-b border-gray-100">
-                    <th className="px-3 py-2 font-bold w-8">#</th>
-                    <th className="px-3 py-2 font-bold whitespace-nowrap">School / District Group</th>
-                    <th className="px-3 py-2 font-bold whitespace-nowrap">District</th>
-                    <th className="px-3 py-2 font-bold whitespace-nowrap">Learners</th>
-                    <th className="px-3 py-2 font-bold whitespace-nowrap">Attendance</th>
-                    <th className="px-3 py-2 font-bold whitespace-nowrap">Assessment Score</th>
-                    <th className="px-3 py-2 font-bold whitespace-nowrap">Reading Proficiency</th>
-                    <th className="px-3 py-2 font-bold whitespace-nowrap">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {FALLBACK.scorecard.map((row, i) => (
-                    <tr key={row.school} className="border-b border-gray-50 hover:bg-gray-50/40">
-                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
-                      <td className="px-3 py-2 text-gray-900 font-semibold whitespace-nowrap">{row.school}</td>
-                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.district}</td>
-                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.learners.toLocaleString()}</td>
-                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.attendance}%</td>
-                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.score}%</td>
-                      <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.reading}%</td>
-                      <td className="px-3 py-2 whitespace-nowrap"><StatusPill status={row.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-3">
+              <DashboardListHeader template="32px minmax(0,1.6fr) minmax(0,1fr) 80px 100px 130px 140px 110px">
+                <span>#</span>
+                <span>School / District Group</span>
+                <span>District</span>
+                <span>Learners</span>
+                <span>Attendance</span>
+                <span>Assessment Score</span>
+                <span>Reading Proficiency</span>
+                <span>Status</span>
+              </DashboardListHeader>
+              {FALLBACK.scorecard.map((row, i) => (
+                <DashboardListRow
+                  key={row.school}
+                  template="32px minmax(0,1.6fr) minmax(0,1fr) 80px 100px 130px 140px 110px"
+                >
+                  <span className="text-gray-500">{i + 1}</span>
+                  <span className="text-gray-900 font-semibold truncate">{row.school}</span>
+                  <span className="text-gray-700 truncate">{row.district}</span>
+                  <span className="text-gray-700">{row.learners.toLocaleString()}</span>
+                  <span className="text-gray-700">{row.attendance}%</span>
+                  <span className="text-gray-700">{row.score}%</span>
+                  <span className="text-gray-700">{row.reading}%</span>
+                  <span><StatusPill status={row.status} /></span>
+                </DashboardListRow>
+              ))}
             </div>
             <div className="px-5 py-3 border-t border-gray-100">
               <Link href="/portal/insights" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline">
@@ -369,33 +367,30 @@ export default async function SchoolsOverviewPage() {
           {/* Recent School Visits */}
           <section className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
             <CardHeader title="Recent School Visits" link="/portal/visits" />
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px] min-w-[420px]">
-                <thead>
-                  <tr className="text-left text-[9.5px] uppercase tracking-wider text-gray-400 border-b border-gray-100">
-                    <th className="px-4 py-2 font-bold">Date</th>
-                    <th className="px-4 py-2 font-bold">School</th>
-                    <th className="px-4 py-2 font-bold">District</th>
-                    <th className="px-4 py-2 font-bold">Coach</th>
-                    <th className="px-4 py-2 font-bold">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentVisits.map((v) => (
-                    <tr key={`${v.date}-${v.school}`} className="border-b border-gray-50">
-                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap text-[11px]">{v.date}</td>
-                      <td className="px-4 py-2.5 text-gray-900 font-semibold truncate">{v.school}</td>
-                      <td className="px-4 py-2.5 text-gray-700">{v.district}</td>
-                      <td className="px-4 py-2.5 text-gray-700">{v.coach}</td>
-                      <td className="px-4 py-2.5">
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
-                          {v.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-3">
+              <DashboardListHeader template="80px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 90px">
+                <span>Date</span>
+                <span>School</span>
+                <span>District</span>
+                <span>Coach</span>
+                <span>Status</span>
+              </DashboardListHeader>
+              {recentVisits.map((v) => (
+                <DashboardListRow
+                  key={`${v.date}-${v.school}`}
+                  template="80px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 90px"
+                >
+                  <span className="text-gray-500 text-[11px]">{v.date}</span>
+                  <span className="text-gray-900 font-semibold truncate">{v.school}</span>
+                  <span className="text-gray-700 truncate">{v.district}</span>
+                  <span className="text-gray-700 truncate">{v.coach}</span>
+                  <span>
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                      {v.status}
+                    </span>
+                  </span>
+                </DashboardListRow>
+              ))}
             </div>
             <div className="px-5 py-3 border-t border-gray-100">
               <Link href="/portal/visits" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline">

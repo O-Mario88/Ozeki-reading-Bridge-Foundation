@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import {
   getSchoolDirectoryRecord,
   getTeacherImprovementProfileAsync,
@@ -105,28 +106,25 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
             </div>
 
             <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Domain</th>
-                    <th>Delta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(Object.entries(comparison.domainDeltas) as Array<[string, number | null]>).map(
-                    ([domain, delta]) => (
-                      <tr key={domain}>
-                        <td>{domain}</td>
-                        <td>
-                          {typeof delta === "number"
-                            ? `${delta > 0 ? "+" : ""}${delta.toFixed(2)}`
-                            : "Data not available"}
-                        </td>
-                      </tr>
-                    ),
-                  )}
-                </tbody>
-              </table>
+              <DashboardListHeader template="minmax(0,1.6fr) 160px">
+                <span>Domain</span>
+                <span>Delta</span>
+              </DashboardListHeader>
+              {(Object.entries(comparison.domainDeltas) as Array<[string, number | null]>).map(
+                ([domain, delta]) => (
+                  <DashboardListRow
+                    key={domain}
+                    template="minmax(0,1.6fr) 160px"
+                  >
+                    <span className="truncate">{domain}</span>
+                    <span>
+                      {typeof delta === "number"
+                        ? `${delta > 0 ? "+" : ""}${delta.toFixed(2)}`
+                        : "Data not available"}
+                    </span>
+                  </DashboardListRow>
+                ),
+              )}
             </div>
 
             {observationTrajectory.points.length > 0 && (
@@ -160,40 +158,37 @@ export default async function TeacherImprovementPage({ params }: PageProps) {
                   </article>
                 </div>
                 <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Observer</th>
-                        <th>Focus</th>
-                        <th>GPC</th>
-                        <th>Blending</th>
-                        <th>Engagement</th>
-                        <th>Overall</th>
-                        <th>Rating</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {observationTrajectory.points.map((p) => (
-                        <tr key={p.observationId}>
-                          <td><Link href={`/portal/observations/${p.observationId}`}>{p.observationDate}</Link></td>
-                          <td>{p.observerName}</td>
-                          <td>{p.lessonFocus}</td>
-                          <td>{p.gpcAvg ?? "—"}</td>
-                          <td>{p.blendingAvg ?? "—"}</td>
-                          <td>{p.engagementAvg ?? "—"}</td>
-                          <td><strong>{p.overallAvg ?? "—"}</strong></td>
-                          <td>
-                            {p.overallRating ? (
-                              <span className={`coaching-qa-pill coaching-qa-${p.overallRating === "fidelity" ? "ok" : p.overallRating === "partial" ? "warning" : "critical"}`}>
-                                {p.overallRating}
-                              </span>
-                            ) : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <DashboardListHeader template="120px minmax(0,1.2fr) minmax(0,1.4fr) 70px 80px 100px 80px 110px">
+                    <span>Date</span>
+                    <span>Observer</span>
+                    <span>Focus</span>
+                    <span>GPC</span>
+                    <span>Blending</span>
+                    <span>Engagement</span>
+                    <span>Overall</span>
+                    <span>Rating</span>
+                  </DashboardListHeader>
+                  {observationTrajectory.points.map((p) => (
+                    <DashboardListRow
+                      key={p.observationId}
+                      template="120px minmax(0,1.2fr) minmax(0,1.4fr) 70px 80px 100px 80px 110px"
+                    >
+                      <span><Link href={`/portal/observations/${p.observationId}`}>{p.observationDate}</Link></span>
+                      <span className="truncate">{p.observerName}</span>
+                      <span className="truncate">{p.lessonFocus}</span>
+                      <span>{p.gpcAvg ?? "—"}</span>
+                      <span>{p.blendingAvg ?? "—"}</span>
+                      <span>{p.engagementAvg ?? "—"}</span>
+                      <span><strong>{p.overallAvg ?? "—"}</strong></span>
+                      <span>
+                        {p.overallRating ? (
+                          <span className={`coaching-qa-pill coaching-qa-${p.overallRating === "fidelity" ? "ok" : p.overallRating === "partial" ? "warning" : "critical"}`}>
+                            {p.overallRating}
+                          </span>
+                        ) : "—"}
+                      </span>
+                    </DashboardListRow>
+                  ))}
                 </div>
               </article>
             )}

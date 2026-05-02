@@ -3,6 +3,7 @@
 import { DistrictStats, SchoolSupportStatusRecord } from "@/lib/types";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface DistrictProfileViewProps {
     stats: DistrictStats;
@@ -99,40 +100,33 @@ export function DistrictProfileView({ stats, initialSupportStatuses, initialScho
                                 <div className="list-view">
                                     <h3>Schools in {stats.district}</h3>
                                     <div className="table-wrap">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>School Name</th>
-                                                    <th>Sub-county</th>
-                                                    <th>Parish</th>
-                                                    <th>Status</th>
-                                                    <th>Enrollment</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {initialSchools.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={5} className="empty-state-row">
-                                                            No schools found for this district.
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    initialSchools.map((school) => (
-                                                        <tr key={school.id}>
-                                                            <td>
-                                                                <Link href={`/portal/schools/${school.id}`} className="value link">
-                                                                    {school.name}
-                                                                </Link>
-                                                            </td>
-                                                            <td>{school.subCounty}</td>
-                                                            <td>{school.parish}</td>
-                                                            <td>{school.status}</td>
-                                                            <td>{school.enrollment.toLocaleString()}</td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
+                                        <DashboardListHeader template="minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) 110px 110px">
+                                            <span>School Name</span>
+                                            <span>Sub-county</span>
+                                            <span>Parish</span>
+                                            <span>Status</span>
+                                            <span>Enrollment</span>
+                                        </DashboardListHeader>
+                                        {initialSchools.length === 0 ? (
+                                            <div className="empty-state-row py-3">No schools found for this district.</div>
+                                        ) : (
+                                            initialSchools.map((school) => (
+                                                <DashboardListRow
+                                                    key={school.id}
+                                                    template="minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) 110px 110px"
+                                                >
+                                                    <span className="min-w-0">
+                                                        <Link href={`/portal/schools/${school.id}`} className="value link truncate inline-block max-w-full">
+                                                            {school.name}
+                                                        </Link>
+                                                    </span>
+                                                    <span className="truncate">{school.subCounty}</span>
+                                                    <span className="truncate">{school.parish}</span>
+                                                    <span>{school.status}</span>
+                                                    <span>{school.enrollment.toLocaleString()}</span>
+                                                </DashboardListRow>
+                                            ))
+                                        )}
                                     </div>
                                     <div style={{ marginTop: "1rem" }}>
                                         <Link href={`/portal/schools?district=${stats.district}`} className="action-link">
@@ -165,48 +159,41 @@ export function DistrictProfileView({ stats, initialSupportStatuses, initialScho
                                         </article>
                                     </div>
                                     <div className="table-wrap">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>School</th>
-                                                    <th>Status</th>
-                                                    <th>Period</th>
-                                                    <th>Non-readers %</th>
-                                                    <th>Below minimum %</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {initialSupportStatuses.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={5} className="empty-state-row">
-                                                            No support-status snapshots available yet.
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    initialSupportStatuses.map((row) => (
-                                                        <tr key={row.id}>
-                                                            <td>
-                                                                <Link href={`/portal/schools/${row.schoolId}`} className="value link">
-                                                                    {row.schoolName}
-                                                                </Link>
-                                                            </td>
-                                                            <td>{row.status}</td>
-                                                            <td>{row.periodKey}</td>
-                                                            <td>
-                                                                {typeof row.metrics.nonReadersPct === "number"
-                                                                    ? `${row.metrics.nonReadersPct}%`
-                                                                    : "N/A"}
-                                                            </td>
-                                                            <td>
-                                                                {typeof row.metrics.belowMinimumPct === "number"
-                                                                    ? `${row.metrics.belowMinimumPct}%`
-                                                                    : "N/A"}
-                                                            </td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
+                                        <DashboardListHeader template="minmax(0,1.6fr) minmax(0,1fr) 110px 130px 140px">
+                                            <span>School</span>
+                                            <span>Status</span>
+                                            <span>Period</span>
+                                            <span>Non-readers %</span>
+                                            <span>Below minimum %</span>
+                                        </DashboardListHeader>
+                                        {initialSupportStatuses.length === 0 ? (
+                                            <div className="empty-state-row py-3">No support-status snapshots available yet.</div>
+                                        ) : (
+                                            initialSupportStatuses.map((row) => (
+                                                <DashboardListRow
+                                                    key={row.id}
+                                                    template="minmax(0,1.6fr) minmax(0,1fr) 110px 130px 140px"
+                                                >
+                                                    <span className="min-w-0">
+                                                        <Link href={`/portal/schools/${row.schoolId}`} className="value link truncate inline-block max-w-full">
+                                                            {row.schoolName}
+                                                        </Link>
+                                                    </span>
+                                                    <span className="truncate">{row.status}</span>
+                                                    <span>{row.periodKey}</span>
+                                                    <span>
+                                                        {typeof row.metrics.nonReadersPct === "number"
+                                                            ? `${row.metrics.nonReadersPct}%`
+                                                            : "N/A"}
+                                                    </span>
+                                                    <span>
+                                                        {typeof row.metrics.belowMinimumPct === "number"
+                                                            ? `${row.metrics.belowMinimumPct}%`
+                                                            : "N/A"}
+                                                    </span>
+                                                </DashboardListRow>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             )}

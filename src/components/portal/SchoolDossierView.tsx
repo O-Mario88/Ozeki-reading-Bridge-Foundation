@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import {
   TrendingUp, TrendingDown, Minus, Activity, Users, GraduationCap,
   Award, CheckCircle2, XCircle, Download, School as SchoolIcon,
@@ -171,34 +172,29 @@ export function SchoolDossierView({ dossier }: SchoolDossierViewProps) {
         </div>
 
         {districtComparison.peers.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                  <th className="py-2 px-2 font-semibold">Rank</th>
-                  <th className="py-2 px-2 font-semibold">School</th>
-                  <th className="py-2 px-2 font-semibold text-right">Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {districtComparison.peers.slice(0, 10).map((peer) => (
-                  <tr
-                    key={peer.schoolId}
-                    className={`border-b border-gray-50 ${peer.isThisSchool ? "bg-[#006b61]/5 font-semibold" : ""}`}
-                  >
-                    <td className="py-2 px-2 text-gray-500">#{peer.rank}</td>
-                    <td className="py-2 px-2">
-                      {peer.isThisSchool ? (
-                        <span className="text-[#006b61]">{peer.name} <span className="text-xs opacity-60">(this school)</span></span>
-                      ) : (
-                        peer.name
-                      )}
-                    </td>
-                    <td className="py-2 px-2 text-right text-gray-700">{peer.score}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <DashboardListHeader template="60px minmax(0,2fr) 100px">
+              <span>Rank</span>
+              <span>School</span>
+              <span className="text-right">Score</span>
+            </DashboardListHeader>
+            {districtComparison.peers.slice(0, 10).map((peer) => (
+              <DashboardListRow
+                key={peer.schoolId}
+                template="60px minmax(0,2fr) 100px"
+                className={peer.isThisSchool ? "bg-[#006b61]/5 font-semibold" : ""}
+              >
+                <span className="text-gray-500">#{peer.rank}</span>
+                <span className="truncate">
+                  {peer.isThisSchool ? (
+                    <span className="text-[#006b61]">{peer.name} <span className="text-xs opacity-60">(this school)</span></span>
+                  ) : (
+                    peer.name
+                  )}
+                </span>
+                <span className="text-right text-gray-700">{peer.score}</span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </div>
@@ -247,50 +243,47 @@ export function SchoolDossierView({ dossier }: SchoolDossierViewProps) {
         </div>
 
         {teacherRoster.teachers.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                  <th className="py-2 px-2 font-semibold">Teacher</th>
-                  <th className="py-2 px-2 font-semibold">Class</th>
-                  <th className="py-2 px-2 font-semibold text-center">Trained</th>
-                  <th className="py-2 px-2 font-semibold text-center">Observed</th>
-                  <th className="py-2 px-2 font-semibold text-center">Assessed</th>
-                  <th className="py-2 px-2 font-semibold">Last Rating</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teacherRoster.teachers.map((t) => (
-                  <tr key={t.teacherUid} className="border-b border-gray-50">
-                    <td className="py-2 px-2 font-medium text-gray-800">{t.fullName}</td>
-                    <td className="py-2 px-2 text-gray-500">{t.classTaught ?? "—"}</td>
-                    <td className="py-2 px-2 text-center">
-                      {t.isTrained ? <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" /> : <XCircle className="w-4 h-4 text-gray-300 inline" />}
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      {t.isObserved ? <CheckCircle2 className="w-4 h-4 text-sky-600 inline" /> : <XCircle className="w-4 h-4 text-gray-300 inline" />}
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      {t.hasAssessmentData ? <CheckCircle2 className="w-4 h-4 text-purple-600 inline" /> : <XCircle className="w-4 h-4 text-gray-300 inline" />}
-                    </td>
-                    <td className="py-2 px-2 text-xs">
-                      {t.lastObservationRating ? (
-                        <span className={
-                          t.lastObservationRating === "fidelity" ? "text-blue-700 font-semibold" :
-                          t.lastObservationRating === "partial" ? "text-amber-700 font-semibold" :
-                          "text-red-700 font-semibold"
-                        }>
-                          {t.lastObservationRating}
-                          {t.lastObservationDate && <span className="text-gray-400 font-normal"> · {t.lastObservationDate}</span>}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1fr) 80px 90px 90px minmax(0,1.4fr)">
+              <span>Teacher</span>
+              <span>Class</span>
+              <span className="text-center">Trained</span>
+              <span className="text-center">Observed</span>
+              <span className="text-center">Assessed</span>
+              <span>Last Rating</span>
+            </DashboardListHeader>
+            {teacherRoster.teachers.map((t) => (
+              <DashboardListRow
+                key={t.teacherUid}
+                template="minmax(0,1.4fr) minmax(0,1fr) 80px 90px 90px minmax(0,1.4fr)"
+              >
+                <span className="font-medium text-gray-800 truncate">{t.fullName}</span>
+                <span className="text-gray-500 truncate">{t.classTaught ?? "—"}</span>
+                <span className="text-center">
+                  {t.isTrained ? <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" /> : <XCircle className="w-4 h-4 text-gray-300 inline" />}
+                </span>
+                <span className="text-center">
+                  {t.isObserved ? <CheckCircle2 className="w-4 h-4 text-sky-600 inline" /> : <XCircle className="w-4 h-4 text-gray-300 inline" />}
+                </span>
+                <span className="text-center">
+                  {t.hasAssessmentData ? <CheckCircle2 className="w-4 h-4 text-purple-600 inline" /> : <XCircle className="w-4 h-4 text-gray-300 inline" />}
+                </span>
+                <span className="text-xs truncate">
+                  {t.lastObservationRating ? (
+                    <span className={
+                      t.lastObservationRating === "fidelity" ? "text-blue-700 font-semibold" :
+                      t.lastObservationRating === "partial" ? "text-amber-700 font-semibold" :
+                      "text-red-700 font-semibold"
+                    }>
+                      {t.lastObservationRating}
+                      {t.lastObservationDate && <span className="text-gray-400 font-normal"> · {t.lastObservationDate}</span>}
+                    </span>
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
 
@@ -327,30 +320,29 @@ export function SchoolDossierView({ dossier }: SchoolDossierViewProps) {
           </div>
         </div>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-              <th className="py-2 px-2 font-semibold">Criterion</th>
-              <th className="py-2 px-2 font-semibold">Target</th>
-              <th className="py-2 px-2 font-semibold">Actual</th>
-              <th className="py-2 px-2 font-semibold text-center">Met</th>
-            </tr>
-          </thead>
-          <tbody>
-            {graduation.criteria.map((c) => (
-              <tr key={c.key} className="border-b border-gray-50">
-                <td className="py-2.5 px-2 font-medium text-gray-800">{c.label}</td>
-                <td className="py-2.5 px-2 text-gray-500 text-xs">{c.target}</td>
-                <td className="py-2.5 px-2 text-gray-700 font-semibold">{c.actual}</td>
-                <td className="py-2.5 px-2 text-center">
-                  {c.met
-                    ? <CheckCircle2 className="w-5 h-5 text-emerald-600 inline" />
-                    : <XCircle className="w-5 h-5 text-red-400 inline" />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div>
+          <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 80px">
+            <span>Criterion</span>
+            <span>Target</span>
+            <span>Actual</span>
+            <span className="text-center">Met</span>
+          </DashboardListHeader>
+          {graduation.criteria.map((c) => (
+            <DashboardListRow
+              key={c.key}
+              template="minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 80px"
+            >
+              <span className="font-medium text-gray-800 truncate">{c.label}</span>
+              <span className="text-gray-500 text-xs truncate">{c.target}</span>
+              <span className="text-gray-700 font-semibold truncate">{c.actual}</span>
+              <span className="text-center">
+                {c.met
+                  ? <CheckCircle2 className="w-5 h-5 text-emerald-600 inline" />
+                  : <XCircle className="w-5 h-5 text-red-400 inline" />}
+              </span>
+            </DashboardListRow>
+          ))}
+        </div>
 
         {!graduation.ready && graduation.missing.length > 0 && (
           <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-100">

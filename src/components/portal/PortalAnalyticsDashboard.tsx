@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ImpactExplorerProfiles } from "@/services/dataService";
 import { PortalAnalyticsData, PortalRecordModule, PortalRecordStatus, PortalUser } from "@/lib/types";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface PortalAnalyticsDashboardProps {
   data: PortalAnalyticsData;
@@ -442,32 +443,27 @@ export function PortalAnalyticsDashboard({ data, explorer, user }: PortalAnalyti
             <p>Top active districts by records</p>
           </div>
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>District</th>
-                  <th>Records</th>
-                  <th>Schools</th>
-                  <th>Testimonials</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.districtStats ?? []).length === 0 ? (
-                  <tr>
-                    <td colSpan={4}>No district activity found.</td>
-                  </tr>
-                ) : (
-                  (data.districtStats ?? []).slice(0, 8).map((item) => (
-                    <tr key={item.district}>
-                      <td>{item.district}</td>
-                      <td>{formatNumber(item.records)}</td>
-                      <td>{formatNumber(item.schools)}</td>
-                      <td>{formatNumber(item.testimonials)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DashboardListHeader template="minmax(0,1.6fr) 100px 100px 130px">
+              <span>District</span>
+              <span>Records</span>
+              <span>Schools</span>
+              <span>Testimonials</span>
+            </DashboardListHeader>
+            {(data.districtStats ?? []).length === 0 ? (
+              <div className="py-3">No district activity found.</div>
+            ) : (
+              (data.districtStats ?? []).slice(0, 8).map((item) => (
+                <DashboardListRow
+                  key={item.district}
+                  template="minmax(0,1.6fr) 100px 100px 130px"
+                >
+                  <span className="truncate">{item.district}</span>
+                  <span>{formatNumber(item.records)}</span>
+                  <span>{formatNumber(item.schools)}</span>
+                  <span>{formatNumber(item.testimonials)}</span>
+                </DashboardListRow>
+              ))
+            )}
           </div>
         </article>
 
@@ -477,38 +473,33 @@ export function PortalAnalyticsDashboard({ data, explorer, user }: PortalAnalyti
             <p>Latest entries from portal modules</p>
           </div>
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Date</th>
-                  <th>Module</th>
-                  <th>District</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.recentRecords ?? []).length === 0 ? (
-                  <tr>
-                    <td colSpan={5}>No recent records found.</td>
-                  </tr>
-                ) : (
-                  (data.recentRecords ?? []).slice(0, 8).map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.recordCode}</td>
-                      <td>{formatDate(item.date)}</td>
-                      <td>{moduleLabels[item.module]}</td>
-                      <td>{item.district}</td>
-                      <td>
-                        <span className={`analytics-status-pill ${recordStatusClass(item.status)}`}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DashboardListHeader template="120px 110px minmax(0,1fr) minmax(0,1fr) 110px">
+              <span>Code</span>
+              <span>Date</span>
+              <span>Module</span>
+              <span>District</span>
+              <span>Status</span>
+            </DashboardListHeader>
+            {(data.recentRecords ?? []).length === 0 ? (
+              <div className="py-3">No recent records found.</div>
+            ) : (
+              (data.recentRecords ?? []).slice(0, 8).map((item) => (
+                <DashboardListRow
+                  key={item.id}
+                  template="120px 110px minmax(0,1fr) minmax(0,1fr) 110px"
+                >
+                  <span className="truncate">{item.recordCode}</span>
+                  <span>{formatDate(item.date)}</span>
+                  <span className="truncate">{moduleLabels[item.module]}</span>
+                  <span className="truncate">{item.district}</span>
+                  <span>
+                    <span className={`analytics-status-pill ${recordStatusClass(item.status)}`}>
+                      {item.status}
+                    </span>
+                  </span>
+                </DashboardListRow>
+              ))
+            )}
           </div>
         </article>
       </section>

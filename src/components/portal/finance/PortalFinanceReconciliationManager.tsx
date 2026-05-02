@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useMemo, useState } from "react";
 import { FloatingSurface } from "@/components/FloatingSurface";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type {
     FinanceLedgerTransactionRecord,
     FinanceStatementLineRecord,
@@ -186,44 +187,44 @@ export function PortalFinanceReconciliationManager({ initialLines, initialLedger
                     {filteredLines.length === 0 ? (
                         <div style={{ padding: 24, textAlign: "center", color: "var(--fin-text-muted)" }}>No statement lines.</div>
                     ) : (
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th style={{ textAlign: "right" }}>Amount</th>
-                                    <th>Reference</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredLines.map((line) => (
-                                    <tr key={line.id} style={selectedLineId === line.id ? { background: "var(--fin-primary-light)" } : undefined}>
-                                        <td>{formatDate(line.date)}</td>
-                                        <td style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(line.currency, line.amount)}</td>
-                                        <td>{line.reference || "—"}</td>
-                                        <td>
-                                            <span className={`finance-status-pill finance-status-pill--${line.matchStatus === "matched" ? "paid" : line.matchStatus === "partial" ? "sent" : "draft"}`}>
-                                                {line.matchStatus}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {line.matchStatus !== "matched" && (
-                                                <button
-                                                    type="button"
-                                                    className="finance-btn finance-btn-outline"
-                                                    style={{ fontSize: 12, padding: "4px 10px" }}
-                                                    onClick={() => handleAutoSuggest(line.id)}
-                                                    disabled={saving}
-                                                >
-                                                    Suggest
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div>
+                            <DashboardListHeader template="100px 130px minmax(0,1.2fr) 110px 100px">
+                                <span>Date</span>
+                                <span style={{ textAlign: "right" }}>Amount</span>
+                                <span>Reference</span>
+                                <span>Status</span>
+                                <span>Actions</span>
+                            </DashboardListHeader>
+                            {filteredLines.map((line) => (
+                                <DashboardListRow
+                                    key={line.id}
+                                    template="100px 130px minmax(0,1.2fr) 110px 100px"
+                                    className={selectedLineId === line.id ? "bg-emerald-50" : ""}
+                                >
+                                    <span>{formatDate(line.date)}</span>
+                                    <span style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(line.currency, line.amount)}</span>
+                                    <span className="truncate">{line.reference || "—"}</span>
+                                    <span>
+                                        <span className={`finance-status-pill finance-status-pill--${line.matchStatus === "matched" ? "paid" : line.matchStatus === "partial" ? "sent" : "draft"}`}>
+                                            {line.matchStatus}
+                                        </span>
+                                    </span>
+                                    <span>
+                                        {line.matchStatus !== "matched" && (
+                                            <button
+                                                type="button"
+                                                className="finance-btn finance-btn-outline"
+                                                style={{ fontSize: 12, padding: "4px 10px" }}
+                                                onClick={() => handleAutoSuggest(line.id)}
+                                                disabled={saving}
+                                            >
+                                                Suggest
+                                            </button>
+                                        )}
+                                    </span>
+                                </DashboardListRow>
+                            ))}
+                        </div>
                     )}
                 </div>
 
@@ -233,63 +234,61 @@ export function PortalFinanceReconciliationManager({ initialLines, initialLedger
                         <h3>{suggestions.length > 0 ? "Suggested Matches" : "Unmatched Ledger Transactions"}</h3>
                     </div>
                     {suggestions.length > 0 && selectedLineId ? (
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th style={{ textAlign: "right" }}>Amount</th>
-                                    <th>Counterparty</th>
-                                    <th>Score</th>
-                                    <th>Match</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {suggestions.map((s) => (
-                                    <tr key={s.ledgerTxnId}>
-                                        <td>{formatDate(s.date)}</td>
-                                        <td style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(s.currency, s.amount)}</td>
-                                        <td>{s.counterpartyName || "—"}</td>
-                                        <td>
-                                            <span style={{ fontWeight: 700, color: s.score >= 80 ? "var(--fin-success)" : s.score >= 60 ? "var(--fin-warning)" : "var(--fin-text-muted)" }}>
-                                                {s.score}%
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button
-                                                type="button"
-                                                className="finance-btn finance-btn-primary"
-                                                style={{ fontSize: 12, padding: "4px 10px" }}
-                                                onClick={() => handleMatch(selectedLineId, s.ledgerTxnId, Math.abs(s.amount))}
-                                                disabled={saving}
-                                            >
-                                                Match
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div>
+                            <DashboardListHeader template="100px 130px minmax(0,1.2fr) 80px 100px">
+                                <span>Date</span>
+                                <span style={{ textAlign: "right" }}>Amount</span>
+                                <span>Counterparty</span>
+                                <span>Score</span>
+                                <span>Match</span>
+                            </DashboardListHeader>
+                            {suggestions.map((s) => (
+                                <DashboardListRow
+                                    key={s.ledgerTxnId}
+                                    template="100px 130px minmax(0,1.2fr) 80px 100px"
+                                >
+                                    <span>{formatDate(s.date)}</span>
+                                    <span style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(s.currency, s.amount)}</span>
+                                    <span className="truncate">{s.counterpartyName || "—"}</span>
+                                    <span>
+                                        <span style={{ fontWeight: 700, color: s.score >= 80 ? "var(--fin-success)" : s.score >= 60 ? "var(--fin-warning)" : "var(--fin-text-muted)" }}>
+                                            {s.score}%
+                                        </span>
+                                    </span>
+                                    <span>
+                                        <button
+                                            type="button"
+                                            className="finance-btn finance-btn-primary"
+                                            style={{ fontSize: 12, padding: "4px 10px" }}
+                                            onClick={() => handleMatch(selectedLineId, s.ledgerTxnId, Math.abs(s.amount))}
+                                            disabled={saving}
+                                        >
+                                            Match
+                                        </button>
+                                    </span>
+                                </DashboardListRow>
+                            ))}
+                        </div>
                     ) : (
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th style={{ textAlign: "right" }}>Amount</th>
-                                    <th>Source</th>
-                                    <th>Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {unmatchedLedger.slice(0, 15).map((t) => (
-                                    <tr key={t.id}>
-                                        <td>{formatDate(t.date)}</td>
-                                        <td style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(t.currency, t.amount)}</td>
-                                        <td>{t.sourceType}</td>
-                                        <td>{t.notes || "—"}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div>
+                            <DashboardListHeader template="100px 130px 130px minmax(0,1.4fr)">
+                                <span>Date</span>
+                                <span style={{ textAlign: "right" }}>Amount</span>
+                                <span>Source</span>
+                                <span>Notes</span>
+                            </DashboardListHeader>
+                            {unmatchedLedger.slice(0, 15).map((t) => (
+                                <DashboardListRow
+                                    key={t.id}
+                                    template="100px 130px 130px minmax(0,1.4fr)"
+                                >
+                                    <span>{formatDate(t.date)}</span>
+                                    <span style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(t.currency, t.amount)}</span>
+                                    <span className="truncate">{t.sourceType}</span>
+                                    <span className="truncate">{t.notes || "—"}</span>
+                                </DashboardListRow>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>

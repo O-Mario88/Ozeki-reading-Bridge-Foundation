@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { AnthologyRecord, PortalUser, SchoolDirectoryRecord, StoryRecord } from "@/lib/types";
 import { StoryStudioDrawer } from "@/components/portal/StoryStudioDrawer";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface Props {
   initialStories: StoryRecord[];
@@ -272,86 +273,86 @@ export function StoryLibraryManager({
             </p>
           </div>
         ) : (
-          <div className="card" style={{ overflow: "auto" }}>
-            <table className="portal-table" style={{ width: "100%", fontSize: "0.88rem" }}>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>School</th>
-                  <th>Author link</th>
-                  <th>Status</th>
-                  <th>Consent</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stories.map((story) => (
-                  <tr key={story.id}>
-                    <td>
-                      <strong>{story.title}</strong>
-                      <br />
-                      <span style={{ fontSize: "0.8em", opacity: 0.8 }}>
-                        {story.language || "English"}
-                      </span>
-                    </td>
-                    <td>{story.schoolName || "—"}</td>
-                    <td>{story.learnerUid ? `Learner linked` : "Not linked"}</td>
-                    <td>
-                      <Badge label={story.publishStatus} color={STATUS_COLORS[story.publishStatus] ?? "#666"} />
-                    </td>
-                    <td>
-                      <Badge label={story.consentStatus} color={STATUS_COLORS[story.consentStatus] ?? "#666"} />
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                        <button
-                          className="button button-ghost"
-                          style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
-                          onClick={() => openStoryStudio(story)}
-                        >
-                          Open studio
-                        </button>
-                        {story.publishStatus !== "published" && story.consentStatus === "approved" ? (
-                          <button
-                            className="button"
-                            style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
-                            onClick={() => {
-                              void handlePublishStory(story.id);
-                            }}
-                          >
-                            Publish
-                          </button>
-                        ) : null}
-                        {story.publishStatus === "published" && canUnpublish ? (
-                          <button
-                            className="button button-ghost"
-                            style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
-                            onClick={() => {
-                              void handleUnpublishStory(story.id);
-                            }}
-                          >
-                            Unpublish
-                          </button>
-                        ) : null}
-                        <button
-                          className="button button-ghost"
-                          style={{
-                            fontSize: "0.78rem",
-                            padding: "0.25rem 0.5rem",
-                            color: "var(--md-sys-color-error)",
-                          }}
-                          onClick={() => {
-                            void handleDeleteStory(story.id);
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="card" style={{ overflow: "auto", fontSize: "0.88rem" }}>
+            <DashboardListHeader template="minmax(0,2fr) minmax(0,1.2fr) 130px 110px 110px minmax(0,1.6fr)">
+              <span>Title</span>
+              <span>School</span>
+              <span>Author link</span>
+              <span>Status</span>
+              <span>Consent</span>
+              <span>Actions</span>
+            </DashboardListHeader>
+            {stories.map((story) => (
+              <DashboardListRow
+                key={story.id}
+                template="minmax(0,2fr) minmax(0,1.2fr) 130px 110px 110px minmax(0,1.6fr)"
+              >
+                <span className="min-w-0">
+                  <strong className="block truncate">{story.title}</strong>
+                  <span style={{ fontSize: "0.8em", opacity: 0.8 }}>
+                    {story.language || "English"}
+                  </span>
+                </span>
+                <span className="truncate">{story.schoolName || "—"}</span>
+                <span>{story.learnerUid ? `Learner linked` : "Not linked"}</span>
+                <span>
+                  <Badge label={story.publishStatus} color={STATUS_COLORS[story.publishStatus] ?? "#666"} />
+                </span>
+                <span>
+                  <Badge label={story.consentStatus} color={STATUS_COLORS[story.consentStatus] ?? "#666"} />
+                </span>
+                <span>
+                  <span style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="button button-ghost"
+                      style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
+                      onClick={() => openStoryStudio(story)}
+                    >
+                      Open studio
+                    </button>
+                    {story.publishStatus !== "published" && story.consentStatus === "approved" ? (
+                      <button
+                        type="button"
+                        className="button"
+                        style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
+                        onClick={() => {
+                          void handlePublishStory(story.id);
+                        }}
+                      >
+                        Publish
+                      </button>
+                    ) : null}
+                    {story.publishStatus === "published" && canUnpublish ? (
+                      <button
+                        type="button"
+                        className="button button-ghost"
+                        style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
+                        onClick={() => {
+                          void handleUnpublishStory(story.id);
+                        }}
+                      >
+                        Unpublish
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="button button-ghost"
+                      style={{
+                        fontSize: "0.78rem",
+                        padding: "0.25rem 0.5rem",
+                        color: "var(--md-sys-color-error)",
+                      }}
+                      onClick={() => {
+                        void handleDeleteStory(story.id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </span>
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )
       ) : (
@@ -560,53 +561,51 @@ export function StoryLibraryManager({
             </div>
 
             {anthologies.length > 0 ? (
-              <div style={{ overflow: "auto", marginTop: "1rem" }}>
-                <table className="portal-table" style={{ width: "100%", fontSize: "0.88rem" }}>
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Scope</th>
-                      <th>Edition</th>
-                      <th>Consent</th>
-                      <th>Status</th>
-                      <th>Featured</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {anthologies.map((anthology) => (
-                      <tr key={anthology.id}>
-                        <td>
-                          <strong>{anthology.title}</strong>
-                        </td>
-                        <td>{anthology.scopeType}</td>
-                        <td>{anthology.edition || "—"}</td>
-                        <td>
-                          <Badge
-                            label={anthology.consentStatus}
-                            color={STATUS_COLORS[anthology.consentStatus] ?? "#666"}
-                          />
-                        </td>
-                        <td>
-                          <Badge
-                            label={anthology.publishStatus}
-                            color={STATUS_COLORS[anthology.publishStatus] ?? "#666"}
-                          />
-                        </td>
-                        <td>{anthology.featured ? "Yes" : "No"}</td>
-                        <td>
-                          <button
-                            className="button button-ghost"
-                            style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
-                            onClick={() => openAnthologyEditor(anthology)}
-                          >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ overflow: "auto", marginTop: "1rem", fontSize: "0.88rem" }}>
+                <DashboardListHeader template="minmax(0,2fr) 110px 110px 110px 110px 90px 110px">
+                  <span>Title</span>
+                  <span>Scope</span>
+                  <span>Edition</span>
+                  <span>Consent</span>
+                  <span>Status</span>
+                  <span>Featured</span>
+                  <span>Actions</span>
+                </DashboardListHeader>
+                {anthologies.map((anthology) => (
+                  <DashboardListRow
+                    key={anthology.id}
+                    template="minmax(0,2fr) 110px 110px 110px 110px 90px 110px"
+                  >
+                    <span className="min-w-0">
+                      <strong className="block truncate">{anthology.title}</strong>
+                    </span>
+                    <span>{anthology.scopeType}</span>
+                    <span>{anthology.edition || "—"}</span>
+                    <span>
+                      <Badge
+                        label={anthology.consentStatus}
+                        color={STATUS_COLORS[anthology.consentStatus] ?? "#666"}
+                      />
+                    </span>
+                    <span>
+                      <Badge
+                        label={anthology.publishStatus}
+                        color={STATUS_COLORS[anthology.publishStatus] ?? "#666"}
+                      />
+                    </span>
+                    <span>{anthology.featured ? "Yes" : "No"}</span>
+                    <span>
+                      <button
+                        type="button"
+                        className="button button-ghost"
+                        style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
+                        onClick={() => openAnthologyEditor(anthology)}
+                      >
+                        Edit
+                      </button>
+                    </span>
+                  </DashboardListRow>
+                ))}
               </div>
             ) : null}
           </div>

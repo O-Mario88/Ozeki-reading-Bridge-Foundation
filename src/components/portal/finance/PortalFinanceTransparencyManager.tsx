@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient
 import { format } from "date-fns";
 import { FileText, Plus, CheckCircle, Archive, Eye, Upload } from "lucide-react";
 import { FloatingSurface } from "@/components/FloatingSurface";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type { FinanceCurrency, FinancePublicSnapshotRecord, FinanceAuditedStatementRecord } from "@/lib/types";
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -266,45 +267,42 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
         </form>
       </FloatingSurface>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Generated</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {data.length === 0 ? (
-              <tr><td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">No snapshots generated yet.</td></tr>
-            ) : data.map((item) => (
-              <tr key={item.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  FY {item.fy} {item.quarter ? `(${item.quarter})` : ""} • {item.currency}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <StatusBadge status={item.status} />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {format(new Date(item.generatedAt), "MMM d, yyyy")}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                  <a href={`/api/portal/finance/transparency/download?id=${item.id}&type=snapshot`} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900 inline-flex items-center">
-                    <Eye className="w-4 h-4 mr-1" /> View PDF
-                  </a>
-                  {item.status === "draft" && (
-                    <button onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FA7D15] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
-                  )}
-                  {item.status !== "archived" && (
-                    <button onClick={() => onArchive(item.id)} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">Archive</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="px-4">
+        <DashboardListHeader template="minmax(0,1.6fr) 110px 130px minmax(0,1.6fr)">
+          <span>Period</span>
+          <span>Status</span>
+          <span>Generated</span>
+          <span className="text-right">Actions</span>
+        </DashboardListHeader>
+        {data.length === 0 ? (
+          <div className="py-4 text-center text-sm text-gray-500">No snapshots generated yet.</div>
+        ) : data.map((item) => (
+          <DashboardListRow
+            key={item.id}
+            template="minmax(0,1.6fr) 110px 130px minmax(0,1.6fr)"
+          >
+            <span className="text-sm font-medium text-gray-900 truncate">
+              FY {item.fy} {item.quarter ? `(${item.quarter})` : ""} • {item.currency}
+            </span>
+            <span className="text-sm text-gray-500">
+              <StatusBadge status={item.status} />
+            </span>
+            <span className="text-sm text-gray-500">
+              {format(new Date(item.generatedAt), "MMM d, yyyy")}
+            </span>
+            <span className="text-right text-sm font-medium space-x-3">
+              <a href={`/api/portal/finance/transparency/download?id=${item.id}&type=snapshot`} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900 inline-flex items-center">
+                <Eye className="w-4 h-4 mr-1" /> View PDF
+              </a>
+              {item.status === "draft" && (
+                <button type="button" onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FA7D15] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
+              )}
+              {item.status !== "archived" && (
+                <button type="button" onClick={() => onArchive(item.id)} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">Archive</button>
+              )}
+            </span>
+          </DashboardListRow>
+        ))}
       </div>
     </div>
   );
@@ -390,51 +388,48 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
         </form>
       </FloatingSurface>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statement</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {data.length === 0 ? (
-              <tr><td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">No audited statements uploaded.</td></tr>
-            ) : data.map((item) => (
-              <tr key={item.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  <div className="flex items-center">
-                    <FileText className="w-4 h-4 text-gray-400 mr-2" />
-                    <div>
-                      <div>FY {item.fy} Audited Financials</div>
-                      {item.auditorName && <div className="text-xs text-gray-500 font-normal">{item.auditorName}</div>}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <StatusBadge status={item.status === "private_uploaded" ? "draft" : item.status} />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {format(new Date(item.uploadedAt || item.publishedAt || new Date()), "MMM d, yyyy")}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                  <a href={`/api/portal/finance/transparency/download?id=${item.id}&type=audited`} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900 inline-flex items-center">
-                    <Eye className="w-4 h-4 mr-1" /> View PDF
-                  </a>
-                  {item.status === "private_uploaded" && (
-                    <button onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FA7D15] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
-                  )}
-                  {item.status !== "archived" && (
-                    <button onClick={() => onArchive(item.id)} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">Archive</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="px-4">
+        <DashboardListHeader template="minmax(0,1.8fr) 110px 130px minmax(0,1.6fr)">
+          <span>Statement</span>
+          <span>Status</span>
+          <span>Uploaded</span>
+          <span className="text-right">Actions</span>
+        </DashboardListHeader>
+        {data.length === 0 ? (
+          <div className="py-4 text-center text-sm text-gray-500">No audited statements uploaded.</div>
+        ) : data.map((item) => (
+          <DashboardListRow
+            key={item.id}
+            template="minmax(0,1.8fr) 110px 130px minmax(0,1.6fr)"
+          >
+            <span className="text-sm font-medium text-gray-900 min-w-0">
+              <span className="flex items-center">
+                <FileText className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block truncate">FY {item.fy} Audited Financials</span>
+                  {item.auditorName && <span className="block text-xs text-gray-500 font-normal truncate">{item.auditorName}</span>}
+                </span>
+              </span>
+            </span>
+            <span className="text-sm text-gray-500">
+              <StatusBadge status={item.status === "private_uploaded" ? "draft" : item.status} />
+            </span>
+            <span className="text-sm text-gray-500">
+              {format(new Date(item.uploadedAt || item.publishedAt || new Date()), "MMM d, yyyy")}
+            </span>
+            <span className="text-right text-sm font-medium space-x-3">
+              <a href={`/api/portal/finance/transparency/download?id=${item.id}&type=audited`} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900 inline-flex items-center">
+                <Eye className="w-4 h-4 mr-1" /> View PDF
+              </a>
+              {item.status === "private_uploaded" && (
+                <button type="button" onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FA7D15] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
+              )}
+              {item.status !== "archived" && (
+                <button type="button" onClick={() => onArchive(item.id)} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">Archive</button>
+              )}
+            </span>
+          </DashboardListRow>
+        ))}
       </div>
     </div>
   );
