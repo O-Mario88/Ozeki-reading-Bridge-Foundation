@@ -37,15 +37,15 @@ export function GlassMetricCard({
         className,
       ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
           {Icon && (
-            <span className="grid h-9 w-9 place-items-center rounded-2xl border border-white/70 bg-white/70 text-[#202124] shadow-[0_6px_16px_rgba(10,10,10,0.06)]">
+            <span className="grid h-9 w-9 place-items-center rounded-2xl border border-white/70 bg-white/70 text-[#202124] shadow-[0_6px_16px_rgba(10,10,10,0.06)] shrink-0">
               <Icon className="h-4 w-4" strokeWidth={1.75} />
             </span>
           )}
           <p
-            className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#5A5D63] leading-tight"
+            className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#5A5D63] leading-tight truncate min-w-0"
             title={label}
           >
             {label}

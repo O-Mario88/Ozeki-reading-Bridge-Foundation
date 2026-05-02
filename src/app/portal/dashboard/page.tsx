@@ -84,8 +84,9 @@ export default async function PortalDashboardPage() {
           </button>
         </div>
 
-        {/* KPI strip — 7 cards. Mobile: horizontal scroll. md+: grid. */}
-        <div className="md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 md:gap-3 -mx-4 md:mx-0 px-4 md:px-0 flex gap-3 overflow-x-auto md:overflow-visible no-scrollbar pb-1 md:pb-0 snap-x snap-mandatory md:snap-none">
+        {/* KPI strip — 7 cards. Mobile: horizontal scroll. md/lg: 4-col grid
+            (wraps to 2 rows = 4+3). 2xl: single 7-col row. */}
+        <div className="md:grid md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 md:gap-3 -mx-4 md:mx-0 px-4 md:px-0 flex gap-3 overflow-x-auto md:overflow-visible no-scrollbar pb-1 md:pb-0 snap-x snap-mandatory md:snap-none">
           {[
             <GlassMetricCard
               key="learners"
@@ -169,10 +170,10 @@ export default async function PortalDashboardPage() {
         </div>
 
         {/* Two-column: Scorecard + Activity Trend */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
           {/* School Performance Scorecard */}
-          <GlassCard className="xl:col-span-7 p-6">
+          <GlassCard className="lg:col-span-7 p-6">
             <div className="flex items-start justify-between gap-3 mb-2">
               <div>
                 <h2 className="text-[18px] font-bold text-[#111111] flex items-center gap-1.5 tracking-tight">
@@ -230,7 +231,7 @@ export default async function PortalDashboardPage() {
           </GlassCard>
 
           {/* Activity Trend */}
-          <GlassCard className="xl:col-span-5 p-6">
+          <GlassCard className="lg:col-span-5 p-6">
             <div className="flex items-start justify-between gap-3 mb-3">
               <h2 className="text-[18px] font-bold text-[#111111] tracking-tight">Activity Trend</h2>
               <span className="px-3 h-8 inline-flex items-center rounded-full border border-white/70 bg-white/65 backdrop-blur-xl text-[12px] font-semibold text-[#222]">
@@ -252,10 +253,10 @@ export default async function PortalDashboardPage() {
         </div>
 
         {/* Recent Activity + Coverage row */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
           {/* Recent Network Activity */}
-          <GlassCard className="xl:col-span-7 p-6">
+          <GlassCard className="lg:col-span-7 p-6">
             <div className="flex items-start justify-between gap-3 mb-4">
               <h2 className="text-[18px] font-bold text-[#111111] tracking-tight">Recent Network Activity</h2>
               <span className="px-3 h-8 inline-flex items-center rounded-full border border-white/70 bg-white/65 backdrop-blur-xl text-[12px] font-semibold text-[#222]">
@@ -365,7 +366,7 @@ export default async function PortalDashboardPage() {
           </GlassCard>
 
           {/* Program Implementation Coverage */}
-          <GlassCard className="xl:col-span-5 p-6">
+          <GlassCard className="lg:col-span-5 p-6">
             <h2 className="text-[18px] font-bold text-[#111111] mb-3 tracking-tight">
               Program Implementation Coverage
             </h2>

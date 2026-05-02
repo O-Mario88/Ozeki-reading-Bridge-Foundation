@@ -112,8 +112,8 @@ export default async function FinanceDashboard() {
           </div>
         </div>
 
-        {/* KPI strip — 4 cards. Mobile: 2-col grid. lg+: 4-col. */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* KPI strip — 4 cards. Mobile: 2-col grid. md+: 4-col. */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <GlassFinanceKpiCard
             label="Total Received"
             value={fmtUsd(totalReceivedUsd)}
@@ -152,11 +152,12 @@ export default async function FinanceDashboard() {
           />
         </div>
 
-        {/* Three-column analytics row */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        {/* Three-column analytics row. lg: 7+5 (spending wide, allocation
+            beside it, quick actions wraps to next row). 2xl: full 7+3+2. */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
           {/* Spending Trend */}
-          <GlassCard className="xl:col-span-7 p-6">
+          <GlassCard className="lg:col-span-7 2xl:col-span-7 p-6">
             <div className="flex items-start justify-between mb-4 gap-3">
               <div>
                 <h3 className="text-[18px] font-bold text-[#111111] tracking-tight">Spending Trend</h3>
@@ -212,7 +213,7 @@ export default async function FinanceDashboard() {
           </GlassCard>
 
           {/* Fund Allocation */}
-          <GlassCard className="xl:col-span-3 p-6">
+          <GlassCard className="lg:col-span-5 2xl:col-span-3 p-6">
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-[18px] font-bold text-[#111111] tracking-tight">Fund Allocation</h3>
               <span className="px-3 h-7 inline-flex items-center rounded-full border border-white/70 bg-white/65 text-[11px] font-semibold text-[#222]">
@@ -253,7 +254,7 @@ export default async function FinanceDashboard() {
           </GlassCard>
 
           {/* Quick Actions */}
-          <GlassCard className="xl:col-span-2 p-6">
+          <GlassCard className="lg:col-span-12 2xl:col-span-2 p-6">
             <h3 className="text-[18px] font-bold text-[#111111] mb-3 tracking-tight">Quick Actions</h3>
             <ul className="space-y-1">
               <SmallQuickAction icon={ListChecks} title="Reconcile Bank" sub="Match bank transactions" href="/portal/finance/reconciliation" />
@@ -265,10 +266,10 @@ export default async function FinanceDashboard() {
         </div>
 
         {/* Module groupings */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <ModuleGroup
             title="Core Ledger"
-            span="xl:col-span-3"
+            span="lg:col-span-6 2xl:col-span-3"
             tiles={[
               { href: "/portal/finance/invoices", icon: FileText, label: "Invoices", body: "Issue + track customer invoices" },
               { href: "/portal/finance/receipts", icon: Receipt, label: "Receipts", body: "Record incoming payments" },
@@ -278,7 +279,7 @@ export default async function FinanceDashboard() {
           />
           <ModuleGroup
             title="Reports & Analytics"
-            span="xl:col-span-6"
+            span="lg:col-span-12 2xl:col-span-6"
             tiles={[
               { href: "/portal/finance/reports", icon: FileBarChart, label: "Reports Hub", body: "Monthly, quarterly, FY reports" },
               { href: "/portal/finance/statements", icon: FileCheck, label: "Financial Statements", body: "Balance sheet, P&L, cash flow" },
@@ -292,7 +293,7 @@ export default async function FinanceDashboard() {
           />
           <ModuleGroup
             title="Books & Configuration"
-            span="xl:col-span-3"
+            span="lg:col-span-6 2xl:col-span-3"
             tiles={[
               { href: "/portal/finance/gl", icon: BookOpen, label: "General Ledger", body: "Chart of accounts + journal entries" },
               { href: "/portal/finance/budgets", icon: PiggyBank, label: "Budgets", body: "Operation budgets + fund requests" },

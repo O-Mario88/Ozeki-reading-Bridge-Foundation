@@ -43,10 +43,12 @@ export function GlassDashboardShell({ user, activeHref, mobileRightSlot, childre
         <MobileBottomNav activeHref={activeHref} user={user} />
       </div>
 
-      {/* Desktop layout (lg+) — expanded menu + main only, no icon rail */}
-      <div className="hidden lg:block min-h-screen bg-[#1F1F1F] p-6">
-        <div className="min-h-[calc(100vh-48px)] overflow-hidden rounded-[48px] bg-[#D8D9DE] shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
-          <div className="grid lg:grid-cols-[minmax(320px,400px)_minmax(0,1fr)] gap-7 p-7">
+      {/* Desktop layout (lg+) — expanded menu + main only, no icon rail.
+          Menu column is narrower at lg/xl so main content gets breathing
+          room on typical 1280–1440px laptops. */}
+      <div className="hidden lg:block min-h-screen bg-[#1F1F1F] p-5 xl:p-6">
+        <div className="min-h-[calc(100vh-40px)] xl:min-h-[calc(100vh-48px)] overflow-hidden rounded-[40px] xl:rounded-[48px] bg-[#D8D9DE] shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
+          <div className="grid lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)] gap-5 xl:gap-7 p-5 xl:p-7">
             <GlassExpandedMenu user={user} activeHref={activeHref} />
             <main className="min-w-0">{children}</main>
           </div>
