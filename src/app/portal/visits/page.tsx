@@ -6,6 +6,10 @@ import {
   Layers, Pencil, ListChecks, type LucideIcon,
 } from "lucide-react";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import {
+  DashboardListCard, DashboardListHeader, DashboardListRow,
+  StatusPill, ProgressCell, AvatarCell, EmeraldLink, pillToneFor,
+} from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -231,44 +235,35 @@ export default async function PortalVisitsOverviewPage() {
 
         {/* ─── Operational row — Recent / Alerts / Upcoming ──────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <Card padded={false} className="lg:col-span-5">
-            <div className="px-5 py-3.5 border-b border-[#e8edf3] flex items-center justify-between">
-              <h3 className="text-[14.5px] font-bold text-[#111827]">Recent School Visits</h3>
-              <FooterLink href="/portal/visits/manage" label="View All" inline />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px] min-w-[640px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                    <th className="px-5 py-2">Visit ID</th>
-                    <th className="px-2 py-2">School</th>
-                    <th className="px-2 py-2">Coach</th>
-                    <th className="px-2 py-2">Date</th>
-                    <th className="px-2 py-2">Type</th>
-                    <th className="px-2 py-2">Status</th>
-                    <th className="px-2 py-2">Score</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "120px minmax(0,1.4fr) minmax(0,1fr) 100px 100px 100px 60px";
+            return (
+              <DashboardListCard
+                title="Recent School Visits"
+                padded={false}
+                className="lg:col-span-5"
+                viewAll={{ href: "/portal/visits/manage", label: "View All" }}
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>Visit ID</span><span>School</span><span>Coach</span>
+                    <span>Date</span><span>Type</span><span>Status</span><span>Score</span>
+                  </DashboardListHeader>
                   {DATA.recentVisits.map((v) => (
-                    <tr key={v.id} className="border-b border-[#f3f5f8] last:border-b-0 hover:bg-gray-50/40">
-                      <td className="px-5 py-2.5">
-                        <Link href={`/portal/visits/${v.id}`} className="text-emerald-700 font-bold hover:underline">
-                          {v.id}
-                        </Link>
-                      </td>
-                      <td className="px-2 py-2.5 text-[#374151] truncate">{v.school}</td>
-                      <td className="px-2 py-2.5 text-[#374151] truncate">{v.coach}</td>
-                      <td className="px-2 py-2.5 text-[#374151] whitespace-nowrap">{v.date}</td>
-                      <td className="px-2 py-2.5 text-[#374151]">{v.type}</td>
-                      <td className="px-2 py-2.5"><VisitStatusPill status={v.status} /></td>
-                      <td className="px-2 py-2.5 text-[#111827] font-bold">{v.score}</td>
-                    </tr>
+                    <DashboardListRow key={v.id} template={tpl}>
+                      <span><EmeraldLink href={`/portal/visits/${v.id}`}>{v.id}</EmeraldLink></span>
+                      <span className="text-[#111827] font-bold truncate">{v.school}</span>
+                      <span className="text-[#374151] truncate">{v.coach}</span>
+                      <span className="text-[#374151]">{v.date}</span>
+                      <span className="text-[#374151]">{v.type}</span>
+                      <span><StatusPill tone={pillToneFor(v.status)}>{v.status}</StatusPill></span>
+                      <span className="text-[#111827] font-bold">{v.score}</span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
           <Card padded={false} className="lg:col-span-3">
             <div className="px-5 py-3.5 border-b border-[#e8edf3] flex items-center justify-between">
@@ -286,37 +281,34 @@ export default async function PortalVisitsOverviewPage() {
             </ul>
           </Card>
 
-          <Card padded={false} className="lg:col-span-4">
-            <div className="px-5 py-3.5 border-b border-[#e8edf3] flex items-center justify-between">
-              <h3 className="text-[14.5px] font-bold text-[#111827]">Upcoming Visits &amp; Coaching</h3>
-              <FooterLink href="/portal/visits?view=upcoming" label="View All" inline />
-            </div>
-            <table className="w-full text-[11.5px]">
-              <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                  <th className="px-5 py-2">Date</th>
-                  <th className="px-2 py-2">School</th>
-                  <th className="px-2 py-2">Purpose</th>
-                  <th className="px-2 py-2">Coach</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DATA.upcoming.map((u) => (
-                  <tr key={`${u.date}-${u.school}`} className="border-b border-[#f3f5f8] last:border-b-0">
-                    <td className="px-5 py-2 text-[#374151] whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5">
+          {(() => {
+            const tpl = "100px minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)";
+            return (
+              <DashboardListCard
+                title="Upcoming Visits & Coaching"
+                padded={false}
+                className="lg:col-span-4"
+                viewAll={{ href: "/portal/visits?view=upcoming", label: "View All" }}
+              >
+                <div className="px-3 pb-2">
+                  <DashboardListHeader template={tpl}>
+                    <span>Date</span><span>School</span><span>Purpose</span><span>Coach</span>
+                  </DashboardListHeader>
+                  {DATA.upcoming.map((u) => (
+                    <DashboardListRow key={`${u.date}-${u.school}`} template={tpl}>
+                      <span className="inline-flex items-center gap-1.5 text-[#374151]">
                         <Calendar className="h-3 w-3 text-[#94a3b8]" strokeWidth={1.75} />
                         {u.date}
                       </span>
-                    </td>
-                    <td className="px-2 py-2 font-bold text-[#111827] truncate">{u.school}</td>
-                    <td className="px-2 py-2 text-[#374151] truncate">{u.purpose}</td>
-                    <td className="px-2 py-2 text-[#374151] truncate">{u.coach}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+                      <span className="text-[#111827] font-bold truncate">{u.school}</span>
+                      <span className="text-[#374151] truncate">{u.purpose}</span>
+                      <span className="text-[#374151] truncate">{u.coach}</span>
+                    </DashboardListRow>
+                  ))}
+                </div>
+              </DashboardListCard>
+            );
+          })()}
         </div>
 
         {/* ─── Domains + Coach Workload + Follow-up Actions ──────── */}
@@ -336,77 +328,61 @@ export default async function PortalVisitsOverviewPage() {
             </div>
           </Card>
 
-          <Card padded={false} className="lg:col-span-5">
-            <div className="px-5 py-3.5 border-b border-[#e8edf3] flex items-center justify-between">
-              <h3 className="text-[14.5px] font-bold text-[#111827]">Coach Workload</h3>
-              <FooterLink href="/portal/coach-workload" label="View All" inline />
-            </div>
-            <table className="w-full text-[11.5px]">
-              <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                  <th className="px-5 py-2">Coach</th>
-                  <th className="px-2 py-2">Assigned Schools</th>
-                  <th className="px-2 py-2">Completed</th>
-                  <th className="px-2 py-2">Pending Follow-ups</th>
-                  <th className="px-2 py-2">Completion Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DATA.workload.map((c) => (
-                  <tr key={c.name} className="border-b border-[#f3f5f8] last:border-b-0">
-                    <td className="px-5 py-2">
-                      <span className="inline-flex items-center gap-2 min-w-0">
-                        <span className="grid h-6 w-6 place-items-center rounded-full text-[9px] font-bold text-white shrink-0" style={{ backgroundColor: c.color }}>
-                          {c.initials}
-                        </span>
-                        <span className="font-bold text-[#111827] truncate">{c.name}</span>
-                      </span>
-                    </td>
-                    <td className="px-2 py-2 text-[#374151]">{c.assigned}</td>
-                    <td className="px-2 py-2 text-[#374151]">{c.completed}</td>
-                    <td className="px-2 py-2 text-[#374151]">{c.pending}</td>
-                    <td className="px-2 py-2">
-                      <div className="flex items-center gap-2 min-w-[110px]">
-                        <span className="text-[#111827] font-bold whitespace-nowrap">{c.rate}%</span>
-                        <div className="h-1.5 flex-1 rounded-full bg-[#eef0f4] overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${c.rate}%`, backgroundColor: "#10b981" }} />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          {(() => {
+            const tpl = "minmax(0,1.4fr) 90px 80px 100px 130px";
+            return (
+              <DashboardListCard
+                title="Coach Workload"
+                padded={false}
+                className="lg:col-span-5"
+                viewAll={{ href: "/portal/coach-workload", label: "View All" }}
+              >
+                <div className="px-3 pb-2">
+                  <DashboardListHeader template={tpl}>
+                    <span>Coach</span><span>Assigned</span><span>Completed</span>
+                    <span>Pending</span><span>Completion Rate</span>
+                  </DashboardListHeader>
+                  {DATA.workload.map((c) => (
+                    <DashboardListRow key={c.name} template={tpl}>
+                      <AvatarCell initials={c.initials} name={c.name} color={c.color} />
+                      <span className="text-[#374151]">{c.assigned}</span>
+                      <span className="text-[#374151]">{c.completed}</span>
+                      <span className="text-[#374151]">{c.pending}</span>
+                      <ProgressCell pct={c.rate} />
+                    </DashboardListRow>
+                  ))}
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
-          <Card padded={false} className="lg:col-span-4">
-            <div className="px-5 py-3.5 border-b border-[#e8edf3] flex items-center justify-between">
-              <h3 className="text-[14.5px] font-bold text-[#111827]">Follow-up Actions</h3>
-              <FooterLink href="/portal/visits?view=follow-ups" label="View All" inline />
-            </div>
-            <table className="w-full text-[11.5px]">
-              <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                  <th className="px-5 py-2">Action</th>
-                  <th className="px-2 py-2">Related To</th>
-                  <th className="px-2 py-2">Owner</th>
-                  <th className="px-2 py-2">Due Date</th>
-                  <th className="px-2 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DATA.followUps.map((f) => (
-                  <tr key={`${f.action}-${f.relatedTo}`} className="border-b border-[#f3f5f8] last:border-b-0">
-                    <td className="px-5 py-2 font-bold text-[#111827] truncate">{f.action}</td>
-                    <td className="px-2 py-2 text-[#374151] truncate">{f.relatedTo}</td>
-                    <td className="px-2 py-2 text-[#374151]">{f.owner}</td>
-                    <td className="px-2 py-2 text-[#7a8ca3] whitespace-nowrap">{f.due}</td>
-                    <td className="px-2 py-2"><FollowUpStatusPill status={f.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          {(() => {
+            const tpl = "minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 100px 90px";
+            return (
+              <DashboardListCard
+                title="Follow-up Actions"
+                padded={false}
+                className="lg:col-span-4"
+                viewAll={{ href: "/portal/visits?view=follow-ups", label: "View All" }}
+              >
+                <div className="px-3 pb-2">
+                  <DashboardListHeader template={tpl}>
+                    <span>Action</span><span>Related To</span><span>Owner</span>
+                    <span>Due Date</span><span>Status</span>
+                  </DashboardListHeader>
+                  {DATA.followUps.map((f) => (
+                    <DashboardListRow key={`${f.action}-${f.relatedTo}`} template={tpl}>
+                      <span className="text-[#111827] font-bold truncate">{f.action}</span>
+                      <span className="text-[#374151] truncate">{f.relatedTo}</span>
+                      <span className="text-[#374151] truncate">{f.owner}</span>
+                      <span className="text-[#7a8ca3]">{f.due}</span>
+                      <span><StatusPill tone={pillToneFor(f.status)}>{f.status}</StatusPill></span>
+                    </DashboardListRow>
+                  ))}
+                </div>
+              </DashboardListCard>
+            );
+          })()}
         </div>
 
         {/* ─── Bottom Insight Bar ─────────────────────────────────── */}
@@ -584,34 +560,6 @@ function DistributionDonut({
       </text>
       <text x={size / 2} y={size / 2 + 14} textAnchor="middle" fontSize="9.5" fill="#7a8ca3">{subLabel}</text>
     </svg>
-  );
-}
-
-/* ── Pills ─────────────────────────────────────────────────────────── */
-
-function VisitStatusPill({ status }: { status: string }) {
-  const cls = status === "Completed"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-    : status === "In Review"
-      ? "bg-orange-50 text-orange-700 border-orange-100"
-      : "bg-amber-50 text-amber-700 border-amber-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
-  );
-}
-
-function FollowUpStatusPill({ status }: { status: string }) {
-  const cls = status === "Overdue"
-    ? "bg-rose-50 text-rose-700 border-rose-100"
-    : status === "Due Soon"
-      ? "bg-orange-50 text-orange-700 border-orange-100"
-      : "bg-blue-50 text-blue-700 border-blue-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
   );
 }
 

@@ -7,6 +7,10 @@ import {
   PhoneCall, type LucideIcon,
 } from "lucide-react";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import {
+  DashboardListCard, DashboardListHeader, DashboardListRow,
+  StatusPill, ProgressCell, MediaListRow, pillToneFor,
+} from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -277,156 +281,145 @@ export default async function PortalCrmOverviewPage() {
 
         {/* ─── Second row — 3 cards (Schools / Activity / Follow-ups) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* All Schools & Key Contacts */}
-          <Card padded={false} className="lg:col-span-5">
-            <CardHeader title="All Schools & Key Contacts" link={{ href: "/portal/schools/directory", label: "View all schools" }} />
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px] min-w-[760px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                    <th className="px-4 py-2">School</th>
-                    <th className="px-2 py-2">District</th>
-                    <th className="px-2 py-2">Primary Contact</th>
-                    <th className="px-2 py-2">Role</th>
-                    <th className="px-2 py-2">Relationship Status</th>
-                    <th className="px-2 py-2">Last Activity</th>
-                    <th className="px-2 py-2">Next Action</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "minmax(0,1.4fr) 80px minmax(0,1fr) 100px 110px 100px minmax(0,1fr)";
+            return (
+              <DashboardListCard
+                title="All Schools & Key Contacts"
+                padded={false}
+                className="lg:col-span-5"
+                viewAll={{ href: "/portal/schools/directory", label: "View all schools" }}
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>School</span><span>District</span><span>Contact</span><span>Role</span>
+                    <span>Status</span><span>Last Activity</span><span>Next Action</span>
+                  </DashboardListHeader>
                   {DATA.schools.map((row) => (
-                    <tr key={row.school} className="border-b border-[#f3f5f8] last:border-b-0 hover:bg-gray-50/40">
-                      <td className="px-4 py-2 font-bold text-[#111827] truncate">{row.school}</td>
-                      <td className="px-2 py-2 text-[#374151]">{row.district}</td>
-                      <td className="px-2 py-2 text-[#374151] truncate">{row.contact}</td>
-                      <td className="px-2 py-2 text-[#374151] truncate">{row.role}</td>
-                      <td className="px-2 py-2"><RelationshipPill status={row.status} /></td>
-                      <td className="px-2 py-2 text-[#7a8ca3] whitespace-nowrap">{row.last}</td>
-                      <td className="px-2 py-2">
-                        <p className="text-[#111827] font-bold leading-tight">{row.next}</p>
-                        <p className="text-[10.5px] text-[#7a8ca3] leading-tight">{row.nextDate}</p>
-                      </td>
-                    </tr>
+                    <DashboardListRow key={row.school} template={tpl}>
+                      <span className="text-[#111827] font-bold truncate">{row.school}</span>
+                      <span className="text-[#374151]">{row.district}</span>
+                      <span className="text-[#374151] truncate">{row.contact}</span>
+                      <span className="text-[#374151] truncate">{row.role}</span>
+                      <span><StatusPill tone={pillToneFor(row.status)}>{row.status}</StatusPill></span>
+                      <span className="text-[#7a8ca3]">{row.last}</span>
+                      <span className="min-w-0">
+                        <span className="block text-[#111827] font-bold leading-tight truncate">{row.next}</span>
+                        <span className="block text-[10px] text-[#7a8ca3] leading-tight">{row.nextDate}</span>
+                      </span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
-          {/* Recent Activity Logs */}
-          <Card padded={false} className="lg:col-span-3">
-            <CardHeader title="Recent Activity Logs" link={{ href: "/portal/contacts?view=logs", label: "View all logs" }} />
-            <ul>
+          <DashboardListCard
+            title="Recent Activity Logs"
+            padded={false}
+            className="lg:col-span-3"
+            viewAll={{ href: "/portal/contacts?view=logs", label: "View all logs" }}
+          >
+            <div className="px-3 pb-2">
               {DATA.activity.map((a) => (
-                <li key={a.title} className="px-4 py-2.5 border-b border-[#f3f5f8] last:border-b-0 flex items-start gap-3">
-                  <ActivityIcon icon={a.icon} tone={a.tone} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-bold text-[#111827] truncate leading-tight">{a.title}</p>
-                    <p className="text-[10.5px] text-[#7a8ca3] truncate mt-0.5">{a.source}</p>
-                  </div>
-                  <p className="text-[10.5px] text-[#7a8ca3] whitespace-nowrap shrink-0">{a.when}</p>
-                </li>
+                <MediaListRow
+                  key={a.title}
+                  icon={<ActivityIcon icon={a.icon} tone={a.tone} />}
+                  title={a.title}
+                  subtitle={a.source}
+                  meta={a.when}
+                />
               ))}
-            </ul>
-          </Card>
-
-          {/* Upcoming Follow-ups */}
-          <Card padded={false} className="lg:col-span-4">
-            <CardHeader title="Upcoming Follow-ups" link={{ href: "/portal/contacts?view=calendar", label: "View calendar" }} />
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px] min-w-[640px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                    <th className="px-4 py-2">Contact</th>
-                    <th className="px-2 py-2">Organization / School</th>
-                    <th className="px-2 py-2">Task</th>
-                    <th className="px-2 py-2">Owner</th>
-                    <th className="px-2 py-2">Due Date</th>
-                    <th className="px-2 py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DATA.followUps.map((f) => (
-                    <tr key={`${f.contact}-${f.task}`} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td className="px-4 py-2 font-bold text-[#111827] truncate">{f.contact}</td>
-                      <td className="px-2 py-2 text-[#374151] truncate">{f.org}</td>
-                      <td className="px-2 py-2 text-[#374151] truncate">{f.task}</td>
-                      <td className="px-2 py-2 text-[#374151]">{f.owner}</td>
-                      <td className="px-2 py-2 text-[#7a8ca3] whitespace-nowrap">{f.due}</td>
-                      <td className="px-2 py-2"><FollowupStatusPill status={f.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
-          </Card>
+          </DashboardListCard>
+
+          {(() => {
+            const tpl = "minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 90px 100px 90px";
+            return (
+              <DashboardListCard
+                title="Upcoming Follow-ups"
+                padded={false}
+                className="lg:col-span-4"
+                viewAll={{ href: "/portal/contacts?view=calendar", label: "View calendar" }}
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>Contact</span><span>Org / School</span><span>Task</span>
+                    <span>Owner</span><span>Due Date</span><span>Status</span>
+                  </DashboardListHeader>
+                  {DATA.followUps.map((f) => (
+                    <DashboardListRow key={`${f.contact}-${f.task}`} template={tpl}>
+                      <span className="text-[#111827] font-bold truncate">{f.contact}</span>
+                      <span className="text-[#374151] truncate">{f.org}</span>
+                      <span className="text-[#374151] truncate">{f.task}</span>
+                      <span className="text-[#374151]">{f.owner}</span>
+                      <span className="text-[#7a8ca3]">{f.due}</span>
+                      <span><StatusPill tone={pillToneFor(f.status)}>{f.status}</StatusPill></span>
+                    </DashboardListRow>
+                  ))}
+                </div>
+              </DashboardListCard>
+            );
+          })()}
         </div>
 
         {/* ─── Third row — Partners / Geographic / Quick Actions ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Partner Organizations */}
-          <Card padded={false} className="lg:col-span-4">
-            <CardHeader title="Partner Organizations" link={{ href: "/portal/contacts?view=partners", label: "View all partners" }} />
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px] min-w-[440px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                    <th className="px-4 py-2">Organization</th>
-                    <th className="px-2 py-2">Primary Contact</th>
-                    <th className="px-2 py-2">Active Schools</th>
-                    <th className="px-2 py-2">Engagement Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "minmax(0,1.4fr) minmax(0,1fr) 100px 130px";
+            return (
+              <DashboardListCard
+                title="Partner Organizations"
+                padded={false}
+                className="lg:col-span-4"
+                viewAll={{ href: "/portal/contacts?view=partners", label: "View all partners" }}
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>Organization</span><span>Primary Contact</span>
+                    <span>Schools</span><span>Engagement</span>
+                  </DashboardListHeader>
                   {DATA.partners.map((p) => (
-                    <tr key={p.org} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td className="px-4 py-2 font-bold text-[#111827] truncate">{p.org}</td>
-                      <td className="px-2 py-2 text-[#374151] truncate">{p.contact}</td>
-                      <td className="px-2 py-2 text-[#111827] font-bold">{p.schools}</td>
-                      <td className="px-2 py-2"><EngagementPill status={p.status} /></td>
-                    </tr>
+                    <DashboardListRow key={p.org} template={tpl}>
+                      <span className="text-[#111827] font-bold truncate">{p.org}</span>
+                      <span className="text-[#374151] truncate">{p.contact}</span>
+                      <span className="text-[#111827] font-bold">{p.schools}</span>
+                      <span><StatusPill tone={pillToneFor(p.status)}>{p.status}</StatusPill></span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
-          {/* Geographic Coverage */}
-          <Card padded={false} className="lg:col-span-5">
-            <CardHeader title="Geographic Coverage" link={{ href: "/portal/insights?view=geo", label: "View region insights" }} />
+          <DashboardListCard
+            title="Geographic Coverage"
+            padded={false}
+            className="lg:col-span-5"
+            viewAll={{ href: "/portal/insights?view=geo", label: "View region insights" }}
+          >
             <div className="px-4 py-3 grid grid-cols-[140px_1fr] gap-4 items-start">
               <UgandaSilhouetteMap />
-              <div className="overflow-x-auto">
-                <table className="w-full text-[11.5px]">
-                  <thead>
-                    <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                      <th className="py-1.5 pr-2">Region</th>
-                      <th className="py-1.5 px-2">Schools</th>
-                      <th className="py-1.5 px-2">Contacts</th>
-                      <th className="py-1.5 px-2">Coverage</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              {(() => {
+                const tpl = "80px 70px 70px minmax(0,1fr)";
+                return (
+                  <div className="min-w-0">
+                    <DashboardListHeader template={tpl}>
+                      <span>Region</span><span>Schools</span><span>Contacts</span><span>Coverage</span>
+                    </DashboardListHeader>
                     {DATA.geographic.map((r) => (
-                      <tr key={r.region} className="border-b border-[#f3f5f8] last:border-b-0">
-                        <td className="py-1.5 pr-2 font-bold text-[#111827]">{r.region}</td>
-                        <td className="py-1.5 px-2 text-[#374151]">{r.schools}</td>
-                        <td className="py-1.5 px-2 text-[#374151]">{r.contacts}</td>
-                        <td className="py-1.5 px-2">
-                          <div className="flex items-center gap-2 min-w-[110px]">
-                            <div className="h-1.5 flex-1 rounded-full bg-[#eef0f4] overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${r.coverage}%`, backgroundColor: "#10b981" }} />
-                            </div>
-                            <span className="text-[#111827] font-bold whitespace-nowrap">{r.coverage}%</span>
-                          </div>
-                        </td>
-                      </tr>
+                      <DashboardListRow key={r.region} template={tpl}>
+                        <span className="text-[#111827] font-bold">{r.region}</span>
+                        <span className="text-[#374151]">{r.schools}</span>
+                        <span className="text-[#374151]">{r.contacts}</span>
+                        <ProgressCell pct={r.coverage} />
+                      </DashboardListRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </div>
+                );
+              })()}
             </div>
-          </Card>
+          </DashboardListCard>
 
           {/* Quick Actions */}
           <Card className="lg:col-span-3">
@@ -502,22 +495,6 @@ function Card({
     >
       {children}
     </section>
-  );
-}
-
-function CardHeader({
-  title, link,
-}: {
-  title: string; link?: { href: string; label: string };
-}) {
-  return (
-    <div className="px-4 py-3 border-b border-[#e8edf3] flex items-center justify-between gap-2">
-      <div className="flex items-center gap-1.5 min-w-0">
-        <h3 className="text-[14.5px] font-bold text-[#111827] truncate">{title}</h3>
-        <Info className="h-3.5 w-3.5 text-[#cbd5e1] shrink-0" strokeWidth={1.75} />
-      </div>
-      {link && <FooterLink href={link.href} label={link.label} inline />}
-    </div>
   );
 }
 
@@ -664,49 +641,6 @@ function PipelineMini({
       </div>
       <p className={`text-[18px] font-extrabold leading-none mt-1 ${valueClass}`}>{value}</p>
     </div>
-  );
-}
-
-/* ── Pills ─────────────────────────────────────────────────────────── */
-
-function RelationshipPill({ status }: { status: string }) {
-  const cls = status === "Active"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-    : status === "Warm"
-      ? "bg-orange-50 text-orange-700 border-orange-100"
-      : status === "Needs Follow-up"
-        ? "bg-blue-50 text-blue-700 border-blue-100"
-        : "bg-rose-50 text-rose-700 border-rose-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
-  );
-}
-
-function FollowupStatusPill({ status }: { status: string }) {
-  const cls = status === "Due Soon"
-    ? "bg-orange-50 text-orange-700 border-orange-100"
-    : status === "Scheduled"
-      ? "bg-blue-50 text-blue-700 border-blue-100"
-      : "bg-rose-50 text-rose-700 border-rose-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
-  );
-}
-
-function EngagementPill({ status }: { status: string }) {
-  const cls = status === "Highly Engaged"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-    : status === "Engaged"
-      ? "bg-blue-50 text-blue-700 border-blue-100"
-      : "bg-emerald-50/70 text-emerald-700 border-emerald-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
   );
 }
 

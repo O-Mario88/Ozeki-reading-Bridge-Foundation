@@ -6,6 +6,10 @@ import {
   ClipboardList, Calendar, FileText, type LucideIcon,
 } from "lucide-react";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import {
+  DashboardListCard, DashboardListHeader, DashboardListRow,
+  StatusPill, StarRating, pillToneFor,
+} from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -261,117 +265,95 @@ export default async function PortalTrainingsOverviewPage() {
             <TrainingFunnel rows={DATA.funnel} />
           </Card>
 
-          <Card padded={false} className="lg:col-span-4">
-            <div className="px-5 py-3.5 border-b border-[#e8edf3] flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="text-[14.5px] font-bold text-[#111827]">Top Performing Trainers</h3>
-                <p className="text-[11px] text-[#7a8ca3] mt-0.5">Ranked by average evaluation score</p>
-              </div>
-              <KebabButton />
-            </div>
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                  <th className="px-5 py-2 w-8">#</th>
-                  <th className="px-2 py-2">Trainer</th>
-                  <th className="px-2 py-2">Sessions Led</th>
-                  <th className="px-2 py-2">Avg Rating</th>
-                  <th className="px-2 py-2">Participants Reached</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DATA.trainers.map((t) => (
-                  <tr key={t.name} className="border-b border-[#f3f5f8] last:border-b-0">
-                    <td className="px-5 py-2 text-[#7a8ca3]">{t.rank}</td>
-                    <td className="px-2 py-2 font-bold text-[#111827] truncate">{t.name}</td>
-                    <td className="px-2 py-2 text-[#374151]">{t.sessions}</td>
-                    <td className="px-2 py-2">
-                      <span className="inline-flex items-center gap-1 text-[#111827] font-bold">
-                        {t.rating} <Star className="h-3 w-3 text-amber-500 fill-amber-500" strokeWidth={1.5} />
-                      </span>
-                    </td>
-                    <td className="px-2 py-2 text-[#374151]">{t.reach}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          {(() => {
+            const tpl = "24px minmax(0,1.4fr) 90px 80px 110px";
+            return (
+              <DashboardListCard
+                title="Top Performing Trainers"
+                subtitle="Ranked by average evaluation score"
+                padded={false}
+                className="lg:col-span-4"
+              >
+                <div className="px-3 pb-2">
+                  <DashboardListHeader template={tpl}>
+                    <span>#</span><span>Trainer</span><span>Sessions</span>
+                    <span>Rating</span><span>Reached</span>
+                  </DashboardListHeader>
+                  {DATA.trainers.map((t) => (
+                    <DashboardListRow key={t.name} template={tpl}>
+                      <span className="text-[#7a8ca3]">{t.rank}</span>
+                      <span className="text-[#111827] font-bold truncate">{t.name}</span>
+                      <span className="text-[#374151]">{t.sessions}</span>
+                      <StarRating value={t.rating} />
+                      <span className="text-[#374151]">{t.reach}</span>
+                    </DashboardListRow>
+                  ))}
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
-          <Card padded={false} className="lg:col-span-4">
-            <div className="px-5 py-3.5 border-b border-[#e8edf3] flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="text-[14.5px] font-bold text-[#111827]">Training Pipeline</h3>
-                <p className="text-[11px] text-[#7a8ca3] mt-0.5">Upcoming sessions</p>
-              </div>
-              <KebabButton />
-            </div>
-            <table className="w-full text-[11.5px]">
-              <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                  <th className="px-5 py-2">Date</th>
-                  <th className="px-2 py-2">Location</th>
-                  <th className="px-2 py-2">Training Type</th>
-                  <th className="px-2 py-2">Participants</th>
-                  <th className="px-2 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DATA.pipeline.map((p) => (
-                  <tr key={`${p.date}-${p.location}`} className="border-b border-[#f3f5f8] last:border-b-0">
-                    <td className="px-5 py-2 text-[#374151] whitespace-nowrap">{p.date}</td>
-                    <td className="px-2 py-2 text-[#374151] truncate">{p.location}</td>
-                    <td className="px-2 py-2 text-[#374151] truncate">{p.type}</td>
-                    <td className="px-2 py-2 text-[#111827] font-bold">{p.participants}</td>
-                    <td className="px-2 py-2"><PipelineStatusPill status={p.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          {(() => {
+            const tpl = "100px minmax(0,1fr) minmax(0,1fr) 100px 90px";
+            return (
+              <DashboardListCard
+                title="Training Pipeline"
+                subtitle="Upcoming sessions"
+                padded={false}
+                className="lg:col-span-4"
+              >
+                <div className="px-3 pb-2">
+                  <DashboardListHeader template={tpl}>
+                    <span>Date</span><span>Location</span><span>Type</span>
+                    <span>Participants</span><span>Status</span>
+                  </DashboardListHeader>
+                  {DATA.pipeline.map((p) => (
+                    <DashboardListRow key={`${p.date}-${p.location}`} template={tpl}>
+                      <span className="text-[#374151]">{p.date}</span>
+                      <span className="text-[#374151] truncate">{p.location}</span>
+                      <span className="text-[#374151] truncate">{p.type}</span>
+                      <span className="text-[#111827] font-bold">{p.participants}</span>
+                      <span><StatusPill tone={pillToneFor(p.status)}>{p.status}</StatusPill></span>
+                    </DashboardListRow>
+                  ))}
+                </div>
+              </DashboardListCard>
+            );
+          })()}
         </div>
 
         {/* ─── Recent Sessions / Participant Insights / Quality ───── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <Card padded={false} className="lg:col-span-6">
-            <div className="px-5 py-3.5 border-b border-[#e8edf3] flex items-center justify-between">
-              <h3 className="text-[14.5px] font-bold text-[#111827]">Recent Training Sessions</h3>
-              <KebabButton />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[11.5px] min-w-[820px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e8edf3]">
-                    <th className="px-5 py-2">Date</th>
-                    <th className="px-2 py-2">Session Name</th>
-                    <th className="px-2 py-2">Organization</th>
-                    <th className="px-2 py-2">Presenter</th>
-                    <th className="px-2 py-2">Region</th>
-                    <th className="px-2 py-2">Type</th>
-                    <th className="px-2 py-2">Participants</th>
-                    <th className="px-2 py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "100px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 80px 130px 100px 90px";
+            return (
+              <DashboardListCard
+                title="Recent Training Sessions"
+                padded={false}
+                className="lg:col-span-6"
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>Date</span><span>Session Name</span><span>Organization</span>
+                    <span>Presenter</span><span>Region</span><span>Type</span>
+                    <span>Participants</span><span>Status</span>
+                  </DashboardListHeader>
                   {DATA.recent.map((r) => (
-                    <tr key={`${r.date}-${r.session}`} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td className="px-5 py-2 text-[#374151] whitespace-nowrap">{r.date}</td>
-                      <td className="px-2 py-2 font-bold text-[#111827] truncate">{r.session}</td>
-                      <td className="px-2 py-2 text-[#374151] truncate">{r.org}</td>
-                      <td className="px-2 py-2 text-[#374151] truncate">{r.presenter}</td>
-                      <td className="px-2 py-2 text-[#374151]">{r.region}</td>
-                      <td className="px-2 py-2 text-[#374151] truncate">{r.type}</td>
-                      <td className="px-2 py-2 text-[#111827] font-bold">{r.participants}</td>
-                      <td className="px-2 py-2">
-                        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-100">
-                          {r.status}
-                        </span>
-                      </td>
-                    </tr>
+                    <DashboardListRow key={`${r.date}-${r.session}`} template={tpl}>
+                      <span className="text-[#374151]">{r.date}</span>
+                      <span className="text-[#111827] font-bold truncate">{r.session}</span>
+                      <span className="text-[#374151] truncate">{r.org}</span>
+                      <span className="text-[#374151] truncate">{r.presenter}</span>
+                      <span className="text-[#374151]">{r.region}</span>
+                      <span className="text-[#374151] truncate">{r.type}</span>
+                      <span className="text-[#111827] font-bold">{r.participants}</span>
+                      <span><StatusPill tone={pillToneFor(r.status)}>{r.status}</StatusPill></span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
           <Card className="lg:col-span-3">
             <div className="flex items-center justify-between gap-2">
@@ -746,19 +728,6 @@ function TrainingFunnel({ rows }: { rows: { label: string; value: number; pct: n
         </div>
       ))}
     </div>
-  );
-}
-
-/* ── Pipeline status pill ──────────────────────────────────────────── */
-
-function PipelineStatusPill({ status }: { status: string }) {
-  const cls = status === "Confirmed"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-    : "bg-blue-50 text-blue-700 border-blue-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
   );
 }
 

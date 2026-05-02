@@ -1,12 +1,16 @@
 import Link from "next/link";
 import {
   ClipboardCheck, Users, Building2, CalendarDays, CheckCircle2, Star, ShieldCheck,
-  Plus, Calendar, Download, ChevronDown, ChevronRight, ChevronLeft,
+  Plus, Calendar, Download, ChevronDown, ChevronRight,
   AlertTriangle, FileText, Lightbulb, Clock, UploadCloud, Shield, XCircle,
   TrendingUp, TrendingDown, Volume2, Sparkles, BookOpen, MessageCircle,
   Headphones, type LucideIcon,
 } from "lucide-react";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import {
+  DashboardListCard, DashboardListHeader, DashboardListRow, DashboardListFooter,
+  StatusPill, ProgressCell, AvatarCell, EmeraldLink, pillToneFor,
+} from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -242,54 +246,51 @@ export default async function PortalAssessmentsPage() {
 
         {/* ─── Recent Sessions  +  Alerts / Upcoming ──────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Recent Assessment Sessions table */}
-          <Card padded={false} className="lg:col-span-2">
-            <div className="px-5 py-3.5 border-b border-[#e6ecf2] flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-[#111827]">Recent Assessment Sessions</h3>
-              <FooterLink href="/portal/assessments/manage" label="View All" inline />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12.5px] min-w-[820px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e6ecf2]">
-                    <th className="px-5 py-2">Assessment No.</th>
-                    <th className="px-3 py-2">School</th>
-                    <th className="px-3 py-2">Assessor</th>
-                    <th className="px-3 py-2">Date</th>
-                    <th className="px-3 py-2">Learners</th>
-                    <th className="px-3 py-2">Type</th>
-                    <th className="px-3 py-2">Status</th>
-                    <th className="px-3 py-2">Avg Score</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "150px minmax(0,1.4fr) minmax(0,1fr) 100px 80px 70px 100px 80px";
+            return (
+              <DashboardListCard
+                title="Recent Assessment Sessions"
+                padded={false}
+                className="lg:col-span-2"
+                viewAll={{ href: "/portal/assessments/manage", label: "View All" }}
+              >
+                <div className="px-3 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>Assessment No.</span><span>School</span><span>Assessor</span>
+                    <span>Date</span><span>Learners</span><span>Type</span>
+                    <span>Status</span><span>Avg Score</span>
+                  </DashboardListHeader>
                   {DATA.recentSessions.map((row) => (
-                    <tr key={row.no} className="border-b border-[#f3f5f8] last:border-b-0 hover:bg-gray-50/40">
-                      <td className="px-5 py-2.5">
-                        <Link href={`/portal/assessments/${row.no}`} className="inline-flex items-center gap-1.5 text-emerald-700 font-bold hover:underline">
-                          <FileText className="h-3.5 w-3.5 text-[#94a3b8]" strokeWidth={1.75} />
-                          {row.no}
-                        </Link>
-                      </td>
-                      <td className="px-3 py-2.5 text-[#374151] truncate">{row.school}</td>
-                      <td className="px-3 py-2.5 text-[#374151] truncate">{row.assessor}</td>
-                      <td className="px-3 py-2.5 text-[#374151] whitespace-nowrap">{row.date}</td>
-                      <td className="px-3 py-2.5 text-[#374151]">{row.learners}</td>
-                      <td className="px-3 py-2.5 text-[#374151]">{row.type}</td>
-                      <td className="px-3 py-2.5"><SessionStatusPill status={row.status} /></td>
-                      <td className="px-3 py-2.5 text-[#111827] font-bold">{row.avg}</td>
-                    </tr>
+                    <DashboardListRow key={row.no} template={tpl}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5 text-[#94a3b8]" strokeWidth={1.75} />
+                        <EmeraldLink href={`/portal/assessments/${row.no}`}>{row.no}</EmeraldLink>
+                      </span>
+                      <span className="text-[#374151] truncate">{row.school}</span>
+                      <span className="text-[#374151] truncate">{row.assessor}</span>
+                      <span className="text-[#374151]">{row.date}</span>
+                      <span className="text-[#374151]">{row.learners}</span>
+                      <span className="text-[#374151]">{row.type}</span>
+                      <span><StatusPill tone={pillToneFor(row.status)}>{row.status}</StatusPill></span>
+                      <span className="text-[#111827] font-bold">{row.avg}</span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-5 py-3 border-t border-[#e6ecf2] flex items-center justify-between text-[12px]">
-              <span className="text-[#7a8ca3]">
-                Showing {DATA.pagination.showingFrom} to {DATA.pagination.showingTo} of {DATA.pagination.total} results
-              </span>
-              <Pagination current={DATA.pagination.page} pages={DATA.pagination.pages} />
-            </div>
-          </Card>
+                </div>
+                <div className="px-3 pb-2">
+                  <DashboardListFooter
+                    showing={{
+                      from: DATA.pagination.showingFrom,
+                      to: DATA.pagination.showingTo,
+                      total: DATA.pagination.total,
+                      label: "results",
+                    }}
+                    viewAll={{ href: "/portal/assessments/manage", label: "View All" }}
+                  />
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
           {/* Right column: At-Risk Alerts + Upcoming Windows */}
           <div className="flex flex-col gap-4 min-w-0">
@@ -359,47 +360,31 @@ export default async function PortalAssessmentsPage() {
             </div>
           </Card>
 
-          {/* Assessor Workload */}
-          <Card padded={false}>
-            <div className="px-5 py-3.5 border-b border-[#e6ecf2] flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-[#111827]">Assessor Workload</h3>
-              <FooterLink href="/portal/coach-workload" label="View All" inline />
-            </div>
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#e6ecf2]">
-                  <th className="px-5 py-2">Assessor</th>
-                  <th className="px-2 py-2">Assigned</th>
-                  <th className="px-2 py-2">Completed</th>
-                  <th className="px-3 py-2">Completion Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DATA.assessors.map((a) => (
-                  <tr key={a.name} className="border-b border-[#f3f5f8] last:border-b-0">
-                    <td className="px-5 py-2">
-                      <span className="inline-flex items-center gap-2 min-w-0">
-                        <span className="grid h-6 w-6 place-items-center rounded-full text-[9px] font-bold text-white shrink-0" style={{ backgroundColor: a.color }}>
-                          {a.initials}
-                        </span>
-                        <span className="font-bold text-[#111827] truncate">{a.name}</span>
-                      </span>
-                    </td>
-                    <td className="px-2 py-2 text-[#374151]">{a.assigned}</td>
-                    <td className="px-2 py-2 text-[#374151]">{a.completed}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2 min-w-[110px]">
-                        <span className="text-[#111827] font-bold whitespace-nowrap">{a.rate}%</span>
-                        <div className="h-1.5 flex-1 rounded-full bg-[#eef0f4] overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${a.rate}%`, backgroundColor: "#10b981" }} />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          {(() => {
+            const tpl = "minmax(0,1.4fr) 90px 90px 130px";
+            return (
+              <DashboardListCard
+                title="Assessor Workload"
+                padded={false}
+                viewAll={{ href: "/portal/coach-workload", label: "View All" }}
+              >
+                <div className="px-3 pb-2">
+                  <DashboardListHeader template={tpl}>
+                    <span>Assessor</span><span>Assigned</span><span>Completed</span>
+                    <span>Completion Rate</span>
+                  </DashboardListHeader>
+                  {DATA.assessors.map((a) => (
+                    <DashboardListRow key={a.name} template={tpl}>
+                      <AvatarCell initials={a.initials} name={a.name} color={a.color} />
+                      <span className="text-[#374151]">{a.assigned}</span>
+                      <span className="text-[#374151]">{a.completed}</span>
+                      <ProgressCell pct={a.rate} />
+                    </DashboardListRow>
+                  ))}
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
           {/* Evidence & Verification */}
           <Card padded={false}>
@@ -651,51 +636,6 @@ function UgandaCoverageMap() {
         />
       ))}
     </svg>
-  );
-}
-
-/* ── Pills ─────────────────────────────────────────────────────────── */
-
-function SessionStatusPill({ status }: { status: string }) {
-  const cls =
-    status === "Completed"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-      : status === "In Review"
-        ? "bg-orange-50 text-orange-700 border-orange-100"
-        : "bg-blue-50 text-blue-700 border-blue-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
-  );
-}
-
-/* ── Pagination ────────────────────────────────────────────────────── */
-
-function Pagination({ current, pages }: { current: number; pages: number[] }) {
-  return (
-    <div className="flex items-center gap-1">
-      <button type="button" aria-label="Previous page" className="grid h-7 w-7 place-items-center rounded-md border border-[#dde5ee] text-[#475467] hover:bg-gray-50">
-        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
-      </button>
-      {pages.map((p) => (
-        <button
-          key={p}
-          type="button"
-          className={
-            p === current
-              ? "grid h-7 w-7 place-items-center rounded-md text-white font-bold text-[11px] bg-emerald-700"
-              : "grid h-7 w-7 place-items-center rounded-md text-[#475467] font-bold text-[11px] hover:bg-gray-50"
-          }
-        >
-          {p}
-        </button>
-      ))}
-      <span className="text-[#94a3b8] px-1">…</span>
-      <button type="button" aria-label="Next page" className="grid h-7 w-7 place-items-center rounded-md border border-[#dde5ee] text-[#475467] hover:bg-gray-50">
-        <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
-      </button>
-    </div>
   );
 }
 

@@ -7,6 +7,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import {
+  DashboardListCard, DashboardListHeader, DashboardListRow,
+  StatusPill, pillToneFor,
+} from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -264,41 +268,33 @@ export default async function PortalStoryOverviewPage() {
 
         {/* ─── Top Performing Schools  +  Funnel + Curation Queue ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Top Performing Schools */}
-          <Card padded={false}>
-            <div className="px-5 py-4 border-b border-[#eef0f4] flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-[#102033]">Top Performing Schools</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12.5px] min-w-[640px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#eef0f4]">
-                    <th className="px-5 py-2.5">School</th>
-                    <th className="px-3 py-2.5">District</th>
-                    <th className="px-3 py-2.5">Stories Submitted</th>
-                    <th className="px-3 py-2.5">Published</th>
-                    <th className="px-3 py-2.5">Reads</th>
-                    <th className="px-3 py-2.5">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "minmax(0,1.4fr) 90px 110px 90px 80px 90px";
+            return (
+              <DashboardListCard
+                title="Top Performing Schools"
+                padded={false}
+                viewAll={{ href: "/portal/schools", label: "View all schools" }}
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>School</span><span>District</span><span>Submitted</span>
+                    <span>Published</span><span>Reads</span><span>Status</span>
+                  </DashboardListHeader>
                   {DATA.topSchools.map((row) => (
-                    <tr key={row.school} className="border-b border-[#f3f5f8] last:border-b-0 hover:bg-gray-50/40">
-                      <td className="px-5 py-2.5 font-bold text-[#102033] truncate">{row.school}</td>
-                      <td className="px-3 py-2.5 text-[#374151]">{row.district}</td>
-                      <td className="px-3 py-2.5 text-[#374151]">{row.submitted.toLocaleString()}</td>
-                      <td className="px-3 py-2.5 text-[#374151]">{row.published.toLocaleString()}</td>
-                      <td className="px-3 py-2.5 text-[#374151]">{row.reads.toLocaleString()}</td>
-                      <td className="px-3 py-2.5"><PerformancePill status={row.status} /></td>
-                    </tr>
+                    <DashboardListRow key={row.school} template={tpl}>
+                      <span className="text-[#102033] font-bold truncate">{row.school}</span>
+                      <span className="text-[#374151]">{row.district}</span>
+                      <span className="text-[#374151]">{row.submitted.toLocaleString()}</span>
+                      <span className="text-[#374151]">{row.published.toLocaleString()}</span>
+                      <span className="text-[#374151]">{row.reads.toLocaleString()}</span>
+                      <span><StatusPill tone={pillToneFor(row.status)}>{row.status}</StatusPill></span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-5 py-3 border-t border-[#eef0f4]">
-              <FooterLink href="/portal/schools" label="View all schools" inline />
-            </div>
-          </Card>
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
           {/* Right column: stacked Funnel + Curation Queue */}
           <div className="flex flex-col gap-4 min-w-0">
@@ -333,164 +329,132 @@ export default async function PortalStoryOverviewPage() {
               </div>
             </Card>
 
-            {/* Curation Queue */}
-            <Card padded={false}>
-              <div className="px-5 py-3.5 border-b border-[#eef0f4]">
-                <h3 className="text-[15px] font-bold text-[#102033]">Curation Queue</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[12px] min-w-[640px]">
-                  <thead>
-                    <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#eef0f4]">
-                      <th className="px-5 py-2">Story Title</th>
-                      <th className="px-3 py-2">School</th>
-                      <th className="px-3 py-2">Language</th>
-                      <th className="px-3 py-2">Reviewer Status</th>
-                      <th className="px-3 py-2">Urgency</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+            {(() => {
+              const tpl = "minmax(0,1.4fr) minmax(0,1fr) 80px minmax(0,1.2fr) 80px";
+              return (
+                <DashboardListCard
+                  title="Curation Queue"
+                  padded={false}
+                  viewAll={{ href: "/portal/stories?view=queue", label: "View full queue" }}
+                >
+                  <div className="px-3 pb-2 overflow-x-auto">
+                    <DashboardListHeader template={tpl}>
+                      <span>Story Title</span><span>School</span><span>Language</span>
+                      <span>Reviewer Status</span><span>Urgency</span>
+                    </DashboardListHeader>
                     {DATA.curation.map((row) => {
                       const Icon = row.icon;
+                      const dotColor = row.statusTone === "blue" ? "#2563eb"
+                        : row.statusTone === "orange" ? "#f97316" : "#94a3b8";
                       return (
-                        <tr key={row.title} className="border-b border-[#f3f5f8] last:border-b-0">
-                          <td className="px-5 py-2">
-                            <span className="inline-flex items-center gap-2 font-bold text-[#102033] truncate">
-                              <Icon className="h-3.5 w-3.5 text-[#94a3b8]" strokeWidth={1.75} />
-                              {row.title}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-[#374151] truncate">{row.school}</td>
-                          <td className="px-3 py-2 text-[#374151]">{row.language}</td>
-                          <td className="px-3 py-2">
-                            <ReviewerStatus tone={row.statusTone} text={row.status} />
-                          </td>
-                          <td className="px-3 py-2"><UrgencyPill urgency={row.urgency} /></td>
-                        </tr>
+                        <DashboardListRow key={row.title} template={tpl}>
+                          <span className="inline-flex items-center gap-1.5 font-bold text-[#102033] truncate">
+                            <Icon className="h-3.5 w-3.5 text-[#94a3b8]" strokeWidth={1.75} />
+                            {row.title}
+                          </span>
+                          <span className="text-[#374151] truncate">{row.school}</span>
+                          <span className="text-[#374151]">{row.language}</span>
+                          <span className="inline-flex items-center gap-1.5 text-[#374151] truncate">
+                            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
+                            {row.status}
+                          </span>
+                          <span><StatusPill tone={pillToneFor(row.urgency === "High" ? "Overdue" : row.urgency === "Medium" ? "Pending" : "Completed")}>{row.urgency}</StatusPill></span>
+                        </DashboardListRow>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-5 py-3 border-t border-[#eef0f4]">
-                <FooterLink href="/portal/stories?view=queue" label="View full queue" inline />
-              </div>
-            </Card>
+                  </div>
+                </DashboardListCard>
+              );
+            })()}
           </div>
         </div>
 
         {/* ─── Bottom row — 4 compact cards ───────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-4">
-          {/* Recent Story Submissions */}
-          <Card padded={false}>
-            <div className="px-5 py-3.5 border-b border-[#eef0f4] flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-[#102033]">Recent Story Submissions</h3>
-              <FooterLink href="/portal/story/manage" label="View all" inline />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px] min-w-[520px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#eef0f4]">
-                    <th className="px-5 py-2">Date</th>
-                    <th className="px-3 py-2">Story Title</th>
-                    <th className="px-3 py-2">School</th>
-                    <th className="px-3 py-2">Storyteller</th>
-                    <th className="px-3 py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "100px minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) 90px";
+            return (
+              <DashboardListCard
+                title="Recent Story Submissions"
+                padded={false}
+                viewAll={{ href: "/portal/story/manage", label: "View all" }}
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>Date</span><span>Story Title</span><span>School</span>
+                    <span>Storyteller</span><span>Status</span>
+                  </DashboardListHeader>
                   {DATA.recent.map((r) => (
-                    <tr key={`${r.date}-${r.title}`} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td className="px-5 py-2 text-[#667085] whitespace-nowrap">{r.date}</td>
-                      <td className="px-3 py-2 font-bold text-[#102033] truncate">{r.title}</td>
-                      <td className="px-3 py-2 text-[#374151] truncate">{r.school}</td>
-                      <td className="px-3 py-2 text-[#374151] truncate">{r.storyteller}</td>
-                      <td className="px-3 py-2"><SubmissionPill status={r.status} /></td>
-                    </tr>
+                    <DashboardListRow key={`${r.date}-${r.title}`} template={tpl}>
+                      <span className="text-[#667085]">{r.date}</span>
+                      <span className="text-[#102033] font-bold truncate">{r.title}</span>
+                      <span className="text-[#374151] truncate">{r.school}</span>
+                      <span className="text-[#374151] truncate">{r.storyteller}</span>
+                      <span><StatusPill tone={pillToneFor(r.status === "Submitted" ? "Completed" : r.status === "Draft" ? "Draft" : "In Review")}>{r.status}</StatusPill></span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-5 py-3 border-t border-[#eef0f4]">
-              <FooterLink href="/portal/story/manage" label="View all submissions" inline />
-            </div>
-          </Card>
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
-          {/* Featured Stories */}
-          <Card padded={false}>
-            <div className="px-5 py-3.5 border-b border-[#eef0f4] flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-[#102033]">Featured Stories</h3>
-              <FooterLink href="/portal/stories?view=featured" label="View all" inline />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px] min-w-[420px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#eef0f4]">
-                    <th className="px-5 py-2">Story</th>
-                    <th className="px-3 py-2">Genre</th>
-                    <th className="px-3 py-2">Reads</th>
-                    <th className="px-3 py-2">Likes</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "minmax(0,1.4fr) minmax(0,1fr) 70px 60px";
+            return (
+              <DashboardListCard
+                title="Featured Stories"
+                padded={false}
+                viewAll={{ href: "/portal/stories?view=featured", label: "View all" }}
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>Story</span><span>Genre</span><span>Reads</span><span>Likes</span>
+                  </DashboardListHeader>
                   {DATA.featured.map((s) => (
-                    <tr key={s.title} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td className="px-5 py-2">
-                        <span className="inline-flex items-center gap-2 min-w-0">
-                          <span className="h-6 w-9 rounded shrink-0" style={{ backgroundColor: s.swatch }} />
-                          <span className="font-bold text-[#102033] truncate">{s.title}</span>
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-[#374151]">{s.genre}</td>
-                      <td className="px-3 py-2 text-[#374151]">{s.reads}</td>
-                      <td className="px-3 py-2">
-                        <span className="inline-flex items-center gap-1 text-[#374151]">
-                          <Heart className="h-3 w-3 text-rose-500" strokeWidth={1.75} />
-                          {s.likes}
-                        </span>
-                      </td>
-                    </tr>
+                    <DashboardListRow key={s.title} template={tpl}>
+                      <span className="inline-flex items-center gap-2 min-w-0">
+                        <span className="h-5 w-7 rounded shrink-0" style={{ backgroundColor: s.swatch }} />
+                        <span className="text-[#102033] font-bold truncate">{s.title}</span>
+                      </span>
+                      <span className="text-[#374151] truncate">{s.genre}</span>
+                      <span className="text-[#374151]">{s.reads}</span>
+                      <span className="inline-flex items-center gap-1 text-[#374151]">
+                        <Heart className="h-3 w-3 text-rose-500" strokeWidth={1.75} />
+                        {s.likes}
+                      </span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
-          {/* Story Sessions & Read-Alouds */}
-          <Card padded={false}>
-            <div className="px-5 py-3.5 border-b border-[#eef0f4] flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-[#102033]">Story Sessions &amp; Read-Alouds</h3>
-              <FooterLink href="/portal/events" label="View all" inline />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px] min-w-[420px]">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-[0.06em] text-[#7a8ca3] border-b border-[#eef0f4]">
-                    <th className="px-5 py-2">Activity</th>
-                    <th className="px-3 py-2">School</th>
-                    <th className="px-3 py-2">Date &amp; Time</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {(() => {
+            const tpl = "minmax(0,1.4fr) minmax(0,1fr) 130px";
+            return (
+              <DashboardListCard
+                title="Story Sessions & Read-Alouds"
+                padded={false}
+                viewAll={{ href: "/portal/events", label: "View all" }}
+              >
+                <div className="px-3 pb-2 overflow-x-auto">
+                  <DashboardListHeader template={tpl}>
+                    <span>Activity</span><span>School</span><span>Date &amp; Time</span>
+                  </DashboardListHeader>
                   {DATA.sessions.map((row) => (
-                    <tr key={row.activity} className="border-b border-[#f3f5f8] last:border-b-0">
-                      <td className="px-5 py-2">
-                        <span className="inline-flex items-center gap-2 min-w-0">
-                          <ActivityIcon icon={row.icon} tone={row.tone} />
-                          <span className="font-bold text-[#102033] truncate">{row.activity}</span>
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-[#374151] truncate">{row.school}</td>
-                      <td className="px-3 py-2 text-[#374151] whitespace-nowrap">{row.when}</td>
-                    </tr>
+                    <DashboardListRow key={row.activity} template={tpl}>
+                      <span className="inline-flex items-center gap-2 min-w-0">
+                        <ActivityIcon icon={row.icon} tone={row.tone} />
+                        <span className="text-[#102033] font-bold truncate">{row.activity}</span>
+                      </span>
+                      <span className="text-[#374151] truncate">{row.school}</span>
+                      <span className="text-[#374151]">{row.when}</span>
+                    </DashboardListRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-5 py-3 border-t border-[#eef0f4]">
-              <FooterLink href="/portal/events" label="View calendar" inline />
-            </div>
-          </Card>
+                </div>
+              </DashboardListCard>
+            );
+          })()}
 
           {/* Content Quality Signals */}
           <Card>
@@ -765,65 +729,6 @@ function EngagementChart({
         <text key={m} x={sx(i)} y={h - 6} fontSize="9.5" fill="#94a3b8" textAnchor="middle">{m}</text>
       ))}
     </svg>
-  );
-}
-
-/* ── Pills ─────────────────────────────────────────────────────────── */
-
-function PerformancePill({ status }: { status: string }) {
-  const cls =
-    status === "Excellent"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-      : status === "Very Good"
-        ? "bg-blue-50 text-blue-700 border-blue-100"
-        : "bg-orange-50 text-orange-700 border-orange-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
-  );
-}
-
-function UrgencyPill({ urgency }: { urgency: string }) {
-  const cls =
-    urgency === "High"
-      ? "bg-rose-50 text-rose-700 border-rose-100"
-      : urgency === "Medium"
-        ? "bg-orange-50 text-orange-700 border-orange-100"
-        : "bg-emerald-50 text-emerald-700 border-emerald-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {urgency}
-    </span>
-  );
-}
-
-function SubmissionPill({ status }: { status: string }) {
-  const cls =
-    status === "Draft"
-      ? "bg-gray-100 text-gray-600 border-gray-200"
-      : status === "Submitted"
-        ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-        : "bg-orange-50 text-orange-700 border-orange-100";
-  return (
-    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${cls}`}>
-      {status}
-    </span>
-  );
-}
-
-function ReviewerStatus({ tone, text }: { tone: string; text: string }) {
-  const dotColor =
-    tone === "blue"
-      ? "#2563eb"
-      : tone === "orange"
-        ? "#f97316"
-        : "#94a3b8";
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[#374151] truncate">
-      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
-      {text}
-    </span>
   );
 }
 
