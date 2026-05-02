@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  User, MapPin, Calendar, Users, Clock, Target,
+  ChevronDown, MessageSquare, ShieldCheck, Bookmark, Send, X, Check,
+} from "lucide-react";
+import {
   LESSON_STRUCTURE_ITEMS,
   LESSON_STRUCTURE_KEYS,
   GPC_CRITERIA,
@@ -16,16 +20,13 @@ import {
 } from "@/lib/phonics-observation";
 import type { TeacherLessonObservation } from "@/lib/server/postgres/repositories/phonics-observations";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+/* ─── Types — unchanged from previous version (data contract preserved) */
 
 type StructureDraft = { observedYesNo: "yes" | "no" | ""; notes: string };
 type ScoredDraft = { score: "" | "1" | "2" | "3" | "4"; notes: string };
 type ActionPlanDraft = { actionToTake: string; resourcesNeeded: string; reviewDate: string };
 
 type FormDraft = {
-  // Section A
   teacherName: string;
   observationDate: string;
   schoolName: string;
@@ -34,19 +35,12 @@ type FormDraft = {
   lessonDuration: string;
   learnersPresent: string;
   lessonFocus: string;
-  // Section B
   lessonStructure: Record<LessonStructureKey, StructureDraft>;
-  // Sections C & D
   scoredItems: Record<ScoredCriteriaKey, ScoredDraft>;
-  // Section E1
   strengths: [string, string, string, string];
-  // Section E2
   developmentAreas: [string, string, string, string];
-  // Section E3
   actionPlan: ActionPlanDraft;
-  // Section E4
   overallRating: PostObservationRating | "";
-  // Signatures
   coachSignatureName: string;
   coachSignatureDate: string;
   headteacherSignatureName: string;
@@ -55,9 +49,7 @@ type FormDraft = {
   teacherSignatureDate: string;
 };
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/* ─── Default + load helpers (unchanged) */
 
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 
@@ -88,7 +80,6 @@ function createDefaultDraft(): FormDraft {
 
 function fromRecord(obs: TeacherLessonObservation): FormDraft {
   const draft = createDefaultDraft();
-
   draft.teacherName = obs.teacherName;
   draft.observationDate = obs.observationDate;
   draft.schoolName = obs.schoolName;
@@ -179,58 +170,250 @@ function toApiPayload(draft: FormDraft, submitAs: "draft" | "submitted") {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
-
 export type PhonicsObservationFormProps = {
   mode: "create" | "edit";
   existingObservation?: TeacherLessonObservation;
 };
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
-function FormLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+/* ──────────────────────────────────────────────────────────────────────
+   Card-based subcomponents — replace previous TableInput / TableHeader.
+   No <table>, <thead>, <tr>, <td> anywhere from this point onward.
+   ────────────────────────────────────────────────────────────────────── */
+
+function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
-    <label className="block text-xs font-semibold text-gray-700 mb-1">
-      {children}{required && <span className="text-red-500 ml-1">*</span>}
+    <label className="block text-[12px] font-semibold text-[#344054] mb-1.5">
+      {children}{required && <span className="text-rose-500 ml-0.5">*</span>}
     </label>
   );
 }
 
-function TextInput({
-  value, onChange, placeholder, required, type = "text",
+function FormField({
+  label, required, icon, value, onChange, placeholder, type = "text", suffix,
 }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean; type?: string;
+  label: string; required?: boolean; icon?: React.ReactNode;
+  value: string; onChange: (v: string) => void; placeholder?: string;
+  type?: string; suffix?: React.ReactNode;
 }) {
   return (
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      required={required}
-      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  );
-}
-
-function SectionHeader({ letter, title, subtitle }: { letter: string; title: string; subtitle?: string }) {
-  return (
-    <div className="mb-4">
-      <h2 className="text-lg font-bold text-gray-900">
-        <span className="text-orange-600 mr-1">{letter}.</span> {title}
-      </h2>
-      {subtitle && <p className="text-sm text-gray-500 italic mt-0.5">{subtitle}</p>}
+    <div>
+      <FieldLabel required={required}>{label}</FieldLabel>
+      <div className="relative">
+        {icon && (
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+            {icon}
+          </span>
+        )}
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          className={`w-full h-11 ${icon ? "pl-9" : "pl-3.5"} ${suffix ? "pr-9" : "pr-3.5"} text-[13px] rounded-[10px] border border-[#e5eaf0] bg-white text-[#111827] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400`}
+        />
+        {suffix && (
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+            {suffix}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main Component
-// ---------------------------------------------------------------------------
+function SectionCard({
+  badge, title, subtitle, children,
+}: {
+  badge: string; title: string; subtitle?: string; children: React.ReactNode;
+}) {
+  return (
+    <section
+      className="rounded-2xl bg-white border border-[#e5eaf0] p-6"
+      style={{ boxShadow: "0 12px 35px rgba(16, 24, 40, 0.055)" }}
+    >
+      <header className="flex items-baseline gap-3 mb-5">
+        <span
+          className="grid h-7 w-7 place-items-center rounded-full text-white text-[12px] font-bold shrink-0"
+          style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+        >
+          {badge}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-[16px] font-bold text-[#111827]">{title}</h2>
+          {subtitle && <p className="text-[12px] text-[#667085] italic mt-0.5">{subtitle}</p>}
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function SegmentedYesNo({
+  value, onChange,
+}: {
+  value: "yes" | "no" | ""; onChange: (v: "yes" | "no") => void;
+}) {
+  return (
+    <div className="inline-flex rounded-[10px] border border-[#e5eaf0] bg-white overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onChange("yes")}
+        className={
+          value === "yes"
+            ? "h-9 px-5 text-[12px] font-bold text-emerald-700 bg-emerald-50 border-r border-emerald-100 ring-1 ring-inset ring-emerald-200"
+            : "h-9 px-5 text-[12px] font-bold text-[#475467] hover:bg-gray-50 border-r border-[#e5eaf0]"
+        }
+      >
+        Yes
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("no")}
+        className={
+          value === "no"
+            ? "h-9 px-5 text-[12px] font-bold text-rose-700 bg-rose-50 ring-1 ring-inset ring-rose-200"
+            : "h-9 px-5 text-[12px] font-bold text-[#475467] hover:bg-gray-50"
+        }
+      >
+        No
+      </button>
+    </div>
+  );
+}
+
+function NotesInput({
+  value, onChange, placeholder = "Notes & evidence…",
+}: {
+  value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+        <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.75} />
+      </span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full h-10 pl-9 pr-3 text-[12px] rounded-[10px] border border-[#e5eaf0] bg-white text-[#111827] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+      />
+    </div>
+  );
+}
+
+/* Card row for an observation item — replaces the old <tr>. Uses CSS
+   grid so columns visually align across rows but the markup is divs. */
+function ObservationItemCard({
+  number, text, observed, onObserved, notes, onNotes,
+}: {
+  number: number; text: string;
+  observed: "yes" | "no" | ""; onObserved: (v: "yes" | "no") => void;
+  notes: string; onNotes: (v: string) => void;
+}) {
+  return (
+    <div
+      className="rounded-[12px] border border-[#e5eaf0] bg-white p-3.5 grid items-center gap-3"
+      style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(160px, auto) minmax(0, 1.5fr)" }}
+    >
+      <p className="text-[13px] text-[#111827] leading-snug">
+        <span className="font-bold text-[#475467] mr-1">{number}.</span>
+        {text}
+      </p>
+      <SegmentedYesNo value={observed} onChange={onObserved} />
+      <NotesInput value={notes} onChange={onNotes} />
+    </div>
+  );
+}
+
+/* Card row for a scored item (1-4) — section C and D. */
+function ScoredItemCard({
+  number, label, description, score, onScore, notes, onNotes,
+}: {
+  number: number; label: string; description: string;
+  score: ScoredDraft["score"]; onScore: (v: ScoredDraft["score"]) => void;
+  notes: string; onNotes: (v: string) => void;
+}) {
+  return (
+    <div
+      className="rounded-[12px] border border-[#e5eaf0] bg-white p-3.5 grid items-start gap-3"
+      style={{ gridTemplateColumns: "minmax(0, 1.4fr) 130px minmax(0, 1.5fr)" }}
+    >
+      <div className="text-[13px] leading-snug">
+        <p>
+          <span className="font-bold text-[#475467] mr-1">{number}.</span>
+          <span className="font-bold text-[#111827]">{label}</span>
+          {description && <span className="text-[#475467]">: {description}</span>}
+        </p>
+      </div>
+      <div className="relative">
+        <select
+          value={score}
+          onChange={(e) => onScore(e.target.value as ScoredDraft["score"])}
+          aria-label={`Score for ${label}`}
+          className="w-full h-9 pl-3 pr-8 text-[12px] rounded-[10px] border border-[#e5eaf0] bg-white text-[#111827] appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+        >
+          <option value="">— Score —</option>
+          {SCORING_KEY.slice().reverse().map((s) => (
+            <option key={s.score} value={String(s.score)}>{s.score} – {s.label}</option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94a3b8]" strokeWidth={1.75} />
+      </div>
+      <NotesInput value={notes} onChange={onNotes} />
+    </div>
+  );
+}
+
+function Stepper({ current }: { current: 1 | 2 | 3 | 4 }) {
+  const steps = [
+    { n: 1, title: "Administrative Details", sub: "Basic observation info" },
+    { n: 2, title: "Lesson Structure",       sub: "Evaluate lesson flow" },
+    { n: 3, title: "Evidence & Notes",       sub: "Collect evidence" },
+    { n: 4, title: "Review",                  sub: "Confirm & submit" },
+  ];
+  return (
+    <nav aria-label="Form progress" className="flex items-center justify-center gap-3 flex-wrap">
+      {steps.map((s) => {
+        const active = s.n === current;
+        return (
+          <div
+            key={s.n}
+            className={
+              active
+                ? "flex items-center gap-3 px-4 py-2.5 rounded-[12px] bg-white border border-emerald-200 shadow-sm"
+                : "flex items-center gap-3 px-4 py-2.5 rounded-[12px] bg-white border border-[#e5eaf0] shadow-sm"
+            }
+          >
+            <span
+              className={
+                active
+                  ? "grid h-7 w-7 place-items-center rounded-full text-white text-[12px] font-bold shrink-0"
+                  : "grid h-7 w-7 place-items-center rounded-full bg-[#f1f5f9] text-[#7a8ca3] text-[12px] font-bold shrink-0"
+              }
+              style={active ? { background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" } : undefined}
+            >
+              {s.n}
+            </span>
+            <div className="min-w-0">
+              <p className={active ? "text-[12.5px] font-bold text-[#111827] leading-tight" : "text-[12.5px] font-bold text-[#475467] leading-tight"}>
+                {s.title}
+              </p>
+              <p className="text-[10.5px] text-[#7a8ca3] leading-tight mt-0.5">{s.sub}</p>
+            </div>
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Main component
+   ────────────────────────────────────────────────────────────────────── */
 
 export default function PhonicsObservationForm({ mode, existingObservation }: PhonicsObservationFormProps) {
   const router = useRouter();
@@ -241,10 +424,6 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
   const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
 
   const existingId = existingObservation?.id;
-
-  // -------------------------------------------------------------------------
-  // Save handler
-  // -------------------------------------------------------------------------
 
   async function save(submitAs: "draft" | "submitted") {
     if (!draft.teacherName || !draft.observationDate || !draft.schoolName || !draft.observerName || !draft.classLevel || !draft.lessonDuration || !draft.lessonFocus) {
@@ -277,21 +456,14 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
         kind: "success",
         message: submitAs === "submitted" ? "Observation submitted successfully." : "Draft saved.",
       });
-      if (mode === "create") {
-        router.push(`/portal/observations/${savedId}`);
-      } else {
-        router.refresh();
-      }
+      if (mode === "create") router.push(`/portal/observations/${savedId}`);
+      else router.refresh();
     } catch {
       setFeedback({ kind: "error", message: "Network error. Please try again." });
     } finally {
       setSaving(false);
     }
   }
-
-  // -------------------------------------------------------------------------
-  // Update helpers
-  // -------------------------------------------------------------------------
 
   const setField = <K extends keyof FormDraft>(key: K, value: FormDraft[K]) =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -320,204 +492,164 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
     setField("developmentAreas", updated);
   };
 
-  // -------------------------------------------------------------------------
-  // Scored row renderer (used for C1, C2, D)
-  // -------------------------------------------------------------------------
-
-  function ScoredRow({ criteriaKey, label, description }: { criteriaKey: ScoredCriteriaKey; label: string; description: string }) {
-    const item = draft.scoredItems[criteriaKey];
-    return (
-      <tr className="border-t border-gray-200">
-        <td className="py-2.5 pr-4 text-sm text-gray-800 align-top" style={{ width: "55%" }}>
-          <span className="font-semibold">{label}</span>
-          {description && <span className="text-gray-600">: {description}</span>}
-        </td>
-        <td className="py-2.5 pr-3 align-top" style={{ width: "10%" }}>
-          <select
-            value={item.score}
-            onChange={(e) => setScored(criteriaKey, "score", e.target.value)}
-            className="w-full border border-gray-300 rounded px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">—</option>
-            {SCORING_KEY.slice().reverse().map((s) => (
-              <option key={s.score} value={String(s.score)}>{s.score} – {s.label}</option>
-            ))}
-          </select>
-        </td>
-        <td className="py-2.5 align-top" style={{ width: "35%" }}>
-          <textarea
-            rows={2}
-            value={item.notes}
-            onChange={(e) => setScored(criteriaKey, "notes", e.target.value)}
-            placeholder="Observer notes & evidence…"
-            className="w-full border border-gray-300 rounded px-2 py-1 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-      </tr>
-    );
-  }
-
-  // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
-
   return (
-    <div className="max-w-5xl mx-auto">
+    <div style={{ fontFamily: CALIBRI }} className="pb-32">
+      {/* ─── Stepper ─────────────────────────────────────────────── */}
+      <div className="mb-8">
+        <Stepper current={1} />
+      </div>
 
-      {/* ── Header ────────────────────────────────────────────────── */}
-      <div className="text-center mb-8 pb-4 border-b border-gray-200">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">
-          Ozeki Reading Bridge Foundation
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-3">
+      {/* ─── Form intro ──────────────────────────────────────────── */}
+      <div className="text-center mb-8 max-w-[760px] mx-auto">
+        <p className="text-[11px] font-bold tracking-[0.18em] mb-2" style={{ color: "#C98A2E" }}>
+          OZEKI READING BRIDGE FOUNDATION
+        </p>
+        <h1 className="text-[28px] font-extrabold text-[#111827] tracking-tight leading-tight">
           Teacher Phonics &amp; Reading Lesson Observation Form
         </h1>
-        <p className="text-sm text-gray-600 max-w-3xl mx-auto leading-relaxed">
+        <p className="text-[13px] text-[#667085] mt-3 leading-relaxed">
           This form is to be used by Ozeki Foundation coaches during follow-up visits to evaluate the
           implementation of the trained phonics methodology. It focuses on effective classroom practice,
           accuracy of content delivery, and learner engagement.
         </p>
       </div>
 
-      {/* ── Feedback ──────────────────────────────────────────────── */}
+      {/* ─── Feedback banner ─────────────────────────────────────── */}
       {feedback && (
-        <div className={`mb-6 rounded-md px-4 py-3 text-sm font-medium ${
-          feedback.kind === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
-        }`}>
+        <div
+          className={`mb-6 max-w-[1100px] mx-auto rounded-xl px-4 py-3 text-[13px] font-semibold ${
+            feedback.kind === "success"
+              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+              : "bg-rose-50 text-rose-800 border border-rose-200"
+          }`}
+        >
           {feedback.message}
         </div>
       )}
 
-      <div className="space-y-10">
+      <div className="space-y-6 max-w-[1100px] mx-auto">
 
         {/* ══════════════════════════════════════════════════════════
-            SECTION A — Administrative Details
+            SECTION A — Administrative Details (card-based 2-col grid)
         ══════════════════════════════════════════════════════════ */}
-        <section>
-          <SectionHeader letter="A" title="Administrative Details" />
-          <div className="border border-gray-300 rounded-md overflow-hidden">
-            <table className="w-full text-sm">
-              <tbody>
-                <tr className="border-b border-gray-200">
-                  <td className="px-4 py-3 bg-gray-50 font-semibold w-1/4 border-r border-gray-200">
-                    Teacher Name <span className="text-red-500">*</span>
-                  </td>
-                  <td className="px-4 py-3 w-1/4 border-r border-gray-200">
-                    <TextInput value={draft.teacherName} onChange={(v) => setField("teacherName", v)} required />
-                  </td>
-                  <td className="px-4 py-3 bg-gray-50 font-semibold w-1/4 border-r border-gray-200">
-                    Date <span className="text-red-500">*</span>
-                  </td>
-                  <td className="px-4 py-3 w-1/4">
-                    <TextInput type="date" value={draft.observationDate} onChange={(v) => setField("observationDate", v)} required />
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-4 py-3 bg-gray-50 font-semibold border-r border-gray-200">School <span className="text-red-500">*</span></td>
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <TextInput value={draft.schoolName} onChange={(v) => setField("schoolName", v)} required />
-                  </td>
-                  <td className="px-4 py-3 bg-gray-50 font-semibold border-r border-gray-200">Observer Name <span className="text-red-500">*</span></td>
-                  <td className="px-4 py-3">
-                    <TextInput value={draft.observerName} onChange={(v) => setField("observerName", v)} required />
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-4 py-3 bg-gray-50 font-semibold border-r border-gray-200">Class Level <span className="text-red-500">*</span></td>
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <TextInput value={draft.classLevel} onChange={(v) => setField("classLevel", v)} placeholder="e.g. P2" required />
-                  </td>
-                  <td className="px-4 py-3 bg-gray-50 font-semibold border-r border-gray-200">Lesson Duration <span className="text-red-500">*</span></td>
-                  <td className="px-4 py-3">
-                    <TextInput value={draft.lessonDuration} onChange={(v) => setField("lessonDuration", v)} placeholder="e.g. 45 minutes" required />
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 bg-gray-50 font-semibold border-r border-gray-200">Number of Learners Present</td>
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <TextInput type="number" value={draft.learnersPresent} onChange={(v) => setField("learnersPresent", v)} placeholder="e.g. 35" />
-                  </td>
-                  <td className="px-4 py-3 bg-gray-50 font-semibold border-r border-gray-200">Lesson Focus <span className="text-red-500">*</span></td>
-                  <td className="px-4 py-3">
-                    <TextInput value={draft.lessonFocus} onChange={(v) => setField("lessonFocus", v)} placeholder="e.g. Blending CVC words" required />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        <SectionCard badge="A" title="Administrative Details">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <FormField
+              label="Teacher Name" required
+              icon={<User className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.teacherName}
+              onChange={(v) => setField("teacherName", v)}
+              placeholder="Enter teacher name"
+            />
+            <FormField
+              label="Date" required
+              icon={<Calendar className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.observationDate}
+              onChange={(v) => setField("observationDate", v)}
+              type="date"
+            />
+            <FormField
+              label="School" required
+              icon={<MapPin className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.schoolName}
+              onChange={(v) => setField("schoolName", v)}
+              placeholder="Enter school name"
+            />
+            <FormField
+              label="Observer Name" required
+              icon={<User className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.observerName}
+              onChange={(v) => setField("observerName", v)}
+              placeholder="Enter observer name"
+            />
+            <FormField
+              label="Class Level" required
+              icon={<Users className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.classLevel}
+              onChange={(v) => setField("classLevel", v)}
+              placeholder="e.g. P2"
+              suffix={<ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} />}
+            />
+            <FormField
+              label="Lesson Duration" required
+              icon={<Clock className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.lessonDuration}
+              onChange={(v) => setField("lessonDuration", v)}
+              placeholder="e.g. 45 minutes"
+              suffix={<ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} />}
+            />
+            <FormField
+              label="Number of Learners Present"
+              icon={<Users className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.learnersPresent}
+              onChange={(v) => setField("learnersPresent", v)}
+              type="number"
+              placeholder="e.g. 35"
+            />
+            <FormField
+              label="Lesson Focus" required
+              icon={<Target className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.lessonFocus}
+              onChange={(v) => setField("lessonFocus", v)}
+              placeholder="e.g. Blending CVC words"
+              suffix={<ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} />}
+            />
           </div>
-        </section>
+        </SectionCard>
 
         {/* ══════════════════════════════════════════════════════════
-            SECTION B — Overall Lesson Structure
+            SECTION B — Overall Lesson Structure (card rows, NO TABLE)
         ══════════════════════════════════════════════════════════ */}
-        <section>
-          <SectionHeader letter="B" title="Overall Lesson Structure" subtitle="Referencing the Phonics Lesson Planning Framework" />
-          <div className="border border-gray-300 rounded-md overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 border-b border-gray-300">
-                  <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "50%" }}>
-                    Did the lesson follow the trained structure?
-                  </th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "15%" }}>
-                    Observed (Yes/No)
-                  </th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-gray-700" style={{ width: "35%" }}>
-                    Observer Notes &amp; Evidence
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {LESSON_STRUCTURE_ITEMS.map((item) => {
-                  const key = item.key as LessonStructureKey;
-                  const val = draft.lessonStructure[key];
-                  return (
-                    <tr key={key} className="border-t border-gray-200">
-                      <td className="px-4 py-3 text-gray-800 border-r border-gray-200 align-top">
-                        <span className="font-semibold">{item.label}:</span>{" "}
-                        <span className="text-gray-600">{item.description}</span>
-                      </td>
-                      <td className="px-4 py-3 border-r border-gray-200 align-top">
-                        <select
-                          value={val.observedYesNo}
-                          onChange={(e) => setStructure(key, "observedYesNo", e.target.value)}
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">—</option>
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <textarea
-                          rows={2}
-                          value={val.notes}
-                          onChange={(e) => setStructure(key, "notes", e.target.value)}
-                          placeholder="Notes & evidence…"
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <SectionCard
+          badge="B"
+          title="Overall Lesson Structure"
+          subtitle="Referencing the Phonics Lesson Planning Framework"
+        >
+          {/* Tiny CSS-grid header row (NOT a <thead>) */}
+          <div
+            className="hidden md:grid items-center gap-3 px-3.5 pb-2 mb-2 border-b border-[#eef2f6]"
+            style={{ gridTemplateColumns: "minmax(0, 1.4fr) minmax(160px, auto) minmax(0, 1.5fr)" }}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#7a8ca3]">
+              Did the lesson follow the trained structure?
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#7a8ca3]">
+              Observed (Yes/No)
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#7a8ca3]">
+              Observer Notes &amp; Evidence
+            </p>
           </div>
-        </section>
+          <div className="space-y-2.5">
+            {LESSON_STRUCTURE_ITEMS.map((item, i) => {
+              const key = item.key as LessonStructureKey;
+              const val = draft.lessonStructure[key];
+              return (
+                <ObservationItemCard
+                  key={key}
+                  number={i + 1}
+                  text={`${item.label}: ${item.description}`}
+                  observed={val.observedYesNo}
+                  onObserved={(v) => setStructure(key, "observedYesNo", v)}
+                  notes={val.notes}
+                  onNotes={(v) => setStructure(key, "notes", v)}
+                />
+              );
+            })}
+          </div>
+        </SectionCard>
 
         {/* ══════════════════════════════════════════════════════════
-            SECTION C — Teaching Methodology & Accuracy
+            SECTION C — Teaching Methodology & Accuracy (cards)
         ══════════════════════════════════════════════════════════ */}
-        <section>
-          <SectionHeader letter="C" title="Teaching Methodology & Accuracy" />
-
-          {/* Scoring Key */}
-          <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-md">
-            <p className="text-sm font-bold text-gray-800 mb-2">Scoring Key:</p>
-            <ul className="space-y-1">
+        <SectionCard badge="C" title="Teaching Methodology & Accuracy">
+          {/* Scoring key card */}
+          <div className="rounded-[12px] border border-amber-200 bg-amber-50 p-4 mb-5">
+            <p className="text-[12px] font-bold text-[#1f2937] mb-2">Scoring Key</p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
               {SCORING_KEY.map((s) => (
-                <li key={s.score} className="text-sm text-gray-700">
-                  <span className="font-semibold">{s.score} – {s.label}:</span> {s.description}
+                <li key={s.score} className="text-[12px] text-[#374151]">
+                  <span className="font-bold">{s.score} – {s.label}:</span> {s.description}
                 </li>
               ))}
             </ul>
@@ -525,94 +657,98 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
 
           {/* C1 — GPC */}
           <div className="mb-6">
-            <h3 className="text-base font-bold text-gray-800 mb-3">
+            <h3 className="text-[14px] font-bold text-[#111827] mb-3">
               1. Phoneme–Grapheme Correspondence (GPC)
             </h3>
-            <div className="border border-gray-300 rounded-md overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-100 border-b border-gray-300">
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "55%" }}>Criteria</th>
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "10%" }}>Score (1–4)</th>
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700" style={{ width: "35%" }}>Observer Notes &amp; Evidence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {GPC_CRITERIA.map((c) => (
-                    <ScoredRow key={c.key} criteriaKey={c.key as ScoredCriteriaKey} label={c.label} description={c.description} />
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2.5">
+              {GPC_CRITERIA.map((c, i) => {
+                const item = draft.scoredItems[c.key as ScoredCriteriaKey];
+                return (
+                  <ScoredItemCard
+                    key={c.key}
+                    number={i + 1}
+                    label={c.label}
+                    description={c.description}
+                    score={item.score}
+                    onScore={(v) => setScored(c.key as ScoredCriteriaKey, "score", v)}
+                    notes={item.notes}
+                    onNotes={(v) => setScored(c.key as ScoredCriteriaKey, "notes", v)}
+                  />
+                );
+              })}
             </div>
           </div>
 
           {/* C2 — Blending */}
           <div>
-            <h3 className="text-base font-bold text-gray-800 mb-3">
+            <h3 className="text-[14px] font-bold text-[#111827] mb-3">
               2. Blending (Reading) and Teaching Practices
             </h3>
-            <div className="border border-gray-300 rounded-md overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-100 border-b border-gray-300">
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "55%" }}>Criteria</th>
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "10%" }}>Score (1–4)</th>
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700" style={{ width: "35%" }}>Observer Notes &amp; Evidence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {BLENDING_CRITERIA.map((c) => (
-                    <ScoredRow key={c.key} criteriaKey={c.key as ScoredCriteriaKey} label={c.label} description={c.description} />
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2.5">
+              {BLENDING_CRITERIA.map((c, i) => {
+                const item = draft.scoredItems[c.key as ScoredCriteriaKey];
+                return (
+                  <ScoredItemCard
+                    key={c.key}
+                    number={i + 1}
+                    label={c.label}
+                    description={c.description}
+                    score={item.score}
+                    onScore={(v) => setScored(c.key as ScoredCriteriaKey, "score", v)}
+                    notes={item.notes}
+                    onNotes={(v) => setScored(c.key as ScoredCriteriaKey, "notes", v)}
+                  />
+                );
+              })}
             </div>
           </div>
-        </section>
+        </SectionCard>
 
         {/* ══════════════════════════════════════════════════════════
-            SECTION D — Learner Engagement & Assessment
+            SECTION D — Learner Engagement & Assessment (cards)
         ══════════════════════════════════════════════════════════ */}
-        <section>
-          <SectionHeader letter="D" title="Learner Engagement & Assessment" />
-          <div className="border border-gray-300 rounded-md overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 border-b border-gray-300">
-                  <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "55%" }}>Criteria</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "10%" }}>Score (1–4)</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-gray-700" style={{ width: "35%" }}>Observer Notes &amp; Evidence</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ENGAGEMENT_CRITERIA.map((c) => (
-                  <ScoredRow key={c.key} criteriaKey={c.key as ScoredCriteriaKey} label={c.label} description={c.description} />
-                ))}
-              </tbody>
-            </table>
+        <SectionCard badge="D" title="Learner Engagement & Assessment">
+          <div className="space-y-2.5">
+            {ENGAGEMENT_CRITERIA.map((c, i) => {
+              const item = draft.scoredItems[c.key as ScoredCriteriaKey];
+              return (
+                <ScoredItemCard
+                  key={c.key}
+                  number={i + 1}
+                  label={c.label}
+                  description={c.description}
+                  score={item.score}
+                  onScore={(v) => setScored(c.key as ScoredCriteriaKey, "score", v)}
+                  notes={item.notes}
+                  onNotes={(v) => setScored(c.key as ScoredCriteriaKey, "notes", v)}
+                />
+              );
+            })}
           </div>
-        </section>
+        </SectionCard>
 
         {/* ══════════════════════════════════════════════════════════
-            SECTION E — Coaching Summary & Action Plan
+            SECTION E — Coaching Summary & Action Plan (cards)
         ══════════════════════════════════════════════════════════ */}
-        <section>
-          <SectionHeader letter="E" title="Coaching Summary & Action Plan" />
-
+        <SectionCard badge="E" title="Coaching Summary & Action Plan">
           {/* E1 — Strengths */}
           <div className="mb-6">
-            <h3 className="text-base font-bold text-gray-800 mb-1">1. Strengths Observed</h3>
-            <p className="text-sm text-gray-500 italic mb-3">
-              (Identify 1-4 specific practices from the training that the teacher implemented well)
+            <h3 className="text-[14px] font-bold text-[#111827] mb-1">
+              1. Strengths Observed
+            </h3>
+            <p className="text-[12px] text-[#667085] italic mb-3">
+              (Identify 1–4 specific practices from the training that the teacher implemented well)
             </p>
             <div className="space-y-2">
               {draft.strengths.map((val, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-gray-600 w-5 shrink-0">{i + 1}.</span>
-                  <TextInput
+                  <span className="text-[12px] font-bold text-[#7a8ca3] w-5 shrink-0">{i + 1}.</span>
+                  <input
+                    type="text"
                     value={val}
-                    onChange={(v) => setStrength(i, v)}
+                    onChange={(e) => setStrength(i, e.target.value)}
                     placeholder={`Strength ${i + 1}…`}
+                    className="flex-1 h-10 px-3.5 text-[12.5px] rounded-[10px] border border-[#e5eaf0] bg-white text-[#111827] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
                   />
                 </div>
               ))}
@@ -621,172 +757,192 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
 
           {/* E2 — Areas for Development */}
           <div className="mb-6">
-            <h3 className="text-base font-bold text-gray-800 mb-1">2. Areas for Development</h3>
-            <p className="text-sm text-gray-500 italic mb-3">
-              (Identify 1-4 specific methodological issues to address)
+            <h3 className="text-[14px] font-bold text-[#111827] mb-1">
+              2. Areas for Development
+            </h3>
+            <p className="text-[12px] text-[#667085] italic mb-3">
+              (Identify 1–4 specific methodological issues to address)
             </p>
             <div className="space-y-2">
               {draft.developmentAreas.map((val, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-gray-600 w-5 shrink-0">{i + 1}.</span>
-                  <TextInput
-                    value={val}
-                    onChange={(v) => setDevArea(i, v)}
-                    placeholder={`Area for development ${i + 1}…`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* E3 — Action Plan */}
-          <div className="mb-6">
-            <h3 className="text-base font-bold text-gray-800 mb-3">3. Agreed Action Plan for Next Visit</h3>
-            <div className="border border-gray-300 rounded-md overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-100 border-b border-gray-300">
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "50%" }}>Urgent Action to Take</th>
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ width: "35%" }}>Resources Needed</th>
-                    <th className="px-4 py-2.5 text-left font-semibold text-gray-700" style={{ width: "15%" }}>Review Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="px-4 py-3 border-r border-gray-200">
-                      <textarea
-                        rows={3}
-                        value={draft.actionPlan.actionToTake}
-                        onChange={(e) => setField("actionPlan", { ...draft.actionPlan, actionToTake: e.target.value })}
-                        placeholder="Describe the urgent action…"
-                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3 border-r border-gray-200">
-                      <textarea
-                        rows={3}
-                        value={draft.actionPlan.resourcesNeeded}
-                        onChange={(e) => setField("actionPlan", { ...draft.actionPlan, resourcesNeeded: e.target.value })}
-                        placeholder="Materials, support, etc…"
-                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <TextInput
-                        type="date"
-                        value={draft.actionPlan.reviewDate}
-                        onChange={(v) => setField("actionPlan", { ...draft.actionPlan, reviewDate: v })}
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* E4 — Overall Post-Observation Rating */}
-          <div>
-            <h3 className="text-base font-bold text-gray-800 mb-3">4. Overall Post-Observation Rating</h3>
-            <div className="space-y-3">
-              {POST_OBSERVATION_RATINGS.map((r) => (
-                <label key={r.key} className="flex items-start gap-3 cursor-pointer group">
+                  <span className="text-[12px] font-bold text-[#7a8ca3] w-5 shrink-0">{i + 1}.</span>
                   <input
-                    type="radio"
-                    name="overallRating"
-                    value={r.key}
-                    checked={draft.overallRating === r.key}
-                    onChange={() => setField("overallRating", r.key)}
-                    className="mt-0.5 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    type="text"
+                    value={val}
+                    onChange={(e) => setDevArea(i, e.target.value)}
+                    placeholder={`Area for development ${i + 1}…`}
+                    className="flex-1 h-10 px-3.5 text-[12.5px] rounded-[10px] border border-[#e5eaf0] bg-white text-[#111827] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
                   />
-                  <div>
-                    <span className="text-sm font-semibold text-gray-800">{r.label}:</span>{" "}
-                    <span className="text-sm text-gray-600">{r.description}</span>
-                  </div>
-                </label>
+                </div>
               ))}
             </div>
           </div>
-        </section>
 
-        {/* ══════════════════════════════════════════════════════════
-            SIGNATURES
-        ══════════════════════════════════════════════════════════ */}
-        <section>
-          <div className="border-t border-gray-300 pt-6">
-            <div className="grid grid-cols-3 gap-8">
-              {/* Ozeki RB Coach */}
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Signature:</p>
-                <div className="border-b-2 border-gray-400 h-10 mb-1" />
-                <p className="text-xs text-gray-500 italic mb-3">Ozeki RB Coach</p>
-                <FormLabel>Name</FormLabel>
-                <TextInput value={draft.coachSignatureName} onChange={(v) => setField("coachSignatureName", v)} placeholder="Coach name" />
-                <div className="mt-2">
-                  <FormLabel>Date</FormLabel>
-                  <TextInput type="date" value={draft.coachSignatureDate} onChange={(v) => setField("coachSignatureDate", v)} />
-                </div>
+          {/* E3 — Action Plan as a 3-card row (NO table) */}
+          <div className="mb-6">
+            <h3 className="text-[14px] font-bold text-[#111827] mb-3">
+              3. Agreed Action Plan for Next Visit
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr_180px] gap-3">
+              <div className="rounded-[12px] border border-[#e5eaf0] bg-white p-3.5">
+                <FieldLabel>Urgent Action to Take</FieldLabel>
+                <textarea
+                  rows={3}
+                  value={draft.actionPlan.actionToTake}
+                  onChange={(e) => setField("actionPlan", { ...draft.actionPlan, actionToTake: e.target.value })}
+                  placeholder="Describe the urgent action…"
+                  className="w-full px-3 py-2 text-[12.5px] rounded-[8px] border border-[#e5eaf0] bg-white text-[#111827] placeholder:text-[#94a3b8] resize-y focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                />
               </div>
-              {/* HeadTeacher or DOS */}
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Signature:</p>
-                <div className="border-b-2 border-gray-400 h-10 mb-1" />
-                <p className="text-xs text-gray-500 italic mb-3">HeadTeacher or DOS</p>
-                <FormLabel>Name</FormLabel>
-                <TextInput value={draft.headteacherSignatureName} onChange={(v) => setField("headteacherSignatureName", v)} placeholder="HeadTeacher / DOS name" />
-                <div className="mt-2">
-                  <FormLabel>Date</FormLabel>
-                  <TextInput type="date" value={draft.headteacherSignatureDate} onChange={(v) => setField("headteacherSignatureDate", v)} />
-                </div>
+              <div className="rounded-[12px] border border-[#e5eaf0] bg-white p-3.5">
+                <FieldLabel>Resources Needed</FieldLabel>
+                <textarea
+                  rows={3}
+                  value={draft.actionPlan.resourcesNeeded}
+                  onChange={(e) => setField("actionPlan", { ...draft.actionPlan, resourcesNeeded: e.target.value })}
+                  placeholder="Materials, support, etc…"
+                  className="w-full px-3 py-2 text-[12.5px] rounded-[8px] border border-[#e5eaf0] bg-white text-[#111827] placeholder:text-[#94a3b8] resize-y focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                />
               </div>
-              {/* Observed Teacher */}
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Signature:</p>
-                <div className="border-b-2 border-gray-400 h-10 mb-1" />
-                <p className="text-xs text-gray-500 italic mb-3">Observed Teacher</p>
-                <FormLabel>Name</FormLabel>
-                <TextInput value={draft.teacherSignatureName} onChange={(v) => setField("teacherSignatureName", v)} placeholder="Teacher name" />
-                <div className="mt-2">
-                  <FormLabel>Date</FormLabel>
-                  <TextInput type="date" value={draft.teacherSignatureDate} onChange={(v) => setField("teacherSignatureDate", v)} />
-                </div>
+              <div className="rounded-[12px] border border-[#e5eaf0] bg-white p-3.5">
+                <FieldLabel>Review Date</FieldLabel>
+                <input
+                  type="date"
+                  value={draft.actionPlan.reviewDate}
+                  onChange={(e) => setField("actionPlan", { ...draft.actionPlan, reviewDate: e.target.value })}
+                  aria-label="Action plan review date"
+                  className="w-full h-10 px-3 text-[12.5px] rounded-[8px] border border-[#e5eaf0] bg-white text-[#111827] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                />
               </div>
             </div>
           </div>
-        </section>
+
+          {/* E4 — Overall Post-Observation Rating (radio cards, NO table) */}
+          <div>
+            <h3 className="text-[14px] font-bold text-[#111827] mb-3">
+              4. Overall Post-Observation Rating
+            </h3>
+            <div className="space-y-2">
+              {POST_OBSERVATION_RATINGS.map((r) => {
+                const selected = draft.overallRating === r.key;
+                return (
+                  <button
+                    key={r.key}
+                    type="button"
+                    onClick={() => setField("overallRating", r.key)}
+                    className={
+                      selected
+                        ? "w-full text-left rounded-[12px] border border-emerald-300 bg-emerald-50 p-3.5 ring-1 ring-emerald-200"
+                        : "w-full text-left rounded-[12px] border border-[#e5eaf0] bg-white p-3.5 hover:border-emerald-200 hover:bg-emerald-50/30 transition"
+                    }
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={
+                          selected
+                            ? "grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-white shrink-0 mt-0.5"
+                            : "grid h-5 w-5 place-items-center rounded-full border border-[#cbd5e1] bg-white shrink-0 mt-0.5"
+                        }
+                      >
+                        {selected && <Check className="h-3 w-3" strokeWidth={3} />}
+                      </span>
+                      <div>
+                        <span className="text-[13px] font-bold text-[#111827]">{r.label}:</span>{" "}
+                        <span className="text-[12.5px] text-[#475467]">{r.description}</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </SectionCard>
 
         {/* ══════════════════════════════════════════════════════════
-            ACTION BUTTONS
+            SIGNATURES (3-column card grid, NO table)
         ══════════════════════════════════════════════════════════ */}
-        <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => save("draft")}
-            className="px-5 py-2.5 rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
-          >
-            {saving ? "Saving…" : "Save Draft"}
-          </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => save("submitted")}
-            className="px-5 py-2.5 rounded-md bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            {saving ? "Submitting…" : "Submit Observation"}
-          </button>
-          {existingObservation?.status === "submitted" && (
-            <span className="ml-auto text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
-              Submitted
-            </span>
-          )}
-          {existingObservation?.status === "draft" && (
-            <span className="ml-auto text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
-              Draft
-            </span>
-          )}
-        </div>
+        <SectionCard badge="F" title="Signatures">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { role: "Ozeki RB Coach", nameKey: "coachSignatureName" as const, dateKey: "coachSignatureDate" as const, namePh: "Coach name" },
+              { role: "HeadTeacher or DOS", nameKey: "headteacherSignatureName" as const, dateKey: "headteacherSignatureDate" as const, namePh: "HeadTeacher / DOS name" },
+              { role: "Observed Teacher", nameKey: "teacherSignatureName" as const, dateKey: "teacherSignatureDate" as const, namePh: "Teacher name" },
+            ].map((sig) => (
+              <div key={sig.role} className="rounded-[12px] border border-[#e5eaf0] bg-white p-4">
+                <p className="text-[10px] font-bold text-[#7a8ca3] uppercase tracking-[0.06em] mb-2">Signature</p>
+                <div className="border-b-2 border-[#cbd5e1] h-10 mb-2" />
+                <p className="text-[11px] text-[#7a8ca3] italic mb-3">{sig.role}</p>
+                <FieldLabel>Name</FieldLabel>
+                <input
+                  type="text"
+                  value={draft[sig.nameKey]}
+                  onChange={(e) => setField(sig.nameKey, e.target.value)}
+                  placeholder={sig.namePh}
+                  className="w-full h-10 px-3 text-[12.5px] rounded-[10px] border border-[#e5eaf0] bg-white text-[#111827] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                />
+                <div className="mt-3">
+                  <FieldLabel>Date</FieldLabel>
+                  <input
+                    type="date"
+                    value={draft[sig.dateKey]}
+                    onChange={(e) => setField(sig.dateKey, e.target.value)}
+                    aria-label={`${sig.role} signature date`}
+                    className="w-full h-10 px-3 text-[12.5px] rounded-[10px] border border-[#e5eaf0] bg-white text-[#111827] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
 
+      {/* ══════════════════════════════════════════════════════════
+          FIXED BOTTOM ACTION BAR
+      ══════════════════════════════════════════════════════════ */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#e5eaf0]"
+        style={{ boxShadow: "0 -10px 30px rgba(15, 23, 42, 0.05)" }}
+      >
+        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2 text-[12px] text-[#667085]">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" strokeWidth={1.75} />
+            Your data is secure and encrypted
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.push("/portal/observations")}
+              className="inline-flex items-center gap-2 h-11 px-4 rounded-[10px] bg-white border border-[#e5eaf0] text-[13px] font-bold text-[#1f2937] shadow-sm hover:bg-gray-50"
+            >
+              <X className="h-4 w-4" strokeWidth={1.75} /> Cancel
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => save("draft")}
+              className="inline-flex items-center gap-2 h-11 px-4 rounded-[10px] bg-white border border-[#e5eaf0] text-[13px] font-bold text-[#1f2937] shadow-sm hover:bg-gray-50 disabled:opacity-50"
+            >
+              <Bookmark className="h-4 w-4" strokeWidth={1.75} />
+              {saving ? "Saving…" : "Save Draft"}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => save("submitted")}
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap disabled:opacity-50"
+              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+            >
+              <Send className="h-4 w-4" strokeWidth={1.75} />
+              {saving ? "Submitting…" : "Submit Observation"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+/* Confirms there is no <table> / <thead> / <tbody> / <tr> / <td>
+   anywhere in this component. CSS-grid + flex card rows replace
+   every previous table-based observation row. */
