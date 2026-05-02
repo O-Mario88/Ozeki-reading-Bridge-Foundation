@@ -12607,11 +12607,95 @@ input, select, textarea, button, img {
   height: 2rem;
   font-size: 0.78rem;
 }
-.ozeki-portal-shell .ds-card {
+.ozeki-portal-shell .ds-card,
+.ozeki-portal-shell > .card,
+.ozeki-portal-shell .card {
   background: #ffffff;
   border: 1px solid #f3f4f6;
   border-radius: 1rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+/* Form controls inside any portal page picked up by PortalShell — keep
+   inputs, selects and textareas on the green-theme look. Tailwind-styled
+   inputs override these via specificity (custom classes win). */
+.ozeki-portal-shell input[type="text"]:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell input[type="search"]:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell input[type="email"]:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell input[type="number"]:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell input[type="date"]:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell input[type="tel"]:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell input[type="url"]:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell input[type="password"]:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell select:not([class*="bg-"]):not([class*="rounded-"]),
+.ozeki-portal-shell textarea:not([class*="bg-"]):not([class*="rounded-"]) {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.875rem;
+  color: #111827;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ozeki-portal-shell input:not([type="checkbox"]):not([type="radio"]):not([class*="bg-"]):not([class*="rounded-"]):focus,
+.ozeki-portal-shell select:not([class*="bg-"]):not([class*="rounded-"]):focus,
+.ozeki-portal-shell textarea:not([class*="bg-"]):not([class*="rounded-"]):focus {
+  border-color: #047857;
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.12);
+  outline: none;
+}
+
+/* Tables that aren't styled by the page's own Tailwind classes get a clean
+   default — gray uppercase headers, 1px row separators. */
+.ozeki-portal-shell table:not([class*="min-w-"]):not([class*="bg-"]) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.ozeki-portal-shell table:not([class*="min-w-"]):not([class*="bg-"]) thead th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid #f3f4f6;
+  background: #f9fafb;
+}
+.ozeki-portal-shell table:not([class*="min-w-"]):not([class*="bg-"]) tbody td {
+  padding: 0.85rem 0.9rem;
+  color: #1f2937;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* Status pills if a page emits .pill / .badge class without Tailwind. */
+.ozeki-portal-shell .pill,
+.ozeki-portal-shell .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  white-space: nowrap;
+}
+
+/* Section headings inside legacy markup — bold, dark, no bullet. */
+.ozeki-portal-shell h1:not([class]),
+.ozeki-portal-shell h2:not([class]) {
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+.ozeki-portal-shell h3:not([class]) {
+  font-weight: 700;
+  color: #111827;
 }
 
 /* ── Glass-portal-shell scope ──────────────────────────────────────────
