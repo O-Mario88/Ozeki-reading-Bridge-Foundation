@@ -23,6 +23,7 @@ import {
 } from "@/lib/types";
 import type { EgraLearner } from "./EgraLearnerInputModal";
 import type { RosterEntry } from "./SchoolRosterPicker";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 const EgraLearnerInputModal = lazy(() => import("./EgraLearnerInputModal").then(m => ({ default: m.EgraLearnerInputModal })));
 const SchoolRosterPicker = lazy(() => import("./SchoolRosterPicker").then(m => ({ default: m.SchoolRosterPicker })));
@@ -4747,97 +4748,83 @@ export function PortalModuleManager({
 
       <section className="card">
         <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Date</th>
-                <th>District</th>
-                <th>School</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Last Updated</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.filter(r => {
-                if (!searchTerm) return true;
-                const search = searchTerm.toLowerCase();
-                return (
-                  r.recordCode.toLowerCase().includes(search) ||
-                  r.schoolName.toLowerCase().includes(search) ||
-                  r.district.toLowerCase().includes(search) ||
-                  r.status.toLowerCase().includes(search)
-                );
-              }).length === 0 ? (
-                <tr>
-                  <td colSpan={8}>No records match your search or filters.</td>
-                </tr>
-              ) : (
-                records
-                  .filter(r => {
-                    if (!searchTerm) return true;
-                    const search = searchTerm.toLowerCase();
-                    return (
-                      r.recordCode.toLowerCase().includes(search) ||
-                      r.schoolName.toLowerCase().includes(search) ||
-                      r.district.toLowerCase().includes(search) ||
-                      r.status.toLowerCase().includes(search)
-                    );
-                  })
-                  .map((record) => (
-                    <tr key={record.id}>
-                      <td>{record.recordCode}</td>
-                      <td>{record.date ? new Date(record.date).toLocaleDateString("en-GB") : "-"}</td>
-                      <td>{record.district}</td>
-                      <td>{record.schoolName}</td>
-                      <td>{record.programType ?? "-"}</td>
-                      <td>{record.status}</td>
-                      <td>{record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "-"}</td>
-                      <td>
-                        <button
-                          className="button button-ghost"
-                          type="button"
-                          onClick={() => {
-                            openRecordForm(record);
-                            void loadEvidence(record.id);
-                          }}
-                        >
-                          View/Edit
-                        </button>
-                        <button
-                          className="button button-ghost"
-                          type="button"
-                          style={{color: "var(--charius-red)"}}
-                          onClick={async () => {
-                            const reason = window.prompt("Are you sure you want to delete this record? Please provide a reason:");
-                            if (reason !== null) {
-                              try {
-                                const res = await fetch(`/api/portal/records/${record.id}?reason=${encodeURIComponent(reason)}`, {
-                                  method: "DELETE"
-                                });
-                                if (res.ok) {
-                                  setFeedback({ kind: "success", message: "Record deleted." });
-                                  void fetchRecords(filters);
-                                } else {
-                                  const err = await res.json();
-                                  setFeedback({ kind: "error", message: err.error || "Failed to delete" });
-                                }
-                              } catch (_e) {
-                                setFeedback({ kind: "error", message: "Network error" });
-                              }
-                            }
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
+          <DashboardListHeader template="120px 100px minmax(0,1fr) minmax(0,1.4fr) 110px 100px 160px 200px">
+            <span>ID</span>
+            <span>Date</span>
+            <span>District</span>
+            <span>School</span>
+            <span>Type</span>
+            <span>Status</span>
+            <span>Last Updated</span>
+            <span>Actions</span>
+          </DashboardListHeader>
+          {(() => {
+            const filtered = records.filter(r => {
+              if (!searchTerm) return true;
+              const search = searchTerm.toLowerCase();
+              return (
+                r.recordCode.toLowerCase().includes(search) ||
+                r.schoolName.toLowerCase().includes(search) ||
+                r.district.toLowerCase().includes(search) ||
+                r.status.toLowerCase().includes(search)
+              );
+            });
+            if (filtered.length === 0) {
+              return <div className="py-3">No records match your search or filters.</div>;
+            }
+            return filtered.map((record) => (
+              <DashboardListRow
+                key={record.id}
+                template="120px 100px minmax(0,1fr) minmax(0,1.4fr) 110px 100px 160px 200px"
+              >
+                <span className="truncate">{record.recordCode}</span>
+                <span>{record.date ? new Date(record.date).toLocaleDateString("en-GB") : "-"}</span>
+                <span className="truncate">{record.district}</span>
+                <span className="truncate">{record.schoolName}</span>
+                <span>{record.programType ?? "-"}</span>
+                <span>{record.status}</span>
+                <span>{record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "-"}</span>
+                <span>
+                  <button
+                    className="button button-ghost"
+                    type="button"
+                    onClick={() => {
+                      openRecordForm(record);
+                      void loadEvidence(record.id);
+                    }}
+                  >
+                    View/Edit
+                  </button>
+                  <button
+                    className="button button-ghost"
+                    type="button"
+                    style={{color: "var(--charius-red)"}}
+                    onClick={async () => {
+                      const reason = window.prompt("Are you sure you want to delete this record? Please provide a reason:");
+                      if (reason !== null) {
+                        try {
+                          const res = await fetch(`/api/portal/records/${record.id}?reason=${encodeURIComponent(reason)}`, {
+                            method: "DELETE"
+                          });
+                          if (res.ok) {
+                            setFeedback({ kind: "success", message: "Record deleted." });
+                            void fetchRecords(filters);
+                          } else {
+                            const err = await res.json();
+                            setFeedback({ kind: "error", message: err.error || "Failed to delete" });
+                          }
+                        } catch (_e) {
+                          setFeedback({ kind: "error", message: "Network error" });
+                        }
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                </span>
+              </DashboardListRow>
+            ));
+          })()}
         </div>
       </section>
 
@@ -5538,69 +5525,68 @@ export function PortalModuleManager({
 
                                 {/* Summary Table of Added Learners */}
                                 <div className="table-wrap egra-table-wrap">
-                                  <table className="egra-table">
-                                    <thead>
-                                      <tr>
-                                        <th>No</th>
-                                        <th>Learner ID</th>
-                                        <th>Learner Name</th>
-                                        <th>Class</th>
-                                        <th>Gender</th>
-                                        <th>Age</th>
-                                        <th>Reading Stage</th>
-                                        <th>Benchmark Grade Level</th>
-                                        <th>Expected vs Actual</th>
-                                        <th>Rubric Profile (PA/GPC/BD/WRF/SPC/C)</th>
-                                        <th>Action</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {egraLearners.filter(rowHasAssessmentData).map((row) => {
-                                        const classGrade =
-                                          String(formState.payload.classLevel ?? "").trim() || "P1";
-                                        const mastery =
-                                          egraLearnerMasteryProfiles.get(row.no) ??
-                                          computeLearnerMasteryFromSignals(row, classGrade);
-                                        const readingStage = normalizeEgraLevelLabel(
-                                          row.fluencyLevel,
-                                          row,
-                                          classGrade,
-                                        );
-                                        return (
-                                          <tr key={row.no}>
-                                            <td>{row.no}</td>
-                                            <td>{row.learnerId}</td>
-                                            <td>{row.learnerName || "-"}</td>
-                                            <td>{row.classGrade || "-"}</td>
-                                            <td>{row.sex === "M" ? "Male" : row.sex === "F" ? "Female" : "-"}</td>
-                                            <td>{row.age}</td>
-                                            <td>{readingStage}</td>
-                                            <td>{mastery.benchmarkGradeLevel}</td>
-                                            <td>{mastery.expectedVsActualStatus}</td>
-                                            <td style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: "0.75rem" }}>
-                                              {formatMasteryProfileCompact(mastery)}
-                                            </td>
-                                            <td>
-                                              <button
-                                                type="button"
-                                                className="button button-small button-ghost"
-                                                onClick={() => {
-                                                  setModalLearnerNo(row.no);
-                                                  setModalLearnerId(row.learnerId || nextLearnerShortId(row.no));
-                                                  setIsEgraModalOpen(true);
-                                                }}
-                                              >
-                                                Edit
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                      {egraLearners.filter(rowHasAssessmentData).length === 0 && (
-                                        <tr><td colSpan={11} className="text-center p-4 text-slate-500">No learners added yet. Click "+ Add Learner Result" to begin.</td></tr>
-                                      )}
-                                    </tbody>
-                                  </table>
+                                  <div className="egra-table">
+                                    <DashboardListHeader template="40px 100px minmax(0,1.4fr) 60px 80px 50px 130px 130px 140px minmax(0,1.4fr) 80px">
+                                      <span>No</span>
+                                      <span>Learner ID</span>
+                                      <span>Learner Name</span>
+                                      <span>Class</span>
+                                      <span>Gender</span>
+                                      <span>Age</span>
+                                      <span>Reading Stage</span>
+                                      <span>Benchmark Grade Level</span>
+                                      <span>Expected vs Actual</span>
+                                      <span>Rubric Profile (PA/GPC/BD/WRF/SPC/C)</span>
+                                      <span>Action</span>
+                                    </DashboardListHeader>
+                                    {egraLearners.filter(rowHasAssessmentData).map((row) => {
+                                      const classGrade =
+                                        String(formState.payload.classLevel ?? "").trim() || "P1";
+                                      const mastery =
+                                        egraLearnerMasteryProfiles.get(row.no) ??
+                                        computeLearnerMasteryFromSignals(row, classGrade);
+                                      const readingStage = normalizeEgraLevelLabel(
+                                        row.fluencyLevel,
+                                        row,
+                                        classGrade,
+                                      );
+                                      return (
+                                        <DashboardListRow
+                                          key={row.no}
+                                          template="40px 100px minmax(0,1.4fr) 60px 80px 50px 130px 130px 140px minmax(0,1.4fr) 80px"
+                                        >
+                                          <span>{row.no}</span>
+                                          <span>{row.learnerId}</span>
+                                          <span className="truncate">{row.learnerName || "-"}</span>
+                                          <span>{row.classGrade || "-"}</span>
+                                          <span>{row.sex === "M" ? "Male" : row.sex === "F" ? "Female" : "-"}</span>
+                                          <span>{row.age}</span>
+                                          <span>{readingStage}</span>
+                                          <span>{mastery.benchmarkGradeLevel}</span>
+                                          <span>{mastery.expectedVsActualStatus}</span>
+                                          <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: "0.75rem" }} className="truncate">
+                                            {formatMasteryProfileCompact(mastery)}
+                                          </span>
+                                          <span>
+                                            <button
+                                              type="button"
+                                              className="button button-small button-ghost"
+                                              onClick={() => {
+                                                setModalLearnerNo(row.no);
+                                                setModalLearnerId(row.learnerId || nextLearnerShortId(row.no));
+                                                setIsEgraModalOpen(true);
+                                              }}
+                                            >
+                                              Edit
+                                            </button>
+                                          </span>
+                                        </DashboardListRow>
+                                      );
+                                    })}
+                                    {egraLearners.filter(rowHasAssessmentData).length === 0 && (
+                                      <div className="text-center p-4 text-slate-500">No learners added yet. Click &quot;+ Add Learner Result&quot; to begin.</div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -5609,26 +5595,23 @@ export function PortalModuleManager({
                           if (field.type === "egraSummary") {
                             return (
                               <div key={field.key} className="full-width table-wrap">
-                                <table>
-                                  <thead>
-                                    <tr>
-                                      <th>Domain Mastery Snapshot</th>
-                                      <th>Boys Avg</th>
-                                      <th>Girls Avg</th>
-                                      <th>Class Avg</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {egraMetricLabels.map((metric) => (
-                                      <tr key={metric.key}>
-                                        <td>{metric.label}</td>
-                                        <td>{egraSummary.averages.boys[metric.key].toFixed(1)}</td>
-                                        <td>{egraSummary.averages.girls[metric.key].toFixed(1)}</td>
-                                        <td>{egraSummary.averages.class[metric.key].toFixed(1)}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                                <DashboardListHeader template="minmax(0,1.6fr) 100px 100px 100px">
+                                  <span>Domain Mastery Snapshot</span>
+                                  <span>Boys Avg</span>
+                                  <span>Girls Avg</span>
+                                  <span>Class Avg</span>
+                                </DashboardListHeader>
+                                {egraMetricLabels.map((metric) => (
+                                  <DashboardListRow
+                                    key={metric.key}
+                                    template="minmax(0,1.6fr) 100px 100px 100px"
+                                  >
+                                    <span>{metric.label}</span>
+                                    <span>{egraSummary.averages.boys[metric.key].toFixed(1)}</span>
+                                    <span>{egraSummary.averages.girls[metric.key].toFixed(1)}</span>
+                                    <span>{egraSummary.averages.class[metric.key].toFixed(1)}</span>
+                                  </DashboardListRow>
+                                ))}
                               </div>
                             );
                           }
@@ -5636,42 +5619,36 @@ export function PortalModuleManager({
                           if (field.type === "egraProfile") {
                             return (
                               <div key={field.key} className="full-width table-wrap">
-                                <table>
-                                  <thead>
-                                    <tr>
-                                      <th>Reading Stage</th>
-                                      <th>No. Learners</th>
-                                      <th>% Class</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <tr>
-                                      <td>{egraLevelLabels[0]}</td>
-                                      <td>{egraSummary.profile.nonReaders}</td>
-                                      <td>{egraSummary.profile.percentages.nonReaders.toFixed(1)}%</td>
-                                    </tr>
-                                    <tr>
-                                      <td>{egraLevelLabels[1]}</td>
-                                      <td>{egraSummary.profile.emerging}</td>
-                                      <td>{egraSummary.profile.percentages.emerging.toFixed(1)}%</td>
-                                    </tr>
-                                    <tr>
-                                      <td>{egraLevelLabels[2]}</td>
-                                      <td>{egraSummary.profile.developing}</td>
-                                      <td>{egraSummary.profile.percentages.developing.toFixed(1)}%</td>
-                                    </tr>
-                                    <tr>
-                                      <td>{egraLevelLabels[3]}</td>
-                                      <td>{egraSummary.profile.transitional}</td>
-                                      <td>{egraSummary.profile.percentages.transitional.toFixed(1)}%</td>
-                                    </tr>
-                                    <tr>
-                                      <td>{egraLevelLabels[4]}</td>
-                                      <td>{egraSummary.profile.fluent}</td>
-                                      <td>{egraSummary.profile.percentages.fluent.toFixed(1)}%</td>
-                                    </tr>
-                                  </tbody>
-                                </table>
+                                <DashboardListHeader template="minmax(0,1.6fr) 130px 110px">
+                                  <span>Reading Stage</span>
+                                  <span>No. Learners</span>
+                                  <span>% Class</span>
+                                </DashboardListHeader>
+                                <DashboardListRow template="minmax(0,1.6fr) 130px 110px">
+                                  <span>{egraLevelLabels[0]}</span>
+                                  <span>{egraSummary.profile.nonReaders}</span>
+                                  <span>{egraSummary.profile.percentages.nonReaders.toFixed(1)}%</span>
+                                </DashboardListRow>
+                                <DashboardListRow template="minmax(0,1.6fr) 130px 110px">
+                                  <span>{egraLevelLabels[1]}</span>
+                                  <span>{egraSummary.profile.emerging}</span>
+                                  <span>{egraSummary.profile.percentages.emerging.toFixed(1)}%</span>
+                                </DashboardListRow>
+                                <DashboardListRow template="minmax(0,1.6fr) 130px 110px">
+                                  <span>{egraLevelLabels[2]}</span>
+                                  <span>{egraSummary.profile.developing}</span>
+                                  <span>{egraSummary.profile.percentages.developing.toFixed(1)}%</span>
+                                </DashboardListRow>
+                                <DashboardListRow template="minmax(0,1.6fr) 130px 110px">
+                                  <span>{egraLevelLabels[3]}</span>
+                                  <span>{egraSummary.profile.transitional}</span>
+                                  <span>{egraSummary.profile.percentages.transitional.toFixed(1)}%</span>
+                                </DashboardListRow>
+                                <DashboardListRow template="minmax(0,1.6fr) 130px 110px">
+                                  <span>{egraLevelLabels[4]}</span>
+                                  <span>{egraSummary.profile.fluent}</span>
+                                  <span>{egraSummary.profile.percentages.fluent.toFixed(1)}%</span>
+                                </DashboardListRow>
                               </div>
                             );
                           }
@@ -5777,139 +5754,137 @@ export function PortalModuleManager({
                                       <p className="portal-muted">Loading contacts from school profile...</p>
                                     ) : null}
                                     <div className="table-wrap">
-                                      <table className="portal-participants-table">
-                                        <thead>
-                                          <tr>
-                                            <th>#</th>
-                                            <th>Contact (from School Profile)</th>
-                                            <th>
-                                              How has the training changed the way you think of Reading?
-                                            </th>
-                                            <th>
-                                              What will you do to improve the reading levels of your school?
-                                            </th>
-                                            <th>Remove</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {(trainingParticipantFeedbackRows.length > 0
-                                            ? trainingParticipantFeedbackRows
-                                            : [createEmptyTrainingParticipantFeedbackRow()]).map((row, index) => {
-                                            const selectedContact =
-                                              schoolContacts.find(
-                                                (contact) =>
-                                                  String(contact.contactId) === row.contactId.trim(),
-                                              ) ??
-                                              schoolContacts.find(
-                                                (contact) => contact.contactUid === row.contactUid.trim(),
-                                              );
-                                            return (
-                                              <tr key={row.id}>
-                                                <td>{index + 1}</td>
-                                                <td style={{ minWidth: 240 }}>
-                                                  <select
-                                                    value={row.contactId}
-                                                    onChange={(event) =>
-                                                      setTrainingParticipantFeedbackRows((prev) =>
-                                                        prev.map((entry, entryIndex) =>
-                                                          entryIndex !== index
-                                                            ? entry
-                                                            : (() => {
-                                                                const nextContact =
-                                                                  schoolContacts.find(
-                                                                    (contact) =>
-                                                                      String(contact.contactId) ===
-                                                                      event.target.value,
-                                                                  ) ?? null;
-                                                                return {
-                                                                  ...entry,
-                                                                  contactId: event.target.value,
-                                                                  contactUid:
-                                                                    nextContact?.contactUid ?? "",
-                                                                  participantName:
-                                                                    nextContact?.fullName ??
-                                                                    entry.participantName,
-                                                                };
-                                                              })(),
-                                                        ),
-                                                      )
-                                                    }
-                                                  >
-                                                    <option value="">Select contact</option>
-                                                    {schoolContacts.map((contact) => (
-                                                      <option
-                                                        key={contact.contactId}
-                                                        value={String(contact.contactId)}
-                                                      >
-                                                        {contact.fullName} ({contact.category})
-                                                      </option>
-                                                    ))}
-                                                  </select>
-                                                  {selectedContact ? (
-                                                    <small className="portal-field-help">
-                                                      {selectedContact.fullName}
-                                                    </small>
-                                                  ) : null}
-                                                </td>
-                                                <td>
-                                                  <textarea
-                                                    rows={3}
-                                                    value={row.changedThinking}
-                                                    onChange={(event) =>
-                                                      setTrainingParticipantFeedbackRows((prev) =>
-                                                        prev.map((entry, entryIndex) =>
-                                                          entryIndex === index
-                                                            ? {
-                                                                ...entry,
-                                                                changedThinking: event.target.value,
-                                                              }
-                                                            : entry,
-                                                        ),
-                                                      )
-                                                    }
-                                                  />
-                                                </td>
-                                                <td>
-                                                  <textarea
-                                                    rows={3}
-                                                    value={row.improveReading}
-                                                    onChange={(event) =>
-                                                      setTrainingParticipantFeedbackRows((prev) =>
-                                                        prev.map((entry, entryIndex) =>
-                                                          entryIndex === index
-                                                            ? {
-                                                                ...entry,
-                                                                improveReading: event.target.value,
-                                                              }
-                                                            : entry,
-                                                        ),
-                                                      )
-                                                    }
-                                                  />
-                                                </td>
-                                                <td>
-                                                  <button
-                                                    className="button button-ghost"
-                                                    type="button"
-                                                    onClick={() =>
-                                                      setTrainingParticipantFeedbackRows((prev) => {
-                                                        if (prev.length <= 1) {
-                                                          return [createEmptyTrainingParticipantFeedbackRow()];
-                                                        }
-                                                        return prev.filter(
-                                                          (_, entryIndex) => entryIndex !== index,
-                                                        );
-                                                      })
-                                                    }
-                                                  >
-                                                    Remove
-                                                  </button>
-                                                </td>
-                                              </tr>
+                                      <div className="portal-participants-table">
+                                        <DashboardListHeader template="40px 240px minmax(0,1.4fr) minmax(0,1.4fr) 100px">
+                                          <span>#</span>
+                                          <span>Contact (from School Profile)</span>
+                                          <span>How has the training changed the way you think of Reading?</span>
+                                          <span>What will you do to improve the reading levels of your school?</span>
+                                          <span>Remove</span>
+                                        </DashboardListHeader>
+                                        {(trainingParticipantFeedbackRows.length > 0
+                                          ? trainingParticipantFeedbackRows
+                                          : [createEmptyTrainingParticipantFeedbackRow()]).map((row, index) => {
+                                          const selectedContact =
+                                            schoolContacts.find(
+                                              (contact) =>
+                                                String(contact.contactId) === row.contactId.trim(),
+                                            ) ??
+                                            schoolContacts.find(
+                                              (contact) => contact.contactUid === row.contactUid.trim(),
                                             );
-                                          })}
-                                        </tbody>
-                                      </table>
+                                          return (
+                                            <DashboardListRow
+                                              key={row.id}
+                                              template="40px 240px minmax(0,1.4fr) minmax(0,1.4fr) 100px"
+                                            >
+                                              <span>{index + 1}</span>
+                                              <span style={{ minWidth: 240 }}>
+                                                <select
+                                                  aria-label="Contact"
+                                                  value={row.contactId}
+                                                  onChange={(event) =>
+                                                    setTrainingParticipantFeedbackRows((prev) =>
+                                                      prev.map((entry, entryIndex) =>
+                                                        entryIndex !== index
+                                                          ? entry
+                                                          : (() => {
+                                                              const nextContact =
+                                                                schoolContacts.find(
+                                                                  (contact) =>
+                                                                    String(contact.contactId) ===
+                                                                    event.target.value,
+                                                                ) ?? null;
+                                                              return {
+                                                                ...entry,
+                                                                contactId: event.target.value,
+                                                                contactUid:
+                                                                  nextContact?.contactUid ?? "",
+                                                                participantName:
+                                                                  nextContact?.fullName ??
+                                                                  entry.participantName,
+                                                              };
+                                                            })(),
+                                                      ),
+                                                    )
+                                                  }
+                                                >
+                                                  <option value="">Select contact</option>
+                                                  {schoolContacts.map((contact) => (
+                                                    <option
+                                                      key={contact.contactId}
+                                                      value={String(contact.contactId)}
+                                                    >
+                                                      {contact.fullName} ({contact.category})
+                                                    </option>
+                                                  ))}
+                                                </select>
+                                                {selectedContact ? (
+                                                  <small className="portal-field-help">
+                                                    {selectedContact.fullName}
+                                                  </small>
+                                                ) : null}
+                                              </span>
+                                              <span>
+                                                <textarea
+                                                  rows={3}
+                                                  aria-label="How has the training changed your thinking"
+                                                  value={row.changedThinking}
+                                                  onChange={(event) =>
+                                                    setTrainingParticipantFeedbackRows((prev) =>
+                                                      prev.map((entry, entryIndex) =>
+                                                        entryIndex === index
+                                                          ? {
+                                                              ...entry,
+                                                              changedThinking: event.target.value,
+                                                            }
+                                                          : entry,
+                                                      ),
+                                                    )
+                                                  }
+                                                />
+                                              </span>
+                                              <span>
+                                                <textarea
+                                                  rows={3}
+                                                  aria-label="What will you do to improve reading"
+                                                  value={row.improveReading}
+                                                  onChange={(event) =>
+                                                    setTrainingParticipantFeedbackRows((prev) =>
+                                                      prev.map((entry, entryIndex) =>
+                                                        entryIndex === index
+                                                          ? {
+                                                              ...entry,
+                                                              improveReading: event.target.value,
+                                                            }
+                                                          : entry,
+                                                      ),
+                                                    )
+                                                  }
+                                                />
+                                              </span>
+                                              <span>
+                                                <button
+                                                  className="button button-ghost"
+                                                  type="button"
+                                                  onClick={() =>
+                                                    setTrainingParticipantFeedbackRows((prev) => {
+                                                      if (prev.length <= 1) {
+                                                        return [createEmptyTrainingParticipantFeedbackRow()];
+                                                      }
+                                                      return prev.filter(
+                                                        (_, entryIndex) => entryIndex !== index,
+                                                      );
+                                                    })
+                                                  }
+                                                >
+                                                  Remove
+                                                </button>
+                                              </span>
+                                            </DashboardListRow>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
 
                                     <div className="portal-participants-header" style={{ marginTop: "0.9rem" }}>
@@ -6088,28 +6063,28 @@ export function PortalModuleManager({
                                   </p>
                                 )}
                                 <div className="table-wrap">
-                                  <table className="portal-participants-table">
-                                    <thead>
-                                      <tr>
-                                        <th>#</th>
-                                        <th>Participant (from School Roster)</th>
-                                        <th>School</th>
-                                        <th>Role</th>
-                                        <th>Gender</th>
-                                        <th>Mobile</th>
-                                        <th>Email</th>
-                                        <th>Invited</th>
-                                        <th>Confirmed</th>
-                                        <th>Attended</th>
-                                        <th>Participant Type</th>
-                                        <th>Action</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {trainingParticipants.map((row, index) => (
-                                        <tr key={`participant-${index + 1}`}>
-                                          <td>{index + 1}</td>
-                                          <td style={{ minWidth: 280 }}>
+                                  <div className="portal-participants-table">
+                                    <DashboardListHeader template="40px 280px minmax(0,1fr) 100px 90px 130px minmax(0,1fr) 80px 90px 90px 130px 90px">
+                                      <span>#</span>
+                                      <span>Participant (from School Roster)</span>
+                                      <span>School</span>
+                                      <span>Role</span>
+                                      <span>Gender</span>
+                                      <span>Mobile</span>
+                                      <span>Email</span>
+                                      <span>Invited</span>
+                                      <span>Confirmed</span>
+                                      <span>Attended</span>
+                                      <span>Participant Type</span>
+                                      <span>Action</span>
+                                    </DashboardListHeader>
+                                    {trainingParticipants.map((row, index) => (
+                                      <DashboardListRow
+                                        key={`participant-${index + 1}`}
+                                        template="40px 280px minmax(0,1fr) 100px 90px 130px minmax(0,1fr) 80px 90px 90px 130px 90px"
+                                      >
+                                        <span>{index + 1}</span>
+                                        <span style={{ minWidth: 280 }}>
                                             <div
                                               style={
                                                 isTrainingScheduledLockedField
@@ -6190,20 +6165,22 @@ export function PortalModuleManager({
                                               </Suspense>
                                             </div>
                                             {row.participantName && (
-                                              <div style={{ fontSize: "0.78rem", color: "#C35D0E", marginTop: 2 }}>
+                                              <span style={{ fontSize: "0.78rem", color: "#C35D0E", marginTop: 2, display: "block" }}>
                                                 ✓ {row.participantName}
-                                              </div>
+                                              </span>
                                             )}
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <input
                                               value={formState.schoolName}
                                               readOnly
+                                              aria-label="School"
                                               placeholder="Select school first"
                                             />
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <select
+                                              aria-label="Role"
                                               value={row.role}
                                               onChange={(event) =>
                                                 updateTrainingParticipant(index, "role", event.target.value)
@@ -6214,9 +6191,10 @@ export function PortalModuleManager({
                                               <option value="Teacher">Teacher</option>
                                               <option value="Leader">Leader</option>
                                             </select>
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <select
+                                              aria-label="Gender"
                                               value={row.gender}
                                               onChange={(event) =>
                                                 updateTrainingParticipant(index, "gender", event.target.value)
@@ -6227,10 +6205,11 @@ export function PortalModuleManager({
                                               <option value="Male">Male</option>
                                               <option value="Female">Female</option>
                                             </select>
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <input
                                               value={row.phoneContact}
+                                              aria-label="Mobile"
                                               placeholder="+2567xxxxxxxx"
                                               inputMode="tel"
                                               onChange={(event) =>
@@ -6242,10 +6221,11 @@ export function PortalModuleManager({
                                               }
                                               readOnly={isTrainingScheduledLockedField}
                                             />
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <input
                                               value={row.email}
+                                              aria-label="Email"
                                               placeholder="name@school.org"
                                               inputMode="email"
                                               onChange={(event) =>
@@ -6253,8 +6233,8 @@ export function PortalModuleManager({
                                               }
                                               readOnly={isTrainingScheduledLockedField}
                                             />
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <label className="portal-inline-boolean">
                                               <input
                                                 type="checkbox"
@@ -6266,8 +6246,8 @@ export function PortalModuleManager({
                                               />
                                               <span>Yes</span>
                                             </label>
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <label className="portal-inline-boolean">
                                               <input
                                                 type="checkbox"
@@ -6279,8 +6259,8 @@ export function PortalModuleManager({
                                               />
                                               <span>Yes</span>
                                             </label>
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <label className="portal-inline-boolean">
                                               <input
                                                 type="checkbox"
@@ -6292,9 +6272,10 @@ export function PortalModuleManager({
                                               />
                                               <span>Yes</span>
                                             </label>
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <select
+                                              aria-label="Participant Type"
                                               value={row.participantType}
                                               onChange={(event) =>
                                                 updateTrainingParticipant(index, "participantType", event.target.value)
@@ -6306,8 +6287,8 @@ export function PortalModuleManager({
                                               <option value="Online">Online</option>
                                               <option value="Hybrid">Hybrid</option>
                                             </select>
-                                          </td>
-                                          <td>
+                                          </span>
+                                          <span>
                                             <button
                                               className="button button-ghost"
                                               type="button"
@@ -6316,11 +6297,10 @@ export function PortalModuleManager({
                                             >
                                               Remove
                                             </button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                          </span>
+                                      </DashboardListRow>
+                                    ))}
+                                  </div>
                                 </div>
                                 {field.helperText ? (
                                   <small className="portal-field-help">{field.helperText}</small>
@@ -6548,99 +6528,98 @@ export function PortalModuleManager({
                                   </button>
                                 </div>
                                 <div className="table-wrap">
-                                  <table>
-                                    <thead>
-                                      <tr>
-                                        <th>Action</th>
-                                        <th>Owner</th>
-                                        <th>Due date</th>
-                                        <th>Remove</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {rows.map((row, index) => (
-                                        <tr key={row.id}>
-                                          <td>
-                                            <input
-                                              value={row.action}
-                                              placeholder="Action"
-                                              onChange={(event) =>
-                                                setVisitNextActions((prev) =>
-                                                  prev.map((entry, entryIndex) =>
-                                                    entryIndex === index
-                                                      ? { ...entry, action: event.target.value }
-                                                      : entry,
-                                                  ),
-                                                )
-                                              }
-                                            />
-                                          </td>
-                                          <td>
-                                            <select
-                                              value={row.ownerContactId}
-                                              onChange={(event) =>
-                                                setVisitNextActions((prev) =>
-                                                  prev.map((entry, entryIndex) =>
-                                                    entryIndex === index
-                                                      ? { ...entry, ownerContactId: event.target.value }
-                                                      : entry,
-                                                  ),
-                                                )
-                                              }
+                                  <DashboardListHeader template="minmax(0,2fr) minmax(0,1.4fr) 150px 100px">
+                                    <span>Action</span>
+                                    <span>Owner</span>
+                                    <span>Due date</span>
+                                    <span>Remove</span>
+                                  </DashboardListHeader>
+                                  {rows.map((row, index) => (
+                                    <DashboardListRow
+                                      key={row.id}
+                                      template="minmax(0,2fr) minmax(0,1.4fr) 150px 100px"
+                                    >
+                                      <span>
+                                        <input
+                                          value={row.action}
+                                          placeholder="Action"
+                                          onChange={(event) =>
+                                            setVisitNextActions((prev) =>
+                                              prev.map((entry, entryIndex) =>
+                                                entryIndex === index
+                                                  ? { ...entry, action: event.target.value }
+                                                  : entry,
+                                              ),
+                                            )
+                                          }
+                                        />
+                                      </span>
+                                      <span>
+                                        <select
+                                          aria-label="Owner"
+                                          value={row.ownerContactId}
+                                          onChange={(event) =>
+                                            setVisitNextActions((prev) =>
+                                              prev.map((entry, entryIndex) =>
+                                                entryIndex === index
+                                                  ? { ...entry, ownerContactId: event.target.value }
+                                                  : entry,
+                                              ),
+                                            )
+                                          }
+                                        >
+                                          <option value="">Select owner</option>
+                                          {schoolContacts.map((contact) => (
+                                            <option
+                                              key={contact.contactId}
+                                              value={String(contact.contactId)}
                                             >
-                                              <option value="">Select owner</option>
-                                              {schoolContacts.map((contact) => (
-                                                <option
-                                                  key={contact.contactId}
-                                                  value={String(contact.contactId)}
-                                                >
-                                                  {contact.fullName}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          </td>
-                                          <td>
-                                            <input
-                                              type="date"
-                                              value={row.dueDate}
-                                              onChange={(event) =>
-                                                setVisitNextActions((prev) =>
-                                                  prev.map((entry, entryIndex) =>
-                                                    entryIndex === index
-                                                      ? { ...entry, dueDate: event.target.value }
-                                                      : entry,
-                                                  ),
-                                                )
+                                              {contact.fullName}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </span>
+                                      <span>
+                                        <input
+                                          type="date"
+                                          aria-label="Due date"
+                                          value={row.dueDate}
+                                          onChange={(event) =>
+                                            setVisitNextActions((prev) =>
+                                              prev.map((entry, entryIndex) =>
+                                                entryIndex === index
+                                                  ? { ...entry, dueDate: event.target.value }
+                                                  : entry,
+                                              ),
+                                            )
+                                          }
+                                        />
+                                      </span>
+                                      <span>
+                                        <button
+                                          className="button button-ghost"
+                                          type="button"
+                                          onClick={() =>
+                                            setVisitNextActions((prev) => {
+                                              if (prev.length <= 1) {
+                                                return [
+                                                  {
+                                                    id: `${Date.now()}-0`,
+                                                    action: "",
+                                                    ownerContactId: "",
+                                                    dueDate: "",
+                                                  },
+                                                ];
                                               }
-                                            />
-                                          </td>
-                                          <td>
-                                            <button
-                                              className="button button-ghost"
-                                              type="button"
-                                              onClick={() =>
-                                                setVisitNextActions((prev) => {
-                                                  if (prev.length <= 1) {
-                                                    return [
-                                                      {
-                                                        id: `${Date.now()}-0`,
-                                                        action: "",
-                                                        ownerContactId: "",
-                                                        dueDate: "",
-                                                      },
-                                                    ];
-                                                  }
-                                                  return prev.filter((_, entryIndex) => entryIndex !== index);
-                                                })
-                                              }
-                                            >
-                                              Remove
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                              return prev.filter((_, entryIndex) => entryIndex !== index);
+                                            })
+                                          }
+                                        >
+                                          Remove
+                                        </button>
+                                      </span>
+                                    </DashboardListRow>
+                                  ))}
                                 </div>
                                 {field.helperText ? (
                                   <small className="portal-field-help">{field.helperText}</small>
@@ -6802,99 +6781,96 @@ export function PortalModuleManager({
                                 </div>
                                 {isInsightRecommendationField && selected.length > 0 ? (
                                   <div className="table-wrap" style={{ marginTop: "0.75rem" }}>
-                                    <table>
-                                      <thead>
-                                        <tr>
-                                          <th>REC</th>
-                                          <th>Priority</th>
-                                          <th>Notes (optional)</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {selected.map((recId) => {
-                                          const row =
-                                            insightRecommendationRows.find((item) => item.recId === recId) ??
-                                            {
-                                              recId,
-                                              priority: "medium" as InsightRecommendationPriority,
-                                              notes: "",
-                                            };
-                                          const recTitle = recCatalogById.get(recId)?.title ?? recId;
-                                          return (
-                                            <tr key={recId}>
-                                              <td>
-                                                <strong>{recId}</strong>
-                                                <br />
-                                                <small>{recTitle}</small>
-                                              </td>
-                                              <td>
-                                                <select
-                                                  value={row.priority}
-                                                  disabled={isTrainingScheduledLockedField}
-                                                  onChange={(event) => {
-                                                    const nextPriority =
-                                                      normalizeInsightRecommendationPriority(
-                                                        event.target.value,
-                                                      );
-                                                    setInsightRecommendationRows((prev) => {
-                                                      const byId = new Map(
-                                                        prev.map((entry) => [entry.recId, entry]),
-                                                      );
-                                                      byId.set(recId, {
-                                                        recId,
-                                                        priority: nextPriority,
-                                                        notes: byId.get(recId)?.notes ?? "",
-                                                      });
-                                                      return selected.map(
-                                                        (selectedRecId) =>
-                                                          byId.get(selectedRecId) ?? {
-                                                            recId: selectedRecId,
-                                                            priority: "medium",
-                                                            notes: "",
-                                                          },
-                                                      );
-                                                    });
-                                                  }}
-                                                >
-                                                  <option value="high">High</option>
-                                                  <option value="medium">Medium</option>
-                                                  <option value="low">Low</option>
-                                                </select>
-                                              </td>
-                                              <td>
-                                                <input
-                                                  value={row.notes}
-                                                  placeholder="Optional implementation notes"
-                                                  disabled={isTrainingScheduledLockedField}
-                                                  onChange={(event) => {
-                                                    const nextNotes = event.target.value;
-                                                    setInsightRecommendationRows((prev) => {
-                                                      const byId = new Map(
-                                                        prev.map((entry) => [entry.recId, entry]),
-                                                      );
-                                                      byId.set(recId, {
-                                                        recId,
-                                                        priority:
-                                                          byId.get(recId)?.priority ?? "medium",
-                                                        notes: nextNotes,
-                                                      });
-                                                      return selected.map(
-                                                        (selectedRecId) =>
-                                                          byId.get(selectedRecId) ?? {
-                                                            recId: selectedRecId,
-                                                            priority: "medium",
-                                                            notes: "",
-                                                          },
-                                                      );
-                                                    });
-                                                  }}
-                                                />
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
+                                    <DashboardListHeader template="minmax(0,1.6fr) 130px minmax(0,1.6fr)">
+                                      <span>REC</span>
+                                      <span>Priority</span>
+                                      <span>Notes (optional)</span>
+                                    </DashboardListHeader>
+                                    {selected.map((recId) => {
+                                      const row =
+                                        insightRecommendationRows.find((item) => item.recId === recId) ??
+                                        {
+                                          recId,
+                                          priority: "medium" as InsightRecommendationPriority,
+                                          notes: "",
+                                        };
+                                      const recTitle = recCatalogById.get(recId)?.title ?? recId;
+                                      return (
+                                        <DashboardListRow
+                                          key={recId}
+                                          template="minmax(0,1.6fr) 130px minmax(0,1.6fr)"
+                                        >
+                                          <span className="min-w-0">
+                                            <strong className="block">{recId}</strong>
+                                            <small className="block truncate">{recTitle}</small>
+                                          </span>
+                                          <span>
+                                            <select
+                                              aria-label="Priority"
+                                              value={row.priority}
+                                              disabled={isTrainingScheduledLockedField}
+                                              onChange={(event) => {
+                                                const nextPriority =
+                                                  normalizeInsightRecommendationPriority(
+                                                    event.target.value,
+                                                  );
+                                                setInsightRecommendationRows((prev) => {
+                                                  const byId = new Map(
+                                                    prev.map((entry) => [entry.recId, entry]),
+                                                  );
+                                                  byId.set(recId, {
+                                                    recId,
+                                                    priority: nextPriority,
+                                                    notes: byId.get(recId)?.notes ?? "",
+                                                  });
+                                                  return selected.map(
+                                                    (selectedRecId) =>
+                                                      byId.get(selectedRecId) ?? {
+                                                        recId: selectedRecId,
+                                                        priority: "medium",
+                                                        notes: "",
+                                                      },
+                                                  );
+                                                });
+                                              }}
+                                            >
+                                              <option value="high">High</option>
+                                              <option value="medium">Medium</option>
+                                              <option value="low">Low</option>
+                                            </select>
+                                          </span>
+                                          <span>
+                                            <input
+                                              value={row.notes}
+                                              placeholder="Optional implementation notes"
+                                              disabled={isTrainingScheduledLockedField}
+                                              onChange={(event) => {
+                                                const nextNotes = event.target.value;
+                                                setInsightRecommendationRows((prev) => {
+                                                  const byId = new Map(
+                                                    prev.map((entry) => [entry.recId, entry]),
+                                                  );
+                                                  byId.set(recId, {
+                                                    recId,
+                                                    priority:
+                                                      byId.get(recId)?.priority ?? "medium",
+                                                    notes: nextNotes,
+                                                  });
+                                                  return selected.map(
+                                                    (selectedRecId) =>
+                                                      byId.get(selectedRecId) ?? {
+                                                        recId: selectedRecId,
+                                                        priority: "medium",
+                                                        notes: "",
+                                                      },
+                                                  );
+                                                });
+                                              }}
+                                            />
+                                          </span>
+                                        </DashboardListRow>
+                                      );
+                                    })}
                                   </div>
                                 ) : null}
                                 {field.helperText ? (
@@ -7067,26 +7043,23 @@ export function PortalModuleManager({
                         </div>
                         {evidenceItems.length > 0 ? (
                           <div className="full-width table-wrap">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>File</th>
-                                  <th>Uploaded</th>
-                                  <th>Download</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {evidenceItems.map((item) => (
-                                  <tr key={item.id}>
-                                    <td>{item.fileName}</td>
-                                    <td>{new Date(item.createdAt).toLocaleString()}</td>
-                                    <td>
-                                      <a href={item.downloadUrl}>Download</a>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                            <DashboardListHeader template="minmax(0,2fr) 200px 110px">
+                              <span>File</span>
+                              <span>Uploaded</span>
+                              <span>Download</span>
+                            </DashboardListHeader>
+                            {evidenceItems.map((item) => (
+                              <DashboardListRow
+                                key={item.id}
+                                template="minmax(0,2fr) 200px 110px"
+                              >
+                                <span className="truncate">{item.fileName}</span>
+                                <span>{new Date(item.createdAt).toLocaleString()}</span>
+                                <span>
+                                  <a href={item.downloadUrl}>Download</a>
+                                </span>
+                              </DashboardListRow>
+                            ))}
                           </div>
                         ) : null}
                       </div>
