@@ -11,6 +11,26 @@ import {
   StatusPill, ProgressCell, AvatarCell, EmeraldLink, pillToneFor,
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import {
+  getVisitsKpis, getVisitTrend, getEvalDistribution, getRegionalCoverage,
+  listRecentVisits, listUpcomingVisits, listCoachWorkload, getEvaluationDomains,
+} from "@/lib/server/postgres/repositories/visits-dashboard";
+
+async function safeFetch<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+  try { return await fn(); }
+  catch (err) {
+    logger.warn(`[visits] ${label} failed; falling back to mock`, { error: String(err) });
+    return null;
+  }
+}
+
+function fmtDate(iso: string): string {
+  if (!iso) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); }
+  catch { return iso; }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +43,7 @@ export const metadata = {
 /* ────────────────────────────────────────────────────────────────────
    Reference data — frozen verbatim from the supplied screenshot.
    ──────────────────────────────────────────────────────────────────── */
-const DATA = {
+const FALLBACK = {
   kpis: [
     { label: "Visits Completed",       value: "312",   delta: "↑ 18.4% vs last 6 months", icon: ClipboardCheck, accent: "emerald" as const },
     { label: "Scheduled Visits",       value: "48",    delta: "↑ 4.1% vs last 6 months",  icon: Calendar,       accent: "blue"    as const },
@@ -109,6 +129,67 @@ const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
 export default async function PortalVisitsOverviewPage() {
   const user = await requirePortalStaffUser();
+
+  const [
+    liveKpis, liveTrend, liveDist, liveCoverage,
+    liveRecent, liveUpcoming, liveWorkload, liveDomains,
+  ] = await Promise.all([
+    safeFetch("kpis",        () => getVisitsKpis()),
+    safeFetch("trend",       () => getVisitTrend(6)),
+    safeFetch("distribution", () => getEvalDistribution()),
+    safeFetch("coverage",    () => getRegionalCoverage()),
+    safeFetch("recent",      () => listRecentVisits(5)),
+    safeFetch("upcoming",    () => listUpcomingVisits(5)),
+    safeFetch("workload",    () => listCoachWorkload(5)),
+    safeFetch("domains",     () => getEvaluationDomains()),
+  ]);
+
+  const DATA = {
+    ...FALLBACK,
+    kpis: liveKpis ? FALLBACK.kpis.map((k) => {
+      const lookup: Record<string, string> = {
+        "Visits Completed":       String(liveKpis.visitsCompleted),
+        "Scheduled Visits":       String(liveKpis.scheduledVisits),
+        "Schools Reached":        String(liveKpis.schoolsReached),
+        "Teachers Evaluated":     liveKpis.teachersEvaluated.toLocaleString(),
+        "Avg Evaluation Score":   `${liveKpis.avgEvaluationScore}%`,
+        "Follow-up Actions Open": String(liveKpis.followUpActionsOpen),
+        "Data Quality":           `${liveKpis.dataQualityPct}%`,
+      };
+      return { ...k, value: lookup[k.label] ?? k.value };
+    }) : FALLBACK.kpis,
+    visitTrend: liveTrend && liveTrend.length > 0
+      ? {
+          months: liveTrend.map((p) => p.month),
+          values: liveTrend.map((p) => p.visits),
+          yMax: Math.max(120, ...liveTrend.map((p) => p.visits)),
+        }
+      : FALLBACK.visitTrend,
+    evalDistribution: liveDist
+      ? {
+          total: liveDist.total,
+          label: "Evaluations",
+          rows: liveDist.segments.map((s, i) => ({
+            ...s,
+            color: FALLBACK.evalDistribution.rows[i]?.color ?? "#10b981",
+          })),
+        }
+      : FALLBACK.evalDistribution,
+    regionalCoverage: liveCoverage && liveCoverage.length > 0 ? liveCoverage : FALLBACK.regionalCoverage,
+    recentVisits: liveRecent && liveRecent.length > 0
+      ? liveRecent.map((v) => ({ ...v, date: fmtDate(v.date) }))
+      : FALLBACK.recentVisits,
+    upcoming: liveUpcoming && liveUpcoming.length > 0
+      ? liveUpcoming.map((u) => ({ ...u, date: fmtDate(u.date) }))
+      : FALLBACK.upcoming,
+    workload: liveWorkload && liveWorkload.length > 0 ? liveWorkload : FALLBACK.workload,
+    domains: liveDomains && liveDomains.length > 0
+      ? liveDomains.map((d, i) => {
+          const fb = FALLBACK.domains[i] ?? FALLBACK.domains[0];
+          return { ...d, delta: fb.delta, icon: fb.icon };
+        })
+      : FALLBACK.domains,
+  };
 
   return (
     <OzekiPortalShell
