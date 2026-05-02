@@ -12,6 +12,38 @@ import {
   StatusPill, ProgressCell, MediaListRow, pillToneFor,
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import {
+  getCrmKpis, getCrmActivityTrend, getContactSegments, getCrmPipeline,
+  listSchoolsWithContacts, listRecentCrmActivity, listUpcomingFollowUps,
+  listPartnerOrgs, getGeographicCoverage,
+} from "@/lib/server/postgres/repositories/crm-dashboard";
+
+async function safeFetch<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+  try { return await fn(); }
+  catch (err) {
+    logger.warn(`[contacts] ${label} failed; falling back to mock`, { error: String(err) });
+    return null;
+  }
+}
+
+function fmtDate(iso: string): string {
+  if (!iso || iso === "—") return iso || "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); }
+  catch { return iso; }
+}
+
+function fmtDateTime(iso: string): string {
+  if (!iso) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      month: "short", day: "2-digit", year: "numeric",
+      hour: "numeric", minute: "2-digit",
+    }).replace(",", " •");
+  } catch { return iso; }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +56,7 @@ export const metadata = {
 /* ────────────────────────────────────────────────────────────────────
    Reference data — frozen verbatim from the supplied screenshot.
    ──────────────────────────────────────────────────────────────────── */
-const DATA = {
+const FALLBACK = {
   kpis: {
     totalSchools:        { value: "172",   sub: "↑ 12 this month",            icon: SchoolIcon,    accent: "emerald" as const },
     activeContacts:      { value: "1,486", sub: "↑ 8.4% vs last month",       icon: Users,         accent: "blue"    as const },
@@ -127,6 +159,80 @@ const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
 export default async function PortalCrmOverviewPage() {
   const user = await requirePortalStaffUser();
+
+  const [
+    liveKpis, liveTrend, liveSegments, livePipeline,
+    liveSchools, liveActivity, liveFollowUps, livePartners, liveGeo,
+  ] = await Promise.all([
+    safeFetch("kpis",      () => getCrmKpis()),
+    safeFetch("trend",     () => getCrmActivityTrend(7)),
+    safeFetch("segments",  () => getContactSegments()),
+    safeFetch("pipeline",  () => getCrmPipeline()),
+    safeFetch("schools",   () => listSchoolsWithContacts(6)),
+    safeFetch("activity",  () => listRecentCrmActivity(6)),
+    safeFetch("followUps", () => listUpcomingFollowUps(6)),
+    safeFetch("partners",  () => listPartnerOrgs(5)),
+    safeFetch("geo",       () => getGeographicCoverage()),
+  ]);
+
+  const DATA = {
+    ...FALLBACK,
+    kpis: liveKpis ? {
+      ...FALLBACK.kpis,
+      totalSchools:      { ...FALLBACK.kpis.totalSchools,      value: String(liveKpis.totalSchools) },
+      activeContacts:    { ...FALLBACK.kpis.activeContacts,    value: liveKpis.activeContacts.toLocaleString() },
+      partnerOrgs:       { ...FALLBACK.kpis.partnerOrgs,       value: String(liveKpis.partnerOrgs) },
+      openOpportunities: { ...FALLBACK.kpis.openOpportunities, value: String(liveKpis.openOpportunities) },
+      activityLogs:      { ...FALLBACK.kpis.activityLogs,      value: liveKpis.activityLogs.toLocaleString() },
+      followUpsDue:      { ...FALLBACK.kpis.followUpsDue,      value: String(liveKpis.followUpsDue), sub: `${liveKpis.followUpsOverdue} overdue` },
+      dataCompleteness:  { ...FALLBACK.kpis.dataCompleteness,  value: `${liveKpis.dataCompletenessPct}%` },
+    } : FALLBACK.kpis,
+    trend: liveTrend && liveTrend.length > 0
+      ? {
+          months: liveTrend.map((p) => p.month),
+          values: liveTrend.map((p) => p.value),
+          miniStats: FALLBACK.trend.miniStats,
+        }
+      : FALLBACK.trend,
+    segments: liveSegments
+      ? {
+          total: liveSegments.total,
+          rows: liveSegments.rows.map((s, i) => ({
+            ...s,
+            color: FALLBACK.segments.rows[i]?.color ?? "#10b981",
+          })),
+        }
+      : FALLBACK.segments,
+    pipeline: livePipeline && livePipeline.length > 0
+      ? {
+          rows: livePipeline.map((r, i) => ({
+            ...r,
+            color: FALLBACK.pipeline.rows[i]?.color ?? "#10b981",
+          })),
+          overdue: liveKpis?.followUpsOverdue ?? FALLBACK.pipeline.overdue,
+          dueIn7: FALLBACK.pipeline.dueIn7,
+        }
+      : FALLBACK.pipeline,
+    schools: liveSchools && liveSchools.length > 0
+      ? liveSchools.map((s) => ({ ...s, last: fmtDate(s.last), nextDate: fmtDate(s.nextDate) }))
+      : FALLBACK.schools,
+    activity: liveActivity && liveActivity.length > 0
+      ? liveActivity.map((a) => {
+          const fb = FALLBACK.activity[0];
+          return {
+            icon: fb.icon, tone: fb.tone,
+            title: a.title,
+            source: a.source,
+            when: fmtDateTime(a.whenIso),
+          };
+        })
+      : FALLBACK.activity,
+    followUps: liveFollowUps && liveFollowUps.length > 0
+      ? liveFollowUps.map((f) => ({ ...f, due: fmtDate(f.due) }))
+      : FALLBACK.followUps,
+    partners: livePartners && livePartners.length > 0 ? livePartners : FALLBACK.partners,
+    geographic: liveGeo && liveGeo.length > 0 ? liveGeo : FALLBACK.geographic,
+  };
 
   return (
     <OzekiPortalShell
