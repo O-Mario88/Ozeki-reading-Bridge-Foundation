@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { glassFont } from "./fonts";
-import { GlassIconRail } from "./GlassIconRail";
 import { GlassExpandedMenu } from "./GlassExpandedMenu";
 import { MobileHeader } from "./MobileHeader";
 import { MobileBottomNav } from "./MobileBottomNav";
@@ -17,8 +16,10 @@ interface Props {
 /**
  * Outer shell for portal dashboard pages — implements the glassprism reference.
  *
- * Desktop (`lg+`):  charcoal frame → pale gray rounded canvas → icon rail
- *                   + expanded menu + main content
+ * Desktop (`lg+`):  charcoal frame → pale gray rounded canvas → expanded
+ *                   frosted menu (primary nav) + main content. The slim
+ *                   icon rail was removed at the user's request — kept only
+ *                   for mobile via the bottom nav.
  * Mobile (`<lg`):   light gray page → mobile header (hamburger + brand) →
  *                   stacked main content → fixed mobile bottom nav (5 items),
  *                   safe-area aware
@@ -42,11 +43,10 @@ export function GlassDashboardShell({ user, activeHref, mobileRightSlot, childre
         <MobileBottomNav activeHref={activeHref} user={user} />
       </div>
 
-      {/* Desktop layout (lg+) */}
+      {/* Desktop layout (lg+) — expanded menu + main only, no icon rail */}
       <div className="hidden lg:block min-h-screen bg-[#1F1F1F] p-6">
         <div className="min-h-[calc(100vh-48px)] overflow-hidden rounded-[48px] bg-[#D8D9DE] shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
-          <div className="grid lg:grid-cols-[96px_minmax(360px,420px)_minmax(0,1fr)] gap-7 p-7">
-            <GlassIconRail user={user} activeHref={activeHref} />
+          <div className="grid lg:grid-cols-[minmax(320px,400px)_minmax(0,1fr)] gap-7 p-7">
             <GlassExpandedMenu user={user} activeHref={activeHref} />
             <main className="min-w-0">{children}</main>
           </div>
