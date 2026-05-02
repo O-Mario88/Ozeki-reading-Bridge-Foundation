@@ -136,28 +136,26 @@ export default async function FinanceDashboard() {
               Ledger, reconciliation, reporting, and donor ROI analytics.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden md:flex items-center gap-2 shrink-0">
             <button
               type="button"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
             >
               <Download className="h-4 w-4" strokeWidth={1.75} />
-              <span className="hidden sm:inline">Export Reports</span>
-              <span className="sm:hidden">Export</span>
+              Export Reports
             </button>
             <Link
               href="/portal/finance/expenses?action=new"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800"
             >
               <Plus className="h-4 w-4" strokeWidth={2} />
-              <span className="hidden sm:inline">New Transaction</span>
-              <span className="sm:hidden">New</span>
+              New Transaction
             </Link>
           </div>
         </div>
 
-        {/* KPI strip — 4 tinted cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* KPI strip — 4 tinted cards. Mobile: 2-col grid (2×2). lg+: 4-col row. */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <FinanceTintedKpi
             label="TOTAL RECEIVED"
             value={fmtUsd(totalReceivedUsd)}
@@ -212,10 +210,11 @@ export default async function FinanceDashboard() {
           />
         </div>
 
-        {/* Analytics row: Spending Trend (7) + Fund Allocation (3) + Quick Actions (2) */}
+        {/* Analytics row: Spending Trend (7) + Fund Allocation (3) + Quick Actions (2)
+            Mobile order: Spending Trend → Quick Actions → Fund Allocation (matches reference). */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Spending Trend */}
-          <section className="lg:col-span-7 rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+          <section className="order-1 lg:col-span-7 rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
             <div className="flex items-start justify-between mb-4 gap-3">
               <div>
                 <h3 className="text-[16px] font-bold text-gray-900">Spending Trend</h3>
@@ -263,7 +262,7 @@ export default async function FinanceDashboard() {
           </section>
 
           {/* Fund Allocation */}
-          <section className="lg:col-span-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+          <section className="order-3 lg:order-2 lg:col-span-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-[16px] font-bold text-gray-900">Fund Allocation</h3>
               <span className="text-[11px] font-semibold text-gray-500 px-2 py-1 rounded border border-gray-200 whitespace-nowrap">All Funds ▾</span>
@@ -298,9 +297,9 @@ export default async function FinanceDashboard() {
           </section>
 
           {/* Quick Actions */}
-          <section className="lg:col-span-2 rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+          <section className="order-2 lg:order-3 lg:col-span-2 rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
             <h3 className="text-[16px] font-bold text-gray-900 mb-3">Quick Actions</h3>
-            <ul className="space-y-1">
+            <ul className="grid grid-cols-2 lg:grid-cols-1 gap-2 lg:gap-1">
               <SmallQuickAction icon={ListChecks} title="Reconcile Bank" sub="Match bank transactions" href="/portal/finance/reconciliation" />
               <SmallQuickAction icon={FileCheck} title="Generate Statement" sub="Create financial statement" href="/portal/finance/statements" />
               <SmallQuickAction icon={FilePlus2} title="Add Expense" sub="Record a new expense" href="/portal/finance/expenses?action=new" />
@@ -309,8 +308,42 @@ export default async function FinanceDashboard() {
           </section>
         </div>
 
-        {/* Module board: Core Ledger / Reports & Analytics / Books & Configuration */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Mobile-only unified Finance Modules card — matches reference layout
+            (one card with a 3-col grid of curated modules). */}
+        <section className="lg:hidden rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+          <h3 className="text-[15px] font-bold text-gray-900 mb-3">Finance Modules</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { href: "/portal/finance/invoices", icon: FileText, label: "Invoices", body: "Issue & track customer invoices" },
+              { href: "/portal/finance/receipts", icon: Receipt, label: "Receipts", body: "Record incoming payments" },
+              { href: "/portal/finance/expenses", icon: Wallet, label: "Expenses", body: "Capture & post programme spend" },
+              { href: "/portal/finance/income", icon: DollarSign, label: "Income Ledger", body: "All income streams" },
+              { href: "/portal/finance/reports", icon: FileBarChart, label: "Reports Hub", body: "Monthly, quarterly, FY reports" },
+              { href: "/portal/finance/statements", icon: FileCheck, label: "Financial Statements", body: "Balance sheet, P&L, cash flow" },
+              { href: "/portal/finance/reconciliation", icon: ArrowRightLeft, label: "Reconciliation", body: "Bank vs ledger matching" },
+              { href: "/portal/finance/cost-per-learner", icon: TrendingUp, label: "Cost per Learner", body: "Track cost efficiency metrics" },
+              { href: "/portal/finance/budgets", icon: PiggyBank, label: "Budgets", body: "Operation budgets & fund requests" },
+              { href: "/portal/finance/assets", icon: Building2, label: "Fixed Assets", body: "Register & depreciation" },
+              { href: "/portal/finance/liabilities", icon: ShieldBan, label: "Liabilities", body: "Payables & accruals" },
+              { href: "/portal/finance/settings", icon: SettingsIcon, label: "Settings", body: "Currencies, tax, email templates" },
+            ].map((m) => (
+              <Link
+                key={m.href}
+                href={m.href}
+                className="rounded-xl border border-gray-100 bg-white p-2.5 hover:bg-gray-50 transition flex flex-col gap-1.5 min-h-[78px]"
+              >
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-50 text-emerald-700">
+                  <m.icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+                </span>
+                <p className="text-[10.5px] font-bold text-gray-900 leading-tight truncate">{m.label}</p>
+                <p className="text-[8.5px] text-gray-500 leading-snug line-clamp-2">{m.body}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Desktop module board: Core Ledger / Reports & Analytics / Books & Configuration */}
+        <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-4">
           <ModuleGroup
             title="CORE LEDGER"
             span="lg:col-span-3"
@@ -352,20 +385,67 @@ export default async function FinanceDashboard() {
 
         {/* Recent Transactions */}
         <section className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-[16px] font-bold text-gray-900">Recent Transactions</h3>
-              <p className="text-[12px] text-gray-500 mt-0.5">Latest service payments and financial activities.</p>
+          <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-[15px] sm:text-[16px] font-bold text-gray-900">Recent Transactions</h3>
+              <p className="hidden sm:block text-[12px] text-gray-500 mt-0.5">Latest service payments and financial activities.</p>
             </div>
             <Link
               href="/portal/finance/receipts"
-              className="text-[12px] text-emerald-700 font-semibold inline-flex items-center hover:underline whitespace-nowrap"
+              className="text-[12px] text-emerald-700 font-semibold inline-flex items-center hover:underline whitespace-nowrap shrink-0"
             >
-              View all transactions <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
+              <span className="hidden sm:inline">View all transactions</span>
+              <span className="sm:hidden">View all</span>
+              <ChevronRight className="h-3.5 w-3.5 ml-0.5" strokeWidth={2} />
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile: stacked transaction rows with date badge */}
+          <ul className="lg:hidden divide-y divide-gray-100">
+            {transactionsRows.slice(0, 5).map((t, i) => {
+              const [m, dRaw] = t.date.split(" ");
+              const d = (dRaw ?? "").replace(",", "");
+              return (
+                <li
+                  key={`m-${t.reference}-${i}`}
+                  className="px-4 py-3 flex items-start gap-3"
+                >
+                  <div className="grid place-items-center h-11 w-11 rounded-xl bg-gray-50 border border-gray-100 shrink-0">
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500 leading-none">{m}</span>
+                    <span className="text-[15px] font-bold text-gray-900 leading-none mt-0.5">{d}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[13px] font-bold text-gray-900 leading-tight truncate">
+                        {t.description}
+                      </p>
+                      <span
+                        className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 ${
+                          t.type === "income"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-orange-50 text-orange-700"
+                        }`}
+                      >
+                        {t.type === "income" ? "Income" : "Expense"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-tight mt-0.5 truncate">{t.category}</p>
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      <span className="text-[13px] font-extrabold text-gray-900">
+                        {fmtUsdMoney(typeof t.amount === "number" ? t.amount : 0)}
+                      </span>
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 whitespace-nowrap">
+                        Completed
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Desktop: full data table with horizontal scroll fallback */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-[13px] min-w-[1000px]">
               <thead className="bg-gray-50/50">
                 <tr className="text-left text-[10px] uppercase tracking-widest text-gray-500 border-b border-gray-100">
