@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { PortalUser } from "@/lib/types";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 type ScopeType =
   | "country"
@@ -1018,56 +1019,49 @@ export function PortalNationalIntelligenceManager({
                 Super Admin can create and activate benchmark versions. Assessment auto-calculation reads active rule by grade/language.
               </p>
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Effective</th>
-                      <th>Rules</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {profiles.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="portal-muted">
-                          No benchmark profiles found.
-                        </td>
-                      </tr>
-                    ) : (
-                      profiles.map((profile) => (
-                        <tr key={profile.benchmarkId}>
-                          <td>
-                            <button
-                              type="button"
-                              className="button button-ghost"
-                              onClick={() => setSelectedBenchmarkId(profile.benchmarkId)}
-                            >
-                              {profile.name}
-                            </button>
-                          </td>
-                          <td>
-                            {profile.effectiveFromDate}
-                            {profile.effectiveToDate ? ` → ${profile.effectiveToDate}` : " → ongoing"}
-                          </td>
-                          <td>{profile.rulesCount}</td>
-                          <td>{profile.isActive ? "Active" : "Inactive"}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="button button-ghost"
-                              onClick={() => setProfileActive(profile.benchmarkId)}
-                              disabled={!canManageSuperAdminOnly}
-                            >
-                              Activate
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                <DashboardListHeader template="minmax(0,1.6fr) minmax(0,1.4fr) 80px 100px 110px">
+                  <span>Name</span>
+                  <span>Effective</span>
+                  <span>Rules</span>
+                  <span>Status</span>
+                  <span>Action</span>
+                </DashboardListHeader>
+                {profiles.length === 0 ? (
+                  <div className="portal-muted py-3">No benchmark profiles found.</div>
+                ) : (
+                  profiles.map((profile) => (
+                    <DashboardListRow
+                      key={profile.benchmarkId}
+                      template="minmax(0,1.6fr) minmax(0,1.4fr) 80px 100px 110px"
+                    >
+                      <span className="min-w-0">
+                        <button
+                          type="button"
+                          className="button button-ghost"
+                          onClick={() => setSelectedBenchmarkId(profile.benchmarkId)}
+                        >
+                          {profile.name}
+                        </button>
+                      </span>
+                      <span>
+                        {profile.effectiveFromDate}
+                        {profile.effectiveToDate ? ` → ${profile.effectiveToDate}` : " → ongoing"}
+                      </span>
+                      <span>{profile.rulesCount}</span>
+                      <span>{profile.isActive ? "Active" : "Inactive"}</span>
+                      <span>
+                        <button
+                          type="button"
+                          className="button button-ghost"
+                          onClick={() => setProfileActive(profile.benchmarkId)}
+                          disabled={!canManageSuperAdminOnly}
+                        >
+                          Activate
+                        </button>
+                      </span>
+                    </DashboardListRow>
+                  ))
+                )}
               </div>
             </section>
 
@@ -1189,48 +1183,41 @@ export function PortalNationalIntelligenceManager({
               <details style={{ marginTop: "0.75rem" }}>
                 <summary>Current Rules</summary>
                 <div className="table-wrap" style={{ marginTop: "0.5rem" }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Grade</th>
-                        <th>Language</th>
-                        <th>CWPM Bands</th>
-                        <th>Comprehension Rule</th>
-                        <th>Accuracy Floor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedRules.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="portal-muted">
-                            No rules yet.
-                          </td>
-                        </tr>
-                      ) : (
-                        selectedRules.map((rule) => (
-                          <tr key={rule.ruleId}>
-                            <td>{rule.grade}</td>
-                            <td>{rule.language}</td>
-                            <td>
-                              0, {rule.cwpmBands.emergent[0]}-{rule.cwpmBands.emergent[1]},
-                              {" "}
-                              {rule.cwpmBands.minimum[0]}-{rule.cwpmBands.minimum[1]},
-                              {" "}
-                              {rule.cwpmBands.competent[0]}-{rule.cwpmBands.competent[1]},
-                              {" "}
-                              {rule.cwpmBands.strong[0]}+
-                            </td>
-                            <td>
-                              {rule.comprehensionProficientRule.type === "percent"
-                                ? `${rule.comprehensionProficientRule.threshold}%`
-                                : `${rule.comprehensionProficientRule.correct}/${rule.comprehensionProficientRule.total}`}
-                            </td>
-                            <td>{rule.optionalAccuracyFloor ?? "none"}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                  <DashboardListHeader template="80px minmax(0,1fr) minmax(0,2fr) minmax(0,1.4fr) 130px">
+                    <span>Grade</span>
+                    <span>Language</span>
+                    <span>CWPM Bands</span>
+                    <span>Comprehension Rule</span>
+                    <span>Accuracy Floor</span>
+                  </DashboardListHeader>
+                  {selectedRules.length === 0 ? (
+                    <div className="portal-muted py-3">No rules yet.</div>
+                  ) : (
+                    selectedRules.map((rule) => (
+                      <DashboardListRow
+                        key={rule.ruleId}
+                        template="80px minmax(0,1fr) minmax(0,2fr) minmax(0,1.4fr) 130px"
+                      >
+                        <span>{rule.grade}</span>
+                        <span className="truncate">{rule.language}</span>
+                        <span className="truncate">
+                          0, {rule.cwpmBands.emergent[0]}-{rule.cwpmBands.emergent[1]},
+                          {" "}
+                          {rule.cwpmBands.minimum[0]}-{rule.cwpmBands.minimum[1]},
+                          {" "}
+                          {rule.cwpmBands.competent[0]}-{rule.cwpmBands.competent[1]},
+                          {" "}
+                          {rule.cwpmBands.strong[0]}+
+                        </span>
+                        <span className="truncate">
+                          {rule.comprehensionProficientRule.type === "percent"
+                            ? `${rule.comprehensionProficientRule.threshold}%`
+                            : `${rule.comprehensionProficientRule.correct}/${rule.comprehensionProficientRule.total}`}
+                        </span>
+                        <span>{rule.optionalAccuracyFloor ?? "none"}</span>
+                      </DashboardListRow>
+                    ))
+                  )}
                 </div>
               </details>
             </section>
@@ -1252,110 +1239,94 @@ export function PortalNationalIntelligenceManager({
             <section className="card" style={{ padding: "0.9rem" }}>
               <h3 style={{ marginTop: 0 }}>Summary</h3>
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Scope</th>
-                      <th>Period</th>
-                      <th>Completeness</th>
-                      <th>Coverage</th>
-                      <th>Open Exceptions</th>
-                      <th>Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summaries.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="portal-muted">
-                          No data-quality summary rows.
-                        </td>
-                      </tr>
-                    ) : (
-                      summaries.map((summary) => (
-                        <tr key={`${summary.scopeType}-${summary.scopeId}-${summary.periodKey}`}>
-                          <td>{summary.scopeType}:{summary.scopeId}</td>
-                          <td>{summary.periodKey}</td>
-                          <td>{summary.completenessPct}%</td>
-                          <td>
-                            Schools {summary.coverageIndicators.schoolsWithBaseline}/{summary.coverageIndicators.schoolsTotal};
-                            missing endline {summary.coverageIndicators.schoolsMissingEndline};
-                            low districts {summary.coverageIndicators.districtsLowCoverage}
-                          </td>
-                          <td>
-                            {summary.exceptionCounts.open}
-                            {" "}
-                            (H:{summary.exceptionCounts.high} M:{summary.exceptionCounts.medium} L:{summary.exceptionCounts.low})
-                          </td>
-                          <td>{new Date(summary.lastUpdated).toLocaleString()}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                <DashboardListHeader template="minmax(0,1.2fr) 130px 120px minmax(0,2fr) minmax(0,1.4fr) 160px">
+                  <span>Scope</span>
+                  <span>Period</span>
+                  <span>Completeness</span>
+                  <span>Coverage</span>
+                  <span>Open Exceptions</span>
+                  <span>Updated</span>
+                </DashboardListHeader>
+                {summaries.length === 0 ? (
+                  <div className="portal-muted py-3">No data-quality summary rows.</div>
+                ) : (
+                  summaries.map((summary) => (
+                    <DashboardListRow
+                      key={`${summary.scopeType}-${summary.scopeId}-${summary.periodKey}`}
+                      template="minmax(0,1.2fr) 130px 120px minmax(0,2fr) minmax(0,1.4fr) 160px"
+                    >
+                      <span className="truncate">{summary.scopeType}:{summary.scopeId}</span>
+                      <span>{summary.periodKey}</span>
+                      <span>{summary.completenessPct}%</span>
+                      <span className="truncate">
+                        Schools {summary.coverageIndicators.schoolsWithBaseline}/{summary.coverageIndicators.schoolsTotal};
+                        missing endline {summary.coverageIndicators.schoolsMissingEndline};
+                        low districts {summary.coverageIndicators.districtsLowCoverage}
+                      </span>
+                      <span>
+                        {summary.exceptionCounts.open}
+                        {" "}
+                        (H:{summary.exceptionCounts.high} M:{summary.exceptionCounts.medium} L:{summary.exceptionCounts.low})
+                      </span>
+                      <span>{new Date(summary.lastUpdated).toLocaleString()}</span>
+                    </DashboardListRow>
+                  ))
+                )}
               </div>
             </section>
 
             <section className="card" style={{ padding: "0.9rem" }}>
               <h3 style={{ marginTop: 0 }}>Exception Queue</h3>
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Severity</th>
-                      <th>Rule</th>
-                      <th>Entity</th>
-                      <th>Status</th>
-                      <th>Message</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {exceptions.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="portal-muted">
-                          No audit exceptions.
-                        </td>
-                      </tr>
-                    ) : (
-                      exceptions.map((exception) => (
-                        <tr key={exception.exceptionId}>
-                          <td>{exception.exceptionId}</td>
-                          <td>{exception.severity}</td>
-                          <td>{exception.ruleCode}</td>
-                          <td>
-                            {exception.entityType}:{exception.entityId}
-                          </td>
-                          <td>{exception.status}</td>
-                          <td>{exception.message}</td>
-                          <td>
-                            {exception.status === "open" ? (
-                              <div className="action-row">
-                                <button
-                                  type="button"
-                                  className="button button-ghost"
-                                  onClick={() => void resolveException(exception, "resolved")}
-                                >
-                                  Resolve
-                                </button>
-                                <button
-                                  type="button"
-                                  className="button button-ghost"
-                                  onClick={() => void resolveException(exception, "overridden")}
-                                  disabled={!currentUser.isSuperAdmin}
-                                >
-                                  Override
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="portal-muted">Closed</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                <DashboardListHeader template="80px 100px 130px minmax(0,1fr) 100px minmax(0,1.6fr) 200px">
+                  <span>ID</span>
+                  <span>Severity</span>
+                  <span>Rule</span>
+                  <span>Entity</span>
+                  <span>Status</span>
+                  <span>Message</span>
+                  <span>Action</span>
+                </DashboardListHeader>
+                {exceptions.length === 0 ? (
+                  <div className="portal-muted py-3">No audit exceptions.</div>
+                ) : (
+                  exceptions.map((exception) => (
+                    <DashboardListRow
+                      key={exception.exceptionId}
+                      template="80px 100px 130px minmax(0,1fr) 100px minmax(0,1.6fr) 200px"
+                    >
+                      <span>{exception.exceptionId}</span>
+                      <span>{exception.severity}</span>
+                      <span className="truncate">{exception.ruleCode}</span>
+                      <span className="truncate">{exception.entityType}:{exception.entityId}</span>
+                      <span>{exception.status}</span>
+                      <span className="truncate">{exception.message}</span>
+                      <span>
+                        {exception.status === "open" ? (
+                          <span className="action-row">
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              onClick={() => void resolveException(exception, "resolved")}
+                            >
+                              Resolve
+                            </button>
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              onClick={() => void resolveException(exception, "overridden")}
+                              disabled={!currentUser.isSuperAdmin}
+                            >
+                              Override
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="portal-muted">Closed</span>
+                        )}
+                      </span>
+                    </DashboardListRow>
+                  ))
+                )}
               </div>
             </section>
           </div>
@@ -1419,34 +1390,27 @@ export function PortalNationalIntelligenceManager({
             <section className="card" style={{ padding: "0.9rem" }}>
               <h3 style={{ marginTop: 0 }}>Cohort Tracking (Baseline → Latest)</h3>
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>School</th>
-                      <th>Baseline 20+</th>
-                      <th>Latest 20+</th>
-                      <th>Delta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {!insights || insights.cohortTracking.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="portal-muted">
-                          No cohort tracking rows.
-                        </td>
-                      </tr>
-                    ) : (
-                      insights.cohortTracking.slice(0, 80).map((item) => (
-                        <tr key={item.schoolId}>
-                          <td>{item.schoolName}</td>
-                          <td>{item.baselineAt20PlusPct}%</td>
-                          <td>{item.latestAt20PlusPct}%</td>
-                          <td>{item.deltaPct >= 0 ? "+" : ""}{item.deltaPct}%</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                <DashboardListHeader template="minmax(0,2fr) 130px 130px 100px">
+                  <span>School</span>
+                  <span>Baseline 20+</span>
+                  <span>Latest 20+</span>
+                  <span>Delta</span>
+                </DashboardListHeader>
+                {!insights || insights.cohortTracking.length === 0 ? (
+                  <div className="portal-muted py-3">No cohort tracking rows.</div>
+                ) : (
+                  insights.cohortTracking.slice(0, 80).map((item) => (
+                    <DashboardListRow
+                      key={item.schoolId}
+                      template="minmax(0,2fr) 130px 130px 100px"
+                    >
+                      <span className="truncate">{item.schoolName}</span>
+                      <span>{item.baselineAt20PlusPct}%</span>
+                      <span>{item.latestAt20PlusPct}%</span>
+                      <span>{item.deltaPct >= 0 ? "+" : ""}{item.deltaPct}%</span>
+                    </DashboardListRow>
+                  ))
+                )}
               </div>
             </section>
           </div>
@@ -1459,75 +1423,68 @@ export function PortalNationalIntelligenceManager({
               Refresh Queue
             </button>
             <div className="table-wrap" style={{ marginTop: "0.75rem" }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>School</th>
-                    <th>Geo</th>
-                    <th>Risk</th>
-                    <th>Priority</th>
-                    <th>Recommended Intervention</th>
-                    <th>Evidence</th>
-                    <th>Assignment</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!insights || insights.priorityQueue.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="portal-muted">
-                        No priority items.
-                      </td>
-                    </tr>
-                  ) : (
-                    insights.priorityQueue.map((item) => (
-                      <tr key={`${item.schoolId}-${item.periodKey}`}>
-                        <td>{item.schoolName}</td>
-                        <td>{item.district} / {item.subRegion} / {item.region}</td>
-                        <td>{item.riskScore}</td>
-                        <td>{item.priorityLevel}</td>
-                        <td>{item.recommendedIntervention}</td>
-                        <td>{item.evidenceSummary}</td>
-                        <td>
-                          {item.assignedOwnerName ? (
-                            <span>
-                              {item.assignedOwnerName}
-                              <br />
-                              <small>{item.assignedAt ? new Date(item.assignedAt).toLocaleString() : ""}</small>
-                            </span>
-                          ) : (
-                            <select
-                              value=""
-                              onChange={(event) => {
-                                const ownerUserId = Number(event.target.value);
-                                if (ownerUserId > 0) {
-                                  void assignPriority(item, ownerUserId);
-                                }
-                              }}
-                            >
-                              <option value="">Assign...</option>
-                              {assignableUsers.map((assignable) => (
-                                <option key={assignable.id} value={assignable.id}>
-                                  {assignable.fullName} ({assignable.role})
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="button button-ghost"
-                            onClick={() => void createPlanFromPriority(item)}
-                          >
-                            Create Plan
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1.4fr) 70px 100px minmax(0,1.6fr) minmax(0,1.4fr) minmax(0,1.4fr) 130px">
+                <span>School</span>
+                <span>Geo</span>
+                <span>Risk</span>
+                <span>Priority</span>
+                <span>Recommended Intervention</span>
+                <span>Evidence</span>
+                <span>Assignment</span>
+                <span>Actions</span>
+              </DashboardListHeader>
+              {!insights || insights.priorityQueue.length === 0 ? (
+                <div className="portal-muted py-3">No priority items.</div>
+              ) : (
+                insights.priorityQueue.map((item) => (
+                  <DashboardListRow
+                    key={`${item.schoolId}-${item.periodKey}`}
+                    template="minmax(0,1.4fr) minmax(0,1.4fr) 70px 100px minmax(0,1.6fr) minmax(0,1.4fr) minmax(0,1.4fr) 130px"
+                  >
+                    <span className="truncate">{item.schoolName}</span>
+                    <span className="truncate">{item.district} / {item.subRegion} / {item.region}</span>
+                    <span>{item.riskScore}</span>
+                    <span>{item.priorityLevel}</span>
+                    <span className="truncate">{item.recommendedIntervention}</span>
+                    <span className="truncate">{item.evidenceSummary}</span>
+                    <span className="min-w-0">
+                      {item.assignedOwnerName ? (
+                        <span>
+                          {item.assignedOwnerName}
+                          <small className="block">{item.assignedAt ? new Date(item.assignedAt).toLocaleString() : ""}</small>
+                        </span>
+                      ) : (
+                        <select
+                          aria-label="Assign owner"
+                          value=""
+                          onChange={(event) => {
+                            const ownerUserId = Number(event.target.value);
+                            if (ownerUserId > 0) {
+                              void assignPriority(item, ownerUserId);
+                            }
+                          }}
+                        >
+                          <option value="">Assign...</option>
+                          {assignableUsers.map((assignable) => (
+                            <option key={assignable.id} value={assignable.id}>
+                              {assignable.fullName} ({assignable.role})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </span>
+                    <span>
+                      <button
+                        type="button"
+                        className="button button-ghost"
+                        onClick={() => void createPlanFromPriority(item)}
+                      >
+                        Create Plan
+                      </button>
+                    </span>
+                  </DashboardListRow>
+                ))
+              )}
             </div>
           </div>
         ) : null}
@@ -1563,55 +1520,47 @@ export function PortalNationalIntelligenceManager({
             <section className="card" style={{ padding: "0.9rem" }}>
               <h3 style={{ marginTop: 0 }}>Intervention Plans</h3>
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Title</th>
-                      <th>Scope</th>
-                      <th>Status</th>
-                      <th>Progress</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {plans.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="portal-muted">
-                          No intervention plans.
-                        </td>
-                      </tr>
-                    ) : (
-                      plans.map((plan) => (
-                        <tr key={plan.planId}>
-                          <td>
-                            <button
-                              type="button"
-                              className="button button-ghost"
-                              onClick={() => {
-                                setSelectedPlanId(plan.planId);
-                                void loadActions(plan.planId);
-                              }}
-                            >
-                              {plan.planId}
-                            </button>
-                          </td>
-                          <td>{plan.title}</td>
-                          <td>{plan.scopeType}:{plan.scopeId}</td>
-                          <td>{plan.status}</td>
-                          <td>
-                            {plan.completedActions}/{plan.totalActions}
-                          </td>
-                          <td>
-                            {plan.createdByName}
-                            <br />
-                            <small>{new Date(plan.createdAt).toLocaleString()}</small>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                <DashboardListHeader template="100px minmax(0,1.6fr) minmax(0,1.2fr) 110px 110px minmax(0,1.4fr)">
+                  <span>ID</span>
+                  <span>Title</span>
+                  <span>Scope</span>
+                  <span>Status</span>
+                  <span>Progress</span>
+                  <span>Created</span>
+                </DashboardListHeader>
+                {plans.length === 0 ? (
+                  <div className="portal-muted py-3">No intervention plans.</div>
+                ) : (
+                  plans.map((plan) => (
+                    <DashboardListRow
+                      key={plan.planId}
+                      template="100px minmax(0,1.6fr) minmax(0,1.2fr) 110px 110px minmax(0,1.4fr)"
+                    >
+                      <span>
+                        <button
+                          type="button"
+                          className="button button-ghost"
+                          onClick={() => {
+                            setSelectedPlanId(plan.planId);
+                            void loadActions(plan.planId);
+                          }}
+                        >
+                          {plan.planId}
+                        </button>
+                      </span>
+                      <span className="truncate">{plan.title}</span>
+                      <span className="truncate">{plan.scopeType}:{plan.scopeId}</span>
+                      <span>{plan.status}</span>
+                      <span>
+                        {plan.completedActions}/{plan.totalActions}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate">{plan.createdByName}</span>
+                        <small className="block truncate">{new Date(plan.createdAt).toLocaleString()}</small>
+                      </span>
+                    </DashboardListRow>
+                  ))
+                )}
               </div>
             </section>
 
@@ -1655,38 +1604,31 @@ export function PortalNationalIntelligenceManager({
               </form>
 
               <div className="table-wrap" style={{ marginTop: "0.75rem" }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Action</th>
-                      <th>Owner</th>
-                      <th>Status</th>
-                      <th>Due</th>
-                      <th>Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {!selectedPlanId || !(actionsByPlan[String(selectedPlanId)]?.length) ? (
-                      <tr>
-                        <td colSpan={6} className="portal-muted">
-                          No actions yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      actionsByPlan[String(selectedPlanId)]?.map((action) => (
-                        <tr key={action.actionId}>
-                          <td>{action.actionId}</td>
-                          <td>{action.actionType}</td>
-                          <td>{action.ownerUserName}</td>
-                          <td>{action.status}</td>
-                          <td>{action.dueDate ?? "-"}</td>
-                          <td>{action.outcomeNotes ?? "-"}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                <DashboardListHeader template="80px minmax(0,1.4fr) minmax(0,1fr) 110px 130px minmax(0,1.4fr)">
+                  <span>ID</span>
+                  <span>Action</span>
+                  <span>Owner</span>
+                  <span>Status</span>
+                  <span>Due</span>
+                  <span>Notes</span>
+                </DashboardListHeader>
+                {!selectedPlanId || !(actionsByPlan[String(selectedPlanId)]?.length) ? (
+                  <div className="portal-muted py-3">No actions yet.</div>
+                ) : (
+                  actionsByPlan[String(selectedPlanId)]?.map((action) => (
+                    <DashboardListRow
+                      key={action.actionId}
+                      template="80px minmax(0,1.4fr) minmax(0,1fr) 110px 130px minmax(0,1.4fr)"
+                    >
+                      <span>{action.actionId}</span>
+                      <span className="truncate">{action.actionType}</span>
+                      <span className="truncate">{action.ownerUserName}</span>
+                      <span>{action.status}</span>
+                      <span>{action.dueDate ?? "-"}</span>
+                      <span className="truncate">{action.outcomeNotes ?? "-"}</span>
+                    </DashboardListRow>
+                  ))
+                )}
               </div>
             </section>
           </div>
@@ -1740,50 +1682,42 @@ export function PortalNationalIntelligenceManager({
             <section className="card" style={{ padding: "0.9rem" }}>
               <h3 style={{ marginTop: 0 }}>Report Packs</h3>
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Preset</th>
-                      <th>Scope</th>
-                      <th>Period</th>
-                      <th>Generated</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="portal-muted">
-                          No report packs generated yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      reports.map((report) => (
-                        <tr key={report.reportCode}>
-                          <td>{report.reportCode}</td>
-                          <td>{report.preset}</td>
-                          <td>{report.scopeType}:{report.scopeId}</td>
-                          <td>{report.periodStart} to {report.periodEnd}</td>
-                          <td>
-                            {report.generatedByName}
-                            <br />
-                            <small>{new Date(report.generatedAt).toLocaleString()}</small>
-                          </td>
-                          <td>
-                            {report.pdfUrl ? (
-                              <a className="button button-ghost" href={report.pdfUrl}>
-                                PDF
-                              </a>
-                            ) : (
-                              <span className="portal-muted">No PDF</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                <DashboardListHeader template="160px minmax(0,1.2fr) minmax(0,1.2fr) 200px minmax(0,1.4fr) 110px">
+                  <span>Code</span>
+                  <span>Preset</span>
+                  <span>Scope</span>
+                  <span>Period</span>
+                  <span>Generated</span>
+                  <span>Actions</span>
+                </DashboardListHeader>
+                {reports.length === 0 ? (
+                  <div className="portal-muted py-3">No report packs generated yet.</div>
+                ) : (
+                  reports.map((report) => (
+                    <DashboardListRow
+                      key={report.reportCode}
+                      template="160px minmax(0,1.2fr) minmax(0,1.2fr) 200px minmax(0,1.4fr) 110px"
+                    >
+                      <span className="truncate">{report.reportCode}</span>
+                      <span className="truncate">{report.preset}</span>
+                      <span className="truncate">{report.scopeType}:{report.scopeId}</span>
+                      <span>{report.periodStart} to {report.periodEnd}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate">{report.generatedByName}</span>
+                        <small className="block truncate">{new Date(report.generatedAt).toLocaleString()}</small>
+                      </span>
+                      <span>
+                        {report.pdfUrl ? (
+                          <a className="button button-ghost" href={report.pdfUrl}>
+                            PDF
+                          </a>
+                        ) : (
+                          <span className="portal-muted">No PDF</span>
+                        )}
+                      </span>
+                    </DashboardListRow>
+                  ))
+                )}
               </div>
             </section>
           </div>
@@ -1840,51 +1774,42 @@ export function PortalNationalIntelligenceManager({
             <section className="card" style={{ padding: "0.9rem" }}>
               <h3 style={{ marginTop: 0 }}>Partner Clients</h3>
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Partner</th>
-                      <th>Scope</th>
-                      <th>Status</th>
-                      <th>Created</th>
-                      <th>Last Used</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clients.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="portal-muted">
-                          No partner API clients.
-                        </td>
-                      </tr>
-                    ) : (
-                      clients.map((client) => (
-                        <tr key={client.clientId}>
-                          <td>{client.clientId}</td>
-                          <td>{client.partnerName}</td>
-                          <td>
-                            {client.allowedScopeType}: {client.allowedScopeIds.join(", ")}
-                          </td>
-                          <td>{client.active ? "Active" : "Disabled"}</td>
-                          <td>{new Date(client.createdAt).toLocaleString()}</td>
-                          <td>{client.lastUsedAt ? new Date(client.lastUsedAt).toLocaleString() : "Never"}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="button button-ghost"
-                              onClick={() => void togglePartnerClient(client.clientId, !client.active)}
-                              disabled={!canManagePartnerClients}
-                            >
-                              {client.active ? "Disable" : "Enable"}
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                <DashboardListHeader template="80px minmax(0,1.4fr) minmax(0,1.6fr) 100px 160px 160px 100px">
+                  <span>ID</span>
+                  <span>Partner</span>
+                  <span>Scope</span>
+                  <span>Status</span>
+                  <span>Created</span>
+                  <span>Last Used</span>
+                  <span>Action</span>
+                </DashboardListHeader>
+                {clients.length === 0 ? (
+                  <div className="portal-muted py-3">No partner API clients.</div>
+                ) : (
+                  clients.map((client) => (
+                    <DashboardListRow
+                      key={client.clientId}
+                      template="80px minmax(0,1.4fr) minmax(0,1.6fr) 100px 160px 160px 100px"
+                    >
+                      <span>{client.clientId}</span>
+                      <span className="truncate">{client.partnerName}</span>
+                      <span className="truncate">{client.allowedScopeType}: {client.allowedScopeIds.join(", ")}</span>
+                      <span>{client.active ? "Active" : "Disabled"}</span>
+                      <span>{new Date(client.createdAt).toLocaleString()}</span>
+                      <span>{client.lastUsedAt ? new Date(client.lastUsedAt).toLocaleString() : "Never"}</span>
+                      <span>
+                        <button
+                          type="button"
+                          className="button button-ghost"
+                          onClick={() => void togglePartnerClient(client.clientId, !client.active)}
+                          disabled={!canManagePartnerClients}
+                        >
+                          {client.active ? "Disable" : "Enable"}
+                        </button>
+                      </span>
+                    </DashboardListRow>
+                  ))
+                )}
               </div>
             </section>
 
