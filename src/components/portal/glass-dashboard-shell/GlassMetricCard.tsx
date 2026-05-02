@@ -61,7 +61,7 @@ export function GlassMetricCard({
       </div>
 
       <div className="flex items-baseline gap-2 min-w-0">
-        <p className="text-[34px] font-extrabold leading-none text-[#111111] truncate">
+        <p className="text-[28px] sm:text-[34px] font-extrabold leading-none text-[#111111] truncate">
           {value}
         </p>
         {hasDelta && (

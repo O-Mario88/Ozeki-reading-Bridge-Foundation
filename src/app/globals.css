@@ -12537,3 +12537,19 @@ input, select, textarea, button, img {
 [style*="display: flex"] > * {
   min-width: 0;
 }
+
+/* Mobile dashboard utilities — used by the glassprism shell + dashboard pages.
+   Hides scrollbars on horizontal rails (KPI strip, tab bars, filter chips). */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Truncate-on-mobile helper for nav labels, pill text, etc. */
+.mobile-nowrap {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Safe-area helpers for fixed bottom navigation on iPhone. */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pt-safe { padding-top: env(safe-area-inset-top); }

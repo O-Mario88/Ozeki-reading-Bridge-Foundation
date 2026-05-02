@@ -71,37 +71,49 @@ export default async function FinanceDashboard() {
     <GlassDashboardShell user={user} activeHref="/portal/finance">
       <div className="space-y-5">
 
-        <GlassTopBar
-          greeting={`Welcome, ${user.fullName ?? "Ozeki Team"}`}
-          subtitle="Here's what's happening in your finance command center."
-          controls={<GlassTopControls initials={initials} />}
-        />
+        {/* Desktop top bar with welcome + controls — mobile uses shell header */}
+        <div className="hidden lg:block">
+          <GlassTopBar
+            greeting={`Welcome, ${user.fullName ?? "Ozeki Team"}`}
+            subtitle="Here's what's happening in your finance command center."
+            controls={<GlassTopControls initials={initials} />}
+          />
+        </div>
 
         {/* Page title row */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-[28px] md:text-[32px] font-extrabold tracking-tight text-[#111111]">Finance</h2>
-              <Shield className="h-5 w-5 text-[#0F8F6B]" strokeWidth={1.75} />
+              <h2 className="text-[24px] md:text-[32px] font-extrabold tracking-tight text-[#111111] leading-tight">
+                Finance
+              </h2>
+              <Shield className="h-5 w-5 text-[#0F8F6B] shrink-0" strokeWidth={1.75} />
             </div>
-            <p className="text-[14px] text-[#6B6E76]">
+            <p className="text-[13px] md:text-[14px] text-[#6B6E76] leading-snug">
               Ledger, reconciliation, reporting, and donor ROI analytics.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <GlassButton variant="secondary" size="md">
+          <div className="flex items-center gap-2 -mx-1 px-1 overflow-x-auto no-scrollbar md:overflow-visible">
+            <GlassButton variant="secondary" size="md" className="shrink-0 whitespace-nowrap">
               <Download className="h-4 w-4" strokeWidth={1.75} />
-              Export Reports
+              <span className="hidden sm:inline">Export Reports</span>
+              <span className="sm:hidden">Export</span>
             </GlassButton>
-            <GlassButton variant="primary" size="md" href="/portal/finance/expenses?action=new">
+            <GlassButton
+              variant="primary"
+              size="md"
+              href="/portal/finance/expenses?action=new"
+              className="shrink-0 whitespace-nowrap"
+            >
               <Plus className="h-4 w-4" strokeWidth={2} />
-              New Transaction
+              <span className="hidden sm:inline">New Transaction</span>
+              <span className="sm:hidden">New</span>
             </GlassButton>
           </div>
         </div>
 
-        {/* KPI strip — 4 cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* KPI strip — 4 cards. Mobile: 2-col grid. lg+: 4-col. */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <GlassFinanceKpiCard
             label="Total Received"
             value={fmtUsd(totalReceivedUsd)}

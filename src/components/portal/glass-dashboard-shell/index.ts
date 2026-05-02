@@ -2,6 +2,8 @@ export { GlassDashboardShell } from "./GlassDashboardShell";
 export { GlassIconRail } from "./GlassIconRail";
 export { GlassExpandedMenu } from "./GlassExpandedMenu";
 export { GlassMobileNav } from "./GlassMobileNav";
+export { MobileHeader } from "./MobileHeader";
+export { MobileBottomNav } from "./MobileBottomNav";
 export { GlassTopBar } from "./GlassTopBar";
 export { GlassTopControls } from "./GlassTopControls";
 export { GlassCard, GlassPanel } from "./GlassCard";

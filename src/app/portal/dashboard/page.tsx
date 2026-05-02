@@ -53,83 +53,111 @@ export default async function PortalDashboardPage() {
   return (
     <GlassDashboardShell user={user} activeHref="/portal/dashboard">
       <div className="space-y-5">
-        {/* Top bar with welcome + controls */}
-        <GlassTopBar
-          greeting={`Welcome back, ${user.fullName ?? "Ozeki Team"}`}
-          subtitle="Here's what's happening across your literacy network today."
-          controls={<GlassTopControls initials={initials} />}
-        />
+        {/* Mobile-only welcome line — the shell's MobileHeader handles nav */}
+        <div className="lg:hidden">
+          <h1 className="text-[22px] font-bold tracking-tight text-[#111111] leading-tight">
+            Welcome back, {user.fullName ?? "Ozeki Team"}
+          </h1>
+          <p className="text-[13px] text-[#6B6E76] leading-snug mt-1">
+            Here&apos;s what&apos;s happening across your literacy network today.
+          </p>
+        </div>
+
+        {/* Desktop top bar with welcome + controls */}
+        <div className="hidden lg:block">
+          <GlassTopBar
+            greeting={`Welcome back, ${user.fullName ?? "Ozeki Team"}`}
+            subtitle="Here's what's happening across your literacy network today."
+            controls={<GlassTopControls initials={initials} />}
+          />
+        </div>
 
         {/* Date range selector */}
         <div className="flex justify-end">
           <button
             type="button"
-            className="inline-flex items-center gap-2 h-11 px-5 rounded-full border border-white/70 bg-white/65 backdrop-blur-xl text-[13px] font-semibold text-[#111111] shadow-[0_10px_28px_rgba(10,10,10,0.06)] hover:bg-white transition"
+            className="inline-flex items-center gap-2 h-11 px-5 rounded-full border border-white/70 bg-white/65 backdrop-blur-xl text-[13px] font-semibold text-[#111111] shadow-[0_10px_28px_rgba(10,10,10,0.06)] hover:bg-white transition whitespace-nowrap"
           >
-            <Calendar className="h-4 w-4 text-[#6B6E76]" strokeWidth={1.75} />
-            {dateRangeLabel}
-            <ChevronRight className="h-3.5 w-3.5 text-[#6B6E76] rotate-90" strokeWidth={2} />
+            <Calendar className="h-4 w-4 text-[#6B6E76] shrink-0" strokeWidth={1.75} />
+            <span className="truncate">{dateRangeLabel}</span>
+            <ChevronRight className="h-3.5 w-3.5 text-[#6B6E76] rotate-90 shrink-0" strokeWidth={2} />
           </button>
         </div>
 
-        {/* KPI strip — 7 cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
-          <GlassMetricCard
-            label="Learners Reached"
-            value={kpis.learnersReached.toLocaleString()}
-            subline="Total impacting"
-            deltaPct={kpis.learnersDeltaPct}
-            icon={Users}
-          />
-          <GlassMetricCard
-            label="Trainings Logged"
-            value={kpis.trainingsLogged.toLocaleString()}
-            subline="All time"
-            deltaPct={kpis.trainingsDeltaPct}
-            icon={GraduationCap}
-          />
-          <GlassMetricCard
-            label="Assessments"
-            value={kpis.assessments.toLocaleString()}
-            subline="Total records"
-            deltaPct={kpis.assessmentsDeltaPct}
-            icon={FileText}
-          />
-          <GlassMetricCard
-            label="School Visits"
-            value={kpis.schoolVisits.toLocaleString()}
-            subline="Tracking"
-            deltaPct={kpis.visitsDeltaPct}
-            icon={VisitIcon}
-          />
-          <GlassMetricCard
-            label="Story Activities"
-            value={kpis.storyActivities.toLocaleString()}
-            subline="Collected"
-            deltaPct={kpis.storiesDeltaPct}
-            icon={BookOpen}
-          />
-          <GlassMetricCard
-            label="Implementing"
-            value={`${kpis.implementingPct}%`}
-            subline="Schools active"
-            deltaPct={kpis.implementingDeltaPp}
-            icon={Shield}
-            accentDot="#0F8F6B"
-          />
-          <GlassMetricCard
-            label="Not Implementing"
-            value={`${kpis.notImplementingPct}%`}
-            subline="Schools inactive"
-            deltaPct={kpis.notImplementingDeltaPp}
-            deltaPositive={false}
-            icon={ShieldOff}
-            accentDot="#DC2626"
-          />
+        {/* KPI strip — 7 cards. Mobile: horizontal scroll. md+: grid. */}
+        <div className="md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 md:gap-3 -mx-4 md:mx-0 px-4 md:px-0 flex gap-3 overflow-x-auto md:overflow-visible no-scrollbar pb-1 md:pb-0 snap-x snap-mandatory md:snap-none">
+          {[
+            <GlassMetricCard
+              key="learners"
+              label="Learners Reached"
+              value={kpis.learnersReached.toLocaleString()}
+              subline="Total impacting"
+              deltaPct={kpis.learnersDeltaPct}
+              icon={Users}
+              className="snap-start min-w-[170px] md:min-w-0"
+            />,
+            <GlassMetricCard
+              key="trainings"
+              label="Trainings Logged"
+              value={kpis.trainingsLogged.toLocaleString()}
+              subline="All time"
+              deltaPct={kpis.trainingsDeltaPct}
+              icon={GraduationCap}
+              className="snap-start min-w-[170px] md:min-w-0"
+            />,
+            <GlassMetricCard
+              key="assessments"
+              label="Assessments"
+              value={kpis.assessments.toLocaleString()}
+              subline="Total records"
+              deltaPct={kpis.assessmentsDeltaPct}
+              icon={FileText}
+              className="snap-start min-w-[170px] md:min-w-0"
+            />,
+            <GlassMetricCard
+              key="visits"
+              label="School Visits"
+              value={kpis.schoolVisits.toLocaleString()}
+              subline="Tracking"
+              deltaPct={kpis.visitsDeltaPct}
+              icon={VisitIcon}
+              className="snap-start min-w-[170px] md:min-w-0"
+            />,
+            <GlassMetricCard
+              key="stories"
+              label="Story Activities"
+              value={kpis.storyActivities.toLocaleString()}
+              subline="Collected"
+              deltaPct={kpis.storiesDeltaPct}
+              icon={BookOpen}
+              className="snap-start min-w-[170px] md:min-w-0"
+            />,
+            <GlassMetricCard
+              key="implementing"
+              label="Implementing"
+              value={`${kpis.implementingPct}%`}
+              subline="Schools active"
+              deltaPct={kpis.implementingDeltaPp}
+              icon={Shield}
+              accentDot="#0F8F6B"
+              className="snap-start min-w-[170px] md:min-w-0"
+            />,
+            <GlassMetricCard
+              key="notImplementing"
+              label="Not Implementing"
+              value={`${kpis.notImplementingPct}%`}
+              subline="Schools inactive"
+              deltaPct={kpis.notImplementingDeltaPp}
+              deltaPositive={false}
+              icon={ShieldOff}
+              accentDot="#DC2626"
+              className="snap-start min-w-[170px] md:min-w-0"
+            />,
+          ]}
         </div>
 
-        {/* Quick action cards — 8 across (4 + 4) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Quick action cards — 2-col on mobile, 4-col on lg+ */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <GlassQuickAction icon={GraduationCap} title="Log Training" subtitle="Record a new training" href="/portal/trainings?new=1" />
           <GlassQuickAction icon={VisitIcon} title="School Visit" subtitle="Log a coaching visit" href="/portal/visits/new" />
           <GlassQuickAction icon={ClipboardCheck} title="Assessment" subtitle="Upload learner scores" href="/portal/assessments?new=1" />
@@ -241,50 +269,89 @@ export default async function PortalDashboardPage() {
                 <p className="text-[14px]">No recent activity.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto -mx-2">
-                <table className="w-full text-[14px] min-w-[700px]">
-                  <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-widest text-[#6B6E76] border-b border-[#14141414]">
-                      <th className="px-3 py-2 font-bold w-8">#</th>
-                      <th className="px-3 py-2 font-bold">School Name</th>
-                      <th className="px-3 py-2 font-bold">Type</th>
-                      <th className="px-3 py-2 font-bold">Timestamp</th>
-                      <th className="px-3 py-2 font-bold">Status</th>
-                      <th className="px-3 py-2 font-bold text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activity.map((row, i) => (
-                      <tr key={row.id} className="border-b border-[#14141408] hover:bg-white/40 transition">
-                        <td className="px-3 py-3 text-[#6B6E76] text-[12px]">{i + 1}</td>
-                        <td className="px-3 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="grid h-7 w-7 place-items-center rounded-xl bg-white/70 border border-white/70 shrink-0">
-                              <Users className="h-3.5 w-3.5 text-[#202124]" strokeWidth={1.75} />
-                            </div>
-                            <span className="font-semibold text-[#111111]">{row.schoolName}</span>
+              <>
+                {/* Mobile: stacked cards (<sm) */}
+                <ul className="sm:hidden space-y-2">
+                  {activity.map((row) => (
+                    <li
+                      key={`m-${row.id}`}
+                      className="rounded-2xl border border-white/70 bg-white/65 p-3 backdrop-blur-xl shadow-[0_8px_22px_rgba(10,10,10,0.06)]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="grid h-9 w-9 place-items-center rounded-xl bg-white border border-white/70 shrink-0">
+                          <Users className="h-4 w-4 text-[#202124]" strokeWidth={1.75} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-bold text-[14px] text-[#111111] truncate">
+                              {row.schoolName}
+                            </p>
+                            <StatusBadge status={row.status} />
                           </div>
-                        </td>
-                        <td className="px-3 py-3 text-[#35383F]">{row.type}</td>
-                        <td className="px-3 py-3 text-[#6B6E76] whitespace-nowrap text-[12px]">
-                          {formatTimestamp(row.occurredAt)}
-                        </td>
-                        <td className="px-3 py-3">
-                          <StatusBadge status={row.status} />
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <Link
-                            href={row.href}
-                            className="text-[12px] font-semibold text-[#111111] hover:underline inline-flex items-center gap-0.5"
-                          >
-                            View <ChevronRight className="h-3 w-3" strokeWidth={2} />
-                          </Link>
-                        </td>
+                          <p className="text-[12px] text-[#35383F] truncate mt-0.5">{row.type}</p>
+                          <div className="flex items-center justify-between gap-2 mt-2">
+                            <span className="text-[11px] text-[#6B6E76] truncate">
+                              {formatTimestamp(row.occurredAt)}
+                            </span>
+                            <Link
+                              href={row.href}
+                              className="text-[12px] font-semibold text-[#111111] hover:underline inline-flex items-center gap-0.5 shrink-0"
+                            >
+                              View <ChevronRight className="h-3 w-3" strokeWidth={2} />
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* sm+: regular table with horizontal scroll fallback */}
+                <div className="hidden sm:block overflow-x-auto -mx-2">
+                  <table className="w-full text-[14px] min-w-[700px]">
+                    <thead>
+                      <tr className="text-left text-[10px] uppercase tracking-widest text-[#6B6E76] border-b border-[#14141414]">
+                        <th className="px-3 py-2 font-bold w-8">#</th>
+                        <th className="px-3 py-2 font-bold">School Name</th>
+                        <th className="px-3 py-2 font-bold">Type</th>
+                        <th className="px-3 py-2 font-bold">Timestamp</th>
+                        <th className="px-3 py-2 font-bold">Status</th>
+                        <th className="px-3 py-2 font-bold text-right">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {activity.map((row, i) => (
+                        <tr key={row.id} className="border-b border-[#14141408] hover:bg-white/40 transition">
+                          <td className="px-3 py-3 text-[#6B6E76] text-[12px]">{i + 1}</td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="grid h-7 w-7 place-items-center rounded-xl bg-white/70 border border-white/70 shrink-0">
+                                <Users className="h-3.5 w-3.5 text-[#202124]" strokeWidth={1.75} />
+                              </div>
+                              <span className="font-semibold text-[#111111]">{row.schoolName}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-[#35383F]">{row.type}</td>
+                          <td className="px-3 py-3 text-[#6B6E76] whitespace-nowrap text-[12px]">
+                            {formatTimestamp(row.occurredAt)}
+                          </td>
+                          <td className="px-3 py-3">
+                            <StatusBadge status={row.status} />
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <Link
+                              href={row.href}
+                              className="text-[12px] font-semibold text-[#111111] hover:underline inline-flex items-center gap-0.5"
+                            >
+                              View <ChevronRight className="h-3 w-3" strokeWidth={2} />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             <div className="mt-3">
@@ -303,15 +370,15 @@ export default async function PortalDashboardPage() {
               Program Implementation Coverage
             </h2>
 
-            <div className="grid grid-cols-5 gap-4 items-center">
-              <div className="col-span-2 flex items-center justify-center">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center">
+              <div className="sm:col-span-2 flex items-center justify-center">
                 <ImplementationCoverageDonut
                   buckets={coverage.buckets}
                   centerPct={coverage.implementingPct}
                   size={180}
                 />
               </div>
-              <ul className="col-span-3 space-y-3">
+              <ul className="sm:col-span-3 space-y-3">
                 {coverage.buckets.map((b) => (
                   <li key={b.label} className="flex items-center justify-between gap-3 text-[14px]">
                     <span className="inline-flex items-center gap-2 text-[#35383F]">

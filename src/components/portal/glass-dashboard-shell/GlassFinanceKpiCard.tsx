@@ -50,12 +50,14 @@ export function GlassFinanceKpiCard({
         ) : null}
       </div>
 
-      <div>
-        <p className="text-[11px] font-bold text-[#5A5D63] uppercase tracking-[0.08em]">{label}</p>
-        <p className="text-[32px] font-extrabold text-[#111111] mt-1 leading-none tracking-tight">
+      <div className="min-w-0">
+        <p className="text-[11px] font-bold text-[#5A5D63] uppercase tracking-[0.08em] truncate">
+          {label}
+        </p>
+        <p className="text-[26px] sm:text-[30px] lg:text-[32px] font-extrabold text-[#111111] mt-1 leading-none tracking-tight truncate">
           {value}
         </p>
-        <p className="text-[12px] text-[#6B6E76] mt-1">{subline}</p>
+        <p className="text-[12px] text-[#6B6E76] mt-1 truncate">{subline}</p>
       </div>
 
       {deltaPct !== null && (
