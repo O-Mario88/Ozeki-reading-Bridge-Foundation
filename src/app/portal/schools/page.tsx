@@ -30,10 +30,10 @@ const FALLBACK = {
   trendCurrent: 64,
   totalLearners: 68420,
   readingLevels: [
-    { label: "Proficient", pct: 24, count: 16421, color: "#7c3aed" },
-    { label: "Developing", pct: 36, count: 24645, color: "#facc15" },
-    { label: "Emerging",   pct: 26, count: 17808, color: "#22c55e" },
-    { label: "Beginning",  pct: 14, count: 9546,  color: "#fb923c" },
+    { label: "Proficient", pct: 24, count: 16421, color: "#22c55e" },
+    { label: "Developing", pct: 36, count: 24645, color: "#f59e0b" },
+    { label: "Emerging",   pct: 26, count: 17808, color: "#2563eb" },
+    { label: "Beginning",  pct: 14, count: 9546,  color: "#8b5cf6" },
   ],
   regions: [
     { name: "Central",   pct: 71, color: "#10b981" },

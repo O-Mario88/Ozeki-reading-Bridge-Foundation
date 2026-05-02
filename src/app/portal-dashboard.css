@@ -34,7 +34,7 @@
   --ds-accent-purple: #8b5cf6;
   --ds-accent-teal: #14b8a6;
 
-  --ds-font: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
+  --ds-font: Calibri, "Segoe UI", var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
   --ds-shell-radius: 24px;
 }
 

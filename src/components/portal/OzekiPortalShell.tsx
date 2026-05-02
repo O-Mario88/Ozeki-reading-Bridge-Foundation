@@ -1,17 +1,11 @@
 import { ReactNode } from "react";
-import { Open_Sans } from "next/font/google";
 import { OzekiSidebar } from "./OzekiSidebar";
 import { OzekiTopBar } from "./OzekiTopBar";
 import { MobileBottomNav } from "./glass-dashboard-shell/MobileBottomNav";
 import { MobileHeader } from "./glass-dashboard-shell/MobileHeader";
 import type { PortalUser } from "@/lib/types";
 
-const portalFont = Open_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-ozeki-portal",
-  display: "swap",
-});
+const PORTAL_FONT_STACK = 'Calibri, "Segoe UI", Arial, sans-serif';
 
 function getInitials(name: string): string {
   return name
@@ -69,7 +63,8 @@ export function OzekiPortalShell({
 
   return (
     <div
-      className={`${portalFont.variable} font-[var(--font-ozeki-portal)] text-gray-900`}
+      className="text-gray-900"
+      style={{ fontFamily: PORTAL_FONT_STACK }}
     >
       {/* Mobile (<lg) */}
       <div className="lg:hidden min-h-screen bg-gray-50">
