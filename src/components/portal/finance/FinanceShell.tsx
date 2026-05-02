@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 import { PortalUser } from "@/lib/types";
-import { FinanceGlassShell } from "./FinanceGlassShell";
+import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 
 type FinanceShellProps = {
   user: PortalUser;
@@ -24,10 +24,8 @@ const financeNavItems = [
 ];
 
 /**
- * Finance workspace shell — wraps the glassprism `FinanceGlassShell` so
- * finance sub-pages keep the dark-frame / pale-gray-canvas / frosted-menu
- * look while the rest of the portal moved to the green Ozeki theme. The
- * tab strip is a horizontal-scroll glass-pill bar with a black active pill.
+ * Finance workspace shell — uses the same green Ozeki shell as the rest of
+ * the portal so finance sub-pages share the unified design system.
  */
 export function FinanceShell({
   user,
@@ -36,22 +34,22 @@ export function FinanceShell({
   children,
 }: FinanceShellProps) {
   return (
-    <FinanceGlassShell user={user} activeHref={activeHref}>
-      <div className="space-y-5">
+    <OzekiPortalShell user={user} activeHref={activeHref} hideFrame>
+      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5 max-w-[1600px] mx-auto">
         {/* Workspace header */}
         <header>
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#6B6E76]">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-emerald-700">
             Finance Workspace
           </p>
-          <h1 className="text-[24px] md:text-[28px] lg:text-[30px] font-extrabold text-[#111111] tracking-tight leading-tight mt-1">
+          <h1 className="text-[22px] md:text-[26px] lg:text-[28px] font-extrabold text-gray-900 tracking-tight leading-tight mt-1">
             {title}
           </h1>
-          <p className="text-[13px] md:text-[14px] text-[#6B6E76] leading-snug mt-1 max-w-2xl">
+          <p className="text-[13px] md:text-[14px] text-gray-500 leading-snug mt-1 max-w-2xl">
             Manage immutable posting rules and audit-safe operations.
           </p>
         </header>
 
-        {/* Tab pills — horizontal scroll on mobile, normal flex on desktop */}
+        {/* Tab strip — horizontal scroll on mobile */}
         <nav
           aria-label="Finance sections"
           className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1"
@@ -68,8 +66,8 @@ export function FinanceShell({
                 prefetch={false}
                 className={
                   isActive
-                    ? "shrink-0 inline-flex items-center h-10 px-5 rounded-full bg-[#111111] text-white text-[13px] font-semibold whitespace-nowrap shadow-[0_14px_30px_rgba(10,10,10,0.18)]"
-                    : "shrink-0 inline-flex items-center h-10 px-5 rounded-full border border-white/70 bg-white/65 backdrop-blur-xl text-[13px] font-semibold text-[#222] whitespace-nowrap hover:bg-white transition"
+                    ? "shrink-0 inline-flex items-center h-9 px-4 rounded-full bg-emerald-700 text-white text-[12.5px] font-semibold whitespace-nowrap shadow-sm"
+                    : "shrink-0 inline-flex items-center h-9 px-4 rounded-full border border-gray-200 bg-white text-[12.5px] font-semibold text-gray-700 whitespace-nowrap hover:bg-gray-50 transition"
                 }
               >
                 {item.label}
@@ -80,6 +78,6 @@ export function FinanceShell({
 
         {children}
       </div>
-    </FinanceGlassShell>
+    </OzekiPortalShell>
   );
 }
