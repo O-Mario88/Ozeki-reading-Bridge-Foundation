@@ -6,6 +6,7 @@ import {
   type NewsletterEditorialTemplateInput,
   type NewsletterEditorialUpdateItem,
 } from "@/lib/newsletter-editorial-template";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 type DispatchSummary = {
   total: number;
@@ -840,64 +841,60 @@ export function PortalNewsletterManager({
             <p>No newsletter issues yet.</p>
           ) : (
             <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Published</th>
-                    <th>Dispatch</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {issues.map((issue) => (
-                    <tr key={issue.id}>
-                      <td>
-                        <strong>{issue.title}</strong>
-                        <br />
-                        <small>{issue.slug}</small>
-                      </td>
-                      <td>{issue.status}</td>
-                      <td>{issue.publishedAt ? issue.publishedAt.slice(0, 10) : "—"}</td>
-                      <td>
-                        sent {issue.dispatchSummary.sent}, failed {issue.dispatchSummary.failed}
-                      </td>
-                      <td>
-                        <div className="action-row">
-                          {issue.status === "published" ? (
-                            <>
-                              <a className="button button-ghost" href={`/newsletter/${encodeURIComponent(issue.slug)}`}>
-                                Open
-                              </a>
-                              <a
-                                className="button button-ghost"
-                                href={`/api/newsletter/${encodeURIComponent(issue.slug)}/pdf`}
-                              >
-                                PDF
-                              </a>
-                              <a
-                                className="button button-ghost"
-                                href={`/api/newsletter/${encodeURIComponent(issue.slug)}/html`}
-                              >
-                                HTML
-                              </a>
-                            </>
-                          ) : null}
-                          <button
-                            className="button"
-                            type="button"
-                            onClick={() => void handleSendIssue(issue.id)}
-                            disabled={publishingIssueId === issue.id}
+              <DashboardListHeader template="minmax(0,2fr) 100px 110px minmax(0,1fr) minmax(0,1.6fr)">
+                <span>Title</span>
+                <span>Status</span>
+                <span>Published</span>
+                <span>Dispatch</span>
+                <span>Actions</span>
+              </DashboardListHeader>
+              {issues.map((issue) => (
+                <DashboardListRow
+                  key={issue.id}
+                  template="minmax(0,2fr) 100px 110px minmax(0,1fr) minmax(0,1.6fr)"
+                >
+                  <span className="min-w-0">
+                    <strong className="block truncate">{issue.title}</strong>
+                    <small className="block truncate">{issue.slug}</small>
+                  </span>
+                  <span>{issue.status}</span>
+                  <span>{issue.publishedAt ? issue.publishedAt.slice(0, 10) : "—"}</span>
+                  <span>
+                    sent {issue.dispatchSummary.sent}, failed {issue.dispatchSummary.failed}
+                  </span>
+                  <span>
+                    <span className="action-row">
+                      {issue.status === "published" ? (
+                        <>
+                          <a className="button button-ghost" href={`/newsletter/${encodeURIComponent(issue.slug)}`}>
+                            Open
+                          </a>
+                          <a
+                            className="button button-ghost"
+                            href={`/api/newsletter/${encodeURIComponent(issue.slug)}/pdf`}
                           >
-                            {publishingIssueId === issue.id ? "Sending..." : "Send Group"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            PDF
+                          </a>
+                          <a
+                            className="button button-ghost"
+                            href={`/api/newsletter/${encodeURIComponent(issue.slug)}/html`}
+                          >
+                            HTML
+                          </a>
+                        </>
+                      ) : null}
+                      <button
+                        className="button"
+                        type="button"
+                        onClick={() => void handleSendIssue(issue.id)}
+                        disabled={publishingIssueId === issue.id}
+                      >
+                        {publishingIssueId === issue.id ? "Sending..." : "Send Group"}
+                      </button>
+                    </span>
+                  </span>
+                </DashboardListRow>
+              ))}
             </div>
           )}
         </section>

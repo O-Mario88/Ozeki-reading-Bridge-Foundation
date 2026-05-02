@@ -6,6 +6,7 @@ import type { OnlineTrainingEventRecord } from "@/lib/types";
 import { FormModal } from "@/components/forms";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import { EventSignUpForm } from "@/components/portal/EventSignUpForm";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface PortalEventsManagerProps {
   initialEvents: OnlineTrainingEventRecord[];
@@ -183,64 +184,61 @@ export function PortalEventsManager({ initialEvents }: PortalEventsManagerProps)
           <p>No events scheduled yet.</p>
         ) : (
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Start</th>
-                  <th>Audience</th>
-                  <th>Attendees</th>
-                  <th>Teachers</th>
-                  <th>Leaders</th>
-                  <th>Links</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.title}</td>
-                    <td>{formatDateTime(item.startDateTime)}</td>
-                    <td>{item.audience}</td>
-                    <td>{item.attendeeCount}</td>
-                    <td>{item.onlineTeachersTrained}</td>
-                    <td>{item.onlineSchoolLeadersTrained}</td>
-                    <td>
-                      <div className="action-row">
-                        {item.calendarLink ? (
-                          <a href={item.calendarLink} target="_blank" rel="noreferrer">
-                            Calendar
-                          </a>
-                        ) : (
-                          <span>-</span>
-                        )}
-                        {item.meetLink ? (
-                          <a href={item.meetLink} target="_blank" rel="noreferrer">
-                            Meet
-                          </a>
-                        ) : (
-                          <span className="badge badge-warning" title="Google Meet link not available">No Meet</span>
-                        )}
-                        <Link href={`/portal/events/${item.id}/live`}>In-app room</Link>
-                      </div>
-                    </td>
-                    <td>
-                      <button
-                        className="button button-ghost"
-                        type="button"
-                        style={{ fontSize: "0.8rem", padding: "0.2rem 0.5rem" }}
-                        onClick={() => {
-                          setSignUpEventId(item.id);
-                          setIsSignUpOpen(true);
-                        }}
-                      >
-                        Sign Up School
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="minmax(0,1.6fr) 130px 110px 90px 90px 90px minmax(0,1.4fr) 140px">
+              <span>Title</span>
+              <span>Start</span>
+              <span>Audience</span>
+              <span>Attendees</span>
+              <span>Teachers</span>
+              <span>Leaders</span>
+              <span>Links</span>
+              <span>Actions</span>
+            </DashboardListHeader>
+            {events.map((item) => (
+              <DashboardListRow
+                key={item.id}
+                template="minmax(0,1.6fr) 130px 110px 90px 90px 90px minmax(0,1.4fr) 140px"
+              >
+                <span className="truncate">{item.title}</span>
+                <span>{formatDateTime(item.startDateTime)}</span>
+                <span>{item.audience}</span>
+                <span>{item.attendeeCount}</span>
+                <span>{item.onlineTeachersTrained}</span>
+                <span>{item.onlineSchoolLeadersTrained}</span>
+                <span>
+                  <span className="action-row">
+                    {item.calendarLink ? (
+                      <a href={item.calendarLink} target="_blank" rel="noreferrer">
+                        Calendar
+                      </a>
+                    ) : (
+                      <span>-</span>
+                    )}
+                    {item.meetLink ? (
+                      <a href={item.meetLink} target="_blank" rel="noreferrer">
+                        Meet
+                      </a>
+                    ) : (
+                      <span className="badge badge-warning" title="Google Meet link not available">No Meet</span>
+                    )}
+                    <Link href={`/portal/events/${item.id}/live`}>In-app room</Link>
+                  </span>
+                </span>
+                <span>
+                  <button
+                    className="button button-ghost"
+                    type="button"
+                    style={{ fontSize: "0.8rem", padding: "0.2rem 0.5rem" }}
+                    onClick={() => {
+                      setSignUpEventId(item.id);
+                      setIsSignUpOpen(true);
+                    }}
+                  >
+                    Sign Up School
+                  </button>
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

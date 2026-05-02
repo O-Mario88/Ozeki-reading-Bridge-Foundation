@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { PortalUser, SupportRequestRecord, PortalUserAdminRecord } from "@/lib/types";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { 
   Search, LifeBuoy, BookOpen, GraduationCap, MapPin, 
   BarChart3, Settings, AlertCircle, CheckCircle2, FileText, 
@@ -425,52 +426,51 @@ export default function SupportHubClient({ user, initialRequests, staffMembers }
                   <p style={{ color: "var(--ds-text-muted)", fontSize: "0.85rem" }}>When you submit tickets, they will appear here.</p>
                 </div>
               ) : (
-                <table className="ds-table">
-                  <thead>
-                    <tr>
-                      <th>Ticket ID</th>
-                      <th>Date Submited</th>
-                      <th>Category</th>
-                      <th>Message Preview</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {initialRequests.map((req) => {
-                      const isNew = req.status === 'New';
-                      const isClosed = req.status === 'Closed';
-                      return (
-                        <tr key={req.id}>
-                          <td style={{ fontFamily: "monospace", color: "var(--ds-accent-blue)", fontWeight: 600 }}>#{req.id.toString().padStart(4, '0')}</td>
-                          <td style={{ color: "var(--ds-text-secondary)", fontSize: "0.8rem" }}>
-                            {new Date(req.createdAt).toLocaleDateString()}
-                          </td>
-                          <td>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-                              {req.supportTypes.map(t => (
-                                <span key={t} style={{ background: "#f8f9fa", color: "var(--ds-text-secondary)", padding: "0.15rem 0.4rem", borderRadius: "4px", fontSize: "10px", fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                                  {t}
-                               </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td style={{ color: "var(--ds-text-primary)", maxWidth: "250px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {req.message}
-                          </td>
-                          <td>
-                            <span className={`ds-badge ds-badge-${
-                              isNew ? 'info' :
-                              isClosed ? 'default' :
-                              'warning'
-                            }`}>
-                              {req.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <div>
+                  <DashboardListHeader template="100px 130px minmax(0,1.4fr) minmax(0,1.6fr) 110px">
+                    <span>Ticket ID</span>
+                    <span>Date Submited</span>
+                    <span>Category</span>
+                    <span>Message Preview</span>
+                    <span>Status</span>
+                  </DashboardListHeader>
+                  {initialRequests.map((req) => {
+                    const isNew = req.status === 'New';
+                    const isClosed = req.status === 'Closed';
+                    return (
+                      <DashboardListRow
+                        key={req.id}
+                        template="100px 130px minmax(0,1.4fr) minmax(0,1.6fr) 110px"
+                      >
+                        <span style={{ fontFamily: "monospace", color: "var(--ds-accent-blue)", fontWeight: 600 }}>#{req.id.toString().padStart(4, '0')}</span>
+                        <span style={{ color: "var(--ds-text-secondary)", fontSize: "0.8rem" }}>
+                          {new Date(req.createdAt).toLocaleDateString()}
+                        </span>
+                        <span className="min-w-0">
+                          <span style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                            {req.supportTypes.map(t => (
+                              <span key={t} style={{ background: "#f8f9fa", color: "var(--ds-text-secondary)", padding: "0.15rem 0.4rem", borderRadius: "4px", fontSize: "10px", fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                                {t}
+                              </span>
+                            ))}
+                          </span>
+                        </span>
+                        <span style={{ color: "var(--ds-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {req.message}
+                        </span>
+                        <span>
+                          <span className={`ds-badge ds-badge-${
+                            isNew ? 'info' :
+                            isClosed ? 'default' :
+                            'warning'
+                          }`}>
+                            {req.status}
+                          </span>
+                        </span>
+                      </DashboardListRow>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>

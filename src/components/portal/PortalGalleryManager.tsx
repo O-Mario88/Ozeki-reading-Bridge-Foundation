@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { allUgandaDistricts } from "@/lib/uganda-locations";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 type GalleryUploadItem = {
   id: number;
@@ -262,49 +263,43 @@ export function PortalGalleryManager({ initialItems }: PortalGalleryManagerProps
           <p>No photos uploaded yet.</p>
         ) : (
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Photo Thumbnail</th>
-                  <th>Context Details</th>
-                  <th>Upload Details</th>
-                  <th>Posted By</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <a href={item.imageUrl} target="_blank" rel="noreferrer" className="portal-gallery-preview-link">
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.personName}
-                          width={220}
-                          height={140}
-                          className="portal-gallery-preview-image"
-                        />
-                      </a>
-                    </td>
-                    <td>
-                      <strong>{item.personName}</strong> ({item.personRole})<br />
-                      <small className="text-gray-500">{item.activityType} • {item.district}, {item.recordedYear}</small>
-                      <br /><br />
-                      <span className="line-clamp-2 text-sm italic">"{item.quoteText}"</span>
-                    </td>
-                    <td>
-                      {item.fileName}
-                      <br />
-                      <small>{formatSize(item.sizeBytes ?? 0)}</small>
-                    </td>
-                    <td>
-                      {item.createdByName}
-                      <br />
-                      <small>{formatDateTime(item.createdAt)}</small>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="240px minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr)">
+              <span>Photo Thumbnail</span>
+              <span>Context Details</span>
+              <span>Upload Details</span>
+              <span>Posted By</span>
+            </DashboardListHeader>
+            {items.map((item) => (
+              <DashboardListRow
+                key={item.id}
+                template="240px minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr)"
+              >
+                <span>
+                  <a href={item.imageUrl} target="_blank" rel="noreferrer" className="portal-gallery-preview-link">
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.personName}
+                      width={220}
+                      height={140}
+                      className="portal-gallery-preview-image"
+                    />
+                  </a>
+                </span>
+                <span className="min-w-0">
+                  <strong>{item.personName}</strong> ({item.personRole})
+                  <small className="block text-gray-500">{item.activityType} • {item.district}, {item.recordedYear}</small>
+                  <span className="block line-clamp-2 text-sm italic mt-2">&ldquo;{item.quoteText}&rdquo;</span>
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate">{item.fileName}</span>
+                  <small className="block">{formatSize(item.sizeBytes ?? 0)}</small>
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate">{item.createdByName}</span>
+                  <small className="block">{formatDateTime(item.createdAt)}</small>
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

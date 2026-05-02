@@ -20,6 +20,7 @@ const SchoolRosterPicker = dynamic(
 import { FormModal } from "@/components/forms";
 import { EnrollmentFormModal } from "./EnrollmentFormModal";
 import { LiteracyImpactFormModal } from "./LiteracyImpactFormModal";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface PortalSchoolsManagerProps {
   initialSchools: SchoolDirectoryRecord[];
@@ -1299,67 +1300,62 @@ export function PortalSchoolsManager({
         ) : null}
 
         <div className="ds-table-wrap">
-          <table className="ds-table">
-            <thead>
-              <tr>
-                <th>Account Name</th>
-                <th>School ID</th>
-                <th>Current Partner Type</th>
-                <th>Country</th>
-                <th>Primary Contact</th>
-                <th>Phone</th>
-                <th>School Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schools.length === 0 ? (
-                <tr>
-                  <td colSpan={8}>No schools available.</td>
-                </tr>
-              ) : (
-                schools.map((school) => (
-                  <tr key={school.id}>
-                    <td title={school.name}>
-                      <Link href={`/portal/schools/${school.id}`} className="portal-table-cell-ellipsis is-school-name">
-                        {school.name}
-                      </Link>
-                    </td>
-                    <td title={school.schoolCode}>
-                      <span className="portal-table-cell-ellipsis is-code">{school.schoolCode}</span>
-                    </td>
-                    <td title={school.currentPartnerType}>
-                      <span className="portal-table-cell-ellipsis">{school.currentPartnerType}</span>
-                    </td>
-                    <td title={school.country}>
-                      <span className="portal-table-cell-ellipsis">{school.country}</span>
-                    </td>
-                    <td title={school.primaryContactName ?? school.contactName ?? "-"}>
-                      <span className="portal-table-cell-ellipsis is-contact">
-                        {school.primaryContactName ?? school.contactName ?? "-"}
-                      </span>
-                    </td>
-                    <td title={school.contactPhone ?? "-"}>
-                      <span className="portal-table-cell-ellipsis">{school.contactPhone ?? "-"}</span>
-                    </td>
-                    <td>
-                      <span className={`portal-filter-chip ${school.schoolStatus === "Open" ? "active" : ""}`}>
-                        {school.schoolStatus}
-                      </span>
-                    </td>
-                    <td>
-                      <Link
-                        href={`/portal/schools/${school.id}`}
-                        className="button button-ghost button-compact"
-                      >
-                        Open profile
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <DashboardListHeader template="minmax(0,1.6fr) 110px minmax(0,1fr) 100px minmax(0,1.2fr) 130px 110px 130px">
+            <span>Account Name</span>
+            <span>School ID</span>
+            <span>Current Partner Type</span>
+            <span>Country</span>
+            <span>Primary Contact</span>
+            <span>Phone</span>
+            <span>School Status</span>
+            <span>Actions</span>
+          </DashboardListHeader>
+          {schools.length === 0 ? (
+            <div className="py-3">No schools available.</div>
+          ) : (
+            schools.map((school) => (
+              <DashboardListRow
+                key={school.id}
+                template="minmax(0,1.6fr) 110px minmax(0,1fr) 100px minmax(0,1.2fr) 130px 110px 130px"
+              >
+                <span className="min-w-0" title={school.name}>
+                  <Link href={`/portal/schools/${school.id}`} className="portal-table-cell-ellipsis is-school-name">
+                    {school.name}
+                  </Link>
+                </span>
+                <span className="min-w-0" title={school.schoolCode}>
+                  <span className="portal-table-cell-ellipsis is-code">{school.schoolCode}</span>
+                </span>
+                <span className="min-w-0" title={school.currentPartnerType}>
+                  <span className="portal-table-cell-ellipsis">{school.currentPartnerType}</span>
+                </span>
+                <span className="min-w-0" title={school.country}>
+                  <span className="portal-table-cell-ellipsis">{school.country}</span>
+                </span>
+                <span className="min-w-0" title={school.primaryContactName ?? school.contactName ?? "-"}>
+                  <span className="portal-table-cell-ellipsis is-contact">
+                    {school.primaryContactName ?? school.contactName ?? "-"}
+                  </span>
+                </span>
+                <span className="min-w-0" title={school.contactPhone ?? "-"}>
+                  <span className="portal-table-cell-ellipsis">{school.contactPhone ?? "-"}</span>
+                </span>
+                <span>
+                  <span className={`portal-filter-chip ${school.schoolStatus === "Open" ? "active" : ""}`}>
+                    {school.schoolStatus}
+                  </span>
+                </span>
+                <span>
+                  <Link
+                    href={`/portal/schools/${school.id}`}
+                    className="button button-ghost button-compact"
+                  >
+                    Open profile
+                  </Link>
+                </span>
+              </DashboardListRow>
+            ))
+          )}
         </div>
       </section>
       </>

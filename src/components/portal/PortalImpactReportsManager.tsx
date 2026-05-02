@@ -12,6 +12,7 @@ import {
   ReportCategory,
 } from "@/lib/types";
 import { FloatingSurface } from "@/components/FloatingSurface";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { programsFromReportCategory, REPORT_CATEGORIES } from "@/lib/report-data-contracts";
 
 interface PortalImpactReportsManagerProps {
@@ -756,76 +757,66 @@ export function PortalImpactReportsManager({
           <p>No impact reports generated yet.</p>
         ) : (
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Report</th>
-                  <th>Scope</th>
-                  <th>Period</th>
-                  <th>Version</th>
-                  <th>Visibility</th>
-                  <th>Usage</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleReports.map((report) => (
-                  <tr key={report.reportCode}>
-                    <td>
-                      <strong>{report.title}</strong>
-                      <br />
-                      <small>
-                        {report.reportCode} · {report.reportType}
-                      </small>
-                      {report.partnerName ? (
-                        <>
-                          <br />
-                          <small>Partner: {report.partnerName}</small>
-                        </>
-                      ) : null}
-                    </td>
-                    <td>
-                      {report.scopeType}
-                      <br />
-                      <small>{report.scopeValue}</small>
-                    </td>
-                    <td>
-                      {report.periodStart}
-                      <br />
-                      <small>to {report.periodEnd}</small>
-                    </td>
-                    <td>{report.version}</td>
-                    <td>{report.isPublic ? "Public" : "Internal"}</td>
-                    <td>
-                      Views: {report.viewCount}
-                      <br />
-                      <small>Downloads: {report.downloadCount}</small>
-                    </td>
-                    <td>
-                      <div className="action-row">
-                        <a className="button button-ghost" href={`/impact/reports/${report.reportCode}`}>
-                          View
-                        </a>
-                        <a
-                          className="button"
-                          href={`/api/impact-reports/${report.reportCode}/download`}
-                        >
-                          PDF
-                        </a>
-                        <a
-                          className="button button-ghost"
-                          href={`/api/impact-reports/${report.reportCode}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          JSON
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="minmax(0,2fr) minmax(0,1.2fr) 130px 80px 100px 130px minmax(0,1fr)">
+              <span>Report</span>
+              <span>Scope</span>
+              <span>Period</span>
+              <span>Version</span>
+              <span>Visibility</span>
+              <span>Usage</span>
+              <span>Actions</span>
+            </DashboardListHeader>
+            {visibleReports.map((report) => (
+              <DashboardListRow
+                key={report.reportCode}
+                template="minmax(0,2fr) minmax(0,1.2fr) 130px 80px 100px 130px minmax(0,1fr)"
+              >
+                <span className="min-w-0">
+                  <strong className="block truncate">{report.title}</strong>
+                  <small className="block">
+                    {report.reportCode} · {report.reportType}
+                  </small>
+                  {report.partnerName ? (
+                    <small className="block">Partner: {report.partnerName}</small>
+                  ) : null}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate">{report.scopeType}</span>
+                  <small className="block truncate">{report.scopeValue}</small>
+                </span>
+                <span>
+                  <span className="block">{report.periodStart}</span>
+                  <small className="block">to {report.periodEnd}</small>
+                </span>
+                <span>{report.version}</span>
+                <span>{report.isPublic ? "Public" : "Internal"}</span>
+                <span>
+                  Views: {report.viewCount}
+                  <small className="block">Downloads: {report.downloadCount}</small>
+                </span>
+                <span>
+                  <span className="action-row">
+                    <a className="button button-ghost" href={`/impact/reports/${report.reportCode}`}>
+                      View
+                    </a>
+                    <a
+                      className="button"
+                      href={`/api/impact-reports/${report.reportCode}/download`}
+                    >
+                      PDF
+                    </a>
+                    <a
+                      className="button button-ghost"
+                      href={`/api/impact-reports/${report.reportCode}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      JSON
+                    </a>
+                  </span>
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

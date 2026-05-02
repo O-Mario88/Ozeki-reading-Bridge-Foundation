@@ -3,6 +3,7 @@
 import { RegionStats, SchoolSupportStatusRecord } from "@/lib/types";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface RegionProfileViewProps {
     stats: RegionStats;
@@ -135,38 +136,33 @@ export function RegionProfileView({ stats, initialSupportStatuses }: RegionProfi
                                         </article>
                                     </div>
                                     <div className="table-wrap">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>School</th>
-                                                    <th>District</th>
-                                                    <th>Status</th>
-                                                    <th>Period</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {initialSupportStatuses.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={4} className="empty-state-row">
-                                                            No support-status snapshots available yet.
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    initialSupportStatuses.map((row) => (
-                                                        <tr key={row.id}>
-                                                            <td>
-                                                                <Link href={`/portal/schools/${row.schoolId}`} className="school-link">
-                                                                    {row.schoolName}
-                                                                </Link>
-                                                            </td>
-                                                            <td>{row.district}</td>
-                                                            <td>{row.status}</td>
-                                                            <td>{row.periodKey}</td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
+                                        <DashboardListHeader template="minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) 130px">
+                                            <span>School</span>
+                                            <span>District</span>
+                                            <span>Status</span>
+                                            <span>Period</span>
+                                        </DashboardListHeader>
+                                        {initialSupportStatuses.length === 0 ? (
+                                            <div className="empty-state-row py-3">
+                                                No support-status snapshots available yet.
+                                            </div>
+                                        ) : (
+                                            initialSupportStatuses.map((row) => (
+                                                <DashboardListRow
+                                                    key={row.id}
+                                                    template="minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) 130px"
+                                                >
+                                                    <span className="min-w-0">
+                                                        <Link href={`/portal/schools/${row.schoolId}`} className="school-link truncate inline-block max-w-full">
+                                                            {row.schoolName}
+                                                        </Link>
+                                                    </span>
+                                                    <span className="truncate">{row.district}</span>
+                                                    <span className="truncate">{row.status}</span>
+                                                    <span>{row.periodKey}</span>
+                                                </DashboardListRow>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             )}

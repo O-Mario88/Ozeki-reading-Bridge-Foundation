@@ -157,38 +157,35 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
               </div>
             ) : active?.columns?.length && active.rows ? (
               <div className="portal-crm-tab-table-wrap">
-                <table className="portal-crm-tab-table">
-                  <thead>
-                    <tr>
-                      {active.columns.map((column) => (
-                        <th key={`${active.id}-${column.key}`}>{column.label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {active.rows.length > 0 ? (
-                      active.rows.map((row) => (
-                        <tr key={`${active.id}-${row.id}`}>
-                          {active.columns?.map((column) => {
-                            const cell = row.cells[column.key];
-                            const content = cell?.href ? (
-                              <Link href={cell.href} target="_blank">{cell.value}</Link>
-                            ) : (
-                              <span className={cell?.muted ? "is-muted" : undefined}>{cell?.value ?? "-"}</span>
-                            );
-                            return <td key={`${active.id}-${row.id}-${column.key}`}>{content}</td>;
-                          })}
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={active.columns.length} className="portal-crm-empty">
-                          {active.emptyLabel}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                <div
+                  className="portal-crm-card-header"
+                  style={{ gridTemplateColumns: `repeat(${active.columns.length}, minmax(0, 1fr))` }}
+                >
+                  {active.columns.map((column) => (
+                    <span key={`${active.id}-${column.key}`}>{column.label}</span>
+                  ))}
+                </div>
+                {active.rows.length > 0 ? (
+                  active.rows.map((row) => (
+                    <div
+                      key={`${active.id}-${row.id}`}
+                      className="portal-crm-card-row"
+                      style={{ gridTemplateColumns: `repeat(${active.columns!.length}, minmax(0, 1fr))` }}
+                    >
+                      {active.columns?.map((column) => {
+                        const cell = row.cells[column.key];
+                        const content = cell?.href ? (
+                          <Link href={cell.href} target="_blank">{cell.value}</Link>
+                        ) : (
+                          <span className={cell?.muted ? "is-muted" : undefined}>{cell?.value ?? "-"}</span>
+                        );
+                        return <span key={`${active.id}-${row.id}-${column.key}`}>{content}</span>;
+                      })}
+                    </div>
+                  ))
+                ) : (
+                  <div className="portal-crm-empty">{active.emptyLabel}</div>
+                )}
               </div>
             ) : active ? (
               <div className="portal-crm-activity-list">
@@ -657,45 +654,40 @@ export function PortalCrmProfileView({ profile, contactId }: PortalCrmProfileVie
           text-decoration: underline;
         }
 
-        /* ── TABLE ── */
+        /* ── CARD-LIST (replaces table) ── */
         .portal-crm-tab-table-wrap {
           overflow-x: auto;
         }
-        .portal-crm-tab-table {
-          width: 100%;
-          min-width: 780px;
-          border-collapse: collapse;
-        }
-        .portal-crm-tab-table th,
-        .portal-crm-tab-table td {
+        .portal-crm-card-header,
+        .portal-crm-card-row {
+          display: grid;
+          gap: 0.75rem;
           padding: 0.75rem 0.85rem;
           border-bottom: 1px solid rgba(168,162,158,0.12);
-          text-align: left;
-          vertical-align: top;
+          align-items: start;
         }
-        .portal-crm-tab-table th {
+        .portal-crm-card-header {
           color: #a8a29e;
           font-size: 0.72rem;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
-          white-space: nowrap;
           background: transparent;
           border-bottom-color: rgba(168,162,158,0.25);
         }
-        .portal-crm-tab-table td {
+        .portal-crm-card-row {
           color: #292524;
           font-size: 0.9rem;
         }
-        .portal-crm-tab-table :global(a) {
+        .portal-crm-card-row :global(a) {
           color: #3d6b4f;
           font-weight: 600;
           text-decoration: none;
         }
-        .portal-crm-tab-table :global(a:hover) {
+        .portal-crm-card-row :global(a:hover) {
           text-decoration: underline;
         }
-        .portal-crm-tab-table .is-muted {
+        .portal-crm-card-row .is-muted {
           color: #a8a29e;
         }
 

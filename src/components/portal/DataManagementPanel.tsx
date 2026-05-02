@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface TableRow {
   table: string;
@@ -134,42 +135,39 @@ export function DataManagementPanel() {
 
       {!loading ? (
         <div className="table-wrap portal-table-compact portal-data-management-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Table</th>
-                <th>Description</th>
-                <th>Rows</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {safeTables.map((table) => {
-                const isBusy = busyTarget === table.table;
-                return (
-                  <tr key={table.table}>
-                    <td title={table.table}>
-                      <span className="portal-table-cell-ellipsis">{table.table}</span>
-                    </td>
-                    <td title={table.label}>
-                      <span className="portal-table-cell-ellipsis is-wide">{table.label}</span>
-                    </td>
-                    <td>{table.count.toLocaleString()}</td>
-                    <td>
-                      <button
-                        className="button button-ghost button-compact"
-                        type="button"
-                        disabled={table.count === 0 || busyTarget !== null}
-                        onClick={() => void handleClearSingleTable(table.table)}
-                      >
-                        {isBusy ? "Clearing..." : "Delete table data"}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <DashboardListHeader template="minmax(0,1.4fr) minmax(0,2fr) 100px 160px">
+            <span>Table</span>
+            <span>Description</span>
+            <span>Rows</span>
+            <span>Action</span>
+          </DashboardListHeader>
+          {safeTables.map((table) => {
+            const isBusy = busyTarget === table.table;
+            return (
+              <DashboardListRow
+                key={table.table}
+                template="minmax(0,1.4fr) minmax(0,2fr) 100px 160px"
+              >
+                <span className="min-w-0" title={table.table}>
+                  <span className="portal-table-cell-ellipsis">{table.table}</span>
+                </span>
+                <span className="min-w-0" title={table.label}>
+                  <span className="portal-table-cell-ellipsis is-wide">{table.label}</span>
+                </span>
+                <span>{table.count.toLocaleString()}</span>
+                <span>
+                  <button
+                    className="button button-ghost button-compact"
+                    type="button"
+                    disabled={table.count === 0 || busyTarget !== null}
+                    onClick={() => void handleClearSingleTable(table.table)}
+                  >
+                    {isBusy ? "Clearing..." : "Delete table data"}
+                  </button>
+                </span>
+              </DashboardListRow>
+            );
+          })}
         </div>
       ) : null}
 

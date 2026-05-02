@@ -5,6 +5,7 @@ import {
   Key, Plus, Trash2, Copy, CheckCircle2, Loader2, AlertCircle,
   Eye, EyeOff, Building2,
 } from "lucide-react";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface ApiKey {
   id: number;
@@ -242,66 +243,64 @@ export function ApiKeysManager() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                  <th className="py-2 px-3 font-semibold">Name & Prefix</th>
-                  <th className="py-2 px-3 font-semibold">Organisation</th>
-                  <th className="py-2 px-3 font-semibold text-center">Rate Limit</th>
-                  <th className="py-2 px-3 font-semibold">Last Used</th>
-                  <th className="py-2 px-3 font-semibold text-center">Status</th>
-                  <th className="py-2 px-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {keys.map((k) => (
-                  <tr key={k.id} className="border-b border-gray-50">
-                    <td className="py-2.5 px-3">
-                      <p className="font-semibold text-gray-800">{k.name}</p>
-                      <p className="text-xs text-gray-400 font-mono">{k.keyPrefix}…</p>
-                    </td>
-                    <td className="py-2.5 px-3 text-gray-500 text-xs">
-                      {k.organisation ? (
-                        <span className="flex items-center gap-1">
-                          <Building2 className="w-3 h-3" />
-                          {k.organisation}
-                        </span>
-                      ) : "—"}
-                      {k.contactEmail && <p className="text-gray-400 mt-0.5">{k.contactEmail}</p>}
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-xs text-gray-600">
-                      <p>{k.rateLimitPerMinute}/min</p>
-                      <p className="text-gray-400">{k.rateLimitPerDay.toLocaleString()}/day</p>
-                    </td>
-                    <td className="py-2.5 px-3 text-xs text-gray-500">
-                      {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Never"}
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                        k.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
-                        k.status === "revoked" ? "bg-red-50 text-red-600 border border-red-100" :
-                        "bg-gray-50 text-gray-500 border border-gray-100"
-                      }`}>
-                        {k.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      {k.status === "active" && (
-                        <button
-                          onClick={() => revoke(k.id, k.name)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 transition"
-                          aria-label="Revoke"
-                          title="Revoke"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="px-2">
+            <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1.2fr) 110px 130px 100px 60px">
+              <span>Name &amp; Prefix</span>
+              <span>Organisation</span>
+              <span className="text-center">Rate Limit</span>
+              <span>Last Used</span>
+              <span className="text-center">Status</span>
+              <span />
+            </DashboardListHeader>
+            {keys.map((k) => (
+              <DashboardListRow
+                key={k.id}
+                template="minmax(0,1.4fr) minmax(0,1.2fr) 110px 130px 100px 60px"
+              >
+                <span className="min-w-0">
+                  <span className="block font-semibold text-gray-800 truncate">{k.name}</span>
+                  <span className="block text-xs text-gray-400 font-mono truncate">{k.keyPrefix}…</span>
+                </span>
+                <span className="text-gray-500 text-xs min-w-0">
+                  {k.organisation ? (
+                    <span className="flex items-center gap-1 truncate">
+                      <Building2 className="w-3 h-3 shrink-0" />
+                      {k.organisation}
+                    </span>
+                  ) : "—"}
+                  {k.contactEmail && <span className="block text-gray-400 mt-0.5 truncate">{k.contactEmail}</span>}
+                </span>
+                <span className="text-center text-xs text-gray-600">
+                  <span className="block">{k.rateLimitPerMinute}/min</span>
+                  <span className="block text-gray-400">{k.rateLimitPerDay.toLocaleString()}/day</span>
+                </span>
+                <span className="text-xs text-gray-500">
+                  {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Never"}
+                </span>
+                <span className="text-center">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                    k.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
+                    k.status === "revoked" ? "bg-red-50 text-red-600 border border-red-100" :
+                    "bg-gray-50 text-gray-500 border border-gray-100"
+                  }`}>
+                    {k.status}
+                  </span>
+                </span>
+                <span className="text-right">
+                  {k.status === "active" && (
+                    <button
+                      type="button"
+                      onClick={() => revoke(k.id, k.name)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 transition"
+                      aria-label="Revoke"
+                      title="Revoke"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </div>

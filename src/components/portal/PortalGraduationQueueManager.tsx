@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { GraduationEligibilityRecord, GraduationQueueSummary } from "@/lib/types";
 import { GraduationReviewModal } from "@/components/portal/GraduationReviewModal";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 type SupervisorOption = {
   id: number;
@@ -85,58 +86,53 @@ export function PortalGraduationQueueManager({
         </div>
 
         <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>School</th>
-                <th>Scope</th>
-                <th>Domain checks</th>
-                <th>Fluent %</th>
-                <th>Stories</th>
-                <th>Teaching %</th>
-                <th>Workflow</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8}>No graduation-eligible schools found for this filter.</td>
-                </tr>
-              ) : (
-                filtered.map((item) => (
-                  <tr key={item.schoolId}>
-                    <td>
-                      <strong>{item.schoolName}</strong>
-                    </td>
-                    <td>
-                      {item.region} • {item.subRegion} • {item.district}
-                    </td>
-                    <td>{item.eligibilityScorecard.domainsOk ? "✓ Pass" : "Needs review"}</td>
-                    <td>{formatPercent(item.eligibilityScorecard.fluentPct)}</td>
-                    <td>
-                      {item.eligibilityScorecard.publishedStoryCount.toLocaleString()} /{" "}
-                      {item.eligibilityScorecard.requiredStories}
-                    </td>
-                    <td>{formatPercent(item.eligibilityScorecard.teachingQualityPct)}</td>
-                    <td>
-                      <span className="portal-filter-chip">{item.workflowState.replaceAll("_", " ")}</span>
-                    </td>
-                    <td>
-                      <div className="action-row">
-                        <button className="button button-ghost" onClick={() => setSelected(item)}>
-                          Review
-                        </button>
-                        <Link href={`/portal/schools/${item.schoolId}`} className="inline-download-link">
-                          School
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <DashboardListHeader template="minmax(0,1.4fr) minmax(0,1.6fr) 130px 90px 110px 100px 130px 160px">
+            <span>School</span>
+            <span>Scope</span>
+            <span>Domain checks</span>
+            <span>Fluent %</span>
+            <span>Stories</span>
+            <span>Teaching %</span>
+            <span>Workflow</span>
+            <span>Actions</span>
+          </DashboardListHeader>
+          {filtered.length === 0 ? (
+            <div className="py-3">No graduation-eligible schools found for this filter.</div>
+          ) : (
+            filtered.map((item) => (
+              <DashboardListRow
+                key={item.schoolId}
+                template="minmax(0,1.4fr) minmax(0,1.6fr) 130px 90px 110px 100px 130px 160px"
+              >
+                <span className="min-w-0">
+                  <strong className="truncate inline-block max-w-full">{item.schoolName}</strong>
+                </span>
+                <span className="truncate">
+                  {item.region} • {item.subRegion} • {item.district}
+                </span>
+                <span>{item.eligibilityScorecard.domainsOk ? "✓ Pass" : "Needs review"}</span>
+                <span>{formatPercent(item.eligibilityScorecard.fluentPct)}</span>
+                <span>
+                  {item.eligibilityScorecard.publishedStoryCount.toLocaleString()} /{" "}
+                  {item.eligibilityScorecard.requiredStories}
+                </span>
+                <span>{formatPercent(item.eligibilityScorecard.teachingQualityPct)}</span>
+                <span>
+                  <span className="portal-filter-chip">{item.workflowState.replaceAll("_", " ")}</span>
+                </span>
+                <span>
+                  <span className="action-row">
+                    <button type="button" className="button button-ghost" onClick={() => setSelected(item)}>
+                      Review
+                    </button>
+                    <Link href={`/portal/schools/${item.schoolId}`} className="inline-download-link">
+                      School
+                    </Link>
+                  </span>
+                </span>
+              </DashboardListRow>
+            ))
+          )}
         </div>
       </section>
 

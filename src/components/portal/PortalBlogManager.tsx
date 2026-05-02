@@ -8,6 +8,7 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorialArticleLayout } from "@/components/blog/EditorialArticleLayout";
 import { blogPoppins } from "@/components/blog/blog-font";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { sanitizeInlineRichText, stripHtmlTags } from "@/lib/rich-text";
 import type {
   BlogArticleType,
@@ -1752,103 +1753,98 @@ export function PortalBlogManager({
       ) : null}
 
       <section className="card" style={{ overflow: "auto" }}>
-        <table className="portal-table" style={{ width: "100%", fontSize: "0.88rem" }}>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Category</th>
-              <th>Author</th>
-              <th>Status</th>
-              <th>Publish Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {posts.length === 0 ? (
-              <tr>
-                <td colSpan={6}>No blog posts yet.</td>
-              </tr>
-            ) : (
-              posts.map((post) => (
-                <tr key={post.id}>
-                  <td>
-                    <strong>{post.title}</strong>
-                    <div className="portal-muted" style={{ fontSize: "0.78rem" }}>
-                      /blog/{post.slug}
-                    </div>
-                  </td>
-                  <td>{post.primaryCategory || post.category}</td>
-                  <td>
-                    {post.author}
-                    <div className="portal-muted" style={{ fontSize: "0.78rem" }}>
-                      {post.role}
-                    </div>
-                  </td>
-                  <td>{getWorkflowBadge(post)}</td>
-                  <td>{new Date(post.publishedAt).toLocaleDateString("en-GB")}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        className="button button-ghost"
-                        style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
-                        onClick={() => handleEdit(post)}
-                      >
-                        Edit
-                      </button>
-                      <a
-                        className="button button-ghost"
-                        style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
-                        href={`/blog/${post.slug}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        View
-                      </a>
-                      {post.publishStatus === "draft" ? (
-                        <button
-                          type="button"
-                          className="button"
-                          style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
-                          onClick={() => {
-                            void changeStatus(post.id, "publish");
-                          }}
-                        >
-                          Publish
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="button button-ghost"
-                          style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
-                          onClick={() => {
-                            void changeStatus(post.id, "unpublish");
-                          }}
-                        >
-                          Unpublish
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="button button-ghost"
-                        style={{
-                          fontSize: "0.78rem",
-                          padding: "0.25rem 0.5rem",
-                          color: "var(--md-sys-color-error)",
-                        }}
-                        onClick={() => {
-                          void deletePost(post.id);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <DashboardListHeader template="minmax(0,2fr) 130px minmax(0,1fr) 110px 120px minmax(0,1.4fr)">
+          <span>Title</span>
+          <span>Category</span>
+          <span>Author</span>
+          <span>Status</span>
+          <span>Publish Date</span>
+          <span>Actions</span>
+        </DashboardListHeader>
+        {posts.length === 0 ? (
+          <div className="py-3">No blog posts yet.</div>
+        ) : (
+          posts.map((post) => (
+            <DashboardListRow
+              key={post.id}
+              template="minmax(0,2fr) 130px minmax(0,1fr) 110px 120px minmax(0,1.4fr)"
+            >
+              <span className="min-w-0">
+                <strong className="block truncate">{post.title}</strong>
+                <span className="portal-muted block truncate" style={{ fontSize: "0.78rem" }}>
+                  /blog/{post.slug}
+                </span>
+              </span>
+              <span className="truncate">{post.primaryCategory || post.category}</span>
+              <span className="min-w-0">
+                <span className="block truncate">{post.author}</span>
+                <span className="portal-muted block truncate" style={{ fontSize: "0.78rem" }}>
+                  {post.role}
+                </span>
+              </span>
+              <span>{getWorkflowBadge(post)}</span>
+              <span>{new Date(post.publishedAt).toLocaleDateString("en-GB")}</span>
+              <span>
+                <span style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="button button-ghost"
+                    style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
+                    onClick={() => handleEdit(post)}
+                  >
+                    Edit
+                  </button>
+                  <a
+                    className="button button-ghost"
+                    style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
+                    href={`/blog/${post.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View
+                  </a>
+                  {post.publishStatus === "draft" ? (
+                    <button
+                      type="button"
+                      className="button"
+                      style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
+                      onClick={() => {
+                        void changeStatus(post.id, "publish");
+                      }}
+                    >
+                      Publish
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="button button-ghost"
+                      style={{ fontSize: "0.78rem", padding: "0.25rem 0.5rem" }}
+                      onClick={() => {
+                        void changeStatus(post.id, "unpublish");
+                      }}
+                    >
+                      Unpublish
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="button button-ghost"
+                    style={{
+                      fontSize: "0.78rem",
+                      padding: "0.25rem 0.5rem",
+                      color: "var(--md-sys-color-error)",
+                    }}
+                    onClick={() => {
+                      void deletePost(post.id);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </span>
+              </span>
+            </DashboardListRow>
+          ))
+        )}
       </section>
     </div>
   );

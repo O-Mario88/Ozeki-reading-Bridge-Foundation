@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import type { TrainingReportArtifactRecord, TrainingReportScopeType } from "@/lib/types";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface PortalTrainingReportsManagerProps {
   initialReports: TrainingReportArtifactRecord[];
@@ -129,71 +130,64 @@ export function PortalTrainingReportsManager({ initialReports }: PortalTrainingR
       {feedback ? <p className="portal-muted">{feedback}</p> : null}
 
       <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Scope</th>
-              <th>Period</th>
-              <th>Generated</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="portal-muted">
-                  No generated training reports yet.
-                </td>
-              </tr>
-            ) : (
-              reports.map((report) => (
-                <tr key={report.reportCode}>
-                  <td>{report.reportCode}</td>
-                  <td>{report.scopeType}: {report.scopeValue}</td>
-                  <td>{report.periodStart} to {report.periodEnd}</td>
-                  <td>{new Date(report.generatedAt).toLocaleString()}</td>
-                  <td>
-                    <div className="action-row">
-                      <a
-                        className="button button-ghost"
-                        href={`/api/portal/automation/training-report/${encodeURIComponent(report.reportCode)}/pdf`}
-                      >
-                        PDF
-                      </a>
-                      <button
-                        type="button"
-                        className="button button-ghost"
-                        onClick={() =>
-                          setExpandedCode((prev) => (prev === report.reportCode ? "" : report.reportCode))
-                        }
-                      >
-                        {expandedCode === report.reportCode ? "Hide HTML" : "View HTML"}
-                      </button>
-                    </div>
-                    {expandedCode === report.reportCode ? (
-                      <details open style={{ marginTop: "0.5rem" }}>
-                        <summary>Rendered HTML</summary>
-                        <div
-                          style={{
-                            marginTop: "0.35rem",
-                            border: "1px solid var(--md-sys-color-outline-variant)",
-                            borderRadius: "12px",
-                            background: "white",
-                            maxHeight: "420px",
-                            overflow: "auto",
-                            padding: "0.75rem",
-                          }}
-                          dangerouslySetInnerHTML={{ __html: report.htmlReport }}
-                        />
-                      </details>
-                    ) : null}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <DashboardListHeader template="160px minmax(0,1.6fr) 200px 170px minmax(0,1.4fr)">
+          <span>Code</span>
+          <span>Scope</span>
+          <span>Period</span>
+          <span>Generated</span>
+          <span>Actions</span>
+        </DashboardListHeader>
+        {reports.length === 0 ? (
+          <div className="portal-muted py-3">No generated training reports yet.</div>
+        ) : (
+          reports.map((report) => (
+            <DashboardListRow
+              key={report.reportCode}
+              template="160px minmax(0,1.6fr) 200px 170px minmax(0,1.4fr)"
+            >
+              <span className="truncate">{report.reportCode}</span>
+              <span className="truncate">{report.scopeType}: {report.scopeValue}</span>
+              <span>{report.periodStart} to {report.periodEnd}</span>
+              <span>{new Date(report.generatedAt).toLocaleString()}</span>
+              <span className="min-w-0">
+                <span className="action-row">
+                  <a
+                    className="button button-ghost"
+                    href={`/api/portal/automation/training-report/${encodeURIComponent(report.reportCode)}/pdf`}
+                  >
+                    PDF
+                  </a>
+                  <button
+                    type="button"
+                    className="button button-ghost"
+                    onClick={() =>
+                      setExpandedCode((prev) => (prev === report.reportCode ? "" : report.reportCode))
+                    }
+                  >
+                    {expandedCode === report.reportCode ? "Hide HTML" : "View HTML"}
+                  </button>
+                </span>
+                {expandedCode === report.reportCode ? (
+                  <details open style={{ marginTop: "0.5rem" }}>
+                    <summary>Rendered HTML</summary>
+                    <div
+                      style={{
+                        marginTop: "0.35rem",
+                        border: "1px solid var(--md-sys-color-outline-variant)",
+                        borderRadius: "12px",
+                        background: "white",
+                        maxHeight: "420px",
+                        overflow: "auto",
+                        padding: "0.75rem",
+                      }}
+                      dangerouslySetInnerHTML={{ __html: report.htmlReport }}
+                    />
+                  </details>
+                ) : null}
+              </span>
+            </DashboardListRow>
+          ))
+        )}
       </div>
     </section>
   );

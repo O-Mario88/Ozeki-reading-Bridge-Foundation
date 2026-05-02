@@ -9,6 +9,7 @@ import {
   ResourceType,
 } from "@/lib/types";
 import { FormModal } from "@/components/forms";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 type PortalResourceView = {
   id: number;
@@ -152,42 +153,37 @@ export function PortalResourcesManager({ initialResources }: PortalResourcesMana
           <p>No resources uploaded yet.</p>
         ) : (
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Grade / Skill</th>
-                  <th>Type</th>
-                  <th>Area</th>
-                  <th>Source</th>
-                  <th>Download</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resources.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <strong>{item.title}</strong>
-                    </td>
-                    <td>
-                      {item.grade} / {item.skill}
-                    </td>
-                    <td>{item.type}</td>
-                    <td>{item.section}</td>
-                    <td>{item.fileName ? "Uploaded file" : "External URL"}</td>
-                    <td>
-                      <a href={item.downloadUrl} target="_blank" rel="noreferrer">
-                        {item.downloadLabel || "Open download"}
-                      </a>
-                    </td>
-                    <td>
-                      {item.createdByName} · {formatDate(item.createdAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="minmax(0,1.6fr) 130px 110px 130px 130px 160px minmax(0,1.4fr)">
+              <span>Title</span>
+              <span>Grade / Skill</span>
+              <span>Type</span>
+              <span>Area</span>
+              <span>Source</span>
+              <span>Download</span>
+              <span>Created</span>
+            </DashboardListHeader>
+            {resources.map((item) => (
+              <DashboardListRow
+                key={item.id}
+                template="minmax(0,1.6fr) 130px 110px 130px 130px 160px minmax(0,1.4fr)"
+              >
+                <span className="min-w-0">
+                  <strong className="truncate inline-block max-w-full">{item.title}</strong>
+                </span>
+                <span>{item.grade} / {item.skill}</span>
+                <span>{item.type}</span>
+                <span>{item.section}</span>
+                <span>{item.fileName ? "Uploaded file" : "External URL"}</span>
+                <span className="truncate">
+                  <a href={item.downloadUrl} target="_blank" rel="noreferrer">
+                    {item.downloadLabel || "Open download"}
+                  </a>
+                </span>
+                <span className="truncate">
+                  {item.createdByName} · {formatDate(item.createdAt)}
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

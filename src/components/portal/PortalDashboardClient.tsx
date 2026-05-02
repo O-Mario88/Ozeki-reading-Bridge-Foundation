@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PortalDashboardData, PortalRecordModule } from "@/lib/types";
 import { PerformanceCascade, PerformanceNode } from "@/components/dashboard/PerformanceCascade";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 interface PortalDashboardClientProps {
   dashboard: PortalDashboardData;
@@ -170,52 +171,49 @@ export function PortalDashboardClient({ dashboard, performanceData }: PortalDash
           <div className="ds-card-header" style={{ padding: "1.5rem 1.5rem 0", marginBottom: "1rem" }}>
             <h2 className="ds-card-title">Recent Network Activity</h2>
           </div>
-          <div className="ds-table-wrap">
-            <table className="ds-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>School Name</th>
-                  <th>Type</th>
-                  <th>Timestamp</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dashboard.recentActivity.length === 0 ? (
-                  <tr><td colSpan={6} className="ds-empty">No recent activity found.</td></tr>
-                ) : (
-                  dashboard.recentActivity.slice(0, 8).map((item, idx) => {
-                    const statusProps = getStatusProps(item.status);
-                    return (
-                      <tr key={item.id}>
-                        <td style={{ color: "#9ca3af" }}>{idx + 1}</td>
-                        <td style={{ fontWeight: 500 }}>
-                          <div style={{ maxWidth: "160px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={item.schoolName}>
-                            {item.schoolName}
-                          </div>
-                        </td>
-                        <td style={{ whiteSpace: "nowrap" }}>{moduleLabel[item.module]}</td>
-                        <td style={{ color: "#6b7280", whiteSpace: "nowrap", fontSize: "0.75rem" }}>
-                          {formatDay(item.date)}
-                        </td>
-                        <td style={{ whiteSpace: "nowrap" }}>
-                          <span className={`ds-badge ds-badge-${statusProps.color}`}>
-                            {statusProps.text}
-                          </span>
-                        </td>
-                        <td style={{ whiteSpace: "nowrap" }}>
-                          <Link href={`${moduleRoute[item.module]}?record=${item.id}`} className="ds-card-action">
-                            View
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+          <div className="ds-table-wrap px-4">
+            <DashboardListHeader template="40px minmax(0,1.6fr) 110px 110px 110px 80px">
+              <span>#</span>
+              <span>School Name</span>
+              <span>Type</span>
+              <span>Timestamp</span>
+              <span>Status</span>
+              <span>Action</span>
+            </DashboardListHeader>
+            {dashboard.recentActivity.length === 0 ? (
+              <div className="ds-empty py-3">No recent activity found.</div>
+            ) : (
+              dashboard.recentActivity.slice(0, 8).map((item, idx) => {
+                const statusProps = getStatusProps(item.status);
+                return (
+                  <DashboardListRow
+                    key={item.id}
+                    template="40px minmax(0,1.6fr) 110px 110px 110px 80px"
+                  >
+                    <span style={{ color: "#9ca3af" }}>{idx + 1}</span>
+                    <span className="min-w-0" style={{ fontWeight: 500 }}>
+                      <span className="truncate inline-block max-w-full" title={item.schoolName}>
+                        {item.schoolName}
+                      </span>
+                    </span>
+                    <span style={{ whiteSpace: "nowrap" }}>{moduleLabel[item.module]}</span>
+                    <span style={{ color: "#6b7280", whiteSpace: "nowrap", fontSize: "0.75rem" }}>
+                      {formatDay(item.date)}
+                    </span>
+                    <span style={{ whiteSpace: "nowrap" }}>
+                      <span className={`ds-badge ds-badge-${statusProps.color}`}>
+                        {statusProps.text}
+                      </span>
+                    </span>
+                    <span style={{ whiteSpace: "nowrap" }}>
+                      <Link href={`${moduleRoute[item.module]}?record=${item.id}`} className="ds-card-action">
+                        View
+                      </Link>
+                    </span>
+                  </DashboardListRow>
+                );
+              })
+            )}
           </div>
         </section>
 

@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { FormModal } from "@/components/forms";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type { RecordedLessonRow } from "@/lib/server/postgres/repositories/recorded-lessons";
 
 interface Props {
@@ -130,58 +131,59 @@ export function PortalRecordedLessonsManager({ initialLessons }: Props) {
           <p>No lessons recorded yet.</p>
         ) : (
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Level / Class</th>
-                  <th>Teacher</th>
-                  <th>Status</th>
-                  <th>Published?</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lessons.map(lesson => (
-                  <tr key={lesson.id}>
-                    <td><strong>{lesson.title}</strong><br/><span className="text-xs text-gray-500">{formatDate(lesson.createdAt)}</span></td>
-                    <td>{lesson.phonicsLevel || '-'} / {lesson.classLevel || '-'}</td>
-                    <td>{lesson.teacherName || '-'}</td>
-                    <td>
-                      <span className={`badge ${lesson.status === 'Published' ? 'badge-success' : 'badge-warning'}`}>
-                        {lesson.status}
-                      </span>
-                    </td>
-                    <td>{lesson.isPublished ? 'Yes' : 'No'}</td>
-                    <td>
-                      <div className="action-row">
-                        {lesson.vimeoEmbedUrl && (
-                          <a href={`/recorded-lessons/${lesson.slug}`} target="_blank" rel="noreferrer" className="text-sm border p-1 rounded hover:bg-gray-50">
-                            Watch
-                          </a>
-                        )}
-                        {(!lesson.googleDriveFileId && !lesson.vimeoEmbedUrl) && (
-                           <button className="button button-ghost" style={{fontSize: "0.8rem", padding: "0.2rem"}} onClick={() => openDriveModal(lesson.id)}>Sync Drive</button>
-                        )}
-                        {lesson.status === "Ready for Import" && (
-                           <button className="button text-brand-primary border border-brand-primary hover:bg-brand-primary hover:text-white" style={{fontSize: "0.8rem", padding: "0.2rem"}} onClick={() => handlePushToVimeo(lesson.id)}>Push to Vimeo</button>
-                        )}
-                        {lesson.vimeoEmbedUrl && (
-                             <button 
-                                className="button button-ghost" 
-                                style={{fontSize: "0.8rem", padding: "0.2rem"}} 
-                                onClick={() => handlePublishToggle(lesson.id, !lesson.isPublished)}
-                             >
-                                 {lesson.isPublished ? 'Unpublish' : 'Publish'}
-                             </button>
-                        )}
-                        <button className="button button-ghost" style={{fontSize: "0.8rem", padding: "0.2rem"}}>Edit</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="minmax(0,1.6fr) 130px minmax(0,1fr) 110px 90px minmax(0,1.6fr)">
+              <span>Title</span>
+              <span>Level / Class</span>
+              <span>Teacher</span>
+              <span>Status</span>
+              <span>Published?</span>
+              <span>Action</span>
+            </DashboardListHeader>
+            {lessons.map(lesson => (
+              <DashboardListRow
+                key={lesson.id}
+                template="minmax(0,1.6fr) 130px minmax(0,1fr) 110px 90px minmax(0,1.6fr)"
+              >
+                <span className="min-w-0">
+                  <strong className="block truncate">{lesson.title}</strong>
+                  <span className="block text-xs text-gray-500">{formatDate(lesson.createdAt)}</span>
+                </span>
+                <span className="truncate">{lesson.phonicsLevel || '-'} / {lesson.classLevel || '-'}</span>
+                <span className="truncate">{lesson.teacherName || '-'}</span>
+                <span>
+                  <span className={`badge ${lesson.status === 'Published' ? 'badge-success' : 'badge-warning'}`}>
+                    {lesson.status}
+                  </span>
+                </span>
+                <span>{lesson.isPublished ? 'Yes' : 'No'}</span>
+                <span>
+                  <span className="action-row">
+                    {lesson.vimeoEmbedUrl && (
+                      <a href={`/recorded-lessons/${lesson.slug}`} target="_blank" rel="noreferrer" className="text-sm border p-1 rounded hover:bg-gray-50">
+                        Watch
+                      </a>
+                    )}
+                    {(!lesson.googleDriveFileId && !lesson.vimeoEmbedUrl) && (
+                       <button type="button" className="button button-ghost" style={{fontSize: "0.8rem", padding: "0.2rem"}} onClick={() => openDriveModal(lesson.id)}>Sync Drive</button>
+                    )}
+                    {lesson.status === "Ready for Import" && (
+                       <button type="button" className="button text-brand-primary border border-brand-primary hover:bg-brand-primary hover:text-white" style={{fontSize: "0.8rem", padding: "0.2rem"}} onClick={() => handlePushToVimeo(lesson.id)}>Push to Vimeo</button>
+                    )}
+                    {lesson.vimeoEmbedUrl && (
+                         <button
+                            type="button"
+                            className="button button-ghost"
+                            style={{fontSize: "0.8rem", padding: "0.2rem"}}
+                            onClick={() => handlePublishToggle(lesson.id, !lesson.isPublished)}
+                         >
+                             {lesson.isPublished ? 'Unpublish' : 'Publish'}
+                         </button>
+                    )}
+                    <button type="button" className="button button-ghost" style={{fontSize: "0.8rem", padding: "0.2rem"}}>Edit</button>
+                  </span>
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

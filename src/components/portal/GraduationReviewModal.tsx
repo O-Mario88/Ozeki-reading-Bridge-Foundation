@@ -212,44 +212,36 @@ export function GraduationReviewModal({
 
           <div className="card">
             <h3>Evidence Snapshot</h3>
-            <div className="table-wrap">
-              <table>
-                <tbody>
-                  <tr>
-                    <th>Fluent / required level %</th>
-                    <td>{formatPercent(scorecard.fluentPct)}</td>
-                  </tr>
-                  <tr>
-                    <th>Published stories</th>
-                    <td>
-                      {scorecard.publishedStoryCount.toLocaleString()} / {scorecard.requiredStories}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Teaching quality</th>
-                    <td>{formatPercent(scorecard.teachingQualityPct)}</td>
-                  </tr>
-                  <tr>
-                    <th>Evaluation sample</th>
-                    <td>{scorecard.teachingEvaluationsCount.toLocaleString()}</td>
-                  </tr>
-                  <tr>
-                    <th>Assessment sample</th>
-                    <td>{scorecard.readingSampleSize.toLocaleString()}</td>
-                  </tr>
-                  <tr>
-                    <th>Learners assessed</th>
-                    <td>
-                      {scorecard.learnersAssessedCount} / {scorecard.requiredLearnersAssessedN}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Data completeness</th>
-                    <td>{formatPercent(scorecard.dataCompletenessPct)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <dl className="grad-evidence-list">
+              <div className="grad-evidence-row">
+                <dt>Fluent / required level %</dt>
+                <dd>{formatPercent(scorecard.fluentPct)}</dd>
+              </div>
+              <div className="grad-evidence-row">
+                <dt>Published stories</dt>
+                <dd>{scorecard.publishedStoryCount.toLocaleString()} / {scorecard.requiredStories}</dd>
+              </div>
+              <div className="grad-evidence-row">
+                <dt>Teaching quality</dt>
+                <dd>{formatPercent(scorecard.teachingQualityPct)}</dd>
+              </div>
+              <div className="grad-evidence-row">
+                <dt>Evaluation sample</dt>
+                <dd>{scorecard.teachingEvaluationsCount.toLocaleString()}</dd>
+              </div>
+              <div className="grad-evidence-row">
+                <dt>Assessment sample</dt>
+                <dd>{scorecard.readingSampleSize.toLocaleString()}</dd>
+              </div>
+              <div className="grad-evidence-row">
+                <dt>Learners assessed</dt>
+                <dd>{scorecard.learnersAssessedCount} / {scorecard.requiredLearnersAssessedN}</dd>
+              </div>
+              <div className="grad-evidence-row">
+                <dt>Data completeness</dt>
+                <dd>{formatPercent(scorecard.dataCompletenessPct)}</dd>
+              </div>
+            </dl>
             <div className="action-row">
               <a className="inline-download-link" href={`/portal/assessments?school=${eligibility.schoolId}`}>
                 Latest assessments

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpDown, ChevronRight, Search } from "lucide-react";
+import { DashboardListRow } from "@/components/portal/DashboardList";
 
 interface Learner {
   learnerUid: string;
@@ -66,16 +67,18 @@ export function ClassRosterTable({ learners, schoolId }: Props) {
   };
 
   const headerCell = (key: SortKey, label: string, align: "left" | "center" | "right" = "left") => (
-    <th
-      className={`py-2 px-2 font-semibold text-${align} cursor-pointer select-none hover:text-gray-800`}
+    <span
+      className={`font-semibold text-${align} cursor-pointer select-none hover:text-gray-800 block`}
       onClick={() => toggleSort(key)}
     >
       <span className="inline-flex items-center gap-1">
         {label}
         <ArrowUpDown className={`w-3 h-3 ${sortKey === key ? "text-blue-500" : "text-gray-300"}`} />
       </span>
-    </th>
+    </span>
   );
+
+  const ROW_TEMPLATE = "minmax(0,1.4fr) 80px minmax(0,1fr) 110px 160px 80px";
 
   return (
     <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
@@ -105,67 +108,66 @@ export function ClassRosterTable({ learners, schoolId }: Props) {
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100 bg-gray-50/30">
-              {headerCell("name", "Learner")}
-              {headerCell("gender", "Gender", "center")}
-              {headerCell("stage", "Reading Stage")}
-              {headerCell("score", "Composite", "center")}
-              {headerCell("flag", "Status", "center")}
-              <th className="py-2 px-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((l) => (
-              <tr key={l.learnerUid} className={`border-b border-gray-50 hover:bg-blue-50/30 ${l.flaggedForAttention ? "bg-red-50/20" : ""}`}>
-                <td className="py-2.5 px-2">
-                  <p className="font-semibold text-gray-800">{l.learnerName}</p>
-                  <p className="text-xs text-gray-400 font-mono">{l.learnerUid}</p>
-                </td>
-                <td className="py-2.5 px-2 text-center text-gray-600">{l.gender ?? "—"}</td>
-                <td className="py-2.5 px-2 text-gray-700">{l.latestReadingStage ?? "—"}</td>
-                <td className="py-2.5 px-2 text-center">
-                  {l.latestComposite != null ? (
-                    <strong className={`text-sm ${
-                      l.latestComposite >= 70 ? "text-emerald-700" :
-                      l.latestComposite >= 40 ? "text-amber-700" :
-                      "text-red-600"
-                    }`}>{l.latestComposite}</strong>
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
-                </td>
-                <td className="py-2.5 px-2 text-center">
-                  {l.flaggedForAttention ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-100">
-                      <AlertTriangle className="w-3 h-3" />
-                      {l.flagReason ?? "Attention"}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-400">—</span>
-                  )}
-                </td>
-                <td className="py-2.5 px-2 text-right">
-                  <Link
-                    href={`/portal/learners/${encodeURIComponent(l.learnerUid)}`}
-                    className="text-xs text-[#006b61] font-semibold hover:underline inline-flex items-center gap-0.5"
-                  >
-                    Profile <ChevronRight className="w-3 h-3" />
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {sorted.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-10 text-center text-sm text-gray-400 italic">
-                  No learners match the current filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="px-2">
+        <div
+          className="grid items-center text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100 bg-gray-50/30 py-2 px-1 gap-3"
+          style={{ gridTemplateColumns: ROW_TEMPLATE }}
+        >
+          {headerCell("name", "Learner")}
+          {headerCell("gender", "Gender", "center")}
+          {headerCell("stage", "Reading Stage")}
+          {headerCell("score", "Composite", "center")}
+          {headerCell("flag", "Status", "center")}
+          <span />
+        </div>
+        {sorted.map((l) => (
+          <DashboardListRow
+            key={l.learnerUid}
+            template={ROW_TEMPLATE}
+            className={`hover:bg-blue-50/30 ${l.flaggedForAttention ? "bg-red-50/20" : ""}`}
+          >
+            <span className="min-w-0">
+              <span className="block font-semibold text-gray-800 truncate">{l.learnerName}</span>
+              <span className="block text-xs text-gray-400 font-mono truncate">{l.learnerUid}</span>
+            </span>
+            <span className="text-center text-gray-600">{l.gender ?? "—"}</span>
+            <span className="text-gray-700 truncate">{l.latestReadingStage ?? "—"}</span>
+            <span className="text-center">
+              {l.latestComposite != null ? (
+                <strong className={`text-sm ${
+                  l.latestComposite >= 70 ? "text-emerald-700" :
+                  l.latestComposite >= 40 ? "text-amber-700" :
+                  "text-red-600"
+                }`}>{l.latestComposite}</strong>
+              ) : (
+                <span className="text-gray-300">—</span>
+              )}
+            </span>
+            <span className="text-center">
+              {l.flaggedForAttention ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-100">
+                  <AlertTriangle className="w-3 h-3" />
+                  {l.flagReason ?? "Attention"}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400">—</span>
+              )}
+            </span>
+            <span className="text-right">
+              <Link
+                href={`/portal/learners/${encodeURIComponent(l.learnerUid)}`}
+                className="text-xs text-[#006b61] font-semibold hover:underline inline-flex items-center gap-0.5"
+              >
+                Profile <ChevronRight className="w-3 h-3" />
+              </Link>
+            </span>
+          </DashboardListRow>
+        ))}
+        {sorted.length === 0 && (
+          <div className="py-10 text-center text-sm text-gray-400 italic">
+            No learners match the current filters.
+          </div>
+        )}
       </div>
     </div>
   );

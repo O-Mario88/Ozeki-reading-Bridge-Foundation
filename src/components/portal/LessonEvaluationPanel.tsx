@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { FloatingSurface } from "@/components/FloatingSurface";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import {
   LESSON_EVALUATION_DOMAIN_LABELS,
   LESSON_EVALUATION_ITEMS,
@@ -622,75 +623,68 @@ export function LessonEvaluationPanel({
       ) : null}
 
       <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Teacher</th>
-              <th>Class</th>
-              <th>Overall</th>
-              <th>Level</th>
-              <th>Top Gap</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7}>Loading lesson evaluations...</td>
-              </tr>
-            ) : evaluations.length === 0 ? (
-              <tr>
-                <td colSpan={7}>
-                  No lesson evaluations found for this scope
-                  {defaultVisitId ? " and visit" : ""}.
-                </td>
-              </tr>
-            ) : (
-              evaluations.map((evaluation) => (
-                <tr key={evaluation.id}>
-                  <td>{new Date(evaluation.lessonDate).toLocaleDateString("en-GB")}</td>
-                  <td>{evaluation.teacherName}</td>
-                  <td>{evaluation.grade}{evaluation.stream ? ` ${evaluation.stream}` : ""}</td>
-                  <td>{evaluation.overallScore.toFixed(2)}/4</td>
-                  <td>{evaluation.overallLevel}</td>
-                  <td>
-                    {evaluation.topGapDomain
-                      ? LESSON_EVALUATION_DOMAIN_LABELS[evaluation.topGapDomain]
-                      : "Data not available"}
-                  </td>
-                  <td>
-                    <div className="action-row">
-                      <Link
-                        className="button button-ghost button-compact"
-                        href={`/portal/schools/${evaluation.schoolId}/teachers/${encodeURIComponent(evaluation.teacherUid)}/improvement`}
-                      >
-                        Improvement
-                      </Link>
-                      <button
-                        className="button button-ghost button-compact"
-                        type="button"
-                        onClick={() => openEditForm(evaluation)}
-                      >
-                        Edit
-                      </button>
-                      {allowVoid && evaluation.status === "active" ? (
-                        <button
-                          className="button button-ghost button-compact"
-                          type="button"
-                          onClick={() => void handleVoid(evaluation)}
-                          disabled={saving}
-                        >
-                          Void
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <DashboardListHeader template="100px minmax(0,1.4fr) 90px 80px 90px minmax(0,1.2fr) 240px">
+          <span>Date</span>
+          <span>Teacher</span>
+          <span>Class</span>
+          <span>Overall</span>
+          <span>Level</span>
+          <span>Top Gap</span>
+          <span>Actions</span>
+        </DashboardListHeader>
+        {loading ? (
+          <div className="py-3">Loading lesson evaluations...</div>
+        ) : evaluations.length === 0 ? (
+          <div className="py-3">
+            No lesson evaluations found for this scope
+            {defaultVisitId ? " and visit" : ""}.
+          </div>
+        ) : (
+          evaluations.map((evaluation) => (
+            <DashboardListRow
+              key={evaluation.id}
+              template="100px minmax(0,1.4fr) 90px 80px 90px minmax(0,1.2fr) 240px"
+            >
+              <span>{new Date(evaluation.lessonDate).toLocaleDateString("en-GB")}</span>
+              <span className="truncate">{evaluation.teacherName}</span>
+              <span>{evaluation.grade}{evaluation.stream ? ` ${evaluation.stream}` : ""}</span>
+              <span>{evaluation.overallScore.toFixed(2)}/4</span>
+              <span>{evaluation.overallLevel}</span>
+              <span className="truncate">
+                {evaluation.topGapDomain
+                  ? LESSON_EVALUATION_DOMAIN_LABELS[evaluation.topGapDomain]
+                  : "Data not available"}
+              </span>
+              <span>
+                <span className="action-row">
+                  <Link
+                    className="button button-ghost button-compact"
+                    href={`/portal/schools/${evaluation.schoolId}/teachers/${encodeURIComponent(evaluation.teacherUid)}/improvement`}
+                  >
+                    Improvement
+                  </Link>
+                  <button
+                    className="button button-ghost button-compact"
+                    type="button"
+                    onClick={() => openEditForm(evaluation)}
+                  >
+                    Edit
+                  </button>
+                  {allowVoid && evaluation.status === "active" ? (
+                    <button
+                      className="button button-ghost button-compact"
+                      type="button"
+                      onClick={() => void handleVoid(evaluation)}
+                      disabled={saving}
+                    >
+                      Void
+                    </button>
+                  ) : null}
+                </span>
+              </span>
+            </DashboardListRow>
+          ))
+        )}
       </div>
 
       <section className="lesson-improvement-section">
