@@ -43,9 +43,9 @@ export default async function PortalDashboardPage() {
 
   return (
     <OzekiPortalShell user={user} activeHref="/portal/dashboard" hideFrame>
-      <div className="space-y-6">
-        {/* Date range selector — top right */}
-        <div className="flex justify-end">
+      <div className="space-y-4 lg:space-y-6">
+        {/* Date range selector — desktop only (not in mobile reference) */}
+        <div className="hidden lg:flex justify-end">
           <button
             type="button"
             className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50 whitespace-nowrap"
@@ -56,8 +56,8 @@ export default async function PortalDashboardPage() {
           </button>
         </div>
 
-        {/* KPI strip — 7 cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 2xl:grid-cols-7 gap-3">
+        {/* KPI strip — 7 cards (3-col on mobile per reference, 7-col on 2xl) */}
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 2xl:grid-cols-7 gap-2.5 lg:gap-3">
           <PortalKpiCard
             label="Learners Reached"
             value={kpis.learnersReached.toLocaleString()}
@@ -121,12 +121,12 @@ export default async function PortalDashboardPage() {
             icon={ShieldOff}
             iconBg="#fef2f2" iconColor="#b91c1c"
             cardBg="#fff5f5" borderColor="#fecaca"
-            className="col-span-2 sm:col-span-1"
+            className="col-span-1"
           />
         </div>
 
-        {/* Quick action cards — 4×2 grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Quick action cards — 2-col mobile / 4-col desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-3">
           <QuickAction icon={GraduationCap} title="Log Training" subtitle="Record a new training" href="/portal/trainings?new=1" />
           <QuickAction icon={MapPin} title="School Visit" subtitle="Log a coaching visit" href="/portal/visits/new" />
           <QuickAction icon={ClipboardCheck} title="Assessment" subtitle="Upload learner scores" href="/portal/assessments?new=1" />
@@ -386,16 +386,16 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="group rounded-2xl border border-gray-100 bg-white hover:border-gray-200 hover:shadow-md transition-all p-4 flex items-center gap-3"
+      className="group rounded-xl lg:rounded-2xl border border-gray-100 bg-white hover:border-gray-200 hover:shadow-md transition-all px-2.5 py-2 lg:p-4 flex items-center gap-2 lg:gap-3"
     >
-      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 transition-colors">
-        <Icon className="w-5 h-5 text-gray-600 group-hover:text-emerald-700 transition-colors" strokeWidth={1.75} />
+      <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gray-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 transition-colors">
+        <Icon className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600 group-hover:text-emerald-700 transition-colors" strokeWidth={1.75} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-bold text-gray-900 leading-tight truncate">{title}</p>
-        <p className="text-[11px] text-gray-500 leading-tight mt-0.5 truncate">{subtitle}</p>
+        <p className="text-[12px] lg:text-[14px] font-bold text-gray-900 leading-tight truncate">{title}</p>
+        <p className="text-[10px] lg:text-[11px] text-gray-500 leading-tight mt-0.5 truncate">{subtitle}</p>
       </div>
-      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 transition-colors shrink-0" strokeWidth={2} />
+      <ChevronRight className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-gray-300 group-hover:text-gray-500 transition-colors shrink-0" strokeWidth={2} />
     </Link>
   );
 }
