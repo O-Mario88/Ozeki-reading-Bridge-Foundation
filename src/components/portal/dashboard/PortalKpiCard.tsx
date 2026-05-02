@@ -16,12 +16,13 @@ interface Props {
   borderColor?: string;
   spark?: number[];
   sparkColor?: string;
+  className?: string;
 }
 
 export function PortalKpiCard({
   label, value, subline, deltaPct, deltaPositive = true,
   icon: Icon, iconBg, iconColor, cardBg = "#ffffff", borderColor = "#f1f5f9",
-  spark, sparkColor,
+  spark, sparkColor, className = "",
 }: Props) {
   const isUp = (deltaPct ?? 0) > 0;
   const isFlat = (deltaPct ?? 0) === 0;
@@ -31,7 +32,7 @@ export function PortalKpiCard({
 
   return (
     <div
-      className="rounded-2xl border p-4 flex flex-col gap-3 min-h-[150px] shadow-sm"
+      className={`rounded-2xl border p-4 flex flex-col gap-3 min-h-[150px] shadow-sm ${className}`}
       style={{ backgroundColor: cardBg, borderColor }}
     >
       <div className="flex items-start justify-between gap-2">

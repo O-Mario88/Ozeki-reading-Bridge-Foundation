@@ -17,21 +17,26 @@ interface Props {
    *   "glass"           → frosted glass menu — used by finance pages.
    */
   variant?: "ozeki" | "glass";
+  /** Notification count badge on the bell. 0 hides the badge. */
+  notificationCount?: number;
 }
 
 /**
- * Mobile-only top header (`<lg`). Hamburger opens a slide-over containing the
- * primary navigation. Variant selects whether the slide-over shows the green
- * Ozeki sidebar or the glassprism menu.
+ * Mobile-only top header (`<lg`). Renders the deep-green Ozeki branded strip
+ * matching the mobile reference: hamburger left, OZEKI book+wordmark
+ * centered, notification bell with red badge right. Tapping the hamburger
+ * opens a slide-over containing the primary navigation.
  *
- * Renders nothing on `lg+` — desktop layouts render their sidebar/menu
- * directly in the page grid.
+ * The container is full-bleed (no rounded edges) so the green strip
+ * reaches both screen edges and meets the safe-area inset cleanly. Renders
+ * nothing on `lg+`.
  */
 export function MobileHeader({
   user,
   activeHref,
   rightSlot,
   variant = "ozeki",
+  notificationCount = 3,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -46,42 +51,52 @@ export function MobileHeader({
     };
   }, [open]);
 
-  const headerCls =
-    variant === "glass"
-      ? "lg:hidden flex items-center justify-between gap-3 h-14 px-4 rounded-[24px] border border-white/70 bg-white/85 backdrop-blur-xl shadow-[0_14px_36px_rgba(10,10,10,0.08)]"
-      : "lg:hidden flex items-center justify-between gap-3 h-14 px-4 rounded-2xl border border-gray-100 bg-white shadow-[0_4px_14px_rgba(15,23,42,0.06)]";
-
   const slideoverWrapperBg = variant === "glass" ? "bg-[#D8D9DE]" : "bg-[#0d4b3a]";
 
   return (
     <>
-      <header className={headerCls}>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="grid h-10 w-10 place-items-center rounded-full text-gray-800 hover:bg-gray-50"
-        >
-          <Menu className="h-5 w-5" strokeWidth={1.75} />
-        </button>
-
-        <Link
-          href="/portal/dashboard"
-          aria-label="Ozeki Reading Bridge"
-          className="grid h-10 w-10 place-items-center rounded-full text-emerald-700"
-        >
-          <BookOpenText className="h-5 w-5" strokeWidth={1.75} />
-        </Link>
-
-        {rightSlot ?? (
-          <Link
-            href="/portal/support"
-            aria-label="Notifications"
-            className="grid h-10 w-10 place-items-center rounded-full text-gray-800 hover:bg-gray-50"
+      <header className="lg:hidden bg-[#0d4b3a] text-white pt-[env(safe-area-inset-top)]">
+        <div className="flex items-center justify-between gap-3 h-14 px-4">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
+            className="grid h-10 w-10 -ml-2 place-items-center rounded-full text-white hover:bg-white/10 transition"
           >
-            <Bell className="h-5 w-5" strokeWidth={1.75} />
+            <Menu className="h-5 w-5" strokeWidth={2} />
+          </button>
+
+          <Link
+            href="/portal/dashboard"
+            aria-label="Ozeki Reading Bridge Foundation"
+            className="flex items-center gap-2 min-w-0"
+          >
+            <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#fef9c3] text-[#0d4b3a] shrink-0">
+              <BookOpenText className="h-5 w-5" strokeWidth={1.75} />
+            </span>
+            <span className="flex flex-col leading-none min-w-0">
+              <span className="text-[14px] font-extrabold tracking-tight text-white">OZEKI</span>
+              <span className="text-[8.5px] font-bold tracking-[0.16em] text-white/75 mt-0.5 truncate">
+                READING BRIDGE FOUNDATION
+              </span>
+            </span>
           </Link>
-        )}
+
+          {rightSlot ?? (
+            <Link
+              href="/portal/support"
+              aria-label="Notifications"
+              className="relative grid h-10 w-10 -mr-2 place-items-center rounded-full text-white hover:bg-white/10 transition"
+            >
+              <Bell className="h-5 w-5" strokeWidth={1.75} />
+              {notificationCount > 0 && (
+                <span className="absolute top-1 right-1 grid place-items-center h-[18px] min-w-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold border border-[#0d4b3a]">
+                  {notificationCount > 9 ? "9+" : notificationCount}
+                </span>
+              )}
+            </Link>
+          )}
+        </div>
       </header>
 
       {open && (

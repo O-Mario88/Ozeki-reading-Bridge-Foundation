@@ -73,25 +73,40 @@ export function OzekiPortalShell({
     >
       {/* Mobile (<lg) */}
       <div className="lg:hidden min-h-screen bg-gray-50">
-        <div className="px-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))]">
-          <MobileHeader user={user} activeHref={activeHref} />
-        </div>
-        <main className="px-4 pt-4 space-y-5 pb-[calc(7rem_+_env(safe-area-inset-bottom))]">
-          {!hideFrame && (title || description) && (
-            <header>
+        {/* Full-bleed green branded header */}
+        <MobileHeader user={user} activeHref={activeHref} />
+
+        {/* Heading: page title/description if provided, else greeting/subtitle.
+            hideFrame still suppresses the page title so dashboard pages can
+            render their own header content while keeping the welcome strip. */}
+        <section className="bg-white px-4 pt-4 pb-3 border-b border-gray-100">
+          {!hideFrame && (title || description) ? (
+            <>
               {title && (
-                <h1 className="text-[22px] font-bold text-gray-900 tracking-tight leading-tight">
+                <h1 className="text-[20px] font-bold text-gray-900 tracking-tight leading-tight">
                   {title}
                 </h1>
               )}
               {description && (
-                <p className="text-[13px] text-gray-500 leading-snug mt-1">
+                <p className="text-[12.5px] text-gray-500 leading-snug mt-1">
                   {description}
                 </p>
               )}
-              {actions && <div className="mt-3 action-row">{actions}</div>}
-            </header>
+            </>
+          ) : (
+            <>
+              <h1 className="text-[19px] font-bold text-gray-900 tracking-tight leading-tight">
+                {displayGreeting}
+              </h1>
+              <p className="text-[12.5px] text-gray-500 leading-snug mt-1">
+                {displaySubtitle}
+              </p>
+            </>
           )}
+          {!hideFrame && actions && <div className="mt-3 action-row">{actions}</div>}
+        </section>
+
+        <main className="px-4 pt-4 space-y-5 pb-[calc(7rem_+_env(safe-area-inset-bottom))]">
           {children}
         </main>
         <MobileBottomNav activeHref={activeHref} user={user} />

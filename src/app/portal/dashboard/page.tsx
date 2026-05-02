@@ -121,6 +121,7 @@ export default async function PortalDashboardPage() {
             icon={ShieldOff}
             iconBg="#fef2f2" iconColor="#b91c1c"
             cardBg="#fff5f5" borderColor="#fecaca"
+            className="col-span-2 sm:col-span-1"
           />
         </div>
 
