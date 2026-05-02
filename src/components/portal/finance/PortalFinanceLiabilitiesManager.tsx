@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatMoney } from "@/components/portal/finance/format";
 import { FormModal, FormPage, FormSection, FormField } from "@/components/forms";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type { FinanceLiabilityRecord } from "@/lib/server/postgres/repositories/finance-liabilities";
 
 export function PortalFinanceLiabilitiesManager({ initialLiabilities }: { initialLiabilities: FinanceLiabilityRecord[] }) {
@@ -78,57 +79,52 @@ export function PortalFinanceLiabilitiesManager({ initialLiabilities }: { initia
       )}
 
       <div className="table-wrapper">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Journal Entry</th>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Type</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {liabilities.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center text-gray-500 py-4">
-                  No liabilities registered.
-                </td>
-              </tr>
-            ) : (
-              liabilities.map((lib) => (
-                <tr key={lib.id} className={lib.status === "reversed" ? "opacity-50 line-through" : ""}>
-                  <td>{lib.entryNumber}</td>
-                  <td>{lib.entryDate}</td>
-                  <td>{lib.description}</td>
-                  <td>
-                    <span className="badge badge-gray capitalize">
-                      {lib.liabilityType.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td>{formatMoney("UGX", lib.amount)}</td>
-                  <td>
-                    <span className={`badge badge-${lib.status === 'posted' ? 'green' : 'gray'}`}>
-                      {lib.status}
-                    </span>
-                  </td>
-                  <td>
-                    {lib.status === "posted" && (
-                      <button 
-                        onClick={() => handleReverse(lib.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Reverse
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <DashboardListHeader template="130px 110px minmax(0,1.6fr) 130px 130px 100px 100px">
+          <span>Journal Entry</span>
+          <span>Date</span>
+          <span>Description</span>
+          <span>Type</span>
+          <span>Amount</span>
+          <span>Status</span>
+          <span>Actions</span>
+        </DashboardListHeader>
+        {liabilities.length === 0 ? (
+          <div className="text-center text-gray-500 py-4">No liabilities registered.</div>
+        ) : (
+          liabilities.map((lib) => (
+            <DashboardListRow
+              key={lib.id}
+              template="130px 110px minmax(0,1.6fr) 130px 130px 100px 100px"
+              className={lib.status === "reversed" ? "opacity-50 line-through" : ""}
+            >
+              <span className="truncate">{lib.entryNumber}</span>
+              <span>{lib.entryDate}</span>
+              <span className="truncate">{lib.description}</span>
+              <span>
+                <span className="badge badge-gray capitalize">
+                  {lib.liabilityType.replace("_", " ")}
+                </span>
+              </span>
+              <span>{formatMoney("UGX", lib.amount)}</span>
+              <span>
+                <span className={`badge badge-${lib.status === 'posted' ? 'green' : 'gray'}`}>
+                  {lib.status}
+                </span>
+              </span>
+              <span>
+                {lib.status === "posted" && (
+                  <button
+                    type="button"
+                    onClick={() => handleReverse(lib.id)}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    Reverse
+                  </button>
+                )}
+              </span>
+            </DashboardListRow>
+          ))
+        )}
       </div>
 
       <FormModal

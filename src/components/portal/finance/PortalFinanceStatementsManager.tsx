@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { FloatingSurface } from "@/components/FloatingSurface";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import type { FinanceMonthlyStatementRecord } from "@/lib/types";
 
@@ -170,60 +171,57 @@ export function PortalFinanceStatementsManager({ initialStatements }: PortalFina
           <p>No statements generated yet.</p>
         ) : (
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Period</th>
-                  <th>Frequency</th>
-                  <th>Currency</th>
-                  <th>Money In</th>
-                  <th>Money Out</th>
-                  <th>Net</th>
-                  <th>Breakdown</th>
-                  <th>Documents</th>
-                </tr>
-              </thead>
-              <tbody>
-                {statements.map((item) => (
-                  <tr key={`${item.periodType}-${item.month}-${item.currency}`}>
-                    <td>{formatPeriodLabel(item.periodType, item.month)}</td>
-                    <td>{formatPeriodType(item.periodType)}</td>
-                    <td>{item.currency}</td>
-                    <td>{formatMoney(item.currency, item.totalMoneyIn)}</td>
-                    <td>{formatMoney(item.currency, item.totalMoneyOut)}</td>
-                    <td>{formatMoney(item.currency, item.net)}</td>
-                    <td>
-                      <div className="portal-list">
-                        {FINANCE_INCOME_CATEGORIES.map((category) => (
-                          <span key={category}>
-                            {category}: {formatMoney(item.currency, item.breakdownByCategory[category])}
-                          </span>
-                        ))}
-                        <span>Expense: {formatMoney(item.currency, item.breakdownByCategory.Expense)}</span>
-                      </div>
-                      <div className="portal-muted">Generated {formatDate(item.generatedAt)}</div>
-                    </td>
-                    <td>
-                      {hasAnyStatementDocument(item) ? (
-                        <div className="action-row">
-                          <a className="button button-ghost" href={statementDocumentUrl(item, "income_statement")} target="_blank" rel="noreferrer">
-                            Income Statement
-                          </a>
-                          <a className="button button-ghost" href={statementDocumentUrl(item, "statement_of_financial_position")} target="_blank" rel="noreferrer">
-                            Statement of Financial Position
-                          </a>
-                          <a className="button button-ghost" href={statementDocumentUrl(item, "balance_sheet")} target="_blank" rel="noreferrer">
-                            Balance Sheet
-                          </a>
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="120px 110px 90px 130px 130px 130px minmax(0,2fr) minmax(0,2fr)">
+              <span>Period</span>
+              <span>Frequency</span>
+              <span>Currency</span>
+              <span>Money In</span>
+              <span>Money Out</span>
+              <span>Net</span>
+              <span>Breakdown</span>
+              <span>Documents</span>
+            </DashboardListHeader>
+            {statements.map((item) => (
+              <DashboardListRow
+                key={`${item.periodType}-${item.month}-${item.currency}`}
+                template="120px 110px 90px 130px 130px 130px minmax(0,2fr) minmax(0,2fr)"
+              >
+                <span>{formatPeriodLabel(item.periodType, item.month)}</span>
+                <span>{formatPeriodType(item.periodType)}</span>
+                <span>{item.currency}</span>
+                <span>{formatMoney(item.currency, item.totalMoneyIn)}</span>
+                <span>{formatMoney(item.currency, item.totalMoneyOut)}</span>
+                <span>{formatMoney(item.currency, item.net)}</span>
+                <span className="min-w-0">
+                  <span className="portal-list">
+                    {FINANCE_INCOME_CATEGORIES.map((category) => (
+                      <span key={category}>
+                        {category}: {formatMoney(item.currency, item.breakdownByCategory[category])}
+                      </span>
+                    ))}
+                    <span>Expense: {formatMoney(item.currency, item.breakdownByCategory.Expense)}</span>
+                  </span>
+                  <span className="portal-muted block">Generated {formatDate(item.generatedAt)}</span>
+                </span>
+                <span className="min-w-0">
+                  {hasAnyStatementDocument(item) ? (
+                    <span className="action-row">
+                      <a className="button button-ghost" href={statementDocumentUrl(item, "income_statement")} target="_blank" rel="noreferrer">
+                        Income Statement
+                      </a>
+                      <a className="button button-ghost" href={statementDocumentUrl(item, "statement_of_financial_position")} target="_blank" rel="noreferrer">
+                        Statement of Financial Position
+                      </a>
+                      <a className="button button-ghost" href={statementDocumentUrl(item, "balance_sheet")} target="_blank" rel="noreferrer">
+                        Balance Sheet
+                      </a>
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

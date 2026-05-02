@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { FloatingSurface } from "@/components/FloatingSurface";
 import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type { FinanceExpenseRecord } from "@/lib/types";
 
 type PortalFinanceExpensesManagerProps = {
@@ -358,60 +359,57 @@ export function PortalFinanceExpensesManager({ initialExpenses }: PortalFinanceE
           <p>No expenses match the current search/filter.</p>
         ) : (
           <div className="table-wrap finance-table-compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>Expense #</th>
-                  <th>Date</th>
-                  <th>Vendor</th>
-                  <th>Subcategory</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredExpenses.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.expenseNumber}</td>
-                    <td>{formatDate(item.date)}</td>
-                    <td>{item.vendorName}</td>
-                    <td>{item.subcategory || "—"}</td>
-                    <td>{formatMoney(item.currency, item.amount)}</td>
-                    <td><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></td>
-                    <td>
-                      <div className="action-row finance-row-actions">
-                        <button
-                          type="button"
-                          className="button button-ghost button-sm"
-                          onClick={() => handleSubmit(item.id)}
-                          disabled={saving || (item.status !== "draft" && item.status !== "blocked_mismatch")}
-                        >
-                          Submit
-                        </button>
-                        <button
-                          type="button"
-                          className="button button-ghost button-sm"
-                          onClick={() => handlePost(item)}
-                          disabled={saving || item.status !== "submitted"}
-                        >
-                          Post
-                        </button>
-                        <button
-                          type="button"
-                          className="button button-ghost button-sm finance-row-danger"
-                          onClick={() => setDestructiveTarget(item)}
-                          disabled={saving || item.status === "void"}
-                          title={item.status === "draft" ? "Delete draft" : "Void posted"}
-                        >
-                          {item.status === "draft" ? "Delete" : "Void"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="120px 100px minmax(0,1.4fr) minmax(0,1fr) 120px 110px 240px">
+              <span>Expense #</span>
+              <span>Date</span>
+              <span>Vendor</span>
+              <span>Subcategory</span>
+              <span>Amount</span>
+              <span>Status</span>
+              <span>Actions</span>
+            </DashboardListHeader>
+            {filteredExpenses.map((item) => (
+              <DashboardListRow
+                key={item.id}
+                template="120px 100px minmax(0,1.4fr) minmax(0,1fr) 120px 110px 240px"
+              >
+                <span>{item.expenseNumber}</span>
+                <span>{formatDate(item.date)}</span>
+                <span className="truncate">{item.vendorName}</span>
+                <span className="truncate">{item.subcategory || "—"}</span>
+                <span>{formatMoney(item.currency, item.amount)}</span>
+                <span><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></span>
+                <span>
+                  <span className="action-row finance-row-actions">
+                    <button
+                      type="button"
+                      className="button button-ghost button-sm"
+                      onClick={() => handleSubmit(item.id)}
+                      disabled={saving || (item.status !== "draft" && item.status !== "blocked_mismatch")}
+                    >
+                      Submit
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-ghost button-sm"
+                      onClick={() => handlePost(item)}
+                      disabled={saving || item.status !== "submitted"}
+                    >
+                      Post
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-ghost button-sm finance-row-danger"
+                      onClick={() => setDestructiveTarget(item)}
+                      disabled={saving || item.status === "void"}
+                      title={item.status === "draft" ? "Delete draft" : "Void posted"}
+                    >
+                      {item.status === "draft" ? "Delete" : "Void"}
+                    </button>
+                  </span>
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

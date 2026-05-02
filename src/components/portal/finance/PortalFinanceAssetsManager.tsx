@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatMoney } from "@/components/portal/finance/format";
 import { FormModal, FormPage, FormSection, FormField } from "@/components/forms";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type { FinanceAssetRecord } from "@/lib/server/postgres/repositories/finance-assets";
 
 export function PortalFinanceAssetsManager({ initialAssets }: { initialAssets: FinanceAssetRecord[] }) {
@@ -75,53 +76,48 @@ export function PortalFinanceAssetsManager({ initialAssets }: { initialAssets: F
       )}
 
       <div className="table-wrapper">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Asset Code</th>
-              <th>Name</th>
-              <th>Acquired On</th>
-              <th>Purchase Value</th>
-              <th>Useful Life (Mos)</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assets.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center text-gray-500 py-4">
-                  No assets found.
-                </td>
-              </tr>
-            ) : (
-              assets.map((ast) => (
-                <tr key={ast.id} className={ast.status === "disposed" ? "opacity-50 line-through" : ""}>
-                  <td>{ast.assetCode}</td>
-                  <td>{ast.name}</td>
-                  <td>{ast.acquisitionDate}</td>
-                  <td>{formatMoney(ast.currency, ast.purchaseValue)}</td>
-                  <td>{ast.usefulLifeMonths}</td>
-                  <td>
-                    <span className={`badge badge-${ast.status === 'active' ? 'green' : 'gray'}`}>
-                      {ast.status}
-                    </span>
-                  </td>
-                  <td>
-                    {ast.status === "active" && (
-                      <button 
-                        onClick={() => handleDispose(ast.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Dispose
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <DashboardListHeader template="120px minmax(0,1.6fr) 130px 140px 130px 100px 100px">
+          <span>Asset Code</span>
+          <span>Name</span>
+          <span>Acquired On</span>
+          <span>Purchase Value</span>
+          <span>Useful Life (Mos)</span>
+          <span>Status</span>
+          <span>Actions</span>
+        </DashboardListHeader>
+        {assets.length === 0 ? (
+          <div className="text-center text-gray-500 py-4">No assets found.</div>
+        ) : (
+          assets.map((ast) => (
+            <DashboardListRow
+              key={ast.id}
+              template="120px minmax(0,1.6fr) 130px 140px 130px 100px 100px"
+              className={ast.status === "disposed" ? "opacity-50 line-through" : ""}
+            >
+              <span className="truncate">{ast.assetCode}</span>
+              <span className="truncate">{ast.name}</span>
+              <span>{ast.acquisitionDate}</span>
+              <span>{formatMoney(ast.currency, ast.purchaseValue)}</span>
+              <span>{ast.usefulLifeMonths}</span>
+              <span>
+                <span className={`badge badge-${ast.status === 'active' ? 'green' : 'gray'}`}>
+                  {ast.status}
+                </span>
+              </span>
+              <span>
+                {ast.status === "active" && (
+                  <button
+                    type="button"
+                    onClick={() => handleDispose(ast.id)}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    Dispose
+                  </button>
+                )}
+              </span>
+            </DashboardListRow>
+          ))
+        )}
       </div>
 
       <FormModal

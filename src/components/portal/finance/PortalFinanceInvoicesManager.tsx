@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { FormModal, FormPage, FormSection, FormField, FormActions } from "@/components/forms";
 import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import type { FinanceContactRecord, FinanceInvoiceRecord } from "@/lib/types";
@@ -504,47 +505,46 @@ export function PortalFinanceInvoicesManager({
           <p>No invoices match the current search/filter.</p>
         ) : (
           <div className="table-wrap finance-table-compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>Invoice</th>
-                  <th>Contact</th>
-                  <th>Dates</th>
-                  <th>Category</th>
-                  <th>Total</th>
-                  <th>Balance</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInvoices.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <strong>{item.invoiceNumber}</strong>
-                      <div className="portal-muted">{item.lastSentTo || "Not emailed yet"}</div>
-                      {item.linkedReceipt ? (
-                        <div className="portal-muted">
-                          Receipt {item.linkedReceipt.receiptNumber} ({item.linkedReceipt.status})
-                        </div>
-                      ) : null}
-                    </td>
-                    <td>
-                      <strong>{item.contactName || "—"}</strong>
-                      {item.contactType ? (
-                        <div className="portal-muted" style={{ textTransform: "capitalize" }}>{item.contactType}</div>
-                      ) : null}
-                    </td>
-                    <td>
-                      <div>{formatDate(item.issueDate)}</div>
-                      <div className="portal-muted">Due {formatDate(item.dueDate)}</div>
-                    </td>
-                    <td>{item.category}</td>
-                    <td>{formatMoney(item.currency, item.total)}</td>
-                    <td>{formatMoney(item.currency, item.balanceDue)}</td>
-                    <td><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></td>
-                    <td>
-                      <div className="action-row finance-row-actions">
+            <DashboardListHeader template="160px minmax(0,1.4fr) 130px 110px 130px 130px 110px minmax(0,2fr)">
+              <span>Invoice</span>
+              <span>Contact</span>
+              <span>Dates</span>
+              <span>Category</span>
+              <span>Total</span>
+              <span>Balance</span>
+              <span>Status</span>
+              <span>Actions</span>
+            </DashboardListHeader>
+            {filteredInvoices.map((item) => (
+              <DashboardListRow
+                key={item.id}
+                template="160px minmax(0,1.4fr) 130px 110px 130px 130px 110px minmax(0,2fr)"
+              >
+                <span className="min-w-0">
+                  <strong className="block truncate">{item.invoiceNumber}</strong>
+                  <span className="portal-muted block truncate">{item.lastSentTo || "Not emailed yet"}</span>
+                  {item.linkedReceipt ? (
+                    <span className="portal-muted block truncate">
+                      Receipt {item.linkedReceipt.receiptNumber} ({item.linkedReceipt.status})
+                    </span>
+                  ) : null}
+                </span>
+                <span className="min-w-0">
+                  <strong className="block truncate">{item.contactName || "—"}</strong>
+                  {item.contactType ? (
+                    <span className="portal-muted block truncate" style={{ textTransform: "capitalize" }}>{item.contactType}</span>
+                  ) : null}
+                </span>
+                <span>
+                  <span className="block">{formatDate(item.issueDate)}</span>
+                  <span className="portal-muted block">Due {formatDate(item.dueDate)}</span>
+                </span>
+                <span className="truncate">{item.category}</span>
+                <span>{formatMoney(item.currency, item.total)}</span>
+                <span>{formatMoney(item.currency, item.balanceDue)}</span>
+                <span><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></span>
+                <span>
+                      <span className="action-row finance-row-actions">
                         <button
                           type="button"
                           className="button button-ghost button-sm"
@@ -653,12 +653,10 @@ export function PortalFinanceInvoicesManager({
                             Receipt unavailable until payment is recorded
                           </span>
                         ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </span>
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

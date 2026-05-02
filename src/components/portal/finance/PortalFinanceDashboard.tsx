@@ -9,6 +9,7 @@ import type {
   FinanceReceiptRecord,
 } from "@/lib/types";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 type PortalFinanceDashboardProps = {
   summary: FinanceDashboardSummary & {
@@ -884,193 +885,125 @@ export function PortalFinanceDashboard({
               </div>
             </div>
 
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "0.85rem",
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    color: "#9ca3af",
-                    borderBottom: "1px solid #f3f4f6",
-                  }}
+            <div style={{ fontSize: "0.85rem" }}>
+              <DashboardListHeader template="minmax(0,2fr) 100px 130px 120px 120px">
+                <span>Name</span>
+                <span>Type</span>
+                <span>Date</span>
+                <span style={{ textAlign: "center" }}>Amount</span>
+                <span style={{ textAlign: "right" }}>Status</span>
+              </DashboardListHeader>
+              {activityRows.slice(0, 5).map((item) => (
+                <DashboardListRow
+                  key={item.id}
+                  template="minmax(0,2fr) 100px 130px 120px 120px"
                 >
-                  <th
-                    style={{
-                      textAlign: "left",
-                      paddingBottom: "1rem",
-                      fontWeight: 500,
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Name
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "left",
-                      paddingBottom: "1rem",
-                      fontWeight: 500,
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Type
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "left",
-                      paddingBottom: "1rem",
-                      fontWeight: 500,
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Date
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "center",
-                      paddingBottom: "1rem",
-                      fontWeight: 500,
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Amount
-                  </th>
-                  <th
-                    style={{
-                      textAlign: "right",
-                      paddingBottom: "1rem",
-                      fontWeight: 500,
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {activityRows.slice(0, 5).map((item) => (
-                  <tr
-                    key={item.id}
-                    style={{ borderBottom: "1px solid #f3f4f6" }}
-                  >
-                    <td
+                  <span style={{ display: "flex", alignItems: "center", gap: "1rem", minWidth: 0 }}>
+                    <span
                       style={{
-                        padding: "1rem 0",
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "12px",
+                        background:
+                          item.type === "Receipt"
+                            ? "#dcfce7"
+                            : item.type === "Expense"
+                              ? "#ffe4e6"
+                              : "#e0e7ff",
                         display: "flex",
                         alignItems: "center",
-                        gap: "1rem",
+                        justifyContent: "center",
+                        fontSize: "1rem",
+                        flexShrink: 0,
                       }}
                     >
-                      <div
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "12px",
-                          background:
-                            item.type === "Receipt"
-                              ? "#dcfce7"
-                              : item.type === "Expense"
-                                ? "#ffe4e6"
-                                : "#e0e7ff",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "1rem",
-                        }}
-                      >
-                        {item.type === "Receipt"
-                          ? "💵"
-                          : item.type === "Expense"
-                            ? "💳"
-                            : "📄"}
-                      </div>
-                      <div>
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            color: "#111827",
-                            fontSize: "0.9rem",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          {item.counterparty}
-                        </div>
-                        <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                          {item.ref}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 600, color: "#4b5563" }}>
-                      {item.type}
-                    </td>
-                    <td>
-                      <div
-                        style={{
-                          color: "#4b5563",
-                          fontWeight: 500,
-                          fontSize: "0.8rem",
-                          marginBottom: "2px",
-                        }}
-                      >
-                        {formatDate(item.date)}
-                      </div>
-                      <div style={{ color: "#9ca3af", fontSize: "0.7rem" }}>
-                        10:32 PM
-                      </div>
-                    </td>
-                    <td
-                      style={{
-                        textAlign: "center",
-                        fontWeight: 600,
-                        color: "#111827",
-                      }}
-                    >
-                      {item.amount}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
+                      {item.type === "Receipt"
+                        ? "💵"
+                        : item.type === "Expense"
+                          ? "💳"
+                          : "📄"}
+                    </span>
+                    <span style={{ minWidth: 0 }}>
                       <span
                         style={{
-                          padding: "0.35rem 0.85rem",
-                          borderRadius: "20px",
-                          fontSize: "0.75rem",
                           fontWeight: 600,
-                          backgroundColor:
-                            item.status === "paid" ||
-                            item.status === "completed"
-                              ? "#dcfce7"
-                              : "#fef3c7",
-                          color:
-                            item.status === "paid" ||
-                            item.status === "completed"
-                              ? "#166534"
-                              : "#b45309",
+                          color: "#111827",
+                          fontSize: "0.9rem",
+                          marginBottom: "4px",
+                          display: "block",
                         }}
                       >
-                        {item.status.charAt(0).toUpperCase() +
-                          item.status.slice(1)}
+                        {item.counterparty}
                       </span>
-                    </td>
-                  </tr>
-                ))}
-                {activityRows.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={5}
+                      <span style={{ fontSize: "0.75rem", color: "#9ca3af", display: "block" }}>
+                        {item.ref}
+                      </span>
+                    </span>
+                  </span>
+                  <span style={{ fontWeight: 600, color: "#4b5563" }}>
+                    {item.type}
+                  </span>
+                  <span>
+                    <span
                       style={{
-                        padding: "2rem",
-                        textAlign: "center",
-                        color: "#9ca3af",
+                        color: "#4b5563",
+                        fontWeight: 500,
+                        fontSize: "0.8rem",
+                        display: "block",
                       }}
                     >
-                      No recent activity found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      {formatDate(item.date)}
+                    </span>
+                    <span style={{ color: "#9ca3af", fontSize: "0.7rem", display: "block" }}>
+                      10:32 PM
+                    </span>
+                  </span>
+                  <span
+                    style={{
+                      textAlign: "center",
+                      fontWeight: 600,
+                      color: "#111827",
+                    }}
+                  >
+                    {item.amount}
+                  </span>
+                  <span style={{ textAlign: "right" }}>
+                    <span
+                      style={{
+                        padding: "0.35rem 0.85rem",
+                        borderRadius: "20px",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        backgroundColor:
+                          item.status === "paid" ||
+                          item.status === "completed"
+                            ? "#dcfce7"
+                            : "#fef3c7",
+                        color:
+                          item.status === "paid" ||
+                          item.status === "completed"
+                            ? "#166534"
+                            : "#b45309",
+                      }}
+                    >
+                      {item.status.charAt(0).toUpperCase() +
+                        item.status.slice(1)}
+                    </span>
+                  </span>
+                </DashboardListRow>
+              ))}
+              {activityRows.length === 0 && (
+                <div
+                  style={{
+                    padding: "2rem",
+                    textAlign: "center",
+                    color: "#9ca3af",
+                  }}
+                >
+                  No recent activity found.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -167,28 +167,29 @@ export function PortalFinanceReportsHub() {
             </div>
           ) : (
             <div className="table-wrapper">
-              <table className="table">
-                <thead>
-                  <tr>
-                    {Object.keys(reportData[0]).map(key => (
-                      <th key={key} className={typeof reportData[0][key] === 'number' ? 'text-right' : 'text-left'}>
-                        {formatColumnHeader(key)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.map((row, i) => (
-                    <tr key={i}>
-                      {Object.keys(row).map(key => (
-                        <td key={key} className={typeof row[key] === 'number' ? 'text-right' : 'text-left'}>
-                          {formatCell(key, row[key])}
-                        </td>
-                      ))}
-                    </tr>
+              <div
+                className="grid items-center text-xs uppercase tracking-wider text-gray-500 border-b border-gray-200 py-2 px-3 gap-3"
+                style={{ gridTemplateColumns: `repeat(${Object.keys(reportData[0]).length}, minmax(0, 1fr))` }}
+              >
+                {Object.keys(reportData[0]).map(key => (
+                  <span key={key} className={typeof reportData[0][key] === 'number' ? 'text-right' : 'text-left'}>
+                    {formatColumnHeader(key)}
+                  </span>
+                ))}
+              </div>
+              {reportData.map((row, i) => (
+                <div
+                  key={i}
+                  className="grid items-center text-sm border-b border-gray-100 last:border-b-0 py-2 px-3 gap-3"
+                  style={{ gridTemplateColumns: `repeat(${Object.keys(row).length}, minmax(0, 1fr))` }}
+                >
+                  {Object.keys(row).map(key => (
+                    <span key={key} className={typeof row[key] === 'number' ? 'text-right' : 'text-left'}>
+                      {formatCell(key, row[key])}
+                    </span>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ))}
             </div>
           )}
         </div>

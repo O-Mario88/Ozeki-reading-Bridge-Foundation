@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import type { FinanceOperationBudget, PortalUser } from "@/lib/types";
 
 const BUDGET_CATEGORIES = [
@@ -402,72 +403,71 @@ export function PortalFinanceBudgetManager({ initialBudgets }: Props) {
                                     No line items added yet.
                                 </div>
                             ) : (
-                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-                                    <thead>
-                                        <tr style={{ textAlign: "left", color: "#64748b", borderBottom: "2px solid #e2e8f0" }}>
-                                            <th style={{ padding: "0.75rem 0.5rem", width: "25%" }}>Category</th>
-                                            <th style={{ padding: "0.75rem 0.5rem", width: "35%" }}>Description</th>
-                                            <th style={{ padding: "0.75rem 0.5rem", width: "12%" }}>Qty</th>
-                                            <th style={{ padding: "0.75rem 0.5rem", width: "18%" }}>Unit Cost</th>
-                                            <th style={{ padding: "0.75rem 0.5rem", width: "10%", textAlign: "center" }}></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {items.map((item) => (
-                                            <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                                <td style={{ padding: "0.75rem 0.5rem" }}>
-                                                    <select 
-                                                        value={item.category} 
-                                                        onChange={e => updateItem(item.id, "category", e.target.value)}
-                                                        style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                                                    >
-                                                        {BUDGET_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                                    </select>
-                                                </td>
-                                                <td style={{ padding: "0.75rem 0.5rem" }}>
-                                                    <input 
-                                                        value={item.description} 
-                                                        onChange={e => updateItem(item.id, "description", e.target.value)}
-                                                        placeholder="Item detail..."
-                                                        style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                                                    />
-                                                </td>
-                                                <td style={{ padding: "0.75rem 0.5rem" }}>
-                                                    <input 
-                                                        type="number" min="1"
-                                                        value={item.quantity} 
-                                                        onChange={e => updateItem(item.id, "quantity", e.target.value)}
-                                                        style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                                                    />
-                                                </td>
-                                                <td style={{ padding: "0.75rem 0.5rem" }}>
-                                                    <input 
-                                                        type="number" min="0" step="1000"
-                                                        value={item.unitCost} 
-                                                        onChange={e => updateItem(item.id, "unitCost", e.target.value)}
-                                                        style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                                                    />
-                                                </td>
-                                                <td style={{ padding: "0.75rem 0.5rem", textAlign: "center" }}>
-                                                    <button 
-                                                        onClick={() => handleRemoveItem(item.id)}
-                                                        style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontSize: "1.1rem" }}
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <td colSpan={3}></td>
-                                            <td colSpan={2} style={{ padding: "1rem 0.5rem", textAlign: "right", fontWeight: 700, fontSize: "1.1rem", color: "#0f172a" }}>
-                                                Total: {formatMoney("UGX", formTotal)}
-                                            </td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                                <div style={{ fontSize: "0.9rem" }}>
+                                    <DashboardListHeader template="minmax(0,1.4fr) minmax(0,2fr) 100px 150px 60px">
+                                        <span>Category</span>
+                                        <span>Description</span>
+                                        <span>Qty</span>
+                                        <span>Unit Cost</span>
+                                        <span className="text-center" />
+                                    </DashboardListHeader>
+                                    {items.map((item) => (
+                                        <DashboardListRow
+                                            key={item.id}
+                                            template="minmax(0,1.4fr) minmax(0,2fr) 100px 150px 60px"
+                                        >
+                                            <span>
+                                                <select
+                                                    title="Category"
+                                                    value={item.category}
+                                                    onChange={e => updateItem(item.id, "category", e.target.value)}
+                                                    style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                                >
+                                                    {BUDGET_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                                </select>
+                                            </span>
+                                            <span>
+                                                <input
+                                                    value={item.description}
+                                                    onChange={e => updateItem(item.id, "description", e.target.value)}
+                                                    placeholder="Item detail..."
+                                                    style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                                />
+                                            </span>
+                                            <span>
+                                                <input
+                                                    type="number" min="1"
+                                                    aria-label="Quantity"
+                                                    value={item.quantity}
+                                                    onChange={e => updateItem(item.id, "quantity", e.target.value)}
+                                                    style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                                />
+                                            </span>
+                                            <span>
+                                                <input
+                                                    type="number" min="0" step="1000"
+                                                    aria-label="Unit cost"
+                                                    value={item.unitCost}
+                                                    onChange={e => updateItem(item.id, "unitCost", e.target.value)}
+                                                    style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                                />
+                                            </span>
+                                            <span style={{ textAlign: "center" }}>
+                                                <button
+                                                    type="button"
+                                                    aria-label="Remove row"
+                                                    onClick={() => handleRemoveItem(item.id)}
+                                                    style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontSize: "1.1rem" }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </span>
+                                        </DashboardListRow>
+                                    ))}
+                                    <div style={{ padding: "1rem 0.5rem", textAlign: "right", fontWeight: 700, fontSize: "1.1rem", color: "#0f172a" }}>
+                                        Total: {formatMoney("UGX", formTotal)}
+                                    </div>
+                                </div>
                             )}
                         </div>
 

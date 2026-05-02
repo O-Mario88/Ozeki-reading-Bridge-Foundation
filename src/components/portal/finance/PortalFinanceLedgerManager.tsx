@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { FinanceLedgerTransactionRecord } from "@/lib/types";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 
 type PortalFinanceLedgerManagerProps = {
   title: string;
@@ -108,51 +109,48 @@ export function PortalFinanceLedgerManager({
           <p>No transactions found.</p>
         ) : (
           <div className="table-wrap finance-table-compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Category</th>
-                  <th>Amount</th>
-                  <th>Counterparty</th>
-                  <th>Source</th>
-                  <th>Status</th>
-                  <th>Evidence</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTransactions.map((item) => (
-                  <tr key={item.id}>
-                    <td>{formatDate(item.date)}</td>
-                    <td>
-                      <strong>{item.category}</strong>
-                      <div className="portal-muted">{item.subcategory || "—"}</div>
-                    </td>
-                    <td>{formatMoney(item.currency, item.amount)}</td>
-                    <td>{item.counterpartyName || "—"}</td>
-                    <td>
-                      {item.sourceType} #{item.sourceId}
-                    </td>
-                    <td>
-                      <span className={`finance-status-tag finance-status-${item.postedStatus}`}>{item.postedStatus}</span>
-                    </td>
-                    <td>
-                      {item.evidenceFiles.length > 0 ? (
-                        <div className="portal-list">
-                          {item.evidenceFiles.map((file) => (
-                            <a key={file.id} href={file.signedUrl} target="_blank" rel="noreferrer">
-                              {file.fileName}
-                            </a>
-                          ))}
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="100px minmax(0,1.4fr) 130px minmax(0,1fr) minmax(0,1fr) 110px minmax(0,1.4fr)">
+              <span>Date</span>
+              <span>Category</span>
+              <span>Amount</span>
+              <span>Counterparty</span>
+              <span>Source</span>
+              <span>Status</span>
+              <span>Evidence</span>
+            </DashboardListHeader>
+            {filteredTransactions.map((item) => (
+              <DashboardListRow
+                key={item.id}
+                template="100px minmax(0,1.4fr) 130px minmax(0,1fr) minmax(0,1fr) 110px minmax(0,1.4fr)"
+              >
+                <span>{formatDate(item.date)}</span>
+                <span className="min-w-0">
+                  <strong className="block truncate">{item.category}</strong>
+                  <span className="portal-muted block truncate">{item.subcategory || "—"}</span>
+                </span>
+                <span>{formatMoney(item.currency, item.amount)}</span>
+                <span className="truncate">{item.counterpartyName || "—"}</span>
+                <span className="truncate">
+                  {item.sourceType} #{item.sourceId}
+                </span>
+                <span>
+                  <span className={`finance-status-tag finance-status-${item.postedStatus}`}>{item.postedStatus}</span>
+                </span>
+                <span className="min-w-0">
+                  {item.evidenceFiles.length > 0 ? (
+                    <span className="portal-list">
+                      {item.evidenceFiles.map((file) => (
+                        <a key={file.id} href={file.signedUrl} target="_blank" rel="noreferrer" className="block truncate">
+                          {file.fileName}
+                        </a>
+                      ))}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>

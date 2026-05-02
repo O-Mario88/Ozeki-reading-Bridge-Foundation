@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { FormModal, FormPage, FormSection, FormField, FormActions } from "@/components/forms";
 import { FinanceDestructiveActionModal } from "@/components/portal/finance/FinanceDestructiveActionModal";
 import { formatDate, formatMoney } from "@/components/portal/finance/format";
+import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
 import type { FinanceContactRecord, FinanceInvoiceRecord, FinanceReceiptRecord } from "@/lib/types";
@@ -371,76 +372,73 @@ export function PortalFinanceReceiptsManager({
           <p>No receipts match the current search/filter.</p>
         ) : (
           <div className="table-wrap finance-table-compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>Receipt</th>
-                  <th>Date</th>
-                  <th>Category</th>
-                  <th>Description / Particulars</th>
-                  <th>Amount</th>
-                  <th>Method</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReceipts.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <strong>{item.receiptNumber}</strong>
-                      <div className="portal-muted">{item.receivedFrom}</div>
-                    </td>
-                    <td>{formatDate(item.receiptDate)}</td>
-                    <td>{item.category}</td>
-                    <td title={item.description || "No description provided."}>
-                      {item.description?.trim() ? item.description : <span className="portal-muted">-</span>}
-                    </td>
-                    <td>{formatMoney(item.currency, item.amountReceived)}</td>
-                    <td>{item.paymentMethod}</td>
-                    <td><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></td>
-                    <td>
-                      <div className="action-row finance-row-actions">
-                        <button
-                          type="button"
-                          className="button button-ghost button-sm"
-                          onClick={() => handleIssue(item.id)}
-                          disabled={saving || item.status !== "draft"}
-                        >
-                          Issue
-                        </button>
-                        <button
-                          type="button"
-                          className="button button-ghost button-sm"
-                          onClick={() => handleSend(item.id)}
-                          disabled={saving || item.status === "void"}
-                        >
-                          Send
-                        </button>
-                        <button
-                          type="button"
-                          className="button button-ghost button-sm finance-row-danger"
-                          onClick={() => setDestructiveTarget(item)}
-                          disabled={saving || item.status === "void"}
-                          title={item.status === "draft" ? "Delete draft" : "Void posted"}
-                        >
-                          {item.status === "draft" ? "Delete" : "Void"}
-                        </button>
-                        <a
-                          className="button button-ghost button-sm"
-                          href={`/api/portal/finance/receipts/${item.id}/pdf`}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Download latest PDF"
-                        >
-                          Download PDF
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DashboardListHeader template="160px 100px 110px minmax(0,1.6fr) 130px 110px 110px minmax(0,1.6fr)">
+              <span>Receipt</span>
+              <span>Date</span>
+              <span>Category</span>
+              <span>Description / Particulars</span>
+              <span>Amount</span>
+              <span>Method</span>
+              <span>Status</span>
+              <span>Actions</span>
+            </DashboardListHeader>
+            {filteredReceipts.map((item) => (
+              <DashboardListRow
+                key={item.id}
+                template="160px 100px 110px minmax(0,1.6fr) 130px 110px 110px minmax(0,1.6fr)"
+              >
+                <span className="min-w-0">
+                  <strong className="block truncate">{item.receiptNumber}</strong>
+                  <span className="portal-muted block truncate">{item.receivedFrom}</span>
+                </span>
+                <span>{formatDate(item.receiptDate)}</span>
+                <span className="truncate">{item.category}</span>
+                <span className="truncate" title={item.description || "No description provided."}>
+                  {item.description?.trim() ? item.description : <span className="portal-muted">-</span>}
+                </span>
+                <span>{formatMoney(item.currency, item.amountReceived)}</span>
+                <span>{item.paymentMethod}</span>
+                <span><span className={`finance-status-tag finance-status-${item.status}`}>{item.status}</span></span>
+                <span>
+                  <span className="action-row finance-row-actions">
+                    <button
+                      type="button"
+                      className="button button-ghost button-sm"
+                      onClick={() => handleIssue(item.id)}
+                      disabled={saving || item.status !== "draft"}
+                    >
+                      Issue
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-ghost button-sm"
+                      onClick={() => handleSend(item.id)}
+                      disabled={saving || item.status === "void"}
+                    >
+                      Send
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-ghost button-sm finance-row-danger"
+                      onClick={() => setDestructiveTarget(item)}
+                      disabled={saving || item.status === "void"}
+                      title={item.status === "draft" ? "Delete draft" : "Void posted"}
+                    >
+                      {item.status === "draft" ? "Delete" : "Void"}
+                    </button>
+                    <a
+                      className="button button-ghost button-sm"
+                      href={`/api/portal/finance/receipts/${item.id}/pdf`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Download latest PDF"
+                    >
+                      Download PDF
+                    </a>
+                  </span>
+                </span>
+              </DashboardListRow>
+            ))}
           </div>
         )}
       </section>
