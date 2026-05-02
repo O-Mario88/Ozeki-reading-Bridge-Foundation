@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   allUgandaDistricts,
@@ -22,6 +23,10 @@ import { LiteracyImpactFormModal } from "./LiteracyImpactFormModal";
 
 interface PortalSchoolsManagerProps {
   initialSchools: SchoolDirectoryRecord[];
+  /** When true, hide the directory grid + profile pane and render only the
+   *  "New School" modal — auto-opened. Used by /portal/schools/new so the
+   *  Add School button on the dashboard goes straight to the input form. */
+  createOnly?: boolean;
 }
 
 type Feedback = {
@@ -45,7 +50,9 @@ function normalizeContactValue(value: string | null | undefined) {
 
 export function PortalSchoolsManager({
   initialSchools,
+  createOnly = false,
 }: PortalSchoolsManagerProps) {
+  const router = useRouter();
   const [schools, setSchools] = useState(initialSchools);
   const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(
     initialSchools[0]?.id ?? null,
@@ -65,7 +72,7 @@ export function PortalSchoolsManager({
   const [savingProfile, setSavingProfile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(createOnly);
   const [isEnrollmentFormOpen, setIsEnrollmentFormOpen] = useState(false);
   const [isLiteracyImpactFormOpen, setIsLiteracyImpactFormOpen] = useState(false);
   const [createContactName, setCreateContactName] = useState("");
@@ -337,6 +344,12 @@ export function PortalSchoolsManager({
         kind: "success",
         message: `School ${data.school.schoolCode} saved. Next: add reading teachers, schedule first visit, and create a baseline assessment session from the school profile actions.`,
       });
+      // In createOnly mode (the dedicated /portal/schools/new route), jump
+      // straight to the new school's dashboard once the save completes —
+      // there's no directory underneath to navigate back to.
+      if (createOnly) {
+        router.push(`/portal/schools/${data.school.id}`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not save school.";
       setCreateFeedback({ kind: "error", message });
@@ -505,30 +518,46 @@ export function PortalSchoolsManager({
     return <section className="ds-card">Loading schools...</section>;
   }
 
+  /* createOnly mode (used by /portal/schools/new): render only the
+     New School modal — no directory grid, no profile pane, no
+     listing. Modal close redirects back to the Schools dashboard
+     since there's nothing to fall back to underneath. */
+  const handleCreateModalClose = () => {
+    if (createOnly) {
+      router.push("/portal/schools");
+    } else {
+      setIsCreateFormOpen(false);
+    }
+  };
+
   return (
     <div className="portal-grid">
-      <section className="ds-card">
-        <div className="portal-school-create-header">
-          <h2>New School Entry</h2>
-          <button
-            className="button button-compact"
-            type="button"
-            onClick={() => {
-              setIsCreateFormOpen(true);
-              setCreateFeedback({ kind: "idle", message: "" });
-            }}
-          >
-            + New School
-          </button>
-        </div>
-        <p className="portal-muted">Create school records in a floating form without leaving this page.</p>
+      {!createOnly && (
+        <section className="ds-card">
+          <div className="portal-school-create-header">
+            <h2>New School Entry</h2>
+            <button
+              className="button button-compact"
+              type="button"
+              onClick={() => {
+                setIsCreateFormOpen(true);
+                setCreateFeedback({ kind: "idle", message: "" });
+              }}
+            >
+              + New School
+            </button>
+          </div>
+          <p className="portal-muted">Create school records in a floating form without leaving this page.</p>
+        </section>
+      )}
+      <section className="ds-card" hidden={!createOnly && !isCreateFormOpen}>
         {isCreateFormOpen ? (
           <FormModal
             open={isCreateFormOpen}
-            onClose={() => setIsCreateFormOpen(false)}
+            onClose={handleCreateModalClose}
             title="New School Entry"
             description="Add a new school account and baseline metadata."
-            closeLabel="Close"
+            closeLabel={createOnly ? "Cancel" : "Close"}
             maxWidth="1080px"
           >
             <form ref={createFormRef} className="form-grid portal-form-grid portal-form-grid-side" onSubmit={handleCreateSchool}>
@@ -785,6 +814,8 @@ export function PortalSchoolsManager({
         ) : null}
       </section>
 
+      {!createOnly && (
+      <>
       <section className="ds-card">
         <h2>School Profile</h2>
         {!selectedSchool ? (
@@ -1331,6 +1362,8 @@ export function PortalSchoolsManager({
           </table>
         </div>
       </section>
+      </>
+      )}
     </div >
   );
 }

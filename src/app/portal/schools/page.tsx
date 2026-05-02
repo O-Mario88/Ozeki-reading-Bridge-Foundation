@@ -125,7 +125,15 @@ export default async function SchoolsOverviewPage() {
               <span className="sm:hidden">Export</span>
             </Link>
             <Link
-              href="/portal/schools/directory?action=new"
+              href="/portal/schools/directory"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50 whitespace-nowrap"
+            >
+              <SchoolIcon className="h-4 w-4" strokeWidth={1.75} />
+              <span className="hidden sm:inline">School Directory</span>
+              <span className="sm:hidden">Directory</span>
+            </Link>
+            <Link
+              href="/portal/schools/new"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50 whitespace-nowrap"
             >
               <Plus className="h-4 w-4" strokeWidth={1.75} />
@@ -136,7 +144,7 @@ export default async function SchoolsOverviewPage() {
               href="/portal/schools/directory"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800 whitespace-nowrap"
             >
-              <SchoolIcon className="h-4 w-4" strokeWidth={1.75} />
+              <Activity className="h-4 w-4" strokeWidth={1.75} />
               Actions
               <ChevronDown className="h-3.5 w-3.5" strokeWidth={2} />
             </Link>
