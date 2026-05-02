@@ -8,8 +8,65 @@ import {
 } from "lucide-react";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import {
+  getInterventionsKpis,
+  listInterventionPlans,
+  getInterventionProgressTrend,
+  getInterventionTypeMix,
+  getInterventionOutcomeFunnel,
+  getInterventionRegionCoverage,
+  listPriorityQueue,
+  listPlanActions,
+  listOwnerWorkload,
+  listInterventionActivity,
+  listInterventionEvidence,
+} from "@/lib/server/postgres/repositories/interventions";
 
 export const dynamic = "force-dynamic";
+
+/* Pretty-format a Postgres date/timestamp as the dashboard's "MMM DD, YYYY"
+   style. Falls through to the original string if the value is already
+   pre-formatted (the FALLBACK constant uses pre-formatted strings). */
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try {
+    return new Date(iso).toLocaleDateString("en-US", {
+      month: "short", day: "2-digit", year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function fmtDateTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  try {
+    return new Date(iso)
+      .toLocaleString("en-US", {
+        month: "short", day: "2-digit", year: "numeric",
+        hour: "numeric", minute: "2-digit",
+      })
+      .replace(",", " •");
+  } catch {
+    return iso;
+  }
+}
+
+/* Try a repo function and return its value on success, otherwise null.
+   Each card on the page checks for null and falls back to the FALLBACK
+   constant. Repo errors (missing table, bad query) are logged once
+   and do NOT take the page down. */
+async function safeFetch<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (err) {
+    logger.warn(`[interventions] ${label} failed; falling back to mock`, { error: String(err) });
+    return null;
+  }
+}
 
 export const metadata = {
   title: "Interventions Overview | Ozeki Portal",
@@ -20,7 +77,7 @@ export const metadata = {
 /* ────────────────────────────────────────────────────────────────────
    Reference data — frozen verbatim from the supplied screenshot.
    ──────────────────────────────────────────────────────────────────── */
-const DATA = {
+const FALLBACK = {
   tabs: [
     { label: "Benchmarks",        href: "/portal/benchmarks" },
     { label: "Data Quality",      href: "/portal/data-quality" },
@@ -133,6 +190,142 @@ const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
 export default async function PortalInterventionsOverviewPage() {
   const user = await requirePortalStaffUser();
+
+  /* ── Fetch live data in parallel; each repo returns null on miss/error
+        and we fall back to the screenshot constants below so an empty
+        intervention_* table still renders the same UI as before. ───── */
+  const [
+    liveKpis,
+    livePlansPage,
+    liveTrend,
+    liveTypeMix,
+    liveFunnel,
+    liveRegions,
+    liveQueue,
+    liveActions,
+    liveWorkload,
+    liveActivity,
+    liveEvidence,
+  ] = await Promise.all([
+    safeFetch("kpis",         () => getInterventionsKpis()),
+    safeFetch("plans",        () => listInterventionPlans({ limit: 5 })),
+    safeFetch("trend",        () => getInterventionProgressTrend(6)),
+    safeFetch("typeMix",      () => getInterventionTypeMix()),
+    safeFetch("funnel",       () => getInterventionOutcomeFunnel()),
+    safeFetch("regions",      () => getInterventionRegionCoverage()),
+    safeFetch("priorityQueue", () => listPriorityQueue(4)),
+    safeFetch("planActions",  () => listPlanActions(5)),
+    safeFetch("workload",     () => listOwnerWorkload(5)),
+    safeFetch("activity",     () => listInterventionActivity(4)),
+    safeFetch("evidence",     () => listInterventionEvidence(5)),
+  ]);
+
+  /* ── Overlay live data onto the FALLBACK structure. The renderer
+        below reads everything from `DATA`. Anything that returned
+        null/empty stays at the screenshot value, anything live
+        replaces it. Shape conversions (Postgres ISO dates → display
+        strings, repo column names → renderer field names) live here
+        so the JSX stays simple. ─────────────────────────────────── */
+  const ownerColors: Record<string, string> = {
+    JN: "#10b981", PO: "#2563eb", AM: "#f59e0b", BW: "#8b5cf6", NT: "#ef4444",
+  };
+  const colorFor = (init: string) =>
+    ownerColors[init] ?? `hsl(${(init.charCodeAt(0) * 37) % 360} 65% 45%)`;
+
+  const DATA = {
+    ...FALLBACK,
+    kpis: liveKpis
+      ? FALLBACK.kpis.map((k) => {
+          const lookup: Record<string, string> = {
+            "Active Plans":               String(liveKpis.activePlans),
+            "Schools Under Intervention": String(liveKpis.schoolsUnderIntervention),
+            "Open Actions":               String(liveKpis.openActions),
+            "Overdue Actions":            String(liveKpis.overdueActions),
+            "Owners Assigned":            String(liveKpis.ownersAssigned),
+            "Avg Plan Completion":        `${liveKpis.avgPlanCompletionPct}%`,
+            "High-Risk Schools":          String(liveKpis.highRiskSchools),
+          };
+          return { ...k, value: lookup[k.label] ?? k.value };
+        })
+      : FALLBACK.kpis,
+    trend: liveTrend && liveTrend.length > 0
+      ? { months: liveTrend.map((p) => p.month), values: liveTrend.map((p) => p.pct) }
+      : FALLBACK.trend,
+    typeMix: liveTypeMix && liveTypeMix.length > 0
+      ? {
+          total: liveTypeMix.reduce((n, r) => n + r.value, 0),
+          rows: liveTypeMix.map((r, i) => ({
+            ...r,
+            color: FALLBACK.typeMix.rows[i]?.color ?? "#10b981",
+          })),
+        }
+      : FALLBACK.typeMix,
+    funnel: liveFunnel && liveFunnel.length > 0
+      ? liveFunnel.map((r, i) => ({ ...r, color: FALLBACK.funnel[i]?.color ?? "#10b981" }))
+      : FALLBACK.funnel,
+    regions: liveRegions && liveRegions.length > 0 ? liveRegions : FALLBACK.regions,
+    plans: livePlansPage && livePlansPage.rows.length > 0
+      ? livePlansPage.rows.map((p) => ({
+          id:          p.id,
+          title:       p.title,
+          scope:       p.scope,
+          owner:       p.ownerName ?? "—",
+          ownerInit:   p.ownerInitials,
+          ownerColor:  colorFor(p.ownerInitials),
+          status:      p.status,
+          progress:    p.progress,
+          due:         fmtDate(p.due),
+          risk:        p.risk,
+          updated:     fmtDate(p.updated),
+        }))
+      : FALLBACK.plans,
+    totalPlans: livePlansPage?.total ?? FALLBACK.totalPlans,
+    priorityQueue: liveQueue && liveQueue.length > 0
+      ? liveQueue.map((q) => ({ ...q, due: fmtDate(q.due) }))
+      : FALLBACK.priorityQueue,
+    planActions: liveActions && liveActions.length > 0
+      ? liveActions.map((a) => ({
+          action: a.action,
+          plan:   a.plan,
+          owner:  a.ownerName ?? "—",
+          due:    fmtDate(a.due),
+          status: a.status,
+        }))
+      : FALLBACK.planActions,
+    workload: liveWorkload && liveWorkload.length > 0
+      ? liveWorkload.map((w, i) => ({
+          rank: i + 1,
+          owner: w.ownerName,
+          active: w.activePlans,
+          completion: w.avgCompletionPct,
+        }))
+      : FALLBACK.workload,
+    activity: liveActivity && liveActivity.length > 0
+      ? liveActivity.map((a) => {
+          const fb = FALLBACK.activity[0];
+          return {
+            tone: fb.tone,
+            icon: fb.icon,
+            title: a.message,
+            when:  fmtDateTime(a.occurredAt),
+          };
+        })
+      : FALLBACK.activity,
+    evidence: liveEvidence && liveEvidence.length > 0
+      ? liveEvidence.map((e, i) => {
+          const fb = FALLBACK.evidence[i] ?? FALLBACK.evidence[0];
+          return {
+            file: e.fileName,
+            icon: fb.icon,
+            tone: fb.tone,
+            plan: e.planId ?? "—",
+            uploader: e.uploaderName ?? "—",
+            date: fmtDate(e.uploadedAt),
+            status: e.status,
+          };
+        })
+      : FALLBACK.evidence,
+  };
 
   return (
     <OzekiPortalShell
