@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────
+   ORBF Brand Tokens — single source of truth for the rebrand.
+   Primary teal: #066a67 • Primary orange: #ff7235.
+   Use the --orbf-* vars in raw CSS; in JSX prefer the matching
+   bg-brand-teal / text-brand-orange Tailwind classes from tailwind.config.ts.
+   ───────────────────────────────────────────────────────────────────── */
+:root {
+  --orbf-teal:        #066a67;
+  --orbf-teal-dark:   #044f4d;
+  --orbf-teal-deep:   #033f3e;
+  --orbf-teal-soft:   #e6f3f2;
+  --orbf-teal-muted:  #cce7e6;
+  --orbf-orange:      #ff7235;
+  --orbf-orange-dark: #e85f24;
+  --orbf-orange-soft: #fff0e8;
+  --orbf-orange-muted:#ffd8c4;
+  --orbf-focus-teal:   rgba(6, 106, 103, 0.35);
+  --orbf-focus-orange: rgba(255, 114, 53, 0.35);
+}
+
 /* Global Scroll Padding for Sticky Header */
 
 * {

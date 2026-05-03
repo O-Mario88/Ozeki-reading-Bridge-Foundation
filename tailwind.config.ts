@@ -9,25 +9,44 @@ const config: Config = {
         display: ["var(--font-plus-jakarta)", "sans-serif"],
       },
       colors: {
+        // Official ORBF brand palette — single source of truth.
+        // Primary teal: #066a67 • Primary orange: #ff7235.
         brand: {
+          // Backwards-compatible MD3 references (kept so existing usages
+          // like bg-brand-surface don't regress).
           primary: "var(--md-sys-color-primary)",
           secondary: "var(--md-sys-color-secondary)",
           surface: "var(--md-sys-color-surface)",
           background: "var(--md-sys-color-background)",
           text: "var(--md-sys-color-on-surface)",
           muted: "var(--md-sys-color-on-surface-variant)",
+          // New canonical brand tokens.
+          teal:        "#066a67",
+          tealDark:    "#044f4d",
+          tealDeep:    "#033f3e",
+          tealSoft:    "#e6f3f2",
+          tealMuted:   "#cce7e6",
+          orange:      "#ff7235",
+          orangeDark:  "#e85f24",
+          orangeSoft:  "#fff0e8",
+          orangeMuted: "#ffd8c4",
         },
+        // Semantic aliases.
+        primary: "#066a67",
+        accent:  "#ff7235",
+        // Legacy palette names — re-pointed to the new tokens so any
+        // unswept call sites adopt the rebrand automatically.
         ozeki: {
-          dark: "#0f172a",
+          dark:  "#0f172a",
           slate: "#1e293b",
-          green: "#006b61",
-          mint: "#e6f0ef",
-          gold: "#eab308",
+          green: "#066a67",
+          mint:  "#e6f3f2",
+          gold:  "#eab308",
         },
         charius: {
-          beige: "#FAF5EF",
-          dark: "#09110D",
-          orange: "#FA7D15",
+          beige:  "#FAF5EF",
+          dark:   "#09110D",
+          orange: "#ff7235",
         },
       },
       boxShadow: {
