@@ -241,7 +241,7 @@ function trackEvent(eventName: string, data: Record<string, string | number> = {
 
 export default function ImpactCalculatorPage() {
   const [packageKey, setPackageKey] = useState<PackageKey>("country");
-  const [currency, setCurrency] = useState<CurrencyKey>("USD");
+  const [currency, setCurrency] = useState<CurrencyKey>("UGX");
   const [amount, setAmount] = useState<number>(900000);
   const [frequency, setFrequency] = useState<FrequencyKey>("one-time");
   const [activeAccordion, setActiveAccordion] =
@@ -416,8 +416,8 @@ export default function ImpactCalculatorPage() {
                   value={currency}
                   onChange={(event) => setCurrency(event.target.value as CurrencyKey)}
                 >
-                  <option value="USD">USD</option>
                   <option value="UGX">UGX</option>
+                  <option value="USD">USD</option>
                 </select>
               </label>
 

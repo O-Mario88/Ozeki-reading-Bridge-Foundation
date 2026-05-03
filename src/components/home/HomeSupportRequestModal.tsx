@@ -123,7 +123,7 @@ const PARTNERSHIP_GOAL_OPTIONS = [
   "Build district/region evidence and reporting",
 ] as const;
 
-const BUDGET_RANGE_OPTIONS = ["<$10k", "$10-25k", "$25-50k", "$50-100k", "$100k+"] as const;
+const BUDGET_RANGE_OPTIONS = ["<UGX 50M", "UGX 50–100M", "UGX 100–250M", "UGX 250–500M", "UGX 500M+"] as const;
 
 const PREFERRED_START_OPTIONS = ["Immediate", "Next term", "Next FY", "Not sure"] as const;
 
