@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ImpactExplorerProfiles } from "@/services/dataService";
 import { PortalAnalyticsData, PortalRecordModule, PortalRecordStatus, PortalUser } from "@/lib/types";
 import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
@@ -263,8 +264,14 @@ export function PortalAnalyticsDashboard({ data, explorer, user }: PortalAnalyti
     <div className="crm-dashboard">
       <section className="card crm-shell-card">
         <div className="crm-shell-top">
-          <div className="crm-shell-brand">
-            <span>OR</span>
+          <div className="crm-shell-brand" aria-label="Ozeki Reading Bridge Foundation">
+            <Image
+              src="/photos/logo.png"
+              alt="Ozeki Reading Bridge Foundation"
+              width={32}
+              height={32}
+              className="object-contain"
+            />
           </div>
           <div className="crm-shell-search">
             <input type="search" aria-label="Search dashboard" placeholder="Search..." />

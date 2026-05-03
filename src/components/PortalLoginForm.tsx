@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { officialContactLinks } from "@/lib/contact";
 
@@ -106,9 +107,18 @@ export function PortalLoginForm() {
 
   return (
     <div className="portal-login-card">
-      {/* Branding */}
+      {/* Branding — real Ozeki Reading Bridge Foundation logo */}
       <div className="portal-login-brand">
-        <div className="portal-login-brand-icon">OR</div>
+        <div className="portal-login-brand-icon" style={{ background: "white", padding: 0, overflow: "hidden" }}>
+          <Image
+            src="/photos/logo.png"
+            alt="Ozeki Reading Bridge Foundation"
+            width={48}
+            height={48}
+            style={{ objectFit: "contain", width: "100%", height: "100%" }}
+            priority
+          />
+        </div>
         <div>
           <h1 className="portal-login-title">Login</h1>
           <p className="portal-login-subtitle">Welcome back, please sign in to your account</p>

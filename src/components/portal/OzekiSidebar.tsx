@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpenText } from "lucide-react";
+import Image from "next/image";
 import {
   glassNavItems,
   filterNavForUser,
@@ -60,10 +60,17 @@ export function OzekiSidebar({ user, activeHref, forceVisible = false }: Props) 
 
   return (
     <aside aria-label="Primary navigation" className={wrapperCls}>
-      {/* Brand */}
+      {/* Brand — real Ozeki Reading Bridge Foundation logo */}
       <div className="flex items-center gap-3 px-5 pt-6 pb-5 border-b border-white/10">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fef9c3] text-[#0d4b3a] shrink-0">
-          <BookOpenText className="h-5 w-5" strokeWidth={1.75} />
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-white shrink-0 overflow-hidden">
+          <Image
+            src="/photos/logo.png"
+            alt="Ozeki Reading Bridge Foundation"
+            width={40}
+            height={40}
+            className="object-contain"
+            priority
+          />
         </span>
         <div className="min-w-0">
           <p className="text-[13px] font-extrabold leading-none tracking-tight text-white">OZEKI</p>

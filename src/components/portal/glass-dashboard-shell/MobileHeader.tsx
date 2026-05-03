@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ReactNode, useState, useEffect } from "react";
-import { Menu, BookOpenText, X, Bell } from "lucide-react";
+import Image from "next/image";
+import { Menu, X, Bell } from "lucide-react";
 import type { PortalUser } from "@/lib/types";
 import { OzekiSidebar } from "@/components/portal/OzekiSidebar";
 
@@ -62,8 +63,14 @@ export function MobileHeader({
             aria-label="Ozeki Reading Bridge Foundation"
             className="flex items-center gap-2 min-w-0"
           >
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#fef9c3] text-[#0d4b3a] shrink-0">
-              <BookOpenText className="h-5 w-5" strokeWidth={1.75} />
+            <span className="grid h-9 w-9 place-items-center rounded-lg bg-white shrink-0 overflow-hidden">
+              <Image
+                src="/photos/logo.png"
+                alt="Ozeki Reading Bridge Foundation"
+                width={36}
+                height={36}
+                className="object-contain"
+              />
             </span>
             <span className="flex flex-col leading-none min-w-0">
               <span className="text-[14px] font-extrabold tracking-tight text-white">OZEKI</span>
