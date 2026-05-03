@@ -1,5 +1,6 @@
 import { withApiV1 } from "@/lib/server/api-v1";
 import { listSchoolsForApiPostgres } from "@/lib/server/postgres/repositories/national-intelligence";
+import { clampLimit, clampOffset } from "@/lib/server/http/pagination";
 
 export const runtime = "nodejs";
 export const revalidate = 1800;
@@ -9,8 +10,8 @@ export const GET = withApiV1.table(async (req) => {
   const result = await listSchoolsForApiPostgres({
     region: p.get("region") ?? undefined,
     district: p.get("district") ?? undefined,
-    limit: p.get("limit") ? Number(p.get("limit")) : 100,
-    offset: p.get("offset") ? Number(p.get("offset")) : 0,
+    limit: clampLimit(p.get("limit"), 100, 100),
+    offset: clampOffset(p.get("offset"), 0),
   });
   return {
     rows: result.data as unknown as Array<Record<string, unknown>>,

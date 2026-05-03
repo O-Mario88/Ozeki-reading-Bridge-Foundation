@@ -38,6 +38,22 @@ import {
   type MasteryStatus,
 } from "@/lib/mastery-assessment";
 
+/**
+ * Stable unique IDs for synthetic rows (next-action drafts, participant
+ * placeholders, evidence attachments, etc.). Replaces a previous
+ * `${Date.now()}-${Math.random()}` pattern that could collide when multiple
+ * rows were inserted in the same millisecond. Falls back to a counter+random
+ * suffix if `crypto.randomUUID` is unavailable (very old browsers).
+ */
+let __rowIdCounter = 0;
+function nextRowId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  __rowIdCounter += 1;
+  return `${Date.now()}-${__rowIdCounter}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 type FilterState = {
   region: string;
   dateFrom: string;
@@ -621,7 +637,7 @@ function parseVisitNextActions(value: unknown): VisitNextActionRow[] {
 
   const parsedRows = rows
     .map((row, index) => ({
-      id: `${Date.now()}-${index}`,
+      id: nextRowId(),
       action: String(row.action ?? "").trim(),
       ownerContactId: String(row.ownerContactId ?? row.owner_contact_id ?? "").trim(),
       dueDate: String(row.dueDate ?? row.due_date ?? "").trim().slice(0, 10),
@@ -632,7 +648,7 @@ function parseVisitNextActions(value: unknown): VisitNextActionRow[] {
     return parsedRows;
   }
 
-  return [{ id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" }];
+  return [{ id: nextRowId(), action: "", ownerContactId: "", dueDate: "" }];
 }
 
 function sanitizeContactIds(values: string[]) {
@@ -1089,7 +1105,7 @@ function parseTrainingParticipants(
 
 function createEmptyTrainingParticipantFeedbackRow(): TrainingParticipantFeedbackRow {
   return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: nextRowId(),
     contactId: "",
     contactUid: "",
     participantName: "",
@@ -1100,7 +1116,7 @@ function createEmptyTrainingParticipantFeedbackRow(): TrainingParticipantFeedbac
 
 function createEmptyTrainingFacilitatorRow(): TrainingFacilitatorRow {
   return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: nextRowId(),
     fullName: "",
     phone: "",
   };
@@ -1147,8 +1163,8 @@ function parseTrainingFeedbackBundle(raw: unknown): TrainingFeedbackBundle | nul
           id:
             row && typeof row === "object"
               ? String((row as { id?: unknown }).id ?? "").trim() ||
-                `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-              : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                nextRowId()
+              : nextRowId(),
           fullName:
             row && typeof row === "object"
               ? String((row as { fullName?: unknown }).fullName ?? "").trim()
@@ -1909,7 +1925,7 @@ export function PortalModuleManager({
   const [schoolContacts, setSchoolContacts] = useState<SchoolContactOption[]>([]);
 
   const [visitNextActions, setVisitNextActions] = useState<VisitNextActionRow[]>(() => [
-    { id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" },
+    { id: nextRowId(), action: "", ownerContactId: "", dueDate: "" },
   ]);
   const [insightRecommendationRows, setInsightRecommendationRows] = useState<
     InsightRecommendationRow[]
@@ -2215,7 +2231,7 @@ export function PortalModuleManager({
     setFileInputKey((value) => value + 1);
     setEvidenceItems([]);
     setSchoolContacts([]);
-    setVisitNextActions([{ id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" }]);
+    setVisitNextActions([{ id: nextRowId(), action: "", ownerContactId: "", dueDate: "" }]);
     setInsightRecommendationRows([]);
     setFeedback({ kind: "idle", message: "" });
   }, [newFormState]);
@@ -2324,7 +2340,7 @@ export function PortalModuleManager({
         setTrainingParticipantFeedbackRows(
           parsedBundle.participants.length > 0
             ? parsedBundle.participants.map((row) => ({
-                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                id: nextRowId(),
                 contactId: row.contactId ? String(row.contactId) : "",
                 contactUid: row.contactUid ?? "",
                 participantName: row.participantName,
@@ -2630,7 +2646,7 @@ export function PortalModuleManager({
     const seededRows = trainingParticipants
       .filter((row) => row.contactId.trim() || row.contactUid.trim() || row.participantName.trim())
       .map((row) => ({
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: nextRowId(),
         contactId: row.contactId.trim(),
         contactUid: row.contactUid.trim(),
         participantName: row.participantName.trim(),
@@ -2943,7 +2959,7 @@ export function PortalModuleManager({
                     return {
                       id:
                         String(entry.id ?? "").trim() ||
-                        `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                        nextRowId(),
                       contactId: String(entry.contactId ?? "").trim(),
                       contactUid: String(entry.contactUid ?? "").trim(),
                       participantName: String(entry.participantName ?? "").trim(),
@@ -2962,7 +2978,7 @@ export function PortalModuleManager({
                     return {
                       id:
                         String(entry.id ?? "").trim() ||
-                        `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                        nextRowId(),
                       fullName: String(entry.fullName ?? "").trim(),
                       phone: String(entry.phone ?? "").trim(),
                     } satisfies TrainingFacilitatorRow;
@@ -4981,7 +4997,7 @@ export function PortalModuleManager({
                                     : prev.region,
                                 }));
                                 setVisitNextActions([
-                                  { id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" },
+                                  { id: nextRowId(), action: "", ownerContactId: "", dueDate: "" },
                                 ]);
                               }}
                               placeholder="Type to search school..."
@@ -5699,7 +5715,7 @@ export function PortalModuleManager({
                                               row.participantName.trim(),
                                           )
                                           .map((row) => ({
-                                            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                                            id: nextRowId(),
                                             contactId: row.contactId.trim(),
                                             contactUid: row.contactUid.trim(),
                                             participantName: row.participantName.trim(),
@@ -6504,7 +6520,7 @@ export function PortalModuleManager({
                           if (isVisitModule && field.key === "leadershipNextActionsJson") {
                             const rows = visitNextActions.length > 0
                               ? visitNextActions
-                              : [{ id: `${Date.now()}-0`, action: "", ownerContactId: "", dueDate: "" }];
+                              : [{ id: nextRowId(), action: "", ownerContactId: "", dueDate: "" }];
                             return (
                               <div key={field.key} className="full-width portal-next-actions-block">
                                 <div className="portal-participants-header">
@@ -6516,7 +6532,7 @@ export function PortalModuleManager({
                                       setVisitNextActions((prev) => [
                                         ...prev,
                                         {
-                                          id: `${Date.now()}-${prev.length + 1}`,
+                                          id: nextRowId(),
                                           action: "",
                                           ownerContactId: "",
                                           dueDate: "",
@@ -6604,7 +6620,7 @@ export function PortalModuleManager({
                                               if (prev.length <= 1) {
                                                 return [
                                                   {
-                                                    id: `${Date.now()}-0`,
+                                                    id: nextRowId(),
                                                     action: "",
                                                     ownerContactId: "",
                                                     dueDate: "",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
 import { getLessonContentAnalyticsPostgres } from "@/lib/server/postgres/repositories/lesson-lms";
+import { clampLimit } from "@/lib/server/http/pagination";
 
 export const runtime = "nodejs";
 
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
     await requirePortalUser();
     const { searchParams } = new URL(request.url);
     const flaggedOnly = searchParams.get("flaggedOnly") === "1";
-    const limit = Number(searchParams.get("limit") ?? 200);
+    const limit = clampLimit(searchParams.get("limit"), 200, 1000);
     const data = await getLessonContentAnalyticsPostgres({ limit, flaggedOnly });
 
     const summary = {

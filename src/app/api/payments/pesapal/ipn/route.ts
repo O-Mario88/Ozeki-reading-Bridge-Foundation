@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 import { verifyPesapalTransactionStatus } from "@/lib/server/payments/pesapal";
+import { generateReceiptNumber } from "@/lib/server/payments/receipt-numbers";
 
 export async function POST(request: Request) {
    try {
@@ -97,7 +98,7 @@ async function processDonationWebhook(donation: Record<string, unknown>, trackin
                );
 
                if (receiptId == null) {
-                   const receiptHash = `OZK-DON-RCT-${new Date().getFullYear()}-${Math.random().toString().substring(2, 8)}`;
+                   const receiptHash = generateReceiptNumber("OZK-DON-RCT");
                    try {
                        const receiptRes = await client.query(
                            `INSERT INTO donation_receipts (
@@ -178,7 +179,16 @@ async function processServiceBookingWebhook(payment: Record<string, unknown>, tr
                    [payment.amount_requested, gatewayVerification.payment_method, JSON.stringify(ipnPayload), JSON.stringify(gatewayVerification), payment.id]
                );
 
-               const reqCheck = await client.query(`SELECT final_total, estimated_total, amount_paid FROM service_requests WHERE id = $1`, [payment.service_request_id]);
+               // Lock the service_requests row inside the same transaction so that
+               // two concurrent IPNs on different service_payments for the same
+               // booking serialise their amount_paid arithmetic — without this
+               // FOR UPDATE both could read the same baseline and overwrite each
+               // other's contribution.
+               const reqCheck = await client.query(
+                   `SELECT final_total, estimated_total, amount_paid
+                    FROM service_requests WHERE id = $1 FOR UPDATE`,
+                   [payment.service_request_id],
+               );
                const totalTarget = Number(reqCheck.rows[0].final_total) > 0 ? Number(reqCheck.rows[0].final_total) : Number(reqCheck.rows[0].estimated_total);
                const newlyAccumulatedPaid = Number(reqCheck.rows[0].amount_paid) + Number(payment.amount_requested);
                const remainingBalance = totalTarget - newlyAccumulatedPaid;
@@ -190,7 +200,7 @@ async function processServiceBookingWebhook(payment: Record<string, unknown>, tr
                );
 
                if (receiptId == null) {
-                   const receiptHash = `OZK-RCT-${new Date().getFullYear()}-${Math.random().toString().substring(2, 8)}`;
+                   const receiptHash = generateReceiptNumber("OZK-RCT");
                    try {
                        const receiptRes = await client.query(
                            `INSERT INTO payment_receipts (
@@ -285,7 +295,7 @@ async function processSponsorshipWebhook(sponsorRecord: Record<string, unknown>,
                );
 
                if (receiptId == null) {
-                   const receiptHash = `OZK-SPN-RCT-${new Date().getFullYear()}-${Math.random().toString().substring(2, 8)}`;
+                   const receiptHash = generateReceiptNumber("OZK-SPN-RCT");
                    try {
                        const receiptRes = await client.query(
                            `INSERT INTO sponsorship_receipts (

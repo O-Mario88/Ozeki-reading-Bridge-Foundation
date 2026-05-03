@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { requireAdminToken } from "@/lib/server/http/admin-auth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireAdminToken(request);
+  if (authError) return authError;
   try {
     console.log("Beginning FinTech & Services Schema Generation (Phase 5)...");
     await queryPostgres('BEGIN');

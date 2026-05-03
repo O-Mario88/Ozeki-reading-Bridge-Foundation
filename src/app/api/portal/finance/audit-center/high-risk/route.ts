@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listFinanceHighRiskTransactions } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { clampLimit } from "@/lib/server/http/pagination";
 
 export const runtime = "nodejs";
 
@@ -10,8 +11,7 @@ export async function GET(request: NextRequest) {
     return auth.error;
   }
 
-  const limitRaw = request.nextUrl.searchParams.get("limit");
-  const limit = Number(limitRaw || 25);
-  const items = await listFinanceHighRiskTransactions(Number.isFinite(limit) ? limit : 25);
+  const limit = clampLimit(request.nextUrl.searchParams.get("limit"), 25, 500);
+  const items = await listFinanceHighRiskTransactions(limit);
   return NextResponse.json({ items });
 }

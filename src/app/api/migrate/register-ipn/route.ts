@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { requireAdminToken } from "@/lib/server/http/admin-auth";
 
-export async function GET() {
+export async function GET(request: Request) {
+    const authError = requireAdminToken(request);
+    if (authError) return authError;
     try {
         const consumerKey = process.env.PESAPAL_CONSUMER_KEY;
         const consumerSecret = process.env.PESAPAL_CONSUMER_SECRET;

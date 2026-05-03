@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { getUpcomingTrainingsPostgres } from "@/lib/server/postgres/repositories/training-intelligence";
+import { clampLimit } from "@/lib/server/http/pagination";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     const from = searchParams.get("from") ?? undefined;
     const to = searchParams.get("to") ?? undefined;
     const district = searchParams.get("district") ?? undefined;
-    const limit = Number(searchParams.get("limit") ?? 100);
+    const limit = clampLimit(searchParams.get("limit"), 100, 500);
     const data = await getUpcomingTrainingsPostgres({ fromDate: from, toDate: to, district, limit });
     return NextResponse.json({ data, lastUpdated: new Date().toISOString() });
   } catch (error) {

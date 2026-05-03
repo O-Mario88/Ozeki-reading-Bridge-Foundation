@@ -84,10 +84,15 @@ export function PortalLoginForm() {
 
       if (data.requiresMfa) {
         if (data.devOtp) {
+          // Dev-only convenience: keep the code out of the URL (history,
+          // Referer, analytics) and hand it off via sessionStorage instead.
+          try {
+            window.sessionStorage.setItem(`devOtp:${data.userId}`, String(data.devOtp));
+          } catch { /* private mode: alert is the fallback */ }
           alert(`[DEV MODE] Email delivery bypassed.\nYour MFA verification code is: ${data.devOtp}`);
         }
         setState({ status: "success", message: "Verification required. Redirecting..." });
-        window.location.href = `/portal/mfa-verify?userId=${data.userId}${data.devOtp ? `&devOtp=${data.devOtp}` : ""}`;
+        window.location.href = `/portal/mfa-verify?userId=${data.userId}`;
         return;
       }
 

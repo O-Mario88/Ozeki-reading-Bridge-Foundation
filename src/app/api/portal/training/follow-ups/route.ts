@@ -6,6 +6,7 @@ import {
   getTrainingFollowUpsPostgres,
   seedTrainingFollowUpsPostgres,
 } from "@/lib/server/postgres/repositories/training-intelligence";
+import { clampLimit } from "@/lib/server/http/pagination";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
     const overdue = searchParams.get("overdue") === "1";
     const status = searchParams.get("status") || undefined;
     const mine = searchParams.get("mine") === "1";
-    const limit = Number(searchParams.get("limit") ?? 100);
+    const limit = clampLimit(searchParams.get("limit"), 100, 500);
 
     const rows = await getTrainingFollowUpsPostgres({
       ownerUserId: mine ? user.id : undefined,

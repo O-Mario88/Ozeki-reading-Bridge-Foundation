@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePortalUser } from "@/lib/auth";
 import { getWorkQueuePostgres, type WorkQueueOptions } from "@/lib/server/postgres/repositories/command-center";
+import { clampLimit } from "@/lib/server/http/pagination";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const mine = searchParams.get("mine") === "1";
     const category = searchParams.get("category") || undefined;
-    const limit = Number(searchParams.get("limit") ?? 100);
+    const limit = clampLimit(searchParams.get("limit"), 100, 1000);
 
     const items = await getWorkQueuePostgres({
       ownerUserId: mine ? user.id : undefined,

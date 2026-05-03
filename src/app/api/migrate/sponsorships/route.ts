@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { requireAdminToken } from "@/lib/server/http/admin-auth";
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  if (url.searchParams.get("secret") !== process.env.CRON_SECRET && process.env.NODE_ENV !== "development") {
-    return NextResponse.json({ message: "Unauthorized Phase 7 Migration" }, { status: 401 });
-  }
+  const authError = requireAdminToken(request);
+  if (authError) return authError;
 
   try {
     await queryPostgres('BEGIN');

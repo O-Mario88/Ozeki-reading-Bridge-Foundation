@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, Suspense } from "react";
+import { useEffect, useState, FormEvent, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { officialContactLinks } from "@/lib/contact";
 
@@ -10,6 +10,21 @@ function MfaVerifyForm() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
   const [state, setState] = useState({ status: "idle", message: "" });
+  const [devOtp, setDevOtp] = useState("");
+
+  // Dev-only: the login form parks the OTP in sessionStorage to avoid leaking
+  // it through the URL bar / history / Referer / analytics.
+  useEffect(() => {
+    if (!userId) return;
+    try {
+      const key = `devOtp:${userId}`;
+      const stored = window.sessionStorage.getItem(key);
+      if (stored) {
+        setDevOtp(stored);
+        window.sessionStorage.removeItem(key);
+      }
+    } catch { /* private mode: user types the code */ }
+  }, [userId]);
 
   if (!userId) {
     return <div className="portal-login-message error">Invalid session. Please sign in again.</div>;
@@ -54,11 +69,12 @@ function MfaVerifyForm() {
         <label className="portal-login-label">
           <div className="portal-login-input-wrap">
             <input
+              key={devOtp || "empty"}
               name="code"
               required
               maxLength={6}
               minLength={6}
-              defaultValue={searchParams.get("devOtp") ?? ""}
+              defaultValue={devOtp}
               autoComplete="one-time-code"
               placeholder="Enter 6-digit code"
               className="portal-login-input"
