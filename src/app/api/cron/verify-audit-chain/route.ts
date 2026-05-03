@@ -4,20 +4,18 @@ import {
   writeAuditCheckpointPostgres,
 } from "@/lib/server/postgres/repositories/finance-controls";
 import { logger } from "@/lib/logger";
+import { requireCronToken } from "@/lib/server/http/cron-auth";
 
 export const runtime = "nodejs";
 
 /**
  * Daily cron: verifies the finance audit chain and writes a checkpoint.
  * Consumers (public integrity badge, auditor API) read these checkpoints.
- * Protected by CRON_SECRET header — same pattern as other cron routes.
+ * Standardised on `Authorization: Bearer <CRON_SECRET_TOKEN>`.
  */
 export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  const provided = req.headers.get("x-cron-secret");
-  if (expected && expected !== provided) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = requireCronToken(req);
+  if (authError) return authError;
   try {
     const result = await verifyAuditChainPostgres();
     await writeAuditCheckpointPostgres(result);

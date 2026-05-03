@@ -6,6 +6,7 @@ import { z } from "zod";
 import { listPortalEvidencePostgres, savePortalEvidencePostgres } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import { sanitisedErrorResponse } from "@/lib/server/http/error-response";
 
 export const runtime = "nodejs";
 
@@ -128,9 +129,6 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return sanitisedErrorResponse("api/portal/evidence POST", error);
   }
 }

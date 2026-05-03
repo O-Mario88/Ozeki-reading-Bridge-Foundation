@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sendFinanceReceipt } from "@/services/financeService";
 import { requireFinanceReceiptEditor } from "@/app/api/portal/finance/_utils";
+import { readOptionalJsonBody, JsonBodyError } from "@/lib/server/http/json-body";
 
 export const runtime = "nodejs";
 
@@ -25,19 +26,20 @@ export async function POST(
   }
 
   try {
-    const parsed = bodySchema.parse(await request.json().catch(() => ({})));
+    const parsed = bodySchema.parse(await readOptionalJsonBody(request));
     const result = await sendFinanceReceipt(receiptId, auth.actor, {
       to: parsed.to,
       cc: parsed.cc,
     });
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof JsonBodyError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });
     }
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to send receipt." },
-      { status: 400 },
-    );
+    console.error("[api/portal/finance/receipts/send]", error);
+    return NextResponse.json({ error: "Failed to send receipt." }, { status: 400 });
   }
 }

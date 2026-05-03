@@ -5,6 +5,7 @@ import { initiatePesapalOrderGateway } from "@/lib/server/payments/pesapal";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { checkIdempotency, storeIdempotencyResponse } from "@/lib/server/idempotency";
 import { logger } from "@/lib/logger";
+import { normalisePhoneNumber } from "@/lib/phone";
 
 export const runtime = "nodejs";
 
@@ -49,6 +50,20 @@ export async function POST(request: NextRequest) {
     }
     const body = parsed.data;
 
+    // Normalise phone before persisting + before sending to Pesapal. We accept
+    // user-friendly separators (spaces/dashes/+/parens) but reject obvious
+    // junk (`abc def 123`) so analytics + outbound dialling stay clean.
+    let normalisedPhone: ReturnType<typeof normalisePhoneNumber> = null;
+    if (body.phone) {
+      normalisedPhone = normalisePhoneNumber(body.phone);
+      if (!normalisedPhone) {
+        return NextResponse.json(
+          { error: "Phone number contains invalid characters." },
+          { status: 400 },
+        );
+      }
+    }
+
     // Idempotency: if the client sent Idempotency-Key and we already processed
     // the identical payload, replay the original response instead of creating
     // a duplicate donation record.
@@ -68,7 +83,7 @@ export async function POST(request: NextRequest) {
       donorName: body.name ?? null,
       organizationName: body.organizationName ?? null,
       email: body.email ?? null,
-      phone: body.phone ?? null,
+      phone: normalisedPhone?.display ?? null,
       country: body.country ?? null,
       districtOrCity: body.districtOrCity ?? null,
       anonymous: Boolean(body.anonymous),
@@ -77,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Initiate Pesapal payment
     const contactPayload = {
-      phone: body.phone ?? "000000000",
+      phone: normalisedPhone?.digitsOnly ?? "000000000",
       email: body.email ?? "donor@ozekiread.org",
       name: body.anonymous ? undefined : body.name ?? undefined,
     };

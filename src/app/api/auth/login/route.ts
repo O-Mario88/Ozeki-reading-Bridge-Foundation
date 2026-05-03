@@ -30,7 +30,13 @@ export async function POST(request: Request) {
     const rateLimitKey = `portal-login:${ipAddress}:${loginIdentifier}`;
     const rateLimit = consumeRateLimit(rateLimitKey, { maxRequests: 8, windowMs: 15 * 60 * 1000 });
     if (!rateLimit.allowed) {
-      return NextResponse.json({ error: "Too many login attempts. Please wait.", retryAfterSeconds: rateLimit.retryAfterSeconds }, { status: 429 });
+      // Don't echo the bucket size in the body — it tells attackers the
+      // shape of the limiter. The standard `Retry-After` header gives
+      // legitimate clients what they need.
+      return NextResponse.json(
+        { error: "Too many login attempts. Please wait." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(rateLimit.retryAfterSeconds)) } },
+      );
     }
 
     // 2. Strict Database Brute-Force limit

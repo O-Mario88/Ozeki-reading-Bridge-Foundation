@@ -38,6 +38,20 @@ async function main() {
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     let pool: ReturnType<typeof getPostgresPool> | undefined;
+    // Errors we silently skip on every run (genuine idempotency races):
+    //   42P07 duplicate_table   42710 duplicate_object
+    //   42701 duplicate_column  42723 duplicate_function
+    const ALWAYS_TOLERABLE = new Set(["42P07", "42710", "42701", "42723"]);
+    // Errors that are USUALLY a benign re-run (index/trigger references a
+    // not-yet-present column, DROP on a constraint that was already removed)
+    // but CAN mask real "you forgot a column" bugs in newer migrations. We
+    // keep tolerating them so existing prod doesn't break, but every hit is
+    // surfaced in the end-of-run summary so a human can audit.
+    //   42703 undefined_column  42P01 undefined_table
+    //   42704 undefined_object
+    const SUSPICIOUS_TOLERABLE = new Set(["42703", "42P01", "42704"]);
+    const suspiciousHits: Array<{ file: string; code: string; message: string }> = [];
+
     try {
       pool = getPostgresPool();
       // Test connectivity first
@@ -48,24 +62,27 @@ async function main() {
           await pool.query(sql);
           console.log(`Applied PostgreSQL schema from ${schemaPath}`);
         } catch (err) {
-          // Tolerate idempotent re-run hazards that IF NOT EXISTS cannot fully
-          // defend against. Each skipped error is logged for visibility.
-          //   42P07 = duplicate_table/relation (index-vs-constraint name clash)
-          //   42710 = duplicate_object
-          //   42701 = duplicate_column
-          //   42723 = duplicate_function
-          //   42703 = undefined_column  (index references column not yet present)
-          //   42P01 = undefined_table   (referential DROP on non-existent table)
-          //   42704 = undefined_object  (DROP on non-existent constraint/index)
           const code = (err as { code?: string })?.code;
-          const tolerableCodes = new Set(["42P07", "42710", "42701", "42723", "42703", "42P01", "42704"]);
-          if (code && tolerableCodes.has(code)) {
-            console.warn(
-              `[bootstrap] Skipping ${path.basename(schemaPath)} (${code}): ${(err as Error).message}`,
-            );
+          const fileName = path.basename(schemaPath);
+          if (code && ALWAYS_TOLERABLE.has(code)) {
+            console.warn(`[bootstrap] Skipping ${fileName} (${code}): ${(err as Error).message}`);
+            continue;
+          }
+          if (code && SUSPICIOUS_TOLERABLE.has(code)) {
+            suspiciousHits.push({ file: fileName, code, message: (err as Error).message });
+            console.warn(`[bootstrap] ⚠ Suspicious skip in ${fileName} (${code}): ${(err as Error).message}`);
             continue;
           }
           throw err;
+        }
+      }
+      if (suspiciousHits.length > 0) {
+        console.warn(
+          `[bootstrap] ⚠ ${suspiciousHits.length} suspicious skip(s) — review the migrations above. ` +
+          `If any of these references a column or table that should exist, the prior migration is broken.`,
+        );
+        for (const h of suspiciousHits) {
+          console.warn(`  • ${h.file} (${h.code}): ${h.message}`);
         }
       }
       return; // success

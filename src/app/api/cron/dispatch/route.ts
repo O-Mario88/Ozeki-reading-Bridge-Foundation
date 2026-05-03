@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCronToken } from "@/lib/server/http/cron-auth";
 
 export const runtime = "nodejs";
 
@@ -10,11 +11,10 @@ export const runtime = "nodejs";
  * Expected cron cadence: hourly.
  */
 export async function GET(request: Request) {
-  const auth = request.headers.get("authorization") ?? "";
-  const expected = process.env.CRON_SECRET_TOKEN;
-  if (expected && auth !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const authError = requireCronToken(request);
+  if (authError) return authError;
+  // Re-resolve here so child fetches can forward the same token.
+  const expected = process.env.CRON_SECRET_TOKEN ?? process.env.CRON_SECRET ?? "";
 
   const url = new URL(request.url);
   const origin = `${url.protocol}//${url.host}`;
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     const t = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const r = await fetch(fullUrl, {
-        headers: { authorization: `Bearer ${expected ?? ""}` },
+        headers: { authorization: `Bearer ${expected}` },
         signal: controller.signal,
       });
       const body = await r.json().catch(() => ({}));

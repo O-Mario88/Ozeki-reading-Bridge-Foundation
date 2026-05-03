@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildDigestPayloadPostgres } from "@/lib/server/postgres/repositories/command-center";
 import { sendFinanceMail } from "@/lib/finance-email";
+import { requireCronToken } from "@/lib/server/http/cron-auth";
 
 export const runtime = "nodejs";
 
@@ -108,12 +109,8 @@ function renderDigestHtml(digest: Awaited<ReturnType<typeof buildDigestPayloadPo
 }
 
 export async function GET(request: Request) {
-  // Protect with CRON_SECRET_TOKEN like other cron endpoints in this codebase
-  const auth = request.headers.get("authorization") ?? "";
-  const expected = process.env.CRON_SECRET_TOKEN;
-  if (expected && auth !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const authError = requireCronToken(request);
+  if (authError) return authError;
 
   try {
     const { searchParams } = new URL(request.url);

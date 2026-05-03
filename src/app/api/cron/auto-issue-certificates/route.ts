@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { publishEvent } from "@/lib/server/events/publish";
+import { requireCronToken } from "@/lib/server/http/cron-auth";
 
 export const runtime = "nodejs";
 
@@ -12,11 +13,8 @@ export const runtime = "nodejs";
  * (e.g., when the event bus missed them) by re-publishing quiz.passed events.
  */
 export async function GET(request: Request) {
-  const auth = request.headers.get("authorization") ?? "";
-  const expected = process.env.CRON_SECRET_TOKEN;
-  if (expected && auth !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const authError = requireCronToken(request);
+  if (authError) return authError;
 
   const results = { trainingFlagged: 0, lessonReplayed: 0 };
 

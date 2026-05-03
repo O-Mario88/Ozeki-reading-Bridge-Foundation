@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { postFinanceExpenseAsync } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { readOptionalJsonBody, JsonBodyError } from "@/lib/server/http/json-body";
 
 export const runtime = "nodejs";
 
@@ -20,16 +21,17 @@ export async function POST(
   }
 
   try {
-    await request.json().catch(() => ({}));
+    await readOptionalJsonBody(request); // body is optional but must be valid JSON if present
     const updatedExpense = await postFinanceExpenseAsync(Number(id), auth.actor);
     return NextResponse.json({ expense: updatedExpense });
   } catch (error) {
+    if (error instanceof JsonBodyError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload." }, { status: 400 });
     }
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to post expense." },
-      { status: 400 },
-    );
+    console.error("[api/portal/finance/expenses/post]", error);
+    return NextResponse.json({ error: "Failed to post expense." }, { status: 400 });
   }
 }

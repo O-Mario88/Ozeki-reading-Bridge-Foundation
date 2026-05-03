@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
 import { runFinanceResetBatchPostgres } from "@/lib/server/postgres/repositories/finance-lifecycle";
 import { logger } from "@/lib/logger";
+import { readOptionalJsonBody, JsonBodyError } from "@/lib/server/http/json-body";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     if (!user.isSuperAdmin) {
       return NextResponse.json({ error: "Only super-admins may run a finance reset batch." }, { status: 403 });
     }
-    const body = await req.json().catch(() => ({}));
+    const body = await readOptionalJsonBody(req);
     const parsed = schema.parse(body);
 
     // Require the typed confirmation for non-dry runs so the button can't be
@@ -35,6 +36,9 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ ok: true, dryRun: Boolean(parsed.dryRun), summary: result });
   } catch (err) {
+    if (err instanceof JsonBodyError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.issues[0]?.message ?? "Invalid payload." }, { status: 400 });
     }

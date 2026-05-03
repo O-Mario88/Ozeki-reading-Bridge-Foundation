@@ -2,20 +2,13 @@ import { NextResponse } from "next/server";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { listRecordingFilesFromDrive, makeDriveFilePublicWithLink } from "@/lib/google-workspace";
 import { uploadVideoToVimeoByPull } from "@/lib/vimeo";
+import { requireCronToken } from "@/lib/server/http/cron-auth";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  // 1. Authenticate CRON Token
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET_TOKEN?.trim() || "local_dev_bypass";
-  
-  if (
-     (authHeader !== `Bearer ${cronSecret}`) && 
-     process.env.NODE_ENV === "production"
-  ) {
-     return NextResponse.json({ error: "Unauthorized Cron Connection" }, { status: 401 });
-  }
+  const authError = requireCronToken(request);
+  if (authError) return authError;
 
   try {
      console.log("[cron-sync] Starting Automated Google Drive -> Vimeo Synchronization cycle...");

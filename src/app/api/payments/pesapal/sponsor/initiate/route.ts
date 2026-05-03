@@ -5,6 +5,7 @@ import { initiatePesapalOrderGateway } from "@/lib/server/payments/pesapal";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { checkIdempotency, storeIdempotencyResponse } from "@/lib/server/idempotency";
 import { logger } from "@/lib/logger";
+import { normalisePhoneNumber } from "@/lib/phone";
 
 export const runtime = "nodejs";
 
@@ -46,6 +47,17 @@ export async function POST(request: NextRequest) {
     }
     const body = parsed.data;
 
+    let normalisedPhone: ReturnType<typeof normalisePhoneNumber> = null;
+    if (body.phone) {
+      normalisedPhone = normalisePhoneNumber(body.phone);
+      if (!normalisedPhone) {
+        return NextResponse.json(
+          { error: "Phone number contains invalid characters." },
+          { status: 400 },
+        );
+      }
+    }
+
     const idem = await checkIdempotency(request, "sponsor-initiate", body);
     if (idem.cached) return idem.replay;
 
@@ -63,7 +75,7 @@ export async function POST(request: NextRequest) {
       donorName: body.name ?? null,
       organizationName: body.organizationName ?? null,
       email: body.email ?? null,
-      phone: body.phone ?? null,
+      phone: normalisedPhone?.display ?? null,
       country: body.country ?? null,
       donorMessage: body.message ?? null,
       anonymous: Boolean(body.anonymous),
@@ -71,7 +83,7 @@ export async function POST(request: NextRequest) {
     });
 
     const contactPayload = {
-      phone: body.phone ?? "000000000",
+      phone: normalisedPhone?.digitsOnly ?? "000000000",
       email: body.email ?? "sponsor@ozekiread.org",
     };
 

@@ -6,6 +6,7 @@ import {
 } from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
 import { PortalRecordPayload, PortalUser } from "@/lib/types";
+import { sanitisedErrorResponse } from "@/lib/server/http/error-response";
 
 export const runtime = "nodejs";
 
@@ -93,10 +94,7 @@ export async function GET(
 
     return NextResponse.json({ record });
   } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return sanitisedErrorResponse("api/portal/records GET", error);
   }
 }
 
@@ -179,10 +177,7 @@ export async function PUT(
         { status: 400 },
       );
     }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return sanitisedErrorResponse("api/portal/records PUT", error);
   }
 }
 
@@ -206,9 +201,6 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return sanitisedErrorResponse("api/portal/records DELETE", error);
   }
 }
