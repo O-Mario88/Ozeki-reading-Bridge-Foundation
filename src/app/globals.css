@@ -195,7 +195,8 @@ textarea:focus-visible {
 ul,
 ol {
   margin: 0;
-  padding-left: 1.2rem;
+  padding-left: 0;
+  list-style: none;
 }
 
 main {

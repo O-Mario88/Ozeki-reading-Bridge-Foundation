@@ -60,19 +60,49 @@ export const metadata = {
    empties that array. */
 const ACTIVITY_VISUAL_DEFAULT = { icon: Mail as LucideIcon, tone: "blue" as const };
 
+/* Same reason as ACTIVITY_VISUAL_DEFAULT: KPI icon refs and accent
+   string-literals must NOT live inside FALLBACK because devFallback()
+   recursively zeros every primitive and walks into forwardRef Lucide
+   icons (typeof === "object"), stripping their $$typeof/render and
+   leaving an unrenderable shape. Keep visuals here; FALLBACK only
+   carries text/numeric data the page may overwrite from live queries. */
+type KpiKey =
+  | "totalSchools" | "activeContacts" | "partnerOrgs" | "openOpportunities"
+  | "activityLogs" | "followUpsDue"  | "dataCompleteness";
+const KPI_VISUAL: Record<KpiKey, { icon: LucideIcon; accent: Accent; subTone?: "rose" }> = {
+  totalSchools:      { icon: SchoolIcon,    accent: "emerald" },
+  activeContacts:    { icon: Users,         accent: "blue"    },
+  partnerOrgs:       { icon: Building2,     accent: "violet"  },
+  openOpportunities: { icon: Target,        accent: "orange"  },
+  activityLogs:      { icon: MessageSquare, accent: "teal"    },
+  followUpsDue:      { icon: CalendarCheck, accent: "red", subTone: "rose" },
+  dataCompleteness:  { icon: ShieldCheck,   accent: "emerald" },
+};
+
+const QUICK_ACTIONS: { icon: LucideIcon; label: string; href: string }[] = [
+  { icon: UserPlus,    label: "Add Contact",        href: "/portal/contacts?new=1" },
+  { icon: PhoneCall,   label: "Log Call",           href: "/portal/contacts?action=log-call" },
+  { icon: MapPin,      label: "Log Visit",          href: "/portal/visits/new" },
+  { icon: SchoolIcon,  label: "Add School",         href: "/portal/schools/directory?action=new" },
+  { icon: Target,      label: "Create Opportunity", href: "/portal/contacts?action=opportunity" },
+  { icon: Send,        label: "Send Follow-up",     href: "/portal/contacts?action=follow-up" },
+  { icon: Upload,      label: "Import Contacts",    href: "/portal/contacts?action=import" },
+  { icon: FileText,    label: "View Full CRM",      href: "/portal/contacts?view=full" },
+];
+
 /* ────────────────────────────────────────────────────────────────────
    Reference data — gated to dev only via devFallback().
    Production zeros these out so live (possibly-empty) DB drives the page.
    ──────────────────────────────────────────────────────────────────── */
 const FALLBACK = devFallback({
   kpis: {
-    totalSchools:        { value: "172",   sub: "↑ 12 this month",            icon: SchoolIcon,    accent: "emerald" as const },
-    activeContacts:      { value: "1,486", sub: "↑ 8.4% vs last month",       icon: Users,         accent: "blue"    as const },
-    partnerOrgs:         { value: "38",    sub: "Across districts & NGOs",    icon: Building2,     accent: "violet"  as const },
-    openOpportunities:   { value: "64",    sub: "Funding / partnership pipeline", icon: Target,    accent: "orange"  as const },
-    activityLogs:        { value: "3,248", sub: "Calls, visits, emails, notes",   icon: MessageSquare, accent: "teal" as const },
-    followUpsDue:        { value: "82",    sub: "23 overdue",                 icon: CalendarCheck, accent: "red"     as const, subTone: "rose" as const },
-    dataCompleteness:    { value: "94%",   sub: "CRM hygiene score",          icon: ShieldCheck,   accent: "emerald" as const },
+    totalSchools:      { value: "172",   sub: "↑ 12 this month" },
+    activeContacts:    { value: "1,486", sub: "↑ 8.4% vs last month" },
+    partnerOrgs:       { value: "38",    sub: "Across districts & NGOs" },
+    openOpportunities: { value: "64",    sub: "Funding / partnership pipeline" },
+    activityLogs:      { value: "3,248", sub: "Calls, visits, emails, notes" },
+    followUpsDue:      { value: "82",    sub: "23 overdue" },
+    dataCompleteness:  { value: "94%",   sub: "CRM hygiene score" },
   },
   trend: {
     months: ["Dec '24", "Jan '25", "Feb '25", "Mar '25", "Apr '25", "May '25", "Jun '25"],
@@ -146,16 +176,6 @@ const FALLBACK = devFallback({
     { region: "Acholi",    schools: 10, contacts: 74,  coverage: 46 },
     { region: "Lango",     schools: 6,  contacts: 38,  coverage: 36 },
     { region: "Karamoja",  schools: 4,  contacts: 22,  coverage: 28 },
-  ],
-  quickActions: [
-    { icon: UserPlus,    label: "Add Contact",        href: "/portal/contacts?new=1" },
-    { icon: PhoneCall,   label: "Log Call",           href: "/portal/contacts?action=log-call" },
-    { icon: MapPin,      label: "Log Visit",          href: "/portal/visits/new" },
-    { icon: SchoolIcon,  label: "Add School",         href: "/portal/schools/directory?action=new" },
-    { icon: Target,      label: "Create Opportunity", href: "/portal/contacts?action=opportunity" },
-    { icon: Send,        label: "Send Follow-up",     href: "/portal/contacts?action=follow-up" },
-    { icon: Upload,      label: "Import Contacts",    href: "/portal/contacts?action=import" },
-    { icon: FileText,    label: "View Full CRM",      href: "/portal/contacts?view=full" },
   ],
   insight: {
     text: "Most active relationship growth this period came from Central and Acholi regions, while 23 contacts and 9 schools require urgent follow-up.",
@@ -290,17 +310,18 @@ export default async function PortalCrmOverviewPage() {
 
         {/* ─── KPI strip — 7 cards ────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-3">
-          {(Object.keys(DATA.kpis) as (keyof typeof DATA.kpis)[]).map((key) => {
+          {(Object.keys(DATA.kpis) as KpiKey[]).map((key) => {
             const k = DATA.kpis[key];
+            const v = KPI_VISUAL[key];
             return (
               <Kpi
                 key={key}
                 label={kpiLabel(key)}
                 value={k.value}
                 sub={k.sub}
-                icon={k.icon}
-                accent={k.accent}
-                subTone={"subTone" in k ? k.subTone : undefined}
+                icon={v.icon}
+                accent={v.accent}
+                subTone={v.subTone}
               />
             );
           })}
@@ -540,7 +561,7 @@ export default async function PortalCrmOverviewPage() {
               <Info className="h-3.5 w-3.5 text-[#cbd5e1]" strokeWidth={1.75} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              {DATA.quickActions.map((a) => (
+              {QUICK_ACTIONS.map((a) => (
                 <QuickActionTile key={a.label} icon={a.icon} label={a.label} href={a.href} />
               ))}
             </div>
