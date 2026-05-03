@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
+import { SchoolProfileActionsClient } from "@/components/portal/SchoolProfileActionsClient";
 import { getSchoolAccountProfile, getSchoolDirectoryRecord } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { devFallback } from "@/lib/dev-fallback";
@@ -193,6 +194,11 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
               <ContactItem icon={Calendar} label="Established" value={String(yearFounded)} />
             </div>
           </div>
+        </section>
+
+        {/* Action buttons — moved here from the schools directory inline panel */}
+        <section className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+          <SchoolProfileActionsClient school={school} />
         </section>
 
         {/* KPI strip — 6 cards */}
