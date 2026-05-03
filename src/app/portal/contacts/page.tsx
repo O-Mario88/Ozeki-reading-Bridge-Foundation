@@ -117,7 +117,7 @@ const FALLBACK = devFallback({
   segments: {
     total: 1486,
     rows: [
-      { label: "Headteachers",       value: 412, pct: 27.7, color: "#0d6f5b" },
+      { label: "Headteachers",       value: 412, pct: 27.7, color: "#066a67" },
       { label: "Teachers",            value: 386, pct: 26.0, color: "#22c55e" },
       { label: "District Officials", value: 218, pct: 14.7, color: "#2563eb" },
       { label: "Donors / Partners",   value: 176, pct: 11.8, color: "#f59e0b" },
@@ -300,7 +300,7 @@ export default async function PortalCrmOverviewPage() {
             <Link
               href="/portal/contacts?new=1"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <UserPlus className="h-4 w-4" strokeWidth={1.75} />
               New Contact
@@ -578,7 +578,7 @@ export default async function PortalCrmOverviewPage() {
               <BarChart3 className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
-              <p className="text-[13.5px] font-extrabold text-[#0f5c4a] leading-tight">CRM Insight</p>
+              <p className="text-[13.5px] font-extrabold text-[#044f4d] leading-tight">CRM Insight</p>
               <p className="text-[12px] text-[#374151] leading-snug mt-0.5">
                 Most active relationship growth this period came from{" "}
                 <strong className="text-emerald-700">Central</strong> and{" "}
@@ -646,7 +646,7 @@ function FooterLink({ href, label, inline = false }: { href: string; label: stri
 
 type Accent = "emerald" | "blue" | "violet" | "orange" | "teal" | "red";
 const accentMap: Record<Accent, { bg: string; fg: string }> = {
-  emerald: { bg: "#eaf7f1", fg: "#047857" },
+  emerald: { bg: "#eaf7f1", fg: "#066a67" },
   blue:    { bg: "#ecf4ff", fg: "#1d4ed8" },
   violet:  { bg: "#f4eeff", fg: "#7c3aed" },
   orange:  { bg: "#fff4e8", fg: "#c2410c" },
@@ -782,7 +782,7 @@ function PipelineMini({
 function ActivityIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: string }) {
   const map: Record<string, { bg: string; fg: string }> = {
     blue:    { bg: "#dbeafe", fg: "#1d4ed8" },
-    emerald: { bg: "#d1fae5", fg: "#047857" },
+    emerald: { bg: "#d1fae5", fg: "#066a67" },
     orange:  { bg: "#fef3c7", fg: "#b45309" },
     violet:  { bg: "#ede9fe", fg: "#7c3aed" },
     rose:    { bg: "#fee2e2", fg: "#b91c1c" },
@@ -834,13 +834,13 @@ function UgandaSilhouetteMap() {
       {/* Western */}
       <path d="M 14 50 L 30 60 L 50 56 L 50 78 L 30 84 L 16 76 Z" fill="#10b981" stroke="#fff" strokeWidth={1} />
       {/* Central */}
-      <path d="M 50 56 L 60 56 L 78 62 L 80 86 L 60 94 L 50 78 Z" fill="#065f46" stroke="#fff" strokeWidth={1} />
+      <path d="M 50 56 L 60 56 L 78 62 L 80 86 L 60 94 L 50 78 Z" fill="#044f4d" stroke="#fff" strokeWidth={1} />
       {/* Eastern (lake-side) */}
       <path d="M 78 62 L 96 60 L 102 78 L 96 94 L 80 86 Z" fill="#34d399" stroke="#fff" strokeWidth={1} />
       {/* South-west tip */}
       <path d="M 16 76 L 30 84 L 50 78 L 48 100 L 30 104 L 18 92 Z" fill="#10b981" stroke="#fff" strokeWidth={1} />
       {/* South-central toward Lake Victoria */}
-      <path d="M 50 78 L 60 94 L 80 86 L 78 110 L 56 116 L 48 100 Z" fill="#065f46" stroke="#fff" strokeWidth={1} />
+      <path d="M 50 78 L 60 94 L 80 86 L 78 110 L 56 116 L 48 100 Z" fill="#044f4d" stroke="#fff" strokeWidth={1} />
       {/* Lake Victoria (bottom-right) */}
       <path d="M 78 110 L 96 94 L 102 78 L 116 88 L 120 120 L 90 130 L 60 122 L 56 116 Z" fill="#bfdbfe" opacity={0.85} />
     </svg>

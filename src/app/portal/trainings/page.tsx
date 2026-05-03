@@ -255,7 +255,7 @@ export default async function PortalTrainingsOverviewPage() {
             <Link
               href="/portal/trainings/manage?new=1"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <Plus className="h-4 w-4" strokeWidth={1.75} />
               New Training Session
@@ -567,7 +567,7 @@ export default async function PortalTrainingsOverviewPage() {
               <Sparkles className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
-              <p className="text-[13.5px] font-extrabold text-[#0f5c4a] leading-tight">Training Insight</p>
+              <p className="text-[13.5px] font-extrabold text-[#044f4d] leading-tight">Training Insight</p>
               <p className="text-[12px] text-[#374151] leading-snug mt-0.5">{DATA.insight.text}</p>
             </div>
           </div>
@@ -630,7 +630,7 @@ function KebabButton() {
 
 type Accent = "emerald" | "blue" | "violet" | "orange" | "teal" | "rose";
 const accentMap: Record<Accent, { bg: string; fg: string }> = {
-  emerald: { bg: "#eaf7f1", fg: "#047857" },
+  emerald: { bg: "#eaf7f1", fg: "#066a67" },
   blue:    { bg: "#ecf4ff", fg: "#1d4ed8" },
   violet:  { bg: "#f4eeff", fg: "#7c3aed" },
   orange:  { bg: "#fff4e8", fg: "#c2410c" },
@@ -689,7 +689,7 @@ function DeliveryTrendChart({ months, values }: { months: string[]; values: numb
       <g transform={`translate(${Math.max(lastX - 70, 6)}, ${Math.max(lastY - 38, 4)})`}>
         <rect width="70" height="30" rx="6" fill="#fff" stroke="#e5eaf0" />
         <text x="8" y="13" fontSize="9.5" fontWeight="700" fill="#111827">May &apos;25</text>
-        <text x="8" y="24" fontSize="10" fontWeight="800" fill="#047857">{values[lastIdx]} Sessions</text>
+        <text x="8" y="24" fontSize="10" fontWeight="800" fill="#066a67">{values[lastIdx]} Sessions</text>
       </g>
       {months.map((m, i) => (
         <text key={m} x={sx(i)} y={h - 6} fontSize="9.5" fill="#94a3b8" textAnchor="middle">{m}</text>
@@ -804,7 +804,7 @@ function TrainingFunnel({ rows }: { rows: { label: string; value: number; pct: n
           className="rounded-md px-2 py-3 flex flex-col items-center text-center min-h-[86px] justify-center"
           style={{ backgroundColor: "#eaf7f1", border: "1px solid #d1ecde" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#047857] leading-tight truncate w-full">{r.label}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#066a67] leading-tight truncate w-full">{r.label}</p>
           <p className="text-[18px] font-extrabold text-[#111827] leading-none mt-1.5">{r.value}</p>
           <p className="text-[10px] font-bold text-emerald-700 mt-0.5">{i === 0 ? "" : `${r.pct}%`}</p>
         </div>
@@ -842,7 +842,7 @@ function AttendanceSparkline({ values }: { values: number[] }) {
 function FileToneIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: string }) {
   const map: Record<string, { bg: string; fg: string }> = {
     rose:    { bg: "#fee2e2", fg: "#b91c1c" },
-    emerald: { bg: "#d1fae5", fg: "#047857" },
+    emerald: { bg: "#d1fae5", fg: "#066a67" },
     violet:  { bg: "#ede9fe", fg: "#7c3aed" },
     blue:    { bg: "#dbeafe", fg: "#1d4ed8" },
     amber:   { bg: "#fef3c7", fg: "#b45309" },
@@ -863,7 +863,7 @@ function ActionTile({
   icon: LucideIcon; label: string; href: string; tone: string;
 }) {
   const map: Record<string, { bg: string; fg: string }> = {
-    emerald: { bg: "#d1fae5", fg: "#047857" },
+    emerald: { bg: "#d1fae5", fg: "#066a67" },
     blue:    { bg: "#dbeafe", fg: "#1d4ed8" },
     violet:  { bg: "#ede9fe", fg: "#7c3aed" },
     orange:  { bg: "#ffedd5", fg: "#c2410c" },

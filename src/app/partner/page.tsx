@@ -68,7 +68,7 @@ export default function PartnerPage() {
             <PremiumCard variant="charius" className="p-8 flex flex-col items-start" key={card.href} withHover>
               <h3 className="text-2xl font-bold text-[#111] mb-4">{card.title}</h3>
               <p className="text-gray-500 leading-relaxed text-lg flex-1 mb-8">{card.description}</p>
-              <Link className="font-semibold text-[#FA7D15] hover:text-[#E86D0B] flex items-center gap-2 group mt-auto" href={card.href}>
+              <Link className="font-semibold text-[#ff7235] hover:text-[#E86D0B] flex items-center gap-2 group mt-auto" href={card.href}>
                 {card.cta} <span className="group-hover:translate-x-1 transition-transform">→</span>
               </Link>
             </PremiumCard>

@@ -36,14 +36,14 @@ const QUICK_REPORTS: {
   href: string; icon: LucideIcon; iconBg: string; iconColor: string;
   cardBg: string; title: string; body: string;
 }[] = [
-  { href: "/portal/reports?tab=school-reading-performance", icon: BarChart3, iconBg: "#dcfce7", iconColor: "#047857", cardBg: "#f0fdf4", title: "School Performance", body: "Overall school performance analysis" },
+  { href: "/portal/reports?tab=school-reading-performance", icon: BarChart3, iconBg: "#dcfce7", iconColor: "#066a67", cardBg: "#f0fdf4", title: "School Performance", body: "Overall school performance analysis" },
   { href: "/portal/reports?tab=impact-reports", icon: GraduationCap, iconBg: "#dbeafe", iconColor: "#1d4ed8", cardBg: "#eff6ff", title: "Learner Outcomes", body: "Assessment and learning outcomes report" },
   { href: "/portal/reports?tab=training-reports", icon: ClipboardCheck, iconBg: "#f3e8ff", iconColor: "#7c3aed", cardBg: "#faf5ff", title: "Training Summary", body: "Training activities and attendance" },
   { href: "/portal/reports?tab=operations", icon: MapPin, iconBg: "#ffedd5", iconColor: "#c2410c", cardBg: "#fff7ed", title: "Visit & Coaching", body: "School visits and coaching report" },
   { href: "/portal/reports?tab=impact-reports", icon: BookOpen, iconBg: "#e0f2fe", iconColor: "#0369a1", cardBg: "#f0f9ff", title: "Assessment Summary", body: "Assessment completion and results" },
   { href: "/portal/stories", icon: Sparkles, iconBg: "#fce7f3", iconColor: "#be185d", cardBg: "#fdf2f8", title: "Story Collection", body: "1001 Story collection and engagement" },
-  { href: "/portal/insights", icon: Layers, iconBg: "#dcfce7", iconColor: "#047857", cardBg: "#f0fdf4", title: "Program Coverage", body: "Program implementation coverage report" },
-  { href: "/portal/finance/reports", icon: Wallet, iconBg: "#ecfdf5", iconColor: "#047857", cardBg: "#f0fdf4", title: "Finance Overview", body: "Financial summary and overview" },
+  { href: "/portal/insights", icon: Layers, iconBg: "#dcfce7", iconColor: "#066a67", cardBg: "#f0fdf4", title: "Program Coverage", body: "Program implementation coverage report" },
+  { href: "/portal/finance/reports", icon: Wallet, iconBg: "#ecfdf5", iconColor: "#066a67", cardBg: "#f0fdf4", title: "Finance Overview", body: "Financial summary and overview" },
   { href: "/portal/finance/transparency", icon: Heart, iconBg: "#fee2e2", iconColor: "#b91c1c", cardBg: "#fef2f2", title: "Donor Report", body: "Donor impact and ROI report" },
   { href: "/portal/data-quality", icon: ShieldCheck, iconBg: "#dbeafe", iconColor: "#1d4ed8", cardBg: "#eff6ff", title: "Data Quality", body: "Data quality and completeness report" },
 ];
@@ -126,7 +126,7 @@ export default async function ReportsPage() {
             delta={FALLBACK_KPIS.totalDelta}
             icon={FileText}
             cardBg="#f0fdf4" borderColor="#bbf7d0"
-            iconBg="#dcfce7" iconColor="#047857"
+            iconBg="#dcfce7" iconColor="#066a67"
           />
           <ReportsKpi
             label="GENERATED"
@@ -162,7 +162,7 @@ export default async function ReportsPage() {
             delta={FALLBACK_KPIS.coverageDelta}
             icon={TrendingUp}
             cardBg="#f0fdf4" borderColor="#bbf7d0"
-            iconBg="#dcfce7" iconColor="#047857"
+            iconBg="#dcfce7" iconColor="#066a67"
             className="col-span-2 md:col-span-3 lg:col-span-1"
           />
         </div>

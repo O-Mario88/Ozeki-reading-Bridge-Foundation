@@ -88,8 +88,8 @@ export function SpendingTrendChart({ points, width = 720, height = 260 }: Props)
           <stop offset="100%" stopColor="#006b61" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="trend-expense-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FA7D15" stopOpacity="0.16" />
-          <stop offset="100%" stopColor="#FA7D15" stopOpacity="0" />
+          <stop offset="0%" stopColor="#ff7235" stopOpacity="0.16" />
+          <stop offset="100%" stopColor="#ff7235" stopOpacity="0" />
         </linearGradient>
       </defs>
 
@@ -122,12 +122,12 @@ export function SpendingTrendChart({ points, width = 720, height = 260 }: Props)
 
       {/* Lines */}
       <path d={buildPath("income")} fill="none" stroke="#006b61" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-      <path d={buildPath("expenses")} fill="none" stroke="#FA7D15" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+      <path d={buildPath("expenses")} fill="none" stroke="#ff7235" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
 
       {/* End-of-line dot + value labels */}
       {[
         { value: lastIncome, color: "#006b61", label: fmtAbbrev(lastIncome) },
-        { value: lastExpense, color: "#FA7D15", label: fmtAbbrev(lastExpense) },
+        { value: lastExpense, color: "#ff7235", label: fmtAbbrev(lastExpense) },
       ].map((d, i) => {
         const x = padding.left + innerW;
         const y = scaleY(d.value);

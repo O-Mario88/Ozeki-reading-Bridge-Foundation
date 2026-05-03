@@ -82,8 +82,8 @@ function renderDigestHtml(digest: Awaited<ReturnType<typeof buildDigestPayloadPo
 
       ${digest.donationTotalUgx > 0 ? `
         <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 18px;margin-bottom:24px;">
-          <strong style="color:#065f46;">💚 ${digest.newDonations} new donations</strong>
-          <span style="color:#047857;"> — UGX ${digest.donationTotalUgx.toLocaleString()} raised in this period</span>
+          <strong style="color:#044f4d;">💚 ${digest.newDonations} new donations</strong>
+          <span style="color:#066a67;"> — UGX ${digest.donationTotalUgx.toLocaleString()} raised in this period</span>
         </div>
       ` : ""}
 

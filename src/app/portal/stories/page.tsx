@@ -323,7 +323,7 @@ export default async function PortalStoryOverviewPage() {
             <button
               type="button"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <Sparkles className="h-4 w-4" strokeWidth={1.75} />
               Actions
@@ -684,7 +684,7 @@ function FooterLink({ href, label, inline = false }: { href: string; label: stri
 
 type Accent = "emerald" | "blue" | "orange" | "violet" | "teal";
 const accentMap: Record<Accent, { bg: string; fg: string }> = {
-  emerald: { bg: "#e8f7f1", fg: "#047857" },
+  emerald: { bg: "#e8f7f1", fg: "#066a67" },
   blue:    { bg: "#eaf3ff", fg: "#1d4ed8" },
   orange:  { bg: "#fff2e8", fg: "#c2410c" },
   violet:  { bg: "#f4eeff", fg: "#7c3aed" },
@@ -888,7 +888,7 @@ function EngagementChart({
 function ActivityIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: string }) {
   const map: Record<string, { bg: string; fg: string }> = {
     amber:   { bg: "#fef3c7", fg: "#b45309" },
-    emerald: { bg: "#d1fae5", fg: "#047857" },
+    emerald: { bg: "#d1fae5", fg: "#066a67" },
     blue:    { bg: "#dbeafe", fg: "#1d4ed8" },
     violet:  { bg: "#ede9fe", fg: "#7c3aed" },
     pink:    { bg: "#fce7f3", fg: "#be185d" },

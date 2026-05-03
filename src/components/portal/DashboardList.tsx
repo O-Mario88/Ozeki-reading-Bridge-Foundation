@@ -134,7 +134,7 @@ export function ViewAllLink({ href, label = "View all" }: { href: string; label?
   return (
     <Link
       href={href}
-      className="text-[11.5px] font-bold text-[#006B5B] hover:text-[#003F37] inline-flex items-center gap-0.5 whitespace-nowrap shrink-0"
+      className="text-[11.5px] font-bold text-[#006B5B] hover:text-[#033f3e] inline-flex items-center gap-0.5 whitespace-nowrap shrink-0"
     >
       {label} <ChevronRight className="h-3 w-3" strokeWidth={2.25} />
     </Link>

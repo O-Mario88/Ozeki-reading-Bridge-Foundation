@@ -110,7 +110,7 @@ export default async function PortalDashboardPage() {
             subline="Schools active"
             deltaPct={kpis.implementingDeltaPp}
             icon={Shield}
-            iconBg="#ecfdf5" iconColor="#047857"
+            iconBg="#ecfdf5" iconColor="#066a67"
             cardBg="#f4fdf8" borderColor="#bbf7d0"
           />
           <PortalKpiCard

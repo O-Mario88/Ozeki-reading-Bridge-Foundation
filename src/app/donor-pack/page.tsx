@@ -58,7 +58,7 @@ export default async function DonorPackPage() {
             <ul className="space-y-3">
               {donorPackContents.map((item) => (
                 <li key={item} className="flex items-start gap-3 text-gray-500">
-                  <span className="text-[#FA7D15] font-bold mt-0.5">•</span> {item}
+                  <span className="text-[#ff7235] font-bold mt-0.5">•</span> {item}
                 </li>
               ))}
             </ul>
@@ -68,22 +68,22 @@ export default async function DonorPackPage() {
             <h2 className="text-2xl font-bold text-[#111] mb-6">Quick links</h2>
             <div className="space-y-4">
               <p>
-                <a className="text-[#FA7D15] font-semibold hover:text-[#E86D0B] transition-colors" href="/downloads/donor-trust/governance-overview.pdf">
+                <a className="text-[#ff7235] font-semibold hover:text-[#E86D0B] transition-colors" href="/downloads/donor-trust/governance-overview.pdf">
                   Download Governance Summary →
                 </a>
               </p>
               <p>
-                <a className="text-[#FA7D15] font-semibold hover:text-[#E86D0B] transition-colors" href="/downloads/donor-trust/safeguarding-summary.pdf">
+                <a className="text-[#ff7235] font-semibold hover:text-[#E86D0B] transition-colors" href="/downloads/donor-trust/safeguarding-summary.pdf">
                   Download Safeguarding Summary →
                 </a>
               </p>
               <p>
-                <a className="text-[#FA7D15] font-semibold hover:text-[#E86D0B] transition-colors" href="/downloads/donor-trust/data-privacy-ethics-summary.pdf">
+                <a className="text-[#ff7235] font-semibold hover:text-[#E86D0B] transition-colors" href="/downloads/donor-trust/data-privacy-ethics-summary.pdf">
                   Download Data Privacy & Ethics Summary →
                 </a>
               </p>
               <p>
-                <a className="text-[#FA7D15] font-semibold hover:text-[#E86D0B] transition-colors" href="/downloads/donor-trust/financial-controls-anti-fraud-summary.pdf">
+                <a className="text-[#ff7235] font-semibold hover:text-[#E86D0B] transition-colors" href="/downloads/donor-trust/financial-controls-anti-fraud-summary.pdf">
                   Download Financial Controls Summary →
                 </a>
               </p>
@@ -93,7 +93,7 @@ export default async function DonorPackPage() {
                   <ul className="space-y-3">
                     {donorPackUploads.map((item) => (
                       <li key={item.id}>
-                        <a className="text-[#FA7D15] font-semibold hover:text-[#E86D0B] transition-colors" href={item.externalUrl || `/api/resources/${item.id}/download`}>
+                        <a className="text-[#ff7235] font-semibold hover:text-[#E86D0B] transition-colors" href={item.externalUrl || `/api/resources/${item.id}/download`}>
                           {item.downloadLabel?.trim() || item.title}
                         </a>
                       </li>
@@ -106,7 +106,7 @@ export default async function DonorPackPage() {
             </div>
           </PremiumCard>
 
-          <PremiumCard variant="charius" className="p-8 border-t-4 border-[#FA7D15]">
+          <PremiumCard variant="charius" className="p-8 border-t-4 border-[#ff7235]">
             <h2 className="text-2xl font-bold text-[#111] mb-4">Next action</h2>
             <p className="text-gray-600 leading-relaxed mb-8">
               Request a concept note for your target district or package and receive

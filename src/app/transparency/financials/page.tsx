@@ -168,7 +168,7 @@ export default async function FinancialTransparencyPage() {
             </PremiumCard>
             <PremiumCard variant="charius" className="p-10 flex flex-col items-start bg-white" withHover>
               <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center mb-6">
-                <Scale className="w-7 h-7 text-[#FA7D15]" />
+                <Scale className="w-7 h-7 text-[#ff7235]" />
               </div>
               <h3 className="text-2xl font-bold text-[#111] mb-4">Accountability</h3>
               <p className="text-gray-500 leading-relaxed text-lg">
@@ -207,7 +207,7 @@ export default async function FinancialTransparencyPage() {
                   "Continuous strengthening of financial systems and controls"
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <CheckCircle className="w-6 h-6 text-[#FA7D15] shrink-0 mt-0.5" />
+                    <CheckCircle className="w-6 h-6 text-[#ff7235] shrink-0 mt-0.5" />
                     <span className="text-lg text-gray-700 font-medium">{item}</span>
                   </li>
                 ))}
@@ -329,7 +329,7 @@ export default async function FinancialTransparencyPage() {
                 </p>
                 <p className="text-xs text-white/70 mt-1">direct-to-classroom spend</p>
               </div>
-              <div className="rounded-2xl bg-[#FA7D15] shadow-md p-5 text-center">
+              <div className="rounded-2xl bg-[#ff7235] shadow-md p-5 text-center">
                 <div className="flex items-center gap-2 justify-center mb-2">
                   <PercentCircle className="w-4 h-4 text-white/70" />
                   <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Cost per Learner</p>
@@ -409,13 +409,13 @@ export default async function FinancialTransparencyPage() {
               {/* Teaching quality */}
               {programEvidence.fidelity.totalSubmitted > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-7 text-center">
-                  <div className="w-12 h-12 rounded-full bg-[#FA7D15]/10 flex items-center justify-center mx-auto mb-4">
-                    <Award className="w-6 h-6 text-[#FA7D15]" />
+                  <div className="w-12 h-12 rounded-full bg-[#ff7235]/10 flex items-center justify-center mx-auto mb-4">
+                    <Award className="w-6 h-6 text-[#ff7235]" />
                   </div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
                     Teaching Fidelity
                   </p>
-                  <p className="text-4xl font-extrabold text-[#FA7D15]">
+                  <p className="text-4xl font-extrabold text-[#ff7235]">
                     {programEvidence.fidelity.fidelityPct}%
                   </p>
                   <p className="text-sm text-gray-500 mt-2">
@@ -478,7 +478,7 @@ export default async function FinancialTransparencyPage() {
             {/* Live Financial Summaries */}
             <div>
               <h3 className="text-2xl font-bold text-[#111] mb-6 flex items-center border-b pb-4">
-                <FileCheck className="w-6 h-6 mr-3 text-[#FA7D15]" />
+                <FileCheck className="w-6 h-6 mr-3 text-[#ff7235]" />
                 Financial Summary Reports
               </h3>
               
@@ -521,8 +521,8 @@ export default async function FinancialTransparencyPage() {
               {audited.length === 0 ? (
                 <PublicReportDownloader 
                   type="audit"
-                  buttonColor="bg-[#FA7D15]"
-                  buttonHoverColor="hover:bg-[#FA7D15]/90"
+                  buttonColor="bg-[#ff7235]"
+                  buttonHoverColor="hover:bg-[#ff7235]/90"
                   options={[
                     { label: "2028 Audited Financials", value: "2028" },
                     { label: "2027 Audited Financials", value: "2027" },
@@ -576,7 +576,7 @@ export default async function FinancialTransparencyPage() {
             </PremiumCard>
             
             <PremiumCard variant="charius" className="p-8 md:p-10 bg-white" withHover>
-              <h3 className="text-2xl font-bold text-[#FA7D15] mb-6 flex items-center gap-3">
+              <h3 className="text-2xl font-bold text-[#ff7235] mb-6 flex items-center gap-3">
                 <ShieldCheck className="w-6 h-6" /> Governance and Oversight
               </h3>
               <ul className="space-y-4">
@@ -607,8 +607,8 @@ export default async function FinancialTransparencyPage() {
           subheading="We welcome responsible inquiry and are committed to strengthening trust through openness and accountability."
           primaryButtonText="Contact Ozeki"
           primaryButtonHref="/contact"
-          primaryButtonColor="bg-[#FA7D15]"
-          primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
+          primaryButtonColor="bg-[#ff7235]"
+          primaryButtonHoverColor="hover:bg-[#ff7235]/90"
           secondaryButtonText="Explore Reports"
           secondaryButtonHref="#reports"
         />

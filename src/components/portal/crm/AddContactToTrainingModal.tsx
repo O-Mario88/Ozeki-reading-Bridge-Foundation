@@ -251,7 +251,7 @@ export function AddContactToTrainingModal({ contactId }: AddContactToTrainingMod
         }
         .att-modal-feedback--success {
           background: #ecfdf5;
-          color: #065f46;
+          color: #044f4d;
           border: 1px solid #a7f3d0;
         }
         .att-modal-feedback--error {

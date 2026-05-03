@@ -234,7 +234,7 @@ export default async function PortalAssessmentsPage() {
             <Link
               href="/portal/assessments/manage?action=new"
               className="inline-flex items-center gap-2 h-11 px-5 rounded-[9px] text-white text-[13.5px] font-bold shadow-sm whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <Plus className="h-4 w-4" strokeWidth={2} />
               New Assessment
@@ -330,7 +330,7 @@ export default async function PortalAssessmentsPage() {
             <div className="mt-2 flex items-center gap-3">
               <UgandaCoverageMap />
               <ul className="space-y-1.5 text-[10.5px]">
-                <CoverageLegendRow color="#065f46" label="90-100%" />
+                <CoverageLegendRow color="#044f4d" label="90-100%" />
                 <CoverageLegendRow color="#10b981" label="75-89%" />
                 <CoverageLegendRow color="#34d399" label="50-74%" />
                 <CoverageLegendRow color="#86efac" label="25-49%" />
@@ -490,7 +490,7 @@ export default async function PortalAssessmentsPage() {
               <FooterLink href="/portal/data-quality" label="View All" inline />
             </div>
             <div className="px-5 pt-3 grid grid-cols-3 gap-3">
-              <EvidenceMini icon={UploadCloud} bg="#d1fae5" fg="#047857" label="Uploads Verified" value={DATA.evidenceTotals.verified.value} delta={`↑ ${DATA.evidenceTotals.verified.delta}%`} direction="up" />
+              <EvidenceMini icon={UploadCloud} bg="#d1fae5" fg="#066a67" label="Uploads Verified" value={DATA.evidenceTotals.verified.value} delta={`↑ ${DATA.evidenceTotals.verified.delta}%`} direction="up" />
               <EvidenceMini icon={Shield}      bg="#fef3c7" fg="#b45309" label="Pending Review"   value={DATA.evidenceTotals.pending.value}  delta={`↓ ${Math.abs(DATA.evidenceTotals.pending.delta)}%`} direction="down" />
               <EvidenceMini icon={XCircle}     bg="#fee2e2" fg="#b91c1c" label="Rejected"         value={DATA.evidenceTotals.rejected.value} delta={`↓ ${Math.abs(DATA.evidenceTotals.rejected.delta)}%`} direction="down" />
             </div>
@@ -567,7 +567,7 @@ function FooterLink({ href, label, inline = false }: { href: string; label: stri
 
 type Accent = "emerald" | "blue" | "orange" | "violet";
 const accentMap: Record<Accent, { bg: string; fg: string }> = {
-  emerald: { bg: "#e8f7f1", fg: "#047857" },
+  emerald: { bg: "#e8f7f1", fg: "#066a67" },
   blue:    { bg: "#eaf3ff", fg: "#1d4ed8" },
   orange:  { bg: "#fff4e5", fg: "#c2410c" },
   violet:  { bg: "#f4eeff", fg: "#7c3aed" },
@@ -700,12 +700,12 @@ function UgandaCoverageMap() {
   const tiles: { x: number; y: number; fill: string }[] = [
     // Northern strip (Karamoja, Acholi, West Nile)
     { x: 28, y: 12, fill: "#10b981" }, { x: 42, y: 10, fill: "#10b981" }, { x: 56, y: 12, fill: "#34d399" }, { x: 70, y: 14, fill: "#86efac" }, { x: 84, y: 18, fill: "#34d399" },
-    { x: 22, y: 24, fill: "#34d399" }, { x: 36, y: 22, fill: "#10b981" }, { x: 50, y: 22, fill: "#065f46" }, { x: 64, y: 24, fill: "#10b981" }, { x: 78, y: 28, fill: "#34d399" },
+    { x: 22, y: 24, fill: "#34d399" }, { x: 36, y: 22, fill: "#10b981" }, { x: 50, y: 22, fill: "#044f4d" }, { x: 64, y: 24, fill: "#10b981" }, { x: 78, y: 28, fill: "#34d399" },
     // Central / Western
-    { x: 18, y: 36, fill: "#34d399" }, { x: 32, y: 34, fill: "#065f46" }, { x: 46, y: 34, fill: "#065f46" }, { x: 60, y: 36, fill: "#10b981" }, { x: 74, y: 40, fill: "#10b981" },
-    { x: 14, y: 48, fill: "#34d399" }, { x: 28, y: 46, fill: "#10b981" }, { x: 42, y: 46, fill: "#065f46" }, { x: 56, y: 48, fill: "#10b981" }, { x: 70, y: 52, fill: "#34d399" },
+    { x: 18, y: 36, fill: "#34d399" }, { x: 32, y: 34, fill: "#044f4d" }, { x: 46, y: 34, fill: "#044f4d" }, { x: 60, y: 36, fill: "#10b981" }, { x: 74, y: 40, fill: "#10b981" },
+    { x: 14, y: 48, fill: "#34d399" }, { x: 28, y: 46, fill: "#10b981" }, { x: 42, y: 46, fill: "#044f4d" }, { x: 56, y: 48, fill: "#10b981" }, { x: 70, y: 52, fill: "#34d399" },
     // Southern / Lake region
-    { x: 18, y: 60, fill: "#10b981" }, { x: 32, y: 58, fill: "#065f46" }, { x: 46, y: 58, fill: "#065f46" }, { x: 60, y: 60, fill: "#34d399" },
+    { x: 18, y: 60, fill: "#10b981" }, { x: 32, y: 58, fill: "#044f4d" }, { x: 46, y: 58, fill: "#044f4d" }, { x: 60, y: 60, fill: "#34d399" },
     { x: 22, y: 72, fill: "#34d399" }, { x: 36, y: 70, fill: "#10b981" }, { x: 50, y: 70, fill: "#10b981" },
     // Eastern / Teso
     { x: 88, y: 36, fill: "#34d399" }, { x: 92, y: 50, fill: "#10b981" }, { x: 86, y: 62, fill: "#34d399" },
@@ -791,7 +791,7 @@ function EvidenceMini({
 
 function ActivityDot({ tone, icon: Icon }: { tone: string; icon: LucideIcon }) {
   const map: Record<string, { bg: string; fg: string }> = {
-    emerald: { bg: "#d1fae5", fg: "#047857" },
+    emerald: { bg: "#d1fae5", fg: "#066a67" },
     blue:    { bg: "#dbeafe", fg: "#1d4ed8" },
     orange:  { bg: "#fef3c7", fg: "#b45309" },
   };

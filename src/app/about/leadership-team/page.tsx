@@ -17,7 +17,7 @@ const accentColors = [
   { bg: "#006b61", shape: "#1dc9ba" },
   { bg: "#fe8b5c", shape: "#ffb899" },
   { bg: "#1dc9ba", shape: "#006b61" },
-  { bg: "#FA7D15", shape: "#fec89a" },
+  { bg: "#ff7235", shape: "#fec89a" },
   { bg: "#2563eb", shape: "#93c5fd" },
   { bg: "#006b61", shape: "#fe8b5c" },
 ];

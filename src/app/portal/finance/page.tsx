@@ -44,9 +44,9 @@ const FALLBACK = devFallback({
   allocation: {
     totalSpent: 2_163_420,
     slices: [
-      { label: "Programme Delivery", amount: 1_686_670, pct: 78, color: "#047857" },
+      { label: "Programme Delivery", amount: 1_686_670, pct: 78, color: "#066a67" },
       { label: "Operations", amount: 259_610, pct: 12, color: "#1d4ed8" },
-      { label: "Fundraising", amount: 129_800, pct: 6, color: "#ea580c" },
+      { label: "Fundraising", amount: 129_800, pct: 6, color: "#e85f24" },
       { label: "Other", amount: 87_340, pct: 4, color: "#94a3b8" },
     ],
   },
@@ -168,7 +168,7 @@ export default async function FinanceDashboard() {
             cardBg="#f0fdf9"
             borderColor="#bbf7d0"
             iconBg="#dcfce7"
-            iconColor="#047857"
+            iconColor="#066a67"
           />
           <FinanceTintedKpi
             label="TOTAL SPENT"
@@ -192,9 +192,9 @@ export default async function FinanceDashboard() {
             cardBg="#f4fdf8"
             borderColor="#bbf7d0"
             iconBg="#dcfce7"
-            iconColor="#047857"
+            iconColor="#066a67"
             ringPct={programmeDeliveryPct}
-            ringColor="#047857"
+            ringColor="#066a67"
           />
           <FinanceTintedKpi
             label="COST PER LEARNER"
@@ -208,7 +208,7 @@ export default async function FinanceDashboard() {
             iconBg="#ffedd5"
             iconColor="#c2410c"
             spark={learnerSpark}
-            sparkColor="#ea580c"
+            sparkColor="#e85f24"
           />
         </div>
 
@@ -221,8 +221,8 @@ export default async function FinanceDashboard() {
               <div>
                 <h3 className="text-[16px] font-bold text-gray-900">Spending Trend</h3>
                 <div className="flex items-center gap-4 mt-3">
-                  <Legend label="Income" color="#047857" />
-                  <Legend label="Expenses" color="#ea580c" />
+                  <Legend label="Income" color="#066a67" />
+                  <Legend label="Expenses" color="#e85f24" />
                 </div>
               </div>
               <span className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
@@ -580,7 +580,7 @@ function FinanceTintedKpi({
           <Icon className="w-5 h-5" style={{ color: iconColor }} strokeWidth={1.75} />
         </div>
         {ringPct != null ? (
-          <RingBadge pct={ringPct} color={ringColor ?? "#047857"} />
+          <RingBadge pct={ringPct} color={ringColor ?? "#066a67"} />
         ) : spark && spark.length > 0 ? (
           <Sparkline data={spark} color={sparkColor ?? iconColor} />
         ) : null}
@@ -748,14 +748,14 @@ function FallbackSpendingChart() {
         </text>
       ))}
       {/* income line */}
-      <path d={path(incomeY)} stroke="#047857" strokeWidth={2.4} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={path(incomeY)} stroke="#066a67" strokeWidth={2.4} fill="none" strokeLinejoin="round" strokeLinecap="round" />
       {incomeY.map((v, i) => (
-        <circle key={`i-${i}`} cx={sx(i, incomeY.length)} cy={sy(v)} r={2.5} fill="#047857" stroke="#fff" strokeWidth={1.5} />
+        <circle key={`i-${i}`} cx={sx(i, incomeY.length)} cy={sy(v)} r={2.5} fill="#066a67" stroke="#fff" strokeWidth={1.5} />
       ))}
       {/* expenses line */}
-      <path d={path(expensesY)} stroke="#ea580c" strokeWidth={2.4} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={path(expensesY)} stroke="#e85f24" strokeWidth={2.4} fill="none" strokeLinejoin="round" strokeLinecap="round" />
       {expensesY.map((v, i) => (
-        <circle key={`e-${i}`} cx={sx(i, expensesY.length)} cy={sy(v)} r={2.5} fill="#ea580c" stroke="#fff" strokeWidth={1.5} />
+        <circle key={`e-${i}`} cx={sx(i, expensesY.length)} cy={sy(v)} r={2.5} fill="#e85f24" stroke="#fff" strokeWidth={1.5} />
       ))}
       {/* x labels */}
       {xs.map((label, i) => (
@@ -764,8 +764,8 @@ function FallbackSpendingChart() {
         </text>
       ))}
       {/* right endpoint labels */}
-      <text x={padL + innerW + 4} y={sy(incomeY[incomeY.length - 1]) + 3} fontSize="10" fontWeight="700" fill="#047857">$64.2K</text>
-      <text x={padL + innerW + 4} y={sy(expensesY[expensesY.length - 1]) + 3} fontSize="10" fontWeight="700" fill="#ea580c">$41.3K</text>
+      <text x={padL + innerW + 4} y={sy(incomeY[incomeY.length - 1]) + 3} fontSize="10" fontWeight="700" fill="#066a67">$64.2K</text>
+      <text x={padL + innerW + 4} y={sy(expensesY[expensesY.length - 1]) + 3} fontSize="10" fontWeight="700" fill="#e85f24">$41.3K</text>
     </svg>
   );
 }

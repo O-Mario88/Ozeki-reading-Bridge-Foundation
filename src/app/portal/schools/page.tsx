@@ -200,13 +200,13 @@ export default async function SchoolsOverviewPage() {
 
         {/* KPI strip — 7 cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-3">
-          <SchoolsKpi label="SCHOOLS REACHED" value={schoolsReached.toLocaleString()} delta={FALLBACK.schoolsReachedDelta} icon={SchoolIcon} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" />
+          <SchoolsKpi label="SCHOOLS REACHED" value={schoolsReached.toLocaleString()} delta={FALLBACK.schoolsReachedDelta} icon={SchoolIcon} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#066a67" />
           <SchoolsKpi label="ACTIVE SCHOOLS" value={activeSchools.toLocaleString()} delta={FALLBACK.activeSchoolsDelta} icon={Building2} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
           <SchoolsKpi label="TEACHERS EVALUATED" value={teachersEvaluated.toLocaleString()} delta={FALLBACK.teachersEvaluatedDelta} icon={Users} cardBg="#faf5ff" borderColor="#e9d5ff" iconBg="#f3e8ff" iconColor="#7c3aed" />
           <SchoolsKpi label="ASSESSMENTS COMPLETED" value={assessmentsDone.toLocaleString()} delta={FALLBACK.assessmentsCompletedDelta} icon={ClipboardCheck} cardBg="#fff7ed" borderColor="#fed7aa" iconBg="#ffedd5" iconColor="#c2410c" />
           <SchoolsKpi label="COACHING VISITS" value={coachingVisits.toLocaleString()} delta={FALLBACK.coachingVisitsDelta} icon={MapPin} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
           <SchoolsKpi label="STORY ACTIVITIES" value={storyActivities.toLocaleString()} delta={FALLBACK.storyActivitiesDelta} icon={BookOpen} cardBg="#fef2f2" borderColor="#fecaca" iconBg="#fee2e2" iconColor="#b91c1c" />
-          <SchoolsKpi label="DATA QUALITY" value={`${dataQuality}%`} delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" className="col-span-2 sm:col-span-3 lg:col-span-4 2xl:col-span-1" />
+          <SchoolsKpi label="DATA QUALITY" value={`${dataQuality}%`} delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#066a67" className="col-span-2 sm:col-span-3 lg:col-span-4 2xl:col-span-1" />
         </div>
 
         {/* Analytics row — 4 cards */}
@@ -501,7 +501,7 @@ function PerformanceTrendChart({ endValue }: { endValue: number }) {
         <circle key={i} cx={sx(i)} cy={sy(v)} r={3} fill="#10b981" stroke="#fff" strokeWidth={1.5} />
       ))}
       {/* End annotation */}
-      <text x={sx(ys.length - 1) - 8} y={sy(ys[ys.length - 1]) - 12} fontSize="11" fontWeight="800" fill="#047857" textAnchor="end">{endValue}%</text>
+      <text x={sx(ys.length - 1) - 8} y={sy(ys[ys.length - 1]) - 12} fontSize="11" fontWeight="800" fill="#066a67" textAnchor="end">{endValue}%</text>
       <text x={sx(ys.length - 1) - 8} y={sy(ys[ys.length - 1]) - 2} fontSize="8.5" fill="#6b7280" textAnchor="end">Jun 2024</text>
       {months.map((m, i) => (
         <text key={m} x={sx(i)} y={h - 6} fontSize="9" fill="#9ca3af" textAnchor="middle">{m}</text>

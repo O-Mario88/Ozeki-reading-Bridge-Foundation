@@ -121,7 +121,7 @@ export default async function CoachWorkloadDetailPage({ params }: PageProps) {
                     />
                     {w.observations > 0 && (
                       <div
-                        className="bg-[#FA7D15] rounded-sm transition-all"
+                        className="bg-[#ff7235] rounded-sm transition-all"
                         style={{ height: `${(w.observations / maxWeekly) * 30}%` }}
                         title={`${w.observations} observations`}
                       />
@@ -136,7 +136,7 @@ export default async function CoachWorkloadDetailPage({ params }: PageProps) {
                 <span className="w-2.5 h-2.5 rounded-sm bg-[#006b61]" /> Visits
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#FA7D15]" /> Observations
+                <span className="w-2.5 h-2.5 rounded-sm bg-[#ff7235]" /> Observations
               </span>
             </div>
           </div>

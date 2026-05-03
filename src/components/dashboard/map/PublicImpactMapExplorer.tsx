@@ -2133,7 +2133,7 @@ export function PublicImpactMapExplorer({
                 <div className="impact-auto-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
                   <div className="impact-domain-mini-card">
                     <h4>Trained Schools</h4>
-                    <div className="text-3xl font-bold mt-2" style={{ color: "#ea580c" }}>
+                    <div className="text-3xl font-bold mt-2" style={{ color: "#e85f24" }}>
                       {payload.trainingOutcomeCorrelation.trainedSchools.avgScoreDelta !== null
                         ? `+${payload.trainingOutcomeCorrelation.trainedSchools.avgScoreDelta.toFixed(2)}`
                         : "—"}
@@ -2194,7 +2194,7 @@ export function PublicImpactMapExplorer({
                     )}
                     <div className="impact-domain-mini-card">
                       <h4>Endline Avg</h4>
-                      <div className="text-3xl font-bold mt-2" style={{ color: "#ea580c" }}>
+                      <div className="text-3xl font-bold mt-2" style={{ color: "#e85f24" }}>
                         {payload.cohortProgression.avgEndlineComposite?.toFixed(1) ?? "—"}
                       </div>
                       <p className="text-gray-500 text-sm">
@@ -2247,10 +2247,10 @@ export function PublicImpactMapExplorer({
               ) : (payload?.rankings?.atRisk?.length ?? 0) > 0 ? (
                 <div className="mt-2 flex flex-col gap-2">
                   {(payload?.rankings?.atRisk ?? []).map((school) => (
-                    <div key={school.schoolId} style={{ padding: "10px 12px", borderRadius: 8, background: school.riskScore >= 4 ? "#fef2f2" : school.riskScore >= 3 ? "#fff7ed" : "#f9fafb", borderLeft: `4px solid ${school.riskScore >= 4 ? "#dc2626" : school.riskScore >= 3 ? "#ea580c" : "#6b7280"}` }}>
+                    <div key={school.schoolId} style={{ padding: "10px 12px", borderRadius: 8, background: school.riskScore >= 4 ? "#fef2f2" : school.riskScore >= 3 ? "#fff7ed" : "#f9fafb", borderLeft: `4px solid ${school.riskScore >= 4 ? "#dc2626" : school.riskScore >= 3 ? "#e85f24" : "#6b7280"}` }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 600 }}>{school.name}</span>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: school.riskScore >= 4 ? "#dc2626" : "#ea580c" }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: school.riskScore >= 4 ? "#dc2626" : "#e85f24" }}>
                           Risk {school.riskScore}
                         </span>
                       </div>

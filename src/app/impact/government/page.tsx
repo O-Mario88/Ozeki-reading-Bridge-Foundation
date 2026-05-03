@@ -20,7 +20,7 @@ function priorityBadge(flag: "urgent" | "watch" | "on-track") {
     const styles: Record<string, { bg: string; color: string; label: string }> = {
         urgent: { bg: "#fee2e2", color: "#dc2626", label: "⚠ Urgent" },
         watch: { bg: "#fef3c7", color: "#b45309", label: "◉ Watch" },
-        "on-track": { bg: "#FFF4EC", color: "#FA7D15", label: "✓ On track" },
+        "on-track": { bg: "#FFF4EC", color: "#ff7235", label: "✓ On track" },
     };
     const s = styles[flag] ?? styles["on-track"];
     return (
@@ -144,7 +144,7 @@ export default async function GovernmentViewPage() {
                             <strong>{data.leagueTable.length}</strong>
                             <span>Districts with data</span>
                         </article>
-                        <article className="card impact-kpi-card" style={{ borderLeft: "4px solid #FA7D15" }}>
+                        <article className="card impact-kpi-card" style={{ borderLeft: "4px solid #ff7235" }}>
                             <strong>{onTrackCount}</strong>
                             <span>On track</span>
                         </article>
@@ -207,7 +207,7 @@ export default async function GovernmentViewPage() {
                                             </td>
                                             <td style={{ padding: "0.5rem", textAlign: "right" }}>
                                                 {row.outcomesScore !== null ? (
-                                                    <span style={{ color: row.outcomesScore > 0 ? "#FA7D15" : "#dc2626", fontWeight: 600 }}>
+                                                    <span style={{ color: row.outcomesScore > 0 ? "#ff7235" : "#dc2626", fontWeight: 600 }}>
                                                         {row.outcomesScore > 0 ? "+" : ""}{row.outcomesScore.toFixed(1)}pp
                                                     </span>
                                                 ) : "—"}

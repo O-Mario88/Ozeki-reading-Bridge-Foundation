@@ -52,7 +52,7 @@ export default async function ImpactToStoryLibraryPage() {
                 <section className="relative overflow-hidden bg-brand-background pt-24 pb-20 md:pt-32 md:pb-24 border-b border-gray-100">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#006b61]/10 via-brand-background to-brand-background pointer-events-none" />
                     <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff7235]/10 text-[#ff7235] font-bold text-sm mb-6 shadow-sm border border-[#ff7235]/20">
                             <BookOpen className="w-4 h-4" /> 1001 Story Project
                         </div>
                         <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">

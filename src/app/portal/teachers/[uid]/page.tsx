@@ -42,7 +42,7 @@ export default async function StaffTeacherProfilePage({ params }: { params: Prom
          <div className="bg-[#006b61] text-white p-8 relative">
             <div className="absolute inset-0 bg-[url('/patterns/topography.svg')] opacity-10" />
             <div className="relative z-10 flex items-center gap-6">
-               <div className="w-20 h-20 bg-[#FA7D15] rounded-full flex items-center justify-center shadow-lg border-4 border-white/20 shrink-0">
+               <div className="w-20 h-20 bg-[#ff7235] rounded-full flex items-center justify-center shadow-lg border-4 border-white/20 shrink-0">
                   <ShieldCheck className="w-10 h-10 text-white" />
                </div>
                <div>
@@ -86,7 +86,7 @@ export default async function StaffTeacherProfilePage({ params }: { params: Prom
            {/* CERTIFICATES SECTION */}
            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
               <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
-                 <Award className="w-5 h-5 text-[#FA7D15]" /> Digital Certificates
+                 <Award className="w-5 h-5 text-[#ff7235]" /> Digital Certificates
               </h2>
               {profile.certificates.length > 0 ? (
                  <div className="space-y-3">

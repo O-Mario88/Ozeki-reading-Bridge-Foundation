@@ -243,8 +243,8 @@ export default async function DonorSelfServicePage({ params }: PageProps) {
       <div className="max-w-2xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-[#FA7D15]/10 flex items-center justify-center mx-auto mb-4">
-            <Heart className="w-8 h-8 text-[#FA7D15]" />
+          <div className="w-16 h-16 rounded-full bg-[#ff7235]/10 flex items-center justify-center mx-auto mb-4">
+            <Heart className="w-8 h-8 text-[#ff7235]" />
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-1">Donation Record</h1>
           <p className="text-gray-500 text-sm font-mono">{d.donationReference}</p>
@@ -316,7 +316,7 @@ export default async function DonorSelfServicePage({ params }: PageProps) {
             <a
               href={receipt.receiptPdfUrl}
               download
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FA7D15] text-white text-sm font-semibold hover:bg-[#FA7D15]/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ff7235] text-white text-sm font-semibold hover:bg-[#ff7235]/90 transition-colors"
             >
               <Download className="w-4 h-4" /> Download
             </a>

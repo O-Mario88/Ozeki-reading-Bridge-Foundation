@@ -40,19 +40,19 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-[#111] mb-1">Email us</h3>
-                  <a href={officialContactLinks.mailto} className="text-gray-500 hover:text-[#FA7D15] transition-colors">
+                  <a href={officialContactLinks.mailto} className="text-gray-500 hover:text-[#ff7235] transition-colors">
                     {officialContact.email}
                   </a>
                 </div>
               </PremiumCard>
 
               <PremiumCard variant="charius" className="p-6 flex items-start gap-4">
-                <div className="w-12 h-12 shrink-0 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] flex items-center justify-center">
+                <div className="w-12 h-12 shrink-0 rounded-full bg-[#ff7235]/10 text-[#ff7235] flex items-center justify-center">
                   <Phone size={24} />
                 </div>
                 <div>
                   <h3 className="font-bold text-[#111] mb-1">Call us</h3>
-                  <a href={officialContactLinks.tel} className="text-gray-500 hover:text-[#FA7D15] transition-colors">
+                  <a href={officialContactLinks.tel} className="text-gray-500 hover:text-[#ff7235] transition-colors">
                     {officialContact.phoneDisplay}
                   </a>
                 </div>
@@ -71,7 +71,7 @@ export default function ContactPage() {
               </PremiumCard>
 
               <PremiumCard variant="charius" className="p-6 flex items-start gap-4">
-                <div className="w-12 h-12 shrink-0 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] flex items-center justify-center">
+                <div className="w-12 h-12 shrink-0 rounded-full bg-[#ff7235]/10 text-[#ff7235] flex items-center justify-center">
                   <MapPin size={24} />
                 </div>
                 <div>

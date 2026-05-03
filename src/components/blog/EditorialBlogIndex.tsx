@@ -64,7 +64,7 @@ export function EditorialBlogIndex({ posts, categories }: EditorialBlogIndexProp
         <section className="relative overflow-hidden pt-24 pb-12 md:pt-32 md:pb-16 border-b border-gray-100">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-brand-primary/5 via-transparent to-transparent pointer-events-none" />
           <div className="container mx-auto px-4 md:px-6 max-w-6xl relative z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff7235]/10 text-[#ff7235] font-bold text-sm mb-6 shadow-sm border border-[#ff7235]/20">
               Knowledge Hub
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6 w-full">

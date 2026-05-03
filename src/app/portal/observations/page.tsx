@@ -102,7 +102,7 @@ export default async function ObservationsListPage() {
           <Link
             href="/portal/observations/new"
             className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap shrink-0"
-            style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+            style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
           >
             <Plus className="h-4 w-4" strokeWidth={1.75} />
             New Observation
@@ -112,10 +112,10 @@ export default async function ObservationsListPage() {
 
         {/* ─── KPI strip — 4 cards ──────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Kpi label="Total Observations" value={String(total)}     delta="↑ 18% vs last 30 days"   icon={ClipboardCheck} bg="#eaf7f1" fg="#047857" />
+          <Kpi label="Total Observations" value={String(total)}     delta="↑ 18% vs last 30 days"   icon={ClipboardCheck} bg="#eaf7f1" fg="#066a67" />
           <Kpi label="This Month"          value={String(thisMonth)} delta="↑ 12% vs last month"     icon={CalendarDays}   bg="#ecf4ff" fg="#1d4ed8" />
           <Kpi label="Teachers Observed"   value={String(teachersObserved)} delta="— No change"      icon={Users}          bg="#f4eeff" fg="#7c3aed" trendNeutral />
-          <Kpi label="Avg. Score"          value={`${avgScore} / 5`} delta="↑ 0.4 vs last 30 days"  icon={Target}         bg="#eaf7f1" fg="#047857" />
+          <Kpi label="Avg. Score"          value={`${avgScore} / 5`} delta="↑ 0.4 vs last 30 days"  icon={Target}         bg="#eaf7f1" fg="#066a67" />
         </div>
 
         {/* ─── Filter card ────────────────────────────────────── */}
@@ -147,7 +147,7 @@ export default async function ObservationsListPage() {
             <button
               type="button"
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[8px] text-white text-[12.5px] font-bold whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <Filter className="h-3.5 w-3.5" strokeWidth={1.75} />
               Apply Filters

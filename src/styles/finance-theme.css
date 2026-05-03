@@ -192,7 +192,7 @@
 .finance-top-tab.active {
     color: var(--fin-primary); /* Green text */
     font-weight: 600;
-    border-bottom-color: #ea580c; /* Orange underline */
+    border-bottom-color: #e85f24; /* Orange underline */
 }
 
 /* ── Top Bar ── */

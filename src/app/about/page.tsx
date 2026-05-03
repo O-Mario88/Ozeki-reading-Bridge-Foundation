@@ -175,7 +175,7 @@ export default function AboutPage() {
       <SectionWrapper theme="light" id="leadership-team">
         <div className="max-w-3xl mx-auto text-center mb-20">
           <h2 className="text-4xl md:text-5xl font-extrabold text-brand-primary mb-6">
-            Meet Our Team <span className="relative inline-block">Leader<span className="absolute -bottom-2 left-0 w-full h-[4px] bg-[#FA7D15] rounded-full"></span></span>
+            Meet Our Team <span className="relative inline-block">Leader<span className="absolute -bottom-2 left-0 w-full h-[4px] bg-[#ff7235] rounded-full"></span></span>
           </h2>
           <p className="text-lg md:text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto mt-8">
             Meet the dedicated individuals driving our mission to strengthen early-grade literacy.

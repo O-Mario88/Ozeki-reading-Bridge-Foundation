@@ -102,7 +102,7 @@ export default function DeveloperDocsPage() {
       <SectionWrapper theme="off-white">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-extrabold text-gray-900 mb-2 flex items-center gap-2">
-            <Zap className="w-7 h-7 text-[#FA7D15]" />
+            <Zap className="w-7 h-7 text-[#ff7235]" />
             Quickstart
           </h2>
           <p className="text-gray-600 mb-8">

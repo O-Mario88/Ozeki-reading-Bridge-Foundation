@@ -66,7 +66,7 @@ const FALLBACK = devFallback({
     { date: "Jul 5, 2024",  title: "Reading Assessment Window",  detail: "School-wide" },
   ],
   programs: [
-    { title: "Reading Bridge",     sub: "Grades: P1 - P5",            icon: Users,    iconBg: "#dcfce7", iconColor: "#047857" },
+    { title: "Reading Bridge",     sub: "Grades: P1 - P5",            icon: Users,    iconBg: "#dcfce7", iconColor: "#066a67" },
     { title: "Teacher Training",   sub: "Focus: Foundational",         icon: GraduationCap, iconBg: "#dbeafe", iconColor: "#1d4ed8" },
     { title: "1001 Story",         sub: "Library & Story Collection",  icon: BookOpen, iconBg: "#f3e8ff", iconColor: "#7c3aed" },
     { title: "Mentorship Program", sub: "Peer Learning & Support",     icon: Heart,    iconBg: "#fee2e2", iconColor: "#b91c1c" },
@@ -194,12 +194,12 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
 
         {/* KPI strip — 6 cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <SchoolKpi label="LEARNERS ENROLLED" value={learnersEnrolled.toLocaleString()} delta={FALLBACK.enrolledDelta} icon={Users} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" />
+          <SchoolKpi label="LEARNERS ENROLLED" value={learnersEnrolled.toLocaleString()} delta={FALLBACK.enrolledDelta} icon={Users} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#066a67" />
           <SchoolKpi label="ATTENDANCE RATE" value={`${FALLBACK.attendanceRate}%`} delta={FALLBACK.attendanceDelta} icon={Calendar} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
           <SchoolKpi label="READING PROFICIENCY" value={`${FALLBACK.readingProficiency}%`} delta={FALLBACK.readingDelta} icon={BookOpen} cardBg="#faf5ff" borderColor="#e9d5ff" iconBg="#f3e8ff" iconColor="#7c3aed" />
           <SchoolKpi label="ASSESSMENT SCORE" value={`${FALLBACK.assessmentScore}%`} delta={FALLBACK.assessmentDelta} icon={ClipboardCheck} cardBg="#fff7ed" borderColor="#fed7aa" iconBg="#ffedd5" iconColor="#c2410c" />
           <SchoolKpi label="ACTIVE TEACHERS" value={String(FALLBACK.activeTeachers)} delta={FALLBACK.activeTeachersDelta} deltaSuffix="" icon={GraduationCap} cardBg="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" iconColor="#1d4ed8" />
-          <SchoolKpi label="DATA QUALITY" value={`${FALLBACK.dataQuality}%`} delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#047857" />
+          <SchoolKpi label="DATA QUALITY" value={`${FALLBACK.dataQuality}%`} delta={FALLBACK.dataQualityDelta} icon={ShieldCheck} cardBg="#f0fdf4" borderColor="#bbf7d0" iconBg="#dcfce7" iconColor="#066a67" />
         </div>
 
         {/* Analytics row — 4 cards */}
@@ -483,7 +483,7 @@ function AttendanceTrendChart({ endValue }: { endValue: number }) {
       {ys.map((v, i) => (
         <circle key={i} cx={sx(i)} cy={sy(v)} r={3} fill="#10b981" stroke="#fff" strokeWidth={1.5} />
       ))}
-      <text x={sx(ys.length - 1) + 4} y={sy(ys[ys.length - 1]) + 3} fontSize="11" fontWeight="800" fill="#047857">{endValue}%</text>
+      <text x={sx(ys.length - 1) + 4} y={sy(ys[ys.length - 1]) + 3} fontSize="11" fontWeight="800" fill="#066a67">{endValue}%</text>
       <text x={sx(ys.length - 1) + 4} y={sy(ys[ys.length - 1]) + 14} fontSize="8.5" fill="#6b7280">Jun 2024</text>
       {months.map((m, i) => (
         <text key={m} x={sx(i)} y={h - 6} fontSize="9" fill="#9ca3af" textAnchor="middle">{m}</text>
@@ -560,7 +560,7 @@ function LiteracyProgressChart() {
       <path d={path(emerging)}   fill="none" stroke="#fb923c" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" />
       {proficient.map((v, i) => <circle key={`p-${i}`} cx={sx(i)} cy={sy(v)} r={2.5} fill="#10b981" stroke="#fff" strokeWidth={1.5} />)}
       {emerging.map((v, i)   => <circle key={`e-${i}`} cx={sx(i)} cy={sy(v)} r={2.5} fill="#fb923c" stroke="#fff" strokeWidth={1.5} />)}
-      <text x={sx(proficient.length - 1) + 4} y={sy(proficient[proficient.length - 1]) + 3} fontSize="11" fontWeight="800" fill="#047857">68%</text>
+      <text x={sx(proficient.length - 1) + 4} y={sy(proficient[proficient.length - 1]) + 3} fontSize="11" fontWeight="800" fill="#066a67">68%</text>
       <text x={sx(emerging.length - 1) + 4}   y={sy(emerging[emerging.length - 1]) + 3}   fontSize="11" fontWeight="800" fill="#c2410c">26%</text>
       {labels.map((m, i) => (
         <text key={m} x={sx(i)} y={h - 6} fontSize="8.5" fill="#9ca3af" textAnchor="middle">{m}</text>

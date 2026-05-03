@@ -74,12 +74,12 @@ export default async function ProgramsPage() {
       {/* 1. Hero Section */}
       <section className="relative overflow-hidden bg-brand-background pt-32 pb-20 md:pt-40 md:pb-28 border-b border-gray-100">
         {/* Subtle radial glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#FA7D15]/8 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#ff7235]/8 via-transparent to-transparent pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#006b61]/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/3 pointer-events-none" />
 
         <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-8 shadow-sm border border-[#FA7D15]/20">
-            <span className="w-2 h-2 rounded-full bg-[#FA7D15] animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff7235]/10 text-[#ff7235] font-bold text-sm mb-8 shadow-sm border border-[#ff7235]/20">
+            <span className="w-2 h-2 rounded-full bg-[#ff7235] animate-pulse" />
             What We Do
           </div>
 
@@ -111,7 +111,7 @@ export default async function ProgramsPage() {
       {/* 2. Real-time Impact Metrics */}
       <SectionWrapper theme="charius-beige">
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <div className="w-16 h-16 bg-[#FA7D15]/10 rounded-full flex items-center justify-center mx-auto mb-6 text-[#FA7D15]">
+          <div className="w-16 h-16 bg-[#ff7235]/10 rounded-full flex items-center justify-center mx-auto mb-6 text-[#ff7235]">
             <BarChart3 size={32} />
           </div>
           <h2 className="text-4xl font-bold text-[#111] mb-6">Real-Time Impact</h2>
@@ -152,7 +152,7 @@ export default async function ProgramsPage() {
               
               <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
                 <span className="text-sm font-bold text-gray-900 block mb-1">Evidence generated:</span> 
-                <span className="text-[#FA7D15] font-medium text-sm">{program.evidence}</span>
+                <span className="text-[#ff7235] font-medium text-sm">{program.evidence}</span>
               </div>
               
               <div className="mt-auto">

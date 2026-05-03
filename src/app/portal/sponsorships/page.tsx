@@ -128,7 +128,7 @@ export default async function SponsorshipDashboard() {
                   </span>
                   <span className="text-right">
                      {s.receipt_number ? (
-                        <span className="text-xs font-bold text-[#FA7D15] bg-[#FA7D15]/10 border border-[#FA7D15]/20 px-3 py-1.5 rounded-lg font-mono">
+                        <span className="text-xs font-bold text-[#ff7235] bg-[#ff7235]/10 border border-[#ff7235]/20 px-3 py-1.5 rounded-lg font-mono">
                            {s.receipt_number}
                         </span>
                      ) : (

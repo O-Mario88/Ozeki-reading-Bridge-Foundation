@@ -50,7 +50,7 @@ export default async function MethodologyPage() {
           </PremiumCard>
 
           <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 rounded-xl bg-[#FA7D15]/10 text-[#FA7D15] flex items-center justify-center mb-6">
+            <div className="w-12 h-12 rounded-xl bg-[#ff7235]/10 text-[#ff7235] flex items-center justify-center mb-6">
               <RefreshCw size={24} />
             </div>
             <h2 className="text-2xl font-bold text-[#111] mb-4">Reading Levels</h2>

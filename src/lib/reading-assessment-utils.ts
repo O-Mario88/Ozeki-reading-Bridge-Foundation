@@ -187,7 +187,7 @@ export function getReadingLevelColor(level: ReadingLevel): string {
         case "Developing":
             return "#fbc02d"; // amber
         case "Transitional":
-            return "#FA7D15"; // orange
+            return "#ff7235"; // orange
         case "Fluent":
             return "#1565c0"; // blue
     }

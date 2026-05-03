@@ -110,7 +110,7 @@ export function DonationWizard() {
              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
                 ${step >= 3 ? 'bg-[#006b61] text-white' : 'bg-gray-200 text-gray-400'}`}>3</div>
           </div>
-          <div className="text-[#FA7D15] font-black text-sm uppercase tracking-widest flex items-center gap-1">
+          <div className="text-[#ff7235] font-black text-sm uppercase tracking-widest flex items-center gap-1">
              <Heart className="w-4 h-4" /> Donate
           </div>
        </div>
@@ -247,7 +247,7 @@ export function DonationWizard() {
                      <div className="text-4xl font-black text-gray-900 mb-2 font-mono">
                         UGX {getFinalAmount().toLocaleString()}
                      </div>
-                     <div className="text-sm font-bold text-[#FA7D15]">
+                     <div className="text-sm font-bold text-[#ff7235]">
                         To: {purpose}
                      </div>
                   </div>

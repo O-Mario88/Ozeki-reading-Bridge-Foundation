@@ -372,7 +372,7 @@ function SectionCard({
       <header className="flex items-baseline gap-3 mb-5">
         <span
           className="grid h-7 w-7 place-items-center rounded-full text-white text-[12px] font-bold shrink-0"
-          style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+          style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
         >
           {badge}
         </span>
@@ -529,7 +529,7 @@ function Stepper({ current }: { current: 1 | 2 | 3 | 4 }) {
                   ? "grid h-7 w-7 place-items-center rounded-full text-white text-[12px] font-bold shrink-0"
                   : "grid h-7 w-7 place-items-center rounded-full bg-[#f1f5f9] text-[#7a8ca3] text-[12px] font-bold shrink-0"
               }
-              style={active ? { background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" } : undefined}
+              style={active ? { background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" } : undefined}
             >
               {s.n}
             </span>
@@ -1181,7 +1181,7 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
               disabled={saving}
               onClick={() => save("submitted")}
               className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap disabled:opacity-50"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <Send className="h-4 w-4" strokeWidth={1.75} />
               {saving ? "Submitting…" : "Submit Observation"}

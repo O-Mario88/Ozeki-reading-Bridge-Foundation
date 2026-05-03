@@ -43,7 +43,7 @@ const RECENT_EVENTS: RecentRow[] = [
 ];
 
 const KPIS = [
-  { label: "Attendance Rate",     value: "78%",   trend: "↑ 12% vs last month", icon: Users,  bg: "#eaf7f1", fg: "#047857" },
+  { label: "Attendance Rate",     value: "78%",   trend: "↑ 12% vs last month", icon: Users,  bg: "#eaf7f1", fg: "#066a67" },
   { label: "Sessions This Month", value: "12",    trend: "↑ 3 vs last month",   icon: Calendar, bg: "#fff4e8", fg: "#c2410c" },
   { label: "Certificates Issued", value: "86",    trend: "↑ 15 vs last month",  icon: Award,  bg: "#f4eeff", fg: "#7c3aed" },
   { label: "Avg Satisfaction",    value: "4.6 / 5", trend: "↑ 0.4 vs last month", icon: Star, bg: "#ecf4ff", fg: "#1d4ed8" },
@@ -89,7 +89,7 @@ export default function EventsWebinarScheduler() {
           <button
             type="button"
             className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap"
-            style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+            style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
           >
             <CalendarPlus className="h-4 w-4" strokeWidth={1.75} />
             New Event
@@ -269,7 +269,7 @@ export default function EventsWebinarScheduler() {
               <button
                 type="button"
                 className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap"
-                style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+                style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
               >
                 <Calendar className="h-4 w-4" strokeWidth={1.75} />
                 Schedule Event
@@ -452,7 +452,7 @@ export default function EventsWebinarScheduler() {
             <button
               type="button"
               className="inline-flex items-center gap-2 h-11 px-5 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <Save className="h-4 w-4" strokeWidth={1.75} />
               Save Outcomes

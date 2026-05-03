@@ -224,7 +224,7 @@ export function PortalUnifiedEventsForm() {
        </div>
        
        <div className="p-8 border-t bg-gray-50 flex justify-end">
-         <button disabled={isSubmitting} type="submit" className="bg-[#FA7D15] hover:opacity-90 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition-all flex items-center gap-2">
+         <button disabled={isSubmitting} type="submit" className="bg-[#ff7235] hover:opacity-90 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition-all flex items-center gap-2">
             {isSubmitting ? "Orchestrating Architecture..." : `Schedule ${deliveryType === 'online' ? 'Webinar' : 'Workshop'}`}
          </button>
        </div>

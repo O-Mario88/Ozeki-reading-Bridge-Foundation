@@ -106,19 +106,19 @@ function PortalFinanceTransparencyManagerContent() {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab("fy")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "fy" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "fy" ? "border-[#ff7235] text-[#ff7235]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Annual Snapshots
           </button>
           <button
             onClick={() => setActiveTab("quarterly")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "quarterly" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "quarterly" ? "border-[#ff7235] text-[#ff7235]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Quarterly Snapshots
           </button>
           <button
             onClick={() => setActiveTab("audited")}
-            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "audited" ? "border-[#FA7D15] text-[#FA7D15]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
+            className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === "audited" ? "border-[#ff7235] text-[#ff7235]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}
           >
             Audited Statements
           </button>
@@ -295,7 +295,7 @@ function SnapshotManager({ data, type, onPublish, onArchive, isPending }: { data
                 <Eye className="w-4 h-4 mr-1" /> View PDF
               </a>
               {item.status === "draft" && (
-                <button type="button" onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FA7D15] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
+                <button type="button" onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#ff7235] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
               )}
               {item.status !== "archived" && (
                 <button type="button" onClick={() => onArchive(item.id)} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">Archive</button>
@@ -422,7 +422,7 @@ function AuditedManager({ data, onPublish, onArchive, isPending }: { data: Finan
                 <Eye className="w-4 h-4 mr-1" /> View PDF
               </a>
               {item.status === "private_uploaded" && (
-                <button type="button" onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#FA7D15] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
+                <button type="button" onClick={() => onPublish(item.id)} disabled={isPending} className="text-[#ff7235] hover:text-[#c35d0e] disabled:opacity-50">Publish</button>
               )}
               {item.status !== "archived" && (
                 <button type="button" onClick={() => onArchive(item.id)} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">Archive</button>

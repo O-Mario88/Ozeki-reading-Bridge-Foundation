@@ -113,7 +113,7 @@ export type FundAllocation = {
 const ALLOCATION_BUCKETS: Array<{ label: string; match: RegExp; color: string }> = [
   { label: "Programme Delivery", match: /(training|coaching|assessment|programme|program|delivery|learner|teacher)/i, color: "#006b61" },
   { label: "Operations", match: /(operation|admin|office|overhead|salary|salaries|payroll)/i, color: "#0ea5a3" },
-  { label: "Fundraising", match: /(fundrais|donor|marketing|event)/i, color: "#FA7D15" },
+  { label: "Fundraising", match: /(fundrais|donor|marketing|event)/i, color: "#ff7235" },
   { label: "Other", match: /.*/, color: "#94a3b8" },
 ];
 

@@ -71,7 +71,7 @@ function fmt(amount: number, currency: string) {
 
 function typeIcon(type: string) {
   if (type === "school") return <School className="w-4 h-4 text-[#006b61]" />;
-  if (type === "district") return <Building2 className="w-4 h-4 text-[#FA7D15]" />;
+  if (type === "district") return <Building2 className="w-4 h-4 text-[#ff7235]" />;
   return <Globe className="w-4 h-4 text-blue-500" />;
 }
 
@@ -106,9 +106,9 @@ export async function SponsorshipMilestonesWidget() {
           <p className="text-2xl font-extrabold text-[#006b61]">{data.schoolCount}</p>
           <p className="text-xs text-gray-500 font-medium mt-0.5">Schools</p>
         </div>
-        <div className="rounded-xl bg-[#FA7D15]/5 border border-[#FA7D15]/10 p-4 text-center">
-          <Building2 className="w-5 h-5 text-[#FA7D15] mx-auto mb-2" />
-          <p className="text-2xl font-extrabold text-[#FA7D15]">{data.districtCount}</p>
+        <div className="rounded-xl bg-[#ff7235]/5 border border-[#ff7235]/10 p-4 text-center">
+          <Building2 className="w-5 h-5 text-[#ff7235] mx-auto mb-2" />
+          <p className="text-2xl font-extrabold text-[#ff7235]">{data.districtCount}</p>
           <p className="text-xs text-gray-500 font-medium mt-0.5">Districts</p>
         </div>
         <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 text-center">

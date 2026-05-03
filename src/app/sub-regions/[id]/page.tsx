@@ -69,7 +69,7 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{
-                            "--kpi-accent": fidelity.band === "Strong" ? "#FA7D15" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
+                            "--kpi-accent": fidelity.band === "Strong" ? "#ff7235" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
                         } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Fidelity ({fidelity.band})</span>
@@ -78,7 +78,7 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                         </article>
                         {kpis.improvementIndex !== null && (
                             <article className="impact-dash-kpi" style={{
-                                "--kpi-accent": kpis.improvementIndex > 0 ? "#FA7D15" : "#dc2626",
+                                "--kpi-accent": kpis.improvementIndex > 0 ? "#ff7235" : "#dc2626",
                             } as React.CSSProperties}>
                                 <div className="impact-dash-kpi-body">
                                     <span className="impact-dash-kpi-label">Improvement Index</span>
@@ -97,10 +97,10 @@ export default async function SubRegionPage({ params }: { params: Params }) {
                             <div key={d.driver} style={{ marginBottom: "0.75rem" }}>
                                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", fontSize: "0.85rem" }}>
                                     <span style={{ fontWeight: 600 }}>{d.label}</span>
-                                    <span style={{ fontWeight: 700, color: d.score >= 75 ? "#FA7D15" : d.score >= 50 ? "#e8a317" : "#dc2626" }}>{d.score}%</span>
+                                    <span style={{ fontWeight: 700, color: d.score >= 75 ? "#ff7235" : d.score >= 50 ? "#e8a317" : "#dc2626" }}>{d.score}%</span>
                                 </div>
                                 <div style={{ height: "6px", borderRadius: "4px", background: "#e8e8e8", overflow: "hidden", marginTop: "0.15rem" }}>
-                                    <div style={{ width: `${d.score}%`, height: "100%", borderRadius: "4px", background: d.score >= 75 ? "#FA7D15" : d.score >= 50 ? "#e8a317" : "#dc2626" }} />
+                                    <div style={{ width: `${d.score}%`, height: "100%", borderRadius: "4px", background: d.score >= 75 ? "#ff7235" : d.score >= 50 ? "#e8a317" : "#dc2626" }} />
                                 </div>
                                 <div style={{ fontSize: "0.72rem", color: "#999" }}>{d.detail}</div>
                             </div>

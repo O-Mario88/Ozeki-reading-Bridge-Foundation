@@ -195,7 +195,7 @@ export default async function NationalBenchmarksPage() {
             </Link>
           </div>
           <div className="rounded-2xl bg-white border border-gray-100 p-6">
-            <Scale className="w-8 h-8 text-[#FA7D15] mb-3" />
+            <Scale className="w-8 h-8 text-[#ff7235] mb-3" />
             <h3 className="text-lg font-bold text-gray-900 mb-2">Citation</h3>
             <p className="text-sm text-gray-600 mb-2">
               These benchmarks are released under CC BY 4.0. Please cite as:

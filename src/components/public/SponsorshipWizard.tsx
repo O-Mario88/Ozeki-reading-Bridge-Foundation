@@ -95,7 +95,7 @@ export function SponsorshipWizard({ level }: { level: string }) {
   return (
     <div className="w-full bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col">
        <div className="bg-gray-50 border-b p-6 flex flex-col items-center justify-center text-center">
-          <div className="text-[#FA7D15] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-1 mb-2">
+          <div className="text-[#ff7235] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-1 mb-2">
              <MapPin className="w-4 h-4" /> GEOSPATIAL GATEWAY
           </div>
           <h2 className="text-2xl font-black text-gray-900">{getFormatTitle()}</h2>
@@ -210,7 +210,7 @@ export function SponsorshipWizard({ level }: { level: string }) {
                   <div className="text-4xl font-black text-gray-900 mb-2 font-mono">
                      UGX {Number(amount).toLocaleString()}
                   </div>
-                  <div className="text-sm font-bold text-[#FA7D15]">
+                  <div className="text-sm font-bold text-[#ff7235]">
                      Target: {targetName} ({level.toUpperCase()})
                   </div>
                </div>

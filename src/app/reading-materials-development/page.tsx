@@ -22,7 +22,7 @@ export default function ReadingMaterialsDevelopmentPage() {
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             
             <div className="flex flex-col items-start">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff7235]/10 text-[#ff7235] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Program Spotlight
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
@@ -82,7 +82,7 @@ export default function ReadingMaterialsDevelopmentPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           
           <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
+            <div className="w-12 h-12 bg-[#ff7235]/10 rounded-xl flex items-center justify-center mb-6 text-[#ff7235] font-bold text-xl">1</div>
             <h3 className="text-2xl font-bold text-[#111] mb-4">Decodable Readers</h3>
             <p className="text-gray-500 leading-relaxed mb-6">
               Short books where most words follow phonics patterns learners have already learned.
@@ -104,7 +104,7 @@ export default function ReadingMaterialsDevelopmentPage() {
           </PremiumCard>
 
           <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
+            <div className="w-12 h-12 bg-[#ff7235]/10 rounded-xl flex items-center justify-center mb-6 text-[#ff7235] font-bold text-xl">2</div>
             <h3 className="text-2xl font-bold text-[#111] mb-4">Leveled Passages</h3>
             <p className="text-gray-500 leading-relaxed mb-6">
               Short texts organized by difficulty to build smooth reading and stamina.
@@ -126,7 +126,7 @@ export default function ReadingMaterialsDevelopmentPage() {
           </PremiumCard>
 
           <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
+            <div className="w-12 h-12 bg-[#ff7235]/10 rounded-xl flex items-center justify-center mb-6 text-[#ff7235] font-bold text-xl">3</div>
             <h3 className="text-2xl font-bold text-[#111] mb-4">Comprehension Activities</h3>
             <p className="text-gray-500 leading-relaxed mb-6">
               Help learners understand, retell, and respond to text without overwhelming them.
@@ -202,8 +202,8 @@ export default function ReadingMaterialsDevelopmentPage() {
         subheading="Open school profiles for implementation support or visit the full resources page."
         primaryButtonText="Browse Resources"
         primaryButtonHref="/resources"
-        primaryButtonColor="bg-[#FA7D15]"
-        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
+        primaryButtonColor="bg-[#ff7235]"
+        primaryButtonHoverColor="hover:bg-[#ff7235]/90"
         secondaryButtonText="All Resources"
         secondaryButtonHref="/resources"
         theme="charius"

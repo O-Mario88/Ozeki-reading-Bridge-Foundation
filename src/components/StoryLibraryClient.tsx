@@ -72,7 +72,7 @@ function StoryCard({ story }: { story: PublishedStory }) {
 
 function AnthologyCard({ anthology }: { anthology: AnthologyRecord }) {
     return (
-        <PremiumCard className="h-full border-none shadow-md overflow-hidden bg-white text-gray-900 hover:border-[#FA7D15]/20 transition-all p-0 flex flex-col" withHover>
+        <PremiumCard className="h-full border-none shadow-md overflow-hidden bg-white text-gray-900 hover:border-[#ff7235]/20 transition-all p-0 flex flex-col" withHover>
             <Link href={`/anthologies/${anthology.slug}`} className="story-card flex-grow relative group">
             {anthology.coverImagePath ? (
                 <div className="story-card-cover">

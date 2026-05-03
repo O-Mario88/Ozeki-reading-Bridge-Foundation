@@ -83,7 +83,7 @@ export default async function ImpactOverviewPage() {
 
   const primaryKpis = [
     { label: "Schools Supported", value: fmt(kpis.schools), icon: School, color: "text-[#006b61]", bg: "bg-[#006b61]/10" },
-    { label: "Teachers Trained", value: fmt(kpis.teachers), icon: Users, color: "text-[#FA7D15]", bg: "bg-[#FA7D15]/10" },
+    { label: "Teachers Trained", value: fmt(kpis.teachers), icon: Users, color: "text-[#ff7235]", bg: "bg-[#ff7235]/10" },
     { label: "Learners Reached", value: fmt(kpis.learners), icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Coaching Visits", value: fmt(kpis.visits), icon: Activity, color: "text-purple-600", bg: "bg-purple-50" },
   ];
@@ -192,7 +192,7 @@ export default async function ImpactOverviewPage() {
         <SectionWrapper theme="charius-beige">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] text-sm font-semibold mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#ff7235]/10 text-[#ff7235] text-sm font-semibold mb-4">
                 <Award className="w-4 h-4" /> Teaching Quality Observations
               </div>
               <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3">
@@ -309,8 +309,8 @@ export default async function ImpactOverviewPage() {
         primaryButtonHref="/donate"
         secondaryButtonText="Explore Full Data"
         secondaryButtonHref="/impact/dashboard"
-        primaryButtonColor="bg-[#FA7D15]"
-        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
+        primaryButtonColor="bg-[#ff7235]"
+        primaryButtonHoverColor="hover:bg-[#ff7235]/90"
         theme="brand"
       />
     </div>

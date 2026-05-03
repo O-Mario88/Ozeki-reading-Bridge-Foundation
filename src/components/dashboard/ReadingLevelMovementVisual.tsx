@@ -33,7 +33,7 @@ export const ReadingLevelMovementVisual = React.memo(function ReadingLevelMoveme
     const levelTextColors: Record<string, string> = {
         "Non-reader": "#dc2626", // red-600
         "Emergent": "#d97706",    // amber-600
-        "Transitional": "#FA7D15", // orange-600
+        "Transitional": "#ff7235", // orange-600
         "Fluent": "#2563eb",      // blue-600
         "Advanced": "#7c3aed",    // purple-600
     };
@@ -175,7 +175,7 @@ export const ReadingLevelMovementVisual = React.memo(function ReadingLevelMoveme
                     </div>
                     <div style={{ width: "1px", height: "24px", background: "rgba(0,0,0,0.1)" }}></div>
                     <div>
-                        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FA7D15" }}>
+                        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ff7235" }}>
                             {data.movement.n_matched}
                         </div>
                         <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#666" }}>MATCHED LEARNERS</div>

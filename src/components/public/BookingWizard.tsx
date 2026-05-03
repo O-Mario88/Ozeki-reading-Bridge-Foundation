@@ -263,7 +263,7 @@ export function BookingWizard({ catalog }: { catalog: ServiceCatalogRow[] }) {
            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="flex justify-between items-end mb-6">
                  <div className="flex items-center gap-3">
-                   <div className="w-12 h-12 rounded-2xl bg-[#FA7D15]/10 flex items-center justify-center text-[#FA7D15]">
+                   <div className="w-12 h-12 rounded-2xl bg-[#ff7235]/10 flex items-center justify-center text-[#ff7235]">
                      <ShoppingCart className="w-6 h-6" />
                    </div>
                    <div>

@@ -25,7 +25,7 @@ export default function OurStoryPage() {
         <SectionWrapper theme="charius-beige" id="problem">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
-              <div className="w-12 h-12 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#ff7235]/10 text-[#ff7235] flex items-center justify-center">
                 <AlertTriangle size={24} />
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-[#111]">The Problem We Are Solving</h2>
@@ -101,11 +101,11 @@ export default function OurStoryPage() {
             <PremiumCard variant="charius" className="bg-white border-2 border-[#006b61]/10 p-8 md:p-12 text-center mb-12 shadow-md">
               <h3 className="text-2xl font-extrabold text-[#006b61] mb-8">The Evidence-Driven Improvement Cycle</h3>
               <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm font-bold text-gray-800 uppercase tracking-widest">
-                <div className="flex flex-col items-center"><Compass className="w-8 h-8 text-[#FA7D15] mb-2" /> Train</div>
+                <div className="flex flex-col items-center"><Compass className="w-8 h-8 text-[#ff7235] mb-2" /> Train</div>
                 <ArrowRightCircle className="w-5 h-5 text-gray-300 hidden md:block" />
                 <div className="flex flex-col items-center"><Lightbulb className="w-8 h-8 text-[#006b61] mb-2" /> Support</div>
                 <ArrowRightCircle className="w-5 h-5 text-gray-300 hidden md:block" />
-                <div className="flex flex-col items-center"><LineChart className="w-8 h-8 text-[#FA7D15] mb-2" /> Analyze</div>
+                <div className="flex flex-col items-center"><LineChart className="w-8 h-8 text-[#ff7235] mb-2" /> Analyze</div>
                 <ArrowRightCircle className="w-5 h-5 text-gray-300 hidden md:block" />
                 <div className="flex flex-col items-center"><Compass className="w-8 h-8 text-[#006b61] mb-2" /> Sustain</div>
               </div>

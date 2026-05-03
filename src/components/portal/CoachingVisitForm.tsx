@@ -259,7 +259,7 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
               <button
                 key={f} type="button" onClick={() => toggleInArray("focusAreas", f)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                  selected ? "bg-[#FA7D15] text-white border-[#FA7D15]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                  selected ? "bg-[#ff7235] text-white border-[#ff7235]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
                 }`}
               >
                 {f}

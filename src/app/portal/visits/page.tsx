@@ -232,7 +232,7 @@ export default async function PortalVisitsOverviewPage() {
             <Link
               href="/portal/visits/new"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] text-white text-[13px] font-bold shadow-sm whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <Plus className="h-4 w-4" strokeWidth={1.75} />
               New School Visit
@@ -318,7 +318,7 @@ export default async function PortalVisitsOverviewPage() {
             <div className="mt-2 flex items-center gap-3">
               <UgandaCoverageMap />
               <ul className="space-y-1.5 text-[10.5px]">
-                <CoverageLegendRow color="#065f46" label="90-100%" />
+                <CoverageLegendRow color="#044f4d" label="90-100%" />
                 <CoverageLegendRow color="#10b981" label="75-89%" />
                 <CoverageLegendRow color="#34d399" label="50-74%" />
                 <CoverageLegendRow color="#86efac" label="25-49%" />
@@ -559,7 +559,7 @@ function FooterLink({ href, label, inline = false }: { href: string; label: stri
 
 type Accent = "emerald" | "blue" | "violet" | "orange" | "teal" | "rose";
 const accentMap: Record<Accent, { bg: string; fg: string }> = {
-  emerald: { bg: "#eaf7f1", fg: "#047857" },
+  emerald: { bg: "#eaf7f1", fg: "#066a67" },
   blue:    { bg: "#ecf4ff", fg: "#1d4ed8" },
   violet:  { bg: "#f4eeff", fg: "#7c3aed" },
   orange:  { bg: "#fff4e8", fg: "#c2410c" },
@@ -729,10 +729,10 @@ function UgandaCoverageMap() {
      Victoria in light blue. */
   const tiles: { x: number; y: number; fill: string }[] = [
     { x: 28, y: 12, fill: "#10b981" }, { x: 42, y: 10, fill: "#10b981" }, { x: 56, y: 12, fill: "#34d399" }, { x: 70, y: 14, fill: "#86efac" }, { x: 84, y: 18, fill: "#34d399" },
-    { x: 22, y: 24, fill: "#34d399" }, { x: 36, y: 22, fill: "#10b981" }, { x: 50, y: 22, fill: "#065f46" }, { x: 64, y: 24, fill: "#10b981" }, { x: 78, y: 28, fill: "#34d399" },
-    { x: 18, y: 36, fill: "#34d399" }, { x: 32, y: 34, fill: "#065f46" }, { x: 46, y: 34, fill: "#065f46" }, { x: 60, y: 36, fill: "#10b981" }, { x: 74, y: 40, fill: "#10b981" },
-    { x: 14, y: 48, fill: "#34d399" }, { x: 28, y: 46, fill: "#10b981" }, { x: 42, y: 46, fill: "#065f46" }, { x: 56, y: 48, fill: "#10b981" }, { x: 70, y: 52, fill: "#34d399" },
-    { x: 18, y: 60, fill: "#10b981" }, { x: 32, y: 58, fill: "#065f46" }, { x: 46, y: 58, fill: "#065f46" }, { x: 60, y: 60, fill: "#34d399" },
+    { x: 22, y: 24, fill: "#34d399" }, { x: 36, y: 22, fill: "#10b981" }, { x: 50, y: 22, fill: "#044f4d" }, { x: 64, y: 24, fill: "#10b981" }, { x: 78, y: 28, fill: "#34d399" },
+    { x: 18, y: 36, fill: "#34d399" }, { x: 32, y: 34, fill: "#044f4d" }, { x: 46, y: 34, fill: "#044f4d" }, { x: 60, y: 36, fill: "#10b981" }, { x: 74, y: 40, fill: "#10b981" },
+    { x: 14, y: 48, fill: "#34d399" }, { x: 28, y: 46, fill: "#10b981" }, { x: 42, y: 46, fill: "#044f4d" }, { x: 56, y: 48, fill: "#10b981" }, { x: 70, y: 52, fill: "#34d399" },
+    { x: 18, y: 60, fill: "#10b981" }, { x: 32, y: 58, fill: "#044f4d" }, { x: 46, y: 58, fill: "#044f4d" }, { x: 60, y: 60, fill: "#34d399" },
     { x: 22, y: 72, fill: "#34d399" }, { x: 36, y: 70, fill: "#10b981" }, { x: 50, y: 70, fill: "#10b981" },
     { x: 88, y: 36, fill: "#34d399" }, { x: 92, y: 50, fill: "#10b981" }, { x: 86, y: 62, fill: "#34d399" },
   ];

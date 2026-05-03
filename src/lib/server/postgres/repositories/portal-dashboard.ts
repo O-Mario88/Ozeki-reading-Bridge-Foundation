@@ -478,7 +478,7 @@ export async function getImplementationCoveragePostgres(): Promise<Implementatio
     const pct = (n: number) => (total > 0 ? Math.round((n / total) * 1000) / 10 : 0);
 
     const buckets: CoverageBucket[] = [
-      { label: "Implementing",       count: counts.implementing,     pct: pct(counts.implementing),     color: "#047857" },
+      { label: "Implementing",       count: counts.implementing,     pct: pct(counts.implementing),     color: "#066a67" },
       { label: "Not Implementing",   count: counts.not_implementing, pct: pct(counts.not_implementing), color: "#ef4444" },
       { label: "No Data",            count: counts.no_data,          pct: pct(counts.no_data),          color: "#cbd5e1" },
     ];

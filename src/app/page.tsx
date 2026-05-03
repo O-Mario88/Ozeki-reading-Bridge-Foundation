@@ -612,7 +612,7 @@ export default async function HomePage() {
             className="relative inline-flex group"
           >
             {/* Glowing animated backing */}
-            <div className="absolute transition-all duration-1000 opacity-60 -inset-px bg-gradient-to-r from-charius-orange via-[#FA7D15] to-[#f49342] rounded-full blur-lg group-hover:opacity-100 group-hover:-inset-1 group-hover:duration-200 animate-pulse"></div>
+            <div className="absolute transition-all duration-1000 opacity-60 -inset-px bg-gradient-to-r from-charius-orange via-[#ff7235] to-[#f49342] rounded-full blur-lg group-hover:opacity-100 group-hover:-inset-1 group-hover:duration-200 animate-pulse"></div>
             {/* Core button */}
             <div className="relative inline-flex items-center justify-center px-10 py-5 text-lg font-bold text-white transition-all duration-200 bg-[#006b61] hover:bg-[#005a51] rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#006b61] shadow-xl shadow-[#006b61]/30">
               Be Part of the Next Success Story!

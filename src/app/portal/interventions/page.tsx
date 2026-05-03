@@ -395,7 +395,7 @@ export default async function PortalInterventionsOverviewPage() {
             <Link
               href="/portal/interventions?action=new"
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-white text-[12px] font-bold shadow-sm whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
             >
               <Plus className="h-3.5 w-3.5" strokeWidth={1.75} />
               Create Plan
@@ -506,7 +506,7 @@ export default async function PortalInterventionsOverviewPage() {
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 h-7 px-3 rounded-[6px] text-white text-[11px] font-bold whitespace-nowrap"
-                style={{ background: "linear-gradient(180deg,#0d6f5b 0%,#003f37 100%)" }}
+                style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
               >
                 <Filter className="h-3 w-3" strokeWidth={1.75} />
                 Apply Filters
@@ -778,7 +778,7 @@ function KebabButton() {
 
 type Accent = "emerald" | "blue" | "violet" | "orange" | "teal" | "rose";
 const accentMap: Record<Accent, { bg: string; fg: string }> = {
-  emerald: { bg: "#eaf7f1", fg: "#047857" },
+  emerald: { bg: "#eaf7f1", fg: "#066a67" },
   blue:    { bg: "#ecf4ff", fg: "#1d4ed8" },
   violet:  { bg: "#f4eeff", fg: "#7c3aed" },
   orange:  { bg: "#fff4e8", fg: "#c2410c" },
@@ -851,7 +851,7 @@ function ProgressTrendChart({ months, values }: { months: string[]; values: numb
       <g transform={`translate(${Math.max(lastX - 48, 4)}, ${Math.max(lastY - 30, 4)})`}>
         <rect width="48" height="24" rx="4" fill="#fff" stroke="#e5eaf0" />
         <text x="6" y="10" fontSize="8" fontWeight="700" fill="#111827">May &apos;25</text>
-        <text x="6" y="20" fontSize="9" fontWeight="800" fill="#047857">{values[lastIdx]}%</text>
+        <text x="6" y="20" fontSize="9" fontWeight="800" fill="#066a67">{values[lastIdx]}%</text>
       </g>
       {months.map((m, i) => (
         <text key={m} x={sx(i)} y={h - 5} fontSize="8.5" fill="#94a3b8" textAnchor="middle">{m}</text>
@@ -962,7 +962,7 @@ function DateStub({ value }: { value: string }) {
 
 function ActivityIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: string }) {
   const map: Record<string, { bg: string; fg: string }> = {
-    emerald: { bg: "#d1fae5", fg: "#047857" },
+    emerald: { bg: "#d1fae5", fg: "#066a67" },
     blue:    { bg: "#dbeafe", fg: "#1d4ed8" },
     rose:    { bg: "#fee2e2", fg: "#b91c1c" },
     orange:  { bg: "#ffedd5", fg: "#c2410c" },
@@ -981,7 +981,7 @@ function ActivityIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: string }) 
 function FileToneIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: string }) {
   const map: Record<string, { bg: string; fg: string }> = {
     rose:    { bg: "#fee2e2", fg: "#b91c1c" },
-    emerald: { bg: "#d1fae5", fg: "#047857" },
+    emerald: { bg: "#d1fae5", fg: "#066a67" },
     violet:  { bg: "#ede9fe", fg: "#7c3aed" },
     blue:    { bg: "#dbeafe", fg: "#1d4ed8" },
   };
@@ -1001,7 +1001,7 @@ function ActionTile({
   icon: LucideIcon; label: string; href: string; tone: string;
 }) {
   const map: Record<string, { bg: string; fg: string }> = {
-    emerald: { bg: "#d1fae5", fg: "#047857" },
+    emerald: { bg: "#d1fae5", fg: "#066a67" },
     blue:    { bg: "#dbeafe", fg: "#1d4ed8" },
     violet:  { bg: "#ede9fe", fg: "#7c3aed" },
     orange:  { bg: "#ffedd5", fg: "#c2410c" },

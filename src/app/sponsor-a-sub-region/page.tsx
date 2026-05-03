@@ -107,7 +107,7 @@ export default function SponsorSubRegionPage() {
           <div className="absolute inset-0 bg-[#1a4d47]/88 backdrop-blur-[2px]" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#1a4d47]/40 to-[#1a4d47]/95" />
         </div>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#FA7D15]/15 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#ff7235]/15 via-transparent to-transparent pointer-events-none" />
 
         <div className="container mx-auto px-4 md:px-6 max-w-5xl relative z-10 text-center flex flex-col items-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-white font-semibold text-sm mb-6 shadow-sm border border-white/20">
@@ -313,8 +313,8 @@ export default function SponsorSubRegionPage() {
         subheading="Your investment creates a focused proof point for literacy improvement — deep enough to transform, visible enough to inspire."
         primaryButtonText="Fund a Sub-Region"
         primaryButtonHref="#sponsorship-checkout"
-        primaryButtonColor="bg-[#FA7D15]"
-        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
+        primaryButtonColor="bg-[#ff7235]"
+        primaryButtonHoverColor="hover:bg-[#ff7235]/90"
         secondaryButtonText="All Partnership Options"
         secondaryButtonHref="/partner"
         theme="charius"

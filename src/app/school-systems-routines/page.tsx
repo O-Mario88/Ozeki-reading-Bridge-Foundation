@@ -22,7 +22,7 @@ export default function SchoolSystemsRoutinesPage() {
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             
             <div className="flex flex-col items-start">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff7235]/10 text-[#ff7235] font-bold text-sm mb-6 shadow-sm border border-[#ff7235]/20">
                 Program Spotlight
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
@@ -84,7 +84,7 @@ export default function SchoolSystemsRoutinesPage() {
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           
           <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">1</div>
+            <div className="w-12 h-12 bg-[#ff7235]/10 rounded-xl flex items-center justify-center mb-6 text-[#ff7235] font-bold text-xl">1</div>
             <h3 className="text-2xl font-bold text-[#111] mb-4">Set the Literacy Structure</h3>
             <p className="text-gray-500 leading-relaxed mb-6">
               We help the school create a realistic literacy timetable that
@@ -106,7 +106,7 @@ export default function SchoolSystemsRoutinesPage() {
           </PremiumCard>
 
           <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">2</div>
+            <div className="w-12 h-12 bg-[#ff7235]/10 rounded-xl flex items-center justify-center mb-6 text-[#ff7235] font-bold text-xl">2</div>
             <h3 className="text-2xl font-bold text-[#111] mb-4">Install Daily &amp; Weekly Routines</h3>
             <p className="text-gray-500 leading-relaxed mb-6">
               We introduce repeatable routines teachers can run every day without
@@ -128,7 +128,7 @@ export default function SchoolSystemsRoutinesPage() {
           </PremiumCard>
 
           <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">3</div>
+            <div className="w-12 h-12 bg-[#ff7235]/10 rounded-xl flex items-center justify-center mb-6 text-[#ff7235] font-bold text-xl">3</div>
             <h3 className="text-2xl font-bold text-[#111] mb-4">Track Implementation</h3>
             <p className="text-gray-500 leading-relaxed mb-6">
               We provide simple tools to track whether routines are happening
@@ -150,7 +150,7 @@ export default function SchoolSystemsRoutinesPage() {
           </PremiumCard>
 
           <PremiumCard variant="charius" className="p-8 flex flex-col" withHover>
-            <div className="w-12 h-12 bg-[#FA7D15]/10 rounded-xl flex items-center justify-center mb-6 text-[#FA7D15] font-bold text-xl">4</div>
+            <div className="w-12 h-12 bg-[#ff7235]/10 rounded-xl flex items-center justify-center mb-6 text-[#ff7235] font-bold text-xl">4</div>
             <h3 className="text-2xl font-bold text-[#111] mb-4">Accountability (Supportive)</h3>
             <p className="text-gray-500 leading-relaxed mb-6">
               We help leaders supervise reading lessons using short checklists and
@@ -232,8 +232,8 @@ export default function SchoolSystemsRoutinesPage() {
         subheading="Establish literacy routines and accountability systems directly in your school."
         primaryButtonText="Signature Program"
         primaryButtonHref="/phonics-training"
-        primaryButtonColor="bg-[#FA7D15]"
-        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
+        primaryButtonColor="bg-[#ff7235]"
+        primaryButtonHoverColor="hover:bg-[#ff7235]/90"
         theme="charius"
       />
     </>

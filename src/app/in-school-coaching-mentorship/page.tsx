@@ -22,7 +22,7 @@ export default function InSchoolCoachingMentorshipPage() {
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             
             <div className="flex flex-col items-start">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff7235]/10 text-[#ff7235] font-semibold text-sm mb-6 shadow-sm border border-brand-primary/10">
                 Program Spotlight
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-primary tracking-tight leading-tight mb-6">
@@ -228,8 +228,8 @@ export default function InSchoolCoachingMentorshipPage() {
         subheading="Support coaching cycles that are tracked, verified, and directly linked to learner reading gains."
         primaryButtonText="Partner With Us"
         primaryButtonHref="/partner-with-us"
-        primaryButtonColor="bg-[#FA7D15]"
-        primaryButtonHoverColor="hover:bg-[#FA7D15]/90"
+        primaryButtonColor="bg-[#ff7235]"
+        primaryButtonHoverColor="hover:bg-[#ff7235]/90"
         secondaryButtonText="Explore Impact Evidence"
         secondaryButtonHref="/impact"
         theme="charius"

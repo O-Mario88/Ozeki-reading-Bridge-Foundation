@@ -16,7 +16,7 @@ function renderDossierHtml(d: SchoolDossier): string {
   const comp = d.districtComparison;
 
   const bandColor = (band: string) => {
-    if (band === "Excellent") return "#047857";
+    if (band === "Excellent") return "#066a67";
     if (band === "Strong") return "#0284c7";
     if (band === "Developing") return "#d97706";
     if (band === "At Risk") return "#dc2626";
@@ -24,7 +24,7 @@ function renderDossierHtml(d: SchoolDossier): string {
   };
 
   const trajectoryColor = (band: string) => {
-    if (band === "Accelerating") return "#047857";
+    if (band === "Accelerating") return "#066a67";
     if (band === "Steady") return "#0284c7";
     if (band === "Stagnating") return "#d97706";
     if (band === "Regressing") return "#dc2626";

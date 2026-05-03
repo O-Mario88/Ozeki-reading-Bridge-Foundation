@@ -75,7 +75,7 @@ export default async function RegionPage({ params }: { params: Params }) {
                             </div>
                         </article>
                         <article className="impact-dash-kpi" style={{
-                            "--kpi-accent": fidelity.band === "Strong" ? "#FA7D15" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
+                            "--kpi-accent": fidelity.band === "Strong" ? "#ff7235" : fidelity.band === "Developing" ? "#e8a317" : "#dc2626",
                         } as React.CSSProperties}>
                             <div className="impact-dash-kpi-body">
                                 <span className="impact-dash-kpi-label">Fidelity ({fidelity.band})</span>

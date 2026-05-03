@@ -73,16 +73,16 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
 
             <main className="flex-grow pt-[72px] md:pt-20">
                 <section className="relative overflow-hidden bg-brand-background pt-16 pb-16 md:pt-24 md:pb-24 border-b border-gray-100">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#FA7D15]/5 via-brand-background to-brand-background pointer-events-none" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#ff7235]/5 via-brand-background to-brand-background pointer-events-none" />
                     
                     <div className="container mx-auto px-4 md:px-6 max-w-6xl relative z-10">
                         <nav className="flex items-center gap-2 text-sm text-gray-500 font-medium mb-8" aria-label="Breadcrumb">
-                            <Link href="/stories" className="hover:text-[#FA7D15] transition-colors">Story Library</Link>
+                            <Link href="/stories" className="hover:text-[#ff7235] transition-colors">Story Library</Link>
                             <span aria-hidden>›</span>
                             <span className="text-gray-900 truncate max-w-[200px] md:max-w-md">{story.title}</span>
                         </nav>
                         
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA7D15]/10 text-[#FA7D15] font-bold text-sm mb-6 shadow-sm border border-[#FA7D15]/20">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff7235]/10 text-[#ff7235] font-bold text-sm mb-6 shadow-sm border border-[#ff7235]/20">
                             <BookOpen className="w-4 h-4" /> 1001 Story Project
                         </div>
                         
@@ -99,7 +99,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                         <div className="flex flex-wrap items-center gap-3 text-gray-500 font-medium mb-10 text-lg">
                             <span className="text-gray-900 font-bold">{safeAuthorName}</span>
                             <span className="text-gray-300">•</span>
-                            <Link href={`/schools/${story.schoolId}`} className="hover:text-[#FA7D15] transition-colors">
+                            <Link href={`/schools/${story.schoolId}`} className="hover:text-[#ff7235] transition-colors">
                                 {story.schoolName}
                             </Link>
                             <span className="text-gray-300">•</span>
@@ -141,7 +141,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                     <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12">
                         
                         <article className="flex-grow w-full lg:w-2/3">
-                            <div className="p-4 mb-8 bg-[#FA7D15]/5 border border-[#FA7D15]/10 rounded-xl text-sm text-gray-500 leading-relaxed italic">
+                            <div className="p-4 mb-8 bg-[#ff7235]/5 border border-[#ff7235]/10 rounded-xl text-sm text-gray-500 leading-relaxed italic">
                                 Disclaimer: This work is published with the explicit written consent of the author's guardian and school. Standard safeguarding policies apply.
                             </div>
 
@@ -182,7 +182,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                                 </h3>
                                 <p className="text-gray-500 leading-relaxed mb-4">
                                     This story was written by <strong>{safeAuthorName}</strong> as part of the{" "}
-                                    <Link href="/story-project" className="text-[#FA7D15] font-bold hover:underline">1001 Story Project</Link>.
+                                    <Link href="/story-project" className="text-[#ff7235] font-bold hover:underline">1001 Story Project</Link>.
                                 </p>
                                 {story.authorAbout ? (
                                     <p className="text-sm text-gray-500 leading-relaxed italic border-l-2 border-[#006b61]/20 pl-4 mb-4">
@@ -208,7 +208,7 @@ export default async function StoryDetailPage({ params }: { params: Params }) {
                                     <div className="flex flex-col gap-5">
                                         {moreStories.map(s => (
                                             <Link key={s.slug} href={`/stories/${s.slug}`} className="group block">
-                                                <h4 className="font-bold text-brand-primary group-hover:text-[#FA7D15] transition-colors line-clamp-2 leading-tight mb-1">
+                                                <h4 className="font-bold text-brand-primary group-hover:text-[#ff7235] transition-colors line-clamp-2 leading-tight mb-1">
                                                     {s.title}
                                                 </h4>
                                                 <p className="text-sm text-gray-500 font-medium">

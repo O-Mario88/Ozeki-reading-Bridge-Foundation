@@ -55,8 +55,8 @@ export function OzekiSidebar({ user, activeHref, forceVisible = false }: Props) 
     .join(" • ");
 
   const wrapperCls = forceVisible
-    ? "flex flex-col h-full w-full bg-[#0d4b3a] text-white overflow-hidden"
-    : "hidden lg:flex flex-col h-screen w-[248px] xl:w-[260px] bg-[#0d4b3a] text-white border-r border-black/10 overflow-hidden sticky top-0";
+    ? "flex flex-col h-full w-full bg-[#044f4d] text-white overflow-hidden"
+    : "hidden lg:flex flex-col h-screen w-[248px] xl:w-[260px] bg-[#044f4d] text-white border-r border-black/10 overflow-hidden sticky top-0";
 
   return (
     <aside aria-label="Primary navigation" className={wrapperCls}>
@@ -124,7 +124,7 @@ export function OzekiSidebar({ user, activeHref, forceVisible = false }: Props) 
       {/* User pod */}
       <div className="border-t border-white/10 px-3 py-3">
         <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-[#16624c] text-[12px] font-bold text-white shrink-0">
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-[#044f4d] text-[12px] font-bold text-white shrink-0">
             {getInitials(user.fullName ?? user.email ?? "OS")}
           </div>
           <div className="min-w-0 flex-1">

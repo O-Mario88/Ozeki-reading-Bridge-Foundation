@@ -47,7 +47,7 @@ export function MobileHeader({
 
   return (
     <>
-      <header className="lg:hidden bg-[#0d4b3a] text-white pt-[env(safe-area-inset-top)]">
+      <header className="lg:hidden bg-[#044f4d] text-white pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between gap-3 h-14 px-4">
           <button
             type="button"
@@ -88,7 +88,7 @@ export function MobileHeader({
             >
               <Bell className="h-5 w-5" strokeWidth={1.75} />
               {notificationCount > 0 && (
-                <span className="absolute top-1 right-1 grid place-items-center h-[18px] min-w-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold border border-[#0d4b3a]">
+                <span className="absolute top-1 right-1 grid place-items-center h-[18px] min-w-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold border border-[#044f4d]">
                   {notificationCount > 9 ? "9+" : notificationCount}
                 </span>
               )}
@@ -106,7 +106,7 @@ export function MobileHeader({
             tabIndex={-1}
             aria-label="Close menu"
           />
-          <div className="w-[88vw] max-w-[300px] h-full overflow-y-auto bg-[#0d4b3a]">
+          <div className="w-[88vw] max-w-[300px] h-full overflow-y-auto bg-[#044f4d]">
             <button
               type="button"
               onClick={() => setOpen(false)}

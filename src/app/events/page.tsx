@@ -44,10 +44,10 @@ export default async function EventsPage() {
                   {scheduledEvents.map(event => (
                      <div key={event.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all border border-gray-100 overflow-hidden group flex flex-col h-full">
                         <div className={`px-6 py-4 border-b flex justify-between items-center ${event.deliveryType === 'online' ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
-                           <span className={`text-xs font-black tracking-widest uppercase ${event.deliveryType === 'online' ? 'text-blue-700' : 'text-[#FA7D15]'}`}>
+                           <span className={`text-xs font-black tracking-widest uppercase ${event.deliveryType === 'online' ? 'text-blue-700' : 'text-[#ff7235]'}`}>
                               {event.deliveryType === 'online' ? "ONLINE LIVE SESSION" : "IN-PERSON TRAINING"}
                            </span>
-                           {event.deliveryType === 'online' ? <Video className="w-5 h-5 text-blue-400" /> : <MapPin className="w-5 h-5 text-[#FA7D15]/60" />}
+                           {event.deliveryType === 'online' ? <Video className="w-5 h-5 text-blue-400" /> : <MapPin className="w-5 h-5 text-[#ff7235]/60" />}
                         </div>
                         
                         <div className="p-6 flex-1 flex flex-col">
@@ -78,7 +78,7 @@ export default async function EventsPage() {
                               ) : (
                                 <>
                                   <div className="flex items-center gap-3 mt-4 pt-4 border-t border-dashed">
-                                     <MapPin className="w-4 h-4 text-[#FA7D15]" />
+                                     <MapPin className="w-4 h-4 text-[#ff7235]" />
                                      <span className="font-medium text-gray-900 line-clamp-1">{event.venueName}</span>
                                   </div>
                                   <div className="flex items-center gap-3">

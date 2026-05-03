@@ -197,7 +197,7 @@ export const UGANDA_SUB_REGIONS: Record<string, string[]> = {
 };
 
 export const REGION_COLORS: Record<string, string> = {
-    Central: "#FA7D15",  // Orange
+    Central: "#ff7235",  // Orange
     Eastern: "#e8a317",  // Amber
     Northern: "#2563eb",  // Blue
     Western: "#7c3aed",  // Purple

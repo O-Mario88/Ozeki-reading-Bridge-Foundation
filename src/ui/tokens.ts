@@ -5,7 +5,7 @@ export const uiTokens = {
       dark: "#063748",
     },
     orange: {
-      primary: "#FA7D15",
+      primary: "#ff7235",
       dark: "#CF620B",
     },
   },
