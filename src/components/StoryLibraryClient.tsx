@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import type { PublishedStory, AnthologyRecord } from "@/lib/types";
 import { PremiumCard } from "@/components/public/PremiumCard";
@@ -115,7 +115,18 @@ export function StoryLibraryClient({ initialStories, initialTotal, initialAnthol
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
 
+    // Track the in-flight search so rapid filter clicks don't apply stale
+    // results on top of fresh ones (each new search aborts the previous).
+    const inFlightRef = useRef<AbortController | null>(null);
+    useEffect(() => () => inFlightRef.current?.abort(), []);
+
     const doSearch = useCallback(async (overrides: Record<string, string | number> = {}) => {
+        // Abort any prior in-flight request so its late response can't
+        // overwrite the newer one we're about to issue.
+        inFlightRef.current?.abort();
+        const controller = new AbortController();
+        inFlightRef.current = controller;
+
         setLoading(true);
         const params = new URLSearchParams();
         const q = (overrides.q as string) ?? query;
@@ -135,12 +146,23 @@ export function StoryLibraryClient({ initialStories, initialTotal, initialAnthol
         params.set("page", String(p));
 
         try {
-            const res = await fetch(`/api/stories?${params}`);
+            const res = await fetch(`/api/stories?${params}`, { signal: controller.signal });
             const data = await res.json();
+            // Only commit results if we're still the latest request.
+            if (controller.signal.aborted) return;
             setStories(data.stories ?? []);
             setTotal(data.total ?? 0);
+        } catch (err) {
+            // AbortError is the expected signal that a newer search took over;
+            // anything else is a real network/parsing failure to surface.
+            if ((err as { name?: string })?.name !== "AbortError") {
+                console.error("[stories] search failed", err);
+            }
         } finally {
-            setLoading(false);
+            if (inFlightRef.current === controller) {
+                inFlightRef.current = null;
+                setLoading(false);
+            }
         }
     }, [query, district, grade, tag, language, sort, page]);
 
@@ -163,14 +185,25 @@ export function StoryLibraryClient({ initialStories, initialTotal, initialAnthol
         <>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", borderBottom: "1px solid var(--md-sys-color-outline-variant)", paddingBottom: "0.5rem", marginBottom: "2rem" }}>
                 <button
+                    type="button"
                     className={`button ${activeTab === "stories" ? "" : "button-ghost"}`}
-                    onClick={() => setActiveTab("stories")}
+                    onClick={() => {
+                        // Clear story-only filters when leaving the stories tab so
+                        // they don't quietly persist and re-apply if the user comes
+                        // back via the tab switcher.
+                        setActiveTab("stories");
+                    }}
                 >
                     Individual Stories
                 </button>
                 <button
+                    type="button"
                     className={`button ${activeTab === "anthologies" ? "" : "button-ghost"}`}
-                    onClick={() => setActiveTab("anthologies")}
+                    onClick={() => {
+                        setQuery(""); setDistrict(""); setGrade("");
+                        setTag(""); setLanguage(""); setSort("newest"); setPage(1);
+                        setActiveTab("anthologies");
+                    }}
                 >
                     Full Anthologies
                 </button>

@@ -27,18 +27,27 @@ export default function SupportRequestForm() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (search.length > 2) {
-            // Simplified search logic, ideally this would be an API call
-            fetch(`/api/schools/search?search=${search}`)
-                .then(res => res.json())
-                .then(data => {
-                    const schoolsArr = Array.isArray(data.schools) ? data.schools : [];
-                    setSchools(schoolsArr.slice(0, 10));
-                })
-                .catch(err => console.error("Error fetching schools:", err));
-        } else {
+        if (search.length <= 2) {
             setSchools([]);
+            return;
         }
+        // Abort the in-flight request when the user types another character
+        // or unmounts; otherwise a slow response could overwrite the latest
+        // search results out of order.
+        const controller = new AbortController();
+        fetch(`/api/schools/search?search=${encodeURIComponent(search)}`, { signal: controller.signal })
+            .then(res => res.json())
+            .then(data => {
+                if (controller.signal.aborted) return;
+                const schoolsArr = Array.isArray(data.schools) ? data.schools : [];
+                setSchools(schoolsArr.slice(0, 10));
+            })
+            .catch(err => {
+                if ((err as { name?: string })?.name !== "AbortError") {
+                    console.error("Error fetching schools:", err);
+                }
+            });
+        return () => controller.abort();
     }, [search]);
 
     const toggleSupportType = (type: SupportType) => {

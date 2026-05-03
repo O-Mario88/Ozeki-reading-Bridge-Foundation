@@ -20,8 +20,23 @@ export function EventRegistrationForm({ eventId, eventTitle }: { eventId: number
     registeredByEmail: "",
   });
 
-  // Teachers Roster State
-  const [teachers, setTeachers] = useState([{ fullName: "", phone: "", email: "", role: "", classTaught: "", gender: "Other" }]);
+  // Teachers Roster State.
+  // Each row carries a stable client-only `_id` so React keys survive
+  // insertions/removals — without this, `key={index}` shifts the input
+  // values onto a different teacher when the user removes a middle row.
+  const makeTeacher = () => ({
+    _id:
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `teacher-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    fullName: "",
+    phone: "",
+    email: "",
+    role: "",
+    classTaught: "",
+    gender: "Other",
+  });
+  const [teachers, setTeachers] = useState([makeTeacher()]);
 
   const handleSchoolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSchool({ ...school, [e.target.name]: e.target.value });
@@ -35,7 +50,7 @@ export function EventRegistrationForm({ eventId, eventTitle }: { eventId: number
   };
 
   const addTeacher = () => {
-    setTeachers([...teachers, { fullName: "", phone: "", email: "", role: "", classTaught: "", gender: "Other" }]);
+    setTeachers([...teachers, makeTeacher()]);
   };
 
   const removeTeacher = (index: number) => {
@@ -151,9 +166,9 @@ export function EventRegistrationForm({ eventId, eventTitle }: { eventId: number
           <p className="text-sm text-gray-600 mb-4">Add all teachers from your school who will be attending this event.</p>
           
           {teachers.map((teacher, index) => (
-            <div key={index} className="teacher-entry p-4 bg-gray-50 border rounded-lg relative">
+            <div key={teacher._id} className="teacher-entry p-4 bg-gray-50 border rounded-lg relative">
               {teachers.length > 1 && (
-                <button onClick={() => removeTeacher(index)} className="absolute top-4 right-4 text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
+                <button type="button" onClick={() => removeTeacher(index)} className="absolute top-4 right-4 text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
               )}
               <h4 className="font-medium mb-3">Teacher {index + 1}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

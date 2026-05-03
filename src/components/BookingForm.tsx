@@ -146,7 +146,15 @@ export function BookingForm({
       <FormSection title="Scheduling Preferences">
         <label className="form-field-label">
           Preferred date
-          <input type="date" name="preferredDate" required />
+          <input
+            type="date"
+            name="preferredDate"
+            required
+            // Block past dates at the picker level — saves a server round-trip
+            // and avoids the silent "submit succeeds but reservation invalid"
+            // failure mode.
+            min={new Date().toISOString().slice(0, 10)}
+          />
         </label>
         <label className="form-field-label">
           Preferred time

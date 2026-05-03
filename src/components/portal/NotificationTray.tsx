@@ -31,11 +31,22 @@ export function NotificationTray() {
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/portal/notifications?limit=20");
-      if (!res.ok) return;
+      if (!res.ok) {
+        // 401/403 are expected on session expiry — quietly stop polling.
+        // 5xx is real and worth knowing about.
+        if (res.status >= 500) {
+          console.warn("[notifications] poll failed", res.status, res.statusText);
+        }
+        return;
+      }
       const json = await res.json();
       setList(json.data ?? []);
       setUnread(Number(json.unreadCount ?? 0));
-    } catch { /* silent */ }
+    } catch (err) {
+      // Network/parse errors aren't safe to swallow — log so devs notice
+      // when the count goes stale because of a real failure.
+      console.warn("[notifications] poll error", err);
+    }
   }, []);
 
   useEffect(() => {

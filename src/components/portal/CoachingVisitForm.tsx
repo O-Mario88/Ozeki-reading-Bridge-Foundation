@@ -81,6 +81,14 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
   const submit = async () => {
     if (!form.schoolId) { setError("Please choose a school."); return; }
     if (!form.coachUserId) { setError("Please choose a coach."); return; }
+    // Same-day window check: when the user supplies both a start and end
+    // time, end must be strictly after start. The API rejects this too,
+    // but a client-side guard avoids the round-trip and gives an
+    // immediate, specific message.
+    if (form.startTime && form.endTime && form.startTime >= form.endTime) {
+      setError("End time must be after start time.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
