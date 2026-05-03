@@ -8,7 +8,7 @@ import { devFallback } from "@/lib/dev-fallback";
 import {
   Users, Calendar, BookOpen, ClipboardCheck, GraduationCap, ShieldCheck,
   ArrowUpRight, Phone, Mail, MapPin, ChevronDown, Download, Edit3, ChevronRight,
-  Camera, Clock, FilePlus2, Upload, FileText, AlertTriangle, Activity,
+  School as SchoolIcon, Clock, FilePlus2, Upload, FileText, AlertTriangle, Activity,
   Library, Heart, type LucideIcon,
 } from "lucide-react";
 
@@ -82,17 +82,17 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
   const school = profile?.school ?? null;
   if (!school || !profile) notFound();
 
-  // Real numbers where the DB has them — fallback otherwise.
-  const learnersEnrolled = school.enrolledLearners || school.enrollmentTotal || 842;
-
-  const district = school.district || "Kampala District";
-  const region = school.region || "Central Region";
-  const headteacher = profile.contacts?.[0]?.fullName ?? "Sarah Namubiru";
-  const headteacherPhone = profile.contacts?.[0]?.phone ?? "+256 780 123 456";
-  const headteacherEmail = profile.contacts?.[0]?.email ?? "snamubiru@kwhacademy.ac.ug";
-  const yearFounded = school.yearFounded ?? 2010;
-  const schoolCode = school.schoolCode || "KHA-001";
-  const emis = school.schoolUid || "U12345";
+  // All identity fields come straight from the DB; missing values render as
+  // an em-dash. No more screenshot defaults leaking into production.
+  const learnersEnrolled = school.enrolledLearners || school.enrollmentTotal || 0;
+  const district = school.district || null;
+  const region = school.region || null;
+  const headteacher = profile.contacts?.[0]?.fullName ?? null;
+  const headteacherPhone = profile.contacts?.[0]?.phone ?? null;
+  const headteacherEmail = profile.contacts?.[0]?.email ?? null;
+  const yearFounded = school.yearFounded ?? null;
+  const schoolCode = school.schoolCode || null;
+  const emis = school.schoolExternalId || null;
   const status = school.schoolActive ?? true;
 
   // Calculate reading-level distribution from real progress when present.
@@ -127,7 +127,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              href={`/portal/reports?district=${encodeURIComponent(district)}&search=${encodeURIComponent(school.name)}`}
+              href={`/portal/reports?district=${encodeURIComponent(district ?? "")}&search=${encodeURIComponent(school.name)}`}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50 whitespace-nowrap"
             >
               <Download className="h-4 w-4" strokeWidth={1.75} />
@@ -155,17 +155,12 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
 
         {/* School identity hero card */}
         <section className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_auto] gap-0">
-            {/* Photo */}
-            <div className="relative h-[180px] lg:h-full lg:min-h-[200px] bg-gradient-to-br from-emerald-700 via-emerald-600 to-amber-600">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.18),transparent_60%)]" aria-hidden />
-              <button
-                type="button"
-                aria-label="Edit photo"
-                className="absolute bottom-3 right-3 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-gray-700 shadow"
-              >
-                <Camera className="h-4 w-4" strokeWidth={1.75} />
-              </button>
+          <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_auto] gap-0">
+            {/* Icon panel */}
+            <div className="flex items-center justify-center h-[160px] lg:h-full lg:min-h-[200px] bg-emerald-50 border-b lg:border-b-0 lg:border-r border-emerald-100">
+              <span className="grid h-20 w-20 place-items-center rounded-2xl bg-emerald-700 text-white shadow-sm">
+                <SchoolIcon className="h-10 w-10" strokeWidth={1.75} />
+              </span>
             </div>
             {/* Identity */}
             <div className="px-6 py-5 min-w-0">
@@ -178,20 +173,22 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
                 </span>
               </div>
               <ul className="mt-2 space-y-1.5 text-[12.5px] text-gray-600">
-                <li className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-gray-400" strokeWidth={1.75} />{district}, {region}</li>
-                <li className="inline-flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5 text-gray-400" strokeWidth={1.75} />Primary &nbsp;•&nbsp; Day School &nbsp;•&nbsp; Mixed</li>
+                <li className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-gray-400" strokeWidth={1.75} />
+                  {[district, region].filter(Boolean).join(", ") || "—"}
+                </li>
                 <li className="inline-flex items-center gap-3 text-gray-500">
-                  <span><span className="font-semibold text-gray-700">EMIS:</span> {emis}</span>
-                  <span><span className="font-semibold text-gray-700">School Code:</span> {schoolCode}</span>
+                  <span><span className="font-semibold text-gray-700">EMIS:</span> {emis ?? "—"}</span>
+                  <span><span className="font-semibold text-gray-700">School Code:</span> {schoolCode ?? "—"}</span>
                 </li>
               </ul>
             </div>
             {/* Contact grid */}
             <div className="px-6 py-5 border-t lg:border-t-0 lg:border-l border-gray-100 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
-              <ContactItem icon={Users} label="Headteacher" value={headteacher} />
-              <ContactItem icon={Mail}  label="Email"        value={headteacherEmail} mono />
-              <ContactItem icon={Phone} label="Phone"        value={headteacherPhone} />
-              <ContactItem icon={Calendar} label="Established" value={String(yearFounded)} />
+              <ContactItem icon={Users}    label="Headteacher" value={headteacher ?? "—"} />
+              <ContactItem icon={Mail}     label="Email"        value={headteacherEmail ?? "—"} mono />
+              <ContactItem icon={Phone}    label="Phone"        value={headteacherPhone ?? "—"} />
+              <ContactItem icon={Calendar} label="Established"  value={yearFounded ? String(yearFounded) : "—"} />
             </div>
           </div>
         </section>

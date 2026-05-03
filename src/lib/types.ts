@@ -2554,6 +2554,8 @@ export interface SchoolDirectoryRecord {
   id: number;
   schoolUid: string;
   schoolCode: string;
+  /** Ministry of Education identifier (EMIS) — user-entered, optional. */
+  schoolExternalId: string | null;
   name: string;
   country: string;
   region: string;

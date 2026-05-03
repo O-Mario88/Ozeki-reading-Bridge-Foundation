@@ -245,6 +245,7 @@ export function PortalSchoolsManager({
       parish: String(formData.get("parish") ?? ""),
       village: String(formData.get("village") ?? ""),
       alternateSchoolNames: String(formData.get("alternateSchoolNames") ?? ""),
+      schoolExternalId: String(formData.get("schoolExternalId") ?? ""),
       schoolStatus: String(formData.get("schoolStatus") ?? "Open"),
       schoolStatusDate: String(formData.get("schoolStatusDate") ?? ""),
       currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
@@ -294,6 +295,7 @@ export function PortalSchoolsManager({
           parish: payload.parish.trim() || undefined,
           village: payload.village.trim() || undefined,
           alternateSchoolNames: payload.alternateSchoolNames.trim() || undefined,
+          schoolExternalId: payload.schoolExternalId.trim() || undefined,
           schoolStatus: payload.schoolStatus || "Open",
           schoolStatusDate: payload.schoolStatusDate.trim() || undefined,
           currentPartnerType: payload.currentPartnerType || "NA",
@@ -580,6 +582,13 @@ export function PortalSchoolsManager({
               <label>
                 <span className="portal-field-label">Country</span>
                 <input name="country" defaultValue="Uganda" required />
+              </label>
+              <label>
+                <span className="portal-field-label">EMIS Number (optional)</span>
+                <input
+                  name="schoolExternalId"
+                  placeholder="e.g. U12345 — leave blank if unknown"
+                />
               </label>
               <label>
                 <span className="portal-field-label">School Status</span>
