@@ -39,6 +39,7 @@ const FOCUS_OPTIONS = [
 const VISIT_REASONS = [
   "Scheduled coaching cycle",
   "Follow-up to previous visit",
+  "Training Follow Up",
   "Headteacher request",
   "Concern flagged by coach",
   "Termly review",
@@ -57,8 +58,6 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
     visitReasons: [] as string[],
     focusAreas: [] as string[],
     implementationStatus: "started" as "not_started" | "started" | "partial" | "full",
-    classesImplementing: "" as string,
-    classesNotImplementing: "" as string,
     startTime: "",
     endTime: "",
     sponsorshipType: "none" as "none" | "school" | "district" | "region" | "general",
@@ -104,12 +103,8 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
         visitReasons: form.visitReasons,
         focusAreas: form.focusAreas,
         implementationStatus: form.implementationStatus,
-        classesImplementing: form.classesImplementing
-          ? form.classesImplementing.split(",").map((s) => s.trim()).filter(Boolean)
-          : [],
-        classesNotImplementing: form.classesNotImplementing
-          ? form.classesNotImplementing.split(",").map((s) => s.trim()).filter(Boolean)
-          : [],
+        classesImplementing: [],
+        classesNotImplementing: [],
         startTime: form.startTime || null,
         endTime: form.endTime || null,
         sponsorshipType: form.sponsorshipType === "none" ? null : form.sponsorshipType,
@@ -289,26 +284,6 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
               </button>
             );
           })}
-        </div>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Classes implementing</label>
-            <input
-              type="text" placeholder="e.g. P1, P2, P3"
-              value={form.classesImplementing}
-              onChange={(e) => setForm({ ...form, classesImplementing: e.target.value })}
-              className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Classes not implementing</label>
-            <input
-              type="text" placeholder="e.g. P4, P5"
-              value={form.classesNotImplementing}
-              onChange={(e) => setForm({ ...form, classesNotImplementing: e.target.value })}
-              className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
         </div>
       </div>
 
