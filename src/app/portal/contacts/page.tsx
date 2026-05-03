@@ -13,6 +13,7 @@ import {
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   getCrmKpis, getCrmActivityTrend, getContactSegments, getCrmPipeline,
   listSchoolsWithContacts, listRecentCrmActivity, listUpcomingFollowUps,
@@ -54,9 +55,10 @@ export const metadata = {
 };
 
 /* ────────────────────────────────────────────────────────────────────
-   Reference data — frozen verbatim from the supplied screenshot.
+   Reference data — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page.
    ──────────────────────────────────────────────────────────────────── */
-const FALLBACK = {
+const FALLBACK = devFallback({
   kpis: {
     totalSchools:        { value: "172",   sub: "↑ 12 this month",            icon: SchoolIcon,    accent: "emerald" as const },
     activeContacts:      { value: "1,486", sub: "↑ 8.4% vs last month",       icon: Users,         accent: "blue"    as const },
@@ -153,7 +155,7 @@ const FALLBACK = {
     text: "Most active relationship growth this period came from Central and Acholi regions, while 23 contacts and 9 schools require urgent follow-up.",
     updated: "Jun 2025  •  10:45 AM",
   },
-};
+});
 
 const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import { getSchoolAccountProfile, getSchoolDirectoryRecord } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   Users, Calendar, BookOpen, ClipboardCheck, GraduationCap, ShieldCheck,
   ArrowUpRight, Phone, Mail, MapPin, ChevronDown, Download, Edit3, ChevronRight,
@@ -27,8 +28,9 @@ export async function generateMetadata({ params }: PageProps) {
   };
 }
 
-/* ── Screenshot fallback values used when DB does not yet expose the metric ── */
-const FALLBACK = {
+/* ── Screenshot fallback values — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page. ── */
+const FALLBACK = devFallback({
   attendanceRate: 92, attendanceDelta: 6,
   readingProficiency: 68, readingDelta: 5,
   assessmentScore: 74, assessmentDelta: 7,
@@ -67,7 +69,7 @@ const FALLBACK = {
     { title: "1001 Story",         sub: "Library & Story Collection",  icon: BookOpen, iconBg: "#f3e8ff", iconColor: "#7c3aed" },
     { title: "Mentorship Program", sub: "Peer Learning & Support",     icon: Heart,    iconBg: "#fee2e2", iconColor: "#b91c1c" },
   ],
-};
+});
 
 export default async function SchoolDashboardPage({ params }: PageProps) {
   const user = await requirePortalStaffUser();

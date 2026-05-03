@@ -13,6 +13,7 @@ import {
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   getAssessmentsKpis, getAssessmentTrend, getScoreDistribution,
   getAssessmentRegionalCoverage, listRecentAssessmentSessions,
@@ -44,10 +45,10 @@ export const metadata = {
 };
 
 /* ────────────────────────────────────────────────────────────────────
-   Frozen reference data — values and ordering taken verbatim from the
-   supplied screenshot. The dashboard renders these exact figures.
+   Reference data — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page.
    ──────────────────────────────────────────────────────────────────── */
-const FALLBACK = {
+const FALLBACK = devFallback({
   kpis: {
     totalAssessments: 4820, totalAssessmentsDelta: 12.4,
     learnersAssessed: 68420, learnersAssessedDelta: 9.8,
@@ -126,7 +127,7 @@ const FALLBACK = {
     updated: "May 21, 2025  12:45 PM",
   },
   pagination: { page: 1, pages: [1, 2, 3, 4, 5], showingFrom: 1, showingTo: 5, total: 25 },
-};
+});
 
 const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 

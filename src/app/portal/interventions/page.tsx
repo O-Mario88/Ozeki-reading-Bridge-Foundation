@@ -14,6 +14,7 @@ import {
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   getInterventionsKpis,
   listInterventionPlans,
@@ -80,9 +81,10 @@ export const metadata = {
 };
 
 /* ────────────────────────────────────────────────────────────────────
-   Reference data — frozen verbatim from the supplied screenshot.
+   Reference data — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page.
    ──────────────────────────────────────────────────────────────────── */
-const FALLBACK = {
+const FALLBACK = devFallback({
   tabs: [
     { label: "Benchmarks",        href: "/portal/benchmarks" },
     { label: "Data Quality",      href: "/portal/data-quality" },
@@ -189,7 +191,7 @@ const FALLBACK = {
     text: "Regions with the highest action completion this month were Central and Northern, while 37 schools remain high-risk and require immediate follow-up.",
     updated: "May 21, 2026  12:45 PM",
   },
-};
+});
 
 const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 

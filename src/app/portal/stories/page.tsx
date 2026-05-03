@@ -13,6 +13,7 @@ import {
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   getStoriesKpis, getStoryStatusBreakdown, getStoryLanguageMix,
   getStoryGenreMix, getStorySubmissionTrend, getStoryEngagementTrend,
@@ -56,10 +57,10 @@ export const metadata = {
 };
 
 /* ────────────────────────────────────────────────────────────────────
-   Reference data — frozen from the supplied screenshot. The dashboard
-   renders these exact numbers per the pixel-faithful spec.
+   Reference data — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page.
    ──────────────────────────────────────────────────────────────────── */
-const FALLBACK = {
+const FALLBACK = devFallback({
   kpis: {
     storiesCollected: 12486, storiesCollectedDelta: 18,
     publishedStories: 8214, publishedStoriesDelta: 15,
@@ -153,7 +154,7 @@ const FALLBACK = {
     text: "Community storytelling is accelerating — published story volume is up 18%, with the strongest contribution from Central and Acholi regions.",
     updated: "Jun 10, 2024  •  9:15 AM",
   },
-};
+});
 
 /* Calibri-first font stack applied to the entire page wrapper */
 const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';

@@ -9,6 +9,7 @@ import {
 import { logger } from "@/lib/logger";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   Building2, School as SchoolIcon, Users, ClipboardCheck, MapPin, BookOpen,
   ShieldCheck, ArrowUpRight, ChevronDown, ChevronRight, Download, Plus,
@@ -24,8 +25,9 @@ export const metadata = {
     "Network-wide school performance, implementation coverage, and support activity.",
 };
 
-/* ── Screenshot fallback values — used when DB doesn't expose the metric ── */
-const FALLBACK = {
+/* ── Screenshot fallback values — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page. ── */
+const FALLBACK = devFallback({
   schoolsReached: 172, schoolsReachedDelta: 8,
   activeSchools: 148, activeSchoolsDelta: 6,
   teachersEvaluated: 1260, teachersEvaluatedDelta: 7,
@@ -83,7 +85,7 @@ const FALLBACK = {
     { date: "Jun 15, 2024", activity: "Reading Event",    details: "Read Aloud Day" },
     { date: "Jun 20, 2024", activity: "Story Activity",   details: "1001 Story Workshop" },
   ],
-};
+});
 
 export default async function SchoolsOverviewPage() {
   const user = await requirePortalStaffUser();

@@ -3,6 +3,7 @@ import { requirePortalUser, getPortalHomePath } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   Calendar, ChevronDown, ChevronRight, ChevronLeft, Download, Plus, Filter,
   ArrowUpRight, FileText, Sparkles, Info,
@@ -20,15 +21,16 @@ export const metadata = {
     "Generate, analyze, and export reports across the Ozeki Reading Bridge Foundation literacy network.",
 };
 
-/* Screenshot fallback values — used so the page is fully populated even
-   when DB metrics aren't wired up. */
-const FALLBACK_KPIS = {
+/* Screenshot fallback values — gated to development only via devFallback().
+   In production these zero out so live (possibly-empty) DB data drives
+   the page entirely. */
+const FALLBACK_KPIS = devFallback({
   totalReports: 128, totalDelta: 16,
   generated: 42, generatedDelta: 12,
   downloads: 1256, downloadsDelta: 8,
   scheduled: 18, scheduledDelta: 5,
   dataCoverage: 87, coverageDelta: 6,
-};
+});
 
 const QUICK_REPORTS: {
   href: string; icon: LucideIcon; iconBg: string; iconColor: string;
@@ -49,7 +51,7 @@ const QUICK_REPORTS: {
 const RECENT_REPORTS: {
   name: string; category: string; generatedBy: string;
   date: string; format: "PDF" | "Excel"; status: string;
-}[] = [
+}[] = devFallback([
   { name: "Q2 School Performance Report", category: "School Performance", generatedBy: "Ozeki Team", date: "Jun 10, 2024 • 9:45 AM", format: "PDF", status: "Completed" },
   { name: "May Learner Outcomes Summary", category: "Learner Outcomes", generatedBy: "System", date: "Jun 10, 2024 • 8:30 AM", format: "Excel", status: "Completed" },
   { name: "Training Activities Report", category: "Training Summary", generatedBy: "Ozeki Team", date: "Jun 9, 2024 • 4:15 PM", format: "PDF", status: "Completed" },
@@ -58,7 +60,7 @@ const RECENT_REPORTS: {
   { name: "Program Coverage Report", category: "Program Coverage", generatedBy: "Ozeki Team", date: "Jun 8, 2024 • 9:00 AM", format: "PDF", status: "Completed" },
   { name: "Q2 Finance Overview", category: "Finance Overview", generatedBy: "Finance Officer", date: "Jun 7, 2024 • 3:45 PM", format: "Excel", status: "Completed" },
   { name: "Donor Impact Report", category: "Donor Report", generatedBy: "Ozeki Team", date: "Jun 7, 2024 • 10:30 AM", format: "PDF", status: "Completed" },
-];
+]);
 
 export default async function ReportsPage() {
   const user = await requirePortalUser();

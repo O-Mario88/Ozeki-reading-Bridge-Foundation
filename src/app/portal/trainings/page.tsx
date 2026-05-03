@@ -12,6 +12,7 @@ import {
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   getTrainingsKpis, getTrainingDeliveryTrend, getTrainingTypeMix,
   getTrainingRegionalCoverage, listTopTrainers, listTrainingPipeline,
@@ -42,9 +43,10 @@ export const metadata = {
 };
 
 /* ────────────────────────────────────────────────────────────────────
-   Reference data — frozen verbatim from the supplied screenshot.
+   Reference data — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page.
    ──────────────────────────────────────────────────────────────────── */
-const FALLBACK = {
+const FALLBACK = devFallback({
   kpis: [
     { label: "Training Sessions",        value: "248",   delta: "↑ 18% vs last month",  icon: CalendarDays, accent: "emerald" as const },
     { label: "Upcoming Sessions",        value: "32",    delta: "↑ 7% vs last month",   icon: CalendarPlus, accent: "blue"    as const },
@@ -154,7 +156,7 @@ const FALLBACK = {
     text: "Training completion remains strong at 89%, with the highest facilitator performance in Central and Acholi regions.",
     updated: "May 22, 2025, 9:15 AM",
   },
-};
+});
 
 const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 

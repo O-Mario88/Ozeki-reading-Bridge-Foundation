@@ -12,6 +12,7 @@ import {
 } from "@/lib/server/postgres/repositories/finance-dashboard";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import { DashboardListHeader, DashboardListRow } from "@/components/portal/DashboardList";
+import { devFallback } from "@/lib/dev-fallback";
 import { SpendingTrendChart } from "@/components/portal/finance/SpendingTrendChart";
 import { FundAllocationDonut } from "@/components/portal/finance/FundAllocationDonut";
 import { Sparkline } from "@/components/portal/finance/Sparkline";
@@ -28,9 +29,9 @@ import {
 export const metadata = { title: "Finance Dashboard | Ozeki Portal" };
 export const dynamic = "force-dynamic";
 
-/* ── Screenshot fallback values used when DB returns 0 / null. The reference
-   contract requires the page to render populated data. ──────────────────── */
-const FALLBACK = {
+/* ── Screenshot fallback values — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page. ── */
+const FALLBACK = devFallback({
   totalReceived: 2_847_650,
   totalSpent: 2_163_420,
   programmeDeliveryPct: 78,
@@ -60,7 +61,7 @@ const FALLBACK = {
   receivedSpark: [12, 18, 15, 22, 19, 28, 24, 30, 27, 34, 31, 38],
   spentSpark: [10, 14, 12, 18, 16, 20, 19, 24, 22, 26, 25, 29],
   learnerSpark: [22, 21, 23, 20, 18, 19, 17, 18, 16, 17, 15, 16],
-};
+});
 
 function fmtUsd(n: number): string {
   return `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;

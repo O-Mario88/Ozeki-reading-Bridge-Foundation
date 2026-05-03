@@ -12,6 +12,7 @@ import {
 } from "@/components/portal/DashboardList";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { devFallback } from "@/lib/dev-fallback";
 import {
   getVisitsKpis, getVisitTrend, getEvalDistribution, getRegionalCoverage,
   listRecentVisits, listUpcomingVisits, listCoachWorkload, getEvaluationDomains,
@@ -41,9 +42,10 @@ export const metadata = {
 };
 
 /* ────────────────────────────────────────────────────────────────────
-   Reference data — frozen verbatim from the supplied screenshot.
+   Reference data — gated to dev only via devFallback().
+   Production zeros these out so live (possibly-empty) DB drives the page.
    ──────────────────────────────────────────────────────────────────── */
-const FALLBACK = {
+const FALLBACK = devFallback({
   kpis: [
     { label: "Visits Completed",       value: "312",   delta: "↑ 18.4% vs last 6 months", icon: ClipboardCheck, accent: "emerald" as const },
     { label: "Scheduled Visits",       value: "48",    delta: "↑ 4.1% vs last 6 months",  icon: Calendar,       accent: "blue"    as const },
@@ -123,7 +125,7 @@ const FALLBACK = {
     text: "Northern and Central regions showed the strongest teacher growth this period, while 22 schools require targeted classroom coaching support.",
     updated: "May 21, 2025  12:45 PM",
   },
-};
+});
 
 const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
