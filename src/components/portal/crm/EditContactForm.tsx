@@ -33,11 +33,13 @@ export function EditContactForm({ initialData }: EditContactFormProps) {
   const [form, setForm] = useState(initialData);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError("");
+    setSuccess("");
 
     try {
       const res = await fetch("/api/portal/schools/roster", {
@@ -71,7 +73,10 @@ export function EditContactForm({ initialData }: EditContactFormProps) {
         throw new Error(data.error || "Failed to update contact.");
       }
 
-      router.push(`/portal/contacts/${initialData.id}`);
+      // Stay on the edit page after a successful save; refresh so the
+      // form re-loads with the persisted values, and surface a success
+      // banner instead of redirecting away.
+      setSuccess("Contact updated successfully.");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error.");
@@ -257,6 +262,7 @@ export function EditContactForm({ initialData }: EditContactFormProps) {
         </div>
 
         {error && <div className="crm-form-error">{error}</div>}
+        {success && <div className="crm-form-success">{success}</div>}
 
         <div className="crm-form-actions">
           <Link href={`/portal/contacts/${initialData.id}`} className="crm-button-ghost">
@@ -329,6 +335,14 @@ export function EditContactForm({ initialData }: EditContactFormProps) {
           color: #b91c1c;
           background: #fef2f2;
           border: 1px solid #f87171;
+          padding: 0.75rem;
+          border-radius: 0.375rem;
+          margin-bottom: 1.5rem;
+        }
+        .crm-form-success {
+          color: #14532d;
+          background: #f0fdf4;
+          border: 1px solid #86efac;
           padding: 0.75rem;
           border-radius: 0.375rem;
           margin-bottom: 1.5rem;

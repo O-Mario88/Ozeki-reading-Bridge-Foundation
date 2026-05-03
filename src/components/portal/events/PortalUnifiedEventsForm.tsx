@@ -7,6 +7,7 @@ import { Video, MapPin, Globe, CreditCard, Building } from "lucide-react";
 export function PortalUnifiedEventsForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   
   // Master Switch
   const [deliveryType, setDeliveryType] = useState<'online' | 'in_person'>('online');
@@ -35,9 +36,28 @@ export function PortalUnifiedEventsForm() {
   const [currency, setCurrency] = useState("UGX");
   const [sponsoringPartnerName, setSponsoringPartnerName] = useState("");
   
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setDate("");
+    setStartTime("");
+    setEndTime("");
+    setContactName("");
+    setContactPhone("");
+    setVenueName("");
+    setVenueAddress("");
+    setDistrict("");
+    setFundingType("");
+    setTrainingFeeAmount(0);
+    setCurrency("UGX");
+    setSponsoringPartnerName("");
+    setDeliveryType("online");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFeedback(null);
     
     try {
       const payload = {
@@ -72,14 +92,18 @@ export function PortalUnifiedEventsForm() {
       
       const data = await res.json();
       if (res.ok) {
-        router.push(deliveryType === 'online' ? '/portal/events' : '/portal/events/physical');
+        setFeedback({
+          kind: "success",
+          message: "Event scheduled successfully. Form has been reset for the next entry.",
+        });
+        resetForm();
         router.refresh();
       } else {
-        alert(data.message || "Failed to schedule event.");
+        setFeedback({ kind: "error", message: data.message || "Failed to schedule event." });
       }
-    } catch (e) {
-      console.error(e);
-      alert("Network error.");
+    } catch (err) {
+      console.error(err);
+      setFeedback({ kind: "error", message: "Network error. Please try again." });
     } finally {
       setIsSubmitting(false);
     }
@@ -223,6 +247,17 @@ export function PortalUnifiedEventsForm() {
 
        </div>
        
+       {feedback && (
+         <div
+           className={`px-8 py-4 text-sm font-semibold ${
+             feedback.kind === "success"
+               ? "bg-emerald-50 text-emerald-800 border-t border-emerald-200"
+               : "bg-red-50 text-red-800 border-t border-red-200"
+           }`}
+         >
+           {feedback.message}
+         </div>
+       )}
        <div className="p-8 border-t bg-gray-50 flex justify-end">
          <button disabled={isSubmitting} type="submit" className="bg-[#ff7235] hover:opacity-90 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition-all flex items-center gap-2">
             {isSubmitting ? "Orchestrating Architecture..." : `Schedule ${deliveryType === 'online' ? 'Webinar' : 'Workshop'}`}

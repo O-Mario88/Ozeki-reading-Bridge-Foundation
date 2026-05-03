@@ -121,12 +121,14 @@ export function PortalTrainingParticipantCreateForm({
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.error?.message ?? "Failed to save participant.");
       }
-      setFeedback({ kind: "success", message: "Training participant saved." });
-      if (mode === "save_another") {
-        resetParticipantFields();
-        return;
-      }
-      router.push(trainingId ? `/portal/trainings/${trainingId}` : "/portal/trainings");
+      setFeedback({
+        kind: "success",
+        message: "Training participant saved. Form has been reset for the next entry.",
+      });
+      // Always reset so the user can keep adding participants without
+      // bouncing to a different page. They can navigate manually if they
+      // want to leave.
+      resetParticipantFields();
       router.refresh();
     } catch (error) {
       setFeedback({ kind: "error", message: getErrorMessage(error, "Failed to save participant.") });
