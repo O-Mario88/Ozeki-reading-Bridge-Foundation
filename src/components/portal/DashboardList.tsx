@@ -93,7 +93,7 @@ export function DashboardListHeader({
 }) {
   return (
     <div
-      className={`grid items-center text-[10px] font-bold uppercase tracking-[0.04em] text-[#7a8ca3] border-b border-[#e8edf3] py-1.5 px-1 gap-3 ${className}`}
+      className={`grid items-center text-[10px] font-bold uppercase tracking-[0.04em] text-[#7a8ca3] border-b border-[#e8edf3] py-1.5 px-1 gap-3 [&>*]:whitespace-nowrap [&>*]:overflow-hidden [&>*]:text-ellipsis ${className}`}
       style={{ gridTemplateColumns: template }}
       role="row"
     >
@@ -110,7 +110,10 @@ export function DashboardListRow({
   className?: string;
   href?: string;
 }) {
-  const baseCls = `grid items-center text-[11px] font-semibold text-[#344054] border-b border-[#eef2f6] last:border-b-0 py-1.5 px-1 gap-3 ${className}`;
+  // [&>*]:min-w-0 ensures grid children can shrink below their intrinsic
+  // size — without it, long unbroken strings (URLs, long names) stretch
+  // the grid past the parent's overflow-x-auto and lock the layout.
+  const baseCls = `grid items-center text-[11px] font-semibold text-[#344054] border-b border-[#eef2f6] last:border-b-0 py-1.5 px-1 gap-3 [&>*]:min-w-0 ${className}`;
   const inner = (
     <div className={baseCls} style={{ gridTemplateColumns: template }} role="row">
       {children}
