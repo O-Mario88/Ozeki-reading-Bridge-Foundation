@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import { SchoolProfileActionsClient } from "@/components/portal/SchoolProfileActionsClient";
+import { SchoolEditModalClient } from "@/components/portal/SchoolEditModalClient";
 import { getSchoolAccountProfile, getSchoolDirectoryRecord } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { devFallback } from "@/lib/dev-fallback";
 import {
   Users, Calendar, BookOpen, ClipboardCheck, GraduationCap, ShieldCheck,
-  ArrowUpRight, Phone, Mail, MapPin, ChevronDown, Download, Edit3, ChevronRight,
+  ArrowUpRight, Phone, Mail, MapPin, ChevronDown, Download, ChevronRight,
   School as SchoolIcon, Clock, FilePlus2, Upload, FileText, AlertTriangle, Activity,
   Library, Heart, type LucideIcon,
 } from "lucide-react";
@@ -134,14 +135,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
               <span className="hidden sm:inline">Export Report</span>
               <span className="sm:hidden">Export</span>
             </Link>
-            <Link
-              href={`/portal/schools/directory?edit=${schoolId}`}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50 whitespace-nowrap"
-            >
-              <Edit3 className="h-4 w-4" strokeWidth={1.75} />
-              <span className="hidden sm:inline">Edit School</span>
-              <span className="sm:hidden">Edit</span>
-            </Link>
+            <SchoolEditModalClient school={school} />
             <Link
               href={`/portal/schools/${schoolId}/dossier`}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800 whitespace-nowrap"
