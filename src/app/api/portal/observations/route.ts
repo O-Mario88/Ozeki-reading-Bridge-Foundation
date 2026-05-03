@@ -141,7 +141,22 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload." }, { status: 400 });
     }
-    logger.error("[observations] POST failed", { error: String(error) });
-    return NextResponse.json({ error: "Internal error." }, { status: 500 });
+    // Surface the actual Postgres error message + code (when available)
+    // instead of a blanket "Internal error" — gives the operator a real
+    // diagnostic when a column / constraint mismatch happens in prod.
+    const e = error as { message?: string; code?: string; detail?: string };
+    logger.error("[observations] POST failed", {
+      error: e?.message,
+      code: e?.code,
+      detail: e?.detail,
+    });
+    return NextResponse.json(
+      {
+        error: e?.message ?? "Internal error.",
+        code: e?.code ?? null,
+        detail: e?.detail ?? null,
+      },
+      { status: 500 },
+    );
   }
 }

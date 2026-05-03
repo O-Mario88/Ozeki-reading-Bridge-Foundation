@@ -664,10 +664,23 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
       const savedId: number = existingId ?? data.id;
       setFeedback({
         kind: "success",
-        message: submitAs === "submitted" ? "Observation submitted successfully." : "Draft saved.",
+        message:
+          submitAs === "submitted"
+            ? "Observation submitted successfully. Form has been reset for the next entry."
+            : "Draft saved.",
       });
-      if (mode === "create") router.push(`/portal/observations/${savedId}`);
-      else router.refresh();
+      if (mode === "create" && submitAs === "submitted") {
+        // Reset the draft so the observer can log another observation
+        // without re-loading the page. router.refresh() pulls fresh
+        // server data so any lists / counts elsewhere update.
+        setDraft(createDefaultDraft());
+        router.refresh();
+      } else if (mode === "create") {
+        // Drafts: stay on the page editing the same draft.
+        router.push(`/portal/observations/${savedId}`);
+      } else {
+        router.refresh();
+      }
     } catch {
       setFeedback({ kind: "error", message: "Network error. Please try again." });
     } finally {

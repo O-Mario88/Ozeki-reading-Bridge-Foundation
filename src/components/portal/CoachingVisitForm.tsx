@@ -46,9 +46,8 @@ const VISIT_REASONS = [
   "Sponsor visit",
 ];
 
-export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCoachId }: Props) {
-  const router = useRouter();
-  const [form, setForm] = useState({
+function buildEmptyForm(defaultSchoolId?: number, defaultCoachId?: number) {
+  return {
     schoolId: defaultSchoolId ?? 0,
     visitDate: new Date().toISOString().slice(0, 10),
     visitType: "lesson_evaluation_coaching",
@@ -62,7 +61,12 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
     endTime: "",
     sponsorshipType: "none" as "none" | "school" | "district" | "region" | "general",
     notes: "",
-  });
+  };
+}
+
+export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCoachId }: Props) {
+  const router = useRouter();
+  const [form, setForm] = useState(buildEmptyForm(defaultSchoolId, defaultCoachId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -120,8 +124,13 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
         setError(data.error ?? "Save failed.");
         return;
       }
-      setSuccess(`Visit ${data.visitUid} saved.`);
-      setTimeout(() => router.push(`/portal/visits/${data.id}`), 800);
+      setSuccess(`Visit ${data.visitUid} saved. Form has been reset for the next entry.`);
+      // Reset the form so the user can log another visit immediately. The
+      // success banner stays visible until the next submit attempt.
+      setForm(buildEmptyForm(defaultSchoolId, defaultCoachId));
+      // Refresh server data so dashboards / lists pick up the new visit
+      // without forcing the user off this page.
+      router.refresh();
     } catch {
       setError("Network error. Please try again.");
     } finally {
