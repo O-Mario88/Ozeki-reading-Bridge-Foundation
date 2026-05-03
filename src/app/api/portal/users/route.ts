@@ -11,6 +11,8 @@ import {
 } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { auditLog } from "@/lib/server/audit/log";
+import { firstPasswordPolicyError } from "@/lib/server/auth/password-policy";
+import { revokeAllPortalSessionsForUserPostgres } from "@/lib/server/postgres/repositories/auth";
 
 export const runtime = "nodejs";
 
@@ -83,6 +85,20 @@ export async function POST(request: Request) {
 
   try {
     const payload = createUserSchema.parse(await request.json());
+
+    // Enforce password policy ONLY when an admin explicitly sets a password.
+    // Auto-generated invite passwords skip the policy because the user is
+    // forced to change them on first login (mustChangePassword=true).
+    if (payload.password) {
+      const policyError = firstPasswordPolicyError(payload.password, {
+        fullName: payload.fullName,
+        email: payload.email,
+      });
+      if (policyError) {
+        return NextResponse.json({ error: policyError }, { status: 400 });
+      }
+    }
+
     const rawPassword = payload.password || crypto.randomBytes(9).toString("base64").replace(/[+/=]/g, "x").slice(0, 12);
     const shouldInvite = payload.sendInviteEmail === true;
     await createPortalUserAccount({

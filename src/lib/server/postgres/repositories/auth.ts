@@ -358,6 +358,28 @@ export async function deletePortalSessionPostgres(token: string) {
   await queryPostgres("DELETE FROM portal_sessions WHERE token = $1", [token]);
 }
 
+/**
+ * Revoke every active session for a user. Call this on password change,
+ * forced logout, or any account-takeover signal — it returns the number of
+ * sessions killed so callers can decide whether to surface a notice.
+ */
+export async function revokeAllPortalSessionsForUserPostgres(
+  userId: number,
+  options?: { exceptToken?: string },
+): Promise<number> {
+  const params: unknown[] = [userId];
+  let where = "user_id = $1";
+  if (options?.exceptToken) {
+    params.push(options.exceptToken);
+    where += ` AND token <> $${params.length}`;
+  }
+  const result = await queryPostgres(
+    `DELETE FROM portal_sessions WHERE ${where}`,
+    params,
+  );
+  return result.rowCount ?? 0;
+}
+
 export async function recordLoginAttemptPostgres(identifier: string, ipAddress: string, success: boolean) {
   await queryPostgres(
     `INSERT INTO login_attempts (identifier, ip_address, success) VALUES ($1, $2, $3)`,

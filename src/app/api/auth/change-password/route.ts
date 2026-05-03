@@ -1,21 +1,23 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { z } from "zod";
-import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { getAuthenticatedPortalUser, PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
-import { findPortalUserAuthByIdPostgres, verifyPassword, hashPassword } from "@/lib/server/postgres/repositories/auth";
+import {
+  findPortalUserAuthByIdPostgres,
+  verifyPassword,
+  hashPassword,
+  revokeAllPortalSessionsForUserPostgres,
+} from "@/lib/server/postgres/repositories/auth";
 import { logger } from "@/lib/logger";
+import { firstPasswordPolicyError } from "@/lib/server/auth/password-policy";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required."),
-  newPassword: z
-    .string()
-    .min(8, "New password must be at least 8 characters.")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter.")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter.")
-    .regex(/[0-9]/, "Password must contain at least one number.")
-    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character."),
+  newPassword: z.string().min(1, "New password is required."),
 });
 
 export async function POST(request: Request) {
@@ -38,16 +40,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Current password is incorrect." }, { status: 401 });
     }
 
+    // Enforce centralised password policy (length, complexity, block-list,
+    // self-reference). Doing this AFTER current-password verification keeps
+    // the policy errors hidden from unauthenticated probes.
+    const policyError = firstPasswordPolicyError(payload.newPassword, {
+      fullName: authRow.fullName,
+      email: authRow.email,
+    });
+    if (policyError) {
+      return NextResponse.json({ error: policyError }, { status: 400 });
+    }
+
     // Prevent reusing the same password
     const sameAsOld = await verifyPassword(payload.newPassword, authRow.passwordHash);
     if (sameAsOld) {
       return NextResponse.json({ error: "New password must be different from the current password." }, { status: 400 });
     }
 
-    // Hash new password with bcrypt
     const newHash = await hashPassword(payload.newPassword);
 
-    // Update password and clear must_change_password flag, set status to active
     await queryPostgres(
       `UPDATE portal_users
        SET password_hash = $1,
@@ -57,7 +68,26 @@ export async function POST(request: Request) {
       [newHash, user.id],
     );
 
-    return NextResponse.json({ ok: true, redirectTo: "/portal/dashboard" });
+    // Defence-in-depth: revoke every OTHER active session for this user so
+    // any attacker who held a stolen cookie is kicked out immediately. The
+    // current session (the one performing the change) is preserved so the
+    // user doesn't have to re-login mid-flow.
+    const cookieStore = await cookies();
+    const currentToken = cookieStore.get(PORTAL_SESSION_COOKIE)?.value ?? null;
+    const revoked = await revokeAllPortalSessionsForUserPostgres(user.id, {
+      exceptToken: currentToken ?? undefined,
+    });
+
+    await auditLog({
+      actor: user,
+      action: "password_reset",
+      targetTable: "portal_users",
+      targetId: user.id,
+      detail: `Self-service password change. ${revoked} other session(s) revoked.`,
+      request,
+    });
+
+    return NextResponse.json({ ok: true, redirectTo: "/portal/dashboard", revokedSessions: revoked });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
