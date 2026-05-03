@@ -1,693 +1,754 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { organizationName, tagline } from "@/lib/content";
-import { isPostgresConfigured } from "@/lib/server/postgres/client";
-import { listPublishedPortalTestimonialsPostgres } from "@/lib/server/postgres/repositories/public-content";
 import {
-  listUpcomingPublicEventsPostgres,
-  type PublicUpcomingEvent,
-} from "@/lib/server/postgres/repositories/public-events";
-import type { PortalTestimonialRecord } from "@/lib/types";
-
-import { SectionWrapper } from "@/components/public/SectionWrapper";
-import { getImpactSummary } from "@/services/dataService";
-import {
-  getHomepageProgrammeCardsPostgres,
-  type HomepageProgrammeCards,
-} from "@/lib/server/postgres/repositories/homepage-programmes";
-import {
-  getPublicReadingStageShift,
-  getPublicCostPerLearnerReached,
-  getPublicProgrammeOverheadSplit,
-  getPublicReachFootprint,
-  getPublicReadingStageDistribution,
-  getPublicCoachingCompletionRate,
-  getPublicStoryCollectionGrowth,
-  type ReadingStageShift,
-  type CostPerLearnerReached,
-  type ProgrammeOverheadSplit,
-  type PublicReachFootprint,
-  type ReadingStageDistribution,
-  type CoachingCompletionRate,
-  type StoryCollectionGrowth,
-} from "@/lib/server/postgres/repositories/public-metrics";
-import { ChariusPillImage } from "@/components/public/ChariusPillImage";
-
-const FOUNDING_YEAR = 2019;
-const MONTH_ABBREVIATIONS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-function formatEventDate(iso: string): { day: string; month: string } {
-  const d = new Date(`${iso}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return { day: "--", month: "---" };
-  return {
-    day: String(d.getUTCDate()).padStart(2, "0"),
-    month: MONTH_ABBREVIATIONS[d.getUTCMonth()] ?? "---",
-  };
-}
-
-function formatEventTimeRange(event: PublicUpcomingEvent): string {
-  if (event.scheduledStartTime && event.scheduledEndTime) {
-    return `${event.scheduledStartTime} – ${event.scheduledEndTime}`;
-  }
-  if (event.scheduledStartTime) return `Starts ${event.scheduledStartTime}`;
-  if (event.venue) return event.venue;
-  if (event.district) return event.district;
-  return "Details inside";
-}
-
-export const revalidate = 300;
+  Heart, GraduationCap, BookOpen, Users, ClipboardCheck, Library,
+  Building2, TrendingUp, ChevronDown, ChevronLeft, ChevronRight, ArrowUpRight,
+  Quote, Facebook, Twitter, Instagram, Youtube, Linkedin, Mail, Phone, MapPin,
+  type LucideIcon,
+} from "lucide-react";
 
 export const metadata: Metadata = {
-  title: `${organizationName} — Phonics Training, Reading Assessments & Teacher Coaching in Uganda`,
+  title: "Ozeki Reading Bridge Foundation — Building Strong Readers Across Uganda",
   description:
-    "Ozeki Reading Bridge Foundation equips nursery and primary school teachers with evidence-based phonics training, reading assessments, in-school coaching, and decodable reading materials — so every child in Uganda can read for meaning.",
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: `${organizationName} — Reading outcomes for Ugandan schools`,
-    description:
-      "Evidence-based phonics training, reading assessments, coaching, and decodable materials for Uganda's nursery and primary schools.",
-    url: "https://www.ozekiread.org",
-    type: "website",
-  },
+    "We equip teachers, reach children, and strengthen literacy across Uganda from the classroom to the community.",
 };
 
-const TESTIMONIAL_FIELDS = new Set([
-  "how_training_changed_teaching",
-  "what_you_will_do_to_improve_reading_levels",
-]);
+const TEAL        = "#066a67";
+const TEAL_DARK   = "#044f4d";
+const TEAL_DEEP   = "#033f3e";
+const TEAL_SOFT   = "#e6f3f2";
+const ORANGE      = "#ff7235";
+const ORANGE_DARK = "#e85f24";
+const ORANGE_SOFT = "#fff0e8";
 
-function clipQuote(text: string, maxChars: number) {
-  const clean = text.trim();
-  if (clean.length <= maxChars) return clean;
-  return `${clean.slice(0, maxChars).trimEnd()}...`;
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Impact", href: "/impact" },
+  { label: "Programs", href: "/programs", hasMenu: true },
+  { label: "Training", href: "/training" },
+  { label: "Stories", href: "/stories" },
+  { label: "About", href: "/about", hasMenu: true },
+];
+
+const PARTNERS = [
+  { name: "USAID",                            text: "USAID" },
+  { name: "UNICEF",                           text: "unicef" },
+  { name: "Save the Children",                text: "Save the Children" },
+  { name: "Global Partnership for Education", text: "Global Partnership for EDUCATION" },
+  { name: "Wordworks",                        text: "Wordworks" },
+];
+
+const IMPACT_STATS: { icon: LucideIcon; value: string; label: string }[] = [
+  { icon: Users,         value: "10,000+", label: "Teachers Trained Across Uganda" },
+  { icon: GraduationCap, value: "32,600+", label: "Learners Reached In 2023" },
+  { icon: BookOpen,      value: "1.2M+",   label: "Books & Materials Distributed" },
+  { icon: Building2,     value: "1,450+",  label: "Schools Supported Nationally" },
+  { icon: TrendingUp,    value: "76%",     label: "Average Reading Improvement" },
+];
+
+const PROGRAMS: { icon: string; title: string; description: string; href: string; iconBg: string; iconColor: string }[] = [
+  { icon: "abc",  title: "Phonics Training",                description: "Practical phonics instruction that helps children decode and read with confidence.", href: "/programs/phonics",     iconBg: TEAL_SOFT,  iconColor: TEAL },
+  { icon: "user", title: "Teacher Professional Development", description: "Building teacher capacity through ongoing training, mentorship & support.",          href: "/programs/teachers",    iconBg: ORANGE_SOFT, iconColor: ORANGE },
+  { icon: "team", title: "In-School Coaching",              description: "On-site coaching and classroom support to strengthen teaching and learning.",         href: "/programs/coaching",    iconBg: TEAL_SOFT,  iconColor: TEAL },
+  { icon: "doc",  title: "Reading Assessments",             description: "Data-driven tools to measure progress and inform instruction.",                       href: "/programs/assessments", iconBg: ORANGE_SOFT, iconColor: ORANGE },
+  { icon: "book", title: "Reading Materials",               description: "High-quality, leveled books and resources for every learner.",                        href: "/programs/materials",   iconBg: TEAL_SOFT,  iconColor: TEAL },
+];
+
+const TESTIMONIALS = [
+  { quote: "Since the training, my pupils are reading more confidently and participating actively in class.", name: "Mary Nalwadda", role: "Primary Teacher, Mukono" },
+  { quote: "I love reading storybooks now. I can read to my little sister at home!",                          name: "Derrick O.",    role: "PS Learner, Lira" },
+  { quote: "Ozeki's coaching helped our school improve reading scores by more than 60%.",                     name: "Headteacher",   role: "Rwentanda Primary School" },
+];
+
+const REGION_BARS = [
+  { label: "Central",  value: "12,450", pct: 100 },
+  { label: "Northern", value: "9,870",  pct: 79 },
+  { label: "Eastern",  value: "6,890",  pct: 55 },
+  { label: "Western",  value: "3,390",  pct: 27 },
+];
+
+const FOOTER_COLUMNS = [
+  {
+    title: "Explore",
+    links: [
+      { label: "Home",     href: "/" },
+      { label: "Impact",   href: "/impact" },
+      { label: "Programs", href: "/programs" },
+      { label: "Training", href: "/training" },
+      { label: "Stories",  href: "/stories" },
+      { label: "About Us", href: "/about" },
+    ],
+  },
+  {
+    title: "Our Programs",
+    links: [
+      { label: "Phonics Training",          href: "/programs/phonics" },
+      { label: "Teacher Development",       href: "/programs/teachers" },
+      { label: "In-School Coaching",        href: "/programs/coaching" },
+      { label: "Reading Assessments",       href: "/programs/assessments" },
+      { label: "Reading Materials",         href: "/programs/materials" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "Blog",                      href: "/blog" },
+      { label: "Reports & Publications",    href: "/transparency" },
+      { label: "Events",                    href: "/events" },
+      { label: "FAQs",                      href: "/faqs" },
+      { label: "Contact",                   href: "/contact" },
+    ],
+  },
+];
+
+/* ──────────────────────────────────────────────────────────────────── */
+
+export default function HomePage() {
+  return (
+    <div className="bg-white text-gray-900" style={{ fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif' }}>
+      <TopUtilityStrip />
+      <TopNavBar />
+      <HeroSection />
+      <PartnerLogoBand />
+      <ImpactNumbersBand />
+      <ProgramsSection />
+      <UgandaImpactSection />
+      <TestimonialsSection />
+      <DonationCtaStrip />
+      <SiteFooterReplica />
+    </div>
+  );
 }
 
-export default async function HomePage() {
-  let testimonialRows: PortalTestimonialRecord[] = [];
-  let upcomingEvents: PublicUpcomingEvent[] = [];
-  let programmeCards: HomepageProgrammeCards | null = null;
-  let readingShift: ReadingStageShift | null = null;
-  let costPerLearner: CostPerLearnerReached | null = null;
-  let programmeSplit: ProgrammeOverheadSplit | null = null;
-  let reachFootprint: PublicReachFootprint | null = null;
-  let stageDistribution: ReadingStageDistribution | null = null;
-  let coachingCompletion: CoachingCompletionRate | null = null;
-  let storyGrowth: StoryCollectionGrowth | null = null;
-  const impactStats: {
-    schools: string | null;
-    assessments: string | null;
-    teachers: string | null;
-    years: string;
-  } = {
-    schools: null,
-    assessments: null,
-    teachers: null,
-    years: String(Math.max(1, new Date().getUTCFullYear() - FOUNDING_YEAR)),
-  };
-
-  if (isPostgresConfigured()) {
-    try {
-      const [
-        testimonialsResult, summary, events, cards,
-        shift, perLearner, split,
-        reach, distribution, completion, growth,
-      ] = await Promise.all([
-        listPublishedPortalTestimonialsPostgres(90),
-        getImpactSummary(),
-        listUpcomingPublicEventsPostgres(3),
-        getHomepageProgrammeCardsPostgres(),
-        getPublicReadingStageShift().catch(() => null),
-        getPublicCostPerLearnerReached().catch(() => null),
-        getPublicProgrammeOverheadSplit().catch(() => null),
-        getPublicReachFootprint().catch(() => null),
-        getPublicReadingStageDistribution().catch(() => null),
-        getPublicCoachingCompletionRate().catch(() => null),
-        getPublicStoryCollectionGrowth().catch(() => null),
-      ]);
-      programmeCards = cards;
-      readingShift = shift;
-      costPerLearner = perLearner;
-      programmeSplit = split;
-      reachFootprint = reach;
-      stageDistribution = distribution;
-      coachingCompletion = completion;
-      storyGrowth = growth;
-
-      testimonialRows = testimonialsResult
-        .filter(
-          (item) =>
-            item.sourceType === "training_feedback" &&
-            TESTIMONIAL_FIELDS.has(String(item.quoteField ?? "")),
-        )
-        .slice(0, 4);
-
-      upcomingEvents = events;
-
-      const formatStat = (val: number) => {
-        if (val > 1000) return `${(val / 1000).toFixed(1)}k`;
-        return val.toLocaleString();
-      };
-
-      const getMetric = (labelMatched: string) => {
-        const found = summary.metrics.find((m) => m.label === labelMatched);
-        return found && found.value > 0 ? formatStat(found.value) : null;
-      };
-
-      // Live values only; the UI suppresses the KPI row if any is null so we
-      // never show a misleading placeholder like "120+" when the DB is empty.
-      impactStats.schools = getMetric("Schools trained");
-      impactStats.assessments = getMetric("Learners assessed");
-      impactStats.teachers = getMetric("Teachers trained");
-    } catch (error) {
-      console.error("Failed to load homepage data.", error);
-    }
-  }
-
-  const SITE_URL = "https://www.ozekiread.org";
-
-  const orgSchema = {
-    "@context": "https://schema.org",
-    "@type": "NGO",
-    name: organizationName,
-    alternateName: "Ozeki Reading Bridge",
-    legalName: organizationName,
-    description: tagline,
-    url: SITE_URL,
-    logo: `${SITE_URL}/logo.png`,
-    image: `${SITE_URL}/opengraph-image`,
-    areaServed: { "@type": "Country", name: "Uganda" },
-    foundingDate: "2019",
-    knowsAbout: [
-      "Phonics instruction",
-      "Early grade reading",
-      "Teacher training",
-      "Reading assessments",
-      "Literacy coaching",
-      "Decodable readers",
-      "Remedial reading",
-    ],
-    contactPoint: [
-      {
-        "@type": "ContactPoint",
-        contactType: "customer support",
-        telephone: "+256-773-397-375",
-        email: "support@ozekiread.org",
-        areaServed: "UG",
-        availableLanguage: ["en"],
-      },
-    ],
-    sameAs: [
-      "https://www.facebook.com/ozekiread",
-      "https://www.linkedin.com/company/ozeki-reading-bridge-foundation",
-      "https://x.com/ozekiread",
-    ],
-  };
-
-  const websiteSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    url: SITE_URL,
-    name: organizationName,
-    description: tagline,
-    inLanguage: "en-UG",
-    publisher: { "@type": "NGO", name: organizationName, url: SITE_URL },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: `${SITE_URL}/blog?q={search_term_string}`,
-      "query-input": "required name=search_term_string",
-    },
-  };
-
+/* ── Top utility strip ─────────────────────────────────────────────── */
+function TopUtilityStrip() {
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
-      />
+    <div style={{ background: TEAL_DARK }} className="text-white text-[12px]">
+      <div className="max-w-[1280px] mx-auto px-6 h-9 flex items-center justify-between">
+        <div className="inline-flex items-center gap-2">
+          <span aria-hidden style={{ color: ORANGE }}>📣</span>
+          <span>Building strong readers. Transforming futures across Uganda.</span>
+        </div>
+        <div className="hidden md:inline-flex items-center gap-2">
+          <span>Teachers. Learners. Communities. Together.</span>
+          <Heart className="h-3.5 w-3.5" style={{ color: ORANGE }} fill={ORANGE} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
+/* ── Top nav bar ───────────────────────────────────────────────────── */
+function TopNavBar() {
+  return (
+    <header className="bg-white border-b border-gray-100">
+      <div className="max-w-[1280px] mx-auto px-6 h-[72px] flex items-center justify-between gap-6">
+        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <Image src="/photos/logo.png" alt="Ozeki" width={40} height={40} className="rounded-lg object-contain" priority />
+          <span className="leading-none">
+            <span className="block text-[14px] font-extrabold tracking-tight" style={{ color: TEAL }}>OZEKI</span>
+            <span className="block text-[9px] font-bold tracking-[0.18em] mt-1 text-gray-500">READING BRIDGE<br />FOUNDATION</span>
+          </span>
+        </Link>
+        <nav className="hidden lg:flex items-center gap-7 text-[13.5px] font-semibold text-gray-700">
+          {NAV_LINKS.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="inline-flex items-center gap-1 transition relative"
+              style={item.label === "Home" ? { color: TEAL } : undefined}
+            >
+              {item.label}
+              {item.hasMenu && <ChevronDown className="h-3.5 w-3.5" strokeWidth={2.25} />}
+              {item.label === "Home" && (
+                <span aria-hidden className="absolute -bottom-[26px] left-0 right-0 h-[2px] mx-auto w-6" style={{ background: TEAL }} />
+              )}
+            </Link>
+          ))}
+        </nav>
+        <Link
+          href="/donate"
+          className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-white text-[13px] font-bold shadow-sm shrink-0 transition"
+          style={{ background: ORANGE }}
+        >
+          <Heart className="h-4 w-4" fill="white" strokeWidth={0} />
+          Donate
+        </Link>
+      </div>
+    </header>
+  );
+}
 
-      {/* 2. Overlapping Pill Section (You're the Hope of Others) */}
-      <SectionWrapper theme="light" className="overflow-hidden py-24">
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center max-w-6xl mx-auto">
-          {/* Left: Component with diagonal pills */}
-          <div className="relative w-full">
-            <ChariusPillImage 
-              src="/photos/PXL_20260217_110748302.jpg" 
-              alt="Reading Session" 
+/* ── Hero section ──────────────────────────────────────────────────── */
+function HeroSection() {
+  return (
+    <section className="relative bg-white overflow-hidden">
+      <div className="max-w-[1280px] mx-auto px-6 pt-14 pb-20 grid lg:grid-cols-[1.05fr_1fr] gap-10 items-start">
+        {/* LEFT */}
+        <div className="pt-4">
+          <p className="text-[12px] font-extrabold uppercase tracking-[0.16em] mb-5" style={{ color: ORANGE }}>
+            Strong Phonics. Confident Readers. Brighter Futures.
+          </p>
+          <h1
+            className="text-[44px] md:text-[52px] lg:text-[58px] font-extrabold tracking-tight leading-[1.05] text-gray-900"
+            style={{ fontFamily: '"Playfair Display", Georgia, "Times New Roman", serif' }}
+          >
+            Building Uganda&rsquo;s Future, <span style={{ color: TEAL }}>One Reader</span> At a Time.
+          </h1>
+          <p className="mt-6 text-[15px] text-gray-600 leading-relaxed max-w-[480px]">
+            We equip teachers. We reach children. We strengthen literacy from the classroom to the community.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              href="/donate"
+              className="inline-flex items-center gap-2 h-12 px-6 rounded-lg text-white font-bold text-[14px] shadow-md transition hover:opacity-95"
+              style={{ background: ORANGE }}
+            >
+              <Heart className="h-4 w-4" fill="white" strokeWidth={0} />
+              Support Our Mission
+            </Link>
+            <Link
+              href="/programs"
+              className="inline-flex items-center gap-2 h-12 px-6 rounded-lg bg-white border-2 font-bold text-[14px] transition"
+              style={{ borderColor: TEAL, color: TEAL }}
+            >
+              Explore Programs
+              <ArrowUpRight className="h-4 w-4" strokeWidth={2.25} />
+            </Link>
+          </div>
+          <div className="mt-9 flex items-center gap-4">
+            <div className="flex -space-x-2">
+              {[1, 2, 3, 4].map((i) => (
+                <span key={i} className="h-9 w-9 rounded-full border-2 border-white overflow-hidden bg-gray-200">
+                  <span
+                    className="block h-full w-full"
+                    style={{
+                      background: `linear-gradient(135deg, ${i % 2 ? TEAL : ORANGE} 0%, ${i % 2 ? TEAL_DARK : ORANGE_DARK} 100%)`,
+                    }}
+                  />
+                </span>
+              ))}
+            </div>
+            <p className="text-[13px] text-gray-700">
+              <strong className="font-bold text-gray-900">10,000+</strong>{" "}
+              <span className="text-gray-500">teachers trained across Uganda</span>
+            </p>
+          </div>
+        </div>
+
+        {/* RIGHT — composed image with floating cards + decorative shapes */}
+        <div className="relative min-h-[500px] hidden lg:block">
+          <div
+            aria-hidden
+            className="absolute right-2 top-2 w-[78%] h-[80%] rounded-[36px]"
+            style={{ background: `linear-gradient(135deg, ${TEAL} 0%, ${TEAL_DARK} 100%)`, opacity: 0.95 }}
+          />
+          <div aria-hidden className="absolute right-0 top-12 grid grid-cols-4 gap-1.5">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ background: TEAL_SOFT }} />
+            ))}
+          </div>
+          <div className="absolute right-6 top-8 w-[70%] aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl">
+            <Image
+              src="/photos/classroom-learners-writing.jpg"
+              alt="Ugandan student reading in class"
+              fill
+              sizes="(min-width: 1024px) 40vw, 100vw"
+              className="object-cover"
+              priority
             />
           </div>
-          
-          {/* Right: Content */}
-          <div className="flex flex-col gap-6">
-            <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase">
-              Welcome To Ozeki
-            </span>
-            <h2 className="text-4xl lg:text-5xl font-bold text-[#111] leading-[1.15] tracking-tight mb-4">
-              You&apos;re the Hope of Others.
-            </h2>
-            <p className="text-gray-600 leading-relaxed text-lg">
-              Across Uganda, reading is the single skill determining whether children 
-              can access the rest of the curriculum. Yet national evidence shows too 
-              many learners still not mastering literacy early enough. 
-            </p>
-            <p className="text-gray-600 leading-relaxed text-lg">
-              Years of disrupted schooling left many classrooms with limited materials. 
-              Recovery requires systematic instruction and repeated practice. We train 
-              teachers to bridge this gap.
-            </p>
-            
-            <div className="mt-6 flex items-center gap-8">
-              <Link 
-                href="/about" 
-                className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-charius-orange text-white font-bold tracking-wide hover:bg-[#e06b0b] transition-colors"
+          <div className="absolute right-2 bottom-12 w-[42%] aspect-[5/4] rounded-2xl overflow-hidden shadow-xl border-4 border-white">
+            <Image
+              src="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg"
+              alt="Classroom in session"
+              fill
+              sizes="(min-width: 1024px) 22vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="absolute left-0 top-16 bg-white rounded-2xl shadow-xl p-4 w-[200px] border border-gray-100">
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl shrink-0" style={{ background: TEAL_SOFT }}>
+                <GraduationCap className="h-5 w-5" style={{ color: TEAL }} strokeWidth={2} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[18px] font-extrabold text-gray-900 leading-none">32,600+</p>
+                <p className="text-[10.5px] text-gray-500 leading-snug mt-1.5">Learners Reached<br />in 2023</p>
+              </div>
+            </div>
+          </div>
+          <div className="absolute left-2 top-[290px] bg-white rounded-2xl shadow-xl p-4 w-[200px] border border-gray-100">
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl shrink-0" style={{ background: TEAL_SOFT }}>
+                <BookOpen className="h-5 w-5" style={{ color: TEAL }} strokeWidth={2} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[18px] font-extrabold text-gray-900 leading-none">1.2M+</p>
+                <p className="text-[10.5px] text-gray-500 leading-snug mt-1.5">Books &amp; Materials<br />Distributed</p>
+              </div>
+            </div>
+          </div>
+          <svg aria-hidden className="absolute right-0 bottom-0 w-32 h-32" viewBox="0 0 120 120">
+            <path d="M 20 100 Q 50 50, 100 30 Q 70 70, 30 110 Z" fill={TEAL} opacity="0.18" />
+            <path d="M 30 110 Q 60 80, 110 60" stroke={TEAL} strokeWidth="2" fill="none" opacity="0.4" />
+          </svg>
+          <svg aria-hidden className="absolute right-4 top-0 w-16 h-16" viewBox="0 0 60 60">
+            <path d="M 5 30 Q 20 10, 35 30 Q 50 50, 55 25" stroke={ORANGE} strokeWidth="1.5" fill="none" />
+          </svg>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Partner logo band ─────────────────────────────────────────────── */
+function PartnerLogoBand() {
+  return (
+    <section className="bg-white pb-10">
+      <div className="max-w-[1280px] mx-auto px-6">
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-6 py-5 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-6 items-center">
+          <p className="text-[11px] font-bold text-gray-700 leading-snug">
+            Trusted by partners and supporters who believe in every child.
+          </p>
+          <div className="flex flex-wrap items-center justify-around gap-x-6 gap-y-3">
+            {PARTNERS.map((p) => (
+              <span key={p.name} className="text-gray-400 text-[14px] font-bold tracking-wide opacity-70 hover:opacity-100 transition">
+                {p.text}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Impact Numbers band ───────────────────────────────────────────── */
+function ImpactNumbersBand() {
+  return (
+    <section className="px-6 pb-12">
+      <div
+        className="max-w-[1280px] mx-auto rounded-3xl px-8 py-10 relative overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${TEAL_DEEP} 0%, ${TEAL_DARK} 60%, ${TEAL} 100%)` }}
+      >
+        <svg aria-hidden className="absolute right-2 top-2 w-40 h-40 opacity-10" viewBox="0 0 100 100">
+          <path d="M 10 90 Q 40 50, 90 20" stroke="white" strokeWidth="1.5" fill="none" />
+          <path d="M 20 80 Q 50 40, 85 30" stroke="white" strokeWidth="1.5" fill="none" />
+        </svg>
+        <h2
+          className="text-center text-white text-[22px] md:text-[26px] font-extrabold tracking-tight mb-7"
+          style={{ fontFamily: '"Playfair Display", Georgia, serif' }}
+        >
+          Our Impact in Numbers
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {IMPACT_STATS.map(({ icon: Icon, value, label }) => (
+            <div key={label} className="bg-white rounded-xl p-5 text-center shadow-md">
+              <span className="grid h-11 w-11 place-items-center rounded-full mx-auto mb-3" style={{ background: TEAL }}>
+                <Icon className="h-5 w-5 text-white" strokeWidth={2} />
+              </span>
+              <p className="text-[24px] font-extrabold tracking-tight" style={{ color: TEAL }}>{value}</p>
+              <p className="text-[11.5px] text-gray-600 leading-snug mt-1">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Programs section ──────────────────────────────────────────────── */
+function ProgramIcon({ kind, color }: { kind: string; color: string }) {
+  if (kind === "abc") {
+    return <span className="text-[15px] font-extrabold" style={{ color }}>abc</span>;
+  }
+  const map: Record<string, LucideIcon> = {
+    user: Users,
+    team: Users,
+    doc: ClipboardCheck,
+    book: Library,
+  };
+  const Icon = map[kind] ?? BookOpen;
+  return <Icon className="h-5 w-5" style={{ color }} strokeWidth={2} />;
+}
+
+function ProgramsSection() {
+  return (
+    <section className="px-6 py-16">
+      <div className="max-w-[1280px] mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] mb-2" style={{ color: ORANGE }}>What We Do</p>
+          <h2
+            className="text-[32px] md:text-[36px] font-extrabold tracking-tight text-gray-900"
+            style={{ fontFamily: '"Playfair Display", Georgia, serif' }}
+          >
+            Programs That Build Strong Readers
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {PROGRAMS.map((p) => (
+            <div key={p.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col">
+              <span className="grid h-10 w-10 place-items-center rounded-xl mb-4" style={{ background: p.iconBg }}>
+                <ProgramIcon kind={p.icon} color={p.iconColor} />
+              </span>
+              <h3 className="text-[15px] font-bold text-gray-900 mb-2">{p.title}</h3>
+              <p className="text-[12px] text-gray-600 leading-relaxed flex-1">{p.description}</p>
+              <Link
+                href={p.href}
+                className="mt-4 inline-flex items-center gap-1 text-[12px] font-semibold transition"
+                style={{ color: ORANGE }}
               >
-                Discover More
+                Learn more
+                <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2.25} />
               </Link>
-              <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center">
-                    <span className="text-charius-orange">📞</span>
-                 </div>
-                 <div>
-                    <span className="block text-xs text-gray-500 uppercase font-semibold">Call Us</span>
-                    <span className="block text-[15px] font-bold text-[#111]">+256 773 397 375</span>
-                 </div>
-              </div>
             </div>
-          </div>
+          ))}
         </div>
-      </SectionWrapper>
+      </div>
+    </section>
+  );
+}
 
-      {/* 3. Stat Banner — only rendered when live data is available.
-          When `reachFootprint` is live we surface districts + regions in
-          place of "Years of Impact" because geographic reach is a far
-          stronger trust signal than years operating. */}
-      {(impactStats.schools || impactStats.assessments || impactStats.teachers || reachFootprint) && (
-        <div className="w-full bg-white border-t border-gray-100 py-16">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-gray-100/50">
-              <div className="text-center px-4">
-                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.schools ?? "—"}</div>
-                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Schools</div>
-              </div>
-              <div className="text-center px-4">
-                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.assessments ?? "—"}</div>
-                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Assessed</div>
-              </div>
-              <div className="text-center px-4">
-                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.teachers ?? "—"}</div>
-                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Happy Teachers</div>
-              </div>
-              {reachFootprint ? (
-                <div className="text-center px-4">
-                  <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{reachFootprint.districtsReached}</div>
-                  <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                    Districts {reachFootprint.regionsReached > 0 && (
-                      <span className="block text-xs text-gray-400 normal-case font-normal mt-1">
-                        across {reachFootprint.regionsReached} region{reachFootprint.regionsReached === 1 ? "" : "s"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center px-4">
-                  <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.years}</div>
-                  <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Years of Impact</div>
-                </div>
-              )}
-            </div>
-          </div>
+/* ── Uganda impact map section ─────────────────────────────────────── */
+function UgandaImpactSection() {
+  return (
+    <section className="px-6 pb-16">
+      <div
+        className="max-w-[1280px] mx-auto rounded-3xl p-8 grid grid-cols-1 lg:grid-cols-[1fr_1.2fr_1.3fr] gap-6 items-stretch"
+        style={{ background: `linear-gradient(135deg, ${TEAL_DEEP} 0%, ${TEAL_DARK} 100%)` }}
+      >
+        <div className="text-white py-2">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] mb-3" style={{ color: ORANGE }}>
+            National Reach
+          </p>
+          <h3
+            className="text-[28px] md:text-[32px] font-extrabold leading-tight tracking-tight"
+            style={{ fontFamily: '"Playfair Display", Georgia, serif' }}
+          >
+            Changing Lives<br />Across Uganda
+          </h3>
+          <p className="text-[13px] text-white/80 leading-relaxed mt-4 max-w-[280px]">
+            From rural villages to urban centers, we&rsquo;re building a nation of confident readers.
+          </p>
+          <Link
+            href="/impact"
+            className="mt-6 inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-white/10 border border-white/20 text-white text-[12.5px] font-semibold hover:bg-white/15 transition"
+          >
+            Explore Our Reach
+            <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2.25} />
+          </Link>
         </div>
-      )}
 
-      {/* 3b. Live transparency band — only renders metrics that have data.
-          Each tile is omitted when its underlying query returns null
-          (early-days / sample too small / no posted journals yet). */}
-      {(readingShift || costPerLearner || programmeSplit || coachingCompletion || storyGrowth) && (
-        <SectionWrapper theme="light" className="py-16 border-t border-gray-100">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="text-center mb-10">
-              <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
-                Live Transparency
-              </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-[#111] leading-tight tracking-tight">
-                What your support is producing
-              </h2>
-              <p className="text-gray-500 mt-3 text-base max-w-2xl mx-auto">
-                Refreshed from our database. We publish each number only when the underlying sample is large enough to be honest.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {readingShift && readingShift.deltaPoints != null && (
-                <article className="bg-white border border-gray-100 rounded-2xl p-6">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    Avg learner reading-stage shift
-                  </p>
-                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
-                    {readingShift.deltaPoints > 0 ? "+" : ""}{readingShift.deltaPoints} pts
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Baseline → endline composite, paired across {readingShift.endlineLearners.toLocaleString()} learners.
-                    {readingShift.improvedSharePct != null && (
-                      <> <span className="font-semibold text-[#066a67]">{readingShift.improvedSharePct}%</span> improved by at least one stage.</>
-                    )}
-                  </p>
-                </article>
-              )}
-              {costPerLearner && (
-                <article className="bg-white border border-gray-100 rounded-2xl p-6">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    Programme cost per learner reached
-                  </p>
-                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
-                    ${costPerLearner.costPerLearnerUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    UGX {costPerLearner.costPerLearnerUgx.toLocaleString()} per learner across {costPerLearner.learnersReached.toLocaleString()} assessed.
-                  </p>
-                </article>
-              )}
-              {programmeSplit && (
-                <article className="bg-white border border-gray-100 rounded-2xl p-6">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    Reaching learners directly
-                  </p>
-                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
-                    {programmeSplit.programmeSharePct}%
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    of total spend is programme delivery; {programmeSplit.overheadSharePct}% is general &amp; administrative overhead.
-                  </p>
-                </article>
-              )}
-              {coachingCompletion && (
-                <article className="bg-white border border-gray-100 rounded-2xl p-6">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    Coaching delivery rate (90 days)
-                  </p>
-                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
-                    {coachingCompletion.completionPct}%
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    {coachingCompletion.completedLast90d.toLocaleString()} of {coachingCompletion.scheduledLast90d.toLocaleString()} scheduled coaching visits delivered.
-                  </p>
-                </article>
-              )}
-              {storyGrowth && (
-                <article className="bg-white border border-gray-100 rounded-2xl p-6">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    1001 Story collection
-                  </p>
-                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
-                    {storyGrowth.totalPublished.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    learner-authored stories published.
-                    {storyGrowth.newThisMonth > 0 && (
-                      <> <span className="font-semibold text-[#066a67]">+{storyGrowth.newThisMonth}</span> this month
-                        {storyGrowth.monthOnMonthDeltaPct != null && (
-                          <>{" "}
-                            ({storyGrowth.monthOnMonthDeltaPct >= 0 ? "+" : ""}
-                            {storyGrowth.monthOnMonthDeltaPct}% vs prior).
-                          </>
-                        )}
-                      </>
-                    )}
-                  </p>
-                </article>
-              )}
-            </div>
-            <p className="text-center text-xs text-gray-400 mt-6">
-              Source: posted journal entries, paired assessments, coaching-visit log, story library. Updated continuously.{" "}
-              <Link href="/transparency" className="text-charius-orange font-semibold hover:underline">
-                See methodology →
-              </Link>
-            </p>
+        <div className="flex items-center justify-center">
+          <UgandaMap />
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-[14px] font-bold text-gray-900">Impact Overview</h4>
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 border border-gray-200 rounded-md px-2 py-1">
+              2023 <ChevronDown className="h-3 w-3" strokeWidth={2.25} />
+            </span>
           </div>
-        </SectionWrapper>
-      )}
-
-      {/* 3c. Reading-stage distribution band. Renders only with ≥30 learners
-          assessed; shows the share of learners at each stage as horizontal
-          bars + counts. Powered by getPublicReadingStageDistribution. */}
-      {stageDistribution && (
-        <SectionWrapper theme="charius-beige" className="py-16 border-t border-gray-100">
-          <div className="max-w-4xl mx-auto px-6">
-            <div className="text-center mb-8">
-              <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
-                Where Learners Stand Today
-              </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-[#111] leading-tight tracking-tight">
-                Reading-stage distribution across {stageDistribution.totalLearners.toLocaleString()} learners
-              </h2>
-              <p className="text-gray-500 mt-3 text-base max-w-2xl mx-auto">
-                Each learner counted once at their most-recent assessment. The lower the proficient share, the more support is needed.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
-              {stageDistribution.bands.map((band) => (
-                <div key={band.key} className="grid grid-cols-[160px_1fr_auto] items-center gap-3">
-                  <span className="text-sm font-semibold text-gray-700">{band.label}</span>
-                  <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
-                    <div
-                      className="h-full bg-charius-orange rounded-full"
-                      style={{ width: `${Math.max(band.sharePct, band.count > 0 ? 2 : 0)}%` }}
-                    />
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { label: "Regions",  value: "112" },
+              { label: "Districts", value: "48" },
+              { label: "Schools",  value: "1,450+" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-lg border border-gray-100 px-3 py-2.5">
+                <p className="text-[10px] text-gray-500 font-semibold">{s.label}</p>
+                <p className="text-[18px] font-extrabold mt-0.5" style={{ color: TEAL }}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10.5px] font-bold text-gray-500 uppercase tracking-wider mb-2">Learners Reached by Region</p>
+          <div className="grid grid-cols-[1fr_140px] gap-4 items-center">
+            <div className="space-y-2">
+              {REGION_BARS.map((r) => (
+                <div key={r.label} className="grid grid-cols-[60px_1fr_56px] items-center gap-2 text-[11px]">
+                  <span className="text-gray-700 font-semibold">{r.label}</span>
+                  <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: TEAL }} />
                   </div>
-                  <span className="text-sm font-bold text-[#111] tabular-nums whitespace-nowrap">
-                    {band.sharePct}% <span className="text-gray-400 font-normal">({band.count.toLocaleString()})</span>
-                  </span>
+                  <span className="text-right font-bold text-gray-900">{r.value}</span>
                 </div>
               ))}
             </div>
+            <div className="flex flex-col items-center">
+              <DonutChart />
+              <p className="text-[10px] text-gray-500 mt-1.5 font-semibold">Total Learners</p>
+            </div>
           </div>
-        </SectionWrapper>
-      )}
-
-      {/* 4. Find the popular cause (Programs) */}
-      <SectionWrapper theme="charius-beige" className="py-24">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
-            Featured Programs
-          </span>
-          <h2 className="text-[40px] font-bold text-[#111] leading-tight tracking-tight">
-            Find the popular cause
-          </h2>
         </div>
-        
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {/* Card 1 — Phonics: amount received from partners via finance_receipts */}
-          <Link href="/phonics-training" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
-            <div className="relative h-64 w-full">
-              <Image src="/photos/26.jpeg" alt="Phonics Training" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-            </div>
-            <div className="p-8">
-              <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
-                The Learners Are Waiting For Your Phonics Support.
-              </h3>
-              <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
-                <div
-                  className="bg-charius-orange h-1.5 rounded-full transition-all"
-                  style={{ width: `${programmeCards?.phonics.percent ?? 0}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between items-center text-[13px] font-semibold text-gray-500">
-                <span>Raised: {programmeCards ? programmeCards.phonics.currentLabel : "—"}</span>
-                <span>Goal: {programmeCards ? programmeCards.phonics.goalLabel : "—"}</span>
-              </div>
-            </div>
-          </Link>
+      </div>
+    </section>
+  );
+}
 
-          {/* Card 2 — Coaching: completed coaching visits from portal_records */}
-          <Link href="/in-school-coaching-mentorship" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
-            <div className="relative h-64 w-full">
-              <Image src="/photos/Phonics%20Session%20for%20Teachers%20in%20Namasale%20Sub-County%20Amolatar.jpg" alt="In-school coaching" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-            </div>
-            <div className="p-8">
-              <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
-                Changing lives one classroom at a time.
-              </h3>
-              <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
-                <div
-                  className="bg-[#006b61] h-1.5 rounded-full transition-all"
-                  style={{ width: `${programmeCards?.coaching.percent ?? 0}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between items-center text-[13px] font-semibold text-gray-500">
-                <span>Visits: {programmeCards ? programmeCards.coaching.currentLabel : "—"}</span>
-                <span>Goal: {programmeCards ? programmeCards.coaching.goalLabel : "—"}</span>
-              </div>
-            </div>
-          </Link>
+function UgandaMap() {
+  const markers = [
+    { x: 68, y: 35 }, { x: 72, y: 50 }, { x: 60, y: 45 }, { x: 50, y: 38 },
+    { x: 40, y: 42 }, { x: 30, y: 55 }, { x: 45, y: 60 }, { x: 55, y: 65 },
+    { x: 65, y: 70 }, { x: 75, y: 65 }, { x: 50, y: 72 }, { x: 35, y: 75 },
+    { x: 55, y: 85 }, { x: 70, y: 85 }, { x: 60, y: 90 },
+  ];
+  return (
+    <svg viewBox="0 0 100 110" className="w-full max-w-[260px] h-auto" role="img" aria-label="Uganda — coverage map">
+      <defs>
+        <linearGradient id="ugMapFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="white" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="white" stopOpacity="0.06" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M 12 22 L 36 14 L 60 12 L 84 18 L 92 30 L 90 44 L 88 60 L 92 80 L 78 100 L 60 104 L 40 100 L 22 96 L 10 78 L 8 56 L 14 38 Z"
+        fill="url(#ugMapFill)"
+        stroke="white"
+        strokeOpacity="0.35"
+        strokeWidth="0.6"
+      />
+      {markers.map((m, i) => (
+        <g key={i}>
+          <circle cx={m.x} cy={m.y - 1.2} r="1.6" fill={ORANGE} />
+          <path d={`M ${m.x} ${m.y - 0.2} L ${m.x - 1.2} ${m.y - 2.4} L ${m.x + 1.2} ${m.y - 2.4} Z`} fill={ORANGE} />
+        </g>
+      ))}
+    </svg>
+  );
+}
 
-          {/* Card 3 — Story Project: teachers trained on the 1001 Story programme */}
-          <Link href="/story-project" className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-shadow block">
-            <div className="relative h-64 w-full">
-              <Image src="/photos/Amolatar%20District%20Literacy.jpg" alt="1001 Story Project" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-            </div>
-            <div className="p-8">
-              <h3 className="text-xl font-bold text-[#111] leading-snug mb-8">
-                Let&apos;s be one community in this cause.
-              </h3>
-              <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
-                <div
-                  className="bg-red-500 h-1.5 rounded-full transition-all"
-                  style={{ width: `${programmeCards?.storyProject.percent ?? 0}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between items-center text-[13px] font-semibold text-gray-500">
-                <span>Trained: {programmeCards ? programmeCards.storyProject.currentLabel : "—"}</span>
-                <span>Goal: {programmeCards ? programmeCards.storyProject.goalLabel : "—"}</span>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </SectionWrapper>
+function DonutChart() {
+  const r = 28;
+  const c = 2 * Math.PI * r;
+  const dash = 0.76 * c;
+  return (
+    <svg width="92" height="92" viewBox="0 0 92 92">
+      <circle cx="46" cy="46" r={r} fill="none" stroke="#f1f5f9" strokeWidth="10" />
+      <circle
+        cx="46"
+        cy="46"
+        r={r}
+        fill="none"
+        stroke={TEAL}
+        strokeWidth="10"
+        strokeDasharray={`${dash} ${c - dash}`}
+        strokeDashoffset={c / 4}
+        strokeLinecap="round"
+        transform="rotate(-90 46 46)"
+      />
+      <circle
+        cx="46"
+        cy="46"
+        r={r}
+        fill="none"
+        stroke={ORANGE}
+        strokeWidth="10"
+        strokeDasharray={`${c * 0.12} ${c}`}
+        strokeDashoffset={-dash + c / 4}
+        strokeLinecap="round"
+        transform="rotate(-90 46 46)"
+      />
+      <text x="46" y="44" textAnchor="middle" fontWeight="800" fontSize="13" fill="#0f172a">
+        32,600+
+      </text>
+      <text x="46" y="58" textAnchor="middle" fontSize="6.5" fill="#64748b">Total Learners</text>
+    </svg>
+  );
+}
 
-      {/* 5. Volunteer / Testimonial Avatars */}
-      <SectionWrapper theme="light" className="py-24">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
-            Voices from the classroom
-          </span>
-          <h2 className="text-[40px] font-bold text-[#006b61] leading-tight tracking-tight">
-            Read The Story of Change Happening in Schools
-          </h2>
-        </div>
-
-        {/* Circular Avatars Row */}
-        <div className="flex flex-wrap justify-center gap-8 md:gap-16 mb-16">
-          {testimonialRows.length > 0 ? testimonialRows.map((q) => (
-             <div key={q.id} className="flex flex-col items-center group">
-                <div className="w-24 h-24 rounded-full overflow-hidden mb-4 border-2 border-transparent group-hover:border-charius-orange transition-all shadow-md">
-                   {/* Fallback avatar block for real data */}
-                   <div className="w-full h-full bg-[#006b61]/10 flex items-center justify-center text-2xl font-bold text-[#006b61]">
-                      {q.storytellerName?.[0] || "T"}
-                   </div>
-                </div>
-                <div className="text-center">
-                   <div className="font-bold text-[#111]">{q.storytellerName?.split(" ")[0]}</div>
-                   <div className="text-xs text-gray-500 font-semibold">{q.storytellerRole || "Teacher"}</div>
-                </div>
-             </div>
-          )) : (
-             <div className="text-gray-500 font-medium">Stories are currently being curated.</div>
-          )}
-        </div>
-
-        {/* Testimonial Quote Boxes Row */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-           {testimonialRows.slice(0, 3).map((q) => (
-              <div key={q.id} className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
-                 <div className="w-10 h-10 rounded-full bg-charius-orange text-white flex items-center justify-center font-serif text-2xl mb-6">
-                   &quot;
-                 </div>
-                 <p className="text-gray-600 leading-relaxed text-[15px] mb-6 min-h-[100px]">
-                   {clipQuote(q.storyText, 140)}
-                 </p>
-                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-[#111] font-bold text-sm">
-                      {q.storytellerName?.[0]}
-                    </div>
-                    <div>
-                       <div className="text-sm font-bold text-[#111]">{q.storytellerName}</div>
-                       <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">{q.schoolName || "Learner Impact"}</div>
-                    </div>
-                 </div>
-              </div>
-           ))}
-        </div>
-
-        {/* Call to Action for Schools */}
-        <div className="mt-16 text-center flex justify-center">
-          <Link
-            href="/partner"
-            className="relative inline-flex group"
+/* ── Testimonials ──────────────────────────────────────────────────── */
+function TestimonialsSection() {
+  return (
+    <section className="px-6 pb-16 bg-white">
+      <div className="max-w-[1280px] mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] mb-2" style={{ color: ORANGE }}>Stories of Change</p>
+          <h2
+            className="text-[32px] md:text-[36px] font-extrabold tracking-tight text-gray-900"
+            style={{ fontFamily: '"Playfair Display", Georgia, serif' }}
           >
-            {/* Glowing animated backing */}
-            <div className="absolute transition-all duration-1000 opacity-60 -inset-px bg-gradient-to-r from-charius-orange via-[#ff7235] to-[#f49342] rounded-full blur-lg group-hover:opacity-100 group-hover:-inset-1 group-hover:duration-200 animate-pulse"></div>
-            {/* Core button */}
-            <div className="relative inline-flex items-center justify-center px-10 py-5 text-lg font-bold text-white transition-all duration-200 bg-[#006b61] hover:bg-[#005a51] rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#006b61] shadow-xl shadow-[#006b61]/30">
-              Be Part of the Next Success Story!
-              <svg className="w-6 h-6 ml-2 transition-transform duration-300 group-hover:translate-x-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </div>
+            Real Stories. Real Impact.
+          </h2>
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            aria-label="Previous testimonial"
+            className="hidden md:grid absolute -left-2 top-1/2 -translate-y-1/2 h-9 w-9 place-items-center rounded-full text-white shadow-md transition hover:opacity-90"
+            style={{ background: ORANGE }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next testimonial"
+            className="hidden md:grid absolute -right-2 top-1/2 -translate-y-1/2 h-9 w-9 place-items-center rounded-full text-white shadow-md transition hover:opacity-90"
+            style={{ background: ORANGE }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-2 md:px-10">
+            {TESTIMONIALS.map((t) => (
+              <article key={t.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <Quote className="h-4 w-4 mb-3" style={{ color: ORANGE }} fill={ORANGE} />
+                <p className="text-[13px] text-gray-700 leading-relaxed">{t.quote}</p>
+                <div className="mt-5 flex items-center gap-3">
+                  <span className="h-10 w-10 rounded-full grid place-items-center text-white font-bold" style={{ background: TEAL }}>
+                    {t.name.charAt(0)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[12.5px] font-bold text-gray-900 leading-tight">{t.name}</p>
+                    <p className="text-[11px] text-gray-500 leading-tight">{t.role}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="flex items-center justify-center gap-1.5 mt-6" aria-hidden>
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className="h-1.5 rounded-full" style={{ width: i === 1 ? 16 : 6, background: i === 1 ? ORANGE : "#cbd5e1" }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Donation CTA strip ────────────────────────────────────────────── */
+function DonationCtaStrip() {
+  return (
+    <section className="px-6 pb-16">
+      <div
+        className="max-w-[1280px] mx-auto rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-[280px_1fr_auto] items-center gap-6 px-6 py-7 relative"
+        style={{ background: `linear-gradient(135deg, ${TEAL_DEEP} 0%, ${TEAL_DARK} 100%)` }}
+      >
+        <svg aria-hidden className="absolute left-4 top-2 w-32 h-24 opacity-15" viewBox="0 0 80 60">
+          <path d="M 5 40 Q 20 10, 75 5" stroke="white" strokeWidth="1.5" fill="none" />
+          <path d="M 10 50 Q 30 20, 70 15" stroke="white" strokeWidth="1.5" fill="none" />
+        </svg>
+        <div className="relative h-[150px] md:h-[160px] rounded-2xl overflow-hidden shadow-lg">
+          <Image
+            src="/photos/Reading Session in Dokolo Greater Bata Cluster.jpeg"
+            alt="Child reading"
+            fill
+            sizes="280px"
+            className="object-cover"
+          />
+        </div>
+        <div className="text-white">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] mb-2" style={{ color: ORANGE }}>
+            Be the Reason a Child Can Read
+          </p>
+          <h3
+            className="text-[24px] md:text-[28px] font-extrabold leading-tight tracking-tight"
+            style={{ fontFamily: '"Playfair Display", Georgia, serif' }}
+          >
+            Your Support Today Builds Their Tomorrow.
+          </h3>
+          <p className="text-[13px] text-white/85 mt-2 max-w-[420px]">
+            Together, we can ensure every child has the skills, confidence, and opportunity to thrive.
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-2 md:gap-3">
+          <Link
+            href="/donate"
+            className="inline-flex items-center gap-2 h-12 px-7 rounded-xl text-white font-bold text-[14px] shadow-lg transition hover:opacity-95"
+            style={{ background: ORANGE }}
+          >
+            Donate Now
+            <Heart className="h-4 w-4" fill="white" strokeWidth={0} />
+          </Link>
+          <Link href="/donate?tab=other" className="text-[11.5px] text-white/85 font-semibold hover:text-white inline-flex items-center gap-1">
+            Other ways to give <ArrowUpRight className="h-3 w-3" strokeWidth={2.25} />
           </Link>
         </div>
-      </SectionWrapper>
+      </div>
+    </section>
+  );
+}
 
-      {/* 6. Upcoming Events — rendered only when the schedule has real rows */}
-      {upcomingEvents.length > 0 && (
-        <section className="bg-[#006b61] py-24 relative overflow-hidden">
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-charius-beige" />
-          <div className="max-w-6xl mx-auto px-6 relative z-10 text-center mb-12">
-            <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
-              Let&apos;s help them together
+/* ── Footer ────────────────────────────────────────────────────────── */
+function SiteFooterReplica() {
+  return (
+    <footer className="bg-white">
+      <div className="max-w-[1280px] mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.3fr_repeat(3,_1fr)_1.2fr] gap-8">
+        <div>
+          <Link href="/" className="flex items-center gap-2.5 mb-4">
+            <Image src="/photos/logo.png" alt="Ozeki" width={36} height={36} className="rounded-lg object-contain" />
+            <span className="leading-none">
+              <span className="block text-[13px] font-extrabold tracking-tight" style={{ color: TEAL }}>OZEKI</span>
+              <span className="block text-[8.5px] font-bold tracking-[0.18em] mt-1 text-gray-500">READING BRIDGE<br />FOUNDATION</span>
             </span>
-            <h2 className="text-[40px] font-bold text-white leading-tight tracking-tight">
-              Join Our Upcoming Events
-            </h2>
+          </Link>
+          <p className="text-[12.5px] text-gray-600 leading-relaxed max-w-[280px]">
+            Strengthening literacy in Uganda through teacher training, quality instruction, and community partnerships.
+          </p>
+          <div className="flex items-center gap-2 mt-4">
+            {[
+              { Icon: Facebook,  href: "https://facebook.com/ozeki",  label: "Facebook" },
+              { Icon: Twitter,   href: "https://twitter.com/ozeki",   label: "Twitter" },
+              { Icon: Instagram, href: "https://instagram.com/ozeki", label: "Instagram" },
+              { Icon: Youtube,   href: "https://youtube.com/@ozeki",  label: "YouTube" },
+              { Icon: Linkedin,  href: "https://linkedin.com/company/ozeki", label: "LinkedIn" },
+            ].map(({ Icon, href, label }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={label}
+                className="grid h-8 w-8 place-items-center rounded-full text-white transition hover:opacity-90"
+                style={{ background: TEAL }}
+              >
+                <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+              </a>
+            ))}
           </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6 relative z-20">
-            {upcomingEvents.map((event, index) => {
-              const { day, month } = formatEventDate(event.scheduledDate);
-              const badgeColor =
-                index === 0 ? "bg-charius-orange" : index === 1 ? "bg-[#006b61]" : "bg-red-500";
-              const image =
-                index === 0
-                  ? "/photos/12.jpeg"
-                  : index === 1
-                  ? "/photos/17.jpeg"
-                  : "/photos/13.jpeg";
-              return (
-                <Link
-                  key={event.id}
-                  href="/events"
-                  className="bg-white rounded-xl overflow-hidden shadow-lg group hover:-translate-y-2 transition-transform block"
-                >
-                  <div className="relative h-48">
-                    <Image
-                      src={image}
-                      alt={event.topic}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover"
-                    />
-                    <div
-                      className={`absolute top-4 left-4 ${badgeColor} w-12 h-14 rounded-b-md flex flex-col items-center justify-center text-white shadow-md`}
-                    >
-                      <span className="text-xl font-bold leading-none">{day}</span>
-                      <span className="text-[10px] uppercase font-semibold">{month}</span>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="font-bold text-lg text-[#111] mb-2 group-hover:text-[#006b61] transition-colors">
-                      {event.topic}
-                      {event.district ? ` — ${event.district}` : ""}
-                    </h3>
-                    <p className="text-gray-500 text-sm flex items-center gap-2 font-medium">
-                      <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">
-                        ⏰
-                      </span>
-                      {formatEventTimeRange(event)}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
+        </div>
+        {FOOTER_COLUMNS.map((col) => (
+          <div key={col.title}>
+            <p className="text-[12.5px] font-extrabold text-gray-900 mb-3">{col.title}</p>
+            <ul className="space-y-2">
+              {col.links.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className="text-[12px] text-gray-600 hover:text-gray-900 transition">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
-        </section>
-      )}
-
-    </>
+        ))}
+        <div>
+          <p className="text-[12.5px] font-extrabold text-gray-900 mb-3">Contact Us</p>
+          <ul className="space-y-2.5 text-[12px] text-gray-600">
+            <li className="inline-flex items-start gap-2">
+              <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: TEAL }} strokeWidth={2} />
+              <span>Plot 15, Nakasero Road<br />Kampala, Uganda</span>
+            </li>
+            <li className="inline-flex items-center gap-2">
+              <Phone className="h-3.5 w-3.5 shrink-0" style={{ color: TEAL }} strokeWidth={2} />
+              +256 773 397 375
+            </li>
+            <li className="inline-flex items-center gap-2">
+              <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: TEAL }} strokeWidth={2} />
+              info@ozekireadingbridge.org
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="text-white text-[11.5px]" style={{ background: TEAL_DARK }}>
+        <div className="max-w-[1280px] mx-auto px-6 h-11 flex flex-col md:flex-row items-center justify-between gap-2">
+          <p className="text-white/85">© 2026 Ozeki Reading Bridge Foundation. All rights reserved.</p>
+          <nav className="flex items-center gap-5">
+            <Link href="/privacy" className="text-white/85 hover:text-white transition">Privacy Policy</Link>
+            <Link href="/terms"   className="text-white/85 hover:text-white transition">Terms of Use</Link>
+            <Link href="/sitemap" className="text-white/85 hover:text-white transition">Sitemap</Link>
+          </nav>
+        </div>
+      </div>
+    </footer>
   );
 }
