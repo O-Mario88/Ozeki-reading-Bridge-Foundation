@@ -16,6 +16,14 @@ import {
   getHomepageProgrammeCardsPostgres,
   type HomepageProgrammeCards,
 } from "@/lib/server/postgres/repositories/homepage-programmes";
+import {
+  getPublicReadingStageShift,
+  getPublicCostPerLearnerReached,
+  getPublicProgrammeOverheadSplit,
+  type ReadingStageShift,
+  type CostPerLearnerReached,
+  type ProgrammeOverheadSplit,
+} from "@/lib/server/postgres/repositories/public-metrics";
 import { ChariusPillImage } from "@/components/public/ChariusPillImage";
 
 const FOUNDING_YEAR = 2019;
@@ -74,6 +82,9 @@ export default async function HomePage() {
   let testimonialRows: PortalTestimonialRecord[] = [];
   let upcomingEvents: PublicUpcomingEvent[] = [];
   let programmeCards: HomepageProgrammeCards | null = null;
+  let readingShift: ReadingStageShift | null = null;
+  let costPerLearner: CostPerLearnerReached | null = null;
+  let programmeSplit: ProgrammeOverheadSplit | null = null;
   const impactStats: {
     schools: string | null;
     assessments: string | null;
@@ -88,13 +99,22 @@ export default async function HomePage() {
 
   if (isPostgresConfigured()) {
     try {
-      const [testimonialsResult, summary, events, cards] = await Promise.all([
+      const [
+        testimonialsResult, summary, events, cards,
+        shift, perLearner, split,
+      ] = await Promise.all([
         listPublishedPortalTestimonialsPostgres(90),
         getImpactSummary(),
         listUpcomingPublicEventsPostgres(3),
         getHomepageProgrammeCardsPostgres(),
+        getPublicReadingStageShift().catch(() => null),
+        getPublicCostPerLearnerReached().catch(() => null),
+        getPublicProgrammeOverheadSplit().catch(() => null),
       ]);
       programmeCards = cards;
+      readingShift = shift;
+      costPerLearner = perLearner;
+      programmeSplit = split;
 
       testimonialRows = testimonialsResult
         .filter(
@@ -268,6 +288,79 @@ export default async function HomePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 3b. Live transparency band — only renders metrics that have data.
+          Powered by getPublicReadingStageShift / getPublicCostPerLearnerReached
+          / getPublicProgrammeOverheadSplit. Each tile is omitted when its
+          underlying query returns null (early-days / sample too small / no
+          posted journal entries yet). */}
+      {(readingShift || costPerLearner || programmeSplit) && (
+        <SectionWrapper theme="light" className="py-16 border-t border-gray-100">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="text-center mb-10">
+              <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
+                Live Transparency
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#111] leading-tight tracking-tight">
+                What your support is producing
+              </h2>
+              <p className="text-gray-500 mt-3 text-base max-w-2xl mx-auto">
+                Three numbers, refreshed from our database. We publish them only when the underlying sample is large enough to be honest.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {readingShift && readingShift.deltaPoints != null && (
+                <article className="bg-white border border-gray-100 rounded-2xl p-6">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Avg learner reading-stage shift
+                  </p>
+                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
+                    {readingShift.deltaPoints > 0 ? "+" : ""}{readingShift.deltaPoints} pts
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Baseline → endline composite, paired across {readingShift.endlineLearners.toLocaleString()} learners.
+                    {readingShift.improvedSharePct != null && (
+                      <> <span className="font-semibold text-emerald-700">{readingShift.improvedSharePct}%</span> improved by at least one stage.</>
+                    )}
+                  </p>
+                </article>
+              )}
+              {costPerLearner && (
+                <article className="bg-white border border-gray-100 rounded-2xl p-6">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Programme cost per learner reached
+                  </p>
+                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
+                    ${costPerLearner.costPerLearnerUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    UGX {costPerLearner.costPerLearnerUgx.toLocaleString()} per learner across {costPerLearner.learnersReached.toLocaleString()} assessed.
+                  </p>
+                </article>
+              )}
+              {programmeSplit && (
+                <article className="bg-white border border-gray-100 rounded-2xl p-6">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Reaching learners directly
+                  </p>
+                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
+                    {programmeSplit.programmeSharePct}%
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    of total spend is programme delivery; {programmeSplit.overheadSharePct}% is general &amp; administrative overhead.
+                  </p>
+                </article>
+              )}
+            </div>
+            <p className="text-center text-xs text-gray-400 mt-6">
+              Source: posted journal entries + paired baseline/endline assessments. Updated continuously.{" "}
+              <Link href="/transparency" className="text-charius-orange font-semibold hover:underline">
+                See methodology →
+              </Link>
+            </p>
+          </div>
+        </SectionWrapper>
       )}
 
       {/* 4. Find the popular cause (Programs) */}
