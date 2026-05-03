@@ -138,6 +138,155 @@ export async function getPublicCostPerLearnerReached(): Promise<CostPerLearnerRe
   };
 }
 
+export interface PublicReachFootprint {
+  schoolsReached: number;
+  districtsReached: number;
+  regionsReached: number;
+}
+
+/**
+ * Geographic footprint for the public stat band — distinct schools,
+ * districts, and regions where Ozeki has activity. Returns null if no
+ * schools have been registered at all.
+ */
+export async function getPublicReachFootprint(): Promise<PublicReachFootprint | null> {
+  const res = await queryPostgres<{
+    schools: string;
+    districts: string;
+    regions: string;
+  }>(
+    `SELECT
+       COUNT(*)::int                                        AS schools,
+       COUNT(DISTINCT NULLIF(district, ''))::int            AS districts,
+       COUNT(DISTINCT NULLIF(region, ''))::int              AS regions
+     FROM schools_directory
+     WHERE school_active IS TRUE OR school_active IS NULL`,
+  );
+  const r = res.rows[0];
+  if (!r) return null;
+  const schools = Number(r.schools) || 0;
+  if (schools === 0) return null;
+  return {
+    schoolsReached: schools,
+    districtsReached: Number(r.districts) || 0,
+    regionsReached: Number(r.regions) || 0,
+  };
+}
+
+export interface ReadingStageDistribution {
+  totalLearners: number;
+  bands: Array<{ key: string; label: string; count: number; sharePct: number }>;
+}
+
+/**
+ * Latest reading-stage distribution across all assessed learners (each
+ * learner counted once at their most-recent assessment). Returns null if
+ * fewer than 30 learners have been assessed (sample too thin to publish).
+ */
+export async function getPublicReadingStageDistribution(): Promise<ReadingStageDistribution | null> {
+  const res = await queryPostgres<{ band: string | null; learners: string }>(
+    `WITH latest AS (
+       SELECT DISTINCT ON (learner_uid)
+         learner_uid, reading_stage_band
+       FROM assessment_records
+       WHERE learner_uid IS NOT NULL
+       ORDER BY learner_uid, assessment_date DESC, id DESC
+     )
+     SELECT reading_stage_band AS band, COUNT(*)::int AS learners
+     FROM latest
+     WHERE reading_stage_band IS NOT NULL
+     GROUP BY reading_stage_band`,
+  );
+
+  const ORDER: Array<{ key: string; label: string }> = [
+    { key: "pre_reader", label: "Pre-reader" },
+    { key: "emergent",   label: "Emergent" },
+    { key: "minimum",    label: "Minimum proficiency" },
+    { key: "competent",  label: "Competent" },
+    { key: "strong",     label: "Strong reader" },
+  ];
+  const counts = new Map<string, number>();
+  for (const row of res.rows) {
+    if (row.band) counts.set(String(row.band), Number(row.learners) || 0);
+  }
+  const total = Array.from(counts.values()).reduce((a, b) => a + b, 0);
+  if (total < 30) return null;
+
+  const bands = ORDER.map((b) => {
+    const count = counts.get(b.key) ?? 0;
+    return { key: b.key, label: b.label, count, sharePct: Math.round((count / total) * 100) };
+  });
+  return { totalLearners: total, bands };
+}
+
+export interface CoachingCompletionRate {
+  scheduledLast90d: number;
+  completedLast90d: number;
+  completionPct: number;
+}
+
+/**
+ * Share of coaching visits scheduled in the last 90 days that were
+ * delivered. `not_started` counts as scheduled-not-completed; everything
+ * else is treated as delivery. Returns null if no visits in window.
+ */
+export async function getPublicCoachingCompletionRate(): Promise<CoachingCompletionRate | null> {
+  const res = await queryPostgres<{ scheduled: string; completed: string }>(
+    `SELECT
+       COUNT(*)::int                                                            AS scheduled,
+       COUNT(*) FILTER (WHERE implementation_status IS NOT NULL
+                          AND implementation_status <> 'not_started')::int      AS completed
+     FROM coaching_visits
+     WHERE visit_date >= CURRENT_DATE - INTERVAL '90 days'`,
+  );
+  const r = res.rows[0];
+  if (!r) return null;
+  const scheduled = Number(r.scheduled) || 0;
+  if (scheduled === 0) return null;
+  const completed = Number(r.completed) || 0;
+  return {
+    scheduledLast90d: scheduled,
+    completedLast90d: completed,
+    completionPct: Math.round((completed / scheduled) * 100),
+  };
+}
+
+export interface StoryCollectionGrowth {
+  totalPublished: number;
+  newThisMonth: number;
+  monthOnMonthDeltaPct: number | null;
+}
+
+/**
+ * Story-library growth signal: total published stories ever, plus the
+ * count published this calendar month and the month-on-month delta.
+ * Returns null until at least 1 story is published.
+ */
+export async function getPublicStoryCollectionGrowth(): Promise<StoryCollectionGrowth | null> {
+  const res = await queryPostgres<{
+    total: string; this_month: string; last_month: string;
+  }>(
+    `SELECT
+       COUNT(*) FILTER (WHERE publish_status = 'published')::int                                    AS total,
+       COUNT(*) FILTER (WHERE publish_status = 'published'
+                          AND created_at >= date_trunc('month', CURRENT_DATE))::int                 AS this_month,
+       COUNT(*) FILTER (WHERE publish_status = 'published'
+                          AND created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+                          AND created_at <  date_trunc('month', CURRENT_DATE))::int                 AS last_month
+     FROM story_library`,
+  );
+  const r = res.rows[0];
+  if (!r) return null;
+  const total = Number(r.total) || 0;
+  if (total === 0) return null;
+  const thisMonth = Number(r.this_month) || 0;
+  const lastMonth = Number(r.last_month) || 0;
+  const delta = lastMonth > 0
+    ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100)
+    : null;
+  return { totalPublished: total, newThisMonth: thisMonth, monthOnMonthDeltaPct: delta };
+}
+
 export interface ProgrammeOverheadSplit {
   totalProgrammeUgx: number;
   totalOverheadUgx: number;

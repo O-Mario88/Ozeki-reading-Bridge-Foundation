@@ -20,9 +20,17 @@ import {
   getPublicReadingStageShift,
   getPublicCostPerLearnerReached,
   getPublicProgrammeOverheadSplit,
+  getPublicReachFootprint,
+  getPublicReadingStageDistribution,
+  getPublicCoachingCompletionRate,
+  getPublicStoryCollectionGrowth,
   type ReadingStageShift,
   type CostPerLearnerReached,
   type ProgrammeOverheadSplit,
+  type PublicReachFootprint,
+  type ReadingStageDistribution,
+  type CoachingCompletionRate,
+  type StoryCollectionGrowth,
 } from "@/lib/server/postgres/repositories/public-metrics";
 import { ChariusPillImage } from "@/components/public/ChariusPillImage";
 
@@ -85,6 +93,10 @@ export default async function HomePage() {
   let readingShift: ReadingStageShift | null = null;
   let costPerLearner: CostPerLearnerReached | null = null;
   let programmeSplit: ProgrammeOverheadSplit | null = null;
+  let reachFootprint: PublicReachFootprint | null = null;
+  let stageDistribution: ReadingStageDistribution | null = null;
+  let coachingCompletion: CoachingCompletionRate | null = null;
+  let storyGrowth: StoryCollectionGrowth | null = null;
   const impactStats: {
     schools: string | null;
     assessments: string | null;
@@ -102,6 +114,7 @@ export default async function HomePage() {
       const [
         testimonialsResult, summary, events, cards,
         shift, perLearner, split,
+        reach, distribution, completion, growth,
       ] = await Promise.all([
         listPublishedPortalTestimonialsPostgres(90),
         getImpactSummary(),
@@ -110,11 +123,19 @@ export default async function HomePage() {
         getPublicReadingStageShift().catch(() => null),
         getPublicCostPerLearnerReached().catch(() => null),
         getPublicProgrammeOverheadSplit().catch(() => null),
+        getPublicReachFootprint().catch(() => null),
+        getPublicReadingStageDistribution().catch(() => null),
+        getPublicCoachingCompletionRate().catch(() => null),
+        getPublicStoryCollectionGrowth().catch(() => null),
       ]);
       programmeCards = cards;
       readingShift = shift;
       costPerLearner = perLearner;
       programmeSplit = split;
+      reachFootprint = reach;
+      stageDistribution = distribution;
+      coachingCompletion = completion;
+      storyGrowth = growth;
 
       testimonialRows = testimonialsResult
         .filter(
@@ -264,8 +285,11 @@ export default async function HomePage() {
         </div>
       </SectionWrapper>
 
-      {/* 3. Stat Banner — only rendered when live data is available */}
-      {(impactStats.schools || impactStats.assessments || impactStats.teachers) && (
+      {/* 3. Stat Banner — only rendered when live data is available.
+          When `reachFootprint` is live we surface districts + regions in
+          place of "Years of Impact" because geographic reach is a far
+          stronger trust signal than years operating. */}
+      {(impactStats.schools || impactStats.assessments || impactStats.teachers || reachFootprint) && (
         <div className="w-full bg-white border-t border-gray-100 py-16">
           <div className="max-w-6xl mx-auto px-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-gray-100/50">
@@ -281,21 +305,32 @@ export default async function HomePage() {
                 <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.teachers ?? "—"}</div>
                 <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Happy Teachers</div>
               </div>
-              <div className="text-center px-4">
-                <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.years}</div>
-                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Years of Impact</div>
-              </div>
+              {reachFootprint ? (
+                <div className="text-center px-4">
+                  <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{reachFootprint.districtsReached}</div>
+                  <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                    Districts {reachFootprint.regionsReached > 0 && (
+                      <span className="block text-xs text-gray-400 normal-case font-normal mt-1">
+                        across {reachFootprint.regionsReached} region{reachFootprint.regionsReached === 1 ? "" : "s"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center px-4">
+                  <div className="text-5xl font-bold text-[#111] tabular-nums mb-2">{impactStats.years}</div>
+                  <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Years of Impact</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* 3b. Live transparency band — only renders metrics that have data.
-          Powered by getPublicReadingStageShift / getPublicCostPerLearnerReached
-          / getPublicProgrammeOverheadSplit. Each tile is omitted when its
-          underlying query returns null (early-days / sample too small / no
-          posted journal entries yet). */}
-      {(readingShift || costPerLearner || programmeSplit) && (
+          Each tile is omitted when its underlying query returns null
+          (early-days / sample too small / no posted journals yet). */}
+      {(readingShift || costPerLearner || programmeSplit || coachingCompletion || storyGrowth) && (
         <SectionWrapper theme="light" className="py-16 border-t border-gray-100">
           <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-10">
@@ -306,7 +341,7 @@ export default async function HomePage() {
                 What your support is producing
               </h2>
               <p className="text-gray-500 mt-3 text-base max-w-2xl mx-auto">
-                Three numbers, refreshed from our database. We publish them only when the underlying sample is large enough to be honest.
+                Refreshed from our database. We publish each number only when the underlying sample is large enough to be honest.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
@@ -352,13 +387,86 @@ export default async function HomePage() {
                   </p>
                 </article>
               )}
+              {coachingCompletion && (
+                <article className="bg-white border border-gray-100 rounded-2xl p-6">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Coaching delivery rate (90 days)
+                  </p>
+                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
+                    {coachingCompletion.completionPct}%
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    {coachingCompletion.completedLast90d.toLocaleString()} of {coachingCompletion.scheduledLast90d.toLocaleString()} scheduled coaching visits delivered.
+                  </p>
+                </article>
+              )}
+              {storyGrowth && (
+                <article className="bg-white border border-gray-100 rounded-2xl p-6">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    1001 Story collection
+                  </p>
+                  <p className="text-4xl font-extrabold text-[#111] tabular-nums">
+                    {storyGrowth.totalPublished.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    learner-authored stories published.
+                    {storyGrowth.newThisMonth > 0 && (
+                      <> <span className="font-semibold text-emerald-700">+{storyGrowth.newThisMonth}</span> this month
+                        {storyGrowth.monthOnMonthDeltaPct != null && (
+                          <>{" "}
+                            ({storyGrowth.monthOnMonthDeltaPct >= 0 ? "+" : ""}
+                            {storyGrowth.monthOnMonthDeltaPct}% vs prior).
+                          </>
+                        )}
+                      </>
+                    )}
+                  </p>
+                </article>
+              )}
             </div>
             <p className="text-center text-xs text-gray-400 mt-6">
-              Source: posted journal entries + paired baseline/endline assessments. Updated continuously.{" "}
+              Source: posted journal entries, paired assessments, coaching-visit log, story library. Updated continuously.{" "}
               <Link href="/transparency" className="text-charius-orange font-semibold hover:underline">
                 See methodology →
               </Link>
             </p>
+          </div>
+        </SectionWrapper>
+      )}
+
+      {/* 3c. Reading-stage distribution band. Renders only with ≥30 learners
+          assessed; shows the share of learners at each stage as horizontal
+          bars + counts. Powered by getPublicReadingStageDistribution. */}
+      {stageDistribution && (
+        <SectionWrapper theme="charius-beige" className="py-16 border-t border-gray-100">
+          <div className="max-w-4xl mx-auto px-6">
+            <div className="text-center mb-8">
+              <span className="text-charius-orange font-semibold tracking-wider text-sm uppercase block mb-3">
+                Where Learners Stand Today
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold text-[#111] leading-tight tracking-tight">
+                Reading-stage distribution across {stageDistribution.totalLearners.toLocaleString()} learners
+              </h2>
+              <p className="text-gray-500 mt-3 text-base max-w-2xl mx-auto">
+                Each learner counted once at their most-recent assessment. The lower the proficient share, the more support is needed.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
+              {stageDistribution.bands.map((band) => (
+                <div key={band.key} className="grid grid-cols-[160px_1fr_auto] items-center gap-3">
+                  <span className="text-sm font-semibold text-gray-700">{band.label}</span>
+                  <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className="h-full bg-charius-orange rounded-full"
+                      style={{ width: `${Math.max(band.sharePct, band.count > 0 ? 2 : 0)}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-bold text-[#111] tabular-nums whitespace-nowrap">
+                    {band.sharePct}% <span className="text-gray-400 font-normal">({band.count.toLocaleString()})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </SectionWrapper>
       )}
