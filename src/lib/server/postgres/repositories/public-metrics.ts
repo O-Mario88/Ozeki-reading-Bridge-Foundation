@@ -325,6 +325,249 @@ export async function getPublicProgrammeOverheadSplit(): Promise<ProgrammeOverhe
   };
 }
 
+export interface DistrictLearningOutcomeRow {
+  district: string;
+  region: string | null;
+  schoolsAssessed: number;
+  learnersPaired: number;
+  baselineAvgComposite: number | null;
+  endlineAvgComposite: number | null;
+  deltaPoints: number | null;
+  movedUpSharePct: number | null;
+}
+
+/**
+ * District-level baseline → endline progression for the
+ * /learning-outcomes public page. Each row reflects only learners with
+ * BOTH a baseline and an endline assessment, joined to their school's
+ * district. Districts with fewer than 5 paired learners are excluded
+ * (sample too thin to publish honestly).
+ */
+export async function listPublicDistrictLearningOutcomes(): Promise<DistrictLearningOutcomeRow[]> {
+  const res = await queryPostgres<{
+    district: string;
+    region: string | null;
+    schools: string;
+    learners: string;
+    avg_baseline: string | null;
+    avg_endline: string | null;
+    moved_up: string;
+    paired: string;
+  }>(
+    `WITH paired AS (
+       SELECT
+         b.learner_uid,
+         b.school_id,
+         b.composite_score AS baseline_score,
+         e.composite_score AS endline_score,
+         b.reading_stage_band AS baseline_stage,
+         e.reading_stage_band AS endline_stage
+       FROM assessment_records b
+       JOIN assessment_records e
+         ON e.learner_uid = b.learner_uid
+        AND e.assessment_type = 'endline'
+        AND b.assessment_type = 'baseline'
+        AND e.assessment_date > b.assessment_date
+       WHERE b.composite_score IS NOT NULL AND e.composite_score IS NOT NULL
+     ),
+     ranked AS (
+       SELECT
+         p.*,
+         CASE p.baseline_stage
+           WHEN 'pre_reader' THEN 0 WHEN 'emergent' THEN 1 WHEN 'minimum' THEN 2
+           WHEN 'competent' THEN 3 WHEN 'strong' THEN 4 ELSE NULL END AS b_rank,
+         CASE p.endline_stage
+           WHEN 'pre_reader' THEN 0 WHEN 'emergent' THEN 1 WHEN 'minimum' THEN 2
+           WHEN 'competent' THEN 3 WHEN 'strong' THEN 4 ELSE NULL END AS e_rank
+       FROM paired p
+     )
+     SELECT
+       COALESCE(NULLIF(sd.district, ''), 'Unknown')              AS district,
+       NULLIF(sd.region, '')                                     AS region,
+       COUNT(DISTINCT r.school_id)::int                          AS schools,
+       COUNT(*)::int                                             AS learners,
+       AVG(r.baseline_score)::numeric(10,1)                      AS avg_baseline,
+       AVG(r.endline_score)::numeric(10,1)                       AS avg_endline,
+       COUNT(*) FILTER (WHERE r.b_rank IS NOT NULL AND r.e_rank IS NOT NULL AND r.e_rank > r.b_rank)::int AS moved_up,
+       COUNT(*)::int                                             AS paired
+     FROM ranked r
+     JOIN schools_directory sd ON sd.id = r.school_id
+     GROUP BY sd.district, sd.region
+     HAVING COUNT(*) >= 5
+     ORDER BY (AVG(r.endline_score) - AVG(r.baseline_score)) DESC NULLS LAST,
+              avg_endline DESC NULLS LAST,
+              district ASC`,
+  );
+
+  return res.rows.map((r) => {
+    const baseline = r.avg_baseline != null ? Number(r.avg_baseline) : null;
+    const endline = r.avg_endline != null ? Number(r.avg_endline) : null;
+    const delta = baseline != null && endline != null ? +(endline - baseline).toFixed(1) : null;
+    const paired = Number(r.paired) || 0;
+    const movedUp = Number(r.moved_up) || 0;
+    return {
+      district: r.district,
+      region: r.region,
+      schoolsAssessed: Number(r.schools) || 0,
+      learnersPaired: Number(r.learners) || 0,
+      baselineAvgComposite: baseline,
+      endlineAvgComposite: endline,
+      deltaPoints: delta,
+      movedUpSharePct: paired > 0 ? Math.round((movedUp / paired) * 100) : null,
+    };
+  });
+}
+
+export interface RegionOverviewRow {
+  region: string;
+  districts: number;
+  schools: number;
+  learnersAssessedAllTime: number;
+  latestAvgComposite: number | null;
+  /** Coaching visits delivered in the last 90 days as a share of scheduled. */
+  coachingDeliverySharePct: number | null;
+}
+
+/**
+ * Region-level rollup for the /regions overview page. Uses
+ * `schools_directory.region` as the canonical region grouping. Districts
+ * with no region tag are bucketed under "Unspecified". Districts and
+ * schools are counted distinct; learners are counted across each learner's
+ * most-recent assessment in schools belonging to that region.
+ */
+export async function listPublicRegionOverview(): Promise<RegionOverviewRow[]> {
+  const res = await queryPostgres<{
+    region: string;
+    districts: string;
+    schools: string;
+    learners: string;
+    avg_composite: string | null;
+    scheduled: string;
+    completed: string;
+  }>(
+    `WITH region_schools AS (
+       SELECT
+         COALESCE(NULLIF(region, ''), 'Unspecified') AS region,
+         id AS school_id,
+         district
+       FROM schools_directory
+     ),
+     latest_assessment AS (
+       SELECT DISTINCT ON (learner_uid)
+         learner_uid, school_id, composite_score, assessment_date
+       FROM assessment_records
+       WHERE learner_uid IS NOT NULL AND composite_score IS NOT NULL
+       ORDER BY learner_uid, assessment_date DESC, id DESC
+     )
+     SELECT
+       rs.region,
+       COUNT(DISTINCT rs.district) FILTER (WHERE rs.district IS NOT NULL AND rs.district <> '')::int AS districts,
+       COUNT(DISTINCT rs.school_id)::int                                                              AS schools,
+       COUNT(DISTINCT la.learner_uid)::int                                                            AS learners,
+       AVG(la.composite_score)::numeric(10,1)                                                         AS avg_composite,
+       (SELECT COUNT(*)::int FROM coaching_visits cv
+          WHERE cv.school_id IN (SELECT school_id FROM region_schools rs2 WHERE rs2.region = rs.region)
+            AND cv.visit_date >= CURRENT_DATE - INTERVAL '90 days')                                   AS scheduled,
+       (SELECT COUNT(*)::int FROM coaching_visits cv
+          WHERE cv.school_id IN (SELECT school_id FROM region_schools rs2 WHERE rs2.region = rs.region)
+            AND cv.visit_date >= CURRENT_DATE - INTERVAL '90 days'
+            AND cv.implementation_status IS NOT NULL
+            AND cv.implementation_status <> 'not_started')                                            AS completed
+     FROM region_schools rs
+     LEFT JOIN latest_assessment la ON la.school_id = rs.school_id
+     GROUP BY rs.region
+     ORDER BY schools DESC, rs.region ASC`,
+  );
+
+  return res.rows.map((r) => {
+    const scheduled = Number(r.scheduled) || 0;
+    const completed = Number(r.completed) || 0;
+    return {
+      region: r.region,
+      districts: Number(r.districts) || 0,
+      schools: Number(r.schools) || 0,
+      learnersAssessedAllTime: Number(r.learners) || 0,
+      latestAvgComposite: r.avg_composite != null ? Number(r.avg_composite) : null,
+      coachingDeliverySharePct: scheduled > 0 ? Math.round((completed / scheduled) * 100) : null,
+    };
+  });
+}
+
+export interface TeacherImpactSnapshot {
+  teachersTrainedTotal: number;
+  teachersTrainedLast90d: number;
+  teachersObserved: number;
+  observationsLast90d: number;
+  fidelitySharePct: number | null;
+  partialSharePct: number | null;
+  lowSharePct: number | null;
+  ratedObservationsLast90d: number;
+}
+
+/**
+ * Snapshot of teacher-side delivery for the /teacher-impact page.
+ *
+ * - "Trained" = distinct teacher_user_id rows in portal_training_attendance
+ *   with attended=TRUE. Last-90d window = events whose portal_record dated
+ *   within the last 90 days.
+ * - "Observed" = distinct teachers with at least one teacher_lesson_observation
+ *   row (lifetime). Last-90d obs counted by observation_date.
+ * - Fidelity / partial / low shares are computed over observations in the
+ *   last 90 days that have an `overall_post_observation_rating` set.
+ *
+ * Returns null if no teachers have ever been trained or observed (nothing
+ * meaningful to publish yet).
+ */
+export async function getPublicTeacherImpactSnapshot(): Promise<TeacherImpactSnapshot | null> {
+  const [trainedRes, observedRes, ratingsRes] = await Promise.all([
+    queryPostgres<{ trained_total: string; trained_90d: string }>(
+      `SELECT
+         COUNT(DISTINCT pta.teacher_user_id)
+           FILTER (WHERE pta.attended IS TRUE)::int                                          AS trained_total,
+         COUNT(DISTINCT pta.teacher_user_id)
+           FILTER (WHERE pta.attended IS TRUE
+                     AND pr.date >= CURRENT_DATE - INTERVAL '90 days')::int                  AS trained_90d
+       FROM portal_training_attendance pta
+       JOIN portal_records pr ON pr.id = pta.portal_record_id`,
+    ).catch(() => ({ rows: [{ trained_total: "0", trained_90d: "0" }] })),
+    queryPostgres<{ observed_total: string; obs_90d: string }>(
+      `SELECT
+         COUNT(DISTINCT teacher_name)::int                                       AS observed_total,
+         COUNT(*) FILTER (WHERE observation_date >= CURRENT_DATE - INTERVAL '90 days')::int  AS obs_90d
+       FROM teacher_lesson_observations`,
+    ).catch(() => ({ rows: [{ observed_total: "0", obs_90d: "0" }] })),
+    queryPostgres<{ fidelity: string; partial: string; low: string; rated: string }>(
+      `SELECT
+         COUNT(*) FILTER (WHERE overall_post_observation_rating = 'fidelity')::int AS fidelity,
+         COUNT(*) FILTER (WHERE overall_post_observation_rating = 'partial')::int  AS partial,
+         COUNT(*) FILTER (WHERE overall_post_observation_rating = 'low')::int      AS low,
+         COUNT(*) FILTER (WHERE overall_post_observation_rating IS NOT NULL)::int  AS rated
+       FROM teacher_lesson_observations
+       WHERE observation_date >= CURRENT_DATE - INTERVAL '90 days'`,
+    ).catch(() => ({ rows: [{ fidelity: "0", partial: "0", low: "0", rated: "0" }] })),
+  ]);
+
+  const trainedTotal = Number(trainedRes.rows[0]?.trained_total ?? 0);
+  const observedTotal = Number(observedRes.rows[0]?.observed_total ?? 0);
+  if (trainedTotal === 0 && observedTotal === 0) return null;
+
+  const rated = Number(ratingsRes.rows[0]?.rated ?? 0);
+  const fidelity = Number(ratingsRes.rows[0]?.fidelity ?? 0);
+  const partial = Number(ratingsRes.rows[0]?.partial ?? 0);
+  const low = Number(ratingsRes.rows[0]?.low ?? 0);
+
+  return {
+    teachersTrainedTotal: trainedTotal,
+    teachersTrainedLast90d: Number(trainedRes.rows[0]?.trained_90d ?? 0),
+    teachersObserved: observedTotal,
+    observationsLast90d: Number(observedRes.rows[0]?.obs_90d ?? 0),
+    fidelitySharePct: rated > 0 ? Math.round((fidelity / rated) * 100) : null,
+    partialSharePct: rated > 0 ? Math.round((partial / rated) * 100) : null,
+    lowSharePct: rated > 0 ? Math.round((low / rated) * 100) : null,
+    ratedObservationsLast90d: rated,
+  };
+}
+
 export interface PublicImpactMetrics {
   totalSchools: number;
   totalLearners: number;
