@@ -923,15 +923,16 @@ export function PortalSchoolsManager({
         ) : null}
 
         <div className="ds-table-wrap">
-          <DashboardListHeader template="minmax(0,1.6fr) 110px minmax(0,1fr) 100px minmax(0,1.2fr) 130px 110px 130px">
-            <span>Account Name</span>
+          <DashboardListHeader template="110px minmax(0,1.6fr) 110px 110px 110px 130px minmax(0,1fr) 100px 110px">
             <span>School ID</span>
-            <span>Current Partner Type</span>
-            <span>Country</span>
-            <span>Primary Contact</span>
+            <span>School Name</span>
+            <span>District</span>
+            <span>Sub-County</span>
+            <span>Parish</span>
             <span>Phone</span>
-            <span>School Status</span>
-            <span>Actions</span>
+            <span>Primary Contact</span>
+            <span>Status</span>
+            <span>Action</span>
           </DashboardListHeader>
           {schools.length === 0 ? (
             <div className="py-3">No schools available.</div>
@@ -939,29 +940,32 @@ export function PortalSchoolsManager({
             schools.map((school) => (
               <DashboardListRow
                 key={school.id}
-                template="minmax(0,1.6fr) 110px minmax(0,1fr) 100px minmax(0,1.2fr) 130px 110px 130px"
+                template="110px minmax(0,1.6fr) 110px 110px 110px 130px minmax(0,1fr) 100px 110px"
               >
+                <span className="min-w-0" title={school.schoolCode}>
+                  <span className="portal-table-cell-ellipsis is-code">{school.schoolCode}</span>
+                </span>
                 <span className="min-w-0" title={school.name}>
                   <Link href={`/portal/schools/${school.id}`} className="portal-table-cell-ellipsis is-school-name">
                     {school.name}
                   </Link>
                 </span>
-                <span className="min-w-0" title={school.schoolCode}>
-                  <span className="portal-table-cell-ellipsis is-code">{school.schoolCode}</span>
+                <span className="min-w-0" title={school.district}>
+                  <span className="portal-table-cell-ellipsis">{school.district || "—"}</span>
                 </span>
-                <span className="min-w-0" title={school.currentPartnerType}>
-                  <span className="portal-table-cell-ellipsis">{school.currentPartnerType}</span>
+                <span className="min-w-0" title={school.subCounty}>
+                  <span className="portal-table-cell-ellipsis">{school.subCounty || "—"}</span>
                 </span>
-                <span className="min-w-0" title={school.country}>
-                  <span className="portal-table-cell-ellipsis">{school.country}</span>
+                <span className="min-w-0" title={school.parish}>
+                  <span className="portal-table-cell-ellipsis">{school.parish || "—"}</span>
                 </span>
-                <span className="min-w-0" title={school.primaryContactName ?? school.contactName ?? "-"}>
+                <span className="min-w-0" title={school.contactPhone ?? "—"}>
+                  <span className="portal-table-cell-ellipsis">{school.contactPhone ?? "—"}</span>
+                </span>
+                <span className="min-w-0" title={school.primaryContactName ?? school.contactName ?? "—"}>
                   <span className="portal-table-cell-ellipsis is-contact">
-                    {school.primaryContactName ?? school.contactName ?? "-"}
+                    {school.primaryContactName ?? school.contactName ?? "—"}
                   </span>
-                </span>
-                <span className="min-w-0" title={school.contactPhone ?? "-"}>
-                  <span className="portal-table-cell-ellipsis">{school.contactPhone ?? "-"}</span>
                 </span>
                 <span>
                   <span className={`portal-filter-chip ${school.schoolStatus === "Open" ? "active" : ""}`}>
@@ -973,7 +977,7 @@ export function PortalSchoolsManager({
                     href={`/portal/schools/${school.id}`}
                     className="button button-ghost button-compact"
                   >
-                    Open profile
+                    Open
                   </Link>
                 </span>
               </DashboardListRow>
