@@ -354,7 +354,7 @@ export default async function PortalInterventionsOverviewPage() {
       hideFrame
     >
       <div
-        style={{ fontFamily: CALIBRI, backgroundColor: "#f8fafc" }}
+        style={{ fontFamily: CALIBRI, backgroundColor: "#e7ecf3" }}
         className="px-3 sm:px-4 lg:px-5 py-3 space-y-3 max-w-[1700px] mx-auto"
       >
         {/* ─── Tab strip ──────────────────────────────────────────── */}

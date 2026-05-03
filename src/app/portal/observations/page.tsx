@@ -86,7 +86,7 @@ export default async function ObservationsListPage() {
   return (
     <PortalShell user={user} activeHref="/portal/observations" hideFrame>
       <div
-        style={{ fontFamily: CALIBRI, backgroundColor: "#f8fafc" }}
+        style={{ fontFamily: CALIBRI, backgroundColor: "#e7ecf3" }}
         className="px-4 sm:px-6 lg:px-8 py-6 space-y-5 max-w-[1700px] mx-auto"
       >
         {/* ─── Title row ──────────────────────────────────────── */}

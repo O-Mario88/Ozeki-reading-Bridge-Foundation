@@ -269,7 +269,7 @@ export default async function PortalCrmOverviewPage() {
       hideFrame
     >
       <div
-        style={{ fontFamily: CALIBRI, backgroundColor: "#f8fafc" }}
+        style={{ fontFamily: CALIBRI, backgroundColor: "#e7ecf3" }}
         className="px-4 sm:px-6 lg:px-7 py-5 space-y-4 max-w-[1700px] mx-auto"
       >
         {/* ─── Title row ──────────────────────────────────────────── */}

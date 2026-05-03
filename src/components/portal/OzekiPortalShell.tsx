@@ -67,7 +67,7 @@ export function OzekiPortalShell({
       style={{ fontFamily: PORTAL_FONT_STACK }}
     >
       {/* Mobile (<lg) */}
-      <div className="lg:hidden min-h-screen bg-gray-50">
+      <div className="lg:hidden min-h-screen bg-[#e7ecf3]">
         {/* Full-bleed green branded header */}
         <MobileHeader user={user} activeHref={activeHref} />
 
@@ -108,7 +108,7 @@ export function OzekiPortalShell({
       </div>
 
       {/* Desktop (lg+) */}
-      <div className="hidden lg:flex min-h-screen bg-gray-50">
+      <div className="hidden lg:flex min-h-screen bg-[#e7ecf3]">
         <OzekiSidebar user={user} activeHref={activeHref} />
         <div className="flex-1 min-w-0 flex flex-col">
           <OzekiTopBar
