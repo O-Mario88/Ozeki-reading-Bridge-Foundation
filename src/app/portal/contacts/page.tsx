@@ -406,7 +406,7 @@ export default async function PortalCrmOverviewPage() {
             </ul>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <PipelineMini icon={Clock} label="Overdue Follow-ups" value={DATA.pipeline.overdue} valueClass="text-rose-600" />
-              <PipelineMini icon={CalendarCheck} label="Due in Next 7 Days" value={DATA.pipeline.dueIn7} valueClass="text-emerald-700" />
+              <PipelineMini icon={CalendarCheck} label="Due in Next 7 Days" value={DATA.pipeline.dueIn7} valueClass="text-[#066a67]" />
             </div>
             <FooterLink href="/portal/contacts?view=pipeline" label="View full pipeline" />
           </Card>
@@ -574,15 +574,15 @@ export default async function PortalCrmOverviewPage() {
           style={{ backgroundColor: "#f3faf6" }}
         >
           <div className="flex items-start gap-3 min-w-0">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-[#066a67] shrink-0">
               <BarChart3 className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
               <p className="text-[13.5px] font-extrabold text-[#044f4d] leading-tight">CRM Insight</p>
               <p className="text-[12px] text-[#374151] leading-snug mt-0.5">
                 Most active relationship growth this period came from{" "}
-                <strong className="text-emerald-700">Central</strong> and{" "}
-                <strong className="text-emerald-700">Acholi</strong> regions, while{" "}
+                <strong className="text-[#066a67]">Central</strong> and{" "}
+                <strong className="text-[#066a67]">Acholi</strong> regions, while{" "}
                 <strong className="text-rose-600">23 contacts</strong> and{" "}
                 <strong className="text-rose-600">9 schools</strong> require urgent follow-up.
               </p>
@@ -635,7 +635,7 @@ function FooterLink({ href, label, inline = false }: { href: string; label: stri
   return (
     <Link
       href={href}
-      className={`text-[12px] font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center ${inline ? "" : "mt-3"}`}
+      className={`text-[12px] font-bold text-[#066a67] hover:text-[#044f4d] inline-flex items-center ${inline ? "" : "mt-3"}`}
     >
       {label} <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2.25} />
     </Link>
@@ -803,7 +803,7 @@ function QuickActionTile({ icon: Icon, label, href }: { icon: LucideIcon; label:
       href={href}
       className="flex items-center gap-2 rounded-[10px] border border-[#e5eaf0] bg-white px-2.5 py-2 hover:bg-gray-50/60 group"
     >
-      <span className="grid h-7 w-7 place-items-center rounded-md bg-[#eaf7f1] text-emerald-700 shrink-0">
+      <span className="grid h-7 w-7 place-items-center rounded-md bg-[#eaf7f1] text-[#066a67] shrink-0">
         <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
       </span>
       <span className="flex-1 text-[11.5px] font-bold text-[#111827] truncate">{label}</span>

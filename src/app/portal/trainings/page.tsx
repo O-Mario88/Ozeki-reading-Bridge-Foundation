@@ -247,7 +247,7 @@ export default async function PortalTrainingsOverviewPage() {
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href="/portal/training-reports?action=export"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] bg-white border border-emerald-200 text-[13px] font-bold text-emerald-700 shadow-sm hover:bg-emerald-50 whitespace-nowrap"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] bg-white border border-emerald-200 text-[13px] font-bold text-[#066a67] shadow-sm hover:bg-emerald-50 whitespace-nowrap"
             >
               <Download className="h-4 w-4" strokeWidth={1.75} />
               Export Reports
@@ -262,7 +262,7 @@ export default async function PortalTrainingsOverviewPage() {
             </Link>
             <Link
               href="/portal/trainings/participants/new"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] bg-white border border-emerald-200 text-[13px] font-bold text-emerald-700 shadow-sm hover:bg-emerald-50 whitespace-nowrap"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] bg-white border border-emerald-200 text-[13px] font-bold text-[#066a67] shadow-sm hover:bg-emerald-50 whitespace-nowrap"
             >
               <UserPlus className="h-4 w-4" strokeWidth={1.75} />
               Add Participant
@@ -563,7 +563,7 @@ export default async function PortalTrainingsOverviewPage() {
           style={{ backgroundColor: "#f3faf6" }}
         >
           <div className="flex items-start gap-3 min-w-0">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-[#066a67] shrink-0">
               <Sparkles className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
@@ -806,7 +806,7 @@ function TrainingFunnel({ rows }: { rows: { label: string; value: number; pct: n
         >
           <p className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#066a67] leading-tight truncate w-full">{r.label}</p>
           <p className="text-[18px] font-extrabold text-[#111827] leading-none mt-1.5">{r.value}</p>
-          <p className="text-[10px] font-bold text-emerald-700 mt-0.5">{i === 0 ? "" : `${r.pct}%`}</p>
+          <p className="text-[10px] font-bold text-[#066a67] mt-0.5">{i === 0 ? "" : `${r.pct}%`}</p>
         </div>
       ))}
     </div>

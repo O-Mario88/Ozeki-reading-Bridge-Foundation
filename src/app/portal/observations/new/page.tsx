@@ -25,7 +25,7 @@ export default async function NewObservationPage() {
           </h1>
           <Link
             href="/portal/observations"
-            className="inline-flex items-center gap-1 text-[12.5px] font-bold text-emerald-700 hover:text-emerald-800 mt-1"
+            className="inline-flex items-center gap-1 text-[12.5px] font-bold text-[#066a67] hover:text-[#044f4d] mt-1"
           >
             <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
             Back to Observations

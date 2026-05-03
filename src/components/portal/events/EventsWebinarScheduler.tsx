@@ -116,7 +116,7 @@ export default function EventsWebinarScheduler() {
         <nav aria-label="Event mode" className="flex items-center gap-1">
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-[13px] font-bold text-emerald-700 border-b-2 border-emerald-600 -mb-px"
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-[13px] font-bold text-[#066a67] border-b-2 border-emerald-600 -mb-px"
           >
             <Video className="h-4 w-4" strokeWidth={1.75} />
             Live Online Sessions
@@ -136,7 +136,7 @@ export default function EventsWebinarScheduler() {
         {/* Schedule Event / Webinar */}
         <Card className="lg:col-span-9">
           <header className="flex items-center gap-2 mb-4">
-            <Calendar className="h-4 w-4 text-emerald-700" strokeWidth={1.75} />
+            <Calendar className="h-4 w-4 text-[#066a67]" strokeWidth={1.75} />
             <h2 className="text-[15px] font-bold text-[#111827]">Schedule Event / Webinar</h2>
           </header>
 
@@ -223,7 +223,7 @@ export default function EventsWebinarScheduler() {
                   onClick={() => setDraft({ ...draft, venueMode: "google" })}
                   className={
                     draft.venueMode === "google"
-                      ? "inline-flex items-center justify-center gap-1.5 h-11 px-3 text-[12.5px] font-bold rounded-[10px] border bg-emerald-50 text-emerald-700 border-emerald-200"
+                      ? "inline-flex items-center justify-center gap-1.5 h-11 px-3 text-[12.5px] font-bold rounded-[10px] border bg-emerald-50 text-[#066a67] border-emerald-200"
                       : "inline-flex items-center justify-center gap-1.5 h-11 px-3 text-[12.5px] font-bold rounded-[10px] border bg-white text-[#475467] border-[#e5eaf0] hover:bg-gray-50"
                   }
                 >
@@ -235,7 +235,7 @@ export default function EventsWebinarScheduler() {
                   onClick={() => setDraft({ ...draft, venueMode: "physical" })}
                   className={
                     draft.venueMode === "physical"
-                      ? "inline-flex items-center justify-center gap-1.5 h-11 px-3 text-[12.5px] font-bold rounded-[10px] border bg-emerald-50 text-emerald-700 border-emerald-200"
+                      ? "inline-flex items-center justify-center gap-1.5 h-11 px-3 text-[12.5px] font-bold rounded-[10px] border bg-emerald-50 text-[#066a67] border-emerald-200"
                       : "inline-flex items-center justify-center gap-1.5 h-11 px-3 text-[12.5px] font-bold rounded-[10px] border bg-white text-[#475467] border-[#e5eaf0] hover:bg-gray-50"
                   }
                 >
@@ -282,10 +282,10 @@ export default function EventsWebinarScheduler() {
         <Card className="lg:col-span-3">
           <header className="flex items-start justify-between gap-2 mb-3">
             <h2 className="text-[14px] font-bold text-[#111827] inline-flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-emerald-700" strokeWidth={1.75} />
+              <Calendar className="h-3.5 w-3.5 text-[#066a67]" strokeWidth={1.75} />
               Upcoming This Week
             </h2>
-            <Link href="/portal/events?view=calendar" className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-0.5">
+            <Link href="/portal/events?view=calendar" className="text-[11px] font-bold text-[#066a67] hover:text-[#044f4d] inline-flex items-center gap-0.5">
               View Calendar <ChevronRight className="h-3 w-3" strokeWidth={2.25} />
             </Link>
           </header>
@@ -366,7 +366,7 @@ export default function EventsWebinarScheduler() {
         {/* Capture Webinar Outcomes */}
         <Card className="lg:col-span-8">
           <header className="flex items-baseline gap-2 mb-1">
-            <BarChart3 className="h-4 w-4 text-emerald-700" strokeWidth={1.75} />
+            <BarChart3 className="h-4 w-4 text-[#066a67]" strokeWidth={1.75} />
             <h2 className="text-[15px] font-bold text-[#111827]">Capture Webinar Outcomes</h2>
           </header>
           <p className="text-[12px] text-[#667085] mb-4">
@@ -570,7 +570,7 @@ function ActionIcon({ children, ariaLabel }: { children: React.ReactNode; ariaLa
 
 function ModePill({ mode }: { mode: Mode }) {
   const cls = mode === "Webinar"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+    ? "bg-emerald-50 text-[#066a67] border-emerald-100"
     : "bg-amber-50 text-amber-700 border-amber-100";
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${cls}`}>

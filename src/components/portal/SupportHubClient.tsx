@@ -33,7 +33,7 @@ const QUICK_ACTIONS = [
 const MODULE_HELP = [
   { icon: GraduationCap, title: "Schools Directory", desc: "Managing school profiles, headteachers, and classes.", color: "bg-blue-50 text-blue-600" },
   { icon: MonitorPlay, title: "Trainings", desc: "Logging attendance, feedback, and session reports.", color: "bg-indigo-50 text-indigo-600" },
-  { icon: MapPin, title: "Visits", desc: "Coaching standards, rubrics, and lesson evaluations.", color: "bg-orange-50 text-orange-600" },
+  { icon: MapPin, title: "Visits", desc: "Coaching standards, rubrics, and lesson evaluations.", color: "bg-orange-50 text-[#e85f24]" },
   { icon: BookOpen, title: "Assessments", desc: "EGRA integration, story tracking, and learning outcomes.", color: "bg-emerald-50 text-emerald-600" },
   { icon: BarChart3, title: "Impact Reports", desc: "Generating AI narratives, PDFs, and scope aggregates.", color: "bg-purple-50 text-purple-600" },
 ];

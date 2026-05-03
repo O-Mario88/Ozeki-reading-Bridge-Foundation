@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "District Data Quality | Ozeki Admin" };
 
 function gradeColor(grade: string): string {
-  if (grade === "A") return "bg-emerald-100 text-emerald-800 border-emerald-300";
+  if (grade === "A") return "bg-emerald-100 text-[#044f4d] border-emerald-300";
   if (grade === "B") return "bg-sky-100 text-sky-800 border-sky-300";
   if (grade === "C") return "bg-amber-100 text-amber-800 border-amber-300";
   if (grade === "D") return "bg-orange-100 text-orange-800 border-orange-300";

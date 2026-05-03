@@ -73,7 +73,7 @@ export default async function TeacherImpactPage() {
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-4xl font-extrabold text-emerald-700 tabular-nums">
+                  <p className="text-4xl font-extrabold text-[#066a67] tabular-nums">
                     {formatNumber(snapshot.teachersTrainedLast90d)}
                   </p>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mt-2">
@@ -147,7 +147,7 @@ export default async function TeacherImpactPage() {
                 <span className="text-charius-orange font-semibold tracking-wider text-xs uppercase block mb-2">
                   Coaching follow-through
                 </span>
-                <p className="text-5xl md:text-6xl font-extrabold text-emerald-700 tabular-nums leading-none">
+                <p className="text-5xl md:text-6xl font-extrabold text-[#066a67] tabular-nums leading-none">
                   {coachingCompletion.completionPct}%
                 </p>
                 <p className="text-gray-700 text-base mt-4">

@@ -44,7 +44,7 @@ export function ScheduleComplianceCard({ window }: { window: Window }) {
   return (
     <div className="rounded-2xl bg-white border border-emerald-200 p-5">
       <div className="flex items-center justify-between mb-3">
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-50 text-[#066a67] border border-emerald-100">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           Open Now
         </span>
@@ -71,7 +71,7 @@ export function ScheduleComplianceCard({ window }: { window: Window }) {
               <span className="font-semibold text-gray-800">
                 {data.submittedSchools} of {data.expectedSchools} submitted
               </span>
-              <span className={`text-lg font-bold ${data.submissionPct >= 80 ? "text-emerald-700" : data.submissionPct >= 50 ? "text-amber-700" : "text-red-600"}`}>
+              <span className={`text-lg font-bold ${data.submissionPct >= 80 ? "text-[#066a67]" : data.submissionPct >= 50 ? "text-amber-700" : "text-red-600"}`}>
                 {data.submissionPct}%
               </span>
             </div>
@@ -109,7 +109,7 @@ export function ScheduleComplianceCard({ window }: { window: Window }) {
           )}
 
           {data.missingSchools.length === 0 && data.expectedSchools > 0 && (
-            <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
+            <p className="text-xs text-[#066a67] font-semibold flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               All expected schools have submitted.
             </p>

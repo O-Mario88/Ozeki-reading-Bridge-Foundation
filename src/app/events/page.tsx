@@ -86,7 +86,7 @@ export default async function EventsPage() {
                                      <span className="text-gray-500 uppercase tracking-wide text-xs">{event.district}</span>
                                   </div>
                                   <div className="flex items-center gap-3 mt-4">
-                                     <CreditCard className={`w-4 h-4 ${event.fundingType === 'Free Ozeki Event' || event.fundingType === 'Sponsored Training' ? 'text-green-500' : 'text-orange-500'}`} />
+                                     <CreditCard className={`w-4 h-4 ${event.fundingType === 'Free Ozeki Event' || event.fundingType === 'Sponsored Training' ? 'text-green-500' : 'text-[#ff7235]'}`} />
                                      <span className={`font-bold ${event.fundingType === 'Paid Training' ? 'text-orange-700' : 'text-green-700'}`}>
                                         {event.fundingType === 'Paid Training' ? `Fee: ${event.currency} ${event.trainingFeeAmount?.toLocaleString()} per teacher` : 'Fee: Free'}
                                      </span>

@@ -2054,7 +2054,7 @@ export function PublicImpactMapExplorer({
                       className="flex justify-between p-2 border-b"
                     >
                       <span>{item.name}</span>
-                      <span className="text-orange-600 font-bold">
+                      <span className="text-[#e85f24] font-bold">
                         +{item.score} pts
                       </span>
                     </div>
@@ -2070,7 +2070,7 @@ export function PublicImpactMapExplorer({
                       className="flex justify-between p-2 border-b"
                     >
                       <span>{item.name}</span>
-                      <span className="text-orange-600 font-bold">
+                      <span className="text-[#e85f24] font-bold">
                         {item.score}
                       </span>
                     </div>
@@ -2098,11 +2098,11 @@ export function PublicImpactMapExplorer({
                 <h4>Completeness Status</h4>
                 <div className="mt-2">
                   {payload?.meta?.dataCompleteness === "Complete" ? (
-                    <span className="text-orange-600 font-bold">
+                    <span className="text-[#e85f24] font-bold">
                       ✓ High (100% submission)
                     </span>
                   ) : (
-                    <span className="text-orange-600 font-bold">
+                    <span className="text-[#e85f24] font-bold">
                       ⚠ Partial (Reporting in progress)
                     </span>
                   )}

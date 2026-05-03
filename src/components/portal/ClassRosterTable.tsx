@@ -135,7 +135,7 @@ export function ClassRosterTable({ learners, schoolId }: Props) {
             <span className="text-center">
               {l.latestComposite != null ? (
                 <strong className={`text-sm ${
-                  l.latestComposite >= 70 ? "text-emerald-700" :
+                  l.latestComposite >= 70 ? "text-[#066a67]" :
                   l.latestComposite >= 40 ? "text-amber-700" :
                   "text-red-600"
                 }`}>{l.latestComposite}</strong>

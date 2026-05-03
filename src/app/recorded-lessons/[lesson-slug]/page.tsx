@@ -99,8 +99,8 @@ export default async function RecordedLessonDetail({ params }: Props) {
 
             <div className="ozeki-card border-emerald-100 bg-emerald-50/50">
               <h3 className="font-bold font-display text-emerald-900 mb-2">Request In-Person Coaching</h3>
-              <p className="text-sm text-emerald-700/80 mb-4">Did you enjoy this session? Request an expert to visit your school physically.</p>
-              <button className="ozeki-btn w-full bg-emerald-800 hover:bg-emerald-900 text-white shadow-sm border border-emerald-700 text-sm">Book School Service</button>
+              <p className="text-sm text-[#066a67]/80 mb-4">Did you enjoy this session? Request an expert to visit your school physically.</p>
+              <button className="ozeki-btn w-full bg-[#044f4d] hover:bg-emerald-900 text-white shadow-sm border border-[#066a67] text-sm">Book School Service</button>
             </div>
           </div>
 

@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 function statusColor(status: string) {
-  if (status === "on_track") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (status === "on_track") return "bg-emerald-50 text-[#066a67] border-emerald-200";
   if (status === "developing") return "bg-amber-50 text-amber-700 border-amber-200";
   if (status === "needs_support") return "bg-red-50 text-red-700 border-red-200";
   return "bg-gray-50 text-gray-500 border-gray-200";
@@ -111,7 +111,7 @@ export default async function LearnerProfilePage({ params }: PageProps) {
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Trajectory</p>
             {profile.trajectoryDelta != null ? (
               <p className={`text-3xl font-extrabold flex items-center gap-1.5 ${
-                profile.trajectoryDelta > 0 ? "text-emerald-700" :
+                profile.trajectoryDelta > 0 ? "text-[#066a67]" :
                 profile.trajectoryDelta < 0 ? "text-red-600" : "text-gray-500"
               }`}>
                 {profile.trajectoryDelta > 0 ? <TrendingUp className="w-6 h-6" /> :
@@ -128,7 +128,7 @@ export default async function LearnerProfilePage({ params }: PageProps) {
             {profile.recommendedFocus.length > 0 ? (
               <p className="text-sm font-bold text-red-700">{profile.recommendedFocus.length} priority domains</p>
             ) : (
-              <p className="text-sm font-bold text-emerald-700 flex items-center gap-1">
+              <p className="text-sm font-bold text-[#066a67] flex items-center gap-1">
                 <CheckCircle2 className="w-4 h-4" />
                 All on track
               </p>
@@ -173,7 +173,7 @@ export default async function LearnerProfilePage({ params }: PageProps) {
                     Latest: <strong className="text-gray-800">{d.latestScore != null ? `${d.latestScore}%` : "—"}</strong>
                   </span>
                   {d.delta != null && (
-                    <span className={`font-semibold ${d.delta > 0 ? "text-emerald-700" : d.delta < 0 ? "text-red-600" : "text-gray-400"}`}>
+                    <span className={`font-semibold ${d.delta > 0 ? "text-[#066a67]" : d.delta < 0 ? "text-red-600" : "text-gray-400"}`}>
                       {d.delta > 0 ? "+" : ""}{d.delta} pp
                     </span>
                   )}

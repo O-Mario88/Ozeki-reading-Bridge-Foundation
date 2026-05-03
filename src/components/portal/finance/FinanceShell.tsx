@@ -38,7 +38,7 @@ export function FinanceShell({
       <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5 max-w-[1600px] mx-auto">
         {/* Workspace header */}
         <header>
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-emerald-700">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#066a67]">
             Finance Workspace
           </p>
           <h1 className="text-[22px] md:text-[26px] lg:text-[28px] font-extrabold text-gray-900 tracking-tight leading-tight mt-1">
@@ -66,7 +66,7 @@ export function FinanceShell({
                 prefetch={false}
                 className={
                   isActive
-                    ? "shrink-0 inline-flex items-center h-9 px-4 rounded-full bg-emerald-700 text-white text-[12.5px] font-semibold whitespace-nowrap shadow-sm"
+                    ? "shrink-0 inline-flex items-center h-9 px-4 rounded-full bg-[#066a67] text-white text-[12.5px] font-semibold whitespace-nowrap shadow-sm"
                     : "shrink-0 inline-flex items-center h-9 px-4 rounded-full border border-gray-200 bg-white text-[12.5px] font-semibold text-gray-700 whitespace-nowrap hover:bg-gray-50 transition"
                 }
               >

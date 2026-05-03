@@ -54,7 +54,7 @@ export default async function DonationsDashboard() {
          </div>
 
          <div className="bg-orange-50/50 p-6 rounded-2xl shadow-sm border border-orange-100 flex flex-col justify-center">
-            <div className="text-orange-600 font-bold text-sm mb-2 uppercase tracking-wide">Pending Gateway Clearances</div>
+            <div className="text-[#e85f24] font-bold text-sm mb-2 uppercase tracking-wide">Pending Gateway Clearances</div>
             <div className="flex items-center gap-3">
                <div className="text-3xl font-black text-orange-900">{pendingCount} Waiting</div>
                {pendingCount > 0 && <AlertTriangle className="w-6 h-6 text-orange-400 animate-pulse" />}

@@ -93,7 +93,7 @@ function NodeCard({ node, expanded, onToggle }: { node: PerformanceNode; expande
                     </div>
 
                     {isSchool && node.isWeaningEligible && (
-                        <span className="bg-orange-600 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-full animate-pulse shrink-0">
+                        <span className="bg-[#e85f24] text-white text-[10px] uppercase font-bold px-2 py-1 rounded-full animate-pulse shrink-0">
                             Wean Ready
                         </span>
                     )}

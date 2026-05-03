@@ -109,11 +109,11 @@ export function ApiKeysManager() {
             <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="font-bold text-emerald-900">API key created for {newKey.record.name}</p>
-              <p className="text-sm text-emerald-800 mt-1">
+              <p className="text-sm text-[#044f4d] mt-1">
                 This key will be shown <strong>only once</strong>. Copy it now and deliver it securely to the partner.
               </p>
             </div>
-            <button onClick={() => setNewKey(null)} className="text-emerald-700 text-sm font-semibold hover:underline">
+            <button onClick={() => setNewKey(null)} className="text-[#066a67] text-sm font-semibold hover:underline">
               Dismiss
             </button>
           </div>
@@ -130,7 +130,7 @@ export function ApiKeysManager() {
             </button>
             <button
               onClick={() => copy(newKey.key, "new")}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-[#066a67] text-white text-sm font-semibold transition"
             >
               {copiedId === "new" ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               {copiedId === "new" ? "Copied" : "Copy"}
@@ -279,7 +279,7 @@ export function ApiKeysManager() {
                 </span>
                 <span className="text-center">
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                    k.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
+                    k.status === "active" ? "bg-emerald-50 text-[#066a67] border border-emerald-100" :
                     k.status === "revoked" ? "bg-red-50 text-red-600 border border-red-100" :
                     "bg-gray-50 text-gray-500 border border-gray-100"
                   }`}>

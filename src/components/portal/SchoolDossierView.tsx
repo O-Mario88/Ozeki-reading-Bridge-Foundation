@@ -12,14 +12,14 @@ interface SchoolDossierViewProps {
 }
 
 function healthColor(band: string): { bg: string; text: string; border: string } {
-  if (band === "Excellent") return { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" };
+  if (band === "Excellent") return { bg: "bg-emerald-50", text: "text-[#066a67]", border: "border-emerald-200" };
   if (band === "Strong") return { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-200" };
   if (band === "Developing") return { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" };
   return { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" };
 }
 
 function trajectoryMeta(band: string): { icon: typeof TrendingUp; color: string; bg: string } {
-  if (band === "Accelerating") return { icon: TrendingUp, color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" };
+  if (band === "Accelerating") return { icon: TrendingUp, color: "text-[#066a67]", bg: "bg-emerald-50 border-emerald-200" };
   if (band === "Steady") return { icon: TrendingUp, color: "text-sky-700", bg: "bg-sky-50 border-sky-200" };
   if (band === "Stagnating") return { icon: Minus, color: "text-amber-700", bg: "bg-amber-50 border-amber-200" };
   if (band === "Regressing") return { icon: TrendingDown, color: "text-red-700", bg: "bg-red-50 border-red-200" };
@@ -98,7 +98,7 @@ export function SchoolDossierView({ dossier }: SchoolDossierViewProps) {
               </div>
               {trajectory.deltaVsEarliest != null && (
                 <p className="text-sm text-gray-600 mt-2">
-                  <strong className={trajectory.deltaVsEarliest >= 0 ? "text-emerald-700" : "text-red-700"}>
+                  <strong className={trajectory.deltaVsEarliest >= 0 ? "text-[#066a67]" : "text-red-700"}>
                     {trajectory.deltaVsEarliest >= 0 ? "+" : ""}{trajectory.deltaVsEarliest} pp
                   </strong>{" "}
                   from baseline to latest
@@ -219,8 +219,8 @@ export function SchoolDossierView({ dossier }: SchoolDossierViewProps) {
 
         <div className="grid grid-cols-4 gap-3 mb-4">
           <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-center">
-            <CheckCircle2 className="w-5 h-5 text-emerald-700 mx-auto mb-1" />
-            <div className="text-xl font-bold text-emerald-700">{teacherRoster.trained}</div>
+            <CheckCircle2 className="w-5 h-5 text-[#066a67] mx-auto mb-1" />
+            <div className="text-xl font-bold text-[#066a67]">{teacherRoster.trained}</div>
             <p className="text-xs text-emerald-600 font-semibold">Trained</p>
           </div>
           <div className="rounded-xl bg-sky-50 border border-sky-100 p-3 text-center">
@@ -310,11 +310,11 @@ export function SchoolDossierView({ dossier }: SchoolDossierViewProps) {
             </p>
           </div>
           <div className="text-right">
-            <div className={`text-3xl font-extrabold ${graduation.ready ? "text-emerald-700" : "text-amber-700"}`}>
+            <div className={`text-3xl font-extrabold ${graduation.ready ? "text-[#066a67]" : "text-amber-700"}`}>
               {graduation.score}
               <span className="text-base text-gray-400">/100</span>
             </div>
-            <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${graduation.ready ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+            <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${graduation.ready ? "bg-emerald-50 text-[#066a67] border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
               {graduation.ready ? "Ready" : "In Progress"}
             </span>
           </div>

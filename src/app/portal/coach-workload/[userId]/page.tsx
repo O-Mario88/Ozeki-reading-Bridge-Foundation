@@ -174,7 +174,7 @@ export default async function CoachWorkloadDetailPage({ params }: PageProps) {
                   <span className="text-center text-gray-700">{s.visitsLast90d}</span>
                   <span className="text-center">
                     {s.observationsLast90d > 0 ? (
-                      <span className="text-emerald-700 font-semibold">{s.observationsLast90d}</span>
+                      <span className="text-[#066a67] font-semibold">{s.observationsLast90d}</span>
                     ) : (
                       <span className="text-amber-700 font-semibold">0 ⚠</span>
                     )}

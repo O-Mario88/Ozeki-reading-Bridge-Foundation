@@ -170,7 +170,7 @@ export function SessionLiveControls({
           <button
             onClick={handleStart}
             disabled={isStarting}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-900/30 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#044f4d] text-white font-bold text-sm transition-all shadow-lg shadow-emerald-900/30 disabled:cursor-not-allowed"
           >
             {isStarting ? (
               <Loader2 className="w-5 h-5 animate-spin" />

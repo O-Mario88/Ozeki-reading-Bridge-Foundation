@@ -398,7 +398,7 @@ function SegmentedYesNo({
         onClick={() => onChange("yes")}
         className={
           value === "yes"
-            ? "h-9 px-5 text-[12px] font-bold text-emerald-700 bg-emerald-50 border-r border-emerald-100 ring-1 ring-inset ring-emerald-200"
+            ? "h-9 px-5 text-[12px] font-bold text-[#066a67] bg-emerald-50 border-r border-emerald-100 ring-1 ring-inset ring-emerald-200"
             : "h-9 px-5 text-[12px] font-bold text-[#475467] hover:bg-gray-50 border-r border-[#e5eaf0]"
         }
       >
@@ -729,7 +729,7 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
         <div
           className={`mb-6 max-w-[1100px] mx-auto rounded-xl px-4 py-3 text-[13px] font-semibold ${
             feedback.kind === "success"
-              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+              ? "bg-emerald-50 text-[#044f4d] border border-emerald-200"
               : "bg-rose-50 text-rose-800 border border-rose-200"
           }`}
         >

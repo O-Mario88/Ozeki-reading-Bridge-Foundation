@@ -136,7 +136,7 @@ export default async function ProgrammeDetailPage({ params }: PageProps) {
               <Award className="w-4 h-4 text-gray-400" />
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Completed</p>
             </div>
-            <p className="text-2xl font-extrabold text-emerald-700">
+            <p className="text-2xl font-extrabold text-[#066a67]">
               {completed}
               <span className="text-sm text-gray-400 font-medium ml-1">({completionRate}%)</span>
             </p>
@@ -221,7 +221,7 @@ export default async function ProgrammeDetailPage({ params }: PageProps) {
                   </span>
                   <span className="text-right">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      e.enrollmentStatus === "completed" ? "bg-emerald-50 text-emerald-700" :
+                      e.enrollmentStatus === "completed" ? "bg-emerald-50 text-[#066a67]" :
                       e.enrollmentStatus === "dropped" ? "bg-red-50 text-red-600" :
                       "bg-amber-50 text-amber-700"
                     }`}>

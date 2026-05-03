@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Assessment Schedule | Ozeki Portal" };
 
 function stateColor(state: string) {
-  if (state === "open") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (state === "open") return "bg-emerald-50 text-[#066a67] border-emerald-200";
   if (state === "upcoming") return "bg-blue-50 text-blue-700 border-blue-200";
   return "bg-gray-50 text-gray-500 border-gray-200";
 }

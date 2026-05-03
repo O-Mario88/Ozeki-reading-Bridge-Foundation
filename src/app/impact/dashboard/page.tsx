@@ -161,7 +161,7 @@ export default async function ImpactDashboardPage({
 
           {reportDataWarning ? (
             <div className="p-4 rounded-xl bg-orange-50 border border-orange-100 text-orange-800 flex items-start gap-4 mb-4">
-              <ShieldAlert className="w-6 h-6 shrink-0 text-orange-600" />
+              <ShieldAlert className="w-6 h-6 shrink-0 text-[#e85f24]" />
               <p className="text-sm font-medium">
                 Report data is temporarily unavailable in this deployment environment. Dashboard visualization remains available.
               </p>

@@ -36,7 +36,7 @@ export function FinanceKpiCard({
   // whether that direction is good for this metric. e.g. expenses going up is bad.
   const isUp = (deltaPct ?? 0) >= 0;
   const goodDirection = deltaPositive ? isUp : !isUp;
-  const trendColor = goodDirection ? "text-emerald-700" : "text-red-600";
+  const trendColor = goodDirection ? "text-[#066a67]" : "text-red-600";
   const TrendIcon = isUp ? ArrowUpRight : ArrowDownRight;
 
   return (

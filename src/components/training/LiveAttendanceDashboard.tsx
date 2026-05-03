@@ -45,7 +45,7 @@ function relativeTime(iso: string | null): string {
 function statusBadge(status: Participant["attendance_status"]) {
   switch (status) {
     case "joined":
-      return { label: "In session", classes: "bg-emerald-50 text-emerald-700 border-emerald-200", Icon: CheckCircle2, dot: "bg-emerald-500" };
+      return { label: "In session", classes: "bg-emerald-50 text-[#066a67] border-emerald-200", Icon: CheckCircle2, dot: "bg-emerald-500" };
     case "attended":
       return { label: "Attended", classes: "bg-blue-50 text-blue-700 border-blue-200", Icon: CheckCircle2, dot: "bg-blue-500" };
     case "left":
@@ -117,8 +117,8 @@ export function LiveAttendanceDashboard({ sessionId, sessionStatus, pollInterval
       {/* Summary strip */}
       <div className="grid grid-cols-4 gap-2">
         <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-3 text-center">
-          <p className="text-2xl font-extrabold text-emerald-700">{counts.joined}</p>
-          <p className="text-xs text-emerald-700 font-semibold uppercase tracking-wider">
+          <p className="text-2xl font-extrabold text-[#066a67]">{counts.joined}</p>
+          <p className="text-xs text-[#066a67] font-semibold uppercase tracking-wider">
             {isLive ? "In Session" : "Joined"}
           </p>
         </div>

@@ -162,7 +162,7 @@ export default async function ObservationsListPage() {
               <p className="text-[28px] mb-2">👁</p>
               <p className="text-[13px] font-bold text-[#475467]">No observations recorded yet.</p>
               <p className="text-[12px] mt-1">Start by creating a new observation.</p>
-              <Link href="/portal/observations/new" className="inline-block mt-3 text-[12px] font-bold text-emerald-700 hover:underline">
+              <Link href="/portal/observations/new" className="inline-block mt-3 text-[12px] font-bold text-[#066a67] hover:underline">
                 Create first observation →
               </Link>
             </div>
@@ -353,7 +353,7 @@ function Pagination({ total }: { total: number }) {
               type="button"
               className={
                 p === 1
-                  ? "grid h-7 w-7 place-items-center rounded-md text-white font-bold text-[11px] bg-emerald-700"
+                  ? "grid h-7 w-7 place-items-center rounded-md text-white font-bold text-[11px] bg-[#066a67]"
                   : "grid h-7 w-7 place-items-center rounded-md text-[#475467] font-bold text-[11px] hover:bg-gray-50"
               }
             >

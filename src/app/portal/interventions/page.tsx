@@ -365,7 +365,7 @@ export default async function PortalInterventionsOverviewPage() {
               href={t.href}
               className={
                 t.active
-                  ? "px-3 py-2 text-[12px] font-bold text-emerald-700 border-b-2 border-emerald-600 -mb-px"
+                  ? "px-3 py-2 text-[12px] font-bold text-[#066a67] border-b-2 border-emerald-600 -mb-px"
                   : "px-3 py-2 text-[12px] font-semibold text-[#475467] hover:text-[#111827] border-b-2 border-transparent -mb-px"
               }
             >
@@ -387,7 +387,7 @@ export default async function PortalInterventionsOverviewPage() {
           <div className="flex items-center gap-1.5 shrink-0">
             <Link
               href="/portal/interventions?action=export"
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] bg-white border border-emerald-200 text-[12px] font-bold text-emerald-700 shadow-sm hover:bg-emerald-50 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] bg-white border border-emerald-200 text-[12px] font-bold text-[#066a67] shadow-sm hover:bg-emerald-50 whitespace-nowrap"
             >
               <Download className="h-3.5 w-3.5" strokeWidth={1.75} />
               Export Plans
@@ -402,7 +402,7 @@ export default async function PortalInterventionsOverviewPage() {
             </Link>
             <Link
               href="/portal/interventions?action=assign"
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] bg-white border border-emerald-200 text-[12px] font-bold text-emerald-700 shadow-sm hover:bg-emerald-50 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] bg-white border border-emerald-200 text-[12px] font-bold text-[#066a67] shadow-sm hover:bg-emerald-50 whitespace-nowrap"
             >
               <UserPlus className="h-3.5 w-3.5" strokeWidth={1.75} />
               Assign Action
@@ -635,7 +635,7 @@ export default async function PortalInterventionsOverviewPage() {
                 <DashboardListCard
                   title="Plan Actions"
                   subtitle="Next 5 Due"
-                  icon={<ClipboardCheck className="h-3.5 w-3.5 text-emerald-700" strokeWidth={1.75} />}
+                  icon={<ClipboardCheck className="h-3.5 w-3.5 text-[#066a67]" strokeWidth={1.75} />}
                   padded={false}
                   viewAll={{ href: "/portal/interventions?view=actions" }}
                 >
@@ -661,7 +661,7 @@ export default async function PortalInterventionsOverviewPage() {
             <Card>
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-[13px] font-bold text-[#111827] inline-flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-700" strokeWidth={1.75} />
+                  <Sparkles className="h-3.5 w-3.5 text-[#066a67]" strokeWidth={1.75} />
                   Action Center
                 </h3>
                 <KebabButton />
@@ -712,11 +712,11 @@ export default async function PortalInterventionsOverviewPage() {
           style={{ backgroundColor: "#f3faf6" }}
         >
           <div className="flex items-start gap-2 min-w-0">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-100 text-[#066a67] shrink-0">
               <Lightbulb className="h-3.5 w-3.5" strokeWidth={1.75} />
             </span>
             <p className="text-[11.5px] text-[#374151] leading-snug min-w-0">
-              <strong className="text-emerald-700">Intervention Insight</strong> &mdash; {DATA.insight.text}
+              <strong className="text-[#066a67]">Intervention Insight</strong> &mdash; {DATA.insight.text}
             </p>
           </div>
           <span className="text-[10.5px] text-[#7a8ca3] whitespace-nowrap shrink-0 self-start md:self-center">

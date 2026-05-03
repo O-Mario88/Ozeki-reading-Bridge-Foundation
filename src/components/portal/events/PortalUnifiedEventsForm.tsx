@@ -156,7 +156,7 @@ export function PortalUnifiedEventsForm() {
           {deliveryType === 'in_person' && (
             <>
               <section>
-                 <h3 className="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2"><MapPin className="text-orange-500 w-5 h-5"/> Venue & Geography</h3>
+                 <h3 className="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2"><MapPin className="text-[#ff7235] w-5 h-5"/> Venue & Geography</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-1">Venue Name *</label>

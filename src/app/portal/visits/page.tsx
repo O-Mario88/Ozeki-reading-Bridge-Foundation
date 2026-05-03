@@ -239,7 +239,7 @@ export default async function PortalVisitsOverviewPage() {
             </Link>
             <Link
               href="/portal/observations/new"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] bg-white border border-emerald-200 text-[13px] font-bold text-emerald-700 shadow-sm hover:bg-emerald-50 whitespace-nowrap"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-[10px] bg-white border border-emerald-200 text-[13px] font-bold text-[#066a67] shadow-sm hover:bg-emerald-50 whitespace-nowrap"
             >
               <ClipboardList className="h-4 w-4" strokeWidth={1.75} />
               Start Evaluation
@@ -487,11 +487,11 @@ export default async function PortalVisitsOverviewPage() {
           style={{ backgroundColor: "#f3faf6" }}
         >
           <div className="flex items-start gap-3 min-w-0">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-[#066a67] shrink-0">
               <Lightbulb className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <p className="text-[12.5px] text-[#374151] leading-snug min-w-0">
-              <strong className="text-emerald-700">Visit &amp; Evaluation Insight</strong> &mdash; {DATA.insight.text}
+              <strong className="text-[#066a67]">Visit &amp; Evaluation Insight</strong> &mdash; {DATA.insight.text}
             </p>
           </div>
           <div className="flex items-center gap-1.5 text-[11.5px] text-[#7a8ca3] self-start md:self-center shrink-0">
@@ -548,7 +548,7 @@ function FooterLink({ href, label, inline = false }: { href: string; label: stri
   return (
     <Link
       href={href}
-      className={`text-[12px] font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center ${inline ? "" : "mt-3"}`}
+      className={`text-[12px] font-bold text-[#066a67] hover:text-[#044f4d] inline-flex items-center ${inline ? "" : "mt-3"}`}
     >
       {label} <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2.25} />
     </Link>
@@ -697,7 +697,7 @@ function DomainTile({
 }) {
   return (
     <div className="rounded-xl border border-[#e5eaf0] p-2.5 flex flex-col items-center text-center gap-1.5 bg-white">
-      <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-50 text-emerald-700">
+      <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-50 text-[#066a67]">
         <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
       </span>
       <p className="text-[10px] font-bold text-[#475467] leading-tight min-h-[24px]">{label}</p>

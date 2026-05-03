@@ -130,15 +130,15 @@ export default function NewEventPage() {
               {deliveryType === "In-Person Training" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100 border-dashed mt-4">
                   <div>
-                    <label className="block text-sm font-medium text-emerald-700 mb-1">Physical Venue</label>
+                    <label className="block text-sm font-medium text-[#066a67] mb-1">Physical Venue</label>
                     <input required name="venueName" className="w-full border rounded-lg px-3 py-2" placeholder="e.g. Imperial Royale Hotel" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-emerald-700 mb-1">District</label>
+                    <label className="block text-sm font-medium text-[#066a67] mb-1">District</label>
                     <input required name="district" className="w-full border rounded-lg px-3 py-2" placeholder="e.g. Kampala" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-emerald-700 mb-1">Venue Address</label>
+                    <label className="block text-sm font-medium text-[#066a67] mb-1">Venue Address</label>
                     <input name="venueAddress" className="w-full border rounded-lg px-3 py-2" placeholder="Plot 4, Example Road..." />
                   </div>
                 </div>

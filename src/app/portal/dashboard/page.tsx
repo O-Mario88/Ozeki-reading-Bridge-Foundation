@@ -155,7 +155,7 @@ export default async function PortalDashboardPage() {
               </div>
               <Link
                 href="/portal/insights"
-                className="text-[12px] text-emerald-700 font-semibold hover:underline whitespace-nowrap inline-flex items-center gap-0.5"
+                className="text-[12px] text-[#066a67] font-semibold hover:underline whitespace-nowrap inline-flex items-center gap-0.5"
               >
                 View full scorecard <ChevronRight className="h-3 w-3" strokeWidth={2} />
               </Link>
@@ -267,7 +267,7 @@ export default async function PortalDashboardPage() {
                             </span>
                             <Link
                               href={row.href}
-                              className="text-[11px] text-emerald-700 font-semibold hover:underline inline-flex items-center gap-0.5 shrink-0"
+                              className="text-[11px] text-[#066a67] font-semibold hover:underline inline-flex items-center gap-0.5 shrink-0"
                             >
                               View <ChevronRight className="h-3 w-3" strokeWidth={2} />
                             </Link>
@@ -302,7 +302,7 @@ export default async function PortalDashboardPage() {
                           <span className="text-right">
                             <Link
                               href={row.href}
-                              className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-0.5"
+                              className="text-[#066a67] font-bold hover:underline inline-flex items-center gap-0.5"
                             >
                               View <ChevronRight className="h-3 w-3" strokeWidth={2} />
                             </Link>
@@ -318,7 +318,7 @@ export default async function PortalDashboardPage() {
             <div className="mt-3">
               <Link
                 href="/portal/reports"
-                className="text-[12px] text-emerald-700 font-semibold inline-flex items-center hover:underline"
+                className="text-[12px] text-[#066a67] font-semibold inline-flex items-center hover:underline"
               >
                 View all activity <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
               </Link>
@@ -355,7 +355,7 @@ export default async function PortalDashboardPage() {
 
             <Link
               href="/portal/insights"
-              className="text-[12px] text-emerald-700 font-semibold mt-4 inline-flex items-center hover:underline"
+              className="text-[12px] text-[#066a67] font-semibold mt-4 inline-flex items-center hover:underline"
             >
               View coverage details <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
             </Link>
@@ -379,7 +379,7 @@ function QuickAction({
       className="group rounded-xl lg:rounded-2xl border border-gray-100 bg-white hover:border-gray-200 hover:shadow-md transition-all px-2.5 py-2 lg:p-4 flex items-center gap-2 lg:gap-3"
     >
       <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gray-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 transition-colors">
-        <Icon className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600 group-hover:text-emerald-700 transition-colors" strokeWidth={1.75} />
+        <Icon className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600 group-hover:text-[#066a67] transition-colors" strokeWidth={1.75} />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] lg:text-[14px] font-bold text-gray-900 leading-tight truncate">{title}</p>
@@ -398,7 +398,7 @@ function MiniStat({ label, value, delta }: { label: string; value: number; delta
       <div className="flex items-baseline gap-1.5 mt-1">
         <p className="text-[22px] font-extrabold text-gray-900 leading-none">{value}</p>
         {delta != null && (
-          <span className={`inline-flex items-center text-[10px] font-bold ${isUp ? "text-emerald-700" : "text-red-600"}`}>
+          <span className={`inline-flex items-center text-[10px] font-bold ${isUp ? "text-[#066a67]" : "text-red-600"}`}>
             {isUp ? <ArrowUpRight className="h-2.5 w-2.5" strokeWidth={2} /> : <ArrowDownRight className="h-2.5 w-2.5" strokeWidth={2} />}
             {Math.abs(delta).toFixed(0)}%
           </span>
@@ -424,7 +424,7 @@ function StatusBadge({ status }: { status: string }) {
   const negative = s === "void" || s === "cancelled" || s === "failed" || s === "missed";
 
   const cls = positive
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+    ? "bg-emerald-50 text-[#066a67] border-emerald-100"
     : inProgress
       ? "bg-amber-50 text-amber-700 border-amber-100"
       : negative

@@ -31,7 +31,7 @@ function cycleLabel(cycle: string): string {
 function cycleColor(cycle: string): string {
   if (cycle === "baseline") return "bg-amber-50 text-amber-800 border-amber-200";
   if (cycle === "progress") return "bg-sky-50 text-sky-800 border-sky-200";
-  if (cycle === "endline") return "bg-emerald-50 text-emerald-800 border-emerald-200";
+  if (cycle === "endline") return "bg-emerald-50 text-[#044f4d] border-emerald-200";
   return "bg-gray-50 text-gray-800 border-gray-200";
 }
 
@@ -90,7 +90,7 @@ export default async function NationalBenchmarksPage() {
               <p className="text-xs text-gray-500">Mid-term checkpoint</p>
             </div>
             <div>
-              <span className="inline-flex px-3 py-1 rounded-full text-sm font-bold border bg-emerald-50 text-emerald-800 border-emerald-200 mb-2">Endline</span>
+              <span className="inline-flex px-3 py-1 rounded-full text-sm font-bold border bg-emerald-50 text-[#044f4d] border-emerald-200 mb-2">Endline</span>
               <p className="text-xs text-gray-500">End of programme cycle</p>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default async function NationalBenchmarksPage() {
                             <td className="py-3 px-4 text-center text-gray-700">{fmt(r.readingComprehension)}</td>
                             <td className="py-3 px-4 text-center font-bold text-[#006b61]">{fmt(r.compositeAvg)}</td>
                             <td className="py-3 px-4 text-center">
-                              <span className={`text-sm font-bold ${r.atOrAboveBenchmarkPct >= 60 ? "text-emerald-700" : r.atOrAboveBenchmarkPct >= 40 ? "text-amber-700" : "text-red-600"}`}>
+                              <span className={`text-sm font-bold ${r.atOrAboveBenchmarkPct >= 60 ? "text-[#066a67]" : r.atOrAboveBenchmarkPct >= 40 ? "text-amber-700" : "text-red-600"}`}>
                                 {r.atOrAboveBenchmarkPct}%
                               </span>
                             </td>

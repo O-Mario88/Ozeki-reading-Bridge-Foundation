@@ -14,7 +14,7 @@ export const metadata = { title: "Coach Workload | Ozeki Portal" };
 function statusMeta(status: string) {
   switch (status) {
     case "balanced":
-      return { color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2, label: "Balanced" };
+      return { color: "bg-emerald-50 text-[#066a67] border-emerald-200", icon: CheckCircle2, label: "Balanced" };
     case "stretched":
       return { color: "bg-amber-50 text-amber-700 border-amber-200", icon: TrendingUp, label: "Stretched" };
     case "overloaded":
@@ -124,7 +124,7 @@ export default async function CoachWorkloadPage() {
                     <span className="text-center">
                       {c.observationsSubmitted90d > 0 ? (
                         <span className={`text-sm font-bold ${
-                          c.fidelityPct >= 70 ? "text-emerald-700" :
+                          c.fidelityPct >= 70 ? "text-[#066a67]" :
                           c.fidelityPct >= 40 ? "text-amber-700" : "text-red-600"
                         }`}>
                           {c.fidelityPct}%

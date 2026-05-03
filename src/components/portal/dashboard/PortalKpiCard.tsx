@@ -27,7 +27,7 @@ export function PortalKpiCard({
   const isUp = (deltaPct ?? 0) > 0;
   const isFlat = (deltaPct ?? 0) === 0;
   const goodDirection = isFlat ? true : (deltaPositive ? isUp : !isUp);
-  const trendColor = goodDirection ? "text-emerald-700" : "text-red-600";
+  const trendColor = goodDirection ? "text-[#066a67]" : "text-red-600";
   const TrendIcon = isFlat ? Minus : isUp ? ArrowUpRight : ArrowDownRight;
 
   return (

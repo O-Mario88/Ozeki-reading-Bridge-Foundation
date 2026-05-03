@@ -121,7 +121,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
               {school.name} Dashboard
             </h1>
             <nav aria-label="Breadcrumb" className="text-[12.5px] mt-1 inline-flex items-center gap-1.5 text-gray-500">
-              <Link href="/portal/schools" className="hover:text-emerald-700 hover:underline">Schools</Link>
+              <Link href="/portal/schools" className="hover:text-[#066a67] hover:underline">Schools</Link>
               <ChevronRight className="h-3 w-3 text-gray-400" strokeWidth={2} />
               <span className="text-gray-700 font-semibold">{school.name}</span>
             </nav>
@@ -138,7 +138,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
             <SchoolEditModalClient school={school} />
             <Link
               href={`/portal/schools/${schoolId}/dossier`}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800 whitespace-nowrap"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[#066a67] text-white text-[13px] font-semibold shadow-sm hover:bg-[#044f4d] whitespace-nowrap"
             >
               <Activity className="h-4 w-4" strokeWidth={1.75} />
               Actions
@@ -152,7 +152,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
           <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_auto] gap-0">
             {/* Icon panel */}
             <div className="flex items-center justify-center h-[160px] lg:h-full lg:min-h-[200px] bg-emerald-50 border-b lg:border-b-0 lg:border-r border-emerald-100">
-              <span className="grid h-20 w-20 place-items-center rounded-2xl bg-emerald-700 text-white shadow-sm">
+              <span className="grid h-20 w-20 place-items-center rounded-2xl bg-[#066a67] text-white shadow-sm">
                 <SchoolIcon className="h-10 w-10" strokeWidth={1.75} />
               </span>
             </div>
@@ -162,7 +162,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
                 <h2 className="text-[22px] md:text-[26px] font-extrabold text-gray-900 tracking-tight leading-tight">
                   {school.name}
                 </h2>
-                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${status ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-gray-100 text-gray-700 border-gray-200"}`}>
+                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${status ? "bg-emerald-50 text-[#066a67] border-emerald-100" : "bg-gray-100 text-gray-700 border-gray-200"}`}>
                   {status ? "Active" : "Inactive"}
                 </span>
               </div>
@@ -236,7 +236,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
                 })}
               </ul>
             </div>
-            <Link href="#" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-3">
+            <Link href="#" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-3">
               View full breakdown <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
             </Link>
           </section>
@@ -253,7 +253,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
                 <ClassRow key={c.name} {...c} />
               ))}
             </div>
-            <Link href="#" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-3">
+            <Link href="#" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-3">
               View class performance <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
             </Link>
           </section>
@@ -272,7 +272,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
               </div>
             </div>
             <LiteracyProgressChart />
-            <Link href="#" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-2">
+            <Link href="#" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-2">
               View progress report <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
             </Link>
           </section>
@@ -381,7 +381,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
                   <div className="min-w-0">
                     <p className="text-[12.5px] font-bold text-gray-900 leading-tight truncate">{p.title}</p>
                     <p className="text-[10.5px] text-gray-500 leading-snug truncate mt-0.5">{p.sub}</p>
-                    <span className="inline-flex items-center mt-1.5 text-[9.5px] font-bold text-emerald-700">
+                    <span className="inline-flex items-center mt-1.5 text-[9.5px] font-bold text-[#066a67]">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1" /> Active
                     </span>
                   </div>
@@ -411,7 +411,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
             Last updated: Jun 10, 2024 • 10:00 AM by Ozeki Team
           </p>
           <p className="inline-flex items-center gap-1.5">
-            <Library className="h-3.5 w-3.5 text-emerald-700" strokeWidth={1.75} />
+            <Library className="h-3.5 w-3.5 text-[#066a67]" strokeWidth={1.75} />
             Ozeki Reading Bridge Foundation
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ml-1" />
           </p>
@@ -455,7 +455,7 @@ function SchoolKpi({
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-tight truncate">{label}</p>
       </div>
       <p className="text-[24px] lg:text-[26px] font-extrabold text-gray-900 leading-none tracking-tight truncate">{value}</p>
-      <p className="text-[10.5px] text-emerald-700 font-semibold mt-auto inline-flex items-center gap-0.5">
+      <p className="text-[10.5px] text-[#066a67] font-semibold mt-auto inline-flex items-center gap-0.5">
         <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
         {delta}{deltaSuffix} <span className="text-gray-500 font-medium ml-0.5">vs last term</span>
       </p>
@@ -575,7 +575,7 @@ function ActionTile({ icon: Icon, label, href }: { icon: LucideIcon; label: stri
       href={href}
       className="rounded-xl border border-gray-100 bg-white hover:bg-gray-50 transition px-2.5 py-3 flex flex-col items-center text-center gap-2"
     >
-      <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-emerald-700">
+      <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-[#066a67]">
         <Icon className="h-4 w-4" strokeWidth={1.75} />
       </span>
       <span className="text-[10.5px] font-bold text-gray-700 leading-tight">{label}</span>
@@ -587,7 +587,7 @@ function CardHeader({ title, link }: { title: string; link: string }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <h3 className="text-[14.5px] font-bold text-gray-900 truncate">{title}</h3>
-      <Link href={link} className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline shrink-0">
+      <Link href={link} className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline shrink-0">
         View all <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
       </Link>
     </div>
@@ -606,7 +606,7 @@ function DateBadge({ date }: { date: string }) {
 
 function StatusPill({ label, tone }: { label: string; tone: "green" | "amber" | "red" }) {
   const cls = tone === "green"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+    ? "bg-emerald-50 text-[#066a67] border-emerald-100"
     : tone === "amber"
       ? "bg-amber-50 text-amber-700 border-amber-100"
       : "bg-rose-50 text-rose-700 border-rose-100";

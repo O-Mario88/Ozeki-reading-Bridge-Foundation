@@ -56,7 +56,7 @@ function SponsorshipPaymentForm() {
     <div className="bg-slate-50 min-h-screen py-16 px-4">
       <div className="max-w-3xl mx-auto">
         <header className="mb-10 text-center">
-          <span className="ozeki-badge bg-emerald-100 text-emerald-800 mb-4">Secure Checkout</span>
+          <span className="ozeki-badge bg-emerald-100 text-[#044f4d] mb-4">Secure Checkout</span>
           <h1 className="text-3xl md:text-4xl font-display font-bold text-slate-900 mb-2">Fund {tierType.charAt(0).toUpperCase() + tierType.slice(1)} Project</h1>
           <p className="text-slate-500">You are completing a direct investment through OzekiRead's secure Pesapal gateway.</p>
         </header>
@@ -94,7 +94,7 @@ function SponsorshipPaymentForm() {
                     min="10"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="border rounded-lg px-3 py-1 w-32 text-right font-bold text-lg text-emerald-700 focus:ring-2 focus:ring-emerald-500" 
+                    className="border rounded-lg px-3 py-1 w-32 text-right font-bold text-lg text-[#066a67] focus:ring-2 focus:ring-emerald-500" 
                     placeholder="250"
                   />
                 ) : (

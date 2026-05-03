@@ -40,7 +40,7 @@ function relativeTime(iso: string): string {
 }
 
 function avatarColor(name: string): string {
-  const colors = ["bg-blue-100 text-blue-700", "bg-emerald-100 text-emerald-700", "bg-purple-100 text-purple-700", "bg-amber-100 text-amber-700", "bg-pink-100 text-pink-700"];
+  const colors = ["bg-blue-100 text-blue-700", "bg-emerald-100 text-[#066a67]", "bg-purple-100 text-purple-700", "bg-amber-100 text-amber-700", "bg-pink-100 text-pink-700"];
   const hash = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   return colors[hash % colors.length];
 }

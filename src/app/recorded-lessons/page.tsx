@@ -119,7 +119,7 @@ export default async function RecordedLessonsIndex() {
                       {lesson.class_target && <span className="ozeki-badge bg-amber-100 text-amber-800">{lesson.class_target}</span>}
                     </div>
                     
-                    <h3 className="font-display font-bold text-xl leading-tight text-slate-900 mb-2 group-hover:text-emerald-700 transition-colors">
+                    <h3 className="font-display font-bold text-xl leading-tight text-slate-900 mb-2 group-hover:text-[#066a67] transition-colors">
                       {lesson.title}
                     </h3>
                     

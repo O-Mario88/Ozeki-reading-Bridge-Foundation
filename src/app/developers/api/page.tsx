@@ -199,7 +199,7 @@ console.log(await r.json());`}
                     key={e.path}
                     className={`px-5 py-4 flex items-start gap-4 ${i < arr.length - 1 ? "border-b border-gray-50" : ""}`}
                   >
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-100 shrink-0">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase bg-emerald-50 text-[#066a67] border border-emerald-100 shrink-0">
                       {e.method}
                     </span>
                     <div className="flex-1 min-w-0">

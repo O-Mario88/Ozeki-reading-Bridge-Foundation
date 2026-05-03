@@ -422,14 +422,14 @@ export default async function PortalAssessmentsPage() {
               <ul>
                 {DATA.upcomingWindows.map((w) => (
                   <li key={w.range} className="px-5 py-2.5 border-b border-[#f3f5f8] last:border-b-0 flex items-center gap-3 text-[12px]">
-                    <span className="grid h-7 w-7 place-items-center rounded-md bg-emerald-50 text-emerald-700 shrink-0">
+                    <span className="grid h-7 w-7 place-items-center rounded-md bg-emerald-50 text-[#066a67] shrink-0">
                       <Calendar className="h-3.5 w-3.5" strokeWidth={1.75} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-[#111827] truncate">{w.range}</p>
                       <p className="text-[#667085] truncate">{w.region}</p>
                     </div>
-                    <span className="inline-flex px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10.5px] font-bold whitespace-nowrap">
+                    <span className="inline-flex px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#066a67] border border-emerald-100 text-[10.5px] font-bold whitespace-nowrap">
                       {w.schools} schools
                     </span>
                   </li>
@@ -516,11 +516,11 @@ export default async function PortalAssessmentsPage() {
           style={{ backgroundColor: "#f3faf6" }}
         >
           <div className="flex items-start gap-3 min-w-0">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-[#066a67] shrink-0">
               <Lightbulb className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <p className="text-[12.5px] text-[#374151] leading-snug min-w-0">
-              <strong className="text-emerald-700">Assessment Insight</strong> — {DATA.insight.text}
+              <strong className="text-[#066a67]">Assessment Insight</strong> — {DATA.insight.text}
             </p>
           </div>
           <div className="flex items-center gap-1.5 text-[11.5px] text-[#7a8ca3] self-start md:self-center shrink-0">
@@ -556,7 +556,7 @@ function FooterLink({ href, label, inline = false }: { href: string; label: stri
   return (
     <Link
       href={href}
-      className={`text-[12px] font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center ${inline ? "" : "mt-3"}`}
+      className={`text-[12px] font-bold text-[#066a67] hover:text-[#044f4d] inline-flex items-center ${inline ? "" : "mt-3"}`}
     >
       {label} <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2.25} />
     </Link>
@@ -745,7 +745,7 @@ function DomainTile({
 }) {
   return (
     <div className="rounded-xl border border-[#e5eaf0] p-2.5 flex flex-col items-center text-center gap-1.5 bg-white">
-      <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-50 text-emerald-700">
+      <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-50 text-[#066a67]">
         <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
       </span>
       <p className="text-[10px] font-bold text-[#475467] leading-tight min-h-[24px]">{label}</p>

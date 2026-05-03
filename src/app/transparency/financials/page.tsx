@@ -285,7 +285,7 @@ export default async function FinancialTransparencyPage() {
         {liveFinance && liveFinance.totalSpentUgx > 0 && (
           <SectionWrapper theme="off-white">
             <div className="max-w-4xl mx-auto text-center mb-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 text-[#066a67] text-xs font-bold mb-4">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 LIVE DATA · Updated {new Date(liveFinance.updatedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
               </div>
@@ -304,7 +304,7 @@ export default async function FinancialTransparencyPage() {
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Total Received</p>
                 </div>
-                <p className="text-2xl font-extrabold text-emerald-700">
+                <p className="text-2xl font-extrabold text-[#066a67]">
                   UGX {liveFinance.totalReceivedUgx.toLocaleString()}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">≈ ${liveFinance.totalReceivedUsd.toLocaleString()}</p>

@@ -143,7 +143,7 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
         </div>
       )}
       {success && (
-        <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 flex items-start gap-2 text-emerald-700 text-sm">
+        <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 flex items-start gap-2 text-[#066a67] text-sm">
           <CheckCircle2 className="w-5 h-5 shrink-0" />
           {success}
         </div>

@@ -15,7 +15,7 @@ export const metadata = { title: "Gender Parity Index | Ozeki Portal" };
 
 function parityLabel(idx: number | null): { label: string; color: string } {
   if (idx == null) return { label: "Insufficient data", color: "text-gray-400" };
-  if (idx >= 0.97 && idx <= 1.03) return { label: "At parity", color: "text-emerald-700" };
+  if (idx >= 0.97 && idx <= 1.03) return { label: "At parity", color: "text-[#066a67]" };
   if (idx > 1.03) return { label: "Female ahead", color: "text-purple-700" };
   return { label: "Female behind", color: "text-amber-700" };
 }
@@ -52,7 +52,7 @@ export default async function GenderParityPage({ searchParams }: PageProps) {
               <p className="text-5xl font-extrabold mb-2">
                 {report.overallParityIndex != null ? report.overallParityIndex.toFixed(2) : "—"}
               </p>
-              <p className={`text-sm font-semibold ${overall.color === "text-emerald-700" ? "text-emerald-200" : overall.color === "text-purple-700" ? "text-purple-200" : "text-amber-200"}`}>
+              <p className={`text-sm font-semibold ${overall.color === "text-[#066a67]" ? "text-emerald-200" : overall.color === "text-purple-700" ? "text-purple-200" : "text-amber-200"}`}>
                 {overall.label}
               </p>
             </div>

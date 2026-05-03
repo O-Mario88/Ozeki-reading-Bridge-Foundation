@@ -132,7 +132,7 @@ export default async function FinanceDashboard() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-[24px] md:text-[28px] font-extrabold tracking-tight text-gray-900 leading-tight">Finance</h1>
-              <Shield className="h-5 w-5 text-emerald-700 shrink-0" strokeWidth={1.75} />
+              <Shield className="h-5 w-5 text-[#066a67] shrink-0" strokeWidth={1.75} />
             </div>
             <p className="text-[13px] md:text-[14px] text-gray-500 leading-snug">
               Ledger, reconciliation, reporting, and donor ROI analytics.
@@ -148,7 +148,7 @@ export default async function FinanceDashboard() {
             </button>
             <Link
               href="/portal/finance/expenses?action=new"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[#066a67] text-white text-[13px] font-semibold shadow-sm hover:bg-[#044f4d]"
             >
               <Plus className="h-4 w-4" strokeWidth={2} />
               New Transaction
@@ -253,7 +253,7 @@ export default async function FinanceDashboard() {
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                   netSurplus >= 0
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                    ? "bg-emerald-50 text-[#066a67] border-emerald-100"
                     : "bg-red-50 text-red-700 border-red-100"
                 }`}
               >
@@ -292,7 +292,7 @@ export default async function FinanceDashboard() {
             </ul>
             <Link
               href="/portal/finance/reports"
-              className="text-[12px] text-emerald-700 font-semibold mt-3 inline-flex items-center hover:underline"
+              className="text-[12px] text-[#066a67] font-semibold mt-3 inline-flex items-center hover:underline"
             >
               View full breakdown <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
             </Link>
@@ -334,7 +334,7 @@ export default async function FinanceDashboard() {
                 href={m.href}
                 className="rounded-xl border border-gray-100 bg-white p-2.5 hover:bg-gray-50 transition flex flex-col gap-1.5 min-h-[78px]"
               >
-                <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-50 text-emerald-700">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-50 text-[#066a67]">
                   <m.icon className="h-3.5 w-3.5" strokeWidth={1.75} />
                 </span>
                 <p className="text-[10.5px] font-bold text-gray-900 leading-tight truncate">{m.label}</p>
@@ -394,7 +394,7 @@ export default async function FinanceDashboard() {
             </div>
             <Link
               href="/portal/finance/receipts"
-              className="text-[12px] text-emerald-700 font-semibold inline-flex items-center hover:underline whitespace-nowrap shrink-0"
+              className="text-[12px] text-[#066a67] font-semibold inline-flex items-center hover:underline whitespace-nowrap shrink-0"
             >
               <span className="hidden sm:inline">View all transactions</span>
               <span className="sm:hidden">View all</span>
@@ -424,7 +424,7 @@ export default async function FinanceDashboard() {
                       <span
                         className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 ${
                           t.type === "income"
-                            ? "bg-emerald-50 text-emerald-700"
+                            ? "bg-emerald-50 text-[#066a67]"
                             : "bg-orange-50 text-orange-700"
                         }`}
                       >
@@ -436,7 +436,7 @@ export default async function FinanceDashboard() {
                       <span className="text-[13px] font-extrabold text-gray-900">
                         {fmtUsdMoney(typeof t.amount === "number" ? t.amount : 0)}
                       </span>
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 whitespace-nowrap">
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#066a67] whitespace-nowrap">
                         Completed
                       </span>
                     </div>
@@ -469,7 +469,7 @@ export default async function FinanceDashboard() {
                   <span
                     className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                       t.type === "income"
-                        ? "bg-emerald-50 text-emerald-700"
+                        ? "bg-emerald-50 text-[#066a67]"
                         : "bg-orange-50 text-orange-700"
                     }`}
                   >
@@ -481,7 +481,7 @@ export default async function FinanceDashboard() {
                   {fmtUsdMoney(typeof t.amount === "number" ? t.amount : 0)}
                 </span>
                 <span>
-                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#066a67] border border-emerald-100">
                     Completed
                   </span>
                 </span>
@@ -510,7 +510,7 @@ export default async function FinanceDashboard() {
         {/* Finance Insight bar */}
         <section className="rounded-2xl bg-gradient-to-r from-emerald-50 to-white border border-emerald-100 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-[#066a67] shrink-0">
               <Sparkles className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <div>
@@ -519,7 +519,7 @@ export default async function FinanceDashboard() {
                 You&apos;re maintaining healthy programme efficiency —{" "}
                 <strong className="text-gray-900">{Math.round(programmeDeliveryPct)}%</strong>{" "}
                 of spend is reaching learners directly.{" "}
-                <Link href="/portal/finance/cost-per-learner" className="text-emerald-700 font-semibold hover:underline">
+                <Link href="/portal/finance/cost-per-learner" className="text-[#066a67] font-semibold hover:underline">
                   View performance details →
                 </Link>
               </p>
@@ -564,7 +564,7 @@ function FinanceTintedKpi({
 }: FinanceTintedKpiProps) {
   const isUp = delta >= 0;
   const goodDirection = deltaPositive ? isUp : !isUp;
-  const trendColor = goodDirection ? "text-emerald-700" : "text-red-600";
+  const trendColor = goodDirection ? "text-[#066a67]" : "text-red-600";
   const TrendIcon = isUp ? ArrowUpRight : ArrowDownRight;
 
   return (
@@ -641,7 +641,7 @@ function SmallQuickAction({ icon: Icon, title, sub, href }: {
         href={href}
         className="group flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors"
       >
-        <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-100">
+        <div className="w-9 h-9 rounded-lg bg-emerald-50 text-[#066a67] flex items-center justify-center shrink-0 group-hover:bg-emerald-100">
           <Icon className="w-4 h-4" strokeWidth={1.75} />
         </div>
         <div className="min-w-0 flex-1">
@@ -680,7 +680,7 @@ function ModuleTileCard({ href, icon: Icon, label, body, isNew }: ModuleTile) {
       href={href}
       className="group rounded-xl border border-gray-100 bg-white hover:bg-gray-50/60 hover:border-gray-200 transition-colors p-3 flex items-start gap-2.5 min-w-0"
     >
-      <div className="w-8 h-8 rounded-lg bg-gray-50 text-gray-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+      <div className="w-8 h-8 rounded-lg bg-gray-50 text-gray-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 group-hover:text-[#066a67] transition-colors">
         <Icon className="w-4 h-4" strokeWidth={1.75} />
       </div>
       <div className="min-w-0 flex-1">
@@ -702,7 +702,7 @@ function PageChip({ children, muted = false }: { children: React.ReactNode; mute
   return (
     <span
       className={`inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-md font-bold ${
-        muted ? "bg-white text-gray-500 border border-gray-200" : "bg-emerald-700 text-white"
+        muted ? "bg-white text-gray-500 border border-gray-200" : "bg-[#066a67] text-white"
       }`}
     >
       {children}

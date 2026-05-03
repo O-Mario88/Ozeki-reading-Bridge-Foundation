@@ -47,13 +47,13 @@ export function DangerZoneWipe() {
           <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
           <div>
             <h3 className="font-bold text-emerald-900">Wipe complete</h3>
-            <p className="text-sm text-emerald-800 mt-1">
+            <p className="text-sm text-[#044f4d] mt-1">
               <strong>{result.truncatedCount}</strong> tables truncated;{" "}
               <strong>{result.preservedCount}</strong> preserved (login + config + reference data).
             </p>
           </div>
         </div>
-        <details className="text-xs text-emerald-800">
+        <details className="text-xs text-[#044f4d]">
           <summary className="cursor-pointer font-semibold">Show affected tables</summary>
           <div className="mt-3 grid grid-cols-2 gap-4">
             <div>

@@ -75,7 +75,7 @@ export default async function SponsorshipHub() {
         ) : (
           <div className="ozeki-card max-w-2xl mx-auto text-center mb-16">
             <p className="text-slate-600">Sponsorship tiers are being updated. Please check back shortly or{" "}
-              <Link href="/contact" className="text-emerald-700 font-semibold hover:underline">contact us</Link> to discuss a custom sponsorship.
+              <Link href="/contact" className="text-[#066a67] font-semibold hover:underline">contact us</Link> to discuss a custom sponsorship.
             </p>
           </div>
         )}
@@ -107,7 +107,7 @@ export default async function SponsorshipHub() {
         <div className="max-w-3xl mx-auto mb-8 text-center">
           <p className="text-sm text-slate-500">
             Already a sponsor?{" "}
-            <Link href="/contact" className="text-emerald-700 font-semibold hover:underline">
+            <Link href="/contact" className="text-[#066a67] font-semibold hover:underline">
               Contact us
             </Link>{" "}
             to retrieve your reference number and access your giving record.

@@ -160,7 +160,7 @@ export function SponsorshipImpactChain({ sponsorshipReference }: Props) {
                     <td className="py-2.5 px-2 text-right">
                       {s.scoreImprovementPp != null ? (
                         <span className={`inline-flex items-center gap-1 font-bold ${
-                          s.scoreImprovementPp > 0.5 ? "text-emerald-700" :
+                          s.scoreImprovementPp > 0.5 ? "text-[#066a67]" :
                           s.scoreImprovementPp < -0.5 ? "text-red-600" : "text-gray-500"
                         }`}>
                           {s.scoreImprovementPp > 0 ? <TrendingUp className="w-3.5 h-3.5" /> :

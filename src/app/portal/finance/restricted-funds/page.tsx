@@ -23,7 +23,7 @@ function statusMeta(status: string) {
     case "warning":
       return { color: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock, label: "Warning" };
     default:
-      return { color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2, label: "Healthy" };
+      return { color: "bg-emerald-50 text-[#066a67] border-emerald-200", icon: CheckCircle2, label: "Healthy" };
   }
 }
 

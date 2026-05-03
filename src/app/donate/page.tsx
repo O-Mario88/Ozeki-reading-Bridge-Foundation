@@ -28,7 +28,7 @@ export default function DonatePage() {
             <div className="space-y-6">
                <div className="flex items-start gap-4">
                  <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-orange-500 font-bold text-xl">📘</span>
+                    <span className="text-[#ff7235] font-bold text-xl">📘</span>
                  </div>
                  <div>
                     <h3 className="font-bold text-gray-900 text-lg">Send Reading Resources</h3>

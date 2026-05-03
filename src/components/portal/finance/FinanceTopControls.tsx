@@ -28,7 +28,7 @@ export function FinanceTopControls({ initials }: Props) {
       </div>
 
       {/* Synced badge */}
-      <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold">
+      <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-[#066a67] text-xs font-bold">
         <Check className="w-3.5 h-3.5" />
         Synced
       </div>
@@ -36,7 +36,7 @@ export function FinanceTopControls({ initials }: Props) {
       {/* Quick add */}
       <button
         type="button"
-        className="hidden md:inline-flex w-9 h-9 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100 items-center justify-center"
+        className="hidden md:inline-flex w-9 h-9 rounded-full bg-emerald-50 border border-emerald-100 text-[#066a67] hover:bg-emerald-100 items-center justify-center"
         aria-label="Quick add"
       >
         <Plus className="w-4 h-4" />
@@ -55,7 +55,7 @@ export function FinanceTopControls({ initials }: Props) {
       </button>
 
       {/* Avatar */}
-      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-700 to-emerald-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#066a67] to-emerald-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
         {initials}
       </div>
     </div>

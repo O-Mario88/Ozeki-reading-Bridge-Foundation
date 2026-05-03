@@ -24,7 +24,7 @@ function formatNumber(n: number): string {
 
 function deliveryTone(pct: number | null): string {
   if (pct == null) return "text-gray-400";
-  if (pct >= 80) return "text-emerald-700";
+  if (pct >= 80) return "text-[#066a67]";
   if (pct >= 60) return "text-emerald-600";
   if (pct >= 40) return "text-amber-600";
   return "text-red-600";

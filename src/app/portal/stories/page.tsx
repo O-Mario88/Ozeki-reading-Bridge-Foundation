@@ -349,7 +349,7 @@ export default async function PortalStoryOverviewPage() {
           <Card>
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-[15px] font-bold text-[#102033]">Story Collection Trend</h3>
-              <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+              <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#066a67] bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
                 <TrendingUp className="h-3 w-3" strokeWidth={2.25} /> {DATA.trend.delta}%
                 <span className="font-medium text-emerald-600/80 ml-0.5">vs last 6 months</span>
               </span>
@@ -403,7 +403,7 @@ export default async function PortalStoryOverviewPage() {
                 <span className="h-2 w-2 rounded-full bg-emerald-500" /> Story Reads
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-orange-500" /> Avg. Completion Rate
+                <span className="h-2 w-2 rounded-full bg-[#ff7235]" /> Avg. Completion Rate
               </span>
             </div>
             <EngagementChart
@@ -673,7 +673,7 @@ function FooterLink({ href, label, inline = false }: { href: string; label: stri
   return (
     <Link
       href={href}
-      className={`text-[12px] font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center ${inline ? "" : "mt-3"}`}
+      className={`text-[12px] font-bold text-[#066a67] hover:text-[#044f4d] inline-flex items-center ${inline ? "" : "mt-3"}`}
     >
       {label} <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2.25} />
     </Link>

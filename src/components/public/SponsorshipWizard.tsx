@@ -233,7 +233,7 @@ export function SponsorshipWizard({ level }: { level: string }) {
                   <button onClick={() => setStep(2)} className="px-6 py-4 rounded-2xl bg-gray-100 font-bold text-gray-600 hover:bg-gray-200" disabled={loading}>Back</button>
                   <button 
                      onClick={handleInitiate} disabled={loading}
-                     className="flex-1 py-4 bg-[#006b61] text-white rounded-2xl font-black text-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-xl disabled:opacity-50"
+                     className="flex-1 py-4 bg-[#006b61] text-white rounded-2xl font-black text-lg hover:bg-[#066a67] transition-colors flex items-center justify-center gap-2 shadow-xl disabled:opacity-50"
                   >
                      {loading ? 'Bridging Banking Networks...' : 'Execute Philanthropic Gateway'} 
                      {!loading && <CreditCard className="w-5 h-5 ml-1" />}

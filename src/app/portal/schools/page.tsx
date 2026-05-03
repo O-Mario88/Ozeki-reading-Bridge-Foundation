@@ -189,7 +189,7 @@ export default async function SchoolsOverviewPage() {
             </Link>
             <Link
               href="/portal/schools/directory"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800 whitespace-nowrap"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[#066a67] text-white text-[13px] font-semibold shadow-sm hover:bg-[#044f4d] whitespace-nowrap"
             >
               <Activity className="h-4 w-4" strokeWidth={1.75} />
               Actions
@@ -222,7 +222,7 @@ export default async function SchoolsOverviewPage() {
             </div>
             <p className="text-[11px] text-gray-500 mb-2">Average School Performance Score</p>
             <PerformanceTrendChart endValue={FALLBACK.trendCurrent} />
-            <Link href="/portal/insights" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-2">
+            <Link href="/portal/insights" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-2">
               View trend analysis <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
             </Link>
           </section>
@@ -250,7 +250,7 @@ export default async function SchoolsOverviewPage() {
                 ))}
               </ul>
             </div>
-            <Link href="/portal/insights" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-3">
+            <Link href="/portal/insights" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-3">
               View full breakdown <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
             </Link>
           </section>
@@ -269,7 +269,7 @@ export default async function SchoolsOverviewPage() {
                 <RegionBarRow key={r.name} {...r} />
               ))}
             </div>
-            <Link href="/portal/regions" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-3">
+            <Link href="/portal/regions" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-3">
               View all regions <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
             </Link>
           </section>
@@ -297,7 +297,7 @@ export default async function SchoolsOverviewPage() {
               </ul>
               <CoverageMapHexes />
             </div>
-            <Link href="/portal/insights" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-3">
+            <Link href="/portal/insights" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-3">
               View coverage details <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
             </Link>
           </section>
@@ -341,7 +341,7 @@ export default async function SchoolsOverviewPage() {
               ))}
             </div>
             <div className="px-5 py-3 border-t border-gray-100">
-              <Link href="/portal/insights" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline">
+              <Link href="/portal/insights" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline">
                 View full scorecard <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
               </Link>
             </div>
@@ -358,7 +358,7 @@ export default async function SchoolsOverviewPage() {
                 <FunnelRow key={row.label} {...row} />
               ))}
             </ul>
-            <Link href="/portal/insights" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-4">
+            <Link href="/portal/insights" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-4">
               View funnel analysis <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
             </Link>
           </section>
@@ -387,7 +387,7 @@ export default async function SchoolsOverviewPage() {
                   <span className="text-gray-700 truncate">{v.district}</span>
                   <span className="text-gray-700 truncate">{v.coach}</span>
                   <span>
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#066a67]">
                       {v.status}
                     </span>
                   </span>
@@ -395,7 +395,7 @@ export default async function SchoolsOverviewPage() {
               ))}
             </div>
             <div className="px-5 py-3 border-t border-gray-100">
-              <Link href="/portal/visits" className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline">
+              <Link href="/portal/visits" className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline">
                 View all visits <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
               </Link>
             </div>
@@ -429,13 +429,13 @@ export default async function SchoolsOverviewPage() {
         {/* Network Insights bar */}
         <section className="rounded-2xl bg-emerald-50/60 border border-emerald-100 px-5 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-[#066a67] shrink-0">
               <BarChart3 className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
               <p className="text-[14px] font-bold text-gray-900 leading-tight">Network Insights</p>
               <p className="text-[12px] text-gray-700 leading-snug mt-0.5">
-                <strong className="text-emerald-700">67%</strong> of supported schools are now <strong className="text-emerald-700">above</strong> the expected implementation benchmark, with strongest gains in <strong className="text-emerald-700">Acholi</strong> and <strong className="text-emerald-700">Central</strong> regions.
+                <strong className="text-[#066a67]">67%</strong> of supported schools are now <strong className="text-[#066a67]">above</strong> the expected implementation benchmark, with strongest gains in <strong className="text-[#066a67]">Acholi</strong> and <strong className="text-[#066a67]">Central</strong> regions.
               </p>
             </div>
           </div>
@@ -472,7 +472,7 @@ function SchoolsKpi({
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-tight truncate">{label}</p>
       </div>
       <p className="text-[24px] lg:text-[26px] font-extrabold text-gray-900 leading-none tracking-tight truncate">{value}</p>
-      <p className="text-[11px] text-emerald-700 font-semibold mt-auto inline-flex items-center gap-0.5">
+      <p className="text-[11px] text-[#066a67] font-semibold mt-auto inline-flex items-center gap-0.5">
         <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
         {delta}% <span className="text-gray-500 font-medium ml-0.5">vs last month</span>
       </p>
@@ -601,7 +601,7 @@ function CoverageMapHexes() {
 
 function StatusPill({ status }: { status: string }) {
   const cls = status === "High Performing"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+    ? "bg-emerald-50 text-[#066a67] border-emerald-100"
     : status === "Improving"
       ? "bg-amber-50 text-amber-700 border-amber-100"
       : status === "At Risk"
@@ -645,7 +645,7 @@ function CardHeader({ title, link }: { title: string; link: string }) {
         <h3 className="text-[14.5px] font-bold text-gray-900 truncate">{title}</h3>
         <Info className="h-3.5 w-3.5 text-gray-300 shrink-0" strokeWidth={1.75} />
       </div>
-      <Link href={link} className="text-[11.5px] text-emerald-700 font-semibold inline-flex items-center hover:underline shrink-0">
+      <Link href={link} className="text-[11.5px] text-[#066a67] font-semibold inline-flex items-center hover:underline shrink-0">
         View all <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
       </Link>
     </div>

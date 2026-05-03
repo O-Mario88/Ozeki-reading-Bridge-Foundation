@@ -64,7 +64,7 @@ export function OzekiTopBar({
           </form>
 
           {/* Synced */}
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-[12px] font-bold text-emerald-700">
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[12px] font-bold text-[#066a67]">
             <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
             Synced
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ml-0.5" aria-hidden />
@@ -123,7 +123,7 @@ export function OzekiTopBar({
             aria-label="Profile"
             className="flex items-center gap-1.5 hover:opacity-90"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-700 text-[12px] font-bold text-white">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-[#066a67] text-[12px] font-bold text-white">
               {initials}
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-gray-400" strokeWidth={2} />

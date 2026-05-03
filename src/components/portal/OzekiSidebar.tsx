@@ -102,8 +102,8 @@ export function OzekiSidebar({ user, activeHref, forceVisible = false }: Props) 
                         aria-current={isActive ? "page" : undefined}
                         className={
                           isActive
-                            ? "flex items-center gap-3 h-10 rounded-lg px-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[13px] font-semibold shadow-[0_4px_14px_-2px_rgba(249,115,22,0.55),inset_0_1px_0_rgba(255,255,255,0.18)]"
-                            : "flex items-center gap-3 h-10 rounded-lg px-3 text-white/75 text-[13px] font-medium hover:bg-orange-500/15 hover:text-orange-200 transition"
+                            ? "flex items-center gap-3 h-10 rounded-lg px-3 bg-gradient-to-r from-[#ff7235] to-[#e85f24] text-white text-[13px] font-semibold shadow-[0_4px_14px_-2px_rgba(255,114,53,0.55),inset_0_1px_0_rgba(255,255,255,0.18)]"
+                            : "flex items-center gap-3 h-10 rounded-lg px-3 text-white/75 text-[13px] font-medium hover:bg-[#ff7235]/15 hover:text-[#ffd8c4] transition"
                         }
                       >
                         <Icon

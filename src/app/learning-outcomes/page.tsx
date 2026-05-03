@@ -26,7 +26,7 @@ function formatNumber(n: number): string {
 
 function deltaTone(delta: number | null): string {
   if (delta == null) return "text-gray-400";
-  if (delta >= 4) return "text-emerald-700";
+  if (delta >= 4) return "text-[#066a67]";
   if (delta >= 1) return "text-emerald-600";
   if (delta >= 0) return "text-gray-700";
   return "text-red-600";
@@ -88,7 +88,7 @@ export default async function LearningOutcomesPage() {
             <div className="text-center">
               {shift && shift.deltaPoints != null ? (
                 <>
-                  <p className="text-4xl font-extrabold text-emerald-700 tabular-nums">
+                  <p className="text-4xl font-extrabold text-[#066a67] tabular-nums">
                     {shift.deltaPoints > 0 ? "+" : ""}{shift.deltaPoints} pts
                   </p>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mt-2">

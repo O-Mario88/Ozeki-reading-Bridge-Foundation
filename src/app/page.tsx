@@ -356,7 +356,7 @@ export default async function HomePage() {
                   <p className="text-sm text-gray-500 mt-2">
                     Baseline → endline composite, paired across {readingShift.endlineLearners.toLocaleString()} learners.
                     {readingShift.improvedSharePct != null && (
-                      <> <span className="font-semibold text-emerald-700">{readingShift.improvedSharePct}%</span> improved by at least one stage.</>
+                      <> <span className="font-semibold text-[#066a67]">{readingShift.improvedSharePct}%</span> improved by at least one stage.</>
                     )}
                   </p>
                 </article>
@@ -411,7 +411,7 @@ export default async function HomePage() {
                   <p className="text-sm text-gray-500 mt-2">
                     learner-authored stories published.
                     {storyGrowth.newThisMonth > 0 && (
-                      <> <span className="font-semibold text-emerald-700">+{storyGrowth.newThisMonth}</span> this month
+                      <> <span className="font-semibold text-[#066a67]">+{storyGrowth.newThisMonth}</span> this month
                         {storyGrowth.monthOnMonthDeltaPct != null && (
                           <>{" "}
                             ({storyGrowth.monthOnMonthDeltaPct >= 0 ? "+" : ""}

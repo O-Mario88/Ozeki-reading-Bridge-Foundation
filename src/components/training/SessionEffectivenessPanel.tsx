@@ -52,7 +52,7 @@ function deltaIcon(delta: number | null) {
 
 function deltaClass(delta: number | null): string {
   if (delta == null) return "text-gray-400";
-  if (delta > 0.5) return "text-emerald-700";
+  if (delta > 0.5) return "text-[#066a67]";
   if (delta < -0.5) return "text-red-600";
   return "text-gray-500";
 }

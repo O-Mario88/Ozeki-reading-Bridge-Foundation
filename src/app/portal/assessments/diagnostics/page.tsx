@@ -14,7 +14,7 @@ interface PageProps {
 export const metadata = { title: "Item-Level Diagnostics | Ozeki Portal" };
 
 function accuracyColor(pct: number): string {
-  if (pct >= 75) return "text-emerald-700 bg-emerald-50";
+  if (pct >= 75) return "text-[#066a67] bg-emerald-50";
   if (pct >= 50) return "text-amber-700 bg-amber-50";
   return "text-red-700 bg-red-50";
 }

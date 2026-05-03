@@ -92,7 +92,7 @@ export default async function ReportsPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-[24px] md:text-[28px] font-extrabold tracking-tight text-gray-900 leading-tight">Reports</h1>
-              <ShieldCheck className="h-5 w-5 text-emerald-700 shrink-0" strokeWidth={1.75} />
+              <ShieldCheck className="h-5 w-5 text-[#066a67] shrink-0" strokeWidth={1.75} />
             </div>
             <p className="text-[13px] md:text-[14px] text-gray-500 leading-snug">
               Create, analyze, and export reports to drive data-informed decisions.
@@ -109,7 +109,7 @@ export default async function ReportsPage() {
             </Link>
             <Link
               href="/portal/reports?action=new"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-700 text-white text-[13px] font-semibold shadow-sm hover:bg-emerald-800 whitespace-nowrap"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[#066a67] text-white text-[13px] font-semibold shadow-sm hover:bg-[#044f4d] whitespace-nowrap"
             >
               <Plus className="h-4 w-4" strokeWidth={2} />
               New Report
@@ -190,7 +190,7 @@ export default async function ReportsPage() {
             <h2 className="text-[16px] font-bold text-gray-900">Quick Reports</h2>
             <Link
               href="/portal/reports?view=all"
-              className="text-[12px] text-emerald-700 font-semibold inline-flex items-center hover:underline whitespace-nowrap"
+              className="text-[12px] text-[#066a67] font-semibold inline-flex items-center hover:underline whitespace-nowrap"
             >
               View all reports <ArrowUpRight className="h-3.5 w-3.5 ml-0.5" strokeWidth={2} />
             </Link>
@@ -223,7 +223,7 @@ export default async function ReportsPage() {
             <h2 className="text-[16px] font-bold text-gray-900">Recent Reports</h2>
             <Link
               href="/portal/reports?view=all"
-              className="text-[12px] text-emerald-700 font-semibold inline-flex items-center hover:underline whitespace-nowrap"
+              className="text-[12px] text-[#066a67] font-semibold inline-flex items-center hover:underline whitespace-nowrap"
             >
               View all reports <ArrowUpRight className="h-3.5 w-3.5 ml-0.5" strokeWidth={2} />
             </Link>
@@ -259,7 +259,7 @@ export default async function ReportsPage() {
                     </div>
                     <div className="flex flex-col items-center gap-1 shrink-0">
                       <FormatIcon format={r.format} />
-                      <span className="inline-flex px-1.5 py-px rounded-full text-[8.5px] font-bold bg-emerald-50 text-emerald-700 whitespace-nowrap">
+                      <span className="inline-flex px-1.5 py-px rounded-full text-[8.5px] font-bold bg-emerald-50 text-[#066a67] whitespace-nowrap">
                         {r.status}
                       </span>
                     </div>
@@ -310,7 +310,7 @@ export default async function ReportsPage() {
                   {r.format}
                 </span>
                 <span>
-                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#066a67] border border-emerald-100">
                     {r.status}
                   </span>
                 </span>
@@ -361,7 +361,7 @@ export default async function ReportsPage() {
         {/* Report Insights bar */}
         <section className="rounded-2xl bg-gradient-to-r from-emerald-50 to-white border border-emerald-100 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-[#066a67] shrink-0">
               <FileBarChart className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
@@ -371,7 +371,7 @@ export default async function ReportsPage() {
               </p>
               <Link
                 href="/portal/insights"
-                className="text-[12px] text-emerald-700 font-semibold inline-flex items-center hover:underline mt-1"
+                className="text-[12px] text-[#066a67] font-semibold inline-flex items-center hover:underline mt-1"
               >
                 View reporting analytics <ArrowUpRight className="h-3.5 w-3.5 ml-0.5" strokeWidth={2} />
               </Link>
@@ -419,7 +419,7 @@ function ReportsKpi({
         <p className="text-[11px] text-gray-500 mt-1">{sub}</p>
       </div>
       <div className="flex items-center gap-1.5 text-[11px] mt-auto">
-        <span className="inline-flex items-center gap-0.5 font-bold text-emerald-700">
+        <span className="inline-flex items-center gap-0.5 font-bold text-[#066a67]">
           <ArrowUpRight className="h-2.5 w-2.5" strokeWidth={2} />
           {delta}%
         </span>
@@ -460,7 +460,7 @@ function FilterField({
 function FormatIcon({ format }: { format: "PDF" | "Excel" }) {
   if (format === "Excel") {
     return (
-      <span className="grid h-5 w-5 place-items-center rounded text-emerald-700">
+      <span className="grid h-5 w-5 place-items-center rounded text-[#066a67]">
         <FileSpreadsheet className="h-4 w-4" strokeWidth={1.75} />
       </span>
     );
@@ -483,7 +483,7 @@ function PageBtn({
       type="button"
       className={`inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-md text-[12px] font-bold transition ${
         active
-          ? "bg-emerald-700 text-white"
+          ? "bg-[#066a67] text-white"
           : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
       }`}
       {...rest}

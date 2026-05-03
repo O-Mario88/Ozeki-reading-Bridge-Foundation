@@ -30,7 +30,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
   const s = status.toLowerCase();
   if (s === "completed" || s === "paid") {
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-sm font-semibold border border-emerald-100">
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-[#066a67] text-sm font-semibold border border-emerald-100">
         <CheckCircle className="w-3.5 h-3.5" /> Completed
       </span>
     );
@@ -288,7 +288,7 @@ export default async function DonorSelfServicePage({ params }: PageProps) {
         {/* Thank-you message for paid */}
         {isPaid && (
           <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 mb-5">
-            <p className="text-sm text-emerald-800 font-semibold flex items-start gap-2">
+            <p className="text-sm text-[#044f4d] font-semibold flex items-start gap-2">
               <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
               Thank you. Your donation has been received and supports active literacy programs across Uganda.
             </p>

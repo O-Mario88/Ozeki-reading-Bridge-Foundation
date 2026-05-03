@@ -104,13 +104,13 @@ export function DataManagementPanel({ initialCategories }: { initialCategories: 
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div className="text-sm text-emerald-900 flex-1">
             <p className="font-semibold">Cleared: {categories.find((c) => c.key === lastCleared.key)?.label ?? lastCleared.key}</p>
-            <p className="text-xs text-emerald-800 mt-0.5">
+            <p className="text-xs text-[#044f4d] mt-0.5">
               {lastCleared.tablesCleared} tables · {lastCleared.rowsCleared.toLocaleString()} rows deleted
             </p>
           </div>
           <button
             onClick={() => setLastCleared(null)}
-            className="text-emerald-700 hover:text-emerald-900"
+            className="text-[#066a67] hover:text-emerald-900"
             aria-label="Dismiss"
           >
             <X className="w-4 h-4" />
