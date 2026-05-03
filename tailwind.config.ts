@@ -34,6 +34,18 @@ const config: Config = {
         // Semantic aliases.
         primary: "#066a67",
         accent:  "#ff7235",
+        // Action button color system (matches the reference button images).
+        // Used by <Button variant="action|positive|warning|attention" />.
+        action: {
+          blue:     "#377FEF",
+          blueDark: "#1f5cce",
+          red:      "#F2382F",
+          redDark:  "#c92a22",
+          green:    "#2EAD55",
+          greenDark:"#1f8a40",
+          yellow:   "#FFB31A",
+          yellowDark:"#d99100",
+        },
         // Legacy palette names — re-pointed to the new tokens so any
         // unswept call sites adopt the rebrand automatically.
         ozeki: {

@@ -76,7 +76,7 @@ export function SchoolProfileActionsClient({ school }: Props) {
         </Link>
         <button
           type="button"
-          className="button button-compact button-error ml-auto"
+          className="button button-compact button-warning ml-auto"
           onClick={handleDelete}
           disabled={isDeleting}
         >

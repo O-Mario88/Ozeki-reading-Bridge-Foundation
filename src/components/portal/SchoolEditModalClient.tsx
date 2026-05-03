@@ -273,7 +273,7 @@ export function SchoolEditModalClient({ school }: Props) {
           </fieldset>
 
           <div className="full-width action-row portal-form-actions">
-            <button className="button" type="submit" disabled={saving}>
+            <button className="button button-positive" type="submit" disabled={saving}>
               {saving ? "Saving..." : "Save profile changes"}
             </button>
             <button

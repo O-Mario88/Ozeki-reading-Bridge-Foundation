@@ -99,7 +99,7 @@ export function FinancePurgePanel() {
           <button
             onClick={() => run(true)}
             disabled={running !== null}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:bg-gray-300 text-white text-sm font-semibold transition"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#377FEF] hover:bg-[#1f5cce] disabled:bg-gray-300 text-white text-sm font-semibold transition"
           >
             {running === "dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
             Preview row counts
@@ -130,7 +130,7 @@ export function FinancePurgePanel() {
         <button
           onClick={() => run(false)}
           disabled={running !== null || confirm !== CONFIRM_PHRASE}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:bg-gray-300 text-white text-sm font-semibold transition"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#F2382F] hover:bg-[#c92a22] disabled:bg-gray-300 text-white text-sm font-semibold transition"
         >
           {running === "live" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
           Purge all finance data

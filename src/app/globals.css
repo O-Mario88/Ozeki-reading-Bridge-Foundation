@@ -20,6 +20,120 @@
   --orbf-orange-muted:#ffd8c4;
   --orbf-focus-teal:   rgba(6, 106, 103, 0.35);
   --orbf-focus-orange: rgba(255, 114, 53, 0.35);
+
+  /* Action button color system — matches the reference button images.
+     Use via .button-action / .button-positive / .button-warning /
+     .button-attention or the <Button variant="..." /> component. */
+  --orbf-action-blue:        #377FEF;
+  --orbf-action-blue-dark:   #1f5cce;
+  --orbf-action-red:         #F2382F;
+  --orbf-action-red-dark:    #c92a22;
+  --orbf-action-green:       #2EAD55;
+  --orbf-action-green-dark:  #1f8a40;
+  --orbf-action-yellow:      #FFB31A;
+  --orbf-action-yellow-dark: #d99100;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Button variant overlays — override only background + border + hover
+   on top of the existing .button base class. Shape, padding, and font
+   come from the base class so existing call sites stay layout-stable.
+   For the rectangular reference style (uppercase, taller, more shadow)
+   add `.button-action-rect` alongside the variant.
+   ───────────────────────────────────────────────────────────────────── */
+.button-action,
+.button-action:focus-visible,
+.button-action:hover {
+  background: var(--orbf-action-blue);
+  border-color: var(--orbf-action-blue);
+  color: #ffffff;
+}
+.button-action:hover {
+  background: var(--orbf-action-blue-dark);
+  border-color: var(--orbf-action-blue-dark);
+}
+
+.button-positive,
+.button-positive:focus-visible,
+.button-positive:hover {
+  background: var(--orbf-action-green);
+  border-color: var(--orbf-action-green);
+  color: #ffffff;
+}
+.button-positive:hover {
+  background: var(--orbf-action-green-dark);
+  border-color: var(--orbf-action-green-dark);
+}
+
+.button-warning,
+.button-warning:focus-visible,
+.button-warning:hover {
+  background: var(--orbf-action-red);
+  border-color: var(--orbf-action-red);
+  color: #ffffff;
+}
+.button-warning:hover {
+  background: var(--orbf-action-red-dark);
+  border-color: var(--orbf-action-red-dark);
+}
+
+.button-attention,
+.button-attention:focus-visible,
+.button-attention:hover {
+  background: var(--orbf-action-yellow);
+  border-color: var(--orbf-action-yellow);
+  color: #ffffff;
+}
+.button-attention:hover {
+  background: var(--orbf-action-yellow-dark);
+  border-color: var(--orbf-action-yellow-dark);
+}
+
+.button-brand,
+.button-brand:focus-visible,
+.button-brand:hover {
+  background: var(--orbf-teal);
+  border-color: var(--orbf-teal);
+  color: #ffffff;
+}
+.button-brand:hover {
+  background: var(--orbf-teal-dark);
+  border-color: var(--orbf-teal-dark);
+}
+
+.button-brand-orange,
+.button-brand-orange:focus-visible,
+.button-brand-orange:hover {
+  background: var(--orbf-orange);
+  border-color: var(--orbf-orange);
+  color: #ffffff;
+}
+.button-brand-orange:hover {
+  background: var(--orbf-orange-dark);
+  border-color: var(--orbf-orange-dark);
+}
+
+/* Rectangular action style — uppercase, taller, bold, subtle drop shadow,
+   matches the reference button image. Layered on top of any variant.
+   Example: <button className="button button-warning button-action-rect">
+   Use sparingly — only for hero CTAs and primary call-to-action buttons. */
+.button-action-rect {
+  min-height: 46px !important;
+  padding: 0 28px !important;
+  border-radius: 7px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  font-size: 13px !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+.button-action-rect:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 11px 24px rgba(15, 23, 42, 0.22);
+}
+.button-action-rect:active {
+  transform: translateY(0);
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.16);
 }
 
 /* Global Scroll Padding for Sticky Header */
