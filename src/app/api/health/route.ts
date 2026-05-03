@@ -10,6 +10,71 @@ import { getOpenAiServerConfig } from "@/lib/server/openai-config";
 
 export const runtime = "nodejs";
 
+type CredentialStatus = "ok" | "missing" | "partial" | "not_configured";
+
+interface PesapalConfigCheck {
+  configured: boolean;
+  status: CredentialStatus;
+  environment: "live" | "sandbox" | null;
+  missing: string[];
+}
+
+function checkPesapalCredentials(): PesapalConfigCheck {
+  const required = ["PESAPAL_CONSUMER_KEY", "PESAPAL_CONSUMER_SECRET", "PESAPAL_IPN_ID"] as const;
+  const missing = required.filter((k) => !process.env[k]?.trim());
+  const env = (process.env.PESAPAL_ENVIRONMENT?.trim() || "sandbox").toLowerCase();
+  const environment: "live" | "sandbox" | null = env === "live" ? "live" : env === "sandbox" ? "sandbox" : null;
+
+  if (missing.length === required.length) {
+    return { configured: false, status: "not_configured", environment, missing };
+  }
+  if (missing.length > 0) {
+    return { configured: false, status: "partial", environment, missing };
+  }
+  return { configured: true, status: "ok", environment, missing: [] };
+}
+
+interface SmtpConfigCheck {
+  configured: boolean;
+  status: CredentialStatus;
+  hasFromAddress: boolean;
+  port: number | null;
+  secure: boolean;
+  missing: string[];
+}
+
+function checkSmtpCredentials(): SmtpConfigCheck {
+  const host = process.env.SMTP_HOST?.trim() ?? "";
+  const user = process.env.SMTP_USER?.trim() ?? "";
+  const pass = process.env.SMTP_PASS?.trim() ?? "";
+  const portRaw = process.env.SMTP_PORT?.trim();
+  const port = portRaw ? Number(portRaw) : null;
+  const secure = String(process.env.SMTP_SECURE ?? "false").toLowerCase() === "true";
+  const hasFrom = Boolean(
+    (process.env.FINANCE_EMAIL_FROM ?? process.env.SMTP_FROM ?? "").trim(),
+  );
+
+  const missing: string[] = [];
+  if (!host) missing.push("SMTP_HOST");
+  if (!user) missing.push("SMTP_USER");
+  if (!pass) missing.push("SMTP_PASS");
+  if (!hasFrom) missing.push("SMTP_FROM (or FINANCE_EMAIL_FROM)");
+
+  let status: CredentialStatus;
+  if (missing.length === 4) status = "not_configured";
+  else if (missing.length > 0) status = "partial";
+  else status = "ok";
+
+  return {
+    configured: status === "ok",
+    status,
+    hasFromAddress: hasFrom,
+    port: port != null && Number.isFinite(port) ? port : null,
+    secure,
+    missing,
+  };
+}
+
 export async function GET(request: Request) {
   const timestamp = new Date().toISOString();
   const openAiConfig = getOpenAiServerConfig("gpt-4o-mini");
@@ -17,6 +82,8 @@ export async function GET(request: Request) {
   const aiProbeRequested = searchParams.get("aiProbe") === "1";
   let aiProbeStatus: "not_requested" | "not_configured" | "ok" | "error" = "not_requested";
   let aiProbeError: string | null = null;
+  const pesapal = checkPesapalCredentials();
+  const smtp = checkSmtpCredentials();
 
   if (aiProbeRequested) {
     if (!openAiConfig.configured || !openAiConfig.apiKey) {
@@ -44,12 +111,16 @@ export async function GET(request: Request) {
           database: "error",
           aiConfig: openAiConfig.status,
           aiProbe: aiProbeStatus,
+          pesapal: pesapal.status,
+          smtp: smtp.status,
         },
         ai: {
           configured: openAiConfig.configured,
           status: openAiConfig.status,
           model: openAiConfig.model,
         },
+        pesapal,
+        smtp,
         error: "DATABASE_URL is not configured. PostgreSQL is required.",
         ...(aiProbeError ? { aiProbeError } : {}),
       },
@@ -100,12 +171,16 @@ export async function GET(request: Request) {
           schema: schemaReady ? "ok" : "degraded",
           aiConfig: openAiConfig.status,
           aiProbe: aiProbeStatus,
+          pesapal: pesapal.status,
+          smtp: smtp.status,
         },
         ai: {
           configured: openAiConfig.configured,
           status: openAiConfig.status,
           model: openAiConfig.model,
         },
+        pesapal,
+        smtp,
         ...(aiProbeError ? { aiProbeError } : {}),
       },
       {
@@ -133,12 +208,16 @@ export async function GET(request: Request) {
           database: "error",
           aiConfig: openAiConfig.status,
           aiProbe: aiProbeStatus,
+          pesapal: pesapal.status,
+          smtp: smtp.status,
         },
         ai: {
           configured: openAiConfig.configured,
           status: openAiConfig.status,
           model: openAiConfig.model,
         },
+        pesapal,
+        smtp,
         error: error instanceof Error ? error.message : "Database health check failed.",
         ...(aiProbeError ? { aiProbeError } : {}),
       },

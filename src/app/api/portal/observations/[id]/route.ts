@@ -7,6 +7,7 @@ import {
   archiveObservationPostgres,
 } from "@/lib/server/postgres/repositories/phonics-observations";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -137,7 +138,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: RouteContext) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const user = await requirePortalUser();
     if (!user.isAdmin && !user.isSuperAdmin) {
@@ -150,6 +151,14 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext) {
     if (!existing) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
     await archiveObservationPostgres(obsId, user.id);
+    await auditLog({
+      actor: user,
+      action: "soft_delete",
+      targetTable: "phonics_observations",
+      targetId: obsId,
+      before: existing,
+      request: req,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error("[observations/[id]] DELETE failed", { error: String(error) });

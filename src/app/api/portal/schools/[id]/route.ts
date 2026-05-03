@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromSession, deleteSchoolDirectoryRecordPostgres } from "@/services/dataService";
 import { canManagePortalUsers } from "@/lib/db-api";
 import { cookies } from "next/headers";
+import { auditLog } from "@/lib/server/audit/log";
 
 import { PortalUser } from "@/lib/types";
 
@@ -36,6 +37,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     const success = await deleteSchoolDirectoryRecordPostgres(schoolId);
     if (success) {
+      await auditLog({
+        actor: user as PortalUser,
+        action: "delete",
+        targetTable: "schools",
+        targetId: schoolId,
+        request,
+      });
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: "School not found or could not be deleted" }, { status: 404 });

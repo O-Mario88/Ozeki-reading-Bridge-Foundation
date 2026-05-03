@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Headphones,
   Settings,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 import type { PortalUserRole } from "@/lib/types";
@@ -71,6 +72,7 @@ export const glassNavItems: GlassNavItem[] = [
   { href: "/portal/superadmin", label: "User Management", icon: UserCog, section: "system", superAdminOnly: true },
   { href: "/portal/data-quality", label: "Data Quality", icon: ShieldCheck, section: "system", roles: ["Staff", "Admin"] },
   { href: "/portal/support", label: "Support Requests", icon: Headphones, section: "system", roles: ["Staff", "Admin"] },
+  { href: "/portal/admin/audit-trail", label: "Audit Trail", icon: ScrollText, section: "system", roles: ["Admin"] },
   { href: "/portal/admin/settings", label: "Admin / Settings", icon: Settings, section: "system", superAdminOnly: true },
 ];
 

@@ -7,6 +7,7 @@ import {
   pinDiscussionPostPostgres,
 } from "@/lib/server/postgres/repositories/training-discussions";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -41,12 +42,20 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: RouteContext) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const user = await requirePortalUser();
-    const { postId } = await params;
+    const { id, postId } = await params;
     const isAdmin = user.isAdmin || user.isSuperAdmin;
     await deleteDiscussionPostPostgres(Number(postId), user.id, isAdmin);
+    await auditLog({
+      actor: user,
+      action: "delete",
+      targetTable: "training_session_discussions",
+      targetId: Number(postId),
+      detail: `From session ${id}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error("[discussions/id] DELETE failed", { error: String(error) });

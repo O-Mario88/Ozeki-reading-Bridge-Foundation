@@ -8,6 +8,7 @@ import {
   ApprovalNotAuthorizedError,
 } from "@/lib/server/postgres/repositories/finance-controls";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -37,6 +38,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       approverRoles: userApprovalRoles(user),
       decision: parsed.decision,
       notes: parsed.notes ?? null,
+    });
+    await auditLog({
+      actor: user,
+      action: parsed.decision === "approved" ? "approve" : "reject",
+      targetTable: "finance_approvals",
+      targetId: Number(id),
+      detail: parsed.notes ?? `${parsed.decision} via approvals workflow`,
+      after: { decision: parsed.decision },
+      request: req,
     });
     return NextResponse.json({ ok: true, approval: result });
   } catch (error) {

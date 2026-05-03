@@ -8,6 +8,7 @@ import {
 } from "@/services/financeService";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 
 const patchSchema = z.object({
   contactId: z.coerce.number().int().positive().optional(),
@@ -101,11 +102,31 @@ export async function DELETE(
     if (!current) {
       return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
     }
+    const auditActor = { id: auth.actor.id, name: auth.actor.userName };
     if (current.status === "draft") {
       const deleted = await deleteFinanceInvoiceDraftAsync(invoiceId, parsed.reason, auth.actor);
+      await auditLog({
+        actor: auditActor,
+        action: "delete",
+        targetTable: "finance_invoices",
+        targetId: invoiceId,
+        before: current,
+        detail: parsed.reason,
+        request,
+      });
       return NextResponse.json({ deleted });
     }
     const invoice = await voidFinanceInvoiceAsync(invoiceId, parsed.reason, auth.actor);
+    await auditLog({
+      actor: auditActor,
+      action: "void",
+      targetTable: "finance_invoices",
+      targetId: invoiceId,
+      before: current,
+      after: invoice,
+      detail: parsed.reason,
+      request,
+    });
     return NextResponse.json({ invoice, deleted: null });
   } catch (error) {
     if (error instanceof z.ZodError) {

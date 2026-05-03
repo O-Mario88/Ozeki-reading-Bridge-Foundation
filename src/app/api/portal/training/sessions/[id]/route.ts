@@ -7,6 +7,7 @@ import {
   updateCalendarEventAttendees,
 } from "@/lib/google-calendar";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -97,7 +98,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: RouteContext) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const user = await requirePortalUser();
     if (!user.isAdmin && !user.isSuperAdmin) {
@@ -124,6 +125,16 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext) {
         logger.warn("[training/sessions/[id]] Calendar event deletion failed", { error: String(err) }),
       );
     }
+
+    await auditLog({
+      actor: user,
+      action: "soft_delete",
+      targetTable: "training_sessions",
+      targetId: sessionId,
+      before: { title: session.title, startTime: session.startTime, status: session.status },
+      detail: "Training session canceled",
+      request: req,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -7,6 +7,7 @@ import {
 import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
 import { PortalRecordPayload, PortalUser } from "@/lib/types";
 import { sanitisedErrorResponse } from "@/lib/server/http/error-response";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -196,8 +197,20 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const reason = searchParams.get("reason") || "User requested deletion via API";
 
+    const before = await getPortalRecordById(id).catch(() => null);
+
     const { softDeletePortalRecord } = await import("@/services/dataService");
     await softDeletePortalRecord(id, user.id, reason);
+
+    await auditLog({
+      actor: user,
+      action: "soft_delete",
+      targetTable: "portal_records",
+      targetId: id,
+      before,
+      detail: reason,
+      request,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

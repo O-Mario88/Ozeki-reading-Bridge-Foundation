@@ -6,6 +6,7 @@ import {
   lockFinancePeriodPostgres,
 } from "@/lib/server/postgres/repositories/finance-controls";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -34,6 +35,15 @@ export async function POST(req: NextRequest) {
     }
     const parsed = createSchema.parse(await req.json());
     const lock = await lockFinancePeriodPostgres({ ...parsed, lockedByUserId: user.id });
+    await auditLog({
+      actor: user,
+      action: "settings_update",
+      targetTable: "finance_period_locks",
+      targetId: lock?.id ?? null,
+      detail: `Locked finance period ${parsed.periodStart} – ${parsed.periodEnd}`,
+      after: parsed,
+      request: req,
+    });
     return NextResponse.json({ ok: true, lock }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -7,6 +7,7 @@ import {
   deleteChapterPostgres,
 } from "@/lib/server/postgres/repositories/training-chapters";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -45,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: RouteContext) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const user = await requirePortalUser();
     const { id, chapterId } = await params;
@@ -53,6 +54,14 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
     await deleteChapterPostgres(Number(chapterId));
+    await auditLog({
+      actor: user,
+      action: "delete",
+      targetTable: "training_session_chapters",
+      targetId: Number(chapterId),
+      detail: `From session ${id}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error("[chapters/id] DELETE failed", { error: String(error) });

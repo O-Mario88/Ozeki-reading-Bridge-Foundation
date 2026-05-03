@@ -3,10 +3,11 @@ import { cookies } from "next/headers";
 import { getPortalUserFromSession } from "@/services/dataService";
 import { canManagePortalUsers } from "@/lib/db-api";
 import { deleteContactPostgres } from "@/lib/server/postgres/repositories/schools";
+import { auditLog } from "@/lib/server/audit/log";
 import type { PortalUser } from "@/lib/types";
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ contactId: string }> },
 ) {
   try {
@@ -41,6 +42,13 @@ export async function DELETE(
     if (deleted) {
       const { revalidateTag } = await import("next/cache");
       revalidateTag("crm-contact");
+      await auditLog({
+        actor: user as PortalUser,
+        action: "delete",
+        targetTable: "contacts",
+        targetId: contactId,
+        request,
+      });
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(

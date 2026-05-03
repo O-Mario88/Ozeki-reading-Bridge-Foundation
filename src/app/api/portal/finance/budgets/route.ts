@@ -5,6 +5,7 @@ import {
   upsertFinanceOperationBudgetPostgres,
   deleteFinanceOperationBudgetPostgres
 } from "@/lib/server/postgres/repositories/finance-budgets";
+import { auditLog } from "@/lib/server/audit/log";
 
 /* GET — list all operational budgets */
 export async function GET(_request: NextRequest) {
@@ -32,7 +33,16 @@ export async function POST(request: NextRequest) {
             submit: body.submit,
             items: body.items
         }, id, actor.id);
-        
+
+        await auditLog({
+          actor: { id: actor.id, name: actor.userName },
+          action: id ? "update" : "create",
+          targetTable: "finance_operation_budgets",
+          targetId: record?.id ?? id,
+          after: { title: body.title, period: body.period, submit: body.submit, itemCount: body.items?.length ?? 0 },
+          request,
+        });
+
         return NextResponse.json({ budget: record });
     } catch (err) {
         return NextResponse.json(
@@ -53,6 +63,13 @@ export async function DELETE(request: NextRequest) {
         if (!id) throw new Error("Missing budget id");
 
         await deleteFinanceOperationBudgetPostgres(Number(id));
+        await auditLog({
+          actor: { id: actor.id, name: actor.userName },
+          action: "delete",
+          targetTable: "finance_operation_budgets",
+          targetId: Number(id),
+          request,
+        });
         return NextResponse.json({ success: true });
     } catch (err) {
         return NextResponse.json(

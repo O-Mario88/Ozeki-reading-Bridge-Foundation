@@ -7,6 +7,7 @@ import {
   voidFinanceExpenseAsync,
 } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -56,12 +57,33 @@ export async function DELETE(
       return NextResponse.json({ error: "Expense not found." }, { status: 404 });
     }
 
+    const auditActor = { id: auth.actor.id, name: auth.actor.userName };
+
     if (current.status === "draft") {
       const deleted = await deleteFinanceExpenseDraftAsync(expenseId, parsed.reason, auth.actor);
+      await auditLog({
+        actor: auditActor,
+        action: "delete",
+        targetTable: "finance_expenses",
+        targetId: expenseId,
+        before: current,
+        detail: parsed.reason,
+        request,
+      });
       return NextResponse.json({ deleted, expense: null });
     }
 
     const expense = await voidFinanceExpenseAsync(expenseId, parsed.reason, auth.actor);
+    await auditLog({
+      actor: auditActor,
+      action: "void",
+      targetTable: "finance_expenses",
+      targetId: expenseId,
+      before: current,
+      after: expense,
+      detail: parsed.reason,
+      request,
+    });
     return NextResponse.json({ deleted: null, expense });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -10,6 +10,7 @@ import {
 } from "@/lib/server/postgres/repositories/public-content";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -177,6 +178,16 @@ export async function DELETE(request: Request) {
     }
     await removeStoredFile(existing.photoStoredPath);
     await deletePortalLeadershipTeamMemberPostgres(id);
+    if (user) {
+      await auditLog({
+        actor: user,
+        action: "delete",
+        targetTable: "portal_leadership_team",
+        targetId: id,
+        before: existing,
+        request,
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

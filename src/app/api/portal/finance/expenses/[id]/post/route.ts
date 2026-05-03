@@ -3,6 +3,7 @@ import { z } from "zod";
 import { postFinanceExpenseAsync } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
 import { readOptionalJsonBody, JsonBodyError } from "@/lib/server/http/json-body";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -23,6 +24,15 @@ export async function POST(
   try {
     await readOptionalJsonBody(request); // body is optional but must be valid JSON if present
     const updatedExpense = await postFinanceExpenseAsync(Number(id), auth.actor);
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: "post",
+      targetTable: "finance_expenses",
+      targetId: expenseId,
+      after: updatedExpense,
+      detail: "Expense posted to ledger",
+      request,
+    });
     return NextResponse.json({ expense: updatedExpense });
   } catch (error) {
     if (error instanceof JsonBodyError) {

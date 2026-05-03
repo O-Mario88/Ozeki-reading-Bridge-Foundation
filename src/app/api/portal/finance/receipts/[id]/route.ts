@@ -6,6 +6,7 @@ import {
   voidFinanceReceiptAsync,
 } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -54,12 +55,33 @@ export async function DELETE(
       return NextResponse.json({ error: "Receipt not found." }, { status: 404 });
     }
 
+    const auditActor = { id: auth.actor.id, name: auth.actor.userName };
+
     if (current.status === "draft") {
       const deleted = await deleteFinanceReceiptDraftAsync(receiptId, parsed.reason, auth.actor);
+      await auditLog({
+        actor: auditActor,
+        action: "delete",
+        targetTable: "finance_receipts",
+        targetId: receiptId,
+        before: current,
+        detail: parsed.reason,
+        request,
+      });
       return NextResponse.json({ deleted, receipt: null });
     }
 
     const receipt = await voidFinanceReceiptAsync(receiptId, parsed.reason, auth.actor);
+    await auditLog({
+      actor: auditActor,
+      action: "void",
+      targetTable: "finance_receipts",
+      targetId: receiptId,
+      before: current,
+      after: receipt,
+      detail: parsed.reason,
+      request,
+    });
     return NextResponse.json({ deleted: null, receipt });
   } catch (error) {
     if (error instanceof z.ZodError) {

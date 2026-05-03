@@ -6,6 +6,7 @@ import {
   getApiKeyUsageSummaryPostgres,
 } from "@/lib/server/postgres/repositories/api-keys";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -45,6 +46,14 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
       // empty body is ok
     }
     await revokeApiKeyPostgres(Number(id), reason);
+    await auditLog({
+      actor: user,
+      action: "permission_revoke",
+      targetTable: "api_keys",
+      targetId: Number(id),
+      detail: reason,
+      request: req,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error("[admin/api-keys/id] DELETE failed", { error: String(error) });

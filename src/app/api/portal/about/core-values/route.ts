@@ -6,6 +6,7 @@ import {
   updatePortalCoreValuePostgres,
 } from "@/lib/server/postgres/repositories/public-content";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -79,6 +80,15 @@ export async function DELETE(request: Request) {
   try {
     const body = z.object({ id: z.number().int().positive() }).parse(await request.json());
     await deletePortalCoreValuePostgres(body.id);
+    if (user) {
+      await auditLog({
+        actor: user,
+        action: "delete",
+        targetTable: "portal_core_values",
+        targetId: body.id,
+        request,
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

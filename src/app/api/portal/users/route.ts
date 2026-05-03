@@ -10,6 +10,7 @@ import {
   updatePortalUserPermissions,
 } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -91,6 +92,15 @@ export async function POST(request: Request) {
       mustChangePassword: shouldInvite,
     }, user);
 
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "portal_users",
+      detail: `Created ${payload.role} account for ${payload.email}${shouldInvite ? " (invite sent)" : ""}`,
+      after: { email: payload.email, role: payload.role, fullName: payload.fullName },
+      request,
+    });
+
     // Send invitation email if requested
     if (shouldInvite) {
       try {
@@ -139,6 +149,22 @@ export async function PATCH(request: Request) {
   try {
     const payload = updateUserSchema.parse(await request.json());
     await updatePortalUserPermissions(payload.userId, payload, user);
+    const isRoleOrPermChange =
+      payload.role !== undefined ||
+      payload.isAdmin !== undefined ||
+      payload.isSuperAdmin !== undefined ||
+      payload.isSupervisor !== undefined ||
+      payload.isME !== undefined ||
+      payload.status !== undefined ||
+      payload.password !== undefined;
+    await auditLog({
+      actor: user,
+      action: isRoleOrPermChange ? "role_change" : "update",
+      targetTable: "portal_users",
+      targetId: payload.userId,
+      after: { ...payload, password: payload.password ? "[redacted]" : undefined },
+      request,
+    });
     return NextResponse.json({
       ok: true,
       users: await listPortalUsersForAdmin(user),
@@ -169,6 +195,13 @@ export async function DELETE(request: Request) {
   try {
     const payload = deleteUserSchema.parse(await request.json());
     await deletePortalUserAccount(payload.userId, user);
+    await auditLog({
+      actor: user,
+      action: "delete",
+      targetTable: "portal_users",
+      targetId: payload.userId,
+      request,
+    });
     return NextResponse.json({
       ok: true,
       users: await listPortalUsersForAdmin(user),

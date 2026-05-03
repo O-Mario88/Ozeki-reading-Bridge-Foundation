@@ -4,6 +4,7 @@ import { requirePortalUser } from "@/lib/auth";
 import { runFinanceResetBatchPostgres } from "@/lib/server/postgres/repositories/finance-lifecycle";
 import { logger } from "@/lib/logger";
 import { readOptionalJsonBody, JsonBodyError } from "@/lib/server/http/json-body";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -34,6 +35,16 @@ export async function POST(req: NextRequest) {
       actorUserId: user.id,
       dryRun: Boolean(parsed.dryRun),
     });
+    if (!parsed.dryRun) {
+      await auditLog({
+        actor: user,
+        action: "bulk_delete",
+        targetTable: "finance_reset_batch",
+        detail: "Finance reset batch — duplicate rows archived",
+        after: result,
+        request: req,
+      });
+    }
     return NextResponse.json({ ok: true, dryRun: Boolean(parsed.dryRun), summary: result });
   } catch (err) {
     if (err instanceof JsonBodyError) {

@@ -6,6 +6,7 @@ import {
   removeSessionFromProgrammePostgres,
 } from "@/lib/server/postgres/repositories/training-programmes";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const { id } = await params;
     const parsed = addSchema.parse(await req.json());
     await addSessionToProgrammePostgres(Number(id), parsed.sessionId, parsed.sortOrder ?? 0, parsed.required ?? true);
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "training_programmes",
+      targetId: Number(id),
+      detail: `Added session #${parsed.sessionId}`,
+      after: parsed,
+      request: req,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -46,6 +56,14 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     const sessionId = Number(req.nextUrl.searchParams.get("sessionId"));
     if (!sessionId) return NextResponse.json({ error: "sessionId required." }, { status: 400 });
     await removeSessionFromProgrammePostgres(Number(id), sessionId);
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "training_programmes",
+      targetId: Number(id),
+      detail: `Removed session #${sessionId}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error("[programmes/sessions] DELETE failed", { error: String(error) });

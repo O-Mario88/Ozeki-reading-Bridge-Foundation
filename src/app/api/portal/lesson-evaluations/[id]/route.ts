@@ -9,11 +9,11 @@ import {
 } from "@/lib/lesson-evaluation";
 import {
   getLessonEvaluationByIdAsync,
-  logAuditEvent,
   updateLessonEvaluationAsync,
   voidLessonEvaluationAsync,
 } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -155,26 +155,26 @@ export async function PATCH(
       user.id,
     );
 
-    logAuditEvent(
-      user.id,
-      user.fullName,
-      "update",
-      "lesson_evaluations",
-      evaluation.id,
-      JSON.stringify({
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "lesson_evaluations",
+      targetId: evaluation.id,
+      before: {
         schoolId: before.schoolId,
         teacherUid: before.teacherUid,
         lessonDate: before.lessonDate,
         visitId: (before as Record<string, unknown>).visitId,
-      }),
-      JSON.stringify({
+      },
+      after: {
         schoolId: evaluation.schoolId,
         teacherUid: evaluation.teacherUid,
         lessonDate: evaluation.lessonDate,
         visitId: (evaluation as Record<string, unknown>).visitId,
-      }),
-      "Lesson evaluation updated.",
-    );
+      },
+      detail: "Lesson evaluation updated.",
+      request,
+    });
 
     return NextResponse.json({ ok: true, evaluation });
   } catch (error) {
@@ -217,21 +217,16 @@ export async function DELETE(
       return NextResponse.json({ error: "Lesson evaluation not found." }, { status: 404 });
     }
 
-    logAuditEvent(
-      user.id,
-      user.fullName,
-      "void",
-      "lesson_evaluations",
-      evaluation.id,
-      JSON.stringify({
-        status: (before as Record<string, unknown>).status,
-      }),
-      JSON.stringify({
-        status: (evaluation as Record<string, unknown>).status,
-        reason: parsed.reason,
-      }),
-      "Lesson evaluation voided.",
-    );
+    await auditLog({
+      actor: user,
+      action: "void",
+      targetTable: "lesson_evaluations",
+      targetId: evaluation.id,
+      before: { status: (before as Record<string, unknown>).status },
+      after: { status: (evaluation as Record<string, unknown>).status, reason: parsed.reason },
+      detail: "Lesson evaluation voided.",
+      request,
+    });
 
     return NextResponse.json({ ok: true, evaluation });
   } catch (error) {
