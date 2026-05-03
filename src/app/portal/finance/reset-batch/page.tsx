@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requirePortalUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { FinanceResetPanel } from "@/components/portal/FinanceResetPanel";
+import { FinancePurgePanel } from "@/components/portal/FinancePurgePanel";
 import { ChevronLeft, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,15 @@ export default async function FinanceResetPage() {
         </div>
 
         <FinanceResetPanel />
+
+        <div className="pt-8 border-t border-gray-200">
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Purge all finance data</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            For wiping mock/test data so the finance module can be used from a clean slate.
+            Separate from the duplicate-archive batch above.
+          </p>
+          <FinancePurgePanel />
+        </div>
       </div>
     </PortalShell>
   );
