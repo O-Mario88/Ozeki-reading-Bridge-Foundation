@@ -54,6 +54,12 @@ export const metadata = {
     "Manage all schools, contacts, partner organizations, communications, and follow-up activity from one place.",
 };
 
+/* Visual default for the activity feed — permanent UI metadata
+   (icon + tone), not mock data. Lifted out of FALLBACK so production
+   doesn't crash on `FALLBACK.activity[0].icon` once devFallback()
+   empties that array. */
+const ACTIVITY_VISUAL_DEFAULT = { icon: Mail as LucideIcon, tone: "blue" as const };
+
 /* ────────────────────────────────────────────────────────────────────
    Reference data — gated to dev only via devFallback().
    Production zeros these out so live (possibly-empty) DB drives the page.
@@ -219,15 +225,13 @@ export default async function PortalCrmOverviewPage() {
       ? liveSchools.map((s) => ({ ...s, last: fmtDate(s.last), nextDate: fmtDate(s.nextDate) }))
       : FALLBACK.schools,
     activity: liveActivity && liveActivity.length > 0
-      ? liveActivity.map((a) => {
-          const fb = FALLBACK.activity[0];
-          return {
-            icon: fb.icon, tone: fb.tone,
-            title: a.title,
-            source: a.source,
-            when: fmtDateTime(a.whenIso),
-          };
-        })
+      ? liveActivity.map((a) => ({
+          icon: ACTIVITY_VISUAL_DEFAULT.icon,
+          tone: ACTIVITY_VISUAL_DEFAULT.tone,
+          title: a.title,
+          source: a.source,
+          when: fmtDateTime(a.whenIso),
+        }))
       : FALLBACK.activity,
     followUps: liveFollowUps && liveFollowUps.length > 0
       ? liveFollowUps.map((f) => ({ ...f, due: fmtDate(f.due) }))

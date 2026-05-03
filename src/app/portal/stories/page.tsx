@@ -159,6 +159,19 @@ const FALLBACK = devFallback({
 /* Calibri-first font stack applied to the entire page wrapper */
 const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
+/* Visual defaults that must NOT be gated to dev — they're permanent UI
+   metadata (icons + colour tones), not mock data. Pulled out of FALLBACK
+   so production rendering doesn't crash on `FALLBACK.curation[0].icon`
+   when devFallback() empties those arrays. */
+const CURATION_ICON_DEFAULT: LucideIcon = BookOpen;
+const SESSION_ICON_TONES: Array<{ icon: LucideIcon; tone: string }> = [
+  { icon: Mic,           tone: "amber" },
+  { icon: BookOpenText,  tone: "emerald" },
+  { icon: Clock,         tone: "blue" },
+  { icon: GraduationCap, tone: "violet" },
+  { icon: Sparkles,      tone: "pink" },
+];
+
 export default async function PortalStoryOverviewPage() {
   const user = await requirePortalStaffUser();
 
@@ -231,18 +244,15 @@ export default async function PortalStoryOverviewPage() {
       : FALLBACK.engagement,
     topSchools: liveTopSchools && liveTopSchools.length > 0 ? liveTopSchools : FALLBACK.topSchools,
     curation: liveCuration && liveCuration.length > 0
-      ? liveCuration.map((c) => {
-          const fb = FALLBACK.curation[0];
-          return {
-            title: c.title,
-            school: c.school,
-            language: c.language,
-            status: c.reviewerStatus,
-            statusTone: "muted",
-            urgency: c.urgency,
-            icon: fb.icon,
-          };
-        })
+      ? liveCuration.map((c) => ({
+          title: c.title,
+          school: c.school,
+          language: c.language,
+          status: c.reviewerStatus,
+          statusTone: "muted",
+          urgency: c.urgency,
+          icon: CURATION_ICON_DEFAULT,
+        }))
       : FALLBACK.curation,
     recent: liveRecent && liveRecent.length > 0
       ? liveRecent.map((r) => ({
@@ -256,13 +266,13 @@ export default async function PortalStoryOverviewPage() {
     featured: liveFeatured && liveFeatured.length > 0 ? liveFeatured : FALLBACK.featured,
     sessions: liveSessions && liveSessions.length > 0
       ? liveSessions.map((s, i) => {
-          const fb = FALLBACK.sessions[i] ?? FALLBACK.sessions[0];
+          const visual = SESSION_ICON_TONES[i % SESSION_ICON_TONES.length];
           return {
             activity: s.activity,
             school: s.school,
             when: fmtDateTime(s.whenIso),
-            icon: fb.icon,
-            tone: fb.tone,
+            icon: visual.icon,
+            tone: visual.tone,
           };
         })
       : FALLBACK.sessions,

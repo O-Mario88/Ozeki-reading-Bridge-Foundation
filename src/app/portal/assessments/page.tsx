@@ -44,6 +44,20 @@ export const metadata = {
     "Track assessment activity, learner outcomes, evidence quality, and programme coverage across the network.",
 };
 
+/* Visual defaults that must NOT be gated to dev — they're permanent UI
+   metadata (icons, colour tones), not mock data. Lifted out of FALLBACK
+   so production rendering doesn't crash on `FALLBACK.domains[i].icon`
+   when devFallback() empties those arrays. The order is canonical:
+   phonemic awareness → grapheme/phoneme → blending → fluency → comprehension. */
+const DOMAIN_VISUALS: Array<{ icon: LucideIcon; delta: number }> = [
+  { icon: Volume2,        delta: 4 },
+  { icon: Sparkles,       delta: 3 },
+  { icon: BookOpen,       delta: 2 },
+  { icon: Headphones,     delta: 5 },
+  { icon: MessageCircle,  delta: 2 },
+];
+const DOMAIN_VISUAL_DEFAULT = DOMAIN_VISUALS[0];
+
 /* ────────────────────────────────────────────────────────────────────
    Reference data — gated to dev only via devFallback().
    Production zeros these out so live (possibly-empty) DB drives the page.
@@ -188,8 +202,8 @@ export default async function PortalAssessmentsPage() {
     assessors: liveWorkload && liveWorkload.length > 0 ? liveWorkload : FALLBACK.assessors,
     domains: liveDomains && liveDomains.length > 0
       ? liveDomains.map((d, i) => {
-          const fb = FALLBACK.domains[i] ?? FALLBACK.domains[0];
-          return { ...d, delta: fb.delta, icon: fb.icon };
+          const v = DOMAIN_VISUALS[i] ?? DOMAIN_VISUAL_DEFAULT;
+          return { ...d, delta: v.delta, icon: v.icon };
         })
       : FALLBACK.domains,
   };

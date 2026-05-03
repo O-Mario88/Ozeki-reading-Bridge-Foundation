@@ -80,6 +80,20 @@ export const metadata = {
     "Plan, prioritize, track actions, and measure outcomes across Uganda.",
 };
 
+/* Visual defaults that must NOT be gated to dev — they're permanent UI
+   metadata (icons, tones), not mock data. Lifted out of FALLBACK so
+   production rendering doesn't crash on `FALLBACK.activity[0].icon` /
+   `FALLBACK.evidence[i].icon` once devFallback() empties those arrays. */
+const ACTIVITY_VISUAL_DEFAULT = { icon: Activity as LucideIcon, tone: "emerald" as const };
+const EVIDENCE_VISUALS: Array<{ icon: LucideIcon; tone: string }> = [
+  { icon: FileText,        tone: "rose" },
+  { icon: FileSpreadsheet, tone: "emerald" },
+  { icon: FileSpreadsheet, tone: "emerald" },
+  { icon: FileImage,       tone: "violet" },
+  { icon: FileText,        tone: "rose" },
+];
+const EVIDENCE_VISUAL_DEFAULT = EVIDENCE_VISUALS[0];
+
 /* ────────────────────────────────────────────────────────────────────
    Reference data — gated to dev only via devFallback().
    Production zeros these out so live (possibly-empty) DB drives the page.
@@ -308,27 +322,24 @@ export default async function PortalInterventionsOverviewPage() {
         }))
       : FALLBACK.workload,
     activity: liveActivity && liveActivity.length > 0
-      ? liveActivity.map((a) => {
-          const fb = FALLBACK.activity[0];
-          return {
-            tone: fb.tone,
-            icon: fb.icon,
-            title: a.message,
-            when:  fmtDateTime(a.occurredAt),
-          };
-        })
+      ? liveActivity.map((a) => ({
+          tone:  ACTIVITY_VISUAL_DEFAULT.tone,
+          icon:  ACTIVITY_VISUAL_DEFAULT.icon,
+          title: a.message,
+          when:  fmtDateTime(a.occurredAt),
+        }))
       : FALLBACK.activity,
     evidence: liveEvidence && liveEvidence.length > 0
       ? liveEvidence.map((e, i) => {
-          const fb = FALLBACK.evidence[i] ?? FALLBACK.evidence[0];
+          const v = EVIDENCE_VISUALS[i] ?? EVIDENCE_VISUAL_DEFAULT;
           return {
-            file: e.fileName,
-            icon: fb.icon,
-            tone: fb.tone,
-            plan: e.planId ?? "—",
+            file:     e.fileName,
+            icon:     v.icon,
+            tone:     v.tone,
+            plan:     e.planId ?? "—",
             uploader: e.uploaderName ?? "—",
-            date: fmtDate(e.uploadedAt),
-            status: e.status,
+            date:     fmtDate(e.uploadedAt),
+            status:   e.status,
           };
         })
       : FALLBACK.evidence,
