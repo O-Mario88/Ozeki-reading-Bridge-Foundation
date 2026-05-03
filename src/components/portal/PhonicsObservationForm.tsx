@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   User, MapPin, Calendar, Users, Clock, Target,
-  ChevronDown, MessageSquare, ShieldCheck, Bookmark, Send, X, Check,
+  ChevronDown, MessageSquare, ShieldCheck, Bookmark, Send, X, Check, Search,
 } from "lucide-react";
 import {
   LESSON_STRUCTURE_ITEMS,
@@ -30,6 +30,8 @@ type FormDraft = {
   teacherName: string;
   observationDate: string;
   schoolName: string;
+  /** Linked school id when picked from the directory; null when free-typed. */
+  schoolId: number | null;
   observerName: string;
   classLevel: string;
   lessonDuration: string;
@@ -66,7 +68,7 @@ function createDefaultDraft(): FormDraft {
   allKeys.forEach((k) => { scored[k] = { score: "", notes: "" }; });
 
   return {
-    teacherName: "", observationDate: todayIso(), schoolName: "", observerName: "",
+    teacherName: "", observationDate: todayIso(), schoolName: "", schoolId: null, observerName: "",
     classLevel: "", lessonDuration: "", learnersPresent: "", lessonFocus: "",
     lessonStructure: structure, scoredItems: scored,
     strengths: ["", "", "", ""], developmentAreas: ["", "", "", ""],
@@ -83,6 +85,7 @@ function fromRecord(obs: TeacherLessonObservation): FormDraft {
   draft.teacherName = obs.teacherName;
   draft.observationDate = obs.observationDate;
   draft.schoolName = obs.schoolName;
+  draft.schoolId = obs.schoolId ?? null;
   draft.observerName = obs.observerName;
   draft.classLevel = obs.classLevel;
   draft.lessonDuration = obs.lessonDuration;
@@ -137,6 +140,7 @@ function toApiPayload(draft: FormDraft, submitAs: "draft" | "submitted") {
     teacherName: draft.teacherName,
     observationDate: draft.observationDate,
     schoolName: draft.schoolName,
+    schoolId: draft.schoolId ?? null,
     observerName: draft.observerName,
     classLevel: draft.classLevel,
     lessonDuration: draft.lessonDuration,
@@ -218,6 +222,137 @@ function FormField({
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
             {suffix}
           </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Filterable dropdown — type to search, click to pick, free-type to keep
+ * the value when no option matches. Not headless; styled to match FormField.
+ */
+function Combobox({
+  label,
+  required,
+  icon,
+  value,
+  onPick,
+  placeholder,
+  options,
+  loading = false,
+  disabled = false,
+  emptyHint,
+}: {
+  label: string;
+  required?: boolean;
+  icon?: React.ReactNode;
+  value: string;
+  /** Called for both option-pick and free-type. `option` is null when free-typed. */
+  onPick: (text: string, option: { id: number | string; sub?: string } | null) => void;
+  placeholder?: string;
+  options: Array<{ id: number | string; label: string; sub?: string }>;
+  loading?: boolean;
+  disabled?: boolean;
+  emptyHint?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const listboxId = useMemo(() => `combobox-list-${Math.random().toString(36).slice(2, 8)}`, []);
+  // Extract ARIA boolean strings so jsx-a11y/aria-proptypes sees a string literal type.
+  const expanded: "true" | "false" = open ? "true" : "false";
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return options.slice(0, 50);
+    return options.filter((o) => o.label.toLowerCase().includes(q) || (o.sub ?? "").toLowerCase().includes(q)).slice(0, 50);
+  }, [value, options]);
+
+  return (
+    <div ref={wrapperRef}>
+      <FieldLabel required={required}>{label}</FieldLabel>
+      <div className="relative">
+        {icon && (
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+            {icon}
+          </span>
+        )}
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => { onPick(e.target.value, null); if (!open) setOpen(true); }}
+          onFocus={() => !disabled && setOpen(true)}
+          placeholder={loading ? "Loading…" : placeholder}
+          required={required}
+          disabled={disabled}
+          role="combobox"
+          aria-label={label}
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
+          aria-controls={listboxId}
+          aria-expanded={expanded}
+          className={`w-full h-11 ${icon ? "pl-9" : "pl-3.5"} pr-9 text-[13px] rounded-[10px] border border-[#e5eaf0] bg-white text-[#111827] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 disabled:bg-gray-50 disabled:cursor-not-allowed`}
+        />
+        <button
+          type="button"
+          onClick={() => !disabled && setOpen((v) => !v)}
+          aria-label="Toggle suggestions"
+          disabled={disabled}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[#94a3b8] hover:text-[#475467] disabled:opacity-40"
+        >
+          <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} />
+        </button>
+
+        {open && !disabled && (
+          <div className="absolute z-30 mt-1 left-0 right-0 max-h-72 overflow-auto rounded-[10px] border border-[#e5eaf0] bg-white shadow-lg">
+            {loading && (
+              <div className="px-3 py-3 text-[12px] text-[#7a8ca3] italic">Loading…</div>
+            )}
+            {!loading && filtered.length === 0 && (
+              <div className="px-3 py-3 text-[12px] text-[#7a8ca3] italic">
+                {options.length === 0 ? (emptyHint ?? "No options available.") : "No matches. Keep typing to enter a custom value."}
+              </div>
+            )}
+            {!loading && filtered.length > 0 && (
+              <div id={listboxId} role="listbox" aria-label={label} className="py-1">
+                {filtered.map((o) => {
+                  const selected: "true" | "false" = o.label === value ? "true" : "false";
+                  return (
+                  <div
+                    key={String(o.id)}
+                    role="option"
+                    aria-selected={selected}
+                    tabIndex={0}
+                    onClick={() => { onPick(o.label, o); setOpen(false); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onPick(o.label, o);
+                        setOpen(false);
+                      }
+                    }}
+                    className="cursor-pointer w-full text-left px-3 py-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none flex items-start gap-2"
+                  >
+                    <Search className="h-3.5 w-3.5 mt-0.5 text-[#94a3b8] shrink-0" strokeWidth={1.75} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] text-[#111827]">{o.label}</span>
+                      {o.sub && <span className="block text-[11px] text-[#7a8ca3] mt-0.5 truncate">{o.sub}</span>}
+                    </span>
+                  </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -415,6 +550,22 @@ function Stepper({ current }: { current: 1 | 2 | 3 | 4 }) {
    Main component
    ────────────────────────────────────────────────────────────────────── */
 
+type SchoolDirOption = { id: number; name: string; district: string };
+type TeacherRosterOption = {
+  contactUid: string;
+  fullName: string;
+  category?: string | null;
+  classTaught?: string | null;
+};
+
+const TEACHING_CATEGORIES = new Set([
+  "Teacher",
+  "Head Teacher",
+  "Deputy Head Teacher",
+  "DOS",
+  "Head Teacher Lower",
+]);
+
 export default function PhonicsObservationForm({ mode, existingObservation }: PhonicsObservationFormProps) {
   const router = useRouter();
   const [draft, setDraft] = useState<FormDraft>(() =>
@@ -423,7 +574,66 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
 
+  // School + teacher directory — fetched live from /api/portal/schools and roster.
+  const [schools, setSchools] = useState<SchoolDirOption[]>([]);
+  const [schoolsLoading, setSchoolsLoading] = useState(true);
+  const [teachers, setTeachers] = useState<TeacherRosterOption[]>([]);
+  const [teachersLoading, setTeachersLoading] = useState(false);
+
   const existingId = existingObservation?.id;
+
+  // Load the school directory once.
+  useEffect(() => {
+    let cancelled = false;
+    setSchoolsLoading(true);
+    fetch("/api/portal/schools", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((data) => {
+        if (cancelled) return;
+        const list: SchoolDirOption[] = Array.isArray(data?.schools)
+          ? data.schools.map((s: { id: number; name: string; district?: string }) => ({
+              id: s.id,
+              name: s.name,
+              district: s.district ?? "",
+            }))
+          : [];
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        setSchools(list);
+      })
+      .catch(() => { if (!cancelled) setSchools([]); })
+      .finally(() => { if (!cancelled) setSchoolsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // When a school is picked from the directory, load its teaching staff.
+  useEffect(() => {
+    if (!draft.schoolId) {
+      setTeachers([]);
+      return;
+    }
+    let cancelled = false;
+    setTeachersLoading(true);
+    fetch(`/api/portal/schools/roster?schoolId=${draft.schoolId}&type=teacher`, { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((data) => {
+        if (cancelled) return;
+        const list: TeacherRosterOption[] = Array.isArray(data?.roster)
+          ? data.roster
+              .filter((c: { category?: string | null }) => !c.category || TEACHING_CATEGORIES.has(c.category))
+              .map((c: { contactUid: string; fullName: string; category?: string | null; classTaught?: string | null }) => ({
+                contactUid: c.contactUid,
+                fullName: c.fullName,
+                category: c.category ?? null,
+                classTaught: c.classTaught ?? null,
+              }))
+          : [];
+        list.sort((a, b) => a.fullName.localeCompare(b.fullName));
+        setTeachers(list);
+      })
+      .catch(() => { if (!cancelled) setTeachers([]); })
+      .finally(() => { if (!cancelled) setTeachersLoading(false); });
+    return () => { cancelled = true; };
+  }, [draft.schoolId]);
 
   async function save(submitAs: "draft" | "submitted") {
     if (!draft.teacherName || !draft.observationDate || !draft.schoolName || !draft.observerName || !draft.classLevel || !draft.lessonDuration || !draft.lessonFocus) {
@@ -534,12 +744,34 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
         ══════════════════════════════════════════════════════════ */}
         <SectionCard badge="A" title="Administrative Details">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            <FormField
-              label="Teacher Name" required
-              icon={<User className="h-4 w-4" strokeWidth={1.75} />}
-              value={draft.teacherName}
-              onChange={(v) => setField("teacherName", v)}
-              placeholder="Enter teacher name"
+            {/* SCHOOL FIRST — searchable directory dropdown.
+                Picking a school links its id, which then unlocks the teacher
+                roster below. Free-typing is still allowed for schools that
+                aren't in the directory yet. */}
+            <Combobox
+              label="School"
+              required
+              icon={<MapPin className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.schoolName}
+              loading={schoolsLoading}
+              options={schools.map((s) => ({
+                id: s.id,
+                label: s.name,
+                sub: s.district || undefined,
+              }))}
+              placeholder={schools.length === 0 ? "No schools registered yet — type to enter manually" : "Search schools…"}
+              onPick={(text, option) => {
+                setDraft((prev) => ({
+                  ...prev,
+                  schoolName: text,
+                  // When the user picks a known school, link the id; when they
+                  // free-type, clear the id so we never store a stale linkage.
+                  schoolId: option ? Number(option.id) : null,
+                  // Reset teacher selection when school context changes.
+                  teacherName: option && option.id !== prev.schoolId ? "" : prev.teacherName,
+                }));
+              }}
+              emptyHint="No schools in the directory yet."
             />
             <FormField
               label="Date" required
@@ -548,12 +780,30 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
               onChange={(v) => setField("observationDate", v)}
               type="date"
             />
-            <FormField
-              label="School" required
-              icon={<MapPin className="h-4 w-4" strokeWidth={1.75} />}
-              value={draft.schoolName}
-              onChange={(v) => setField("schoolName", v)}
-              placeholder="Enter school name"
+            {/* TEACHER SECOND — populated from the picked school's roster.
+                Disabled until a school is linked; free-typing remains a
+                fallback when the teacher isn't on the roster yet. */}
+            <Combobox
+              label="Teacher Name"
+              required
+              icon={<User className="h-4 w-4" strokeWidth={1.75} />}
+              value={draft.teacherName}
+              loading={teachersLoading}
+              disabled={!draft.schoolId}
+              options={teachers.map((t) => ({
+                id: t.contactUid,
+                label: t.fullName,
+                sub: [t.category, t.classTaught].filter(Boolean).join(" · ") || undefined,
+              }))}
+              placeholder={
+                !draft.schoolId
+                  ? "Pick a school first"
+                  : teachers.length === 0
+                  ? "No teachers on file — type to enter manually"
+                  : "Search teachers…"
+              }
+              onPick={(text) => setField("teacherName", text)}
+              emptyHint="No teachers registered for this school. Type a name to record one."
             />
             <FormField
               label="Observer Name" required
