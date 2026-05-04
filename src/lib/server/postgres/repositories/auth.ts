@@ -326,6 +326,7 @@ export async function findPortalUserBySessionTokenPostgres(token: string) {
       WHERE s.token = $1
         AND s.expires_at > NOW()
         AND u.status != 'deactivated'
+        AND (u.expires_at IS NULL OR u.expires_at > NOW())
       LIMIT 1
     `,
     [token],

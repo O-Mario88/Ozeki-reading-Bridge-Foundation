@@ -252,7 +252,8 @@ export type PortalUserRole =
   | "DataClerk"
   | "SchoolLeader"
   | "Partner"
-  | "Government";
+  | "Government"
+  | "Auditor";
 
 export type PortalUserStatus = "active" | "invited" | "deactivated";
 

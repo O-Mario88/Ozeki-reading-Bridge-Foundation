@@ -65,6 +65,7 @@ export async function requirePortalUser(): Promise<PortalUser> {
 
 export async function requirePortalStaffUser(): Promise<PortalUser> {
   const user = await requirePortalUser();
+  if (user.role === "Auditor") redirect("/portal/auditor");
   if (isPortalVolunteer(user)) redirect("/portal/trainings");
   return user;
 }
@@ -105,11 +106,16 @@ export async function requireSuperAdmin(): Promise<PortalUser> {
 // ─── Role utilities ───────────────────────────────────────────────────
 
 export function getPortalHomePath(user: PortalUser): string {
+  if (user.role === "Auditor") return "/portal/auditor";
   return user.role === "Volunteer" ? "/portal/profiles" : "/portal/dashboard";
 }
 
 export function isPortalVolunteer(user: PortalUser): boolean {
   return user.role === "Volunteer";
+}
+
+export function isPortalAuditor(user: PortalUser): boolean {
+  return user.role === "Auditor";
 }
 
 export function canReview(user: {
@@ -119,6 +125,25 @@ export function canReview(user: {
   isSuperAdmin: boolean;
 }): boolean {
   return user.isSupervisor || user.isME || user.isAdmin || user.isSuperAdmin;
+}
+
+/**
+ * Auditors and SuperAdmins/Admins are the only roles that can read the
+ * /portal/auditor/* trust pages. Auditors are read-only by construction
+ * (the role grants no other permissions across the rest of the portal).
+ */
+export function canViewAuditPortal(user: {
+  role: string;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+}): boolean {
+  return user.role === "Auditor" || user.isAdmin || user.isSuperAdmin;
+}
+
+export async function requireAuditPortalUser(): Promise<PortalUser> {
+  const user = await requirePortalUser();
+  if (!canViewAuditPortal(user)) redirect(getPortalHomePath(user));
+  return user;
 }
 
 // ─── Legacy compat aliases (from auth-server.ts) ──────────────────────
