@@ -1,0 +1,72 @@
+{
+  "common": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "loading": "Loading…",
+    "error": "Something went wrong.",
+    "tryAgain": "Try again",
+    "language": "Language",
+    "english": "English",
+    "luganda": "Luganda",
+    "acholi": "Acholi",
+    "ateso": "Ateso",
+    "runyankole": "Runyankole"
+  },
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "transparency": "Transparency",
+    "press": "Press",
+    "research": "Research",
+    "donate": "Donate",
+    "portal": "Portal"
+  },
+  "hero": {
+    "title": "Every Ugandan child reading at grade level.",
+    "subtitle": "Ozeki Reading Bridge Foundation works with public primary schools to help children become confident readers — and gives donors, governments, and journalists live proof of the difference.",
+    "ctaDonate": "Become a donor",
+    "ctaLearnMore": "See live impact"
+  },
+  "footer": {
+    "registered": "Registered NGO · Uganda",
+    "rights": "All rights reserved."
+  },
+  "auth": {
+    "magicLinkRequest": "Email me a sign-in link",
+    "magicLinkSent": "Check your inbox",
+    "magicLinkExplain": "We don't use passwords. Click the link we email you, and you're in.",
+    "fullName": "Full name",
+    "email": "Email",
+    "organization": "Organisation",
+    "district": "District"
+  },
+  "donor": {
+    "portfolioTitle": "Your portfolio",
+    "totalContributed": "Total contributed",
+    "learnersReached": "Learners reached",
+    "learnersImproved": "Learners improved",
+    "teachersTrained": "Teachers trained",
+    "downloadTaxSummary": "Download tax summary",
+    "recurringGiving": "Recurring giving",
+    "noAllocations": "No allocations on file yet."
+  },
+  "press": {
+    "title": "Everything you need to write the story",
+    "subtitle": "Hover any number to see its source, methodology, and sample size.",
+    "factCheckTooltip": "Source and methodology",
+    "downloadChartPng": "Download PNG",
+    "citeOurData": "Cite our data"
+  },
+  "evidence": {
+    "takePhoto": "Take photo",
+    "chooseFromLibrary": "Choose from library",
+    "captureGps": "Tap a button to add photos",
+    "gpsCaptured": "GPS captured",
+    "gpsDenied": "GPS denied — relying on photo EXIF only",
+    "noPhotosYet": "No photos added yet. Take a photo at the school to attach GPS-tagged evidence.",
+    "caption": "Caption (optional)"
+  }
+}

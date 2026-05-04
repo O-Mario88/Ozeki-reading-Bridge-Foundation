@@ -1,0 +1,72 @@
+{
+  "common": {
+    "signIn": "Yingira",
+    "signOut": "Fuluma",
+    "save": "Tereka",
+    "cancel": "Sazaamu",
+    "submit": "Sindika",
+    "loading": "Etikira…",
+    "error": "Waliwo ekikyamye.",
+    "tryAgain": "Geezaako nate",
+    "language": "Olulimi",
+    "english": "Olungereza",
+    "luganda": "Oluganda",
+    "acholi": "Acholi",
+    "ateso": "Ateso",
+    "runyankole": "Runyankore"
+  },
+  "nav": {
+    "home": "Eka",
+    "about": "Ku ffe",
+    "transparency": "Obwesimbu",
+    "press": "Bya bbaluwa",
+    "research": "Okunoonyereza",
+    "donate": "Wayo",
+    "portal": "Omulyango"
+  },
+  "hero": {
+    "title": "Buli mwana wa Uganda asobola okusoma mu kibinja kye.",
+    "subtitle": "Ozeki Reading Bridge Foundation ekola n'amasomero ag'omulimu okuyamba abaana okufuuka abasomi abakakafu — era ewa abawi b'ensimbi, gavumenti, ne ba bbaluwa obukakafu obutuufu obw'enkyukakyuka.",
+    "ctaDonate": "Wewe omuwi",
+    "ctaLearnMore": "Laba enkyukakyuka kati"
+  },
+  "footer": {
+    "registered": "NGO ewandiisiddwa · Uganda",
+    "rights": "Eddembe lyonna lirinaanyizibwa."
+  },
+  "auth": {
+    "magicLinkRequest": "Mpereza akakwate k'okuyingira",
+    "magicLinkSent": "Kebera email yo",
+    "magicLinkExplain": "Tetukozesa passwordi. Nyiga akakwate ke tukuwerezza, n'oyingira.",
+    "fullName": "Erinnya erijjuvu",
+    "email": "Email",
+    "organization": "Ekibiina",
+    "district": "Disitulikiti"
+  },
+  "donor": {
+    "portfolioTitle": "Ebintu byo",
+    "totalContributed": "Ebibyo byonna",
+    "learnersReached": "Abayizi abatuusiddwaako",
+    "learnersImproved": "Abayizi abalongoosezza",
+    "teachersTrained": "Abasomesa abasomeseddwa",
+    "downloadTaxSummary": "Funa olukalala lw'omusolo",
+    "recurringGiving": "Okuwa okuddiŋŋanwa",
+    "noAllocations": "Tewali bibimu wa kati."
+  },
+  "press": {
+    "title": "Byonna bye weetaaga okuwandiika olufaananyi",
+    "subtitle": "Kwata buli muwendo okulaba ensibuko, enkola, ne pulayivasi.",
+    "factCheckTooltip": "Ensibuko n'enkola",
+    "downloadChartPng": "Funa PNG",
+    "citeOurData": "Yogera ku data yaffe"
+  },
+  "evidence": {
+    "takePhoto": "Kuba ekifaananyi",
+    "chooseFromLibrary": "Londa mu ttulibulary",
+    "captureGps": "Nyiga akapande okugatta ebifaananyi",
+    "gpsCaptured": "GPS efunidde",
+    "gpsDenied": "GPS egaaniddwa — tukozesa ebifaananyi EXIF",
+    "noPhotosYet": "Tewali bifaananyi byagattiddwawo. Kuba ekifaananyi ku ssomero okugatta obukakafu obutuufu obwa GPS.",
+    "caption": "Olubuto (sookya)"
+  }
+}
