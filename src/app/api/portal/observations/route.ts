@@ -6,6 +6,7 @@ import {
   listObservationsPostgres,
 } from "@/lib/server/postgres/repositories/phonics-observations";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -136,6 +137,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    await auditLog({
+      actor: user,
+      action: parsed.status === "submitted" ? "submit" : "create",
+      targetTable: "teacher_lesson_observations",
+      targetId: id,
+      after: { status: parsed.status, teacherName: parsed.teacherName, schoolId: parsed.schoolId ?? null },
+      detail: `${parsed.status === "submitted" ? "Submitted" : "Drafted"} observation for ${parsed.teacherName}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true, id }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

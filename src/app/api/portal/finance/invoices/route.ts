@@ -7,6 +7,7 @@ import {
 } from "@/services/financeService";
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -99,6 +100,15 @@ export async function POST(request: Request) {
       },
       auth.actor,
     );
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: "create",
+      targetTable: "finance_invoices",
+      targetId: invoice.id,
+      after: invoice,
+      detail: `Created invoice ${invoice.invoiceNumber ?? invoice.id}`,
+      request,
+    });
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

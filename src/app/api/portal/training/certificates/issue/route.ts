@@ -12,6 +12,7 @@ import {
   generateCertificateNumber,
 } from "@/lib/server/pdf/training-certificate";
 import { sendTrainingCertificateEmail } from "@/lib/training-email";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -122,6 +123,15 @@ export async function POST(request: Request) {
       }
     }
 
+    await auditLog({
+      actor: user,
+      action: "issue",
+      targetTable: "training_certificates",
+      targetId: parsed.portalRecordId,
+      after: { totalIssued: results.length, sendEmail: parsed.sendEmail },
+      detail: `Issued ${results.length} certificate(s) for training ${parsed.portalRecordId}`,
+      request,
+    });
     return NextResponse.json({
       portalRecordId: parsed.portalRecordId,
       issuedBy: user.id,

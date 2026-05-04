@@ -128,6 +128,16 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       updatedByUserId: user.id,
     });
 
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "teacher_lesson_observations",
+      targetId: obsId,
+      before: existing,
+      after: parsed,
+      detail: `Updated observation ${obsId}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { queryPostgres, withPostgresClient } from "@/lib/server/postgres/client";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -152,6 +153,15 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "coaching_visits",
+      targetId: visitId,
+      after: { visitUid, schoolId: v.schoolId, visitDate: v.visitDate, coachUserId: coachId },
+      detail: `Created visit ${visitUid} on school ${v.schoolId}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true, id: visitId, visitUid }, { status: 201 });
   } catch (error) {
     // Surface the underlying message + pg error code (when available) to the

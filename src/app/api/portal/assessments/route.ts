@@ -9,6 +9,7 @@ import {
   validateParticipantBelongsToSchool,
 } from "@/services/dataService";
 import { ASSESSMENT_MODEL_VERSION_UG_MASTERY_ONETEST_STYLE_V1 } from "@/lib/mastery-assessment";
+import { auditLog } from "@/lib/server/audit/log";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { AssessmentRecordInput } from "@/lib/types";
 
@@ -147,6 +148,15 @@ export async function POST(request: Request) {
       },
     });
 
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "assessment_records",
+      targetId: (assessment as { id?: number })?.id,
+      after: { schoolId: payload.schoolId, learnerUid: payload.learnerUid, assessmentType: payload.assessmentType },
+      detail: `Recorded ${payload.assessmentType ?? "assessment"} for ${payload.childName}`,
+      request,
+    });
     return NextResponse.json({ ok: true, assessment });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -6,6 +6,7 @@ import {
   DATA_MANAGEMENT_CATEGORIES,
 } from "@/lib/server/postgres/repositories/data-management";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +57,14 @@ export async function POST(req: NextRequest) {
       rowsCleared: result.rowsCleared,
     });
 
+    await auditLog({
+      actor: user,
+      action: "bulk_delete",
+      targetTable: "data_management_clear",
+      after: { categoryKey, ...result },
+      detail: `Cleared category "${category.label}" — ${result.tablesCleared.length} tables, ${result.rowsCleared} rows`,
+      request: req,
+    });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     logger.error("[admin/data-management/clear] failed", { error: String(err) });

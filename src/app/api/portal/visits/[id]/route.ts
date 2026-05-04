@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { queryPostgres } from "@/lib/server/postgres/client";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -45,7 +46,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
-    await requirePortalStaffUser();
+    const user = await requirePortalStaffUser();
     const { id } = await params;
     const parsed = patchSchema.safeParse(await req.json());
     if (!parsed.success) {
@@ -86,6 +87,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       `UPDATE coaching_visits SET ${sets.join(", ")} WHERE id = $${idx}`,
       vals,
     );
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "coaching_visits",
+      targetId: Number(id),
+      after: v,
+      detail: `Updated visit ${id}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error("[visits/id] PATCH failed", { error: String(error) });

@@ -7,6 +7,7 @@ import {
 } from "@/lib/national-intelligence-async";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { canManageNationalInterventions } from "@/lib/national-intelligence-auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -126,6 +127,15 @@ export async function POST(request: Request) {
           },
         });
 
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "intervention_plans",
+      targetId: (plan as { id?: number })?.id,
+      after: payload,
+      detail: `Created intervention plan (mode: ${payload.mode})`,
+      request,
+    });
     return NextResponse.json({ plan });
   } catch (error) {
     if (error instanceof z.ZodError) {

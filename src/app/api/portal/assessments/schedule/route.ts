@@ -6,6 +6,7 @@ import {
   createAssessmentWindowPostgres,
 } from "@/lib/server/postgres/repositories/assessment-intelligence";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,15 @@ export async function POST(req: NextRequest) {
     }
     const parsed = createSchema.parse(await req.json());
     const id = await createAssessmentWindowPostgres({ ...parsed, createdByUserId: user.id });
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "assessment_windows",
+      targetId: id,
+      after: parsed,
+      detail: `Scheduled ${parsed.assessmentType} window for FY${parsed.academicYear} term ${parsed.termNumber}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true, id }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

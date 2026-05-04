@@ -12,6 +12,7 @@ import {
   upsertFinanceExpenseReceiptsAsync,
 } from "@/services/financeService";
 import { csvHeaders, requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 import { queryPostgres } from "@/lib/server/postgres/client";
 
 export const runtime = "nodejs";
@@ -270,6 +271,15 @@ export async function POST(request: NextRequest) {
       submitted = true;
     }
 
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: submitted ? "submit" : "create",
+      targetTable: "finance_expenses",
+      targetId: finalExpense.id,
+      after: finalExpense,
+      detail: `${submitted ? "Submitted" : "Created"} expense ${finalExpense.id} (${payload.vendorName})`,
+      request,
+    });
     return NextResponse.json({ expense: finalExpense, evidence, linkedReceipts, submitted, autoPosted }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

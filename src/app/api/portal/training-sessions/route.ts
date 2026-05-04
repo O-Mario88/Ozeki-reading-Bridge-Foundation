@@ -7,6 +7,7 @@ import {
   saveTrainingSession,
 } from "@/services/dataService";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -61,6 +62,15 @@ export async function POST(request: Request) {
     const payload = sessionSchema.parse(await request.json());
     const session = await saveTrainingSession(payload, user.id);
 
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "training_sessions",
+      targetId: (session as { id?: number })?.id,
+      after: payload,
+      detail: `Created training session`,
+      request,
+    });
     return NextResponse.json({ ok: true, session });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -9,6 +9,7 @@ import {
 import { FINANCE_INCOME_CATEGORIES } from "@/lib/finance-categories";
 import { csvHeaders, requireFinanceReceiptEditor } from "@/app/api/portal/finance/_utils";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -128,6 +129,17 @@ export async function POST(request: Request) {
         sendEmail: parsed.sendEmail === true,
         ensurePdf: true,
       });
+      if (issued.receipt) {
+        await auditLog({
+          actor: { id: auth.actor.id, name: auth.actor.userName },
+          action: "issue",
+          targetTable: "finance_receipts",
+          targetId: issued.receipt.id,
+          after: issued.receipt,
+          detail: `Created + issued receipt ${issued.receipt.receiptNumber ?? issued.receipt.id}`,
+          request,
+        });
+      }
       return NextResponse.json(
         {
           receipt: issued.receipt,
@@ -137,6 +149,15 @@ export async function POST(request: Request) {
         { status: 201 },
       );
     }
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: "create",
+      targetTable: "finance_receipts",
+      targetId: created.id,
+      after: created,
+      detail: `Created draft receipt ${created.receiptNumber ?? created.id}`,
+      request,
+    });
     return NextResponse.json({ receipt: created, issuedNow: false }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

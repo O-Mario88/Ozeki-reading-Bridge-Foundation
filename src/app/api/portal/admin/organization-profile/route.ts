@@ -5,6 +5,7 @@ import {
   getActiveOrganizationProfile,
   upsertOrganizationProfile,
 } from "@/lib/server/postgres/repositories/organization-profile";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -33,12 +34,20 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    await requireAdmin();
+    const user = await requireAdmin();
     const body = await request.json();
     const parsed = organizationProfileSchema.parse(body);
     const profile = await upsertOrganizationProfile({
       ...parsed,
       logoStorageUrl: parsed.logoStorageUrl || null,
+    });
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "organization_profile",
+      after: parsed,
+      detail: `Updated organization profile (${parsed.name})`,
+      request,
     });
     return NextResponse.json({ profile });
   } catch (error) {

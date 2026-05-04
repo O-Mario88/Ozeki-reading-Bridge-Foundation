@@ -6,6 +6,7 @@ import {
   recordFinancePayment,
 } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -110,6 +111,15 @@ export async function POST(
       uploaded.push(stored);
     }
 
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: "create",
+      targetTable: "finance_payments",
+      targetId: paymentResult.payment.id,
+      after: paymentResult.payment,
+      detail: `Recorded payment of ${payload.amount} on invoice ${invoiceId}`,
+      request,
+    });
     return NextResponse.json(
       {
         payment: paymentResult.payment,

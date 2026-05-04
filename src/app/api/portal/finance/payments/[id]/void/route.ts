@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { voidFinancePaymentAsync } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,15 @@ export async function POST(
   try {
     const parsed = bodySchema.parse(await request.json());
     const payment = await voidFinancePaymentAsync(paymentId, parsed.reason, auth.actor);
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: "void",
+      targetTable: "finance_payments",
+      targetId: paymentId,
+      after: payment,
+      detail: parsed.reason,
+      request,
+    });
     return NextResponse.json({ payment });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -12,6 +12,7 @@ import {
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { createOnlineTrainingSessionPostgres, listOnlineTrainingSessionsPostgres } from "@/lib/server/postgres/repositories/training";
 import { queryPostgres } from "@/lib/server/postgres/client";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -163,6 +164,15 @@ export async function POST(request: Request) {
     };
 
     revalidateTag("events");
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "online_training_sessions",
+      targetId: sessionId,
+      after: eventResponse,
+      detail: `Created online training (id ${sessionId})`,
+      request,
+    });
     return NextResponse.json({
       ok: true,
       event: eventResponse,

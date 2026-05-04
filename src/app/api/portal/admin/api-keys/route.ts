@@ -6,6 +6,7 @@ import {
   createApiKeyPostgres,
 } from "@/lib/server/postgres/repositories/api-keys";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -44,7 +45,17 @@ export async function POST(req: NextRequest) {
       ...parsed,
       createdByUserId: user.id,
     });
-    // plaintextKey is returned ONCE and must be stored by the caller
+    // plaintextKey is returned ONCE and must be stored by the caller.
+    // Audit-log the key METADATA only — never the plaintext.
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "api_keys",
+      targetId: (record as { id?: number })?.id,
+      after: { ...record },
+      detail: `Issued API key "${parsed.name}"`,
+      request: req,
+    });
     return NextResponse.json({ record, plaintextKey }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

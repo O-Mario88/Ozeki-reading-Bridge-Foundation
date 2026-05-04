@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
 import { withPostgresClient } from "@/lib/server/postgres/client";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,6 +130,19 @@ export async function POST(req: NextRequest) {
       preservedCount: summary.preserved.length,
     });
 
+    await auditLog({
+      actor: user,
+      action: "bulk_delete",
+      targetTable: "all_data_wipe",
+      after: {
+        truncatedCount: summary.truncated.length,
+        preservedCount: summary.preserved.length,
+        truncated: summary.truncated,
+        preserved: summary.preserved,
+      },
+      detail: `Wiped all platform data — ${summary.truncated.length} tables truncated, ${summary.preserved.length} preserved`,
+      request: req,
+    });
     return NextResponse.json({
       ok: true,
       truncatedCount: summary.truncated.length,

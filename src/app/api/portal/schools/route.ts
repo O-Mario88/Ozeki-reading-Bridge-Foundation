@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { listSchoolDirectoryRecordsPostgres } from "@/lib/server/postgres/repositories/schools";
 import { createOrUpdateSchool } from "@/lib/server/services/schools/write-service";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -234,6 +235,15 @@ export async function POST(request: Request) {
           : undefined,
       },
     });
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "schools_directory",
+      targetId: result.school.id,
+      after: result.school,
+      detail: `Created ${result.school.schoolCode ?? result.school.name}`,
+      request,
+    });
     return NextResponse.json({ ok: true, school: result.school });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -336,6 +346,15 @@ export async function PATCH(request: Request) {
       },
     });
 
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "schools_directory",
+      targetId: result.school.id,
+      after: result.school,
+      detail: `Updated ${result.school.schoolCode ?? result.school.name}`,
+      request,
+    });
     return NextResponse.json({ ok: true, school: result.school });
   } catch (error) {
     if (error instanceof z.ZodError) {

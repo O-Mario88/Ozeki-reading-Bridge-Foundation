@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { submitFinanceExpenseAsync } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireFinanceEditor();
@@ -20,6 +21,15 @@ export async function POST(
 
   try {
     const expense = await submitFinanceExpenseAsync(expenseId, auth.actor);
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: "submit",
+      targetTable: "finance_expenses",
+      targetId: expenseId,
+      after: expense,
+      detail: `Submitted expense ${expenseId} for approval`,
+      request,
+    });
     return NextResponse.json({ expense });
   } catch (error) {
     return NextResponse.json(

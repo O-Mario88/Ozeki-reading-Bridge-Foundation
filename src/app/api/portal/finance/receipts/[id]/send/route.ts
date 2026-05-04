@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sendFinanceReceipt } from "@/services/financeService";
 import { requireFinanceReceiptEditor } from "@/app/api/portal/finance/_utils";
 import { readOptionalJsonBody, JsonBodyError } from "@/lib/server/http/json-body";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,15 @@ export async function POST(
     const result = await sendFinanceReceipt(receiptId, auth.actor, {
       to: parsed.to,
       cc: parsed.cc,
+    });
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: "send",
+      targetTable: "finance_receipts",
+      targetId: receiptId,
+      after: { to: parsed.to, cc: parsed.cc },
+      detail: `Sent receipt ${receiptId} to ${(parsed.to ?? []).join(", ")}`,
+      request,
     });
     return NextResponse.json(result);
   } catch (error) {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { enrollTeacherInProgrammePostgres } from "@/lib/server/postgres/repositories/training-programmes";
 import { logger } from "@/lib/logger";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const { id } = await params;
     const parsed = enrollSchema.parse(await req.json());
     const enrollmentId = await enrollTeacherInProgrammePostgres({ ...parsed, programmeId: Number(id) });
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "programme_enrollments",
+      targetId: enrollmentId,
+      after: { programmeId: Number(id), teacherName: parsed.teacherName, schoolId: parsed.schoolId ?? null },
+      detail: `Enrolled ${parsed.teacherName} in programme ${id}`,
+      request: req,
+    });
     return NextResponse.json({ ok: true, enrollmentId }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -7,6 +7,7 @@ import {
   type WorkflowCondition,
   type WorkflowAction,
 } from "@/lib/server/postgres/repositories/workflows";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -51,6 +52,15 @@ export async function POST(request: Request) {
       actions: parsed.actions as WorkflowAction[],
       createdByUserId: user.id,
       isEnabled: parsed.isEnabled,
+    });
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "workflows",
+      targetId: id,
+      after: parsed,
+      detail: `Created workflow "${parsed.name}" on trigger ${parsed.triggerEvent}`,
+      request,
     });
     return NextResponse.json({ ok: true, id }, { status: 201 });
   } catch (error) {
