@@ -461,6 +461,9 @@ export default async function TransparencyPage() {
                 <Link className="button" href="/transparency/financials" style={{ backgroundColor: '#00155F', color: 'white' }}>
                   Open Financials Hub
                 </Link>
+                <Link className="button" href="/transparency/finance" style={{ backgroundColor: '#066a67', color: 'white' }}>
+                  Cost per Beneficiary
+                </Link>
               </div>
             </article>
             <article className="card">
