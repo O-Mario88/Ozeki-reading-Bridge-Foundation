@@ -75,6 +75,40 @@ function checkSmtpCredentials(): SmtpConfigCheck {
   };
 }
 
+interface DriveConfigCheck {
+  configured: boolean;
+  status: CredentialStatus;
+  missing: string[];
+}
+
+/**
+ * Google Drive uses the same OAuth client + refresh token as the rest of
+ * the Google Workspace integrations (Gmail send, Calendar sync). If those
+ * three are present, Drive uploads work.
+ */
+function checkDriveCredentials(): DriveConfigCheck {
+  const required = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN"] as const;
+  const missing = required.filter((k) => !process.env[k]?.trim());
+  let status: CredentialStatus;
+  if (missing.length === required.length) status = "not_configured";
+  else if (missing.length > 0) status = "partial";
+  else status = "ok";
+  return { configured: status === "ok", status, missing };
+}
+
+interface VimeoConfigCheck {
+  configured: boolean;
+  status: CredentialStatus;
+  missing: string[];
+}
+
+function checkVimeoCredentials(): VimeoConfigCheck {
+  const token = process.env.VIMEO_ACCESS_TOKEN?.trim() ?? "";
+  const missing: string[] = token ? [] : ["VIMEO_ACCESS_TOKEN"];
+  const status: CredentialStatus = token ? "ok" : "not_configured";
+  return { configured: status === "ok", status, missing };
+}
+
 export async function GET(request: Request) {
   const timestamp = new Date().toISOString();
   const openAiConfig = getOpenAiServerConfig("gpt-4o-mini");
@@ -84,6 +118,8 @@ export async function GET(request: Request) {
   let aiProbeError: string | null = null;
   const pesapal = checkPesapalCredentials();
   const smtp = checkSmtpCredentials();
+  const drive = checkDriveCredentials();
+  const vimeo = checkVimeoCredentials();
 
   if (aiProbeRequested) {
     if (!openAiConfig.configured || !openAiConfig.apiKey) {
@@ -113,6 +149,8 @@ export async function GET(request: Request) {
           aiProbe: aiProbeStatus,
           pesapal: pesapal.status,
           smtp: smtp.status,
+          drive: drive.status,
+          vimeo: vimeo.status,
         },
         ai: {
           configured: openAiConfig.configured,
@@ -121,6 +159,8 @@ export async function GET(request: Request) {
         },
         pesapal,
         smtp,
+        drive,
+        vimeo,
         error: "DATABASE_URL is not configured. PostgreSQL is required.",
         ...(aiProbeError ? { aiProbeError } : {}),
       },
@@ -173,6 +213,8 @@ export async function GET(request: Request) {
           aiProbe: aiProbeStatus,
           pesapal: pesapal.status,
           smtp: smtp.status,
+          drive: drive.status,
+          vimeo: vimeo.status,
         },
         ai: {
           configured: openAiConfig.configured,
@@ -181,6 +223,8 @@ export async function GET(request: Request) {
         },
         pesapal,
         smtp,
+        drive,
+        vimeo,
         ...(aiProbeError ? { aiProbeError } : {}),
       },
       {
@@ -210,6 +254,8 @@ export async function GET(request: Request) {
           aiProbe: aiProbeStatus,
           pesapal: pesapal.status,
           smtp: smtp.status,
+          drive: drive.status,
+          vimeo: vimeo.status,
         },
         ai: {
           configured: openAiConfig.configured,
@@ -218,6 +264,8 @@ export async function GET(request: Request) {
         },
         pesapal,
         smtp,
+        drive,
+        vimeo,
         error: error instanceof Error ? error.message : "Database health check failed.",
         ...(aiProbeError ? { aiProbeError } : {}),
       },
