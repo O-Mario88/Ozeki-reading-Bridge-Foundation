@@ -5938,14 +5938,21 @@ textarea {
   stroke: #ffffff !important;
 }
 
-.header.header__home.sticky .header__logo-text strong,
+/* When the homepage header sticks and flips to white, keep the nav
+   text a neutral dark gray instead of teal. Teal was reading as
+   "the color flips to green" on scroll-up — neutral gray sits
+   quietly on white and doesn't compete with the orange hover/active
+   accent. Logo strong stays brand teal because it's a logo, not nav. */
+.header.header__home.sticky .header__logo-text strong {
+  color: var(--color-brand-blue) !important;
+}
 .header.header__home.sticky .header__logo-text small,
 .header.header__home.sticky .header__menu-link {
-  color: var(--color-brand-blue) !important;
+  color: #1f2937 !important;
 }
 
 .header.header__home.sticky .header__dropdown-arrow svg path {
-  stroke: var(--color-brand-blue) !important;
+  stroke: #1f2937 !important;
 }
 
 /* Orange hover line on main and dropdown navigation links */
