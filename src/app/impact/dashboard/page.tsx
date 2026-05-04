@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 import {
   ChevronDown, ShieldCheck, Building2, Users, GraduationCap,
   ClipboardCheck, MessageCircle, PieChart as PieIcon,
@@ -8,7 +7,7 @@ import {
   TrendingUp, Download, BookOpen, ChevronRight,
   ClipboardList, Heart, Sparkles, type LucideIcon,
 } from "lucide-react";
-import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
+import { LiveMapEmbed } from "./LiveMapEmbed";
 import { DashboardMotionShell, MotionCard, MotionFade } from "./MotionShell";
 import { InteractiveTabs } from "./InteractiveTabs";
 import { InteractiveFilters } from "./InteractiveFilters";
@@ -460,9 +459,7 @@ function MapCard() {
         </div>
         <div className="px-5">
           <div style={{ borderRadius: RADIUS_SM, overflow: "hidden", border: `1px solid ${BORDER}` }}>
-            <Suspense fallback={<MapSkeleton />}>
-              <PublicImpactMapExplorer compact />
-            </Suspense>
+            <LiveMapEmbed />
           </div>
           <div className="flex items-center justify-between gap-2 mt-3 text-[10.5px]" style={{ color: TEXT_SUBTLE }}>
             <div className="inline-flex items-center gap-2">
@@ -502,17 +499,6 @@ function Seg({ label, active = false, tone = "teal" as "teal" | "orange" }: { la
     >
       {label}
     </button>
-  );
-}
-
-function MapSkeleton() {
-  return (
-    <div className="h-[420px] grid place-items-center" style={{ background: "#f8fafc" }}>
-      <div className="text-center">
-        <div className="h-8 w-8 mx-auto rounded-full animate-pulse" style={{ background: TEAL_SOFT }} />
-        <p className="text-[11.5px] mt-3" style={{ color: TEXT_SUBTLE }}>Loading live map…</p>
-      </div>
-    </div>
   );
 }
 
