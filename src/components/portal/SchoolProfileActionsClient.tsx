@@ -65,7 +65,7 @@ export function SchoolProfileActionsClient({ school }: Props) {
         <Link href={`/portal/trainings?new=1&schoolId=${school.id}`} className="button button-compact">
           New Training
         </Link>
-        <Link href={`/portal/visits?new=1&schoolId=${school.id}`} className="button button-compact">
+        <Link href={`/portal/visits/new?schoolId=${school.id}`} className="button button-compact">
           New School Visit
         </Link>
         <Link href={`/portal/assessments?new=1&schoolId=${school.id}`} className="button button-compact">

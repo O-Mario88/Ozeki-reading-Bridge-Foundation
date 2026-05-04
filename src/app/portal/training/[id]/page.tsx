@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { TrainingShellSidebar } from "@/components/training/TrainingShellSidebar";
+import { OzekiSidebar } from "@/components/portal/OzekiSidebar";
 import { TrainingTopBar } from "@/components/training/TrainingTopBar";
 import { SessionVideoPanel } from "@/components/training/SessionVideoPanel";
 import { SessionTabs } from "@/components/training/SessionTabs";
@@ -45,8 +45,8 @@ export default async function TrainingSessionRoomPage({ params }: { params: Prom
   return (
     <div className="h-screen flex overflow-hidden bg-white font-sans text-gray-900">
 
-      {/* 1. Left Sidebar Shell */}
-      <TrainingShellSidebar />
+      {/* 1. Left Sidebar — unified portal nav (was TrainingShellSidebar) */}
+      <OzekiSidebar user={user} activeHref={`/portal/training/${sessionId}`} />
 
       {/* Main App Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
