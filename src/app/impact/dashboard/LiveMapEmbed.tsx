@@ -13,11 +13,14 @@ import dynamic from "next/dynamic";
  * shell and uses just the map component with minimal local state.
  */
 
+// Mirrors the local type inside UgandaImpactMapPro — `school` is
+// optional there, so it must be optional here or React's prop check
+// rejects setSelection as the onSelectionChange handler.
 type MapSelection = {
   region: string;
   subRegion: string;
   district: string;
-  school: string;
+  school?: string;
 };
 
 const UgandaImpactMapPro = dynamic(
