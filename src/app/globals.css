@@ -5424,19 +5424,26 @@ textarea {
   background: transparent !important;
 }
 
-/* Hover text colour depends on header background so we never render
-   white-on-white. Dark hero (homepage non-sticky) keeps white; white
-   header (inner pages + sticky) uses the brand blue so it stays legible. */
-.header:not(.header__home) .header__menu-link:hover,
-.header:not(.header__home) .header__menu-link:focus-visible,
-.header.header__home.sticky .header__menu-link:hover,
-.header.header__home.sticky .header__menu-link:focus-visible {
-  color: var(--color-brand-blue) !important;
+/* Nav hover/active uses brand orange across every header background.
+   Previously hover used --color-brand-blue (#066a67) which matched the
+   dark teal header behind it and made the text vanish. Orange #ff7235
+   is the official brand accent and reads cleanly against both white
+   and dark teal. The active link gets the same orange + a persistent
+   underline drawn by the existing .header__menu-link span::after. */
+.header__menu-link:hover,
+.header__menu-link:focus-visible {
+  color: var(--color-brand-orange) !important;
 }
 
-.header.header__home:not(.sticky) .header__menu-link:hover,
-.header.header__home:not(.sticky) .header__menu-link:focus-visible {
-  color: #ffffff !important;
+/* Active route — keep the underline visible (don't depend on hover). */
+.header__menu-link[aria-current="page"],
+.header__menu-link.is-active {
+  color: var(--color-brand-orange) !important;
+}
+.header__menu-link[aria-current="page"] span::after,
+.header__menu-link.is-active span::after {
+  background: var(--color-brand-orange);
+  transform: scaleX(1);
 }
 
 .header .button,
@@ -11796,8 +11803,8 @@ label:has(> span + :is(input, select, textarea))>:is(input, select, textarea), .
     --color-bg: #eaecf0;
     --color-brand-navy: #101828;
     --color-brand-teal: #1dc9ba;
-    --color-brand-orange-dark: #e46f3e;
-    --color-brand-orange: #fe8b5c;
+    --color-brand-orange-dark: #e85f24;
+    --color-brand-orange: #ff7235;
     --color-brand-blue-dark: #005248;
     --color-brand-blue: #006b61;
     --color-brand-green: #006b61;

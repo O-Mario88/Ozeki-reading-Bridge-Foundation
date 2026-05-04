@@ -166,9 +166,14 @@ export function SiteHeader() {
             <ul className="header__navigation">
               {navItems.map((item, index) => {
                 if (item.type === "link") {
+                  const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
                   return (
                     <li key={`${item.label}-${index + 1}`} className="header__nav-item">
-                      <Link className="header__menu-link" href={item.href}>
+                      <Link
+                        className="header__menu-link"
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                      >
                         <span>{item.label}</span>
                       </Link>
                     </li>
@@ -202,6 +207,7 @@ export function SiteHeader() {
                     <Link
                       className="header__menu-link"
                       href={group.href}
+                      aria-current={pathname.startsWith(group.href) ? "page" : undefined}
                       onClick={() => setActiveDesktopMenu(null)}
                     >
                       <span>{group.title}</span>

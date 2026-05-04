@@ -174,62 +174,6 @@ export function SiteFooter() {
 
         </div>
 
-        {/* Sitemap row — single-hop link surface for every public page */}
-        <nav aria-label="Site map" className="footer-v2-sitemap">
-          <div className="footer-v2-sitemap-col">
-            <h4>About</h4>
-            <Link href="/about">About Us</Link>
-            <Link href="/about/our-story">Our Story</Link>
-            <Link href="/about/leadership-team">Leadership</Link>
-            <Link href="/problem">The Problem</Link>
-            <Link href="/partners">Partners</Link>
-            <Link href="/testimonials">Testimonials</Link>
-            <Link href="/media">Media</Link>
-            <Link href="/faqs">FAQs</Link>
-            <Link href="/contact">Contact</Link>
-          </div>
-          <div className="footer-v2-sitemap-col">
-            <h4>Programs</h4>
-            <Link href="/phonics-training">Phonics Training</Link>
-            <Link href="/teacher-professional-development">Teacher PD</Link>
-            <Link href="/in-school-coaching-mentorship">In-School Coaching</Link>
-            <Link href="/learner-reading-assessments-progress-tracking">Reading Assessments</Link>
-            <Link href="/remedial-catch-up-reading-interventions">Remedial Reading</Link>
-            <Link href="/reading-materials-development">Reading Materials</Link>
-            <Link href="/teaching-aids-instructional-resources-teachers">Teaching Aids</Link>
-            <Link href="/school-systems-routines">School Systems</Link>
-            <Link href="/instructional-leadership-support">Leadership Support</Link>
-            <Link href="/monitoring-evaluation-reporting">M&amp;E Reporting</Link>
-            <Link href="/literacy-content-creation-advocacy">Content &amp; Advocacy</Link>
-          </div>
-          <div className="footer-v2-sitemap-col">
-            <h4>Impact &amp; Evidence</h4>
-            <Link href="/impact">Impact Hub</Link>
-            <Link href="/impact/case-studies">Case Studies</Link>
-            <Link href="/impact/methodology">Methodology</Link>
-            <Link href="/impact/gallery">Evidence Gallery</Link>
-            <Link href="/impact/calculator">Impact Calculator</Link>
-            <Link href="/insights">Insights</Link>
-            <Link href="/transparency">Trust &amp; Accountability</Link>
-            <Link href="/transparency/financials">Financials</Link>
-            <Link href="/governance">Governance</Link>
-            <Link href="/safeguarding">Safeguarding</Link>
-          </div>
-          <div className="footer-v2-sitemap-col">
-            <h4>Content</h4>
-            <Link href="/blog">Blog</Link>
-            <Link href="/stories">Stories</Link>
-            <Link href="/story-project">1001 Story Project</Link>
-            <Link href="/story-library">Story Library</Link>
-            <Link href="/anthologies">Anthologies</Link>
-            <Link href="/resources">Resources</Link>
-            <Link href="/events">Events</Link>
-            <Link href="/diagnostic-quiz">Diagnostic Quiz</Link>
-            <Link href="/pricing">Pricing</Link>
-            <Link href="/academy">Academy</Link>
-          </div>
-        </nav>
-
         {/* Bottom Banner */}
         <div className="footer-v2-bottom">
           <span>©{new Date().getFullYear()} Ozeki Reading Bridge Foundation</span>
