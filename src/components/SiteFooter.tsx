@@ -80,9 +80,6 @@ export function SiteFooter() {
               <a href={socialLinks.twitter} target="_blank" rel="noreferrer" aria-label="Twitter / X"><Twitter size={18} /></a>
               <a href={socialLinks.youtube} target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube size={18} /></a>
             </div>
-            <p className="footer-v2-note">
-              <strong>TIN:</strong> {officialContact.tin}
-            </p>
           </div>
 
           {/* Column 2: Explore */}
@@ -98,9 +95,6 @@ export function SiteFooter() {
               <li><Link href="/academy">Academy</Link></li>
               <li><Link href="/newsletter">Newsletter</Link></li>
             </ul>
-            <p className="footer-v2-note">
-              <strong>Registration No:</strong> {officialContact.regNo}
-            </p>
           </div>
 
           {/* Column 3: Get Involved */}
@@ -244,6 +238,9 @@ export function SiteFooter() {
           <Link href="/terms">Terms &amp; Conditions</Link>
           <Link href="/safeguarding">Safeguarding</Link>
           <Link href="/governance">Governance</Link>
+          <span>|</span>
+          <span><strong>Reg No:</strong> {officialContact.regNo}</span>
+          <span><strong>TIN:</strong> {officialContact.tin}</span>
         </div>
       </div>
     </footer>

@@ -7,6 +7,8 @@ import {
   Quote, Facebook, Twitter, Instagram, Youtube, Linkedin, Mail, Phone, MapPin,
   type LucideIcon,
 } from "lucide-react";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Ozeki Reading Bridge Foundation — Building Strong Readers Across Uganda",
@@ -107,8 +109,7 @@ const FOOTER_COLUMNS = [
 export default function HomePage() {
   return (
     <div className="bg-white text-gray-900" style={{ fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif' }}>
-      <TopUtilityStrip />
-      <TopNavBar />
+      <SiteHeader />
       <HeroSection />
       <PartnerLogoBand />
       <ImpactNumbersBand />
@@ -116,7 +117,7 @@ export default function HomePage() {
       <UgandaImpactSection />
       <TestimonialsSection />
       <DonationCtaStrip />
-      <SiteFooterReplica />
+      <SiteFooter />
     </div>
   );
 }
