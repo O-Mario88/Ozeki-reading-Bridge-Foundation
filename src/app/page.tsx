@@ -7,8 +7,9 @@ import {
   Quote, Facebook, Twitter, Instagram, Youtube, Linkedin, Mail, Phone, MapPin,
   type LucideIcon,
 } from "lucide-react";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
+// Note: SiteHeader + SiteFooter are rendered automatically by
+// LayoutOrchestrator (root layout). Don't import them here or you'll
+// stack two navbars on top of each other.
 
 export const metadata: Metadata = {
   title: "Ozeki Reading Bridge Foundation — Building Strong Readers Across Uganda",
@@ -109,7 +110,6 @@ const FOOTER_COLUMNS = [
 export default function HomePage() {
   return (
     <div className="bg-white text-gray-900" style={{ fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif' }}>
-      <SiteHeader />
       <HeroSection />
       <PartnerLogoBand />
       <ImpactNumbersBand />
@@ -117,7 +117,6 @@ export default function HomePage() {
       <UgandaImpactSection />
       <TestimonialsSection />
       <DonationCtaStrip />
-      <SiteFooter />
     </div>
   );
 }

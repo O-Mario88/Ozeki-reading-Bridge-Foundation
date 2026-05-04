@@ -10,8 +10,9 @@ import {
   ClipboardList, type LucideIcon,
 } from "lucide-react";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
+// Note: SiteHeader + SiteFooter are rendered automatically by
+// LayoutOrchestrator (root layout). Don't import them here or you'll
+// stack two navbars on top of each other.
 
 export const metadata: Metadata = {
   title: "Public Live Impact Dashboard | Ozeki Reading Bridge Foundation",
@@ -98,7 +99,6 @@ export default function PublicLiveImpactDashboardPage() {
   return (
     <div className="bg-[#f4f7fa] min-h-screen text-gray-900" style={{ fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif' }}>
       <LiveStatusTopBar />
-      <SiteHeader />
       <main className="max-w-[1280px] mx-auto px-6 pt-6 pb-10 space-y-5">
         <DashboardHero />
         <KpiRow />
@@ -124,7 +124,6 @@ export default function PublicLiveImpactDashboardPage() {
         <LearningOutcomesGrid />
       </main>
       <BottomTrustBar />
-      <SiteFooter />
     </div>
   );
 }
