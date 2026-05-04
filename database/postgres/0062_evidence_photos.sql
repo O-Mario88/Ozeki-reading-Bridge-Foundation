@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
   id BIGSERIAL PRIMARY KEY,
   parent_type TEXT NOT NULL CHECK (parent_type IN ('coaching_visit', 'training_session', 'training_record')),
   parent_id BIGINT NOT NULL,
-  school_id INTEGER REFERENCES schools(id) ON DELETE SET NULL,
+  school_id INTEGER REFERENCES schools_directory(id) ON DELETE SET NULL,
   captured_at TIMESTAMPTZ,
   lat DOUBLE PRECISION,
   lng DOUBLE PRECISION,
