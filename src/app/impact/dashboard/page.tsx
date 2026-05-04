@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import {
   Heart, ChevronDown, Info, ShieldCheck, Building2, Users, GraduationCap,
   ClipboardCheck, MessageCircle, PieChart as PieIcon,
@@ -15,7 +16,9 @@ export const metadata: Metadata = {
   description: "Real-time, evidence-based literacy outcomes and programme implementation across Uganda.",
 };
 
-export const revalidate = 300;
+// PublicImpactMapExplorer reads useSearchParams() — opt out of static
+// generation so Next.js 15 doesn't bail prerender on the map's CSR hook.
+export const dynamic = "force-dynamic";
 
 const TEAL        = "#066a67";
 const TEAL_DARK   = "#044f4d";
@@ -408,9 +411,14 @@ function WhereWeWorkCard() {
           <span className="grid h-8 w-8 place-items-center rounded-md bg-white border border-gray-200"><Crosshair className="h-4 w-4 text-gray-600" /></span>
         </div>
       </div>
-      {/* Existing live map — full functionality preserved */}
+      {/* Existing live map — full functionality preserved.
+          Wrapped in Suspense because PublicImpactMapExplorer reads
+          useSearchParams() and Next.js 15 requires that to live inside a
+          Suspense boundary at static-generation time. */}
       <div className="rounded-xl overflow-hidden border border-gray-100">
-        <PublicImpactMapExplorer compact />
+        <Suspense fallback={<div className="h-[420px] bg-gray-50 grid place-items-center text-[12px] text-gray-400">Loading map…</div>}>
+          <PublicImpactMapExplorer compact />
+        </Suspense>
       </div>
       {/* Legend */}
       <div className="flex items-center gap-2 mt-3 text-[10px] text-gray-500">
