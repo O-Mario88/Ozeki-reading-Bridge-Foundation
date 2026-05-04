@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalCrmProfileView } from "@/components/portal/crm/PortalCrmProfileView";
+import { PhotoEvidenceGallery } from "@/components/portal/evidence/PhotoEvidenceGallery";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { getTrainingCrmProfile } from "@/lib/server/postgres/repositories/portal-crm";
 
@@ -42,6 +43,13 @@ export default async function PortalTrainingProfilePage({ params }: PageProps) {
       }
     >
       <PortalCrmProfileView profile={profile} />
+      <div className="mt-6">
+        <PhotoEvidenceGallery
+          parentType="training_record"
+          parentId={trainingId}
+          allowUpload
+        />
+      </div>
     </PortalShell>
   );
 }

@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Save, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  PhotoEvidenceCapture,
+  type PhotoEvidenceCaptureHandle,
+  uploadStagedPhotos,
+} from "@/components/portal/evidence/PhotoEvidenceCapture";
 
 interface SchoolOption { id: number; name: string; district: string }
 interface CoachOption { id: number; fullName: string; email: string }
@@ -70,6 +75,7 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const photoCaptureRef = useRef<PhotoEvidenceCaptureHandle>(null);
 
   const toggleInArray = (key: "focusAreas" | "visitReasons", value: string) => {
     setForm((prev) => {
@@ -124,7 +130,25 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
         setError(data.error ?? "Save failed.");
         return;
       }
-      setSuccess(`Visit ${data.visitUid} saved. Form has been reset for the next entry.`);
+
+      const stagedPhotos = photoCaptureRef.current?.getStaged() ?? [];
+      let photoSummary = "";
+      if (stagedPhotos.length > 0 && typeof data.id === "number") {
+        const result = await uploadStagedPhotos({
+          parentType: "coaching_visit",
+          parentId: data.id,
+          schoolId: form.schoolId,
+          staged: stagedPhotos,
+          geo: photoCaptureRef.current?.getGeolocation() ?? null,
+        });
+        photoSummary =
+          result.failed.length === 0
+            ? ` ${result.uploaded} photo${result.uploaded === 1 ? "" : "s"} attached.`
+            : ` ${result.uploaded} photo${result.uploaded === 1 ? "" : "s"} attached, ${result.failed.length} failed.`;
+        photoCaptureRef.current?.clear();
+      }
+
+      setSuccess(`Visit ${data.visitUid} saved.${photoSummary} Form has been reset for the next entry.`);
       // Reset the form so the user can log another visit immediately. The
       // success banner stays visible until the next submit attempt.
       setForm(buildEmptyForm(defaultSchoolId, defaultCoachId));
@@ -325,6 +349,12 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
           />
         </div>
       </div>
+
+      {/* Section 5: Photo evidence */}
+      <PhotoEvidenceCapture
+        ref={photoCaptureRef}
+        helperText="Take photos at the school. GPS location is captured from your device or the photo's EXIF data — both are stored for verification."
+      />
 
       {/* Submit */}
       <div className="flex items-center justify-end gap-3 pt-2">

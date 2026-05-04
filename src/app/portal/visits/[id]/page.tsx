@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalCrmProfileView } from "@/components/portal/crm/PortalCrmProfileView";
+import { PhotoEvidenceGallery } from "@/components/portal/evidence/PhotoEvidenceGallery";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { getVisitCrmProfile } from "@/lib/server/postgres/repositories/portal-crm";
 
@@ -26,6 +27,13 @@ export default async function PortalVisitProfilePage({ params }: PageProps) {
   return (
     <PortalShell user={user} activeHref="/portal/visits" title={profile.title} description={profile.subtitle ?? undefined}>
       <PortalCrmProfileView profile={profile} />
+      <div className="mt-6">
+        <PhotoEvidenceGallery
+          parentType="coaching_visit"
+          parentId={visitId}
+          allowUpload
+        />
+      </div>
     </PortalShell>
   );
 }
