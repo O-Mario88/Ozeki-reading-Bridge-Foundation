@@ -3,6 +3,7 @@ import { getAuthenticatedPortalUser } from "@/lib/auth";
 import { RouteError, jsonSuccess, withRouteHandler } from "@/lib/server/http/route-utils";
 import { withPostgresClient } from "@/lib/server/postgres/client";
 import type { PortalUser } from "@/lib/types";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -286,6 +287,15 @@ export async function POST(request: Request) {
       }
       const body = addToTrainingSchema.parse(await request.json());
       const result = await addContactToTrainingSession(user, body.contactId, body.trainingRecordId);
+      await auditLog({
+        actor: user,
+        action: "create",
+        targetTable: "training_attendees",
+        targetId: body.trainingRecordId,
+        after: { contactId: body.contactId, trainingRecordId: body.trainingRecordId },
+        detail: `Added contact ${body.contactId} to training ${body.trainingRecordId}`,
+        request,
+      });
       return jsonSuccess({ result }, requestId);
     },
   });

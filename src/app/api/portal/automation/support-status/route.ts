@@ -6,6 +6,7 @@ import {
   recomputeLearningAutomationSnapshots,
 } from "@/services/dataService";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -102,6 +103,14 @@ export async function POST(request: Request) {
     const parsed = postSchema.parse(await request.json());
     recomputeLearningAutomationSnapshots({
       schoolId: parsed.schoolId,
+    });
+    await auditLog({
+      actor: user,
+      action: "recompute",
+      targetTable: "learning_automation_snapshots",
+      targetId: parsed.schoolId,
+      detail: `Recomputed support-status snapshots${parsed.schoolId ? ` for school ${parsed.schoolId}` : " (all)"}`,
+      request,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

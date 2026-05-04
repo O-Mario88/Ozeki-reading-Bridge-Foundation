@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireFinanceSuperAdmin } from "@/app/api/portal/finance/_utils";
 import { uploadAuditedStatement } from "@/services/financeService";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
+import { auditLog } from "@/lib/server/audit/log";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -61,6 +62,22 @@ export async function POST(request: Request) {
                 notes
             }
         );
+
+        await auditLog({
+            actor: { id: auth.actor.id, name: auth.actor.userName },
+            action: "create",
+            targetTable: "audited_financial_statements",
+            targetId: typeof id === "number" ? id : undefined,
+            after: {
+                fy,
+                originalFilename: file.name,
+                sizeBytes: buffer.byteLength,
+                auditorName,
+                auditCompletedDate,
+            },
+            detail: `Uploaded audited financial statement for FY${fy} (${file.name})`,
+            request,
+        });
 
         return NextResponse.json({ success: true, id });
     } catch (error: unknown) {

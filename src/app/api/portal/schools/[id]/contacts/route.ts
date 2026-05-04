@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 import { withPostgresClient, queryPostgres } from "@/lib/server/postgres/client";
 import type { PoolClient } from "pg";
 
@@ -166,6 +167,15 @@ export async function POST(
       }
     });
 
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "school_contacts",
+      targetId: contactId,
+      after: { schoolId, fullName: input.fullName, category: input.category },
+      detail: `Added contact "${input.fullName}" (${input.category}) to school ${schoolId}`,
+      request,
+    });
     return NextResponse.json({
       success: true,
       contactId,

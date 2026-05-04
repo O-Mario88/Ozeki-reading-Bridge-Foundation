@@ -7,6 +7,7 @@ import {
   setPortalBlogPublishStatusAsync,
 } from "@/services/blogService";
 import { getCurrentPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const dynamic = "force-dynamic";
 
@@ -183,6 +184,15 @@ export async function POST(request: NextRequest) {
         },
         user,
       );
+      await auditLog({
+        actor: user,
+        action: payload.id ? "update" : "create",
+        targetTable: "portal_blog_posts",
+        targetId: (post as { id?: number })?.id,
+        after: { slug: payload.slug, title: payload.title, publishStatus: payload.publishStatus },
+        detail: `${payload.id ? "Updated" : "Created"} blog post "${payload.title}"`,
+        request,
+      });
       return NextResponse.json({ post });
     }
 
@@ -193,12 +203,29 @@ export async function POST(request: NextRequest) {
         payload.action === "publish" ? "published" : "draft",
         user,
       );
+      await auditLog({
+        actor: user,
+        action: payload.action === "publish" ? "publish" : "unpublish",
+        targetTable: "portal_blog_posts",
+        targetId: payload.postId,
+        after: { publishStatus: payload.action === "publish" ? "published" : "draft" },
+        detail: `${payload.action === "publish" ? "Published" : "Unpublished"} blog post ${payload.postId}`,
+        request,
+      });
       return NextResponse.json({ post });
     }
 
     if (action === "delete") {
       const payload = deleteActionSchema.parse(body);
       await deletePortalBlogPostAsync(payload.postId, user);
+      await auditLog({
+        actor: user,
+        action: "delete",
+        targetTable: "portal_blog_posts",
+        targetId: payload.postId,
+        detail: `Deleted blog post ${payload.postId}`,
+        request,
+      });
       return NextResponse.json({ ok: true });
     }
 

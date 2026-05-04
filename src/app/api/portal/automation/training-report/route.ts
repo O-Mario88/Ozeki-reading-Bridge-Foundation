@@ -6,6 +6,7 @@ import {
 } from "@/lib/training-report-automation";
 import type { TrainingReportScopeType } from "@/lib/types";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -132,6 +133,14 @@ export async function POST(request: Request) {
       throw new Error("Could not load generated report artifact.");
     }
 
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "training_report_artifacts",
+      after: { scopeType: payload.scopeType, scopeValue: payload.scopeValue, periodStart: payload.periodStart, periodEnd: payload.periodEnd },
+      detail: `Generated training report (${payload.scopeType ?? "all"} · ${payload.periodStart} → ${payload.periodEnd})`,
+      request,
+    });
     return NextResponse.json({
       report: toResponseRecord(artifact),
     });

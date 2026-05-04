@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 import {
   getWorkflowByIdPostgres,
   updateWorkflowPostgres,
@@ -42,7 +43,7 @@ const patchSchema = z.object({
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   try {
-    await requireAdmin();
+    const user = await requireAdmin();
     const { id } = await params;
     const body = await request.json();
     const parsed = patchSchema.parse(body);
@@ -51,6 +52,15 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       description: parsed.description === undefined ? undefined : parsed.description ?? null,
       conditions: parsed.conditions as WorkflowCondition[] | undefined,
       actions: parsed.actions as WorkflowAction[] | undefined,
+    });
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "workflows",
+      targetId: Number(id),
+      after: parsed,
+      detail: `Updated workflow ${id}`,
+      request,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

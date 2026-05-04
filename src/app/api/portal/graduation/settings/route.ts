@@ -5,6 +5,7 @@ import {
   updateGraduationSettingsAsync,
 } from "@/services/dataService";
 import { authorizeSuperAdmin } from "@/app/api/portal/_shared/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -59,6 +60,14 @@ export async function PUT(request: Request) {
   try {
     const parsed = settingsSchema.parse(await request.json());
     const settings = await updateGraduationSettingsAsync(parsed, user);
+    await auditLog({
+      actor: user,
+      action: "update",
+      targetTable: "graduation_settings",
+      after: parsed,
+      detail: "Updated graduation settings",
+      request,
+    });
     return NextResponse.json({ settings });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { bulkAssignCoachPostgres } from "@/lib/server/postgres/repositories/command-center";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,14 @@ export async function POST(request: Request) {
       assignedByUserId: user.id,
     });
 
+    await auditLog({
+      actor: user,
+      action: "bulk_assign",
+      targetTable: "school_coach_assignments",
+      after: { coachUserId: parsed.coachUserId, schoolIds: parsed.schoolIds, notes: parsed.notes },
+      detail: `Assigned coach ${parsed.coachUserId} to ${parsed.schoolIds.length} schools`,
+      request,
+    });
     return NextResponse.json({
       ok: true,
       ...result,

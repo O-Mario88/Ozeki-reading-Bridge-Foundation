@@ -8,6 +8,7 @@ import {
 } from "@/lib/content-db";
 import { sendNewsletterIssueInGroups } from "@/lib/newsletter";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,14 @@ export async function POST(request: Request) {
       });
     }
 
+    await auditLog({
+      actor: user,
+      action: "send",
+      targetTable: "newsletter_issues",
+      after: { processed: results.length, recipientsCount: recipients.length },
+      detail: `Auto-sent ${results.length} newsletter issue(s) to ${recipients.length} recipients`,
+      request,
+    });
     return NextResponse.json({
       ok: true,
       processed: results.length,

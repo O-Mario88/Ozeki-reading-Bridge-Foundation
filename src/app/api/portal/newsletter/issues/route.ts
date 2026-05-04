@@ -16,6 +16,7 @@ import {
 } from "@/lib/newsletter-editorial-template";
 import { sendNewsletterIssueInGroups } from "@/lib/newsletter";
 import { canReview, getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -215,6 +216,15 @@ export async function POST(request: Request) {
     }
 
     const refreshedIssue = await getNewsletterIssueById(issue.id);
+    await auditLog({
+      actor: user,
+      action: shouldAutoSend ? "send" : (parsed.publish ? "publish" : "create"),
+      targetTable: "newsletter_issues",
+      targetId: issue.id,
+      after: { title: parsed.title, slug: parsed.slug, status: issue.status },
+      detail: `${shouldAutoSend ? "Created + sent" : (parsed.publish ? "Published" : "Drafted")} newsletter "${parsed.title}"`,
+      request,
+    });
     return NextResponse.json({
       ok: true,
       issue: refreshedIssue ?? issue,

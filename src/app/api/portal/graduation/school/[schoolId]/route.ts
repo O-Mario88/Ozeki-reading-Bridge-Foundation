@@ -7,6 +7,7 @@ import {
   reviewSchoolGraduationAsync,
 } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -101,6 +102,15 @@ export async function POST(
       },
       user,
     );
+    await auditLog({
+      actor: user,
+      action: parsed.action === "confirm_graduation" ? "approve" : "update",
+      targetTable: "school_graduation_reviews",
+      targetId: schoolId,
+      after: parsed,
+      detail: `Graduation review "${parsed.action}" for school ${schoolId}${parsed.reason ? `: ${parsed.reason}` : ""}`,
+      request,
+    });
     return NextResponse.json({
       ok: true,
       eligibility,

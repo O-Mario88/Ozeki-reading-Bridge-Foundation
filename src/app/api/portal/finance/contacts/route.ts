@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createFinanceContactAsync, listFinanceContacts } from "@/services/financeService";
 import { requireFinanceEditor } from "@/app/api/portal/finance/_utils";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,15 @@ export async function POST(request: Request) {
       },
       auth.actor,
     );
+    await auditLog({
+      actor: { id: auth.actor.id, name: auth.actor.userName },
+      action: "create",
+      targetTable: "finance_contacts",
+      targetId: (contact as { id?: number })?.id,
+      after: parsed,
+      detail: `Created ${parsed.contactType} contact "${parsed.name}"`,
+      request,
+    });
     return NextResponse.json({ contact }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { PORTAL_SESSION_COOKIE } from "@/lib/auth";
 import { getPortalUserFromSession, logAuditEvent } from "@/services/dataService";
+import { auditLog } from "@/lib/server/audit/log";
 import { getGoogleWorkspaceDiagnostics } from "@/lib/google-workspace";
 
 async function requireAuth() {
@@ -60,6 +61,14 @@ export async function POST(req: NextRequest) {
             "Updated Google Workspace and AI configuration.",
         );
 
+        await auditLog({
+            actor: user,
+            action: "update",
+            targetTable: "system_settings",
+            after: body,
+            detail: "Updated training / Google Workspace / AI configuration",
+            request: req,
+        });
         return NextResponse.json({ success: true, settings: body });
     } catch (_error) {
         return new NextResponse("Internal Error", { status: 500 });

@@ -4,6 +4,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 import { addImpactGalleryEntryPostgres, listImpactGalleryEntriesPostgres } from "@/lib/server/postgres/repositories/impact-gallery";
 import { inferRegionFromDistrict } from "@/lib/uganda-locations";
 
@@ -122,6 +123,15 @@ export async function POST(request: Request) {
       mimeType: file.type || "image/jpeg",
     }, user);
 
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "impact_gallery",
+      targetId: (item as { id?: number })?.id,
+      after: { quoteText: parsed.quoteText, personName: parsed.personName, district: parsed.district },
+      detail: `Added gallery item by ${parsed.personName} (${parsed.district})`,
+      request,
+    });
     return NextResponse.json({ ok: true, item });
   } catch (error) {
     if (error instanceof z.ZodError) {

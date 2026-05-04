@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { listPortalEvidencePostgres, savePortalEvidencePostgres } from "@/services/dataService";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 import { getRuntimeDataDir } from "@/lib/runtime-paths";
 import { sanitisedErrorResponse } from "@/lib/server/http/error-response";
 
@@ -113,6 +114,21 @@ export async function POST(request: Request) {
       mimeType: file.type || "application/octet-stream",
       sizeBytes: bytes.byteLength,
       uploadedByUserId: user.id,
+    });
+
+    await auditLog({
+      actor: user,
+      action: "create",
+      targetTable: "portal_evidence",
+      targetId: (evidence as { id?: number })?.id,
+      after: {
+        module: meta.module,
+        schoolName: meta.schoolName,
+        fileName: file.name,
+        sizeBytes: bytes.byteLength,
+      },
+      detail: `Uploaded evidence "${file.name}" (${(bytes.byteLength / 1024).toFixed(1)} kB) for ${meta.module}`,
+      request,
     });
 
     return NextResponse.json({

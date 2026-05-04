@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePortalUser } from "@/lib/auth";
 import { bulkScheduleTrainingPostgres } from "@/lib/server/postgres/repositories/command-center";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,14 @@ export async function POST(request: Request) {
       createdByUserId: user.id,
     });
 
+    await auditLog({
+      actor: user,
+      action: "bulk_create",
+      targetTable: "training_records",
+      after: { topic: parsed.topic, scheduledDate: parsed.scheduledDate, schoolIds: parsed.schoolIds },
+      detail: `Bulk-scheduled "${parsed.topic}" across ${parsed.schoolIds.length} schools on ${parsed.scheduledDate}`,
+      request,
+    });
     return NextResponse.json({
       ok: true,
       ...result,

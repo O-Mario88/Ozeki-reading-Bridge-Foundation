@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentPortalUser } from "@/lib/auth";
+import { auditLog } from "@/lib/server/audit/log";
 
 export const runtime = "nodejs";
 
@@ -71,6 +72,16 @@ export async function POST(request: Request) {
     await fs.writeFile(storedPath, buffer);
 
     const publicUrl = `/uploads/blog/${year}/${month}/${storedFile}`;
+    if (user) {
+      await auditLog({
+        actor: user,
+        action: "create",
+        targetTable: "blog_media",
+        after: { url: publicUrl, sizeBytes: buffer.byteLength },
+        detail: `Uploaded blog media (${(buffer.byteLength / 1024).toFixed(1)} kB)`,
+        request,
+      });
+    }
     return NextResponse.json({ ok: true, url: publicUrl, sizeBytes: buffer.byteLength });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload failed.";
