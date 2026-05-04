@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { DashboardMotionShell, MotionCard, MotionFade } from "./MotionShell";
+import { InteractiveTabs } from "./InteractiveTabs";
 
 export const metadata: Metadata = {
   title: "Public Live Impact Dashboard | Ozeki Reading Bridge Foundation",
@@ -129,8 +130,19 @@ export default function PublicLiveImpactDashboardPage() {
             </div>
           </div>
 
-          <TabsRail />
-          <DomainGrid />
+          <InteractiveTabs
+            tabs={TABS}
+            panels={[
+              <DomainGrid key="learning" />,
+              <ComingSoonPanel key="reading-levels" title="Reading Levels"        sub="Distribution by reading stage will appear here once baseline assessments are recorded." />,
+              <ComingSoonPanel key="funnel"          title="Implementation Funnel" sub="The detailed implementation funnel breakdown opens here. The compact funnel above shows the top-line view." />,
+              <ComingSoonPanel key="teaching"        title="Teaching Quality"     sub="Lesson observation rubric scores roll up here when observations are submitted." />,
+              <ComingSoonPanel key="equity"          title="Equity & Segments"    sub="Gender, age, and need-band breakdowns appear here once enough learners are assessed." />,
+              <ComingSoonPanel key="completeness"    title="Data Completeness"    sub="Coverage and freshness of every metric on this dashboard, by region." />,
+              <ComingSoonPanel key="intelligence"    title="Intelligence"          sub="AI-generated narrative insights from the latest period." />,
+              <ComingSoonPanel key="ops"             title="Training Ops"          sub="Trainer workload, session attendance, and certification rates." />,
+            ]}
+          />
         </main>
         <BottomTrust />
       </div>
@@ -180,12 +192,12 @@ function Hero() {
             Real-time, evidence-based literacy outcomes and programme implementation across Uganda.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end -mx-1 px-1 overflow-x-auto lg:overflow-visible">
           <FilterPill label="Year" value="FY 2024/2025" />
           <FilterPill label="View" value="All Metrics" />
           <FilterPill label="Program" value="All Programs" />
           <FilterPill label="Geography" value="Uganda" />
-          <span className="mx-1 hidden md:inline-block w-px h-7 bg-gray-200" />
+          <span className="mx-1 hidden lg:inline-block w-px h-7 bg-gray-200" />
           <ActionButton variant="ghost" icon={FileText}>Open Report</ActionButton>
           <ActionButton variant="primary" icon={Download}>Download</ActionButton>
           <ActionButton variant="ghost" icon={Share2}>Share</ActionButton>
@@ -466,10 +478,10 @@ function MapCard() {
             title="Where We Work"
             subtitle="Live coverage of our programmes across Uganda."
             action={
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap justify-end -mx-1 px-1 max-w-full overflow-x-auto md:overflow-visible">
                 <Seg label="District" active />
                 <Seg label="Sub-region" />
-                <span className="mx-0.5 w-px h-5 bg-gray-200" />
+                <span className="mx-0.5 hidden md:inline-block w-px h-5 bg-gray-200" />
                 <Seg label="Coverage" tone="orange" active />
                 <Seg label="Improvement" />
                 <Seg label="Fidelity" />
@@ -730,30 +742,21 @@ function FunnelCard() {
   );
 }
 
-/* ── Tabs ──────────────────────────────────────────────────────────── */
-function TabsRail() {
+/* ── "Coming soon" panel for the inactive tabs ─────────────────────── */
+function ComingSoonPanel({ title, sub }: { title: string; sub: string }) {
   return (
-    <MotionFade delay={0.1}>
-      <nav
-        className="inline-flex flex-wrap items-center gap-1 p-1.5"
-        style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS, boxShadow: SHADOW_LOW }}
-      >
-        {TABS.map((t, i) => (
-          <button
-            key={t}
-            type="button"
-            className="h-8 px-3.5 text-[12px] font-semibold transition"
-            style={
-              i === 0
-                ? { background: TEAL, color: "#fff", borderRadius: RADIUS_SM }
-                : { color: TEXT_MUTED, borderRadius: RADIUS_SM }
-            }
-          >
-            {t}
-          </button>
-        ))}
-      </nav>
-    </MotionFade>
+    <Card>
+      <div className="py-12 text-center">
+        <span
+          className="grid h-12 w-12 mx-auto place-items-center mb-4"
+          style={{ background: TEAL_SOFT, borderRadius: "50%" }}
+        >
+          <Sparkles className="h-5 w-5" style={{ color: TEAL }} strokeWidth={2} />
+        </span>
+        <h3 className="text-[16px] font-semibold" style={{ color: TEXT }}>{title}</h3>
+        <p className="text-[12.5px] mt-1.5 max-w-md mx-auto" style={{ color: TEXT_MUTED }}>{sub}</p>
+      </div>
+    </Card>
   );
 }
 
