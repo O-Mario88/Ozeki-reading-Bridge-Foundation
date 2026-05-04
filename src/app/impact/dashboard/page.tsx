@@ -4,13 +4,14 @@ import { Suspense } from "react";
 import {
   ChevronDown, ShieldCheck, Building2, Users, GraduationCap,
   ClipboardCheck, MessageCircle, PieChart as PieIcon,
-  Globe, Search, Plus, Minus, Crosshair,
-  TrendingUp, FileText, Download, Share2, BookOpen, ChevronRight,
+  Globe, Search,
+  TrendingUp, Download, BookOpen, ChevronRight,
   ClipboardList, Heart, Sparkles, type LucideIcon,
 } from "lucide-react";
 import { PublicImpactMapExplorer } from "@/components/dashboard/map/PublicImpactMapExplorer";
 import { DashboardMotionShell, MotionCard, MotionFade } from "./MotionShell";
 import { InteractiveTabs } from "./InteractiveTabs";
+import { InteractiveFilters } from "./InteractiveFilters";
 
 export const metadata: Metadata = {
   title: "Public Live Impact Dashboard | Ozeki Reading Bridge Foundation",
@@ -192,62 +193,9 @@ function Hero() {
             Real-time, evidence-based literacy outcomes and programme implementation across Uganda.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end -mx-1 px-1 overflow-x-auto lg:overflow-visible">
-          <FilterPill label="Year" value="FY 2024/2025" />
-          <FilterPill label="View" value="All Metrics" />
-          <FilterPill label="Program" value="All Programs" />
-          <FilterPill label="Geography" value="Uganda" />
-          <span className="mx-1 hidden lg:inline-block w-px h-7 bg-gray-200" />
-          <ActionButton variant="ghost" icon={FileText}>Open Report</ActionButton>
-          <ActionButton variant="primary" icon={Download}>Download</ActionButton>
-          <ActionButton variant="ghost" icon={Share2}>Share</ActionButton>
-        </div>
+        <InteractiveFilters />
       </section>
     </MotionFade>
-  );
-}
-
-function FilterPill({ label, value }: { label: string; value: string }) {
-  return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-2 h-9 px-3.5 text-[12px] font-semibold transition hover:border-gray-300"
-      style={{
-        background: SURFACE,
-        border: `1px solid ${BORDER}`,
-        borderRadius: RADIUS_SM,
-        color: TEXT,
-      }}
-    >
-      <span style={{ color: TEXT_SUBTLE }}>{label}:</span>
-      {value}
-      <ChevronDown className="h-3.5 w-3.5" style={{ color: TEXT_SUBTLE }} strokeWidth={2.25} />
-    </button>
-  );
-}
-
-function ActionButton({ variant, icon: Icon, children }: { variant: "primary" | "ghost"; icon: LucideIcon; children: React.ReactNode }) {
-  if (variant === "primary") {
-    return (
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 h-9 px-4 text-[12px] font-semibold text-white transition hover:opacity-90"
-        style={{ background: TEAL, borderRadius: RADIUS_SM, boxShadow: SHADOW_LOW }}
-      >
-        <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
-        {children}
-      </button>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-2 h-9 px-4 text-[12px] font-semibold transition hover:bg-gray-50"
-      style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS_SM, color: TEXT }}
-    >
-      <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
-      {children}
-    </button>
   );
 }
 
@@ -262,8 +210,13 @@ function KpiRow() {
         return (
           <MotionCard key={k.label} delay={i * 0.04}>
             <div
-              className="p-5 h-full transition hover:shadow-md"
-              style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS, boxShadow: SHADOW_LOW }}
+              className="p-5 h-full transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md hover:border-gray-200 cursor-default"
+              style={{
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+                borderRadius: RADIUS,
+                boxShadow: SHADOW_LOW,
+              }}
             >
               <div className="flex items-center justify-between mb-3">
                 <span
@@ -488,34 +441,21 @@ function MapCard() {
               </div>
             }
           />
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 max-w-[300px]">
-              <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: TEXT_SUBTLE }} />
-              <input
-                type="text"
-                placeholder="Search district…"
-                className="w-full h-9 pl-9 pr-3 text-[12.5px] focus:outline-none focus:ring-2 focus:ring-offset-0"
-                style={{
-                  background: "#f8fafc",
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: RADIUS_SM,
-                  color: TEXT,
-                }}
-              />
-            </div>
-            <div className="ml-auto flex items-center gap-1">
-              {[Plus, Minus, Crosshair].map((I, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="grid h-8 w-8 place-items-center transition hover:bg-gray-50"
-                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS_SM }}
-                  aria-label={i === 0 ? "Zoom in" : i === 1 ? "Zoom out" : "Recenter"}
-                >
-                  <I className="h-3.5 w-3.5" style={{ color: TEXT_MUTED }} strokeWidth={2.25} />
-                </button>
-              ))}
-            </div>
+          {/* Search filter — the live map provides its own zoom/pan
+              controls, so the dashboard wrapper only needs the search. */}
+          <div className="relative max-w-[300px]">
+            <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: TEXT_SUBTLE }} />
+            <input
+              type="text"
+              placeholder="Search district…"
+              className="w-full h-9 pl-9 pr-3 text-[12.5px] focus:outline-none focus:ring-2 focus:ring-offset-0"
+              style={{
+                background: "#f8fafc",
+                border: `1px solid ${BORDER}`,
+                borderRadius: RADIUS_SM,
+                color: TEXT,
+              }}
+            />
           </div>
         </div>
         <div className="px-5">
