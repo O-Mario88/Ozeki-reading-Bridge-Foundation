@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import { SchoolProfileActionsClient } from "@/components/portal/SchoolProfileActionsClient";
 import { SchoolEditModalClient } from "@/components/portal/SchoolEditModalClient";
+import { AddContactButton } from "@/components/portal/AddContactButton";
 import { getSchoolAccountProfile, getSchoolDirectoryRecord } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { devFallback } from "@/lib/dev-fallback";
@@ -127,6 +128,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
             </nav>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <AddContactButton schoolId={schoolId} schoolName={school.name} />
             <Link
               href={`/portal/reports?district=${encodeURIComponent(district ?? "")}&search=${encodeURIComponent(school.name)}`}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 shadow-sm hover:bg-gray-50 whitespace-nowrap"
