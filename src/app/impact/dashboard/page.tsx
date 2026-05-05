@@ -181,7 +181,7 @@ export default function PublicLiveImpactDashboardPage() {
 function TrustStrip() {
   return (
     <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}` }}>
-      <div className="max-w-[1440px] mx-auto px-6 py-2.5 flex items-center justify-between gap-4 text-[12.5px]" style={{ color: TEXT_MUTED }}>
+      <div className="max-w-[1760px] mx-auto px-4 lg:px-6 py-2.5 flex items-center justify-between gap-4 text-[12.5px]" style={{ color: TEXT_MUTED }}>
         <div className="flex items-center gap-2">
           <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: "#16a34a", display: "inline-block", boxShadow: "0 0 0 3px rgba(22, 163, 74, 0.15)" }} />
           <span style={{ fontWeight: 700, color: TEXT, letterSpacing: 0.2 }}>LIVE</span>
@@ -210,7 +210,7 @@ function TrustStrip() {
 function PageTitleRow() {
   return (
     <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}` }}>
-      <div className="max-w-[1440px] mx-auto px-6 py-5 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+      <div className="max-w-[1760px] mx-auto px-4 lg:px-6 py-5 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-[26px] leading-tight font-bold" style={{ color: TEXT, letterSpacing: -0.2 }}>
@@ -238,8 +238,8 @@ function PageTitleRow() {
    ──────────────────────────────────────────────────────────────────── */
 function DashboardLayout() {
   return (
-    <div className="max-w-[1440px] mx-auto px-6 py-6">
-      <div className="flex gap-5">
+    <div className="max-w-[1760px] mx-auto px-4 lg:px-6 py-6">
+      <div className="flex gap-5 items-stretch">
         <Sidebar />
         <div className="flex-1 min-w-0 flex flex-col gap-5">
           <KpiRow />
@@ -261,16 +261,12 @@ function Sidebar() {
     <aside
       className="shrink-0 hidden lg:flex flex-col gap-4"
       style={{
-        width: 220,
+        width: 240,
         background: TEAL_DEEP,
         borderRadius: RADIUS,
-        padding: "16px 12px",
+        padding: "18px 14px",
         color: "#cbe7e6",
-        position: "sticky",
-        top: 16,
-        alignSelf: "flex-start",
-        maxHeight: "calc(100vh - 32px)",
-        overflow: "hidden",
+        alignSelf: "stretch",
       }}
     >
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] px-2" style={{ color: "rgba(255,255,255,0.5)" }}>
@@ -409,23 +405,23 @@ function KpiRow() {
    ──────────────────────────────────────────────────────────────────── */
 function ThreeColumnGrid() {
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-      {/* LEFT — Explore + Data Trust */}
-      <div className="lg:col-span-3 flex flex-col gap-4">
+    <section className="grid grid-cols-1 lg:grid-cols-[minmax(280px,1fr)_minmax(0,2.4fr)_minmax(280px,1fr)] gap-4 items-stretch">
+      {/* LEFT — Explore + Data Trust (stretches to match map height, no dead space) */}
+      <div className="flex flex-col gap-4">
         <ExploreByGeographyCard />
-        <DataTrustCard />
+        <DataTrustCard className="flex-1" />
       </div>
 
-      {/* CENTER — Map (square-ish, centerpiece) */}
-      <div className="lg:col-span-6">
+      {/* CENTER — Map (large square-ish, centerpiece) */}
+      <div className="min-w-0">
         <CoverageMapPanel />
       </div>
 
-      {/* RIGHT — Learning & Parity / Reading Progress / Funnel */}
-      <div className="lg:col-span-3 flex flex-col gap-4">
+      {/* RIGHT — Learning & Parity / Reading Progress / Funnel (stretches to match map height) */}
+      <div className="flex flex-col gap-4">
         <LearningParityCard />
         <ReadingProgressCard />
-        <ConversionFunnelCard />
+        <ConversionFunnelCard className="flex-1" />
       </div>
     </section>
   );
@@ -439,7 +435,15 @@ function Card({ children, padding = 16, className }: CardProps) {
   return (
     <article
       className={className}
-      style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS, padding, boxShadow: SHADOW_LOW }}
+      style={{
+        background: SURFACE,
+        border: `1px solid ${BORDER}`,
+        borderRadius: RADIUS,
+        padding,
+        boxShadow: SHADOW_LOW,
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
       {children}
     </article>
@@ -509,14 +513,14 @@ function ExploreByGeographyCard() {
 /* ────────────────────────────────────────────────────────────────────
    Data Trust card
    ──────────────────────────────────────────────────────────────────── */
-function DataTrustCard() {
+function DataTrustCard({ className }: { className?: string }) {
   const rows = [
     { label: "Completeness", value: "Complete", tone: "ok" as const },
     { label: "Sample size", value: "n = 172", tone: "muted" as const },
     { label: "Last updated", value: "28 Apr · 08:45", tone: "muted" as const },
   ];
   return (
-    <Card>
+    <Card className={className}>
       <div className="flex items-start gap-2 mb-3">
         <span aria-hidden style={{ width: 28, height: 28, borderRadius: 8, background: TEAL_SOFT, color: TEAL, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
           <ShieldCheck className="h-3.5 w-3.5" />
@@ -784,9 +788,9 @@ function ReadingProgressCard() {
   );
 }
 
-function ConversionFunnelCard() {
+function ConversionFunnelCard({ className }: { className?: string }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader title="Conversion Funnel" subtitle="From selection to outcomes." />
       <ul className="flex flex-col gap-2.5">
         {FUNNEL.map((step) => (
