@@ -10,6 +10,7 @@ import {
   getGenderParityOutcomes, getGeographyComparison, getLearnersAssessedKpi,
   getLearningOutcomesTrend, getLessonStructureAdherence, getMovedUpKpi,
   getObservationDomainBreakdown, getPrioritySupportAreas, getReadingLevelsDistribution,
+  getReadingProgressionTrend,
   getReadingProficiencyKpi, getRubricCriteriaBreakdown, getTeachingQualityIndexKpi,
   getTopPerformingGeographies, MIN_PUBLIC_SAMPLE_SIZE,
   type LessonStructureAdherenceRow, type PublicOutcomesFilters,
@@ -59,7 +60,7 @@ export default async function PublicLearningOutcomesPage({ searchParams }: PageP
 
   const [
     learnersAssessed, proficiency, teachingQuality, movedUp, dataCompleteness,
-    dataQuality, readingLevels, trend, observationDomains, domainPerformance,
+    dataQuality, readingLevels, trend, progressionTrend, observationDomains, domainPerformance,
     geographyComparison, genderParity, topGeographies, prioritySupport, filterOptions,
     lessonStructureAdherence, rubric,
   ] = await Promise.all([
@@ -71,6 +72,7 @@ export default async function PublicLearningOutcomesPage({ searchParams }: PageP
     getDataQualityBreakdown(),
     getReadingLevelsDistribution(filters),
     getLearningOutcomesTrend(filters, 12),
+    getReadingProgressionTrend(filters, 12),
     getObservationDomainBreakdown(),
     getDomainPerformance(filters),
     getGeographyComparison(),
@@ -172,7 +174,7 @@ export default async function PublicLearningOutcomesPage({ searchParams }: PageP
           <DomainPerformanceCard rows={domainPerformance} />
           <GeographyComparisonCard rows={geographyComparison} />
           <section id="equity"><GenderParityCard parity={genderParity} /></section>
-          <ReadingProgressionCard trend={trend} />
+          <ReadingProgressionCard trend={progressionTrend} />
         </section>
 
         {/* OBSERVATION RUBRIC ROLLUP — every captured score, analysed.
@@ -764,17 +766,17 @@ function GenderParityCard({ parity }: { parity: { malePct: number; femalePct: nu
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   Reading progression over time (uses trend % with offset)
+   Reading progression over time — % of learners with a baseline who had
+   moved up 1+ reading level by each month. Real value from
+   getReadingProgressionTrend (no approximation).
    ──────────────────────────────────────────────────────────────────── */
 function ReadingProgressionCard({ trend }: { trend: { month: string; pct: number }[] }) {
-  // Approximation: progression = at/above pct - 30 floor, capped at 0
-  const progression = trend.map((t) => ({ month: t.month, pct: Math.max(0, t.pct - 30) }));
   return (
     <article style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, boxShadow: SHADOW }}>
       <h3 className="text-[14px] font-bold" style={{ color: TEXT }}>Reading Progression Over Time</h3>
       <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>% of learners who moved up 1+ reading level</p>
       <div className="mt-3">
-        <TrendLineChart data={progression} stroke={ORANGE} />
+        <TrendLineChart data={trend} stroke={ORANGE} />
       </div>
       <p className="text-[10.5px] mt-2" style={{ color: TEXT_SUBTLE }}>Shows improvement in reading level progression across periods.</p>
     </article>

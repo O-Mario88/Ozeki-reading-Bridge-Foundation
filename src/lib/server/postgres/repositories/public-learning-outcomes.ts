@@ -397,6 +397,72 @@ export async function getLearningOutcomesTrend(
 }
 
 /* ────────────────────────────────────────────────────────────────────
+   Reading Progression trend — monthly % of learners with a baseline who
+   had moved up at least one reading stage by that month. Each learner is
+   evaluated against their own earliest baseline; they count toward a
+   month if their latest assessment in that month outranks the baseline.
+   ──────────────────────────────────────────────────────────────────── */
+export async function getReadingProgressionTrend(
+  filters: PublicOutcomesFilters = {},
+  months = 12,
+): Promise<TrendPoint[]> {
+  try {
+    const params: unknown[] = [months];
+    const where = geoClause(filters, params);
+    const result = await queryPostgres<{ month: string; matched: number; moved: number }>(
+      `WITH baselines AS (
+         SELECT DISTINCT ON (ar.learner_uid)
+                ar.learner_uid,
+                ar.reading_stage_order AS baseline_order
+         FROM assessment_records ar
+         LEFT JOIN schools_directory sd ON sd.id = ar.school_id
+         WHERE ar.assessment_type = 'baseline'
+           AND ar.learner_uid IS NOT NULL
+           AND ar.reading_stage_order IS NOT NULL ${where}
+         ORDER BY ar.learner_uid, ar.assessment_date ASC
+       ),
+       monthly AS (
+         SELECT
+           to_char(date_trunc('month', ar.assessment_date), 'YYYY-MM') AS month,
+           ar.learner_uid,
+           ar.reading_stage_order AS latest_order,
+           row_number() OVER (
+             PARTITION BY ar.learner_uid, date_trunc('month', ar.assessment_date)
+             ORDER BY ar.assessment_date DESC
+           ) AS rn
+         FROM assessment_records ar
+         LEFT JOIN schools_directory sd ON sd.id = ar.school_id
+         WHERE ar.assessment_type IN ('progress', 'endline')
+           AND ar.learner_uid IS NOT NULL
+           AND ar.reading_stage_order IS NOT NULL
+           AND ar.assessment_date >= (date_trunc('month', NOW()) - ($1::int - 1) * INTERVAL '1 month') ${where}
+       )
+       SELECT m.month,
+              COUNT(*)::int AS matched,
+              COUNT(*) FILTER (WHERE m.latest_order > b.baseline_order)::int AS moved
+       FROM monthly m
+       JOIN baselines b ON b.learner_uid = m.learner_uid
+       WHERE m.rn = 1
+       GROUP BY m.month
+       ORDER BY m.month ASC`,
+      params,
+    );
+    return result.rows.map((r) => {
+      const matched = Number(r.matched);
+      const moved = Number(r.moved);
+      return {
+        month: String(r.month),
+        pct: matched >= MIN_PUBLIC_SAMPLE_SIZE
+          ? Math.round((moved / matched) * 1000) / 10
+          : 0,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────
    Teaching Quality from observation rubric domains
    ──────────────────────────────────────────────────────────────────── */
 export type ObservationDomain = { label: string; pct: number };
