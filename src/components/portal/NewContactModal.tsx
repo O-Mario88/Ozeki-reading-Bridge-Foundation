@@ -21,6 +21,20 @@ const CATEGORIES = [
   "Other",
 ] as const;
 
+/**
+ * Canonical role vocabulary captured by the form.
+ * Stored to school_contacts.role_title and indexed for analysis.
+ */
+const ROLES = [
+  "Director",
+  "Head Teacher",
+  "DOS",
+  "Deputy Head Teacher",
+  "Head Teacher Lower",
+  "Classroom Teacher",
+  "Other",
+] as const;
+
 export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: NewContactModalProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const submitter = useFormSubmit<{ success?: boolean }>({
@@ -45,6 +59,7 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
         body: JSON.stringify({
           fullName,
           category: String(formData.get("category") ?? "Classroom Teacher"),
+          roleTitle: String(formData.get("roleTitle") ?? "").trim() || undefined,
           gender: String(formData.get("gender") ?? "Female"),
           phone: String(formData.get("phone") ?? "").trim(),
           email: String(formData.get("email") ?? "").trim(),
@@ -82,6 +97,12 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
                 minLength={2}
                 autoFocus
               />
+            </label>
+            <label>
+              <span className="portal-field-label">Role *</span>
+              <select name="roleTitle" defaultValue="Head Teacher" required>
+                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
             </label>
             <label>
               <span className="portal-field-label">Category</span>

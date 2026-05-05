@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { GraduationCap, ChevronRight, Eye, ClipboardCheck, ShieldCheck } from "lucide-react";
-import { getTeacherRosterIntelPostgres } from "@/lib/server/postgres/repositories/school-intelligence";
+import {
+  getTeacherRosterIntelPostgres,
+  getSchoolContactRoleDistributionPostgres,
+} from "@/lib/server/postgres/repositories/school-intelligence";
 
 type Props = {
   schoolId: number;
@@ -10,12 +13,15 @@ const TEAL = "#066a67";
 
 /**
  * Teachers list card for the school profile dashboard. Server component —
- * pulls live roster + observation/training/assessment flags from
- * getTeacherRosterIntelPostgres so each row's badges (trained, observed,
- * has assessment data) reflect the production database.
+ * pulls live roster + observation/training/assessment flags + role
+ * distribution from production so badges and the role-breakdown strip
+ * reflect the latest contacts.
  */
 export async function SchoolTeachersCard({ schoolId }: Props) {
-  const intel = await getTeacherRosterIntelPostgres(schoolId).catch(() => null);
+  const [intel, roleDist] = await Promise.all([
+    getTeacherRosterIntelPostgres(schoolId).catch(() => null),
+    getSchoolContactRoleDistributionPostgres(schoolId),
+  ]);
 
   const teachers = intel?.teachers ?? [];
   const total = intel?.total ?? 0;
@@ -41,6 +47,21 @@ export async function SchoolTeachersCard({ schoolId }: Props) {
           Manage <ChevronRight className="h-3 w-3 ml-0.5" strokeWidth={2} />
         </Link>
       </header>
+
+      {roleDist.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5 mb-3 -mt-1">
+          {roleDist.map((r) => (
+            <span
+              key={r.roleTitle}
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-[#066a67]"
+              title={`${r.count} ${r.roleTitle}${r.count === 1 ? "" : "s"}`}
+            >
+              <span className="font-bold">{r.count}</span>
+              <span className="text-emerald-700/80">{r.roleTitle}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {teachers.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center">

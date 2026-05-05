@@ -28,6 +28,10 @@ const contactSchema = z.object({
     "Teacher",
     "Other",
   ]),
+  /** Canonical role from the New Contact dropdown. When provided, takes
+   *  precedence over the auto-derived role_title. Free-text on the DB
+   *  side; the form constrains to the canonical vocabulary. */
+  roleTitle: z.string().trim().max(80).optional(),
   gender: z.enum(["Male", "Female", "Other"]).optional().default("Other"),
   phone: z.string().trim().default("").transform(sanitizePhone),
   email: z.string().trim().email().optional().or(z.literal("")).default(""),
@@ -69,19 +73,22 @@ export async function POST(
       return NextResponse.json({ error: "School not found." }, { status: 404 });
     }
 
-    // Determine role title from category
+    // Prefer the explicit role from the form when provided; fall back
+    // to the legacy category-derived label so old API callers still work.
     const roleTitle =
-      input.category === "Head Teacher"
-        ? "Head Teacher"
-        : input.category === "Deputy Head Teacher"
-          ? "Deputy Head Teacher"
-          : input.category === "Classroom Teacher" || input.category === "Teacher"
-            ? "Teacher"
-            : input.category === "Proprietor"
-              ? "Proprietor"
-              : input.category === "Director"
-                ? "Director"
-                : input.category;
+      (input.roleTitle && input.roleTitle.trim().length > 0)
+        ? input.roleTitle.trim()
+        : input.category === "Head Teacher"
+          ? "Head Teacher"
+          : input.category === "Deputy Head Teacher"
+            ? "Deputy Head Teacher"
+            : input.category === "Classroom Teacher" || input.category === "Teacher"
+              ? "Teacher"
+              : input.category === "Proprietor"
+                ? "Proprietor"
+                : input.category === "Director"
+                  ? "Director"
+                  : input.category;
 
     const isTeacher =
       input.category === "Classroom Teacher" ||

@@ -360,6 +360,39 @@ export async function getTeacherRosterIntelPostgres(schoolId: number): Promise<T
   };
 }
 
+export type SchoolContactRoleDistribution = {
+  roleTitle: string;
+  count: number;
+};
+
+/**
+ * Distribution of contacts at a school by role_title (Director, Head
+ * Teacher, DOS, Deputy Head Teacher, Head Teacher Lower, Classroom
+ * Teacher, etc.). Powers the role-breakdown strip on the school
+ * profile dashboard. Cheap query — covered by
+ * idx_school_contacts_role_title.
+ */
+export async function getSchoolContactRoleDistributionPostgres(
+  schoolId: number,
+): Promise<SchoolContactRoleDistribution[]> {
+  try {
+    const res = await queryPostgres<{ role_title: string; n: number }>(
+      `SELECT role_title, COUNT(*)::int AS n
+       FROM school_contacts
+       WHERE school_id = $1 AND role_title IS NOT NULL AND role_title <> ''
+       GROUP BY role_title
+       ORDER BY n DESC, role_title ASC`,
+      [schoolId],
+    );
+    return res.rows.map((r) => ({
+      roleTitle: String(r.role_title),
+      count: Number(r.n ?? 0),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function getGraduationReadinessPostgres(
   schoolId: number,
   health: SchoolHealthScore,
