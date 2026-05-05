@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { queryPostgres } from "@/lib/server/postgres/client";
-import { CoachingVisitForm } from "@/components/portal/CoachingVisitForm";
-import { ChevronLeft } from "lucide-react";
+import { CoachingVisitFormModalShell } from "@/components/portal/CoachingVisitFormModalShell";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "New Coaching Visit | Ozeki Portal" };
@@ -50,25 +48,14 @@ export default async function NewVisitPage({ searchParams }: PageProps) {
   const [schools, coaches] = await Promise.all([getSchools(), getCoaches()]);
 
   return (
-    <PortalShell
-      user={user}
-      activeHref="/portal/visits"
-      title="New Coaching Visit"
-      description="Record a coaching visit to a school. Links to teacher observations and follow-ups."
-    >
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        <Link href="/portal/visits" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
-          <ChevronLeft className="w-4 h-4" />
-          All visits
-        </Link>
-
-        <CoachingVisitForm
-          schools={schools}
-          coaches={coaches}
-          defaultSchoolId={sp.schoolId ? Number(sp.schoolId) : undefined}
-          defaultCoachId={sp.coachId ? Number(sp.coachId) : user.id}
-        />
-      </div>
+    <PortalShell user={user} activeHref="/portal/visits" hideFrame>
+      {/* Floats over the visits list. Closing returns to /portal/visits. */}
+      <CoachingVisitFormModalShell
+        schools={schools}
+        coaches={coaches}
+        defaultSchoolId={sp.schoolId ? Number(sp.schoolId) : undefined}
+        defaultCoachId={sp.coachId ? Number(sp.coachId) : user.id}
+      />
     </PortalShell>
   );
 }

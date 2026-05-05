@@ -1,5 +1,5 @@
 import { PortalShell } from "@/components/portal/PortalShell";
-import { PortalTrainingParticipantCreateForm } from "@/components/imports/PortalTrainingParticipantCreateForm";
+import { TrainingParticipantFormModalShell } from "@/components/portal/TrainingParticipantFormModalShell";
 import { requirePortalStaffUser } from "@/lib/auth";
 import {
   listTrainingImportLookupRows,
@@ -28,13 +28,8 @@ export default async function PortalTrainingParticipantCreatePage({ searchParams
   ]);
 
   return (
-    <PortalShell
-      user={user}
-      activeHref="/portal/trainings"
-      title="Add Training Participant"
-      description="Manual participant entry writes through the same PostgreSQL participant service as the bulk import flow."
-    >
-      <PortalTrainingParticipantCreateForm
+    <PortalShell user={user} activeHref="/portal/trainings" hideFrame>
+      <TrainingParticipantFormModalShell
         trainings={trainings}
         schools={schools}
         initialTrainingId={trainingId}
