@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { submitJson, useFormSubmit } from "@/lib/forms/useFormSubmit";
+import { SubmitButton } from "@/components/forms/SubmitButton";
 
 interface NewContactModalProps {
   schoolId: number;
@@ -18,60 +20,49 @@ const CATEGORIES = [
   "Other",
 ] as const;
 
+const EMPTY = {
+  fullName: "",
+  category: "Classroom Teacher" as string,
+  gender: "Female" as "Male" | "Female" | "Other",
+  phone: "",
+  email: "",
+  whatsapp: "",
+  isPrimary: false,
+};
+
 export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: NewContactModalProps) {
-  const [fullName, setFullName] = useState("");
-  const [category, setCategory] = useState<string>("Classroom Teacher");
-  const [gender, setGender] = useState<"Male" | "Female" | "Other">("Female");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [isPrimary, setIsPrimary] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [form, setForm] = useState(EMPTY);
+  const [validation, setValidation] = useState("");
+
+  const submitter = useFormSubmit<{ success?: boolean }>({
+    onSuccess: () => {
+      setForm(EMPTY);
+      setValidation("");
+      setTimeout(() => { onCreated(); onClose(); }, 1200);
+    },
+  });
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!fullName.trim()) {
-      setError("Full name is required.");
+    if (!form.fullName.trim()) {
+      setValidation("Full name is required.");
       return;
     }
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const response = await fetch(`/api/portal/schools/${schoolId}/contacts`, {
+    setValidation("");
+    await submitter.submit(async () =>
+      submitJson<{ success?: boolean }>(`/api/portal/schools/${schoolId}/contacts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: fullName.trim(),
-          category,
-          gender,
-          phone: phone.trim(),
-          email: email.trim(),
-          whatsapp: whatsapp.trim(),
-          isPrimaryContact: isPrimary,
+          fullName: form.fullName.trim(),
+          category: form.category,
+          gender: form.gender,
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          whatsapp: form.whatsapp.trim(),
+          isPrimaryContact: form.isPrimary,
         }),
-      });
-
-      const data = (await response.json()) as { success?: boolean; message?: string; error?: string };
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error ?? "Could not create contact.");
-      }
-
-      setSuccess(data.message ?? "Contact created.");
-      setTimeout(() => {
-        onCreated();
-        onClose();
-      }, 1200);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create contact.");
-    } finally {
-      setSaving(false);
-    }
+      }),
+    );
   }
 
   return (
@@ -92,8 +83,8 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
               <span className="sp-modal-label">Full Name <span className="sp-required">*</span></span>
               <input
                 type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                value={form.fullName}
+                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                 placeholder="e.g. Sarah Akello"
                 required
                 minLength={2}
@@ -103,7 +94,7 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
 
             <label className="sp-modal-field">
               <span className="sp-modal-label">Category</span>
-              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
@@ -112,7 +103,7 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
 
             <label className="sp-modal-field">
               <span className="sp-modal-label">Gender</span>
-              <select value={gender} onChange={(e) => setGender(e.target.value as "Male" | "Female" | "Other")}>
+              <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value as "Male" | "Female" | "Other" })}>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
@@ -123,8 +114,8 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
               <span className="sp-modal-label">Phone</span>
               <input
                 type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="+2567xxxxxxxx"
                 inputMode="tel"
               />
@@ -134,8 +125,8 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
               <span className="sp-modal-label">Email</span>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="name@school.org"
               />
             </label>
@@ -144,8 +135,8 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
               <span className="sp-modal-label">WhatsApp</span>
               <input
                 type="tel"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
+                value={form.whatsapp}
+                onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
                 placeholder="+2567xxxxxxxx"
                 inputMode="tel"
               />
@@ -154,23 +145,26 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
             <label className="sp-modal-field sp-modal-checkbox">
               <input
                 type="checkbox"
-                checked={isPrimary}
-                onChange={(e) => setIsPrimary(e.target.checked)}
+                checked={form.isPrimary}
+                onChange={(e) => setForm({ ...form, isPrimary: e.target.checked })}
               />
               <span>Set as primary contact for this school</span>
             </label>
           </div>
 
-          {error ? <p className="sp-modal-error" role="alert">{error}</p> : null}
-          {success ? <p className="sp-modal-success" role="status">{success}</p> : null}
+          {validation ? <p className="sp-modal-error" role="alert">{validation}</p> : null}
+          {submitter.status === "failed" && submitter.message ? <p className="sp-modal-error" role="alert">{submitter.message}</p> : null}
 
           <div className="sp-modal-actions">
-            <button type="button" className="sp-btn sp-btn--ghost" onClick={onClose} disabled={saving}>
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={onClose} disabled={submitter.isSubmitting}>
               Cancel
             </button>
-            <button type="submit" className="sp-btn" disabled={saving}>
-              {saving ? "Saving…" : "Create Contact"}
-            </button>
+            <SubmitButton
+              state={submitter}
+              type="submit"
+              idleLabel="Create Contact"
+              className="sp-btn"
+            />
           </div>
         </form>
       </div>

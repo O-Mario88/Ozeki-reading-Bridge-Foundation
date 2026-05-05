@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, type FormEvent } from "react";
 import { FormModal } from "@/components/forms";
 import { SchoolDirectoryRecord } from "@/lib/types";
+import { submitJson, useFormSubmit } from "@/lib/forms/useFormSubmit";
+import { SubmitButton } from "@/components/forms/SubmitButton";
 
 interface EnrollmentFormModalProps {
   open: boolean;
@@ -17,46 +19,30 @@ export function EnrollmentFormModal({
   school,
   onSuccess,
 }: EnrollmentFormModalProps) {
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const submitter = useFormSubmit({
+    onSuccess: () => {
+      formRef.current?.reset();
+      setTimeout(() => { onSuccess(); onClose(); }, 1000);
+    },
+  });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaving(true);
-    setError(null);
-
+    formRef.current = event.currentTarget;
     const formData = new FormData(event.currentTarget);
-    const boysCount = Number(formData.get("boysCount"));
-    const girlsCount = Number(formData.get("girlsCount"));
-    const updatedFrom = String(formData.get("updatedFrom"));
-    
-    // Auto calculate
-    const _totalEnrollment = boysCount + girlsCount;
-
-    try {
-      const response = await fetch(`/api/portal/schools/${school.id}/enrollments`, {
+    const payload = {
+      boysCount: Number(formData.get("boysCount")),
+      girlsCount: Number(formData.get("girlsCount")),
+      updatedFrom: String(formData.get("updatedFrom")),
+      academicTerm: null,
+    };
+    await submitter.submit(async () =>
+      submitJson(`/api/portal/schools/${school.id}/enrollments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          boysCount,
-          girlsCount,
-          updatedFrom,
-          academicTerm: null,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error ?? "Failed to save enrollment data.");
-      }
-
-      onSuccess();
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error occurred.");
-    } finally {
-      setSaving(false);
-    }
+        body: JSON.stringify(payload),
+      }),
+    );
   }
 
   return (
@@ -68,10 +54,10 @@ export function EnrollmentFormModal({
       closeLabel="Cancel"
       maxWidth="600px"
     >
-      <form onSubmit={handleSubmit} className="form-grid portal-form-grid">
-        {error && (
+      <form onSubmit={handleSubmit} className="form-grid portal-form-grid" ref={formRef}>
+        {submitter.status === "failed" && submitter.message && (
           <div className="full-width form-message error">
-            {error}
+            {submitter.message}
           </div>
         )}
 
@@ -105,12 +91,10 @@ export function EnrollmentFormModal({
         </fieldset>
 
         <div className="full-width action-row portal-form-actions mt-4">
-          <button type="button" className="button button-outline" onClick={onClose} disabled={saving}>
+          <button type="button" className="button button-outline" onClick={onClose} disabled={submitter.isSubmitting}>
             Cancel
           </button>
-          <button type="submit" className="button" disabled={saving}>
-            {saving ? "Saving..." : "Save Enrollment"}
-          </button>
+          <SubmitButton state={submitter} type="submit" idleLabel="Save Enrollment" className="button" />
         </div>
       </form>
     </FormModal>

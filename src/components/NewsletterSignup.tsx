@@ -1,20 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { submitJsonWithOfflineQueue } from "@/lib/offline-form-queue";
-
-type SubmitState = {
-  status: "idle" | "submitting" | "success" | "error";
-  message: string;
-};
-
-const initialState: SubmitState = { status: "idle", message: "" };
+import { useFormSubmit } from "@/lib/forms/useFormSubmit";
+import { SubmitButton } from "@/components/forms/SubmitButton";
 
 export function NewsletterSignup() {
-  const [state, setState] = useState<SubmitState>(initialState);
   const [isOpen, setIsOpen] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  const submitter = useFormSubmit<void>({
+    onSuccess: () => { formRef.current?.reset(); },
+    resetMs: 2500,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -31,41 +32,25 @@ export function NewsletterSignup() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState({ status: "submitting", message: "Submitting..." });
-
+    formRef.current = event.currentTarget;
     const formData = new FormData(event.currentTarget);
     const payload = Object.fromEntries(formData.entries());
 
-    try {
+    setStatusMessage("");
+    await submitter.submit(async () => {
       const result = await submitJsonWithOfflineQueue<{ error?: string }>("/api/newsletter", {
         payload,
         label: "Newsletter signup",
       });
-
       if (result.queued) {
-        event.currentTarget.reset();
-        setState({
-          status: "success",
-          message:
-            "No internet connection. Subscription saved on this device and will sync automatically when connected.",
-        });
+        setStatusMessage("No internet connection. Subscription saved on this device and will sync when connected.");
         return;
       }
-
       if (!result.response.ok) {
         throw new Error(result.data?.error ?? "Could not subscribe.");
       }
-
-      event.currentTarget.reset();
-      setState({
-        status: "success",
-        message: "Subscribed. You will receive weekly reading teaching tips.",
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Subscription failed. Try again.";
-      setState({ status: "error", message });
-    }
+      setStatusMessage("Subscribed. You will receive weekly reading teaching tips.");
+    });
   }
 
   return (
@@ -79,8 +64,10 @@ export function NewsletterSignup() {
         </Link>
       </div>
 
-      {state.message ? (
-        <p className={`form-message ${state.status} full-width`}>{state.message}</p>
+      {(submitter.status === "success" || submitter.status === "failed") && statusMessage ? (
+        <p className={`form-message ${submitter.status === "success" ? "success" : "error"} full-width`}>{statusMessage}</p>
+      ) : submitter.status === "failed" && submitter.message ? (
+        <p className="form-message error full-width">{submitter.message}</p>
       ) : null}
 
       {isOpen
@@ -103,7 +90,7 @@ export function NewsletterSignup() {
                   Cancel
                 </button>
               </div>
-              <form className="form-grid newsletter-form" onSubmit={handleSubmit}>
+              <form className="form-grid newsletter-form" onSubmit={handleSubmit} ref={formRef}>
                 <label>
                   Name
                   <input name="name" required />
@@ -112,15 +99,14 @@ export function NewsletterSignup() {
                   Email
                   <input name="email" type="email" required />
                 </label>
-                <button
-                  className="button newsletter-submit-button full-width"
+                <SubmitButton
+                  state={submitter}
                   type="submit"
-                  disabled={state.status === "submitting"}
-                >
-                  {state.status === "submitting" ? "Submitting..." : "Subscribe"}
-                </button>
-                {state.message ? (
-                  <p className={`form-message ${state.status} full-width`}>{state.message}</p>
+                  idleLabel="Subscribe"
+                  className="button newsletter-submit-button full-width"
+                />
+                {(submitter.status === "success" || submitter.status === "failed") && statusMessage ? (
+                  <p className={`form-message ${submitter.status === "success" ? "success" : "error"} full-width`}>{statusMessage}</p>
                 ) : null}
               </form>
             </div>

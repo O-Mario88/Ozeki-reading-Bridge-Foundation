@@ -2,12 +2,14 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Save, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Save, AlertCircle, CheckCircle2 } from "lucide-react";
 import {
   PhotoEvidenceCapture,
   type PhotoEvidenceCaptureHandle,
   uploadStagedPhotos,
 } from "@/components/portal/evidence/PhotoEvidenceCapture";
+import { submitJson, useFormSubmit } from "@/lib/forms/useFormSubmit";
+import { SubmitButton } from "@/components/forms/SubmitButton";
 
 interface SchoolOption { id: number; name: string; district: string }
 interface CoachOption { id: number; fullName: string; email: string }
@@ -72,10 +74,10 @@ function buildEmptyForm(defaultSchoolId?: number, defaultCoachId?: number) {
 export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCoachId }: Props) {
   const router = useRouter();
   const [form, setForm] = useState(buildEmptyForm(defaultSchoolId, defaultCoachId));
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [validation, setValidation] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const photoCaptureRef = useRef<PhotoEvidenceCaptureHandle>(null);
+  const submitter = useFormSubmit<{ id: number; visitUid: string }>();
 
   const toggleInArray = (key: "focusAreas" | "visitReasons", value: string) => {
     setForm((prev) => {
@@ -88,86 +90,75 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
   };
 
   const submit = async () => {
-    if (!form.schoolId) { setError("Please choose a school."); return; }
-    if (!form.coachUserId) { setError("Please choose a coach."); return; }
-    // Same-day window check: when the user supplies both a start and end
-    // time, end must be strictly after start. The API rejects this too,
-    // but a client-side guard avoids the round-trip and gives an
-    // immediate, specific message.
+    setValidation(null);
+    if (!form.schoolId) { setValidation("Please choose a school."); return; }
+    if (!form.coachUserId) { setValidation("Please choose a coach."); return; }
     if (form.startTime && form.endTime && form.startTime >= form.endTime) {
-      setError("End time must be after start time.");
+      setValidation("End time must be after start time.");
       return;
     }
-
-    setSaving(true);
-    setError(null);
     setSuccess(null);
-    try {
-      const payload = {
-        schoolId: form.schoolId,
-        visitDate: form.visitDate,
-        visitType: form.visitType,
-        coachUserId: form.coachUserId,
-        coachingCycleNumber: form.coachingCycleNumber,
-        visitReason: form.visitReason,
-        visitReasons: form.visitReasons,
-        focusAreas: form.focusAreas,
-        implementationStatus: form.implementationStatus,
-        classesImplementing: [],
-        classesNotImplementing: [],
-        startTime: form.startTime || null,
-        endTime: form.endTime || null,
-        sponsorshipType: form.sponsorshipType === "none" ? null : form.sponsorshipType,
-        notes: form.notes || null,
-      };
-      const res = await fetch("/api/portal/visits", {
+
+    const payload = {
+      schoolId: form.schoolId,
+      visitDate: form.visitDate,
+      visitType: form.visitType,
+      coachUserId: form.coachUserId,
+      coachingCycleNumber: form.coachingCycleNumber,
+      visitReason: form.visitReason,
+      visitReasons: form.visitReasons,
+      focusAreas: form.focusAreas,
+      implementationStatus: form.implementationStatus,
+      classesImplementing: [],
+      classesNotImplementing: [],
+      startTime: form.startTime || null,
+      endTime: form.endTime || null,
+      sponsorshipType: form.sponsorshipType === "none" ? null : form.sponsorshipType,
+      notes: form.notes || null,
+    };
+
+    const data = await submitter.submit(async () =>
+      submitJson<{ id: number; visitUid: string }>("/api/portal/visits", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+      }),
+    );
+    if (!data) return;
+
+    const stagedPhotos = photoCaptureRef.current?.getStaged() ?? [];
+    let photoSummary = "";
+    if (stagedPhotos.length > 0 && typeof data.id === "number") {
+      const result = await uploadStagedPhotos({
+        parentType: "coaching_visit",
+        parentId: data.id,
+        schoolId: form.schoolId,
+        staged: stagedPhotos,
+        geo: photoCaptureRef.current?.getGeolocation() ?? null,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Save failed.");
-        return;
-      }
-
-      const stagedPhotos = photoCaptureRef.current?.getStaged() ?? [];
-      let photoSummary = "";
-      if (stagedPhotos.length > 0 && typeof data.id === "number") {
-        const result = await uploadStagedPhotos({
-          parentType: "coaching_visit",
-          parentId: data.id,
-          schoolId: form.schoolId,
-          staged: stagedPhotos,
-          geo: photoCaptureRef.current?.getGeolocation() ?? null,
-        });
-        photoSummary =
-          result.failed.length === 0
-            ? ` ${result.uploaded} photo${result.uploaded === 1 ? "" : "s"} attached.`
-            : ` ${result.uploaded} photo${result.uploaded === 1 ? "" : "s"} attached, ${result.failed.length} failed.`;
-        photoCaptureRef.current?.clear();
-      }
-
-      setSuccess(`Visit ${data.visitUid} saved.${photoSummary} Form has been reset for the next entry.`);
-      // Reset the form so the user can log another visit immediately. The
-      // success banner stays visible until the next submit attempt.
-      setForm(buildEmptyForm(defaultSchoolId, defaultCoachId));
-      // Refresh server data so dashboards / lists pick up the new visit
-      // without forcing the user off this page.
-      router.refresh();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setSaving(false);
+      photoSummary =
+        result.failed.length === 0
+          ? ` ${result.uploaded} photo${result.uploaded === 1 ? "" : "s"} attached.`
+          : ` ${result.uploaded} photo${result.uploaded === 1 ? "" : "s"} attached, ${result.failed.length} failed.`;
+      photoCaptureRef.current?.clear();
     }
+
+    setSuccess(`Visit ${data.visitUid} saved.${photoSummary} Form has been reset for the next entry.`);
+    setForm(buildEmptyForm(defaultSchoolId, defaultCoachId));
+    router.refresh();
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
-      {error && (
+      {validation && (
         <div className="rounded-xl bg-red-50 border border-red-100 p-4 flex items-start gap-2 text-red-700 text-sm">
           <AlertCircle className="w-5 h-5 shrink-0" />
-          {error}
+          {validation}
+        </div>
+      )}
+      {submitter.status === "failed" && submitter.message && (
+        <div className="rounded-xl bg-red-50 border border-red-100 p-4 flex items-start gap-2 text-red-700 text-sm">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          {submitter.message}
         </div>
       )}
       {success && (
@@ -358,14 +349,14 @@ export function CoachingVisitForm({ schools, coaches, defaultSchoolId, defaultCo
 
       {/* Submit */}
       <div className="flex items-center justify-end gap-3 pt-2">
-        <button
+        <SubmitButton
+          state={submitter}
+          type="button"
           onClick={submit}
-          disabled={saving}
+          idleLabel="Save Visit"
+          icon={<Save className="w-4 h-4" />}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#006b61] text-white font-bold text-sm hover:bg-[#006b61]/90 disabled:bg-gray-300 transition-colors"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {saving ? "Saving…" : "Save Visit"}
-        </button>
+        />
       </div>
     </div>
   );

@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { officialContactLinks } from "@/lib/contact";
+import { useFormSubmit } from "@/lib/forms/useFormSubmit";
+import { SubmitButton } from "@/components/forms/SubmitButton";
 
 type SubmitState = {
   status: "idle" | "submitting" | "success" | "error";
@@ -48,15 +50,15 @@ export function PortalLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const searchParams = useSearchParams();
   const oauthError = searchParams.get("error");
+  const submitter = useFormSubmit({ autoReset: false });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setState({ status: "submitting", message: "Signing in..." });
-
     const formData = new FormData(event.currentTarget);
     const payload = Object.fromEntries(formData.entries());
 
-    try {
+    await submitter.submit(async () => {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,12 +68,8 @@ export function PortalLoginForm() {
       let data: Record<string, unknown> = {};
       try {
         const text = await response.text();
-        if (text) {
-          data = JSON.parse(text);
-        }
-      } catch {
-        // response body was empty or not valid JSON
-      }
+        if (text) data = JSON.parse(text);
+      } catch { /* empty body */ }
 
       if (!response.ok) {
         const errorMsg =
@@ -80,16 +78,15 @@ export function PortalLoginForm() {
             : response.status === 502 || response.status === 504
               ? "The server is taking too long to respond. The database may be temporarily unreachable — please try again in a moment."
               : "Could not sign in. Please try again.";
+        setState({ status: "error", message: errorMsg });
         throw new Error(errorMsg);
       }
 
       if (data.requiresMfa) {
         if (data.devOtp) {
-          // Dev-only convenience: keep the code out of the URL (history,
-          // Referer, analytics) and hand it off via sessionStorage instead.
           try {
             window.sessionStorage.setItem(`devOtp:${data.userId}`, String(data.devOtp));
-          } catch { /* private mode: alert is the fallback */ }
+          } catch { /* private mode */ }
           alert(`[DEV MODE] Email delivery bypassed.\nYour MFA verification code is: ${data.devOtp}`);
         }
         setState({ status: "success", message: "Verification required. Redirecting..." });
@@ -99,10 +96,7 @@ export function PortalLoginForm() {
 
       setState({ status: "success", message: "Sign-in successful. Redirecting..." });
       window.location.href = (data.redirectTo as string) ?? "/portal/dashboard";
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Sign-in failed.";
-      setState({ status: "error", message });
-    }
+    });
   }
 
   return (
@@ -174,20 +168,13 @@ export function PortalLoginForm() {
         </div>
 
         {/* Submit */}
-        <button
+        <SubmitButton
+          state={submitter}
           type="submit"
-          disabled={state.status === "submitting"}
+          idleLabel="Login"
+          submittingLabel="Signing in…"
           className="portal-login-submit"
-        >
-          {state.status === "submitting" ? (
-            <>
-              <span className="portal-login-spinner" />
-              Signing in…
-            </>
-          ) : (
-            "Login"
-          )}
-        </button>
+        />
 
         <div className="portal-login-divider">
           <span>or</span>
