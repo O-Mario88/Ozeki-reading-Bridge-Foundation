@@ -130,7 +130,7 @@ export function InteractiveFilters() {
         className="inline-flex items-center gap-2 h-9 px-4 text-[12px] font-semibold text-white transition hover:opacity-90"
         style={{ background: TEAL, borderRadius: RADIUS_SM, boxShadow: SHADOW_LOW }}
       >
-        <Download className="h-3.5 w-3.5" strokeWidth={2.25} /> Download
+        <Download className="h-3.5 w-3.5" strokeWidth={2.25} /> Download PDF
       </button>
       <button
         type="button"
