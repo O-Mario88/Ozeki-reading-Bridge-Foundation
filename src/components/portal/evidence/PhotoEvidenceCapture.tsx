@@ -49,12 +49,14 @@ export const PhotoEvidenceCapture = forwardRef<PhotoEvidenceCaptureHandle, Props
       },
     }), [staged, geo]);
 
+    const stagedRef = useRef<StagedPhoto[]>([]);
+    useEffect(() => { stagedRef.current = staged; }, [staged]);
     useEffect(() => {
+      // Cleanup any object URLs we created during the component's lifetime.
+      // Reads from the ref so the effect's [] deps are genuinely empty.
       return () => {
-        staged.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+        stagedRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
       };
-      // intentionally only run on unmount; staged refs are owned by us.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const requestGeolocation = () => {
