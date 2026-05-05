@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   LayoutDashboard,
   School as SchoolIcon,
-  CreditCard,
+  Users,
   FileText,
   Headphones,
   type LucideIcon,
@@ -17,12 +17,15 @@ interface NavItem {
   superAdminOnly?: boolean;
 }
 
+// Per the mobile reference, the bottom nav is a fixed 5-tab strip:
+// Dashboard / Schools / Contacts / Reports / Support. Finance is reachable
+// via the hamburger drawer for Super Admins (it's locked to Super Admin
+// in the desktop nav too) — keeping the bar at five items matches the
+// reference and avoids having to choose between tabs by role on a phone.
 const items: NavItem[] = [
   { href: "/portal/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/portal/schools", label: "Schools", icon: SchoolIcon },
-  // Finance is locked to Super Admin per the onboarding-tier spec, mirroring
-  // the sidebar nav rule. Plain Admins / Staff / Volunteers see four tabs.
-  { href: "/portal/finance", label: "Finance", icon: CreditCard, superAdminOnly: true },
+  { href: "/portal/contacts", label: "Contacts", icon: Users },
   { href: "/portal/reports", label: "Reports", icon: FileText },
   { href: "/portal/support", label: "Support", icon: Headphones },
 ];

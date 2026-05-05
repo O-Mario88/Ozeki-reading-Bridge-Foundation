@@ -19,6 +19,8 @@ import {
   listSchoolsWithContacts, listRecentCrmActivity, listUpcomingFollowUps,
   listPartnerOrgs, getGeographicCoverage,
 } from "@/lib/server/postgres/repositories/crm-dashboard";
+import { MobileContactDirectory } from "@/components/portal/contacts-mobile/MobileContactDirectory";
+import type { DirectoryFilters, DirectoryTab } from "@/lib/server/postgres/repositories/mobile-contact-directory";
 
 async function safeFetch<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
   try { return await fn(); }
@@ -185,8 +187,41 @@ const FALLBACK = devFallback({
 
 const CALIBRI = 'Calibri, "Segoe UI", Arial, sans-serif';
 
-export default async function PortalCrmOverviewPage() {
+interface PortalCrmOverviewPageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function parseDirectoryFilters(sp: Record<string, string | string[] | undefined> | undefined): DirectoryFilters {
+  const get = (k: string): string | undefined => {
+    const v = sp?.[k];
+    if (Array.isArray(v)) return v[0];
+    return v ?? undefined;
+  };
+  const tabRaw = get("tab");
+  const allowedTabs: DirectoryTab[] = ["all", "school_contacts", "teachers", "coaches"];
+  const tab = (allowedTabs as string[]).includes(tabRaw ?? "") ? (tabRaw as DirectoryTab) : undefined;
+  const statusRaw = get("status");
+  const status = statusRaw === "active" || statusRaw === "inactive" ? statusRaw : undefined;
+  const sortRaw = get("sort");
+  const sort = sortRaw === "name_desc" || sortRaw === "recent" ? sortRaw : undefined;
+  const pageNum = Number(get("page") ?? "1");
+  return {
+    search: get("search"),
+    role: get("role"),
+    region: get("region"),
+    district: get("district"),
+    status,
+    tab,
+    sort,
+    page: Number.isFinite(pageNum) && pageNum > 0 ? Math.floor(pageNum) : 1,
+    limit: 20,
+  };
+}
+
+export default async function PortalCrmOverviewPage({ searchParams }: PortalCrmOverviewPageProps = {}) {
   const user = await requirePortalStaffUser();
+  const sp = searchParams ? await searchParams : undefined;
+  const directoryFilters = parseDirectoryFilters(sp);
 
   const [
     liveKpis, liveTrend, liveSegments, livePipeline,
@@ -268,9 +303,16 @@ export default async function PortalCrmOverviewPage() {
       subtitle="Here's what's happening across your contacts, schools, and partner relationships."
       hideFrame
     >
+      {/* Mobile: screenshot-faithful Contact Directory. Lives entirely in
+          its own server component so the desktop CRM Overview below
+          doesn't need to refactor. */}
+      <MobileContactDirectory filters={directoryFilters} />
+
+      {/* Desktop: existing CRM Overview, untouched. The hidden lg:block
+          wrapper means this fetches but only renders on >= lg viewports. */}
       <div
         style={{ fontFamily: CALIBRI, backgroundColor: "#e7ecf3" }}
-        className="px-4 sm:px-6 lg:px-7 py-5 space-y-4 max-w-[1700px] mx-auto"
+        className="hidden lg:block px-4 sm:px-6 lg:px-7 py-5 space-y-4 max-w-[1700px] mx-auto"
       >
         {/* ─── Title row ──────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
