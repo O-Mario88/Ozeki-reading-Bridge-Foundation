@@ -12,18 +12,11 @@ interface NewContactModalProps {
   onCreated: () => void;
 }
 
-const CATEGORIES = [
-  "Head Teacher",
-  "Deputy Head Teacher",
-  "Classroom Teacher",
-  "Proprietor",
-  "Director",
-  "Other",
-] as const;
-
 /**
  * Canonical role vocabulary captured by the form.
  * Stored to school_contacts.role_title and indexed for analysis.
+ * Replaces the legacy Category dropdown — it duplicated this list.
+ * "Proprietor" pulled in from the old Category set so no value is lost.
  */
 const ROLES = [
   "Director",
@@ -32,8 +25,31 @@ const ROLES = [
   "Deputy Head Teacher",
   "Head Teacher Lower",
   "Classroom Teacher",
+  "Proprietor",
   "Other",
 ] as const;
+
+type Role = typeof ROLES[number];
+
+/**
+ * Map a Role to the legacy `category` enum the API still validates
+ * against. When the API schema drops `category`, this map can go away.
+ */
+function roleToCategory(role: Role): "Head Teacher" | "Deputy Head Teacher" | "Classroom Teacher" | "Proprietor" | "Director" | "Other" {
+  switch (role) {
+    case "Director": return "Director";
+    case "Head Teacher":
+    case "Head Teacher Lower":
+      return "Head Teacher";
+    case "Deputy Head Teacher": return "Deputy Head Teacher";
+    case "Classroom Teacher": return "Classroom Teacher";
+    case "Proprietor": return "Proprietor";
+    case "DOS":
+    case "Other":
+    default:
+      return "Other";
+  }
+}
 
 export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: NewContactModalProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -53,13 +69,17 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
       formRef.current?.reportValidity();
       return;
     }
+    const role = (String(formData.get("roleTitle") ?? "Head Teacher").trim() || "Head Teacher") as Role;
     await submitter.submit(async () =>
       submitJson<{ success?: boolean }>(`/api/portal/schools/${schoolId}/contacts`, {
         method: "POST",
         body: JSON.stringify({
           fullName,
-          category: String(formData.get("category") ?? "Classroom Teacher"),
-          roleTitle: String(formData.get("roleTitle") ?? "").trim() || undefined,
+          // Category derived server-bound from the chosen Role so the
+          // legacy API enum still validates without exposing two
+          // dropdowns to the user.
+          category: roleToCategory(role),
+          roleTitle: role,
           gender: String(formData.get("gender") ?? "Female"),
           phone: String(formData.get("phone") ?? "").trim(),
           email: String(formData.get("email") ?? "").trim(),
@@ -102,12 +122,6 @@ export function NewContactModal({ schoolId, schoolName, onClose, onCreated }: Ne
               <span className="portal-field-label">Role *</span>
               <select name="roleTitle" defaultValue="Head Teacher" required>
                 {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </label>
-            <label>
-              <span className="portal-field-label">Category</span>
-              <select name="category" defaultValue="Classroom Teacher">
-                {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </label>
             <label>
