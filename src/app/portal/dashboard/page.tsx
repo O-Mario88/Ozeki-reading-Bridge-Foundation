@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export const metadata = { title: "Dashboard | Ozeki Portal" };
+export const metadata = { title: "Reading Command Center | Ozeki Portal" };
 export const dynamic = "force-dynamic";
 
 export default async function PortalDashboardPage() {
@@ -43,8 +43,28 @@ export default async function PortalDashboardPage() {
   const dateRangeLabel = `${fmtRange(start)} – ${fmtRange(end)}`;
 
   return (
-    <OzekiPortalShell user={user} activeHref="/portal/dashboard" hideFrame>
+    <OzekiPortalShell
+      user={user}
+      activeHref="/portal/dashboard"
+      hideFrame
+      subtitle="Live reading intelligence across assessments, teaching quality, coaching, interventions, and story practice."
+    >
       <div className="space-y-4 lg:space-y-6">
+        {/* Page heading — Reading Command Center positioning sits above the
+            date selector. The shell already shows the welcome strip with the
+            updated subtitle, so the heading reinforces the focus rather than
+            duplicating it. */}
+        <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+          <div>
+            <h1 className="text-[20px] lg:text-[22px] font-bold text-gray-900 tracking-tight leading-tight">
+              Reading Command Center
+            </h1>
+            <p className="text-[12.5px] text-gray-500 leading-snug mt-1 max-w-2xl">
+              How is reading improving across the network — which schools need urgent reading support, what evidence proves progress, and what action must happen next?
+            </p>
+          </div>
+        </header>
+
         {/* Date range selector — desktop only (not in mobile reference) */}
         <div className="hidden lg:flex justify-end">
           <button

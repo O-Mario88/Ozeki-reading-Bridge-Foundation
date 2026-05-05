@@ -19,7 +19,7 @@ interface Props {
 
 const sectionOrder: { key: GlassNavSection; label: string }[] = [
   { key: "menu", label: "MENU" },
-  { key: "features", label: "FEATURES" },
+  { key: "features", label: "READING OPERATIONS" },
   { key: "cms", label: "CONTENT / WEBSITE" },
   { key: "system", label: "SYSTEM" },
 ];

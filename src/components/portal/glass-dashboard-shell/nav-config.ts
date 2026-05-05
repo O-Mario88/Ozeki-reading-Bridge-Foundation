@@ -45,21 +45,21 @@ export type GlassNavItem = {
  */
 export const glassNavItems: GlassNavItem[] = [
   // Menu
-  { href: "/portal/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
-  { href: "/portal/national-intelligence", label: "Insights", icon: Lightbulb, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
+  { href: "/portal/dashboard", label: "Reading Command Center", icon: LayoutDashboard, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
+  { href: "/portal/national-intelligence", label: "Reading Intelligence", icon: Lightbulb, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
   { href: "/portal/schools", label: "Schools", icon: SchoolIcon, section: "menu", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
   { href: "/portal/learning-outcomes", label: "Learning Outcomes", icon: TrendingUp, section: "menu", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
   { href: "/portal/contacts", label: "CRM", icon: UsersRound, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
   { href: "/portal/finance", label: "Finance", icon: CreditCard, section: "menu", roles: ["Accountant", "Admin"] },
 
-  // Features
-  { href: "/portal/assessments", label: "Assessments", icon: ClipboardCheck, section: "features", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
-  { href: "/portal/observations", label: "Observations", icon: Eye, section: "features", roles: ["Staff", "Admin", "Volunteer"] },
-  { href: "/portal/visits", label: "Visits / Coaching", icon: MapPin, section: "features", roles: ["Staff", "Admin", "Accountant", "Volunteer"] },
+  // Features (renamed visually to "Reading Operations" via sectionMeta below; routes kept identical)
+  { href: "/portal/assessments", label: "Reading Assessments", icon: ClipboardCheck, section: "features", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
+  { href: "/portal/observations", label: "Teaching Quality", icon: Eye, section: "features", roles: ["Staff", "Admin", "Volunteer"] },
+  { href: "/portal/visits", label: "Coaching & Support", icon: MapPin, section: "features", roles: ["Staff", "Admin", "Accountant", "Volunteer"] },
   { href: "/portal/coach-workload", label: "Coach Workload", icon: Users, section: "features", roles: ["Staff", "Admin"] },
-  { href: "/portal/trainings", label: "Trainings", icon: GraduationCap, section: "features", roles: ["Staff", "Admin", "Accountant", "Volunteer"] },
-  { href: "/portal/interventions", label: "Interventions", icon: Target, section: "features", roles: ["Staff", "Admin", "Accountant"] },
-  { href: "/portal/stories", label: "1001 Story", icon: BookOpen, section: "features", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
+  { href: "/portal/trainings", label: "Teacher Training", icon: GraduationCap, section: "features", roles: ["Staff", "Admin", "Accountant", "Volunteer"] },
+  { href: "/portal/interventions", label: "Reading Interventions", icon: Target, section: "features", roles: ["Staff", "Admin", "Accountant"] },
+  { href: "/portal/stories", label: "Story & Read-Alouds", icon: BookOpen, section: "features", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
   { href: "/portal/reports", label: "Reports", icon: FileText, section: "features", roles: ["Staff", "Volunteer", "Admin", "Accountant"] },
   { href: "/portal/graduation-queue", label: "Graduation Queue", icon: Trophy, section: "features", roles: ["Staff", "Admin", "Accountant"] },
 
@@ -80,7 +80,7 @@ export const glassNavItems: GlassNavItem[] = [
 
 const sectionMeta: Record<GlassNavSection, { label: string; icon: LucideIcon }> = {
   menu: { label: "Menu", icon: LayoutDashboard },
-  features: { label: "Programmes", icon: GraduationCap },
+  features: { label: "Reading Operations", icon: GraduationCap },
   cms: { label: "Content", icon: PenSquare },
   system: { label: "System", icon: Settings },
 };

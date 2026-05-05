@@ -42,7 +42,7 @@ import { MapSearchInputClient } from "./MapSearchInputClient";
 import { getDashboardSnapshot, type DashboardSnapshot } from "./dashboard-snapshot";
 
 export const metadata: Metadata = {
-  title: "Public Live Impact Dashboard | Ozeki Reading Bridge Foundation",
+  title: "National Reading Evidence Dashboard | Ozeki Reading Bridge Foundation",
   description: "Real-time, evidence-based literacy outcomes and programme implementation across Uganda.",
 };
 
@@ -289,7 +289,7 @@ function PageTitleRow({ filters }: { filters: PageFilters }) {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-[26px] leading-tight font-bold" style={{ color: TEXT, letterSpacing: -0.2 }}>
-              Public Live Impact Dashboard
+              National Reading Evidence Dashboard
             </h1>
             <span
               className="inline-flex items-center gap-1 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider"
@@ -299,7 +299,7 @@ function PageTitleRow({ filters }: { filters: PageFilters }) {
             </span>
           </div>
           <p className="text-[12.5px] mt-1.5" style={{ color: TEXT_MUTED }}>
-            Real-time, evidence-based literacy outcomes and programme implementation across {filters.geography}.
+            Where reading is improving, where reading gaps remain, and what evidence verifies progress across {filters.geography}.
           </p>
           {activeChips.length > 0 ? (
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
