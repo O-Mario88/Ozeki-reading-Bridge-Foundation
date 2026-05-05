@@ -8,11 +8,13 @@ import {
   getGeographyComparison,
   getLearnersAssessedKpi,
   getLearningOutcomesTrend,
+  getLessonStructureAdherence,
   getMovedUpKpi,
   getObservationDomainBreakdown,
   getPrioritySupportAreas,
   getReadingLevelsDistribution,
   getReadingProficiencyKpi,
+  getRubricCriteriaBreakdown,
   getTeachingQualityIndexKpi,
   getTopPerformingGeographies,
   MIN_PUBLIC_SAMPLE_SIZE,
@@ -88,6 +90,8 @@ export async function GET(request: Request) {
       topGeographies,
       prioritySupport,
       filterOptions,
+      lessonStructureAdherence,
+      rubric,
     ] = await Promise.all([
       getLearnersAssessedKpi(filters),
       getReadingProficiencyKpi(filters),
@@ -104,6 +108,8 @@ export async function GET(request: Request) {
       getTopPerformingGeographies(),
       getPrioritySupportAreas(),
       getFilterOptions(),
+      getLessonStructureAdherence(),
+      getRubricCriteriaBreakdown(),
     ]);
 
     // Learners At/Above Benchmark figure (count, not %)
@@ -139,6 +145,8 @@ export async function GET(request: Request) {
       readingLevelsDistribution: readingLevels,
       learningOutcomesTrend: trend,
       teachingQualityDomains: observationDomains,
+      lessonStructureAdherence,
+      rubricCriteria: rubric,
       domainPerformance,
       geographyComparison,
       genderParity,

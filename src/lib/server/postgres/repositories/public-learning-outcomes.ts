@@ -474,6 +474,139 @@ export async function getObservationDomainBreakdown(): Promise<ObservationDomain
 }
 
 /* ────────────────────────────────────────────────────────────────────
+   Lesson Structure adherence — % of submitted observations where
+   each Section B yes/no checkpoint was observed = 'yes'.
+   ──────────────────────────────────────────────────────────────────── */
+export type LessonStructureAdherenceRow = {
+  itemKey: string;
+  itemLabel: string;
+  observedCount: number;
+  totalCount: number;
+  adherencePct: number;
+};
+
+export async function getLessonStructureAdherence(): Promise<LessonStructureAdherenceRow[]> {
+  try {
+    const result = await queryPostgres<{
+      item_key: string; item_label: string; observed: number; total: number;
+    }>(
+      `SELECT
+         lsi.item_key,
+         MAX(lsi.item_label) AS item_label,
+         COUNT(*) FILTER (WHERE lsi.observed_yes_no = 'yes')::int AS observed,
+         COUNT(*) FILTER (WHERE lsi.observed_yes_no IN ('yes', 'no'))::int AS total
+       FROM observation_lesson_structure_items lsi
+       JOIN teacher_lesson_observations tlo ON tlo.id = lsi.observation_id
+       WHERE tlo.status = 'submitted'
+       GROUP BY lsi.item_key
+       ORDER BY MIN(lsi.id) ASC`,
+    );
+    return result.rows.map((r) => {
+      const total = Number(r.total ?? 0);
+      const observed = Number(r.observed ?? 0);
+      return {
+        itemKey: String(r.item_key),
+        itemLabel: String(r.item_label),
+        observedCount: observed,
+        totalCount: total,
+        adherencePct: total >= MIN_PUBLIC_SAMPLE_SIZE ? Math.round((observed / total) * 1000) / 10 : 0,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Rubric Criteria — avg of the 1–4 score per criterion across all
+   submitted observations + a section rollup (C1 GPC / C2 Blending /
+   D Engagement). Every criterion the rubric collects now feeds at
+   least one analysis surface.
+   ──────────────────────────────────────────────────────────────────── */
+export type RubricCriterionRow = {
+  sectionKey: string;
+  sectionLabel: string;
+  criteriaKey: string;
+  criteriaLabel: string;
+  avgScore: number;        // 0–4 with one decimal
+  avgPct: number;          // (avgScore / 4) * 100, one decimal
+  observationCount: number;
+};
+
+export type RubricSectionAverage = {
+  sectionKey: string;
+  sectionLabel: string;
+  avgScore: number;
+  avgPct: number;
+  criteriaCount: number;
+};
+
+export async function getRubricCriteriaBreakdown(): Promise<{
+  criteria: RubricCriterionRow[];
+  sections: RubricSectionAverage[];
+}> {
+  try {
+    const result = await queryPostgres<{
+      section_key: string; section_label: string;
+      criteria_key: string; criteria_label: string;
+      avg_score: number | null; n: number;
+    }>(
+      `SELECT
+         si.section_key,
+         MAX(si.section_label) AS section_label,
+         si.criteria_key,
+         MAX(si.criteria_label) AS criteria_label,
+         AVG(si.score) FILTER (WHERE si.score IS NOT NULL) AS avg_score,
+         COUNT(*) FILTER (WHERE si.score IS NOT NULL)::int AS n
+       FROM observation_scored_items si
+       JOIN teacher_lesson_observations tlo ON tlo.id = si.observation_id
+       WHERE tlo.status = 'submitted'
+       GROUP BY si.section_key, si.criteria_key
+       ORDER BY si.section_key, MIN(si.id)`,
+    );
+    const criteria: RubricCriterionRow[] = result.rows.map((r) => {
+      const n = Number(r.n ?? 0);
+      const avg = n >= MIN_PUBLIC_SAMPLE_SIZE ? Number(r.avg_score ?? 0) : 0;
+      return {
+        sectionKey: String(r.section_key),
+        sectionLabel: String(r.section_label),
+        criteriaKey: String(r.criteria_key),
+        criteriaLabel: String(r.criteria_label),
+        avgScore: Math.round(avg * 10) / 10,
+        avgPct: Math.round((avg / 4) * 1000) / 10,
+        observationCount: n,
+      };
+    });
+
+    // Section rollups
+    const bySection = new Map<string, { label: string; sum: number; count: number; criteria: number }>();
+    for (const c of criteria) {
+      const cur = bySection.get(c.sectionKey) ?? { label: c.sectionLabel, sum: 0, count: 0, criteria: 0 };
+      if (c.observationCount >= MIN_PUBLIC_SAMPLE_SIZE) {
+        cur.sum += c.avgScore;
+        cur.count += 1;
+      }
+      cur.criteria += 1;
+      bySection.set(c.sectionKey, cur);
+    }
+    const sections: RubricSectionAverage[] = Array.from(bySection.entries()).map(([key, v]) => {
+      const avg = v.count > 0 ? v.sum / v.count : 0;
+      return {
+        sectionKey: key,
+        sectionLabel: v.label,
+        avgScore: Math.round(avg * 10) / 10,
+        avgPct: Math.round((avg / 4) * 1000) / 10,
+        criteriaCount: v.criteria,
+      };
+    });
+
+    return { criteria, sections };
+  } catch {
+    return { criteria: [], sections: [] };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────
    Domain Performance — % at/above benchmark per literacy domain
    ──────────────────────────────────────────────────────────────────── */
 export type DomainPerformanceRow = { key: string; label: string; pct: number };

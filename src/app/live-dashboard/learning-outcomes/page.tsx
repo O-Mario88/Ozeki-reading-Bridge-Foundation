@@ -8,10 +8,12 @@ import {
 import {
   getDataCompletenessKpi, getDataQualityBreakdown, getDomainPerformance, getFilterOptions,
   getGenderParityOutcomes, getGeographyComparison, getLearnersAssessedKpi,
-  getLearningOutcomesTrend, getMovedUpKpi, getObservationDomainBreakdown,
-  getPrioritySupportAreas, getReadingLevelsDistribution, getReadingProficiencyKpi,
-  getTeachingQualityIndexKpi, getTopPerformingGeographies, MIN_PUBLIC_SAMPLE_SIZE,
-  type PublicOutcomesFilters,
+  getLearningOutcomesTrend, getLessonStructureAdherence, getMovedUpKpi,
+  getObservationDomainBreakdown, getPrioritySupportAreas, getReadingLevelsDistribution,
+  getReadingProficiencyKpi, getRubricCriteriaBreakdown, getTeachingQualityIndexKpi,
+  getTopPerformingGeographies, MIN_PUBLIC_SAMPLE_SIZE,
+  type LessonStructureAdherenceRow, type PublicOutcomesFilters,
+  type RubricCriterionRow, type RubricSectionAverage,
 } from "@/lib/server/postgres/repositories/public-learning-outcomes";
 
 export const metadata: Metadata = {
@@ -59,6 +61,7 @@ export default async function PublicLearningOutcomesPage({ searchParams }: PageP
     learnersAssessed, proficiency, teachingQuality, movedUp, dataCompleteness,
     dataQuality, readingLevels, trend, observationDomains, domainPerformance,
     geographyComparison, genderParity, topGeographies, prioritySupport, filterOptions,
+    lessonStructureAdherence, rubric,
   ] = await Promise.all([
     getLearnersAssessedKpi(filters),
     getReadingProficiencyKpi(filters),
@@ -75,6 +78,8 @@ export default async function PublicLearningOutcomesPage({ searchParams }: PageP
     getTopPerformingGeographies(),
     getPrioritySupportAreas(),
     getFilterOptions(),
+    getLessonStructureAdherence(),
+    getRubricCriteriaBreakdown(),
   ]);
 
   const learnersAtAbove = readingLevels.bands
@@ -168,6 +173,16 @@ export default async function PublicLearningOutcomesPage({ searchParams }: PageP
           <GeographyComparisonCard rows={geographyComparison} />
           <section id="equity"><GenderParityCard parity={genderParity} /></section>
           <ReadingProgressionCard trend={trend} />
+        </section>
+
+        {/* OBSERVATION RUBRIC ROLLUP — every captured score, analysed.
+            Lesson-structure adherence (Section B yes/no) on the left,
+            rubric criteria + section averages (Sections C1, C2, D) on
+            the right. Both pull from teacher_lesson_observations child
+            tables that were previously stored but never aggregated. */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <LessonStructureAdherenceCard rows={lessonStructureAdherence} />
+          <RubricCriteriaCard sections={rubric.sections} criteria={rubric.criteria} />
         </section>
 
         {/* THIRD ROW — 4 cards */}
@@ -921,6 +936,104 @@ function TrustItem({ icon: Icon, title, body }: { icon: LucideIcon; title: strin
         <p className="text-[11.5px] mt-0.5" style={{ color: TEXT_MUTED, lineHeight: 1.45 }}>{body}</p>
       </div>
     </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Lesson Structure Adherence — Section B yes/no rollup.
+   Each row = one lesson-structure checkpoint, % of submitted
+   observations where it was observed = "yes".
+   ──────────────────────────────────────────────────────────────────── */
+function LessonStructureAdherenceCard({ rows }: { rows: LessonStructureAdherenceRow[] }) {
+  return (
+    <article style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, boxShadow: SHADOW }}>
+      <h3 className="text-[14px] font-bold" style={{ color: TEXT }}>Lesson Structure Adherence</h3>
+      <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>
+        Share of observed lessons that included each Section B checkpoint.
+      </p>
+      {rows.length === 0 ? (
+        <div className="mt-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-[12px]" style={{ color: TEXT_SUBTLE }}>
+          No lesson-structure data above the privacy threshold.
+        </div>
+      ) : (
+        <ul className="mt-3 space-y-2.5">
+          {rows.map((r) => (
+            <li key={r.itemKey} className="flex items-center gap-3">
+              <span className="text-[11.5px] w-44 shrink-0 truncate" style={{ color: TEXT_MUTED }} title={r.itemLabel}>
+                {r.itemLabel}
+              </span>
+              <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "#F1F5F9" }}>
+                <div style={{ width: `${r.adherencePct}%`, height: "100%", background: PRIMARY, borderRadius: 999 }} />
+              </div>
+              <span className="text-[11px] font-bold w-16 text-right" style={{ color: TEXT }}>
+                {r.adherencePct}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-[10.5px] mt-3" style={{ color: TEXT_SUBTLE }}>
+        From `observation_lesson_structure_items` — Section B yes/no flags on submitted observations.
+      </p>
+    </article>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Rubric Criteria — section averages headline + per-criterion list.
+   Section keys: c1_gpc / c2_blending / d_engagement.
+   ──────────────────────────────────────────────────────────────────── */
+function RubricCriteriaCard({ sections, criteria }: {
+  sections: RubricSectionAverage[];
+  criteria: RubricCriterionRow[];
+}) {
+  return (
+    <article style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, boxShadow: SHADOW }}>
+      <h3 className="text-[14px] font-bold" style={{ color: TEXT }}>Rubric Criteria Scores</h3>
+      <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>
+        Average rubric score (1–4) per criterion across all submitted observations.
+      </p>
+
+      {/* Section averages — headline tiles */}
+      {sections.length > 0 ? (
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          {sections.map((s) => (
+            <div key={s.sectionKey} className="rounded-xl p-2.5" style={{ background: "#EAF7F1", border: `1px solid ${BORDER}` }}>
+              <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: PRIMARY }}>{s.sectionLabel}</p>
+              <p className="text-[18px] font-extrabold leading-tight mt-0.5" style={{ color: TEXT }}>
+                {s.avgScore.toFixed(1)}<span className="text-[10px] text-gray-500">/4</span>
+              </p>
+              <p className="text-[9.5px]" style={{ color: TEXT_SUBTLE }}>{s.criteriaCount} criteria</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {criteria.length === 0 ? (
+        <div className="mt-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-[12px]" style={{ color: TEXT_SUBTLE }}>
+          No rubric data above the privacy threshold.
+        </div>
+      ) : (
+        <ul className="mt-3 space-y-2 max-h-[280px] overflow-y-auto pr-1">
+          {criteria.map((c) => (
+            <li key={`${c.sectionKey}::${c.criteriaKey}`} className="flex items-center gap-3">
+              <span className="text-[11px] w-44 shrink-0 truncate" style={{ color: TEXT_MUTED }} title={c.criteriaLabel}>
+                {c.criteriaLabel}
+              </span>
+              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "#F1F5F9" }}>
+                <div style={{ width: `${c.avgPct}%`, height: "100%", background: ORANGE, borderRadius: 999 }} />
+              </div>
+              <span className="text-[10.5px] font-bold w-12 text-right" style={{ color: TEXT }}>
+                {c.avgScore.toFixed(1)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-[10.5px] mt-3" style={{ color: TEXT_SUBTLE }}>
+        From `observation_scored_items` — Sections C1 GPC / C2 Blending / D Engagement.
+      </p>
+    </article>
   );
 }
 
