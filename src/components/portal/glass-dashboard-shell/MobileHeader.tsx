@@ -47,7 +47,10 @@ export function MobileHeader({
 
   return (
     <>
-      <header className="lg:hidden bg-[#044f4d] text-white pt-[env(safe-area-inset-top)]">
+      <header
+        className="lg:hidden bg-[#044f4d] text-white pt-[env(safe-area-inset-top)]"
+        style={{ fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}
+      >
         <div className="flex items-center justify-between gap-3 h-14 px-4">
           <button
             type="button"

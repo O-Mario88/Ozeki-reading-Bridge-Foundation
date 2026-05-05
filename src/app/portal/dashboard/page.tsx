@@ -78,7 +78,7 @@ export default async function PortalDashboardPage() {
         </div>
 
         {/* KPI strip — 7 cards (3-col on mobile per reference, 7-col on 2xl) */}
-        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 2xl:grid-cols-7 gap-2.5 lg:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 2xl:grid-cols-7 gap-2.5 lg:gap-3">
           <PortalKpiCard
             label="Learners Reached"
             value={kpis.learnersReached.toLocaleString()}

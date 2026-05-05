@@ -14,12 +14,15 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   roles?: PortalUserRole[];
+  superAdminOnly?: boolean;
 }
 
 const items: NavItem[] = [
   { href: "/portal/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/portal/schools", label: "Schools", icon: SchoolIcon },
-  { href: "/portal/finance", label: "Finance", icon: CreditCard, roles: ["Accountant", "Admin"] },
+  // Finance is locked to Super Admin per the onboarding-tier spec, mirroring
+  // the sidebar nav rule. Plain Admins / Staff / Volunteers see four tabs.
+  { href: "/portal/finance", label: "Finance", icon: CreditCard, superAdminOnly: true },
   { href: "/portal/reports", label: "Reports", icon: FileText },
   { href: "/portal/support", label: "Support", icon: Headphones },
 ];
@@ -38,6 +41,7 @@ interface Props {
  */
 export function MobileBottomNav({ activeHref, user }: Props) {
   const visible = items.filter((item) => {
+    if (item.superAdminOnly) return Boolean(user.isSuperAdmin);
     if (!item.roles) return true;
     if (user.isSuperAdmin) return true;
     return item.roles.includes(user.role);
@@ -47,6 +51,7 @@ export function MobileBottomNav({ activeHref, user }: Props) {
     <nav
       aria-label="Primary"
       className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-black/5 bg-white/95 backdrop-blur-xl shadow-[0_-12px_30px_rgba(10,10,10,0.08)] pb-[env(safe-area-inset-bottom)]"
+      style={{ fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}
     >
       <ul className="flex items-stretch justify-around px-2 pt-2 pb-2">
         {visible.map((item) => {
@@ -63,7 +68,7 @@ export function MobileBottomNav({ activeHref, user }: Props) {
                 <span
                   className={
                     isActive
-                      ? "grid h-9 w-9 place-items-center rounded-full bg-[#111111] text-white shadow-[0_8px_18px_rgba(10,10,10,0.18)]"
+                      ? "grid h-9 w-9 place-items-center rounded-full bg-[#066a67] text-white shadow-[0_8px_18px_rgba(6,106,103,0.32)]"
                       : "grid h-9 w-9 place-items-center rounded-full text-[#6B6E76]"
                   }
                 >
@@ -72,7 +77,7 @@ export function MobileBottomNav({ activeHref, user }: Props) {
                 <span
                   className={
                     isActive
-                      ? "w-full truncate text-center text-[11px] font-bold leading-none text-[#111111]"
+                      ? "w-full truncate text-center text-[11px] font-bold leading-none text-[#066a67]"
                       : "w-full truncate text-center text-[11px] font-medium leading-none text-[#6B6E76]"
                   }
                 >
