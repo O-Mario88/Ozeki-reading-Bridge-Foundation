@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { EnrollmentFormModal } from "@/components/portal/EnrollmentFormModal";
 import { LiteracyImpactFormModal } from "@/components/portal/LiteracyImpactFormModal";
+import { NewContactModal } from "@/components/portal/NewContactModal";
 import type { SchoolDirectoryRecord } from "@/lib/types";
 
 interface Props {
@@ -15,6 +16,7 @@ export function SchoolProfileActionsClient({ school }: Props) {
   const router = useRouter();
   const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
   const [isLiteracyOpen, setIsLiteracyOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: "error" | "success"; message: string } | null>(null);
 
@@ -42,6 +44,7 @@ export function SchoolProfileActionsClient({ school }: Props) {
   function handleSuccess() {
     setIsEnrollmentOpen(false);
     setIsLiteracyOpen(false);
+    setIsContactOpen(false);
     router.refresh();
   }
 
@@ -76,6 +79,13 @@ export function SchoolProfileActionsClient({ school }: Props) {
         </Link>
         <button
           type="button"
+          className="button button-compact"
+          onClick={() => setIsContactOpen(true)}
+        >
+          New Contact
+        </button>
+        <button
+          type="button"
           className="button button-compact button-warning ml-auto"
           onClick={handleDelete}
           disabled={isDeleting}
@@ -106,6 +116,15 @@ export function SchoolProfileActionsClient({ school }: Props) {
         school={school}
         onSuccess={handleSuccess}
       />
+
+      {isContactOpen ? (
+        <NewContactModal
+          schoolId={school.id}
+          schoolName={school.name}
+          onClose={() => setIsContactOpen(false)}
+          onCreated={handleSuccess}
+        />
+      ) : null}
     </>
   );
 }
