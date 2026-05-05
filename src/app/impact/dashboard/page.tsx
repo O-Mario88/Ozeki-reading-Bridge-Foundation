@@ -968,6 +968,21 @@ function FontEnforcer() {
       .orbf-public-dashboard button {
         font-family: Calibri, "Segoe UI", Arial, sans-serif !important;
       }
+
+      /* Stretch the public site nav to align with the dashboard's wider
+         canvas. Scoped via :has() so it only fires when the dashboard
+         page is rendered — every other route keeps the default 1280px
+         site-nav width. */
+      body:has(.orbf-public-dashboard) .header .navigation-contain {
+        width: 100%;
+        max-width: 1760px;
+        padding-inline: 1rem;
+      }
+      @media (min-width: 1024px) {
+        body:has(.orbf-public-dashboard) .header .navigation-contain {
+          padding-inline: 1.5rem;
+        }
+      }
     `}</style>
   );
 }
