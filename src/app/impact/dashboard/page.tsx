@@ -9,13 +9,6 @@ import {
   ClipboardCheck,
   MessageCircle,
   PieChart as PieIcon,
-  Globe,
-  Search,
-  Plus,
-  Minus,
-  Maximize2,
-  Crosshair,
-  ChevronDown,
   Heart,
   FileText,
   Sparkles,
@@ -43,6 +36,9 @@ import {
 import { LiveMapEmbed } from "./LiveMapEmbed";
 import { InteractiveTabs } from "./InteractiveTabs";
 import { InteractiveFilters } from "./InteractiveFilters";
+import { ExploreFilterCard } from "./ExploreFilterCard";
+import { CoverageMapModeTabs, CoverageMapZoomControls } from "./CoverageMapControls";
+import { MapSearchInputClient } from "./MapSearchInputClient";
 
 export const metadata: Metadata = {
   title: "Public Live Impact Dashboard | Ozeki Reading Bridge Foundation",
@@ -242,11 +238,21 @@ function DashboardLayout() {
       <div className="flex gap-5 items-stretch">
         <Sidebar />
         <div className="flex-1 min-w-0 flex flex-col gap-5">
-          <KpiRow />
-          <ThreeColumnGrid />
-          <WhatChangedStrip />
-          <ContentTabs />
-          <LearningOutcomesByDomain />
+          <section id="overview" style={{ scrollMarginTop: 96 }}>
+            <KpiRow />
+          </section>
+          <section id="geography" style={{ scrollMarginTop: 96 }}>
+            <ThreeColumnGrid />
+          </section>
+          <section id="intelligence" style={{ scrollMarginTop: 96 }}>
+            <WhatChangedStrip />
+          </section>
+          <section id="reading-levels" style={{ scrollMarginTop: 96 }}>
+            <ContentTabs />
+          </section>
+          <section id="learning-outcomes" style={{ scrollMarginTop: 96 }}>
+            <LearningOutcomesByDomain />
+          </section>
         </div>
       </div>
     </div>
@@ -514,7 +520,7 @@ function ThreeColumnGrid() {
     <section className="grid grid-cols-1 lg:grid-cols-[minmax(280px,1fr)_minmax(0,2.4fr)_minmax(280px,1fr)] gap-4 items-stretch">
       {/* LEFT — Explore + Data Trust (stretches to match map height, no dead space) */}
       <div className="flex flex-col gap-4">
-        <ExploreByGeographyCard />
+        <ExploreFilterCard />
         <DataTrustCard className="flex-1" />
       </div>
 
@@ -568,53 +574,6 @@ function CardHeader({ title, subtitle, right }: { title: string; subtitle?: stri
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────
-   Explore By Geography
-   ──────────────────────────────────────────────────────────────────── */
-function ExploreByGeographyCard() {
-  const filters = [
-    { label: "Period", value: "FY 2024/2025" },
-    { label: "Region", value: "All regions" },
-    { label: "Sub-region", value: "All sub-regions" },
-    { label: "District", value: "All districts" },
-    { label: "School", value: "All schools" },
-  ];
-  return (
-    <Card>
-      <div className="flex items-start gap-2 mb-3">
-        <span aria-hidden style={{ width: 28, height: 28, borderRadius: 8, background: TEAL_SOFT, color: TEAL, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-          <Globe className="h-3.5 w-3.5" />
-        </span>
-        <div>
-          <h3 className="text-[14px] font-bold leading-tight" style={{ color: TEXT }}>Explore By Geography</h3>
-          <p className="text-[11.5px] mt-0.5" style={{ color: TEXT_MUTED }}>Dive deeper to see impact where it matters.</p>
-        </div>
-      </div>
-      <div className="flex flex-col gap-2.5">
-        {filters.map((f) => (
-          <label key={f.label} className="block">
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: TEXT_SUBTLE }}>{f.label}</span>
-            <button
-              type="button"
-              className="mt-1 w-full flex items-center justify-between px-3 py-2 text-[12.5px] transition hover:border-gray-300"
-              style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS_SM, color: TEXT }}
-            >
-              <span>{f.value}</span>
-              <ChevronDown className="h-3.5 w-3.5" style={{ color: TEXT_SUBTLE }} />
-            </button>
-          </label>
-        ))}
-      </div>
-      <button
-        type="button"
-        className="mt-3 w-full inline-flex items-center justify-center gap-1.5 py-2 text-[12.5px] font-bold transition hover:opacity-95"
-        style={{ background: ORANGE, color: "#fff", borderRadius: RADIUS_SM, boxShadow: SHADOW_LOW }}
-      >
-        Apply
-      </button>
-    </Card>
-  );
-}
 
 /* ────────────────────────────────────────────────────────────────────
    Data Trust card
@@ -660,7 +619,7 @@ function DataTrustCard({ className }: { className?: string }) {
           <FileText className="h-3.5 w-3.5" /> Reports
         </Link>
         <Link
-          href="/impact/stories"
+          href="/stories"
           className="inline-flex items-center justify-center gap-1.5 py-2 text-[11.5px] font-bold transition hover:bg-gray-50"
           style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS_SM, color: TEXT }}
         >
@@ -682,8 +641,6 @@ function DataTrustCard({ className }: { className?: string }) {
    Coverage map panel — the centerpiece, with a SQUARE-ISH canvas.
    ──────────────────────────────────────────────────────────────────── */
 function CoverageMapPanel() {
-  const levelTabs = ["District", "Sub-region"];
-  const modeTabs = ["Coverage", "Improvement", "Fidelity"];
   return (
     <Card padding={0}>
       {/* Header */}
@@ -692,30 +649,13 @@ function CoverageMapPanel() {
           <h3 className="text-[14px] font-bold leading-tight" style={{ color: TEXT }}>Where We Work (Live)</h3>
           <p className="text-[11.5px] mt-0.5" style={{ color: TEXT_MUTED }}>Live coverage of our programmes across Uganda.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <SegmentedTabs options={levelTabs} active={0} variant="dark" />
-          <SegmentedTabs options={modeTabs} active={0} variant="orange" />
-        </div>
+        <CoverageMapModeTabs />
       </div>
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 px-4 pt-3">
-        <div className="relative flex-1 max-w-[260px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: TEXT_SUBTLE }} />
-          <input
-            type="search"
-            aria-label="Search district"
-            placeholder="Search district…"
-            className="w-full pl-8 pr-3 py-1.5 text-[12px]"
-            style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS_SM, color: TEXT }}
-          />
-        </div>
-        <div className="flex items-center gap-1">
-          <MapButton ariaLabel="Zoom in"><Plus className="h-3.5 w-3.5" /></MapButton>
-          <MapButton ariaLabel="Zoom out"><Minus className="h-3.5 w-3.5" /></MapButton>
-          <MapButton ariaLabel="Fit to viewport"><Maximize2 className="h-3.5 w-3.5" /></MapButton>
-          <MapButton ariaLabel="Recentre"><Crosshair className="h-3.5 w-3.5" /></MapButton>
-        </div>
+        <MapSearchInput />
+        <CoverageMapZoomControls />
       </div>
 
       {/* The map itself */}
@@ -739,59 +679,12 @@ function CoverageMapPanel() {
   );
 }
 
-function SegmentedTabs({ options, active, variant }: { options: string[]; active: number; variant: "dark" | "orange" }) {
+function MapSearchInput() {
   return (
-    <div
-      className="inline-flex items-center"
-      style={{
-        background: variant === "dark" ? TEAL_DEEP : "rgba(255,114,53,0.08)",
-        padding: 3,
-        borderRadius: 999,
-        gap: 2,
-      }}
-    >
-      {options.map((label, i) => {
-        const isActive = i === active;
-        const inactiveColor = variant === "dark" ? "rgba(255,255,255,0.7)" : ORANGE;
-        return (
-          <button
-            key={label}
-            type="button"
-            className="px-3 py-1 text-[11px] font-bold transition"
-            style={{
-              borderRadius: 999,
-              background: isActive
-                ? variant === "dark" ? "#fff" : ORANGE
-                : "transparent",
-              color: isActive
-                ? variant === "dark" ? TEAL_DEEP : "#fff"
-                : inactiveColor,
-            }}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function MapButton({ children, ariaLabel }: { children: React.ReactNode; ariaLabel: string }) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      className="inline-flex items-center justify-center transition hover:bg-gray-50"
-      style={{
-        width: 30, height: 30,
-        background: SURFACE,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 8,
-        color: TEXT,
-      }}
-    >
-      {children}
-    </button>
+    <MapSearchInputClient
+      placeholder="Search district…"
+      style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: RADIUS_SM, color: TEXT }}
+    />
   );
 }
 
@@ -965,15 +858,15 @@ function WhatChangedStrip() {
    Lower content tabs
    ──────────────────────────────────────────────────────────────────── */
 function ContentTabs() {
-  const tabs = [
-    "Learning Outcomes",
-    "Reading Levels",
-    "Implementation Funnel",
-    "Teaching Quality",
-    "Equity & Segments",
-    "Data Completeness",
-    "Intelligence",
-    "Training Ops",
+  const tabs: { label: string; href: string }[] = [
+    { label: "Learning Outcomes", href: "#learning-outcomes" },
+    { label: "Reading Levels", href: "#reading-levels" },
+    { label: "Implementation Funnel", href: "#funnel" },
+    { label: "Teaching Quality", href: "#teaching-quality" },
+    { label: "Equity & Segments", href: "#equity" },
+    { label: "Data Completeness", href: "#data-completeness" },
+    { label: "Intelligence", href: "#intelligence" },
+    { label: "Training Ops", href: "#training-ops" },
   ];
   return (
     <div
@@ -983,9 +876,9 @@ function ContentTabs() {
       {tabs.map((t, i) => {
         const active = i === 0;
         return (
-          <button
-            key={t}
-            type="button"
+          <a
+            key={t.label}
+            href={t.href}
             className="px-3 py-1.5 text-[12px] font-bold transition"
             style={{
               borderRadius: 999,
@@ -993,8 +886,8 @@ function ContentTabs() {
               color: active ? "#fff" : TEXT_MUTED,
             }}
           >
-            {t}
-          </button>
+            {t.label}
+          </a>
         );
       })}
     </div>
