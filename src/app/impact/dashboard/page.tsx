@@ -1138,14 +1138,16 @@ function WhatChangedStrip({ snapshot }: { snapshot: DashboardSnapshot }) {
    Lower content tabs
    ──────────────────────────────────────────────────────────────────── */
 function ContentTabs() {
+  // Each public dashboard tab opens its own dedicated public page where
+  // available; falls back to a section anchor for tabs not yet split out.
   const tabs: { label: string; href: string }[] = [
-    { label: "Learning Outcomes", href: "#learning-outcomes" },
-    { label: "Reading Levels", href: "#reading-levels" },
+    { label: "Learning Outcomes", href: "/live-dashboard/learning-outcomes" },
+    { label: "Reading Levels", href: "/live-dashboard/learning-outcomes#reading-levels" },
     { label: "Implementation Funnel", href: "#funnel" },
-    { label: "Teaching Quality", href: "#teaching-quality" },
-    { label: "Equity & Segments", href: "#equity" },
-    { label: "Data Completeness", href: "#data-completeness" },
-    { label: "Intelligence", href: "#intelligence" },
+    { label: "Teaching Quality", href: "/live-dashboard/learning-outcomes#teaching-quality" },
+    { label: "Equity & Segments", href: "/live-dashboard/learning-outcomes#equity" },
+    { label: "Data Completeness", href: "/live-dashboard/learning-outcomes#data-completeness" },
+    { label: "Intelligence", href: "/live-dashboard/learning-outcomes#intelligence" },
     { label: "Training Ops", href: "#training-ops" },
   ];
   return (
