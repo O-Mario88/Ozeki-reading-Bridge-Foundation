@@ -4,6 +4,7 @@ import { OzekiPortalShell } from "@/components/portal/OzekiPortalShell";
 import { SchoolProfileActionsClient } from "@/components/portal/SchoolProfileActionsClient";
 import { SchoolEditModalClient } from "@/components/portal/SchoolEditModalClient";
 import { SchoolTeachersCard } from "@/components/portal/SchoolTeachersCard";
+import { MobileSchoolProfileView } from "@/components/portal/school-profile-mobile/MobileSchoolProfileView";
 import { getSchoolAccountProfile, getSchoolDirectoryRecord } from "@/services/dataService";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { devFallback } from "@/lib/dev-fallback";
@@ -124,7 +125,13 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
       subtitle={`Here's what's happening at ${school.name}.`}
       hideFrame
     >
-      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5 max-w-[1700px] mx-auto">
+      {/* Mobile-only screenshot-faithful school profile (lg:hidden inside) */}
+      <MobileSchoolProfileView profile={profile} />
+
+      {/* Desktop layout — kept untouched. The hidden lg:block wrapper means
+          this fetches and renders only on >= lg viewports; phones see the
+          mobile view above. */}
+      <div className="hidden lg:block px-4 sm:px-6 lg:px-8 py-6 space-y-5 max-w-[1700px] mx-auto">
         {/* Page header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
           <div className="min-w-0">
