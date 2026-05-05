@@ -9,7 +9,7 @@ import { requirePortalStaffUser } from "@/lib/auth";
 import { devFallback } from "@/lib/dev-fallback";
 import {
   Users, Calendar, BookOpen, ClipboardCheck, GraduationCap, ShieldCheck,
-  ArrowUpRight, Phone, Mail, MapPin, ChevronDown, Download, ChevronRight,
+  ArrowUpRight, MapPin, ChevronDown, Download, ChevronRight,
   School as SchoolIcon, Clock, FilePlus2, Upload, FileText, AlertTriangle, Activity,
   Library, Heart, type LucideIcon,
 } from "lucide-react";
@@ -88,10 +88,20 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
   // an em-dash. No more screenshot defaults leaking into production.
   const learnersEnrolled = school.enrolledLearners || school.enrollmentTotal || 0;
   const district = school.district || null;
-  const region = school.region || null;
-  const headteacher = profile.contacts?.[0]?.fullName ?? null;
-  const headteacherPhone = profile.contacts?.[0]?.phone ?? null;
-  const headteacherEmail = profile.contacts?.[0]?.email ?? null;
+  const subCounty = school.subCounty || null;
+  const parish = school.parish || null;
+  const village = school.village || null;
+  const _region = school.region || null;
+  void _region; // reserved for the upcoming Region row in v2
+  // Prefer a contact whose role is explicitly Head Teacher; fall back to
+  // the first contact (which is the school's primary contact when set).
+  const headteacherContact =
+    profile.contacts?.find((c) => /head\s*teacher/i.test(c.roleTitle ?? ""))
+    ?? profile.contacts?.[0]
+    ?? null;
+  const headteacher = headteacherContact?.fullName ?? null;
+  const headteacherPhone = headteacherContact?.phone ?? null;
+  const headteacherEmail = headteacherContact?.email ?? null;
   const yearFounded = school.yearFounded ?? null;
   const schoolCode = school.schoolCode || null;
   const emis = school.schoolExternalId || null;
@@ -149,17 +159,18 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
         </div>
 
         {/* School identity hero card */}
-        <section className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_auto] gap-0">
+        <section className="rounded-2xl bg-emerald-50/60 border border-emerald-100 shadow-sm overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr_320px] gap-0 items-stretch">
             {/* Icon panel */}
-            <div className="flex items-center justify-center h-[160px] lg:h-full lg:min-h-[200px] bg-emerald-50 border-b lg:border-b-0 lg:border-r border-emerald-100">
-              <span className="grid h-20 w-20 place-items-center rounded-2xl bg-[#066a67] text-white shadow-sm">
-                <SchoolIcon className="h-10 w-10" strokeWidth={1.75} />
+            <div className="flex items-center justify-center h-[140px] lg:h-full lg:min-h-[180px] border-b lg:border-b-0 lg:border-r border-emerald-100/80">
+              <span className="grid h-16 w-16 place-items-center rounded-2xl bg-[#066a67] text-white shadow-sm">
+                <SchoolIcon className="h-8 w-8" strokeWidth={1.75} />
               </span>
             </div>
-            {/* Identity */}
-            <div className="px-6 py-5 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
+
+            {/* Identity + structured metadata */}
+            <div className="px-6 py-5 min-w-0 bg-white">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <h2 className="text-[22px] md:text-[26px] font-extrabold text-gray-900 tracking-tight leading-tight">
                   {school.name}
                 </h2>
@@ -167,23 +178,34 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
                   {status ? "Active" : "Inactive"}
                 </span>
               </div>
-              <ul className="mt-2 space-y-1.5 text-[12.5px] text-gray-600">
-                <li className="inline-flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-gray-400" strokeWidth={1.75} />
-                  {[district, region].filter(Boolean).join(", ") || "—"}
-                </li>
-                <li className="inline-flex items-center gap-3 text-gray-500">
-                  <span><span className="font-semibold text-gray-700">EMIS:</span> {emis ?? "—"}</span>
-                  <span><span className="font-semibold text-gray-700">School Code:</span> {schoolCode ?? "—"}</span>
-                </li>
-              </ul>
+
+              {/* Row 1 — location details */}
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-[12.5px]">
+                <MetaItem label="District"   value={district} />
+                <MetaItem label="Sub-County" value={subCounty} />
+                <MetaItem label="Parish"     value={parish} />
+                <MetaItem label="Village"    value={village} />
+              </div>
+
+              {/* Row 2 — admin details (EMIS + Year Established on same row) */}
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-[12.5px] pt-3 border-t border-gray-100">
+                <MetaItem label="EMIS"             value={emis} mono />
+                <MetaItem label="School Code"      value={schoolCode} mono />
+                <MetaItem label="Year Established" value={yearFounded ? String(yearFounded) : null} />
+              </div>
             </div>
-            {/* Contact grid */}
-            <div className="px-6 py-5 border-t lg:border-t-0 lg:border-l border-gray-100 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
-              <ContactItem icon={Users}    label="Headteacher" value={headteacher ?? "—"} />
-              <ContactItem icon={Mail}     label="Email"        value={headteacherEmail ?? "—"} mono />
-              <ContactItem icon={Phone}    label="Phone"        value={headteacherPhone ?? "—"} />
-              <ContactItem icon={Calendar} label="Established"  value={yearFounded ? String(yearFounded) : "—"} />
+
+            {/* Contact block — Headteacher / Name / Phone / Email */}
+            <div className="px-6 py-5 border-t lg:border-t-0 lg:border-l border-gray-100 bg-white">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.18em] inline-flex items-center gap-1.5">
+                <Users className="h-3 w-3 text-gray-400" strokeWidth={1.75} />
+                Headteacher
+              </p>
+              <ul className="mt-2.5 space-y-1.5">
+                <ContactRow label="Name"  value={headteacher ?? "—"} />
+                <ContactRow label="Phone" value={headteacherPhone ?? "—"} />
+                <ContactRow label="Email" value={headteacherEmail ?? "—"} mono />
+              </ul>
             </div>
           </div>
         </section>
@@ -427,17 +449,37 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
 
 /* ── small subcomponents ───────────────────────────────────────────── */
 
-function ContactItem({ icon: Icon, label, value, mono = false }: {
-  icon: LucideIcon; label: string; value: string; mono?: boolean;
+/**
+ * MetaItem — uniform "LABEL / value" pair used in the school header
+ * metadata rows (District / Sub-County / Parish / Village / EMIS /
+ * School Code / Year Established). Dash-renders missing values so the
+ * layout stays aligned even on incomplete records.
+ */
+function MetaItem({ label, value, mono = false }: {
+  label: string; value: string | null | undefined; mono?: boolean;
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10.5px] font-semibold text-gray-500 uppercase tracking-wide inline-flex items-center gap-1">
-        <Icon className="h-3 w-3 text-gray-400" strokeWidth={1.75} />
-        {label}
+      <p className="text-[9.5px] font-bold text-gray-500 uppercase tracking-[0.12em]">{label}</p>
+      <p className={`text-[13px] font-semibold text-gray-900 truncate mt-0.5 ${mono ? "font-mono" : ""}`}>
+        {value && String(value).trim().length > 0 ? value : "—"}
       </p>
-      <p className={`text-[12.5px] font-semibold text-gray-900 truncate ${mono ? "font-mono text-[11.5px]" : ""}`}>{value}</p>
     </div>
+  );
+}
+
+/**
+ * ContactRow — one row in the Headteacher contact block
+ * (Name / Phone / Email). Label-and-value live on the same baseline.
+ */
+function ContactRow({ label, value, mono = false }: {
+  label: string; value: string; mono?: boolean;
+}) {
+  return (
+    <li className="flex items-baseline gap-2 text-[12.5px]">
+      <span className="text-gray-500 font-medium shrink-0 w-[52px]">{label}:</span>
+      <span className={`text-gray-900 font-semibold truncate ${mono ? "font-mono text-[11.5px]" : ""}`}>{value}</span>
+    </li>
   );
 }
 
