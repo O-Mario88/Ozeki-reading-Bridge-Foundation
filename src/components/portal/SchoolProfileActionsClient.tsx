@@ -10,9 +10,13 @@ import type { SchoolDirectoryRecord } from "@/lib/types";
 
 interface Props {
   school: SchoolDirectoryRecord;
+  /** Live count of school_contacts rows for this school. Drives the
+   *  Staff & Contacts button counter — adds bump it up, deletes bump
+   *  it down on next render of the school profile page. */
+  contactCount?: number;
 }
 
-export function SchoolProfileActionsClient({ school }: Props) {
+export function SchoolProfileActionsClient({ school, contactCount = 0 }: Props) {
   const router = useRouter();
   const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
   const [isLiteracyOpen, setIsLiteracyOpen] = useState(false);
@@ -84,6 +88,32 @@ export function SchoolProfileActionsClient({ school }: Props) {
         >
           New Contact
         </button>
+        <Link
+          href={`/portal/schools/${school.id}/staff`}
+          className="button button-compact"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+        >
+          Staff &amp; Contacts
+          <span
+            aria-label={`${contactCount} contacts`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 22,
+              height: 20,
+              padding: "0 7px",
+              borderRadius: 999,
+              background: "#066a67",
+              color: "#fff",
+              fontSize: 11,
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
+          >
+            {contactCount}
+          </span>
+        </Link>
         <button
           type="button"
           className="button button-compact button-warning ml-auto"

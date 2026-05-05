@@ -212,7 +212,7 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
 
         {/* Action buttons — moved here from the schools directory inline panel */}
         <section className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-          <SchoolProfileActionsClient school={school} />
+          <SchoolProfileActionsClient school={school} contactCount={profile.contacts?.length ?? 0} />
         </section>
 
         {/* KPI strip — 6 cards */}
