@@ -39,6 +39,7 @@ import { InteractiveFilters } from "./InteractiveFilters";
 import { ExploreFilterCard } from "./ExploreFilterCard";
 import { CoverageMapModeTabs, CoverageMapZoomControls } from "./CoverageMapControls";
 import { MapSearchInputClient } from "./MapSearchInputClient";
+import { getDashboardSnapshot, type DashboardSnapshot } from "./dashboard-snapshot";
 
 export const metadata: Metadata = {
   title: "Public Live Impact Dashboard | Ozeki Reading Bridge Foundation",
@@ -86,17 +87,65 @@ const SIDEBAR_SECTIONS: { label: string; icon: LucideIcon; href: string }[] = [
 ];
 
 /* ────────────────────────────────────────────────────────────────────
-   KPI + metric data (live data wiring is a follow-on; values match the
-   screenshot today so the layout copy is faithful).
+   KPI builder — six live values from the snapshot.
    ──────────────────────────────────────────────────────────────────── */
-const KPIS: { label: string; value: string; helper: string; helperTone: "up" | "muted" | "warn"; icon: LucideIcon }[] = [
-  { label: "Schools Supported", value: "172", helper: "↑ 12 vs last period", helperTone: "up", icon: Building2 },
-  { label: "Reading Teachers", value: "0", helper: "Awaiting first sync", helperTone: "warn", icon: Users },
-  { label: "Est. Learners Reached", value: "120", helper: "↑ 16 vs last period", helperTone: "up", icon: GraduationCap },
-  { label: "Learners Assessed", value: "0", helper: "No baseline yet", helperTone: "muted", icon: ClipboardCheck },
-  { label: "Coaching Visits", value: "0", helper: "No change", helperTone: "muted", icon: MessageCircle },
-  { label: "Assessments (B/PIE)", value: "0/0/0", helper: "No change", helperTone: "muted", icon: PieIcon },
-];
+type KpiTone = "up" | "muted" | "warn";
+type KpiCard = { label: string; value: string; helper: string; helperTone: KpiTone; icon: LucideIcon };
+
+function buildKpis(snapshot: DashboardSnapshot): KpiCard[] {
+  const schools = snapshot.reach?.schoolsReached ?? 0;
+  const teachersTrained = snapshot.cost.teachersTrained ?? 0;
+  const teachersObserved = snapshot.observation.totalSubmitted ?? 0;
+  const learnersReached = snapshot.cost.learnersReached ?? 0;
+  const learnersAssessed = snapshot.assessmentCounts.total ?? 0;
+  const coachingDelivered = snapshot.coaching?.completedLast90d ?? 0;
+  const ac = snapshot.assessmentCounts;
+
+  return [
+    {
+      label: "Schools Supported",
+      value: schools.toLocaleString(),
+      helper: schools > 0 ? `${(snapshot.reach?.districtsReached ?? 0)} districts` : "Awaiting first sync",
+      helperTone: schools > 0 ? "up" : "warn",
+      icon: Building2,
+    },
+    {
+      label: "Reading Teachers",
+      value: teachersTrained.toLocaleString(),
+      helper: teachersObserved > 0 ? `${teachersObserved} observed` : "Awaiting first sync",
+      helperTone: teachersTrained > 0 ? "up" : "warn",
+      icon: Users,
+    },
+    {
+      label: "Est. Learners Reached",
+      value: learnersReached.toLocaleString(),
+      helper: learnersReached > 0 ? `${snapshot.cost.learnersImproved.toLocaleString()} improved` : "No baseline yet",
+      helperTone: learnersReached > 0 ? "up" : "muted",
+      icon: GraduationCap,
+    },
+    {
+      label: "Learners Assessed",
+      value: learnersAssessed.toLocaleString(),
+      helper: learnersAssessed > 0 ? `${ac.baseline.toLocaleString()} baseline · ${ac.endline.toLocaleString()} endline` : "No baseline yet",
+      helperTone: learnersAssessed > 0 ? "up" : "muted",
+      icon: ClipboardCheck,
+    },
+    {
+      label: "Coaching Visits",
+      value: coachingDelivered.toLocaleString(),
+      helper: snapshot.coaching ? `${snapshot.coaching.completionPct ?? 0}% on schedule` : "No change",
+      helperTone: coachingDelivered > 0 ? "up" : "muted",
+      icon: MessageCircle,
+    },
+    {
+      label: "Assessments (B/P/E)",
+      value: `${ac.baseline}/${ac.progress}/${ac.endline}`,
+      helper: ac.total > 0 ? `${ac.total.toLocaleString()} total` : "No change",
+      helperTone: ac.total > 0 ? "up" : "muted",
+      icon: PieIcon,
+    },
+  ];
+}
 
 const READING_IMPROVEMENT: { label: string; value: string }[] = [
   { label: "Early (P1–P2)", value: "—" },
@@ -119,16 +168,27 @@ const FUNNEL: { label: string; value: number; pct: number }[] = [
   { label: "Endline assessed", value: 0, pct: 0 },
 ];
 
-const CHANGE_GRID: { label: string; value: string; helper: string; tone: "up" | "muted" | "warn" }[] = [
-  { label: "Schools Supported", value: "172", helper: "↑ 12", tone: "up" },
-  { label: "Learners Assessed", value: "0", helper: "No change", tone: "muted" },
-  { label: "Teachers Supported", value: "0", helper: "No change", tone: "muted" },
-  { label: "Teaching Quality", value: "—", helper: "Awaiting", tone: "warn" },
-  { label: "Non-reader Reduction", value: "—", helper: "Awaiting", tone: "warn" },
-  { label: "P1+ Capable Gain", value: "—", helper: "Awaiting", tone: "warn" },
-  { label: "Story Sessions", value: "—", helper: "Awaiting", tone: "warn" },
-  { label: "Assessment Completion", value: "0.0%", helper: "0.0 pp", tone: "muted" },
-];
+function buildChangeGrid(snapshot: DashboardSnapshot): { label: string; value: string; helper: string; tone: "up" | "muted" | "warn" }[] {
+  const schools = snapshot.reach?.schoolsReached ?? 0;
+  const learnersAssessed = snapshot.assessmentCounts.total ?? 0;
+  const teachers = snapshot.cost.teachersTrained ?? 0;
+  const tq = snapshot.observation;
+  const nrr = snapshot.nonReaderReduction;
+  const stories = snapshot.stories?.newThisMonth ?? 0;
+  const completion = snapshot.assessmentCompletion.completionPct;
+  // P1+ Capable Gain — share of P1-P2 paired learners that improved.
+  const earlyBand = snapshot.gradeBandImprovement.find((b) => b.band === "Early (P1–P2)");
+  return [
+    { label: "Schools Supported", value: schools.toLocaleString(), helper: schools > 0 ? "Live" : "Awaiting", tone: schools > 0 ? "up" : "warn" },
+    { label: "Learners Assessed", value: learnersAssessed.toLocaleString(), helper: learnersAssessed > 0 ? "Live" : "No change", tone: learnersAssessed > 0 ? "up" : "muted" },
+    { label: "Teachers Supported", value: teachers.toLocaleString(), helper: teachers > 0 ? "Live" : "No change", tone: teachers > 0 ? "up" : "muted" },
+    { label: "Teaching Quality", value: tq.totalSubmitted > 0 ? `${tq.fidelityPct}%` : "—", helper: tq.totalSubmitted > 0 ? `${tq.fidelityCount}/${tq.totalSubmitted} fidelity` : "Awaiting", tone: tq.fidelityPct >= 50 ? "up" : tq.totalSubmitted > 0 ? "muted" : "warn" },
+    { label: "Non-reader Reduction", value: nrr.baselinePreReaders > 0 ? `${nrr.reductionPct}%` : "—", helper: nrr.baselinePreReaders > 0 ? `${nrr.reduction.toLocaleString()} fewer pre-readers` : "Awaiting", tone: nrr.reductionPct > 0 ? "up" : nrr.baselinePreReaders > 0 ? "muted" : "warn" },
+    { label: "P1+ Capable Gain", value: earlyBand && earlyBand.paired > 0 ? `${earlyBand.improvedPct}%` : "—", helper: earlyBand && earlyBand.paired > 0 ? `${earlyBand.improved}/${earlyBand.paired} improved` : "Awaiting", tone: earlyBand && earlyBand.improvedPct > 0 ? "up" : "warn" },
+    { label: "Story Sessions", value: stories.toLocaleString(), helper: snapshot.stories ? `${snapshot.stories.totalPublished} total stories` : "Awaiting", tone: stories > 0 ? "up" : "warn" },
+    { label: "Assessment Completion", value: `${completion.toFixed(1)}%`, helper: snapshot.assessmentCompletion.scheduled > 0 ? `${snapshot.assessmentCompletion.completed}/${snapshot.assessmentCompletion.scheduled} windows` : "0.0 pp", tone: completion >= 50 ? "up" : "muted" },
+  ];
+}
 
 const DOMAIN_TILES: { label: string; icon: LucideIcon }[] = [
   { label: "Phonemic Awareness", icon: Headphones },
@@ -158,14 +218,16 @@ const REGION_DOT: Record<typeof REGIONS[number], string> = {
 };
 
 /* ────────────────────────────────────────────────────────────────────
-   Page
+   Page (async server component — pulls a single live snapshot
+   that every section reads from)
    ──────────────────────────────────────────────────────────────────── */
-export default function PublicLiveImpactDashboardPage() {
+export default async function PublicLiveImpactDashboardPage() {
+  const snapshot = await getDashboardSnapshot();
   return (
     <main style={{ background: CANVAS, color: TEXT, fontFamily: FONT }} className="orbf-public-dashboard">
-      <TrustStrip />
+      <TrustStrip generatedAt={snapshot.generatedAt} />
       <PageTitleRow />
-      <DashboardLayout />
+      <DashboardLayout snapshot={snapshot} />
       <FontEnforcer />
     </main>
   );
@@ -174,14 +236,20 @@ export default function PublicLiveImpactDashboardPage() {
 /* ────────────────────────────────────────────────────────────────────
    Trust strip — slim white strip below the site nav.
    ──────────────────────────────────────────────────────────────────── */
-function TrustStrip() {
+function TrustStrip({ generatedAt }: { generatedAt: string }) {
+  const ageMs = Math.max(0, Date.now() - new Date(generatedAt).getTime());
+  const ageMin = Math.round(ageMs / 60_000);
+  const refreshedLabel =
+    ageMin <= 0 ? "Data refreshed just now" :
+      ageMin < 60 ? `Data refreshed ${ageMin} min${ageMin === 1 ? "" : "s"} ago` :
+        `Data refreshed ${Math.round(ageMin / 60)}h ago`;
   return (
     <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}` }}>
       <div className="max-w-[1760px] mx-auto px-4 lg:px-6 py-2.5 flex items-center justify-between gap-4 text-[12.5px]" style={{ color: TEXT_MUTED }}>
         <div className="flex items-center gap-2">
           <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: "#16a34a", display: "inline-block", boxShadow: "0 0 0 3px rgba(22, 163, 74, 0.15)" }} />
           <span style={{ fontWeight: 700, color: TEXT, letterSpacing: 0.2 }}>LIVE</span>
-          <span>Data refreshed 2 mins ago</span>
+          <span>{refreshedLabel}</span>
         </div>
         <div className="hidden md:block flex-1 text-center" style={{ color: TEXT_MUTED }}>
           We verify every classroom milestone with real data across Uganda.
@@ -232,26 +300,29 @@ function PageTitleRow() {
 /* ────────────────────────────────────────────────────────────────────
    Layout: dark sidebar (left) + main content (right)
    ──────────────────────────────────────────────────────────────────── */
-function DashboardLayout() {
+function DashboardLayout({ snapshot }: { snapshot: DashboardSnapshot }) {
   return (
     <div className="max-w-[1760px] mx-auto px-4 lg:px-6 py-6">
       <div className="flex gap-5 items-stretch">
-        <Sidebar />
+        <Sidebar snapshot={snapshot} />
         <div className="flex-1 min-w-0 flex flex-col gap-5">
           <section id="overview" style={{ scrollMarginTop: 96 }}>
-            <KpiRow />
+            <KpiRow snapshot={snapshot} />
           </section>
           <section id="geography" style={{ scrollMarginTop: 96 }}>
-            <ThreeColumnGrid />
+            <ThreeColumnGrid snapshot={snapshot} />
+          </section>
+          <section id="teaching-quality" style={{ scrollMarginTop: 96 }}>
+            <TeachingQualitySection snapshot={snapshot} />
           </section>
           <section id="intelligence" style={{ scrollMarginTop: 96 }}>
-            <WhatChangedStrip />
+            <WhatChangedStrip snapshot={snapshot} />
           </section>
           <section id="reading-levels" style={{ scrollMarginTop: 96 }}>
             <ContentTabs />
           </section>
           <section id="learning-outcomes" style={{ scrollMarginTop: 96 }}>
-            <LearningOutcomesByDomain />
+            <LearningOutcomesByDomain snapshot={snapshot} />
           </section>
         </div>
       </div>
@@ -262,7 +333,7 @@ function DashboardLayout() {
 /* ────────────────────────────────────────────────────────────────────
    Left dark dashboard sidebar
    ──────────────────────────────────────────────────────────────────── */
-function Sidebar() {
+function Sidebar({ snapshot }: { snapshot: DashboardSnapshot }) {
   return (
     <aside
       className="shrink-0 hidden lg:flex flex-col gap-4"
@@ -306,7 +377,7 @@ function Sidebar() {
           );
         })}
       </ul>
-      <SidebarLivePulse />
+      <SidebarLivePulse snapshot={snapshot} />
       <SidebarAdSlot />
       <DonatePromoCard />
     </aside>
@@ -314,15 +385,39 @@ function Sidebar() {
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   Sidebar — Live Pulse mini-feed
+   Sidebar — Live Pulse mini-feed (sourced from the snapshot)
    ──────────────────────────────────────────────────────────────────── */
-const PULSE_ITEMS: { dotColor: string; text: string; ago: string }[] = [
-  { dotColor: "#34d399", text: "172 schools verified across Uganda", ago: "2m ago" },
-  { dotColor: "#fbbf24", text: "FY 2024/2025 baseline window opens", ago: "today" },
-  { dotColor: "#60a5fa", text: "EMIS sync queued for tonight", ago: "1h ago" },
-];
+function buildPulseItems(snapshot: DashboardSnapshot): { dotColor: string; text: string; ago: string }[] {
+  const items: { dotColor: string; text: string; ago: string }[] = [];
+  if (snapshot.reach && snapshot.reach.schoolsReached > 0) {
+    items.push({
+      dotColor: "#34d399",
+      text: `${snapshot.reach.schoolsReached.toLocaleString()} schools verified across Uganda`,
+      ago: "live",
+    });
+  }
+  if (snapshot.observation.totalSubmitted > 0) {
+    items.push({
+      dotColor: "#60a5fa",
+      text: `${snapshot.observation.fidelityPct}% fidelity from ${snapshot.observation.totalSubmitted.toLocaleString()} observations`,
+      ago: "live",
+    });
+  }
+  if (snapshot.cost.learnersReached > 0) {
+    items.push({
+      dotColor: "#fbbf24",
+      text: `${snapshot.cost.learnersReached.toLocaleString()} learners assessed to date`,
+      ago: "live",
+    });
+  }
+  if (items.length === 0) {
+    items.push({ dotColor: "#94a3b8", text: "Awaiting first sync from the field", ago: "—" });
+  }
+  return items.slice(0, 3);
+}
 
-function SidebarLivePulse() {
+function SidebarLivePulse({ snapshot }: { snapshot: DashboardSnapshot }) {
+  const PULSE_ITEMS = buildPulseItems(snapshot);
   return (
     <div
       style={{
@@ -457,7 +552,8 @@ function DonatePromoCard() {
 /* ────────────────────────────────────────────────────────────────────
    KPI row
    ──────────────────────────────────────────────────────────────────── */
-function KpiRow() {
+function KpiRow({ snapshot }: { snapshot: DashboardSnapshot }) {
+  const KPIS = buildKpis(snapshot);
   return (
     <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {KPIS.map((kpi) => {
@@ -515,13 +611,13 @@ function KpiRow() {
 /* ────────────────────────────────────────────────────────────────────
    Three-column grid: filters/data trust | map | metric stack
    ──────────────────────────────────────────────────────────────────── */
-function ThreeColumnGrid() {
+function ThreeColumnGrid({ snapshot }: { snapshot: DashboardSnapshot }) {
   return (
     <section className="grid grid-cols-1 lg:grid-cols-[minmax(280px,1fr)_minmax(0,2.4fr)_minmax(280px,1fr)] gap-4 items-stretch">
       {/* LEFT — Explore + Data Trust (stretches to match map height, no dead space) */}
       <div className="flex flex-col gap-4">
         <ExploreFilterCard />
-        <DataTrustCard className="flex-1" />
+        <DataTrustCard className="flex-1" snapshot={snapshot} />
       </div>
 
       {/* CENTER — Map (large square-ish, centerpiece) */}
@@ -531,9 +627,9 @@ function ThreeColumnGrid() {
 
       {/* RIGHT — Learning & Parity / Reading Progress / Funnel (stretches to match map height) */}
       <div className="flex flex-col gap-4">
-        <LearningParityCard />
-        <ReadingProgressCard />
-        <ConversionFunnelCard className="flex-1" />
+        <LearningParityCard snapshot={snapshot} />
+        <ReadingProgressCard snapshot={snapshot} />
+        <ConversionFunnelCard className="flex-1" snapshot={snapshot} />
       </div>
     </section>
   );
@@ -578,11 +674,20 @@ function CardHeader({ title, subtitle, right }: { title: string; subtitle?: stri
 /* ────────────────────────────────────────────────────────────────────
    Data Trust card
    ──────────────────────────────────────────────────────────────────── */
-function DataTrustCard({ className }: { className?: string }) {
+function DataTrustCard({ className, snapshot }: { className?: string; snapshot: DashboardSnapshot }) {
+  const sample = snapshot.cost.learnersReached || snapshot.assessmentCounts.total || 0;
+  const completeness =
+    snapshot.observation.totalSubmitted > 0 || snapshot.assessmentCounts.total > 0
+      ? "Live"
+      : "Awaiting first sync";
+  const completenessTone: "ok" | "muted" = completeness === "Live" ? "ok" : "muted";
+  const lastUpdated = new Date(snapshot.generatedAt).toLocaleString(undefined, {
+    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+  });
   const rows = [
-    { label: "Completeness", value: "Complete", tone: "ok" as const },
-    { label: "Sample size", value: "n = 172", tone: "muted" as const },
-    { label: "Last updated", value: "28 Apr · 08:45", tone: "muted" as const },
+    { label: "Completeness", value: completeness, tone: completenessTone },
+    { label: "Sample size", value: sample > 0 ? `n = ${sample.toLocaleString()}` : "n = 0", tone: "muted" as const },
+    { label: "Last updated", value: lastUpdated, tone: "muted" as const },
   ];
   return (
     <Card className={className}>
@@ -691,7 +796,12 @@ function MapSearchInput() {
 /* ────────────────────────────────────────────────────────────────────
    Right column cards
    ──────────────────────────────────────────────────────────────────── */
-function LearningParityCard() {
+function LearningParityCard({ snapshot }: { snapshot: DashboardSnapshot }) {
+  const allGradesPct =
+    snapshot.stageShift?.improvedSharePct != null
+      ? `${snapshot.stageShift.improvedSharePct}%`
+      : "0%";
+  const malePct = snapshot.parity.total > 0 ? snapshot.parity.male / snapshot.parity.total : 0.5;
   return (
     <Card>
       <CardHeader title="Learning & Parity" subtitle="Outcomes & gender parity snapshot." />
@@ -699,32 +809,38 @@ function LearningParityCard() {
         Reading Improvement (vs Baseline)
       </p>
       <ul className="flex flex-col">
-        {READING_IMPROVEMENT.map((row, i) => (
-          <li key={row.label} className="flex items-center justify-between py-1.5 text-[12px]"
+        {snapshot.gradeBandImprovement.map((row, i) => (
+          <li key={row.band} className="flex items-center justify-between py-1.5 text-[12px]"
             style={{ borderTop: i === 0 ? "none" : `1px dashed ${BORDER}` }}>
-            <span style={{ color: TEXT_MUTED }}>{row.label}</span>
-            <span style={{ color: TEXT_SUBTLE, fontWeight: 600 }}>{row.value}</span>
+            <span style={{ color: TEXT_MUTED }}>{row.band}</span>
+            <span style={{ color: row.paired > 0 ? TEXT : TEXT_SUBTLE, fontWeight: 600 }}>
+              {row.paired > 0 ? `${row.improvedPct}%` : "—"}
+            </span>
           </li>
         ))}
         <li className="flex items-center justify-between py-2 text-[12px]"
           style={{ borderTop: `1px dashed ${BORDER}` }}>
           <span style={{ color: TEXT, fontWeight: 700 }}>All grades</span>
-          <span style={{ color: TEXT_SUBTLE, fontWeight: 600 }}>0%</span>
+          <span style={{ color: TEXT, fontWeight: 700 }}>{allGradesPct}</span>
         </li>
       </ul>
 
       <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
-        <ParityDonut malePct={0.5} />
+        <ParityDonut malePct={malePct} />
         <div className="flex-1">
           <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: TEXT_SUBTLE }}>Gender Parity</p>
           <ul className="mt-1 text-[11px] space-y-0.5">
             <li className="flex items-center gap-1.5" style={{ color: TEXT_MUTED }}>
               <span aria-hidden style={{ width: 7, height: 7, borderRadius: 999, background: TEAL, display: "inline-block" }} />
-              Male <span style={{ color: TEXT, fontWeight: 700, marginLeft: 4 }}>0 (0%)</span>
+              Male <span style={{ color: TEXT, fontWeight: 700, marginLeft: 4 }}>
+                {snapshot.parity.male.toLocaleString()} ({snapshot.parity.malePct}%)
+              </span>
             </li>
             <li className="flex items-center gap-1.5" style={{ color: TEXT_MUTED }}>
               <span aria-hidden style={{ width: 7, height: 7, borderRadius: 999, background: ORANGE, display: "inline-block" }} />
-              Female <span style={{ color: TEXT, fontWeight: 700, marginLeft: 4 }}>0 (0%)</span>
+              Female <span style={{ color: TEXT, fontWeight: 700, marginLeft: 4 }}>
+                {snapshot.parity.female.toLocaleString()} ({snapshot.parity.femalePct}%)
+              </span>
             </li>
           </ul>
         </div>
@@ -770,12 +886,20 @@ function ParityDonut({ malePct }: { malePct: number }) {
   );
 }
 
-function ReadingProgressCard() {
+function ReadingProgressCard({ snapshot }: { snapshot: DashboardSnapshot }) {
+  const matched = snapshot.stageShift?.endlineLearners ?? 0;
+  const movedUp = snapshot.cost.learnersImproved ?? 0;
+  const trackedStages = snapshot.gradeBandImprovement.reduce((acc, b) => acc + b.paired, 0);
+  const rows: { label: string; value: string }[] = [
+    { label: "Baseline-to-latest matched", value: matched > 0 ? matched.toLocaleString() : "—" },
+    { label: "Moved up ≥ 1 reading level", value: movedUp > 0 ? movedUp.toLocaleString() : "—" },
+    { label: "Tracked reading stages", value: trackedStages.toLocaleString() },
+  ];
   return (
     <Card>
       <CardHeader title="Reading Progress" subtitle="How learners are progressing." />
       <ul className="flex flex-col">
-        {READING_PROGRESS.map((row, i) => (
+        {rows.map((row, i) => (
           <li key={row.label} className="flex items-center justify-between py-2 text-[12px]"
             style={{ borderTop: i === 0 ? "none" : `1px dashed ${BORDER}` }}>
             <span style={{ color: TEXT_MUTED }}>{row.label}</span>
@@ -787,16 +911,37 @@ function ReadingProgressCard() {
   );
 }
 
-function ConversionFunnelCard({ className }: { className?: string }) {
+function ConversionFunnelCard({ className, snapshot }: { className?: string; snapshot: DashboardSnapshot }) {
+  const f = snapshot.funnel;
+  const top = Math.max(f.schoolsTrusted, 1);
+  const FUNNEL_ROWS: { label: string; value: number; pct: number }[] = [
+    { label: "Schools trusted", value: f.schoolsTrusted, pct: f.schoolsTrusted > 0 ? 100 : 0 },
+    { label: "Contacted / visited", value: f.contactedOrVisited, pct: Math.round((f.contactedOrVisited / top) * 100) },
+    { label: "Baseline assessed", value: f.baselineAssessed, pct: Math.min(100, Math.round((f.baselineAssessed / top) * 100)) },
+    { label: "In-class assessed", value: f.inClassAssessed, pct: Math.min(100, Math.round((f.inClassAssessed / top) * 100)) },
+    { label: "Endline assessed", value: f.endlineAssessed, pct: Math.min(100, Math.round((f.endlineAssessed / top) * 100)) },
+  ];
+  // Step retention = average step-over-step retention. Cumulative = endline / schoolsTrusted.
+  const stepRetentions: number[] = [];
+  for (let i = 1; i < FUNNEL_ROWS.length; i++) {
+    const prev = FUNNEL_ROWS[i - 1]!.value;
+    if (prev > 0) stepRetentions.push((FUNNEL_ROWS[i]!.value / prev) * 100);
+  }
+  const stepRetention = stepRetentions.length > 0
+    ? Math.round((stepRetentions.reduce((a, b) => a + b, 0) / stepRetentions.length) * 10) / 10
+    : 0;
+  const cumulative = top > 0
+    ? Math.round((f.endlineAssessed / top) * 1000) / 10
+    : 0;
   return (
     <Card className={className}>
       <CardHeader title="Conversion Funnel" subtitle="From selection to outcomes." />
       <ul className="flex flex-col gap-2.5">
-        {FUNNEL.map((step) => (
+        {FUNNEL_ROWS.map((step) => (
           <li key={step.label}>
             <div className="flex items-center justify-between text-[11.5px]">
               <span style={{ color: TEXT_MUTED }}>{step.label}</span>
-              <span style={{ color: TEXT, fontWeight: 700 }}>{step.value}</span>
+              <span style={{ color: TEXT, fontWeight: 700 }}>{step.value.toLocaleString()}</span>
             </div>
             <div style={{ height: 5, borderRadius: 999, background: BORDER, overflow: "hidden", marginTop: 4 }}>
               <div
@@ -813,9 +958,115 @@ function ConversionFunnelCard({ className }: { className?: string }) {
         ))}
       </ul>
       <div className="flex items-center justify-between mt-3 pt-3 text-[11px]" style={{ borderTop: `1px solid ${BORDER}` }}>
-        <span style={{ color: TEXT_MUTED }}>Step retention <span style={{ color: TEXT, fontWeight: 700 }}>0.0%</span></span>
-        <span style={{ color: TEXT_MUTED }}>Cumulative <span style={{ color: TEXT, fontWeight: 700 }}>0.0%</span></span>
+        <span style={{ color: TEXT_MUTED }}>Step retention <span style={{ color: TEXT, fontWeight: 700 }}>{stepRetention.toFixed(1)}%</span></span>
+        <span style={{ color: TEXT_MUTED }}>Cumulative <span style={{ color: TEXT, fontWeight: 700 }}>{cumulative.toFixed(1)}%</span></span>
       </div>
+    </Card>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Teaching Quality — fidelity / partial / low split + 12-month trend
+   sourced from teacher_lesson_observations. Anchored to #teaching-quality
+   so the sidebar nav + lower content tabs both land here.
+   ──────────────────────────────────────────────────────────────────── */
+function TeachingQualitySection({ snapshot }: { snapshot: DashboardSnapshot }) {
+  const obs = snapshot.observation;
+  const total = obs.totalSubmitted;
+  const bands: { label: string; count: number; pct: number; color: string }[] = total > 0 ? [
+    { label: "Fidelity", count: obs.fidelityCount, pct: Math.round((obs.fidelityCount / total) * 1000) / 10, color: "#16a34a" },
+    { label: "Partial", count: obs.partialCount, pct: Math.round((obs.partialCount / total) * 1000) / 10, color: "#f59e0b" },
+    { label: "Low", count: obs.lowCount, pct: Math.round((obs.lowCount / total) * 1000) / 10, color: "#dc2626" },
+  ] : [];
+
+  // 12-month trend max for bar scaling
+  const maxTrend = obs.monthlyTrend.reduce(
+    (m, r) => Math.max(m, r.fidelityCount + r.partialCount + r.lowCount),
+    0,
+  );
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 className="text-[16px] font-bold leading-tight" style={{ color: TEXT }}>Teaching Quality</h3>
+          <p className="text-[11.5px] mt-0.5" style={{ color: TEXT_MUTED }}>
+            Fidelity rating from submitted teacher-lesson observations. Live from the observation register.
+          </p>
+        </div>
+        <Link href="/portal/observations" className="text-[11.5px] font-bold inline-flex items-center gap-1" style={{ color: TEAL }}>
+          Open observations <ChevronRight className="h-3 w-3" />
+        </Link>
+      </div>
+
+      {total === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
+          <p className="text-[12.5px] text-gray-600">No submitted observations yet.</p>
+          <p className="text-[11px] text-gray-500 mt-1">Once teachers&apos; lesson observations are submitted, fidelity / partial / low ratings will surface here with a 12-month trend.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-5">
+          {/* Headline split */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] mb-1" style={{ color: TEXT_SUBTLE }}>
+              Headline split
+            </p>
+            <p className="text-[34px] font-bold leading-none" style={{ color: TEAL }}>
+              {obs.fidelityPct}<span className="text-[18px] text-gray-500">% fidelity</span>
+            </p>
+            <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>
+              from {total.toLocaleString()} submitted observation{total === 1 ? "" : "s"}
+            </p>
+            {/* Stacked bar */}
+            <div className="mt-3 flex h-3 rounded-full overflow-hidden" style={{ background: BORDER }}>
+              {bands.map((b) => b.count > 0 ? (
+                <div key={b.label} style={{ width: `${b.pct}%`, background: b.color }} title={`${b.label}: ${b.count} (${b.pct}%)`} />
+              ) : null)}
+            </div>
+            <ul className="mt-2.5 space-y-1.5">
+              {bands.map((b) => (
+                <li key={b.label} className="flex items-center justify-between text-[11.5px]">
+                  <span className="inline-flex items-center gap-1.5" style={{ color: TEXT_MUTED }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: b.color, display: "inline-block" }} />
+                    {b.label}
+                  </span>
+                  <span style={{ color: TEXT, fontWeight: 700 }}>{b.count.toLocaleString()} <span style={{ color: TEXT_SUBTLE, fontWeight: 500 }}>({b.pct}%)</span></span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* 12-month trend */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] mb-2" style={{ color: TEXT_SUBTLE }}>
+              12-month trend
+            </p>
+            {obs.monthlyTrend.length === 0 ? (
+              <p className="text-[12px]" style={{ color: TEXT_SUBTLE }}>No monthly data yet.</p>
+            ) : (
+              <ul className="grid grid-cols-12 gap-1.5 items-end h-[140px]">
+                {obs.monthlyTrend.slice(-12).map((m) => {
+                  const total = m.fidelityCount + m.partialCount + m.lowCount;
+                  const heightPct = maxTrend > 0 ? (total / maxTrend) * 100 : 0;
+                  const fSh = total > 0 ? (m.fidelityCount / total) * heightPct : 0;
+                  const pSh = total > 0 ? (m.partialCount / total) * heightPct : 0;
+                  const lSh = total > 0 ? (m.lowCount / total) * heightPct : 0;
+                  return (
+                    <li key={m.month} className="flex flex-col items-center gap-1 h-full" title={`${m.month}: ${m.fidelityCount}/${m.partialCount}/${m.lowCount}`}>
+                      <div className="flex flex-col-reverse w-full flex-1 rounded-md overflow-hidden" style={{ background: "#f1f5f9" }}>
+                        <div style={{ height: `${fSh}%`, background: "#16a34a" }} />
+                        <div style={{ height: `${pSh}%`, background: "#f59e0b" }} />
+                        <div style={{ height: `${lSh}%`, background: "#dc2626" }} />
+                      </div>
+                      <span className="text-[9px]" style={{ color: TEXT_SUBTLE }}>{m.month.slice(5)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
@@ -823,7 +1074,8 @@ function ConversionFunnelCard({ className }: { className?: string }) {
 /* ────────────────────────────────────────────────────────────────────
    What Changed This Period
    ──────────────────────────────────────────────────────────────────── */
-function WhatChangedStrip() {
+function WhatChangedStrip({ snapshot }: { snapshot: DashboardSnapshot }) {
+  const CHANGE_GRID = buildChangeGrid(snapshot);
   return (
     <Card>
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -897,7 +1149,16 @@ function ContentTabs() {
 /* ────────────────────────────────────────────────────────────────────
    Learning Outcomes by Domain — tile grid (no tables)
    ──────────────────────────────────────────────────────────────────── */
-function LearningOutcomesByDomain() {
+function LearningOutcomesByDomain({ snapshot }: { snapshot: DashboardSnapshot }) {
+  // Match each repo domain row to its display icon.
+  const ICONS: Record<string, LucideIcon> = {
+    phonemic_awareness: Headphones,
+    grapheme_phoneme_correspondence: TypeIcon,
+    blending_decoding: Combine,
+    word_recognition_fluency: Eye,
+    sentence_paragraph_construction: AlignLeft,
+    comprehension: BookCopy,
+  };
   return (
     <Card>
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -912,32 +1173,40 @@ function LearningOutcomesByDomain() {
         </Link>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {DOMAIN_TILES.map(({ label, icon: Icon }) => (
-          <div
-            key={label}
-            style={{
-              background: SURFACE,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 12,
-              padding: 14,
-              minHeight: 110,
-            }}
-          >
-            <span
-              aria-hidden
+        {snapshot.domainMastery.map((d) => {
+          const Icon = ICONS[d.domainKey] ?? BookCopy;
+          const hasData = d.total > 0;
+          return (
+            <div
+              key={d.domainKey}
               style={{
-                width: 32, height: 32, borderRadius: 8,
-                background: ORANGE_SOFT, color: ORANGE,
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+                borderRadius: 12,
+                padding: 14,
+                minHeight: 110,
               }}
             >
-              <Icon className="h-4 w-4" />
-            </span>
-            <p className="text-[12px] font-bold mt-2 leading-snug" style={{ color: TEXT }}>{label}</p>
-            <p className="text-[18px] font-bold mt-2" style={{ color: TEXT_SUBTLE }}>—</p>
-            <p className="text-[10.5px] mt-0.5" style={{ color: TEXT_SUBTLE }}>No baseline</p>
-          </div>
-        ))}
+              <span
+                aria-hidden
+                style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  background: ORANGE_SOFT, color: ORANGE,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+              <p className="text-[12px] font-bold mt-2 leading-snug" style={{ color: TEXT }}>{d.label}</p>
+              <p className="text-[18px] font-bold mt-2" style={{ color: hasData ? TEXT : TEXT_SUBTLE }}>
+                {hasData ? `${d.masteredPct}%` : "—"}
+              </p>
+              <p className="text-[10.5px] mt-0.5" style={{ color: TEXT_SUBTLE }}>
+                {hasData ? `${d.mastered.toLocaleString()} / ${d.total.toLocaleString()} mastered` : "No baseline"}
+              </p>
+            </div>
+          );
+        })}
       </div>
       {/* InteractiveTabs is kept imported (and rendered hidden) so its
           motion/animation chunk still ships and the existing tabbed content
