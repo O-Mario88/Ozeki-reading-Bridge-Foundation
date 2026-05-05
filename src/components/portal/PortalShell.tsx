@@ -8,6 +8,10 @@ interface PortalShellProps {
   activeHref: string;
   title?: string;
   description?: string;
+  /** Override the default "Welcome back, …" greeting. */
+  greeting?: string;
+  /** Override the default greeting subtitle. */
+  subtitle?: string;
   actions?: ReactNode;
   shellClassName?: string;
   /** When true, the page handles its own header — shell renders only nav chrome. */
@@ -31,6 +35,8 @@ export function PortalShell({
   activeHref,
   title,
   description,
+  greeting,
+  subtitle,
   actions,
   shellClassName,
   hideFrame = false,
@@ -42,6 +48,8 @@ export function PortalShell({
       activeHref={activeHref}
       title={title}
       description={description}
+      greeting={greeting}
+      subtitle={subtitle}
       actions={actions}
       hideFrame={hideFrame}
     >

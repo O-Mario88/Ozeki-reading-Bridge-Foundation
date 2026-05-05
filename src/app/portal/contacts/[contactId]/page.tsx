@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { PortalCrmProfileView } from "@/components/portal/crm/PortalCrmProfileView";
+import { ContactProfileView } from "@/components/portal/contact-profile/ContactProfileView";
 import { requirePortalStaffUser } from "@/lib/auth";
-import { getContactCrmProfile } from "@/lib/server/postgres/repositories/portal-crm";
+import { getContactProfileSnapshot } from "@/lib/server/postgres/repositories/contact-profile";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Contact Profile | Ozeki Portal" };
 
 interface PageProps {
   params: Promise<{ contactId: string }>;
@@ -18,14 +19,26 @@ export default async function PortalContactProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const profile = await getContactCrmProfile(id);
-  if (!profile) {
+  const snapshot = await getContactProfileSnapshot(id);
+  if (!snapshot) {
     notFound();
   }
 
+  // The page handles its own page-title row (Contact Profile + breadcrumb),
+  // so the shell only renders the welcome strip + sidebar chrome. The
+  // subtitle is contextual: "Here's what's happening at <primary school>".
+  const subtitle = snapshot.identity.primarySchoolName
+    ? `Here's what's happening at ${snapshot.identity.primarySchoolName}.`
+    : "Here's what's happening across your contact network.";
+
   return (
-    <PortalShell user={user} activeHref="/portal/contacts" title={profile.title} description={profile.subtitle ?? undefined}>
-      <PortalCrmProfileView profile={profile} contactId={id} />
+    <PortalShell
+      user={user}
+      activeHref="/portal/schools"
+      hideFrame
+      subtitle={subtitle}
+    >
+      <ContactProfileView snapshot={snapshot} />
     </PortalShell>
   );
 }
