@@ -300,8 +300,114 @@ function Sidebar() {
           );
         })}
       </ul>
+      <SidebarLivePulse />
+      <SidebarAdSlot />
       <DonatePromoCard />
     </aside>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Sidebar — Live Pulse mini-feed
+   ──────────────────────────────────────────────────────────────────── */
+const PULSE_ITEMS: { dotColor: string; text: string; ago: string }[] = [
+  { dotColor: "#34d399", text: "172 schools verified across Uganda", ago: "2m ago" },
+  { dotColor: "#fbbf24", text: "FY 2024/2025 baseline window opens", ago: "today" },
+  { dotColor: "#60a5fa", text: "EMIS sync queued for tonight", ago: "1h ago" },
+];
+
+function SidebarLivePulse() {
+  return (
+    <div
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 12,
+        padding: 12,
+      }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.5)" }}>
+          Live Pulse
+        </p>
+        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: "#34d399" }}>
+          <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: "#34d399", display: "inline-block", boxShadow: "0 0 0 3px rgba(52, 211, 153, 0.18)" }} />
+          Live
+        </span>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {PULSE_ITEMS.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-[11px]">
+            <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: item.dotColor, display: "inline-block", marginTop: 5, flexShrink: 0 }} />
+            <div className="min-w-0 flex-1">
+              <p style={{ color: "#fff", lineHeight: 1.35 }}>{item.text}</p>
+              <p className="text-[9.5px] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{item.ago}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Sidebar — AdSense slot (prepared)
+   Set NEXT_PUBLIC_ADSENSE_CLIENT (e.g. ca-pub-XXXXX) and
+   NEXT_PUBLIC_ADSENSE_DASHBOARD_SIDEBAR_SLOT (numeric slot id) to
+   replace the placeholder with a live ad. Keep the loader script
+   (adsbygoogle.js) added to the global <head> separately, since
+   AdSense terms forbid loading it on every page conditionally.
+   ──────────────────────────────────────────────────────────────────── */
+function SidebarAdSlot() {
+  const adClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT?.trim();
+  const adSlot = process.env.NEXT_PUBLIC_ADSENSE_DASHBOARD_SIDEBAR_SLOT?.trim();
+
+  return (
+    <div
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: "1px dashed rgba(255,255,255,0.12)",
+        borderRadius: 12,
+        padding: 10,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <p className="text-[9px] font-bold uppercase tracking-[0.16em] mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>
+        Sponsored
+      </p>
+      {adClient && adSlot ? (
+        <ins
+          className="adsbygoogle"
+          style={{ display: "block", minHeight: 200, background: "transparent" }}
+          data-ad-client={adClient}
+          data-ad-slot={adSlot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      ) : (
+        <div
+          aria-hidden
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 200,
+            background: "rgba(255,255,255,0.02)",
+            borderRadius: 8,
+            color: "rgba(255,255,255,0.4)",
+            textAlign: "center",
+            padding: 12,
+          }}
+        >
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em]">Ad slot ready</p>
+          <p className="text-[10.5px] mt-1.5" style={{ lineHeight: 1.4 }}>
+            Set <code style={{ background: "rgba(255,255,255,0.08)", padding: "1px 4px", borderRadius: 4 }}>NEXT_PUBLIC_ADSENSE_CLIENT</code> + slot id to enable.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
