@@ -128,6 +128,16 @@ export async function POST(req: NextRequest) {
       strengths: parsed.strengths,
       developmentAreas: parsed.developmentAreas,
       actionPlan: parsed.actionPlan ? { ...parsed.actionPlan, reviewDate: parsed.actionPlan.reviewDate ?? null } : null,
+      // Per-domain rubric scores — drive the public Teaching Quality
+      // from Teacher Observation Analysis card. Forward every field
+      // the Zod schema accepts so they land in the DB columns added
+      // in migration 0072.
+      lessonStructureScore: parsed.lessonStructureScore ?? null,
+      instructionalDeliveryScore: parsed.instructionalDeliveryScore ?? null,
+      learnerEngagementScore: parsed.learnerEngagementScore ?? null,
+      assessmentPracticesScore: parsed.assessmentPracticesScore ?? null,
+      useOfMaterialsScore: parsed.useOfMaterialsScore ?? null,
+      classroomEnvironmentScore: parsed.classroomEnvironmentScore ?? null,
     });
 
     if (parsed.status === "submitted") {

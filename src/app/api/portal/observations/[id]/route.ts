@@ -133,6 +133,17 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       strengths: parsed.strengths,
       developmentAreas: parsed.developmentAreas,
       actionPlan: parsed.actionPlan === undefined ? undefined : (parsed.actionPlan ? { ...parsed.actionPlan, reviewDate: parsed.actionPlan.reviewDate ?? null } : null),
+      // Per-domain rubric scores — must be threaded through the PATCH
+      // path too so observations created without scores can be
+      // backfilled and edits to existing scores actually persist.
+      // Pass `undefined` when the field is absent so the dynamic SET
+      // builder in updateObservationPostgres skips that column.
+      lessonStructureScore: parsed.lessonStructureScore,
+      instructionalDeliveryScore: parsed.instructionalDeliveryScore,
+      learnerEngagementScore: parsed.learnerEngagementScore,
+      assessmentPracticesScore: parsed.assessmentPracticesScore,
+      useOfMaterialsScore: parsed.useOfMaterialsScore,
+      classroomEnvironmentScore: parsed.classroomEnvironmentScore,
       updatedByUserId: user.id,
     });
 
