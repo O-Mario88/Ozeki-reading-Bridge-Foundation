@@ -1,19 +1,26 @@
 import { notFound } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { MobileActivityInvolvementView } from "@/components/portal/contact-profile/MobileActivityInvolvementView";
 import { ContactProfileView } from "@/components/portal/contact-profile/ContactProfileView";
-import { MobileContactProfileView } from "@/components/portal/contact-profile/MobileContactProfileView";
 import { requirePortalStaffUser } from "@/lib/auth";
 import { canExportData } from "@/lib/permissions";
 import { getContactProfileSnapshot } from "@/lib/server/postgres/repositories/contact-profile";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Contact Profile | Ozeki Portal" };
+export const metadata = { title: "Activity & Involvement | Ozeki Portal" };
 
 interface PageProps {
   params: Promise<{ contactId: string }>;
 }
 
-export default async function PortalContactProfilePage({ params }: PageProps) {
+/**
+ * Mobile-first sub-route of the contact profile. Shows the screenshot's
+ * Activity & Involvement screen on phones; on desktop, since the regular
+ * Contact Profile already includes the Activity Timeline + Coaching &
+ * Evaluations + Meetings & Engagements cards, we just render the same
+ * desktop view rather than building a parallel desktop activity layout.
+ */
+export default async function PortalContactActivityPage({ params }: PageProps) {
   const user = await requirePortalStaffUser();
   const { contactId } = await params;
   const id = Number(contactId);
@@ -26,9 +33,6 @@ export default async function PortalContactProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  // The page handles its own page-title row (Contact Profile + breadcrumb),
-  // so the shell only renders the welcome strip + sidebar chrome. The
-  // subtitle is contextual: "Here's what's happening at <primary school>".
   const subtitle = snapshot.identity.primarySchoolName
     ? `Here's what's happening at ${snapshot.identity.primarySchoolName}.`
     : "Here's what's happening across your contact network.";
@@ -40,9 +44,7 @@ export default async function PortalContactProfilePage({ params }: PageProps) {
       hideFrame
       subtitle={subtitle}
     >
-      {/* Mobile-only view (lg:hidden inside the component) */}
-      <MobileContactProfileView snapshot={snapshot} canExport={canExportData(user)} />
-      {/* Desktop view, untouched */}
+      <MobileActivityInvolvementView snapshot={snapshot} />
       <div className="hidden lg:block">
         <ContactProfileView snapshot={snapshot} canExport={canExportData(user)} />
       </div>
