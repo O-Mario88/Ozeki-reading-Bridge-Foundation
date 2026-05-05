@@ -59,6 +59,11 @@ export function FloatingSurface({
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const requestClose = () => {
     if (unsavedChanges && typeof window !== "undefined") {
@@ -131,7 +136,7 @@ export function FloatingSurface({
     }
   }, [open]);
 
-  if (!open) {
+  if (!open || !mounted) {
     return null;
   }
 
