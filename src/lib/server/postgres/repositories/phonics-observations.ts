@@ -501,6 +501,172 @@ export async function getPublicObservationFidelityStatsPostgres(): Promise<{
   };
 }
 
+/**
+ * Teaching-quality IMPROVEMENT signal for the Public Live Impact
+ * Dashboard. Compares the current 90-day window against the prior
+ * 90-day window for:
+ *   - overall fidelity %                    (deltaPp)
+ *   - average per-domain rubric score (0-100, 6 domains)  (deltaPoints)
+ *   - lesson-structure adherence per checkpoint  (deltaPp)
+ * Empty arrays / zero deltas when no submissions yet.
+ */
+export type TeachingQualityImprovement = {
+  current: { fidelityPct: number; submitted: number };
+  prior: { fidelityPct: number; submitted: number };
+  fidelityDeltaPp: number;
+  domainImprovements: Array<{
+    domainKey:
+      | "lesson_structure_score"
+      | "instructional_delivery_score"
+      | "learner_engagement_score"
+      | "assessment_practices_score"
+      | "use_of_materials_score"
+      | "classroom_environment_score";
+    label: string;
+    currentAvg: number;
+    priorAvg: number;
+    deltaPoints: number;
+  }>;
+  lessonStructureImprovements: Array<{
+    itemKey: string;
+    itemLabel: string;
+    currentAdherencePct: number;
+    priorAdherencePct: number;
+    deltaPp: number;
+  }>;
+};
+
+const DOMAIN_LABELS: Array<{ column: TeachingQualityImprovement["domainImprovements"][number]["domainKey"]; label: string }> = [
+  { column: "lesson_structure_score", label: "Lesson Structure" },
+  { column: "instructional_delivery_score", label: "Instructional Delivery" },
+  { column: "learner_engagement_score", label: "Learner Engagement" },
+  { column: "assessment_practices_score", label: "Assessment Practices" },
+  { column: "use_of_materials_score", label: "Use of Materials" },
+  { column: "classroom_environment_score", label: "Classroom Environment" },
+];
+
+export async function getPublicTeachingQualityImprovementPostgres(): Promise<TeachingQualityImprovement> {
+  try {
+    const [bands, domains, structure] = await Promise.all([
+      // Headline fidelity for current vs prior 90-day window
+      queryPostgres<{ window: string; submitted: number; fidelity: number }>(
+        `SELECT
+           CASE WHEN observation_date >= NOW() - INTERVAL '90 days' THEN 'current' ELSE 'prior' END AS window,
+           COUNT(*) FILTER (WHERE status = 'submitted')::int AS submitted,
+           COUNT(*) FILTER (WHERE status = 'submitted' AND overall_post_observation_rating = 'fidelity')::int AS fidelity
+         FROM teacher_lesson_observations
+         WHERE observation_date >= NOW() - INTERVAL '180 days'
+         GROUP BY window`,
+      ),
+      // Per-domain averages (current vs prior)
+      queryPostgres<{
+        window: string;
+        ls: number | null; id: number | null; le: number | null;
+        ap: number | null; um: number | null; ce: number | null;
+      }>(
+        `SELECT
+           CASE WHEN observation_date >= NOW() - INTERVAL '90 days' THEN 'current' ELSE 'prior' END AS window,
+           AVG(lesson_structure_score)         FILTER (WHERE status = 'submitted' AND lesson_structure_score IS NOT NULL)         AS ls,
+           AVG(instructional_delivery_score)   FILTER (WHERE status = 'submitted' AND instructional_delivery_score IS NOT NULL)   AS id,
+           AVG(learner_engagement_score)       FILTER (WHERE status = 'submitted' AND learner_engagement_score IS NOT NULL)       AS le,
+           AVG(assessment_practices_score)     FILTER (WHERE status = 'submitted' AND assessment_practices_score IS NOT NULL)     AS ap,
+           AVG(use_of_materials_score)         FILTER (WHERE status = 'submitted' AND use_of_materials_score IS NOT NULL)         AS um,
+           AVG(classroom_environment_score)    FILTER (WHERE status = 'submitted' AND classroom_environment_score IS NOT NULL)    AS ce
+         FROM teacher_lesson_observations
+         WHERE observation_date >= NOW() - INTERVAL '180 days'
+         GROUP BY window`,
+      ),
+      // Per-Section-B-checkpoint adherence current vs prior
+      queryPostgres<{ window: string; item_key: string; item_label: string; observed: number; total: number }>(
+        `SELECT
+           CASE WHEN tlo.observation_date >= NOW() - INTERVAL '90 days' THEN 'current' ELSE 'prior' END AS window,
+           lsi.item_key,
+           MAX(lsi.item_label) AS item_label,
+           COUNT(*) FILTER (WHERE lsi.observed_yes_no = 'yes')::int AS observed,
+           COUNT(*) FILTER (WHERE lsi.observed_yes_no IN ('yes', 'no'))::int AS total
+         FROM observation_lesson_structure_items lsi
+         JOIN teacher_lesson_observations tlo ON tlo.id = lsi.observation_id
+         WHERE tlo.status = 'submitted'
+           AND tlo.observation_date >= NOW() - INTERVAL '180 days'
+         GROUP BY window, lsi.item_key
+         ORDER BY MIN(lsi.id)`,
+      ),
+    ]);
+
+    const findBand = (w: "current" | "prior") =>
+      bands.rows.find((r) => r.window === w) ?? { window: w, submitted: 0, fidelity: 0 };
+    const c = findBand("current");
+    const p = findBand("prior");
+    const fidelityCurr = Number(c.submitted) > 0 ? Math.round((Number(c.fidelity) / Number(c.submitted)) * 1000) / 10 : 0;
+    const fidelityPrior = Number(p.submitted) > 0 ? Math.round((Number(p.fidelity) / Number(p.submitted)) * 1000) / 10 : 0;
+
+    const domainCurr = domains.rows.find((r) => r.window === "current");
+    const domainPrior = domains.rows.find((r) => r.window === "prior");
+    const round = (v: number | null | undefined) => (v === null || v === undefined ? 0 : Math.round(Number(v) * 10) / 10);
+    const dvalue = (row: typeof domainCurr, key: TeachingQualityImprovement["domainImprovements"][number]["domainKey"]): number => {
+      if (!row) return 0;
+      switch (key) {
+        case "lesson_structure_score": return round(row.ls);
+        case "instructional_delivery_score": return round(row.id);
+        case "learner_engagement_score": return round(row.le);
+        case "assessment_practices_score": return round(row.ap);
+        case "use_of_materials_score": return round(row.um);
+        case "classroom_environment_score": return round(row.ce);
+      }
+    };
+    const domainImprovements = DOMAIN_LABELS.map((d) => {
+      const currentAvg = dvalue(domainCurr, d.column);
+      const priorAvg = dvalue(domainPrior, d.column);
+      return {
+        domainKey: d.column,
+        label: d.label,
+        currentAvg,
+        priorAvg,
+        deltaPoints: Math.round((currentAvg - priorAvg) * 10) / 10,
+      };
+    });
+
+    // Group structure rows by item_key
+    const byItem = new Map<string, { label: string; current?: { observed: number; total: number }; prior?: { observed: number; total: number } }>();
+    for (const r of structure.rows) {
+      const key = String(r.item_key);
+      const cur = byItem.get(key) ?? { label: String(r.item_label) };
+      const window = r.window === "current" ? "current" : "prior";
+      cur[window] = { observed: Number(r.observed ?? 0), total: Number(r.total ?? 0) };
+      byItem.set(key, cur);
+    }
+    const lessonStructureImprovements = Array.from(byItem.entries()).map(([key, v]) => {
+      const cAd = v.current && v.current.total > 0 ? Math.round((v.current.observed / v.current.total) * 1000) / 10 : 0;
+      const pAd = v.prior && v.prior.total > 0 ? Math.round((v.prior.observed / v.prior.total) * 1000) / 10 : 0;
+      return {
+        itemKey: key,
+        itemLabel: v.label,
+        currentAdherencePct: cAd,
+        priorAdherencePct: pAd,
+        deltaPp: Math.round((cAd - pAd) * 10) / 10,
+      };
+    });
+
+    return {
+      current: { fidelityPct: fidelityCurr, submitted: Number(c.submitted) },
+      prior: { fidelityPct: fidelityPrior, submitted: Number(p.submitted) },
+      fidelityDeltaPp: Math.round((fidelityCurr - fidelityPrior) * 10) / 10,
+      domainImprovements,
+      lessonStructureImprovements,
+    };
+  } catch {
+    return {
+      current: { fidelityPct: 0, submitted: 0 },
+      prior: { fidelityPct: 0, submitted: 0 },
+      fidelityDeltaPp: 0,
+      domainImprovements: DOMAIN_LABELS.map((d) => ({
+        domainKey: d.column, label: d.label, currentAvg: 0, priorAvg: 0, deltaPoints: 0,
+      })),
+      lessonStructureImprovements: [],
+    };
+  }
+}
+
 export async function getObservationDashboardStatsPostgres(): Promise<{
   total: number;
   submitted: number;

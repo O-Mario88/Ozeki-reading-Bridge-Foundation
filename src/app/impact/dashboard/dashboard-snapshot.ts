@@ -30,7 +30,11 @@ import {
   type AssessmentCompletion,
   type NonReaderReduction,
 } from "@/lib/server/postgres/repositories/dashboard-public-metrics";
-import { getPublicObservationFidelityStatsPostgres } from "@/lib/server/postgres/repositories/phonics-observations";
+import {
+  getPublicObservationFidelityStatsPostgres,
+  getPublicTeachingQualityImprovementPostgres,
+  type TeachingQualityImprovement,
+} from "@/lib/server/postgres/repositories/phonics-observations";
 
 export type ObservationFidelity = Awaited<ReturnType<typeof getPublicObservationFidelityStatsPostgres>>;
 
@@ -48,6 +52,7 @@ export type DashboardSnapshot = {
   teacherImpact: TeacherImpactSnapshot | null;
   stories: StoryCollectionGrowth | null;
   observation: ObservationFidelity;
+  teachingQualityImprovement: TeachingQualityImprovement;
   assessmentCounts: AssessmentTypeCounts;
   funnel: LearnerFunnel;
   parity: GenderParity;
@@ -70,6 +75,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     teacherImpact,
     stories,
     observation,
+    teachingQualityImprovement,
     assessmentCounts,
     funnel,
     parity,
@@ -97,6 +103,13 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     getPublicTeacherImpactSnapshot().catch(() => null),
     getPublicStoryCollectionGrowth().catch(() => null),
     getPublicObservationFidelityStatsPostgres().catch(() => EMPTY_OBSERVATION),
+    getPublicTeachingQualityImprovementPostgres().catch(() => ({
+      current: { fidelityPct: 0, submitted: 0 },
+      prior: { fidelityPct: 0, submitted: 0 },
+      fidelityDeltaPp: 0,
+      domainImprovements: [],
+      lessonStructureImprovements: [],
+    } as TeachingQualityImprovement)),
     getPublicAssessmentTypeCountsPostgres(),
     getPublicLearnerFunnelPostgres(),
     getPublicGenderParityPostgres(),
@@ -115,6 +128,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     teacherImpact,
     stories,
     observation,
+    teachingQualityImprovement,
     assessmentCounts,
     funnel,
     parity,

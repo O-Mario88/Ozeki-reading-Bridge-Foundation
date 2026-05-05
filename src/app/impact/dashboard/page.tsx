@@ -161,7 +161,7 @@ function buildChangeGrid(snapshot: DashboardSnapshot): { label: string; value: s
     { label: "Schools Supported", value: schools.toLocaleString(), helper: schools > 0 ? "Live" : "Awaiting", tone: schools > 0 ? "up" : "warn" },
     { label: "Learners Assessed", value: learnersAssessed.toLocaleString(), helper: learnersAssessed > 0 ? "Live" : "No change", tone: learnersAssessed > 0 ? "up" : "muted" },
     { label: "Teachers Supported", value: teachers.toLocaleString(), helper: teachers > 0 ? "Live" : "No change", tone: teachers > 0 ? "up" : "muted" },
-    { label: "Teaching Quality", value: tq.totalSubmitted > 0 ? `${tq.fidelityPct}%` : "—", helper: tq.totalSubmitted > 0 ? `${tq.fidelityCount}/${tq.totalSubmitted} fidelity` : "Awaiting", tone: tq.fidelityPct >= 50 ? "up" : tq.totalSubmitted > 0 ? "muted" : "warn" },
+    { label: "Teaching Quality", value: tq.totalSubmitted > 0 ? `${tq.fidelityPct}%` : "—", helper: tq.totalSubmitted > 0 ? `${snapshot.teachingQualityImprovement.fidelityDeltaPp >= 0 ? "↑" : "↓"} ${Math.abs(snapshot.teachingQualityImprovement.fidelityDeltaPp)} pp vs prior 90d` : "Awaiting", tone: snapshot.teachingQualityImprovement.fidelityDeltaPp > 0 ? "up" : snapshot.teachingQualityImprovement.fidelityDeltaPp < 0 ? "warn" : tq.totalSubmitted > 0 ? "muted" : "warn" },
     { label: "Non-reader Reduction", value: nrr.baselinePreReaders > 0 ? `${nrr.reductionPct}%` : "—", helper: nrr.baselinePreReaders > 0 ? `${nrr.reduction.toLocaleString()} fewer pre-readers` : "Awaiting", tone: nrr.reductionPct > 0 ? "up" : nrr.baselinePreReaders > 0 ? "muted" : "warn" },
     { label: "P1+ Capable Gain", value: earlyBand && earlyBand.paired > 0 ? `${earlyBand.improvedPct}%` : "—", helper: earlyBand && earlyBand.paired > 0 ? `${earlyBand.improved}/${earlyBand.paired} improved` : "Awaiting", tone: earlyBand && earlyBand.improvedPct > 0 ? "up" : "warn" },
     { label: "Story Sessions", value: stories.toLocaleString(), helper: snapshot.stories ? `${snapshot.stories.totalPublished} total stories` : "Awaiting", tone: stories > 0 ? "up" : "warn" },
@@ -1095,7 +1095,75 @@ function TeachingQualitySection({ snapshot }: { snapshot: DashboardSnapshot }) {
           </div>
         </div>
       )}
+
+      {/* Improvement strip — current 90d vs prior 90d, per domain + per Section B item */}
+      {snapshot.teachingQualityImprovement.current.submitted > 0 || snapshot.teachingQualityImprovement.prior.submitted > 0 ? (
+        <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${BORDER}` }}>
+          <div className="flex items-baseline justify-between gap-3 mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: TEXT_SUBTLE }}>
+              Teaching Quality Improvement (current 90 days vs prior 90 days)
+            </p>
+            <ImprovementChip pp={snapshot.teachingQualityImprovement.fidelityDeltaPp} label="overall fidelity" />
+          </div>
+
+          {snapshot.teachingQualityImprovement.domainImprovements.length > 0 ? (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: TEXT_SUBTLE }}>Per-domain rubric (0–100)</p>
+              <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {snapshot.teachingQualityImprovement.domainImprovements.map((d) => (
+                  <DomainImprovementRow key={d.domainKey} label={d.label} current={d.currentAvg} prior={d.priorAvg} delta={d.deltaPoints} unit="pts" />
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {snapshot.teachingQualityImprovement.lessonStructureImprovements.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: TEXT_SUBTLE }}>Lesson-structure adherence (Section B)</p>
+              <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {snapshot.teachingQualityImprovement.lessonStructureImprovements.map((s) => (
+                  <DomainImprovementRow
+                    key={s.itemKey}
+                    label={s.itemLabel}
+                    current={s.currentAdherencePct}
+                    prior={s.priorAdherencePct}
+                    delta={s.deltaPp}
+                    unit="pp"
+                  />
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </Card>
+  );
+}
+
+function ImprovementChip({ pp, label }: { pp: number; label: string }) {
+  const tone = pp > 0 ? "#16a34a" : pp < 0 ? "#dc2626" : TEXT_SUBTLE;
+  const arrow = pp > 0 ? "↑" : pp < 0 ? "↓" : "→";
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider" style={{ background: pp > 0 ? "#dcfce7" : pp < 0 ? "#fee2e2" : BORDER, color: tone, borderRadius: 999 }}>
+      {arrow} {Math.abs(pp).toFixed(1)} pp · {label}
+    </span>
+  );
+}
+
+function DomainImprovementRow({ label, current, prior, delta, unit }: { label: string; current: number; prior: number; delta: number; unit: "pts" | "pp" }) {
+  const tone = delta > 0 ? "#16a34a" : delta < 0 ? "#dc2626" : TEXT_SUBTLE;
+  const arrow = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
+  return (
+    <li className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: "#f8fafc", border: `1px solid ${BORDER}` }}>
+      <span className="text-[11px] truncate" style={{ color: TEXT_MUTED }} title={label}>{label}</span>
+      <span className="flex items-center gap-1.5 shrink-0">
+        <span className="text-[11.5px] font-bold" style={{ color: TEXT }}>{current.toFixed(1)}</span>
+        <span className="text-[10px]" style={{ color: TEXT_SUBTLE }}>vs {prior.toFixed(1)}</span>
+        <span className="text-[10px] font-bold inline-flex items-center" style={{ color: tone }}>
+          {arrow} {Math.abs(delta).toFixed(1)} {unit}
+        </span>
+      </span>
+    </li>
   );
 }
 
