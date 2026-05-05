@@ -4,6 +4,17 @@ import * as argon2 from "argon2";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 
+/**
+ * Idle-session timeout, in minutes. A portal session survives this many
+ * minutes between activity pings; the page mounts a heartbeat that fires
+ * while the user has any keyboard / mouse / touch / scroll activity, so
+ * "idle" here means *true* idle (no real interaction), not just no server
+ * navigation. Applies uniformly to every role — the prior 15-min privileged
+ * cap was retired because it kicked legitimate authors out of long-form
+ * pages they were actively reading.
+ */
+export const PORTAL_IDLE_TIMEOUT_MINUTES = 20;
+
 /** Detect whether a stored hash is Argon2id. */
 function isArgon2Hash(hash: string): boolean {
   return hash.startsWith("$argon2id$");
@@ -298,8 +309,11 @@ export async function insertPortalSessionPostgres(userId: number, token: string,
 
 export async function deleteExpiredPortalSessionsPostgres() {
   await queryPostgres("DELETE FROM portal_sessions WHERE expires_at <= NOW()");
-  // Also delete idle sessions across the system (30 minutes max buffer for non-privileged, 15m is checked actively)
-  await queryPostgres("DELETE FROM portal_sessions WHERE last_active_at < NOW() - INTERVAL '30 minutes'");
+  // Garbage-collect idle sessions. A small margin past the active idle limit
+  // keeps a session row alive long enough that a heartbeat lands cleanly.
+  await queryPostgres(
+    `DELETE FROM portal_sessions WHERE last_active_at < NOW() - INTERVAL '${PORTAL_IDLE_TIMEOUT_MINUTES + 5} minutes'`,
+  );
 }
 
 export async function findPortalUserBySessionTokenPostgres(token: string) {
@@ -335,14 +349,15 @@ export async function findPortalUserBySessionTokenPostgres(token: string) {
   if (!result.rows[0]) return null;
 
   const row = result.rows[0];
-  const isPrivileged = row.isSuperAdmin || row.isAdmin || row.isME || row.isSupervisor;
-  const idleMaxMinutes = isPrivileged ? 15 : 30;
 
-  // 2. Validate Idle Timeout mathematically from last_active_at
+  // 2. Validate idle timeout from last_active_at. The PORTAL_IDLE_TIMEOUT_MINUTES
+  //    constant is uniform across roles; the client-side heartbeat keeps
+  //    last_active_at fresh whenever the user is actually interacting with
+  //    the browser, so a long form-fill or report-read does not trigger
+  //    logout the way it used to under the old role-split rules.
   const lastActive = new Date(row.lastActiveAt).getTime();
   const idleMillis = Date.now() - lastActive;
-  if (idleMillis > idleMaxMinutes * 60 * 1000) {
-    // Delete the expired idle session so it can't be reused
+  if (idleMillis > PORTAL_IDLE_TIMEOUT_MINUTES * 60 * 1000) {
     await deletePortalSessionPostgres(token);
     return null;
   }

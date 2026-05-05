@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { OzekiSidebar } from "./OzekiSidebar";
 import { OzekiTopBar } from "./OzekiTopBar";
+import { SessionHeartbeatClient } from "./SessionHeartbeatClient";
 import { MobileBottomNav } from "./glass-dashboard-shell/MobileBottomNav";
 import { MobileHeader } from "./glass-dashboard-shell/MobileHeader";
 import type { PortalUser } from "@/lib/types";
@@ -66,6 +67,11 @@ export function OzekiPortalShell({
       className="text-gray-900"
       style={{ fontFamily: PORTAL_FONT_STACK }}
     >
+      {/* Keeps the session alive while the user is genuinely interacting,
+          so the 20-min idle timeout only fires on real idleness. Mounts
+          once per portal page; renders nothing. */}
+      <SessionHeartbeatClient />
+
       {/* Mobile (<lg) */}
       <div className="lg:hidden min-h-screen bg-[#e7ecf3]">
         {/* Full-bleed green branded header */}
