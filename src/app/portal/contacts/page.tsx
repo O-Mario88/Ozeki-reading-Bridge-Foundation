@@ -218,7 +218,7 @@ function parseDirectoryFilters(sp: Record<string, string | string[] | undefined>
   };
 }
 
-export default async function PortalCrmOverviewPage({ searchParams }: PortalCrmOverviewPageProps = {}) {
+export default async function PortalCrmOverviewPage({ searchParams }: PortalCrmOverviewPageProps) {
   const user = await requirePortalStaffUser();
   const sp = searchParams ? await searchParams : undefined;
   const directoryFilters = parseDirectoryFilters(sp);
