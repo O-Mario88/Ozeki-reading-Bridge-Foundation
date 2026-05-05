@@ -248,7 +248,7 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
 
   /* ── stat cards data ── */
   const statCards = [
-    { icon: "👤", count: counts.contacts, label: "Contacts", href: "/portal/contacts", tab: null },
+    { icon: "👤", count: counts.contacts, label: "Staff & Contacts", href: null, tab: "contacts" as const },
     { icon: "🎓", count: counts.trainings, label: "Trainings", href: "/portal/trainings", tab: null },
     { icon: "💻", count: counts.onlineTrainings, label: "Online Trainings", href: "/portal/events", tab: null },
     { icon: "🏫", count: counts.visits, label: "School Visits", href: "/portal/visits", tab: null },
@@ -464,22 +464,50 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
 
             {/* ── Contacts Tab ── */}
             {activeTab === "contacts" ? (
-              <div className="sp-contacts-list">
+              <div className="sp-staff-wrap">
+                <div className="sp-staff-header">
+                  <div>
+                    <h3 className="sp-section-title">Staff & Contacts</h3>
+                    <p className="sp-text-muted">
+                      {profile.contacts.length} {profile.contacts.length === 1 ? "person" : "people"} linked to this school. Click a row to open the staff profile.
+                    </p>
+                  </div>
+                  <button className="sp-btn sp-btn--sm" type="button" onClick={() => setNewContactOpen(true)}>
+                    New Contact
+                  </button>
+                </div>
                 {profile.contacts.length === 0 ? (
-                  <p className="sp-empty">No contacts have been linked to this school yet.</p>
+                  <p className="sp-empty">No staff or contacts have been linked to this school yet.</p>
                 ) : (
-                  profile.contacts.map((contact) => (
-                    <div key={contact.contactId} className="sp-contact-row">
-                      <div>
-                        <strong>{contact.fullName}</strong>
-                        <span>{contact.roleTitle || contact.category}{contact.isPrimaryContact ? " (Primary)" : ""}</span>
-                      </div>
-                      <div className="sp-contact-meta">
-                        <span>{contact.phone || "No phone"}</span>
-                        <span>{contact.email || "No email"}</span>
-                      </div>
-                    </div>
-                  ))
+                  <div className="sp-table-wrap">
+                    <DashboardListHeader template="120px minmax(180px,1.4fr) 90px minmax(140px,1fr) 140px minmax(180px,1.2fr)">
+                      <span>Staff ID</span>
+                      <span>Staff Name</span>
+                      <span>Gender</span>
+                      <span>Staff Role</span>
+                      <span>Phone</span>
+                      <span>Email</span>
+                    </DashboardListHeader>
+                    {profile.contacts.map((contact) => (
+                      <Link
+                        key={contact.contactId}
+                        href={`/portal/contacts/${contact.contactId}`}
+                        className="sp-staff-row-link"
+                      >
+                        <DashboardListRow template="120px minmax(180px,1.4fr) 90px minmax(140px,1fr) 140px minmax(180px,1.2fr)">
+                          <span className="sp-staff-id">{contact.contactUid || `#${contact.contactId}`}</span>
+                          <span>
+                            <strong>{contact.fullName}</strong>
+                            {contact.isPrimaryContact ? <em className="sp-staff-primary"> Primary</em> : null}
+                          </span>
+                          <span>{contact.gender || "-"}</span>
+                          <span>{contact.roleTitle || contact.category || "-"}</span>
+                          <span>{contact.phone || "-"}</span>
+                          <span className="truncate">{contact.email || "-"}</span>
+                        </DashboardListRow>
+                      </Link>
+                    ))}
+                  </div>
                 )}
               </div>
             ) : null}
@@ -488,10 +516,10 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
             {activeTab === "related" ? (
               <div className="sp-related-grid">
                 <article className="sp-related-card">
-                  <h3>Contacts</h3>
-                  <p>{counts.contacts} contacts linked to this school account.</p>
+                  <h3>Staff & Contacts</h3>
+                  <p>{counts.contacts} staff members and contacts linked to this school account.</p>
                   <button type="button" className="sp-btn sp-btn--sm" onClick={() => setActiveTab("contacts")}>
-                    View {counts.contacts} contacts
+                    View {counts.contacts} staff
                   </button>
                 </article>
                 <article className="sp-related-card">
@@ -1160,34 +1188,61 @@ export function SchoolProfileView({ profile }: SchoolProfileViewProps) {
           gap: 2rem;
         }
 
-        /* ── CONTACTS LIST ── */
-        .sp-contacts-list {
-          display: flex;
-          flex-direction: column;
+        /* ── STAFF / CONTACTS TABLE ── */
+        .sp-staff-wrap {
+          display: grid;
+          gap: 0.85rem;
         }
-        .sp-contact-row {
+        .sp-staff-header {
           display: flex;
           justify-content: space-between;
+          align-items: flex-end;
           gap: 1rem;
-          padding: 0.75rem 0;
-          border-bottom: 1px solid rgba(168,162,158,0.12);
+          flex-wrap: wrap;
         }
-        .sp-contact-row strong {
-          color: #292524;
-          font-size: 0.92rem;
+        .sp-staff-header .sp-section-title {
+          margin-bottom: 0.25rem;
+          border-bottom: 0;
+          padding-bottom: 0;
+        }
+        .sp-staff-header p {
+          margin: 0;
+        }
+        .sp-staff-row-link {
           display: block;
+          text-decoration: none;
+          color: inherit;
+          border-radius: 10px;
+          transition: background 0.15s ease;
         }
-        .sp-contact-row > div:first-child span {
-          color: #78716c;
+        .sp-staff-row-link:hover {
+          background: rgba(232,240,222,0.35);
+        }
+        .sp-staff-row-link:hover :global(strong) {
+          color: #3d6b4f;
+        }
+        .sp-staff-id {
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
           font-size: 0.82rem;
-        }
-        .sp-contact-meta {
-          text-align: right;
-        }
-        .sp-contact-meta span {
-          display: block;
           color: #78716c;
-          font-size: 0.82rem;
+        }
+        .sp-staff-primary {
+          display: inline-block;
+          margin-left: 0.4rem;
+          padding: 0 0.4rem;
+          font-style: normal;
+          font-size: 0.7rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: #3d6b4f;
+          background: rgba(74,124,89,0.12);
+          border-radius: 6px;
+        }
+        .truncate {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         /* ── RELATED GRID ── */

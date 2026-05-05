@@ -26,6 +26,7 @@ const schoolSchema = z.object({
 
   accountRecordType: z.string().trim().optional(),
   schoolType: z.string().trim().optional(),
+  ownership: z.string().trim().optional(),
   parentAccountLabel: z.string().trim().optional(),
   schoolRelationshipStatus: z.string().trim().optional(),
   schoolRelationshipStatusDate: z.string().trim().optional(),
@@ -89,6 +90,7 @@ const schoolUpdateSchema = z.object({
 
   accountRecordType: z.string().trim().optional(),
   schoolType: z.string().trim().optional(),
+  ownership: z.string().trim().optional(),
   parentAccountLabel: z.string().trim().optional(),
   schoolRelationshipStatus: z.string().trim().nullable().optional(),
   schoolRelationshipStatusDate: z.string().trim().nullable().optional(),
@@ -182,6 +184,7 @@ export async function POST(request: Request) {
 
         accountRecordType: payload.accountRecordType?.trim() || undefined,
         schoolType: payload.schoolType?.trim() || undefined,
+        ownership: payload.ownership?.trim() || undefined,
         parentAccountLabel: payload.parentAccountLabel?.trim() || undefined,
         schoolRelationshipStatus: payload.schoolRelationshipStatus?.trim() || undefined,
         schoolRelationshipStatusDate: payload.schoolRelationshipStatusDate?.trim() || undefined,
@@ -292,6 +295,7 @@ export async function PATCH(request: Request) {
 
         accountRecordType: payload.accountRecordType,
         schoolType: payload.schoolType,
+        ownership: payload.ownership,
         parentAccountLabel: payload.parentAccountLabel,
         schoolRelationshipStatus: payload.schoolRelationshipStatus,
         schoolRelationshipStatusDate: payload.schoolRelationshipStatusDate,

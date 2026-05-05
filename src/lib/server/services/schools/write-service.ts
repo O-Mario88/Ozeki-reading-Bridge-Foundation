@@ -32,6 +32,7 @@ export interface SchoolDirectoryWriteInput {
   currentPartnerType?: string | null;
   accountRecordType?: string | null;
   schoolType?: string | null;
+  ownership?: string | null;
   parentAccountLabel?: string | null;
   schoolRelationshipStatus?: string | null;
   schoolRelationshipStatusDate?: string | null;
@@ -120,6 +121,8 @@ interface SchoolWriteRow {
   enrolledP7: number;
   classesJson: string | null;
   village: string | null;
+  schoolType: string | null;
+  ownership: string | null;
   primaryContactId: number | null;
   primaryContactName: string | null;
   primaryContactPhone: string | null;
@@ -248,6 +251,8 @@ async function loadSchoolWriteRow(client: PoolClient, schoolId: number) {
         COALESCE(s.enrolled_p7, 0) AS "enrolledP7",
         s.classes_json AS "classesJson",
         s.village,
+        s.school_type AS "schoolType",
+        s.ownership AS "ownership",
         s.primary_contact_id AS "primaryContactId",
         sc.full_name AS "primaryContactName",
         sc.phone AS "primaryContactPhone",
@@ -829,6 +834,8 @@ export async function writeSchoolDirectoryRecord(args: {
         primaryContactRoleTitle,
         primaryContactWhatsapp: nullableText(args.input.headTeacher?.whatsapp),
         classesJson: nullableText(args.input.classesJson) ?? current?.classesJson ?? null,
+        schoolType: nullableText(args.input.schoolType) ?? current?.schoolType ?? null,
+        ownership: nullableText(args.input.ownership) ?? current?.ownership ?? null,
       };
 
       const providedEnrollment =
@@ -902,6 +909,7 @@ export async function writeSchoolDirectoryRecord(args: {
               enrolled_p1, enrolled_p2, enrolled_p3, enrolled_p4, enrolled_p5, enrolled_p6, enrolled_p7,
               village,
               classes_json,
+              school_type, ownership,
               created_at
             ) VALUES (
               (SELECT COALESCE(MAX(id),0)+1 FROM schools_directory),
@@ -922,6 +930,7 @@ export async function writeSchoolDirectoryRecord(args: {
               $33, $34, $35, $36, $37, $38, $39,
               $40,
               $41,
+              $42, $43,
               NOW()
             ) RETURNING id
           `,
@@ -967,6 +976,8 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.enrolledP7,                        // $39
             resolved.village,                           // $40
             resolved.classesJson,                       // $41
+            resolved.schoolType ?? null,                // $42
+            resolved.ownership ?? null,                 // $43
           ],
         );
         schoolId = Number(insertResult.rows[0]?.id ?? 0);
@@ -1018,7 +1029,9 @@ export async function writeSchoolDirectoryRecord(args: {
               enrolled_p6 = $38,
               enrolled_p7 = $39,
               village = $40,
-              classes_json = $41
+              classes_json = $41,
+              school_type = $42,
+              ownership = $43
             WHERE id = $1
           `,
           [
@@ -1063,6 +1076,8 @@ export async function writeSchoolDirectoryRecord(args: {
             resolved.enrolledP7,                        // $39
             resolved.village,                           // $40
             resolved.classesJson,                       // $41
+            resolved.schoolType ?? null,                // $42
+            resolved.ownership ?? null,                 // $43
           ],
         );
       }

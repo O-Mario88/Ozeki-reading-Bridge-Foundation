@@ -11,12 +11,18 @@
 -- database. The DROP statements are kept (idempotent IF EXISTS) so that any
 -- DB still carrying live copies of these legacy columns is migrated cleanly,
 -- but in practice they will not match.
+--
+-- 2026-05-06 amendment: school_type was reinstated as a first-class school-
+-- context field by the Reading Intelligence refocus. The DROP for
+-- school_type has been removed from this migration so that the ADD COLUMN
+-- in 0073 isn't undone every bootstrap. Any DB that still carried the old
+-- partner-type-style legacy school_type column has long since been migrated
+-- past it; the new column is purely contextual.
 
 ALTER TABLE schools_directory
   DROP COLUMN IF EXISTS denomination,
   DROP COLUMN IF EXISTS protestant_denomination,
   DROP COLUMN IF EXISTS account_record_type,
-  DROP COLUMN IF EXISTS school_type,
   DROP COLUMN IF EXISTS parent_account_label,
   DROP COLUMN IF EXISTS school_relationship_status,
   DROP COLUMN IF EXISTS school_relationship_status_date,

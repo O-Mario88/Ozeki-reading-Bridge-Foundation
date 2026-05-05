@@ -100,7 +100,7 @@ export default async function SchoolStaffListPage({ params }: PageProps) {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "minmax(120px, 0.9fr) minmax(0, 1.4fr) 80px minmax(0, 1fr) minmax(0, 1.4fr) 24px",
+              gridTemplateColumns: "minmax(120px, 0.9fr) minmax(0, 1.4fr) 80px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) 24px",
               gap: 12, padding: "6px 4px", borderBottom: `1px solid ${BORDER}`,
               fontSize: 10, color: TEXT_SUBTLE, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700,
             }}
@@ -108,6 +108,7 @@ export default async function SchoolStaffListPage({ params }: PageProps) {
             <span>Staff ID</span>
             <span>Staff Name</span>
             <span>Gender</span>
+            <span>Staff Role</span>
             <span>Phone</span>
             <span>Email</span>
             <span></span>
@@ -127,7 +128,7 @@ export default async function SchoolStaffListPage({ params }: PageProps) {
                   href={`/portal/contacts/${c.contactId}`}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "minmax(120px, 0.9fr) minmax(0, 1.4fr) 80px minmax(0, 1fr) minmax(0, 1.4fr) 24px",
+                    gridTemplateColumns: "minmax(120px, 0.9fr) minmax(0, 1.4fr) 80px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) 24px",
                     gap: 12, alignItems: "center", padding: "12px 4px",
                     borderBottom: `1px solid ${BORDER}`, textDecoration: "none",
                   }}
@@ -142,13 +143,15 @@ export default async function SchoolStaffListPage({ params }: PageProps) {
                       <span style={{ fontSize: 13, color: TEXT, fontWeight: 600, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {c.fullName}
                       </span>
-                      <span style={{ fontSize: 10.5, color: TEXT_SUBTLE, display: "block" }}>
-                        {c.roleTitle || c.category || "Contact"}
-                        {c.isPrimaryContact ? " · Primary" : ""}
-                      </span>
+                      {c.isPrimaryContact ? (
+                        <span style={{ fontSize: 10.5, color: PRIMARY, fontWeight: 700, display: "block" }}>Primary contact</span>
+                      ) : null}
                     </span>
                   </span>
                   <span style={{ fontSize: 11.5, color: TEXT_MUTED }}>{c.gender || "—"}</span>
+                  <span style={{ fontSize: 11.5, color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.roleTitle || c.category || "—"}
+                  </span>
                   <span style={{ fontSize: 11.5, color: TEXT_MUTED, display: "flex", alignItems: "center", gap: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {phone ? (
                       <>

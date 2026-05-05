@@ -101,6 +101,8 @@ function normalizeSchoolRecord(row: Record<string, unknown>): SchoolDirectoryRec
       row.graduatedByUserId === null || row.graduatedByUserId === undefined ? null : Number(row.graduatedByUserId),
     graduationNotes: asNullableString(row.graduationNotes),
     graduationVersion: asNullableString(row.graduationVersion),
+    schoolType: asNullableString(row.schoolType),
+    ownership: asNullableString(row.ownership),
     createdAt: String(row.createdAt ?? new Date(0).toISOString()),
   };
 }
@@ -244,6 +246,8 @@ const SCHOOL_SELECT = `
     s.graduated_by_user_id AS "graduatedByUserId",
     s.graduation_notes AS "graduationNotes",
     s.graduation_version AS "graduationVersion",
+    s.school_type AS "schoolType",
+    s.ownership AS "ownership",
     s.created_at::text AS "createdAt"
   FROM schools_directory s
   LEFT JOIN school_contacts sc

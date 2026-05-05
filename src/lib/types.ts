@@ -2604,8 +2604,31 @@ export interface SchoolDirectoryRecord {
   graduatedByUserId: number | null;
   graduationNotes: string | null;
   graduationVersion: string | null;
+  /** Reading-context: school category (Nursery / Primary / etc). Stored as TEXT. */
+  schoolType: string | null;
+  /** Reading-context: ownership (Government Aided / Private / etc). Stored as TEXT. */
+  ownership: string | null;
   createdAt: string;
 }
+
+/** Allowed values surfaced by the school create/edit forms. Stored as TEXT
+ *  so legacy values aren't orphaned. */
+export const SCHOOL_TYPE_OPTIONS = [
+  "Nursery",
+  "Primary",
+  "Nursery and Primary",
+  "Community Learning Centre",
+  "Other",
+] as const;
+
+export const SCHOOL_OWNERSHIP_OPTIONS = [
+  "Government Aided",
+  "Private",
+  "Community",
+  "Faith-Based",
+  "NGO / Foundation Supported",
+  "Other",
+] as const;
 
 export type SchoolAccountModuleKey =
   | "contacts"

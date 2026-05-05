@@ -10,6 +10,7 @@ import {
   ugandaRegions,
 } from "@/lib/uganda-locations";
 import type { SchoolDirectoryRecord } from "@/lib/types";
+import { SCHOOL_TYPE_OPTIONS, SCHOOL_OWNERSHIP_OPTIONS } from "@/lib/types";
 
 interface Props {
   school: SchoolDirectoryRecord;
@@ -65,6 +66,8 @@ export function SchoolEditModalClient({ school }: Props) {
       schoolStatus: String(formData.get("schoolStatus") ?? "Open").trim(),
       schoolStatusDate: String(formData.get("schoolStatusDate") ?? "").trim() || null,
       currentPartnerType: String(formData.get("currentPartnerType") ?? "NA").trim(),
+      schoolType: String(formData.get("schoolType") ?? "").trim() || null,
+      ownership: String(formData.get("ownership") ?? "").trim() || null,
       yearFounded: formData.get("yearFounded")
         ? Number(formData.get("yearFounded"))
         : null,
@@ -177,6 +180,24 @@ export function SchoolEditModalClient({ school }: Props) {
               <option value="Client">Client</option>
               <option value="Partner">Partner</option>
               <option value="Sponsor District">Sponsor District</option>
+            </select>
+          </label>
+          <label>
+            <span className="portal-field-label">School Type</span>
+            <select name="schoolType" defaultValue={school.schoolType ?? ""}>
+              <option value="">Select…</option>
+              {SCHOOL_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="portal-field-label">Ownership</span>
+            <select name="ownership" defaultValue={school.ownership ?? ""}>
+              <option value="">Select…</option>
+              {SCHOOL_OWNERSHIP_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </label>
           <label>

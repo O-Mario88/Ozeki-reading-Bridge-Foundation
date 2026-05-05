@@ -10,7 +10,7 @@ import {
   inferRegionFromDistrict,
   ugandaRegions,
 } from "@/lib/uganda-locations";
-import { SchoolDirectoryRecord } from "@/lib/types";
+import { SchoolDirectoryRecord, SCHOOL_TYPE_OPTIONS, SCHOOL_OWNERSHIP_OPTIONS } from "@/lib/types";
 import dynamic from "next/dynamic";
 
 const SchoolRosterPicker = dynamic(
@@ -249,6 +249,8 @@ export function PortalSchoolsManager({
       schoolStatus: String(formData.get("schoolStatus") ?? "Open"),
       schoolStatusDate: String(formData.get("schoolStatusDate") ?? ""),
       currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
+      schoolType: String(formData.get("schoolType") ?? "").trim(),
+      ownership: String(formData.get("ownership") ?? "").trim(),
       yearFounded: String(formData.get("yearFounded") ?? ""),
       currentPartnerSchool: formData.get("currentPartnerSchool") === "on",
       schoolActive: formData.get("schoolActive") !== null ? formData.get("schoolActive") === "on" : true,
@@ -383,6 +385,8 @@ export function PortalSchoolsManager({
       schoolStatus: String(formData.get("schoolStatus") ?? "Open"),
       schoolStatusDate: String(formData.get("schoolStatusDate") ?? ""),
       currentPartnerType: String(formData.get("currentPartnerType") ?? "NA"),
+      schoolType: String(formData.get("schoolType") ?? "").trim(),
+      ownership: String(formData.get("ownership") ?? "").trim(),
       yearFounded: String(formData.get("yearFounded") ?? ""),
       currentPartnerSchool: formData.get("currentPartnerSchool") === "on",
       schoolActive: formData.get("schoolActive") !== null ? formData.get("schoolActive") === "on" : true,
@@ -609,6 +613,24 @@ export function PortalSchoolsManager({
                   <option value="Client">Client</option>
                   <option value="Partner">Partner</option>
                   <option value="Sponsor District">Sponsor District</option>
+                </select>
+              </label>
+              <label>
+                <span className="portal-field-label">School Type</span>
+                <select name="schoolType" defaultValue="">
+                  <option value="">Select…</option>
+                  {SCHOOL_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="portal-field-label">Ownership</span>
+                <select name="ownership" defaultValue="">
+                  <option value="">Select…</option>
+                  {SCHOOL_OWNERSHIP_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
                 </select>
               </label>
               <label>

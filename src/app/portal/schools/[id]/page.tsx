@@ -416,16 +416,87 @@ export default async function SchoolDashboardPage({ params }: PageProps) {
             </div>
           </section>
 
+          {/* Reading Literacy Snapshot — replaces the legacy "About the School"
+              infrastructure card as part of the Reading Intelligence refocus.
+              Every value is read straight from profile.progress / summary;
+              "—" appears when the metric isn't populated yet. */}
           <section className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
-            <h3 className="text-[15px] font-bold text-gray-900 mb-3">About the School</h3>
-            <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-[11.5px]">
-              <AboutItem label="School Type" value="Day School" />
-              <AboutItem label="Ownership"   value="Government Aided" />
-              <AboutItem label="Boarding Facilities" value="No" />
-              <AboutItem label="No. of Classrooms" value="18" />
-              <AboutItem label="No. of Toilets" value="12" />
-              <AboutItem label="Water Source" value="Borehole" />
-              <AboutItem label="No. of Toilets" value="Yes" />
+            <h3 className="text-[15px] font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-[#066a67]" strokeWidth={1.75} />
+              Reading Literacy Snapshot
+            </h3>
+            <dl className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 text-[11.5px]">
+              <AboutItem
+                label="Learners Assessed"
+                value={(profile.progress?.learnersAssessed ?? 0).toLocaleString()}
+              />
+              <AboutItem
+                label="Reading Proficiency"
+                value={
+                  profile.progress?.onBenchmarkPct != null
+                    ? `${profile.progress.onBenchmarkPct}% at/above benchmark`
+                    : "—"
+                }
+              />
+              <AboutItem
+                label="Fluent Readers"
+                value={
+                  profile.progress?.fluentReaderPct != null
+                    ? `${profile.progress.fluentReaderPct}%`
+                    : "—"
+                }
+              />
+              <AboutItem
+                label="Story Reading Avg"
+                value={
+                  profile.progress?.storyReadingAvg != null
+                    ? `${profile.progress.storyReadingAvg}`
+                    : "—"
+                }
+              />
+              <AboutItem
+                label="Comprehension Avg"
+                value={
+                  profile.progress?.comprehensionAvg != null
+                    ? `${profile.progress.comprehensionAvg}`
+                    : "—"
+                }
+              />
+              <AboutItem
+                label="Latest Reading Stage"
+                value={profile.progress?.latestReadingStage ?? "—"}
+              />
+              <AboutItem
+                label="Last Reading Assessment"
+                value={
+                  profile.summary?.lastMetricsDate
+                    ? new Date(profile.summary.lastMetricsDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : "—"
+                }
+              />
+              <AboutItem
+                label="Last Coaching / Staff Visit"
+                value={
+                  profile.summary?.dateOfLastStaffVisit
+                    ? new Date(profile.summary.dateOfLastStaffVisit).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : "—"
+                }
+              />
+              <AboutItem
+                label="Active Reading Programmes"
+                value={String(profile.counts?.trainings ?? 0)}
+              />
+            </dl>
+          </section>
+
+          {/* School Context — only the two retained context fields. Everything
+              else from the old About card (boarding, toilets, water source,
+              classroom counts) was removed in the Reading Intelligence purge. */}
+          <section className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+            <h3 className="text-[15px] font-bold text-gray-900 mb-3">School Context</h3>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[11.5px]">
+              <AboutItem label="School Type" value={school.schoolType ?? "—"} />
+              <AboutItem label="Ownership" value={school.ownership ?? "—"} />
             </dl>
           </section>
         </div>
