@@ -147,27 +147,6 @@ function buildKpis(snapshot: DashboardSnapshot): KpiCard[] {
   ];
 }
 
-const READING_IMPROVEMENT: { label: string; value: string }[] = [
-  { label: "Early (P1–P2)", value: "—" },
-  { label: "Emergent (P3– P4)", value: "—" },
-  { label: "Developing (P5–P6)", value: "—" },
-  { label: "Fluent (P7+)", value: "—" },
-];
-
-const READING_PROGRESS: { label: string; value: string }[] = [
-  { label: "Baseline-to-latest matched", value: "—" },
-  { label: "Moved up ≥ 1 reading level", value: "—" },
-  { label: "Tracked reading stages", value: "0" },
-];
-
-const FUNNEL: { label: string; value: number; pct: number }[] = [
-  { label: "Schools trusted", value: 172, pct: 100 },
-  { label: "Contacted / visited", value: 0, pct: 0 },
-  { label: "Baseline assessed", value: 0, pct: 0 },
-  { label: "In-class assessed", value: 0, pct: 0 },
-  { label: "Endline assessed", value: 0, pct: 0 },
-];
-
 function buildChangeGrid(snapshot: DashboardSnapshot): { label: string; value: string; helper: string; tone: "up" | "muted" | "warn" }[] {
   const schools = snapshot.reach?.schoolsReached ?? 0;
   const learnersAssessed = snapshot.assessmentCounts.total ?? 0;
@@ -190,15 +169,6 @@ function buildChangeGrid(snapshot: DashboardSnapshot): { label: string; value: s
   ];
 }
 
-const DOMAIN_TILES: { label: string; icon: LucideIcon }[] = [
-  { label: "Phonemic Awareness", icon: Headphones },
-  { label: "Grapheme–Phoneme Correspondence", icon: TypeIcon },
-  { label: "Blending & Decoding", icon: Combine },
-  { label: "Word Recognition", icon: Eye },
-  { label: "Sentence & Paragraph Comprehension", icon: AlignLeft },
-  { label: "Comprehension", icon: BookCopy },
-];
-
 const REGIONS = [
   "Highest Coverage",
   "High Coverage",
@@ -219,14 +189,49 @@ const REGION_DOT: Record<typeof REGIONS[number], string> = {
 
 /* ────────────────────────────────────────────────────────────────────
    Page (async server component — pulls a single live snapshot
-   that every section reads from)
+   that every section reads from). Filters live in URL searchParams so
+   the InteractiveFilters dropdowns drive a re-render of the snapshot.
    ──────────────────────────────────────────────────────────────────── */
-export default async function PublicLiveImpactDashboardPage() {
+type PageFilters = {
+  year: string;
+  view: string;
+  program: string;
+  geography: string;
+};
+
+const FILTER_DEFAULTS: PageFilters = {
+  year: "FY 2024/2025",
+  view: "All Metrics",
+  program: "All Programs",
+  geography: "Uganda",
+};
+
+function parseFilters(sp: Record<string, string | string[] | undefined> | undefined): PageFilters {
+  const get = (k: string, fallback: string) => {
+    const v = sp?.[k];
+    if (Array.isArray(v)) return v[0] ?? fallback;
+    return (typeof v === "string" && v.trim().length > 0) ? v : fallback;
+  };
+  return {
+    year: get("year", FILTER_DEFAULTS.year),
+    view: get("view", FILTER_DEFAULTS.view),
+    program: get("program", FILTER_DEFAULTS.program),
+    geography: get("geography", FILTER_DEFAULTS.geography),
+  };
+}
+
+export default async function PublicLiveImpactDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = searchParams ? await searchParams : undefined;
+  const filters = parseFilters(sp);
   const snapshot = await getDashboardSnapshot();
   return (
     <main style={{ background: CANVAS, color: TEXT, fontFamily: FONT }} className="orbf-public-dashboard">
       <TrustStrip generatedAt={snapshot.generatedAt} />
-      <PageTitleRow />
+      <PageTitleRow filters={filters} />
       <DashboardLayout snapshot={snapshot} />
       <FontEnforcer />
     </main>
@@ -271,7 +276,13 @@ function TrustStrip({ generatedAt }: { generatedAt: string }) {
 /* ────────────────────────────────────────────────────────────────────
    Page title + filter row
    ──────────────────────────────────────────────────────────────────── */
-function PageTitleRow() {
+function PageTitleRow({ filters }: { filters: PageFilters }) {
+  const activeChips: { label: string; value: string }[] = [];
+  if (filters.year !== FILTER_DEFAULTS.year) activeChips.push({ label: "Year", value: filters.year });
+  if (filters.view !== FILTER_DEFAULTS.view) activeChips.push({ label: "View", value: filters.view });
+  if (filters.program !== FILTER_DEFAULTS.program) activeChips.push({ label: "Program", value: filters.program });
+  if (filters.geography !== FILTER_DEFAULTS.geography) activeChips.push({ label: "Geography", value: filters.geography });
+
   return (
     <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}` }}>
       <div className="max-w-[1760px] mx-auto px-4 lg:px-6 py-5 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
@@ -288,8 +299,25 @@ function PageTitleRow() {
             </span>
           </div>
           <p className="text-[12.5px] mt-1.5" style={{ color: TEXT_MUTED }}>
-            Real-time, evidence-based literacy outcomes and programme implementation across Uganda.
+            Real-time, evidence-based literacy outcomes and programme implementation across {filters.geography}.
           </p>
+          {activeChips.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: TEXT_SUBTLE }}>
+                Active filters
+              </span>
+              {activeChips.map((c) => (
+                <span
+                  key={c.label}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold"
+                  style={{ background: TEAL_SOFT, color: TEAL, borderRadius: 999, border: `1px solid ${TEAL_SOFT}` }}
+                  title={`${c.label}: ${c.value}`}
+                >
+                  <span style={{ color: TEAL_DARK }}>{c.label}:</span> {c.value}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
         <InteractiveFilters />
       </div>

@@ -96,10 +96,26 @@ export function InteractiveFilters() {
     }
   }
 
-  function handleDownload() {
-    // Same browser print → "Save as PDF" workflow used elsewhere in
-    // the portal until the dedicated PDF export endpoint is wired.
-    if (typeof window !== "undefined") window.print();
+  async function handleDownload() {
+    if (typeof window === "undefined") return;
+    try {
+      const params = searchParams.toString();
+      const url = `/api/impact/dashboard/report-pdf${params ? `?${params}` : ""}`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `ozeki-public-impact-dashboard-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      // Fallback to print dialog if the endpoint is unavailable.
+      window.print();
+    }
   }
 
   return (
