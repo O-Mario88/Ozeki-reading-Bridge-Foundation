@@ -13,6 +13,7 @@ import {
   BookOpen,
   FileText,
   Trophy,
+  TrendingUp,
   PenSquare,
   Calendar,
   MessageSquareQuote,
@@ -47,6 +48,7 @@ export const glassNavItems: GlassNavItem[] = [
   { href: "/portal/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
   { href: "/portal/national-intelligence", label: "Insights", icon: Lightbulb, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
   { href: "/portal/schools", label: "Schools", icon: SchoolIcon, section: "menu", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
+  { href: "/portal/learning-outcomes", label: "Learning Outcomes", icon: TrendingUp, section: "menu", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
   { href: "/portal/contacts", label: "CRM", icon: UsersRound, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
   { href: "/portal/finance", label: "Finance", icon: CreditCard, section: "menu", roles: ["Accountant", "Admin"] },
 
