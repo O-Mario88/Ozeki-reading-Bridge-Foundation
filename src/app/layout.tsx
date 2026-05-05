@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 import "@/styles/finance-theme.css";
@@ -82,10 +82,34 @@ export const metadata: Metadata = {
   publisher: organizationName,
   category: "Education",
   manifest: "/manifest.webmanifest",
+  // PWA / install metadata. The portal is the data-entry app target,
+  // so installing on a phone drops the user straight into the login.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Ozeki RBF",
+    startupImage: ["/photos/logo.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/photos/logo.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [
+      { url: "/photos/logo.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   verification: {
     // Drop your GSC token here once verified:
     // google: "<google-site-verification-token>",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#003F37",
+  width: "device-width",
+  initialScale: 1,
+  // Allow the user to zoom — accessibility requirement.
+  maximumScale: 5,
 };
 
 export default function RootLayout({

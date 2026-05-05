@@ -1,33 +1,72 @@
 import type { MetadataRoute } from "next";
 
+/**
+ * PWA manifest for Ozeki Reading Bridge Foundation.
+ *
+ * The portal is the data-entry workflow (assessments, observations,
+ * coaching visits, contact logging), so the manifest declares the
+ * portal as the install target — installing from a phone drops users
+ * straight into /portal/login. Public marketing pages still resolve
+ * normally; the manifest just changes what an installed shortcut
+ * launches into.
+ *
+ * Icons reference the existing 512×512 PNG logo (favicon.ico is not
+ * accepted by Chrome's installability checks). Browsers downscale
+ * for launcher / splash usage automatically.
+ */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Ozeki National Literacy Intelligence Platform",
-    short_name: "Ozeki NLIS",
+    id: "/portal/login",
+    name: "Ozeki Reading Bridge Foundation",
+    short_name: "Ozeki RBF",
     description:
-      "Offline-capable literacy implementation data collection for trainings, visits, assessments, and evaluations.",
-    start_url: "/portal/dashboard",
+      "Data-entry app for Ozeki Reading Bridge Foundation field workers — record reading assessments, classroom observations, coaching visits, and contact updates from your phone.",
+    start_url: "/portal/login",
+    scope: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#ff7235",
     orientation: "portrait",
+    background_color: "#ffffff",
+    theme_color: "#003F37",
+    categories: ["education", "productivity"],
+    lang: "en-UG",
     icons: [
       {
-        src: "/favicon.ico",
-        sizes: "48x48",
-        type: "image/x-icon",
-      },
-      {
-        src: "/favicon.ico",
-        sizes: "192x192",
-        type: "image/x-icon",
-        purpose: "maskable",
-      },
-      {
-        src: "/favicon.ico",
+        src: "/photos/logo.png",
         sizes: "512x512",
-        type: "image/x-icon",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/photos/logo.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable",
+      },
+    ],
+    shortcuts: [
+      {
+        name: "Reading Command Center",
+        short_name: "Dashboard",
+        description: "Open the staff reading dashboard",
+        url: "/portal/dashboard",
+      },
+      {
+        name: "New Assessment",
+        short_name: "Assessment",
+        description: "Record a learner reading assessment",
+        url: "/portal/assessments?new=1",
+      },
+      {
+        name: "New Observation",
+        short_name: "Observation",
+        description: "Record a classroom observation",
+        url: "/portal/observations/new",
+      },
+      {
+        name: "New Coaching Visit",
+        short_name: "Visit",
+        description: "Record a coaching or school visit",
+        url: "/portal/visits/new",
       },
     ],
   };
