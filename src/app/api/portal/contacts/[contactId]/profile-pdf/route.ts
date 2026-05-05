@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { getAuthenticatedPortalUser } from "@/lib/auth";
+import { canExportData } from "@/lib/permissions";
 import { getContactProfileSnapshot } from "@/lib/server/postgres/repositories/contact-profile";
 
 export const runtime = "nodejs";
@@ -27,6 +28,12 @@ export async function GET(
   const user = await getAuthenticatedPortalUser();
   if (!user) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
+  if (!canExportData(user)) {
+    return NextResponse.json(
+      { error: "Data export requires Admin or Super Admin." },
+      { status: 403 },
+    );
   }
 
   const snapshot = await getContactProfileSnapshot(contactId);

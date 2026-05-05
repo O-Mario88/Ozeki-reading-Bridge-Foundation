@@ -60,13 +60,16 @@ function formatTimeOfDay(iso: string | null | undefined): string {
 
 interface ViewProps {
   snapshot: PortalLearningOutcomesSnapshot;
+  /** When false, the Export Report button is hidden — Staff and Volunteer
+   *  tiers cannot export per the onboarding-tier spec. */
+  canExport?: boolean;
 }
 
-export function LearningOutcomesView({ snapshot }: ViewProps) {
+export function LearningOutcomesView({ snapshot, canExport = false }: ViewProps) {
   return (
     <div className="orbf-portal-lo" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {/* Page header */}
-      <PageHeader />
+      <PageHeader canExport={canExport} />
 
       {/* KPI row */}
       <KpiRow snapshot={snapshot} />
@@ -121,7 +124,7 @@ export function LearningOutcomesView({ snapshot }: ViewProps) {
    Page header
    ──────────────────────────────────────────────────────────────────── */
 
-function PageHeader() {
+function PageHeader({ canExport }: { canExport: boolean }) {
   return (
     <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
       <div>
@@ -141,12 +144,14 @@ function PageHeader() {
         </p>
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <SecondaryActionButton
-          href="/api/portal/learning-outcomes/export-pdf"
-          icon={<Download size={14} />}
-          label="Export Report"
-          download
-        />
+        {canExport ? (
+          <SecondaryActionButton
+            href="/api/portal/learning-outcomes/export-pdf"
+            icon={<Download size={14} />}
+            label="Export Report"
+            download
+          />
+        ) : null}
         <SecondaryActionButton
           href="/portal/assessments"
           icon={<ListChecks size={14} />}

@@ -66,8 +66,12 @@ export {
 } from "@/lib/server/postgres/repositories/public-impact";
 
 // ── canManagePortalUsers (business logic) ────────────────────────────
+// Tightened 2026-05-06 to Super Admin only — see src/lib/permissions.ts
+// for the full role spec. Admins lost user-management as part of the
+// Reading Intelligence onboarding-tier cleanup; the Admin tier still has
+// access to everything *except* Finance and user creation.
 export function canManagePortalUsers(user: PortalUser): boolean {
-  return Boolean(user.isAdmin || user.isSuperAdmin);
+  return Boolean(user.isSuperAdmin);
 }
 
 // ── Async portal record helpers ──────────────────────────────────────

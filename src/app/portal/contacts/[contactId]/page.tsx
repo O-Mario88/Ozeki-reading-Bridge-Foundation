@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ContactProfileView } from "@/components/portal/contact-profile/ContactProfileView";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { canExportData } from "@/lib/permissions";
 import { getContactProfileSnapshot } from "@/lib/server/postgres/repositories/contact-profile";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export default async function PortalContactProfilePage({ params }: PageProps) {
       hideFrame
       subtitle={subtitle}
     >
-      <ContactProfileView snapshot={snapshot} />
+      <ContactProfileView snapshot={snapshot} canExport={canExportData(user)} />
     </PortalShell>
   );
 }

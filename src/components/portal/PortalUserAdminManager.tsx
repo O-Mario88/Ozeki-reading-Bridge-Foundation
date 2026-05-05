@@ -1,12 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { PortalUserAdminRecord, PortalUserRole, PortalUserStatus } from "@/lib/types";
+import { PortalUserAdminRecord, PortalUserStatus } from "@/lib/types";
+import { ONBOARDING_TIERS, classifyOnboardingTier, tierToRoleAndFlags, type OnboardingTier } from "@/lib/permissions";
 import { FormModal } from "@/components/forms";
-
-const ALL_ROLES: PortalUserRole[] = [
-  "Staff", "Volunteer", "Admin", "Accountant", "Coach", "DataClerk", "SchoolLeader", "Partner", "Government",
-];
 
 interface PortalUserAdminManagerProps {
   initialUsers: PortalUserAdminRecord[];
@@ -70,7 +67,8 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
     setSaving(true);
     setStatus(null);
     const formData = new FormData(event.currentTarget);
-    const role = String(formData.get("role") ?? "Staff") as PortalUserRole;
+    const tier = (String(formData.get("tier") ?? "Staff") as OnboardingTier);
+    const { role, isAdmin, isSuperAdmin } = tierToRoleAndFlags(tier);
     const payload = {
       fullName: String(formData.get("fullName") ?? "").trim(),
       email: String(formData.get("email") ?? "").trim(),
@@ -80,10 +78,10 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
       geographyScope: String(formData.get("geographyScope") ?? "").trim() || undefined,
       password: String(formData.get("password") ?? ""),
       sendInviteEmail: formData.get("sendInviteEmail") === "on",
-      isSupervisor: formData.get("isSupervisor") === "on",
-      isME: formData.get("isME") === "on",
-      isAdmin: formData.get("isAdmin") === "on",
-      isSuperAdmin: formData.get("isSuperAdmin") === "on",
+      isSupervisor: false,
+      isME: false,
+      isAdmin,
+      isSuperAdmin,
     };
 
     try {
@@ -112,7 +110,8 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
     setSaving(true);
     setStatus(null);
     const formData = new FormData(event.currentTarget);
-    const role = String(formData.get("role") ?? "Staff") as PortalUserRole;
+    const tier = (String(formData.get("tier") ?? "Staff") as OnboardingTier);
+    const { role, isAdmin, isSuperAdmin } = tierToRoleAndFlags(tier);
     const payload = {
       userId,
       fullName: String(formData.get("fullName") ?? "").trim(),
@@ -120,10 +119,10 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
       role,
       department: String(formData.get("department") ?? "").trim() || null,
       geographyScope: String(formData.get("geographyScope") ?? "").trim() || null,
-      isSupervisor: formData.get("isSupervisor") === "on",
-      isME: formData.get("isME") === "on",
-      isAdmin: formData.get("isAdmin") === "on",
-      isSuperAdmin: formData.get("isSuperAdmin") === "on",
+      isSupervisor: false,
+      isME: false,
+      isAdmin,
+      isSuperAdmin,
       password: String(formData.get("password") ?? "").trim() || undefined,
     };
 
@@ -248,10 +247,7 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
                 </div>
 
                 <p className="portal-muted" style={{ fontSize: "0.8rem" }}>
-                  Flags:{" "}
-                  {[user.isSupervisor && "Supervisor", user.isME && "M&E", user.isAdmin && "Admin", user.isSuperAdmin && "Super Admin"]
-                    .filter(Boolean)
-                    .join(", ") || "None"}
+                  Tier: <strong>{classifyOnboardingTier(user)}</strong>
                 </p>
                 <p className="portal-muted" style={{ fontSize: "0.78rem" }}>
                   Created: {formatDate(user.createdAt)}
@@ -328,11 +324,14 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
           </label>
           <label>
             <span className="portal-field-label">Role</span>
-            <select name="role" defaultValue="Staff">
-              {ALL_ROLES.map((r) => (
-                <option key={r} value={r}>{r}</option>
+            <select name="tier" defaultValue="Staff">
+              {ONBOARDING_TIERS.map((tier) => (
+                <option key={tier} value={tier}>{tier}</option>
               ))}
             </select>
+            <small className="portal-field-help">
+              Super Admin: full access including Finance and user management. Admin: everything except Finance. Staff: data entry + reports (no exports). Volunteer: data entry only.
+            </small>
           </label>
           <label>
             <span className="portal-field-label">Department (optional)</span>
@@ -356,27 +355,11 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
               User will be required to change their password on first sign-in.
             </small>
           </label>
-          <fieldset className="card">
-            <legend>Permission Flags</legend>
-            <div className="portal-multiselect">
-              <label>
-                <input name="isSupervisor" type="checkbox" />
-                Supervisor
-              </label>
-              <label>
-                <input name="isME" type="checkbox" />
-                M&amp;E
-              </label>
-              <label>
-                <input name="isAdmin" type="checkbox" />
-                Admin
-              </label>
-              <label>
-                <input name="isSuperAdmin" type="checkbox" />
-                Super Admin
-              </label>
-            </div>
-          </fieldset>
+          {/* Permission flags are derived automatically from the Role
+              dropdown via tierToRoleAndFlags(). The legacy supervisor /
+              M&E / standalone admin / standalone super-admin checkboxes
+              are gone — the four onboarding tiers are now the single
+              source of truth. */}
           <div className="full-width action-row portal-form-actions">
             <button className="button" type="submit" disabled={saving}>
               {saving ? "Saving..." : "Create user"}
@@ -425,11 +408,14 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
                 </label>
                 <label>
                   <span className="portal-field-label">Role</span>
-                  <select name="role" defaultValue={user.role}>
-                    {ALL_ROLES.map((r) => (
-                      <option key={r} value={r}>{r}</option>
+                  <select name="tier" defaultValue={classifyOnboardingTier(user)}>
+                    {ONBOARDING_TIERS.map((tier) => (
+                      <option key={tier} value={tier}>{tier}</option>
                     ))}
                   </select>
+                  <small className="portal-field-help">
+                    Super Admin: full access including Finance and user management. Admin: everything except Finance. Staff: data entry + reports (no exports). Volunteer: data entry only.
+                  </small>
                 </label>
                 <label>
                   <span className="portal-field-label">Department</span>
@@ -449,24 +435,8 @@ export function PortalUserAdminManager({ initialUsers }: PortalUserAdminManagerP
                   />
                 </label>
 
-                <div className="portal-multiselect full-width">
-                  <label>
-                    <input name="isSupervisor" type="checkbox" defaultChecked={user.isSupervisor} />
-                    Supervisor
-                  </label>
-                  <label>
-                    <input name="isME" type="checkbox" defaultChecked={user.isME} />
-                    M&amp;E
-                  </label>
-                  <label>
-                    <input name="isAdmin" type="checkbox" defaultChecked={user.isAdmin} />
-                    Admin
-                  </label>
-                  <label>
-                    <input name="isSuperAdmin" type="checkbox" defaultChecked={user.isSuperAdmin} />
-                    Super Admin
-                  </label>
-                </div>
+                {/* Permission flags derive from the Role dropdown above —
+                    see tierToRoleAndFlags() in src/lib/permissions.ts. */}
 
                 <div className="full-width action-row portal-form-actions">
                   <button className="button" type="submit" disabled={saving}>

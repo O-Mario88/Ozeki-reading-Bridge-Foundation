@@ -50,7 +50,9 @@ export const glassNavItems: GlassNavItem[] = [
   { href: "/portal/schools", label: "Schools", icon: SchoolIcon, section: "menu", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
   { href: "/portal/learning-outcomes", label: "Learning Outcomes", icon: TrendingUp, section: "menu", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },
   { href: "/portal/contacts", label: "CRM", icon: UsersRound, section: "menu", roles: ["Staff", "Admin", "Accountant"] },
-  { href: "/portal/finance", label: "Finance", icon: CreditCard, section: "menu", roles: ["Accountant", "Admin"] },
+  // Finance is locked to Super Admin per the 2026-05-06 onboarding-tier
+  // spec. Plain Admins lose Finance visibility; only Super Admins see it.
+  { href: "/portal/finance", label: "Finance", icon: CreditCard, section: "menu", superAdminOnly: true },
 
   // Features (renamed visually to "Reading Operations" via sectionMeta below; routes kept identical)
   { href: "/portal/assessments", label: "Reading Assessments", icon: ClipboardCheck, section: "features", roles: ["Staff", "Admin", "Volunteer", "Accountant"] },

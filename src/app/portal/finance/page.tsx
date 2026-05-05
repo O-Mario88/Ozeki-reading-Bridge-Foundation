@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { canAccessFinance } from "@/lib/permissions";
 import { getTransparencyLiveStatsPostgres } from "@/lib/server/postgres/repositories/finance-intelligence";
 import {
   getSpendingTrendPostgres,
@@ -78,6 +80,12 @@ function fmtUsdAbbrev(n: number): string {
 
 export default async function FinanceDashboard() {
   const user = await requirePortalStaffUser();
+  // Finance is locked to Super Admin per the onboarding-tier spec. Plain
+  // staff / admin / volunteer users hitting the URL directly bounce back
+  // to their portal home instead of seeing finance data.
+  if (!canAccessFinance(user)) {
+    redirect("/portal/dashboard");
+  }
 
   const [stats, trend, allocation, transactions, sparks, kpiDeltas, totalTxnCount, usdRate] = await Promise.all([
     getTransparencyLiveStatsPostgres().catch(() => null),

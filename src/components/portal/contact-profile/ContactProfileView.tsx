@@ -64,9 +64,12 @@ function timeWindowFromIso(iso: string | null | undefined): string {
 
 interface ContactProfileViewProps {
   snapshot: ContactProfileSnapshot;
+  /** When false, the Download Profile button is hidden — Staff and
+   *  Volunteer tiers cannot export per the onboarding-tier spec. */
+  canExport?: boolean;
 }
 
-export function ContactProfileView({ snapshot }: ContactProfileViewProps) {
+export function ContactProfileView({ snapshot, canExport = false }: ContactProfileViewProps) {
   const { identity, contactMethods } = snapshot;
   const schoolId = identity.primarySchoolId;
   const contactId = snapshot.contactId;
@@ -90,6 +93,7 @@ export function ContactProfileView({ snapshot }: ContactProfileViewProps) {
         contactId={contactId}
         schoolId={schoolId}
         email={contactMethods.email}
+        canExport={canExport}
       />
 
       {/* Hero card */}
@@ -177,10 +181,12 @@ function ActionBar({
   contactId,
   schoolId,
   email,
+  canExport,
 }: {
   contactId: number;
   schoolId: number | null;
   email: string | null;
+  canExport: boolean;
 }) {
   const newObsHref = `/portal/observations/new?contactId=${contactId}${schoolId ? `&schoolId=${schoolId}` : ""}`;
   const editHref = `/portal/contacts/${contactId}/edit`;
@@ -212,7 +218,11 @@ function ActionBar({
         <SecondaryActionButton disabled icon={<School size={14} />} label="View School" tooltip="No school linked" />
       )}
 
-      <SecondaryActionButton href={profilePdfHref} icon={<Download size={14} />} label="Download Profile" download />
+      {canExport ? (
+        <SecondaryActionButton href={profilePdfHref} icon={<Download size={14} />} label="Download Profile" download />
+      ) : (
+        <SecondaryActionButton disabled icon={<Download size={14} />} label="Download Profile" tooltip="Data export requires Admin or Super Admin" />
+      )}
 
       <AddNoteModalClient contactId={contactId} />
 

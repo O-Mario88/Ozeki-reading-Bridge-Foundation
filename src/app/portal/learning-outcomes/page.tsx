@@ -1,6 +1,7 @@
 import { PortalShell } from "@/components/portal/PortalShell";
 import { LearningOutcomesView } from "@/components/portal/learning-outcomes/LearningOutcomesView";
 import { requirePortalStaffUser } from "@/lib/auth";
+import { canExportData } from "@/lib/permissions";
 import { getPortalLearningOutcomesSnapshot } from "@/lib/server/postgres/repositories/portal-learning-outcomes";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function PortalLearningOutcomesPage() {
       hideFrame
       subtitle="Here's what's happening in your command center."
     >
-      <LearningOutcomesView snapshot={snapshot} />
+      <LearningOutcomesView snapshot={snapshot} canExport={canExportData(user)} />
     </PortalShell>
   );
 }
