@@ -50,6 +50,14 @@ const patchSchema = z.object({
     resourcesNeeded: z.string().max(2000).default(""),
     reviewDate: z.string().nullable().optional(),
   }).nullable().optional(),
+  /** Per-domain rubric scores (0–100) — drive the public dashboard's
+   *  Teaching Quality from Teacher Observation Analysis card. */
+  lessonStructureScore: z.coerce.number().int().min(0).max(100).nullable().optional(),
+  instructionalDeliveryScore: z.coerce.number().int().min(0).max(100).nullable().optional(),
+  learnerEngagementScore: z.coerce.number().int().min(0).max(100).nullable().optional(),
+  assessmentPracticesScore: z.coerce.number().int().min(0).max(100).nullable().optional(),
+  useOfMaterialsScore: z.coerce.number().int().min(0).max(100).nullable().optional(),
+  classroomEnvironmentScore: z.coerce.number().int().min(0).max(100).nullable().optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: RouteContext) {

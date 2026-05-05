@@ -91,6 +91,14 @@ export type CreateObservationInput = {
   strengths?: [string, string, string, string];
   developmentAreas?: [string, string, string, string];
   actionPlan?: ObservationActionPlan | null;
+  /** Per-domain rubric scores (0–100) — drive the per-domain Teaching
+   *  Quality breakdown on the public Learning Outcomes dashboard. */
+  lessonStructureScore?: number | null;
+  instructionalDeliveryScore?: number | null;
+  learnerEngagementScore?: number | null;
+  assessmentPracticesScore?: number | null;
+  useOfMaterialsScore?: number | null;
+  classroomEnvironmentScore?: number | null;
 };
 
 export type UpdateObservationInput = Partial<Omit<CreateObservationInput, "createdByUserId">> & {
@@ -230,8 +238,10 @@ export async function createObservationPostgres(input: CreateObservationInput): 
            coach_signature_name, coach_signature_date,
            headteacher_dos_signature_name, headteacher_dos_signature_date,
            teacher_signature_name, teacher_signature_date,
-           school_id, observer_user_id, created_by_user_id, status, public_visibility
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+           school_id, observer_user_id, created_by_user_id, status, public_visibility,
+           lesson_structure_score, instructional_delivery_score, learner_engagement_score,
+           assessment_practices_score, use_of_materials_score, classroom_environment_score
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
          RETURNING id`,
         [
           code,
@@ -255,6 +265,12 @@ export async function createObservationPostgres(input: CreateObservationInput): 
           input.createdByUserId,
           input.status ?? "draft",
           input.publicVisibility ?? false,
+          input.lessonStructureScore ?? null,
+          input.instructionalDeliveryScore ?? null,
+          input.learnerEngagementScore ?? null,
+          input.assessmentPracticesScore ?? null,
+          input.useOfMaterialsScore ?? null,
+          input.classroomEnvironmentScore ?? null,
         ],
       );
 
@@ -301,6 +317,12 @@ export async function updateObservationPostgres(
       if (input.observerUserId !== undefined) field("observer_user_id", input.observerUserId ?? null);
       if (input.status !== undefined) field("status", input.status);
       if (input.publicVisibility !== undefined) field("public_visibility", input.publicVisibility);
+      if (input.lessonStructureScore !== undefined) field("lesson_structure_score", input.lessonStructureScore ?? null);
+      if (input.instructionalDeliveryScore !== undefined) field("instructional_delivery_score", input.instructionalDeliveryScore ?? null);
+      if (input.learnerEngagementScore !== undefined) field("learner_engagement_score", input.learnerEngagementScore ?? null);
+      if (input.assessmentPracticesScore !== undefined) field("assessment_practices_score", input.assessmentPracticesScore ?? null);
+      if (input.useOfMaterialsScore !== undefined) field("use_of_materials_score", input.useOfMaterialsScore ?? null);
+      if (input.classroomEnvironmentScore !== undefined) field("classroom_environment_score", input.classroomEnvironmentScore ?? null);
 
       sets.push(`updated_by_user_id = $${idx++}`, `updated_at = NOW()`);
       vals.push(input.updatedByUserId);

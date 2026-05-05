@@ -6,7 +6,7 @@ import {
   ChevronRight, Sparkles, type LucideIcon,
 } from "lucide-react";
 import {
-  getDataCompletenessKpi, getDomainPerformance, getFilterOptions,
+  getDataCompletenessKpi, getDataQualityBreakdown, getDomainPerformance, getFilterOptions,
   getGenderParityOutcomes, getGeographyComparison, getLearnersAssessedKpi,
   getLearningOutcomesTrend, getMovedUpKpi, getObservationDomainBreakdown,
   getPrioritySupportAreas, getReadingLevelsDistribution, getReadingProficiencyKpi,
@@ -57,14 +57,15 @@ export default async function PublicLearningOutcomesPage({ searchParams }: PageP
 
   const [
     learnersAssessed, proficiency, teachingQuality, movedUp, dataCompleteness,
-    readingLevels, trend, observationDomains, domainPerformance, geographyComparison,
-    genderParity, topGeographies, prioritySupport, filterOptions,
+    dataQuality, readingLevels, trend, observationDomains, domainPerformance,
+    geographyComparison, genderParity, topGeographies, prioritySupport, filterOptions,
   ] = await Promise.all([
     getLearnersAssessedKpi(filters),
     getReadingProficiencyKpi(filters),
     getTeachingQualityIndexKpi(),
     getMovedUpKpi(filters),
     getDataCompletenessKpi(),
+    getDataQualityBreakdown(),
     getReadingLevelsDistribution(filters),
     getLearningOutcomesTrend(filters, 12),
     getObservationDomainBreakdown(),
@@ -171,7 +172,7 @@ export default async function PublicLearningOutcomesPage({ searchParams }: PageP
 
         {/* THIRD ROW — 4 cards */}
         <section className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-          <section id="data-completeness"><AssessmentCompletionCard dataCompleteness={dataCompleteness} /></section>
+          <section id="data-completeness"><AssessmentCompletionCard dataQuality={dataQuality} /></section>
           <TopPerformingGeographiesCard rows={topGeographies} />
           <PrioritySupportAreasCard rows={prioritySupport} />
           <section id="intelligence"><KeyInsightsCard insights={insights} /></section>
@@ -768,13 +769,19 @@ function ReadingProgressionCard({ trend }: { trend: { month: string; pct: number
 /* ────────────────────────────────────────────────────────────────────
    Assessment completion + data quality
    ──────────────────────────────────────────────────────────────────── */
-function AssessmentCompletionCard({ dataCompleteness }: { dataCompleteness: { current: number; deltaPp: number } }) {
-  // Three sub-metrics — completion uses the live KPI; valid + timeliness fall
-  // back to safe default labels until per-record validation telemetry ships.
+function AssessmentCompletionCard({ dataQuality }: {
+  dataQuality: { completionPct: number; validUsablePct: number; timelinessPct: number; deltaPp: number };
+}) {
+  // Three real sub-metrics:
+  //   completionPct   — completed assessment_schedule_windows / scheduled
+  //   validUsablePct  — assessment_records.validation_status = 'valid' / total
+  //   timelinessPct   — submitted_at within 14 days of assessment_date / total
+  // The latter two read from columns added in 0072. Until backfill begins,
+  // they correctly render 0% (NOT a derivative of completion %).
   const tiles = [
-    { icon: BarChart3, label: "Assessment Completion Rate", pct: dataCompleteness.current, delta: dataCompleteness.deltaPp },
-    { icon: ShieldCheck, label: "Valid & Usable Data", pct: dataCompleteness.current > 0 ? Math.max(0, dataCompleteness.current - 1) : 0, delta: dataCompleteness.deltaPp },
-    { icon: Database, label: "Data Timeliness", pct: dataCompleteness.current > 0 ? Math.max(0, dataCompleteness.current - 2) : 0, delta: dataCompleteness.deltaPp },
+    { icon: BarChart3, label: "Assessment Completion Rate", pct: dataQuality.completionPct, delta: dataQuality.deltaPp },
+    { icon: ShieldCheck, label: "Valid & Usable Data", pct: dataQuality.validUsablePct, delta: dataQuality.deltaPp },
+    { icon: Database, label: "Data Timeliness", pct: dataQuality.timelinessPct, delta: dataQuality.deltaPp },
   ];
   return (
     <article style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, boxShadow: SHADOW }}>

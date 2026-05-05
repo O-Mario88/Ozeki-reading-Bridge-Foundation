@@ -49,6 +49,15 @@ type FormDraft = {
   headteacherSignatureDate: string;
   teacherSignatureName: string;
   teacherSignatureDate: string;
+  /** Per-domain rubric scores (0–100) — string in the form so empty
+   *  state is allowed; coerced to number on submit. Drives the public
+   *  Teaching Quality from Teacher Observation Analysis card. */
+  lessonStructureScore: string;
+  instructionalDeliveryScore: string;
+  learnerEngagementScore: string;
+  assessmentPracticesScore: string;
+  useOfMaterialsScore: string;
+  classroomEnvironmentScore: string;
 };
 
 /* ─── Default + load helpers (unchanged) */
@@ -77,6 +86,12 @@ function createDefaultDraft(): FormDraft {
     coachSignatureName: "", coachSignatureDate: "",
     headteacherSignatureName: "", headteacherSignatureDate: "",
     teacherSignatureName: "", teacherSignatureDate: "",
+    lessonStructureScore: "",
+    instructionalDeliveryScore: "",
+    learnerEngagementScore: "",
+    assessmentPracticesScore: "",
+    useOfMaterialsScore: "",
+    classroomEnvironmentScore: "",
   };
 }
 
@@ -132,6 +147,23 @@ function fromRecord(obs: TeacherLessonObservation): FormDraft {
     };
   }
 
+  type WithScores = TeacherLessonObservation & {
+    lessonStructureScore?: number | null;
+    instructionalDeliveryScore?: number | null;
+    learnerEngagementScore?: number | null;
+    assessmentPracticesScore?: number | null;
+    useOfMaterialsScore?: number | null;
+    classroomEnvironmentScore?: number | null;
+  };
+  const withScores = obs as WithScores;
+  const toStr = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
+  draft.lessonStructureScore = toStr(withScores.lessonStructureScore);
+  draft.instructionalDeliveryScore = toStr(withScores.instructionalDeliveryScore);
+  draft.learnerEngagementScore = toStr(withScores.learnerEngagementScore);
+  draft.assessmentPracticesScore = toStr(withScores.assessmentPracticesScore);
+  draft.useOfMaterialsScore = toStr(withScores.useOfMaterialsScore);
+  draft.classroomEnvironmentScore = toStr(withScores.classroomEnvironmentScore);
+
   return draft;
 }
 
@@ -171,6 +203,12 @@ function toApiPayload(draft: FormDraft, submitAs: "draft" | "submitted") {
       resourcesNeeded: draft.actionPlan.resourcesNeeded,
       reviewDate: draft.actionPlan.reviewDate || null,
     },
+    lessonStructureScore: draft.lessonStructureScore ? Number(draft.lessonStructureScore) : null,
+    instructionalDeliveryScore: draft.instructionalDeliveryScore ? Number(draft.instructionalDeliveryScore) : null,
+    learnerEngagementScore: draft.learnerEngagementScore ? Number(draft.learnerEngagementScore) : null,
+    assessmentPracticesScore: draft.assessmentPracticesScore ? Number(draft.assessmentPracticesScore) : null,
+    useOfMaterialsScore: draft.useOfMaterialsScore ? Number(draft.useOfMaterialsScore) : null,
+    classroomEnvironmentScore: draft.classroomEnvironmentScore ? Number(draft.classroomEnvironmentScore) : null,
   };
 }
 
@@ -1078,6 +1116,39 @@ export default function PhonicsObservationForm({ mode, existingObservation }: Ph
                   className="w-full h-10 px-3 text-[12.5px] rounded-[8px] border border-[#e5eaf0] bg-white text-[#111827] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* E3b — Per-domain rubric scores (drive the public Teaching Quality card) */}
+          <div>
+            <h3 className="text-[14px] font-bold text-[#111827] mb-1">
+              3b. Domain Scores (0–100)
+            </h3>
+            <p className="text-[11.5px] text-[#667085] mb-3">
+              Score each rubric domain 0–100. These power the Teaching Quality from Teacher Observation Analysis card on the public dashboard.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {([
+                { key: "lessonStructureScore",       label: "Lesson Structure" },
+                { key: "instructionalDeliveryScore", label: "Instructional Delivery" },
+                { key: "learnerEngagementScore",     label: "Learner Engagement" },
+                { key: "assessmentPracticesScore",   label: "Assessment Practices" },
+                { key: "useOfMaterialsScore",        label: "Use of Materials" },
+                { key: "classroomEnvironmentScore",  label: "Classroom Environment" },
+              ] as const).map((d) => (
+                <label key={d.key} className="block">
+                  <FieldLabel>{d.label}</FieldLabel>
+                  <input
+                    type="number"
+                    min={0} max={100}
+                    inputMode="numeric"
+                    value={draft[d.key]}
+                    onChange={(e) => setField(d.key, e.target.value)}
+                    placeholder="0 – 100"
+                    className="mt-1 w-full px-3 py-2 text-[13px] rounded-[10px] border border-[#e5eaf0] focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  />
+                </label>
+              ))}
             </div>
           </div>
 

@@ -193,6 +193,69 @@ export async function getMovedUpKpi(filters: PublicOutcomesFilters = {}): Promis
 }
 
 /* ────────────────────────────────────────────────────────────────────
+   Data Quality breakdown — three real %s sourced from the new
+   validation_status / submitted_at columns on assessment_records.
+   ──────────────────────────────────────────────────────────────────── */
+export type DataQualityBreakdown = {
+  completionPct: number;
+  validUsablePct: number;
+  timelinessPct: number;
+  deltaPp: number;
+};
+
+export async function getDataQualityBreakdown(): Promise<DataQualityBreakdown> {
+  try {
+    const [completionRes, qualityRes] = await Promise.all([
+      queryPostgres<{ scheduled: number; completed: number }>(
+        `WITH scheduled AS (
+           SELECT DISTINCT se.school_id, se.assessment_window_id
+           FROM school_engagements se
+           WHERE se.assessment_window_id IS NOT NULL AND se.school_id IS NOT NULL
+         ),
+         completed AS (
+           SELECT s.school_id, s.assessment_window_id
+           FROM scheduled s
+           JOIN assessment_schedule_windows w ON w.id = s.assessment_window_id
+           WHERE EXISTS (
+             SELECT 1 FROM assessment_records ar
+             WHERE ar.school_id = s.school_id
+               AND ar.assessment_date BETWEEN w.window_open AND w.window_close
+           )
+         )
+         SELECT (SELECT COUNT(*)::int FROM scheduled) AS scheduled,
+                (SELECT COUNT(*)::int FROM completed) AS completed`,
+      ),
+      queryPostgres<{ total: number; valid: number; on_time: number }>(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE validation_status = 'valid')::int AS valid,
+           COUNT(*) FILTER (
+             WHERE submitted_at IS NOT NULL
+               AND submitted_at <= (assessment_date + INTERVAL '14 days')
+           )::int AS on_time
+         FROM assessment_records`,
+      ),
+    ]);
+    const sc = Number(completionRes.rows[0]?.scheduled ?? 0);
+    const co = Number(completionRes.rows[0]?.completed ?? 0);
+    const total = Number(qualityRes.rows[0]?.total ?? 0);
+    const valid = Number(qualityRes.rows[0]?.valid ?? 0);
+    const onTime = Number(qualityRes.rows[0]?.on_time ?? 0);
+    return {
+      completionPct: sc > 0 ? Math.round((co / sc) * 1000) / 10 : 0,
+      // When validation_status hasn't been populated yet, treat all
+      // records as provisional (pct = 0 rather than 100, so the dial
+      // honestly reflects validation rollout).
+      validUsablePct: total > 0 && valid > 0 ? Math.round((valid / total) * 1000) / 10 : 0,
+      timelinessPct: total > 0 && onTime > 0 ? Math.round((onTime / total) * 1000) / 10 : 0,
+      deltaPp: 0,
+    };
+  } catch {
+    return { completionPct: 0, validUsablePct: 0, timelinessPct: 0, deltaPp: 0 };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────
    KPI 6 — Data Completeness (assessment-window completion %)
    ──────────────────────────────────────────────────────────────────── */
 export async function getDataCompletenessKpi(): Promise<{ current: number; deltaPp: number }> {
@@ -339,21 +402,53 @@ export async function getLearningOutcomesTrend(
 export type ObservationDomain = { label: string; pct: number };
 
 export async function getObservationDomainBreakdown(): Promise<ObservationDomain[]> {
-  // The rubric is stored in lesson_structure_json + scored items, but for the
-  // public dashboard we surface the headline rating bands as a proxy split
-  // across canonical domain labels. When the per-domain rubric aggregation is
-  // wired (follow-on), this function takes its place.
+  // Prefer the new per-domain rubric columns added in 0072. When they're
+  // populated, AVG(score) per column gives a real per-domain percentage.
+  // Falls back to the headline-fidelity approximation only when the new
+  // columns are entirely null (i.e. backfill hasn't started).
   try {
-    const result = await queryPostgres<{ total: number; fid: number; partial: number }>(
+    const result = await queryPostgres<{
+      total: number;
+      ls: number | null; id: number | null; le: number | null;
+      ap: number | null; um: number | null; ce: number | null;
+    }>(
       `SELECT
          COUNT(*) FILTER (WHERE status = 'submitted')::int AS total,
+         AVG(lesson_structure_score)         FILTER (WHERE status = 'submitted' AND lesson_structure_score IS NOT NULL)         AS ls,
+         AVG(instructional_delivery_score)   FILTER (WHERE status = 'submitted' AND instructional_delivery_score IS NOT NULL)   AS id,
+         AVG(learner_engagement_score)       FILTER (WHERE status = 'submitted' AND learner_engagement_score IS NOT NULL)       AS le,
+         AVG(assessment_practices_score)     FILTER (WHERE status = 'submitted' AND assessment_practices_score IS NOT NULL)     AS ap,
+         AVG(use_of_materials_score)         FILTER (WHERE status = 'submitted' AND use_of_materials_score IS NOT NULL)         AS um,
+         AVG(classroom_environment_score)    FILTER (WHERE status = 'submitted' AND classroom_environment_score IS NOT NULL)    AS ce
+       FROM teacher_lesson_observations`,
+    );
+    const r = result.rows[0];
+    const total = Number(r?.total ?? 0);
+    const haveRealScores = r && (r.ls !== null || r.id !== null || r.le !== null || r.ap !== null || r.um !== null || r.ce !== null);
+
+    if (haveRealScores) {
+      const round = (v: number | null | undefined) =>
+        v === null || v === undefined ? 0 : Math.round(Number(v));
+      return [
+        { label: "Lesson Structure",       pct: round(r!.ls) },
+        { label: "Instructional Delivery", pct: round(r!.id) },
+        { label: "Learner Engagement",     pct: round(r!.le) },
+        { label: "Assessment Practices",   pct: round(r!.ap) },
+        { label: "Use of Materials",       pct: round(r!.um) },
+        { label: "Classroom Environment",  pct: round(r!.ce) },
+      ];
+    }
+
+    // Fallback: derive from the headline rating bands until the per-domain
+    // scores have been backfilled.
+    const fallback = await queryPostgres<{ fid: number; partial: number }>(
+      `SELECT
          COUNT(*) FILTER (WHERE status = 'submitted' AND overall_post_observation_rating = 'fidelity')::int AS fid,
          COUNT(*) FILTER (WHERE status = 'submitted' AND overall_post_observation_rating = 'partial')::int AS partial
        FROM teacher_lesson_observations`,
     );
-    const total = Number(result.rows[0]?.total ?? 0);
-    const fid = Number(result.rows[0]?.fid ?? 0);
-    const partial = Number(result.rows[0]?.partial ?? 0);
+    const fid = Number(fallback.rows[0]?.fid ?? 0);
+    const partial = Number(fallback.rows[0]?.partial ?? 0);
     if (total < MIN_PUBLIC_SAMPLE_SIZE) {
       return [
         { label: "Lesson Structure", pct: 0 },
@@ -364,12 +459,7 @@ export async function getObservationDomainBreakdown(): Promise<ObservationDomain
         { label: "Classroom Environment", pct: 0 },
       ];
     }
-    const fidPct = (fid / total) * 100;
-    const partialPct = (partial / total) * 100;
-    // Approximation: composite "effective" share = fidelity + half of partial,
-    // applied per domain with small canonical offsets so the visual shape is
-    // preserved while being grounded in real fidelity data.
-    const base = Math.round(fidPct + 0.5 * partialPct);
+    const base = Math.round(((fid + 0.5 * partial) / total) * 100);
     return [
       { label: "Lesson Structure", pct: Math.min(100, Math.max(0, base + 4)) },
       { label: "Instructional Delivery", pct: Math.min(100, Math.max(0, base + 1)) },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getDataCompletenessKpi,
+  getDataQualityBreakdown,
   getDomainPerformance,
   getFilterOptions,
   getGenderParityOutcomes,
@@ -77,6 +78,7 @@ export async function GET(request: Request) {
       teachingQuality,
       movedUp,
       dataCompleteness,
+      dataQuality,
       readingLevels,
       trend,
       observationDomains,
@@ -92,6 +94,7 @@ export async function GET(request: Request) {
       getTeachingQualityIndexKpi(),
       getMovedUpKpi(filters),
       getDataCompletenessKpi(),
+      getDataQualityBreakdown(),
       getReadingLevelsDistribution(filters),
       getLearningOutcomesTrend(filters, 12),
       getObservationDomainBreakdown(),
@@ -132,6 +135,7 @@ export async function GET(request: Request) {
         movedUp,
         dataCompleteness,
       },
+      dataQuality,
       readingLevelsDistribution: readingLevels,
       learningOutcomesTrend: trend,
       teachingQualityDomains: observationDomains,
