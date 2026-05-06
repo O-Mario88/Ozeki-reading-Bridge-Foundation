@@ -181,16 +181,39 @@ export function getPoolStats(): { total: number; idle: number; waiting: number; 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PostgresClient = { query: (text: string, values?: any[]) => Promise<{ rows: any[] }> };
 
+// Empty QueryResult returned during `next build` when DATABASE_URL is unset.
+// Prerender on hosts (Railway, Cloud Run) that don't expose the DB at build
+// time should degrade to empty data instead of crashing the build. Runtime is
+// unaffected — NEXT_PHASE is only set to 'phase-production-build' during the
+// build worker, never when the app actually serves requests.
+function emptyBuildResult<Row extends QueryResultRow>(): QueryResult<Row> {
+  return { command: "SELECT", rowCount: 0, oid: 0, fields: [], rows: [] } as unknown as QueryResult<Row>;
+}
+
+function isBuildPhaseWithoutDb() {
+  return process.env.NEXT_PHASE === "phase-production-build" && !getDatabaseUrlRaw();
+}
+
 export async function queryPostgres<Row extends QueryResultRow = QueryResultRow>(
   text: string,
   params: unknown[] = [],
 ): Promise<QueryResult<Row>> {
+  if (isBuildPhaseWithoutDb()) return emptyBuildResult<Row>();
   return getPostgresPool().query<Row>(text, params);
 }
 
 export async function withPostgresClient<T>(
   callback: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
+  if (isBuildPhaseWithoutDb()) {
+    // Provide a stub client during prerender so callers that branch on rows
+    // (e.g. testimonials lookups) get empty results instead of a thrown init.
+    const stub = {
+      query: async () => ({ rows: [], rowCount: 0 }),
+      release: () => {},
+    } as unknown as PoolClient;
+    return callback(stub);
+  }
   const client = await getPostgresPool().connect();
   let released = false;
   try {
