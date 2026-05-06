@@ -6,7 +6,7 @@ import {
 } from "@/lib/blog-data";
 
 type Params = Promise<{ slug: string }>;
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { slug } = await params;

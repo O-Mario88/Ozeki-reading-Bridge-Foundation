@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPublishedChangeStoryBySlug } from "@/lib/change-stories";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {

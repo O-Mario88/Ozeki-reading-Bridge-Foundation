@@ -1,7 +1,7 @@
 import { EditorialBlogIndex } from "@/components/blog/EditorialBlogIndex";
 import { getMergedBlogCategoriesAsync, getMergedPublishedBlogPostsAsync } from "@/lib/blog-data";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Blog",

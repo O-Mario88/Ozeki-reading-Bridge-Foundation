@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listPublishedChangeStories } from "@/lib/change-stories";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Stories of Measurable Change",
