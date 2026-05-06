@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import { SponsorshipMilestonesWidget } from "@/components/public/SponsorshipMilestonesWidget";
 import { listActiveSponsorshipTiersPostgres } from "@/lib/server/postgres/repositories/settings";
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Sponsor a School or District | OzekiRead",

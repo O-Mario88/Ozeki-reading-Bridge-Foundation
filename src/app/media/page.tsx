@@ -8,7 +8,7 @@ export const metadata = {
   description: "Training highlights, event notes, and media updates.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function MediaPage() {
   const dbItems = await listImpactGalleryEntriesPostgres(24);

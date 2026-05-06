@@ -11,7 +11,7 @@ export const metadata = {
     "Meet the dedicated team behind Ozeki Reading Bridge Foundation — the people driving literacy implementation across schools and communities.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 const accentColors = [
   { bg: "#006b61", shape: "#1dc9ba" },

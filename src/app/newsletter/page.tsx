@@ -7,7 +7,7 @@ export const metadata = {
     "Read the latest Ozeki Reading Bridge newsletter updates and download each issue as PDF.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function NewsletterIndexPage() {
   let latest = null;

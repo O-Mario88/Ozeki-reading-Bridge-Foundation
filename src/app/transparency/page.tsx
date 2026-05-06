@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     "Learn how Ozeki Reading Bridge Foundation ensures strong governance, safeguarding, data privacy, financial controls, and transparent reporting—so every contribution delivers measurable literacy impact.",
 };
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 function getSectionDocuments(
   documents: PortalResourceRecord[],

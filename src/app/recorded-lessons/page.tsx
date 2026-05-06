@@ -8,7 +8,7 @@ export const metadata = {
 
 // Recorded lessons change on publish cadence, not per-request. Cache 1 hour;
 // publishing flow can invalidate via revalidatePath when the dataset changes.
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 interface LessonRow {
   lesson_slug: string;

@@ -11,7 +11,7 @@ import {
     listStoryTagsPostgres,
 } from "@/lib/server/postgres/repositories/public-content";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "1001 Story Library & Impact Reports",

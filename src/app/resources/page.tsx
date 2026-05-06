@@ -5,7 +5,7 @@ import { resources } from "@/lib/content";
 import { listPublishedPortalResources } from "@/lib/content-db";
 import { BookOpen } from "lucide-react";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Resources Library | Ozeki Reading Bridge Foundation",

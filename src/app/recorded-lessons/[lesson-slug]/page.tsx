@@ -2,6 +2,8 @@ import { queryPostgres } from "@/lib/server/postgres/client";
 import { notFound } from "next/navigation";
 import { VimeoTracker } from "@/components/public/lms/VimeoTracker";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ "lesson-slug": string }>;
 }

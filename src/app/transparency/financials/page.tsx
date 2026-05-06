@@ -16,7 +16,7 @@ import { queryPostgres } from "@/lib/server/postgres/client";
 import { DollarSign, PercentCircle } from "lucide-react";
 import { IntegrityBadge } from "@/components/public/IntegrityBadge";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Financial Transparency | Ozeki Reading Bridge Foundation",

@@ -6,7 +6,7 @@ import { PageHero } from "@/components/public/PageHero";
 import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { CTAStrip } from "@/components/public/CTAStrip";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Evidence Gallery — Ozeki Reading Bridge Foundation",

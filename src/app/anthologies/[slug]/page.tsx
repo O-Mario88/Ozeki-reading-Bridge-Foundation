@@ -7,7 +7,7 @@ import {
     listPublishedStoriesByAnthologyPostgres,
 } from "@/lib/server/postgres/repositories/public-content";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
 

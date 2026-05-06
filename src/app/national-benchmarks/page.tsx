@@ -5,7 +5,7 @@ import { SectionWrapper } from "@/components/public/SectionWrapper";
 import { CTAStrip } from "@/components/public/CTAStrip";
 import { BookOpen, Database, ChevronRight, BarChart3, Scale } from "lucide-react";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "National Literacy Benchmarks | Ozeki Reading Bridge Foundation",
