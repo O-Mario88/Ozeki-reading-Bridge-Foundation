@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit",
     "prestart": "node -e \"console.log('Starting ORBF...')\"",
     "start": "node server.js",
-    "start:standalone": "node scripts/start-standalone.mjs",
+    "start:standalone": "node server.js",
     "start:next": "next start",
     "lint": "eslint .",
     "deploy:check": "node scripts/deploy-readiness-check.mjs",
