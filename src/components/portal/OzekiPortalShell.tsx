@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { OzekiSidebar } from "./OzekiSidebar";
 import { OzekiTopBar } from "./OzekiTopBar";
 import { SessionHeartbeatClient } from "./SessionHeartbeatClient";
+import { InstallAppGate } from "@/components/InstallAppGate";
 import { MobileBottomNav } from "./glass-dashboard-shell/MobileBottomNav";
 import { MobileHeader } from "./glass-dashboard-shell/MobileHeader";
 import type { PortalUser } from "@/lib/types";
@@ -71,6 +72,13 @@ export function OzekiPortalShell({
           so the 20-min idle timeout only fires on real idleness. Mounts
           once per portal page; renders nothing. */}
       <SessionHeartbeatClient />
+
+      {/* Gates the PWA install prompt: surfaces the install banner only
+          after the user has accumulated 10 minutes of authenticated portal
+          activity (visible tab + recent input). Public-site visitors and
+          drive-by portal sessions never see it. Renders nothing until the
+          threshold is crossed. */}
+      <InstallAppGate />
 
       {/* Mobile (<lg) */}
       <div className="lg:hidden min-h-screen bg-[#e7ecf3]">

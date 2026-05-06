@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { PortalLoginForm } from "@/components/PortalLoginForm";
-import { InstallAppButton } from "@/components/InstallAppButton";
 import { getCurrentPortalUser, getPortalHomePath } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -17,17 +16,15 @@ export default async function PortalLoginPage() {
     redirect(getPortalHomePath(user));
   }
 
+  // Note: the PWA install button used to live here. It now lives behind
+  // InstallAppGate, mounted in OzekiPortalShell, which only surfaces it
+  // after 10 minutes of authenticated portal activity. Showing it on the
+  // login page would contradict the "must have logged in and used backend
+  // for ~10 minutes" install rule.
   return (
     <div className="portal-login-page">
       <div className="portal-login-page-inner">
         <PortalLoginForm />
-        {/* Install-on-phone CTA — renders only on mobile browsers when the
-            app isn't already installed. Tapping triggers the native install
-            prompt on Android/Chrome, or shows the Add-to-Home-Screen
-            instructions on iOS Safari (Apple has no programmatic API). */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>
-          <InstallAppButton />
-        </div>
       </div>
     </div>
   );
