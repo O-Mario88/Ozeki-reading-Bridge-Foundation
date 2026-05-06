@@ -86,12 +86,31 @@ export function AddContactToTrainingModal({ contactId }: AddContactToTrainingMod
 
   return (
     <>
+      {/* Inline styling so the trigger matches the rest of the action bar
+          (New Observation / Update Contact / New Coaching) regardless of
+          which contact view mounts it. The legacy .portal-crm-button class
+          only exists inside PortalCrmProfileView's scoped <style jsx>, so
+          relying on it left the button unstyled in the new ContactProfileView. */}
       <button
         type="button"
-        className="portal-crm-button"
         onClick={() => setOpen(true)}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          height: 36,
+          padding: "0 14px",
+          borderRadius: 10,
+          background: "#066A67",
+          color: "#FFFFFF",
+          fontSize: 13,
+          fontWeight: 700,
+          border: "1px solid #066A67",
+          cursor: "pointer",
+          fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif',
+        }}
       >
-        Add Contact to Training Session
+        Add to Training
       </button>
 
       {open ? (
