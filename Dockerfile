@@ -36,9 +36,21 @@ COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
-# Persist SQLite runtime data outside the container.
+# Create the runtime data directory used by APP_DATA_DIR (evidence
+# photos, generated PDFs, queued offline payloads).
+#
+# Persistence is the host platform's job — Railway Volumes, Cloud Run
+# / Firebase App Hosting writable layer with caveats, AWS Amplify
+# ephemeral disk. The Dockerfile no longer declares VOLUME because:
+#   • Railway rejects Docker VOLUME — they require their managed
+#     Volumes feature attached at deploy time via the Railway console.
+#   • The original VOLUME was added when the app used SQLite; Postgres
+#     replaced SQLite long ago, so the directive only matters for
+#     uploaded files now.
+# If you need persistent uploads on the platform you choose, attach a
+# managed volume (Railway Volumes / GCS bucket via Cloud Storage FUSE /
+# EFS) and mount it at /app/data — no Dockerfile change required.
 RUN mkdir -p /app/data && chown -R node:node /app
-VOLUME ["/app/data"]
 
 USER node
 EXPOSE 3000
