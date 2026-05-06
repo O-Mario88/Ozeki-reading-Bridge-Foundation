@@ -28,6 +28,7 @@ import {
   listInterventionActivity,
   listInterventionEvidence,
 } from "@/lib/server/postgres/repositories/interventions";
+import { NewInterventionPlanModal } from "@/components/portal/interventions/NewInterventionPlanModal";
 
 export const dynamic = "force-dynamic";
 
@@ -392,14 +393,11 @@ export default async function PortalInterventionsOverviewPage() {
               <Download className="h-3.5 w-3.5" strokeWidth={1.75} />
               Export Plans
             </Link>
-            <Link
-              href="/portal/interventions?action=new"
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-white text-[12px] font-bold shadow-sm whitespace-nowrap"
-              style={{ background: "linear-gradient(180deg,#066a67 0%,#033f3e 100%)" }}
-            >
-              <Plus className="h-3.5 w-3.5" strokeWidth={1.75} />
-              Create Plan
-            </Link>
+            {/* Replaces the previous deep-link "Create Plan" anchor that
+                pointed at ?action=new with no handler. The modal posts
+                directly to /api/portal/interventions and refreshes the
+                route on success. */}
+            <NewInterventionPlanModal />
             <Link
               href="/portal/interventions?action=assign"
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] bg-white border border-emerald-200 text-[12px] font-bold text-[#066a67] shadow-sm hover:bg-emerald-50 whitespace-nowrap"

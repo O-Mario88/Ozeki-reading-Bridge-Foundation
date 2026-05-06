@@ -385,6 +385,114 @@ export async function listInterventionActivity(limit = 4): Promise<InterventionA
   }));
 }
 
+/* ── Create / update plan (write side) ─────────────────────────────── */
+
+export type InterventionPlanInput = {
+  title: string;
+  scopeType?: "Country" | "Region" | "District" | "Cluster" | "School";
+  scopeName?: string;
+  type?:
+    | "Coaching Cycles"
+    | "Remedial Reading"
+    | "Materials Support"
+    | "Leadership Support"
+    | "Data Quality Fixes";
+  ownerName?: string | null;
+  ownerUserId?: number | null;
+  status?: "Planned" | "Approved" | "In Progress" | "At Risk" | "Completed" | "Verified";
+  progressPct?: number;
+  dueDate?: string | null;          // YYYY-MM-DD
+  risk?: "Low" | "Medium" | "High";
+  region?: string | null;
+  schoolsCount?: number;
+};
+
+function generatePlanId(): string {
+  // Compact, time-sortable id. The PK is TEXT so we generate locally
+  // rather than relying on a sequence.
+  return `IPLAN-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
+
+export async function createInterventionPlanRecord(
+  actor: { id: number; fullName: string },
+  input: InterventionPlanInput,
+): Promise<string> {
+  const id = generatePlanId();
+
+  await queryPostgres(
+    `INSERT INTO intervention_plans (
+       id, title, scope_type, scope_name, type, owner_user_id, owner_name,
+       status, progress_pct, due_date, risk, region, schools_count
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::date, $11, $12, $13
+     )`,
+    [
+      id,
+      input.title.trim(),
+      input.scopeType ?? "Country",
+      (input.scopeName ?? "Uganda").trim() || "Uganda",
+      input.type ?? null,
+      input.ownerUserId != null ? String(input.ownerUserId) : String(actor.id),
+      input.ownerName?.trim() || actor.fullName,
+      input.status ?? "Planned",
+      Math.max(0, Math.min(100, input.progressPct ?? 0)),
+      input.dueDate || null,
+      input.risk ?? "Low",
+      input.region?.trim() || null,
+      Math.max(0, input.schoolsCount ?? 0),
+    ],
+  );
+
+  // Activity row so the new plan shows up in the dashboard's recent list.
+  await queryPostgres(
+    `INSERT INTO intervention_activity (plan_id, kind, message, actor_user_id, actor_name)
+     VALUES ($1, 'status_change', $2, $3, $4)`,
+    [id, `Plan created: ${input.title.trim()}`, String(actor.id), actor.fullName],
+  ).catch(() => undefined);
+
+  return id;
+}
+
+export async function updateInterventionPlanRecord(
+  actor: { id: number; fullName: string },
+  id: string,
+  patch: Partial<InterventionPlanInput>,
+): Promise<void> {
+  // Dynamic UPDATE — only set the fields the caller passed.
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  const push = (col: string, value: unknown) => {
+    params.push(value);
+    sets.push(`${col} = $${params.length}`);
+  };
+  if (patch.title !== undefined) push("title", patch.title.trim());
+  if (patch.scopeType !== undefined) push("scope_type", patch.scopeType);
+  if (patch.scopeName !== undefined) push("scope_name", patch.scopeName.trim() || "Uganda");
+  if (patch.type !== undefined) push("type", patch.type);
+  if (patch.ownerName !== undefined) push("owner_name", patch.ownerName?.trim() || null);
+  if (patch.ownerUserId !== undefined) push("owner_user_id", patch.ownerUserId != null ? String(patch.ownerUserId) : null);
+  if (patch.status !== undefined) push("status", patch.status);
+  if (patch.progressPct !== undefined) push("progress_pct", Math.max(0, Math.min(100, patch.progressPct)));
+  if (patch.dueDate !== undefined) push("due_date", patch.dueDate || null);
+  if (patch.risk !== undefined) push("risk", patch.risk);
+  if (patch.region !== undefined) push("region", patch.region?.trim() || null);
+  if (patch.schoolsCount !== undefined) push("schools_count", Math.max(0, patch.schoolsCount));
+  if (sets.length === 0) return;
+  sets.push("updated_at = NOW()");
+
+  params.push(id);
+  await queryPostgres(
+    `UPDATE intervention_plans SET ${sets.join(", ")} WHERE id = $${params.length}`,
+    params,
+  );
+
+  await queryPostgres(
+    `INSERT INTO intervention_activity (plan_id, kind, message, actor_user_id, actor_name)
+     VALUES ($1, 'status_change', $2, $3, $4)`,
+    [id, `Plan updated`, String(actor.id), actor.fullName],
+  ).catch(() => undefined);
+}
+
 /* ── Evidence list ─────────────────────────────────────────────────── */
 
 export async function listInterventionEvidence(limit = 5): Promise<InterventionEvidenceRow[]> {
