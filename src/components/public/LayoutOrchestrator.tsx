@@ -28,7 +28,11 @@ export function LayoutOrchestrator({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    // orbf-public-shell is a marker the body :has() rule in globals.css
+    // looks for to apply the public-site fixed-header padding-top and the
+    // ambient gradient. Portal pages render without this wrapper so their
+    // workspace starts flush at the viewport top — no 80px gap.
+    <div className="orbf-public-shell flex flex-col min-h-screen">
       <SiteHeader />
       <main className="flex-1 bg-white">
         {children}

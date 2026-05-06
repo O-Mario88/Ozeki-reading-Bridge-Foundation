@@ -5938,22 +5938,12 @@ textarea {
   stroke: #ffffff !important;
 }
 
-/* When the homepage header sticks and flips to white, keep the nav
-   text a neutral dark gray instead of teal. Teal was reading as
-   "the color flips to green" on scroll-up — neutral gray sits
-   quietly on white and doesn't compete with the orange hover/active
-   accent. Logo strong stays brand teal because it's a logo, not nav. */
-.header.header__home.sticky .header__logo-text strong {
-  color: var(--color-brand-blue) !important;
-}
-.header.header__home.sticky .header__logo-text small,
-.header.header__home.sticky .header__menu-link {
-  color: #1f2937 !important;
-}
-
-.header.header__home.sticky .header__dropdown-arrow svg path {
-  stroke: #1f2937 !important;
-}
+/* The earlier rule (.header in any state -> dark navy footer background
+   with white nav text) is the current production styling for every
+   page incl. the home hero. The previous override here forced the nav
+   text dark gray on .sticky, which made it disappear against the
+   still-dark sticky background — that's the "nav menu turns black on
+   scroll" bug. Removed; the unified rule now wins in all states. */
 
 /* Orange hover line on main and dropdown navigation links */
 .header__menu-link,
@@ -11317,15 +11307,24 @@ nav[aria-label="Staff navigation"] {
 
 body {
   font-weight: 300;
+  font-family: var(--font-ui);
+  font-size: var(--font-body);
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+/* Public-site-only chrome. Scoped via :has() so portal pages — which
+   render their own dark sidebar + welcome strip starting flush at y=0 —
+   don't inherit the public site's fixed-header padding-top or the peach
+   ambient gradient. Without this scope, portal dashboards picked up an
+   80px empty band at the top of the viewport (matching the public
+   --header-height) and a peach tint bleeding behind their workspace. */
+body:has(.orbf-public-shell) {
   padding-top: var(--header-height);
-    font-family: var(--font-ui);
-    font-size: var(--font-body);
-    line-height: 1.55;
-    background:
-        radial-gradient(circle at 14% 0%, var(--dashboard-ambient-top) 0%, transparent 42%),
-        radial-gradient(circle at 88% 8%, var(--dashboard-ambient-mid) 0%, transparent 34%),
-        linear-gradient(180deg, color-mix(in oklab, var(--color-bg), white 20%), var(--color-bg));
-    color: var(--color-text);
+  background:
+    radial-gradient(circle at 14% 0%, var(--dashboard-ambient-top) 0%, transparent 42%),
+    radial-gradient(circle at 88% 8%, var(--dashboard-ambient-mid) 0%, transparent 34%),
+    linear-gradient(180deg, color-mix(in oklab, var(--color-bg), white 20%), var(--color-bg));
 }
 
 .dashboard-inspired-main {
