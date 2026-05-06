@@ -30,6 +30,11 @@ COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
+# /api/migrate/bootstrap reads every database/postgres/*.sql at runtime via
+# fs.readdir. The Next.js tracer won't pick those up because the imports are
+# dynamic, so copy the SQL directory explicitly.
+COPY --from=builder --chown=node:node /app/database ./database
+
 # Belt-and-suspenders: the Next.js 15 standalone file tracer sometimes
 # omits next/dist/lib/metadata helpers (get-metadata-route.js etc.) that
 # the runtime needs for the App Router icon / apple-icon / opengraph-image

@@ -56,6 +56,7 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/*": ["assets/photos/**/*"],
+    "/api/migrate/bootstrap": ["database/postgres/**/*.sql"],
     // Next.js 15 standalone tracer occasionally omits the dynamic metadata
     // helpers needed at runtime by the App Router icon / apple-icon /
     // opengraph-image conventions. Force-include the whole metadata helper
