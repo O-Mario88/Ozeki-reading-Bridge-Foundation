@@ -24,12 +24,6 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV APP_DATA_DIR=/app/data
 
-# Needed for newsletter PDF generation via Puppeteer.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends chromium \
-  && rm -rf /var/lib/apt/lists/*
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-
 WORKDIR /app
 
 COPY --from=builder --chown=node:node /app/public ./public
