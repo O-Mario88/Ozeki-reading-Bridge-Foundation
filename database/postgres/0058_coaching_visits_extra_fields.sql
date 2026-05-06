@@ -8,7 +8,9 @@ ALTER TABLE coaching_visits ADD COLUMN IF NOT EXISTS visit_reasons_json TEXT NOT
 ALTER TABLE coaching_visits ADD COLUMN IF NOT EXISTS time_from TIME;
 ALTER TABLE coaching_visits ADD COLUMN IF NOT EXISTS time_to TIME;
 ALTER TABLE coaching_visits ADD COLUMN IF NOT EXISTS sponsorship_type TEXT;
-ALTER TABLE coaching_visits ADD COLUMN IF NOT EXISTS sponsored_by_contact_id INTEGER REFERENCES school_contacts(id) ON DELETE SET NULL;
+-- school_contacts uses contact_id as its PK, not id (see 0001_foundation.sql).
+-- Original FK clause referenced the wrong column and broke fresh-DB bootstrap.
+ALTER TABLE coaching_visits ADD COLUMN IF NOT EXISTS sponsored_by_contact_id INTEGER REFERENCES school_contacts(contact_id) ON DELETE SET NULL;
 
 -- Helpful composite index for the visits-by-school listing
 CREATE INDEX IF NOT EXISTS idx_coaching_visits_school_date
