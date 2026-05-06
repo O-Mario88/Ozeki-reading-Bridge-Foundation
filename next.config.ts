@@ -56,6 +56,13 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/*": ["assets/photos/**/*"],
+    // Next.js 15 standalone tracer occasionally omits the dynamic metadata
+    // helpers needed at runtime by the App Router icon / apple-icon /
+    // opengraph-image conventions. Force-include the whole metadata helper
+    // directory so `get-metadata-route.js` (and friends) ship with the
+    // standalone bundle and the server boots instead of crashing on first
+    // request to /icon, /apple-icon, /opengraph-image.
+    "*": ["./node_modules/next/dist/lib/metadata/**/*"],
   },
   async redirects() {
     return [

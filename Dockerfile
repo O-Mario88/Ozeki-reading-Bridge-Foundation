@@ -30,6 +30,16 @@ COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
+# Belt-and-suspenders: the Next.js 15 standalone file tracer sometimes
+# omits next/dist/lib/metadata helpers (get-metadata-route.js etc.) that
+# the runtime needs for the App Router icon / apple-icon / opengraph-image
+# routes. Without them, the server crashes on startup before the
+# healthcheck can respond. Overlay the full metadata directory from the
+# builder's node_modules to guarantee the files are present even if the
+# tracer regresses again. outputFileTracingIncludes in next.config.ts is
+# the primary fix; this COPY is the runtime safety net.
+COPY --from=builder --chown=node:node /app/node_modules/next/dist/lib/metadata ./node_modules/next/dist/lib/metadata
+
 # Create the runtime data directory used by APP_DATA_DIR (evidence
 # photos, generated PDFs, queued offline payloads).
 #
