@@ -17,7 +17,7 @@ in the same project, and exposes the app over HTTPS via a generated subdomain
 | --- | --- |
 | Build | `Dockerfile` — multi-stage Node 22 → standalone Next.js 15 |
 | Start command | `node server.js` (set in `railway.json` and `package.json`) |
-| Healthcheck | `GET /api/health` (configured in `railway.json`) |
+| Healthcheck | `GET /api/health/live` — liveness probe, 200 once the Node server is bound. `GET /api/health` is the strict readiness probe and may return 503 if Postgres / SMTP / etc. are not yet wired up |
 | Persistence | Railway Volume mounted at `/app/data` |
 | Database | Railway Postgres plugin → `DATABASE_URL` injected automatically |
 | Secrets | Service Variables in the Railway dashboard |
@@ -83,9 +83,9 @@ railway run npm run postgres:bootstrap
 Railway has cron jobs (Pro plan and above) — create a cron service that
 invokes:
 
-```
+```http
 GET https://<your-domain>/api/cron/dispatch
-Headers: Authorization: Bearer <CRON_SECRET>
+Authorization: Bearer <CRON_SECRET>
 ```
 
 …hourly. Alternatively, use any external cron service (cron-job.org,
