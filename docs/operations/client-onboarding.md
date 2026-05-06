@@ -72,7 +72,7 @@ sign-in.
 4. **Confirm `FINANCE_SYSTEM_ACTOR_ID`** points at an existing super
    admin user id — automated finance writes (Pesapal IPN ledger
    entries, reset batches) attribute themselves to this user.
-5. **Confirm DB backups are enabled** in your AWS RDS console.
+5. **Confirm DB backups are enabled** — Railway Postgres backups (Service → Backups tab) or, if you use external Postgres, your provider's console.
 
 ## Daily / weekly rhythms
 
@@ -93,7 +93,7 @@ sign-in.
 | Locked yourself out (forgot password) | Another super admin issues a password reset via `/portal/superadmin` |
 | All super admins locked out | Rotate `PORTAL_PASSWORD_SALT` won't help. Run the auto-seed via the env vars `PORTAL_AUTO_SEED_USERS=true` + `PORTAL_SUPERADMIN_*` and redeploy once; immediately disable auto-seed afterwards |
 | Wrong finance posting | `/portal/finance/reset-batch` — voids a batch and re-archives the rows. Idempotent. |
-| Lost data after a deploy | Postgres point-in-time-restore via AWS RDS console. The codebase is stateless. |
+| Lost data after a deploy | Postgres point-in-time-restore via your DB provider (Railway: Service → Backups; AWS RDS: console). The codebase is stateless. |
 | Pesapal IPN didn't fire | Replay manually — see Pesapal runbook §6 |
 
 ## Where things live (codebase map)
@@ -136,7 +136,7 @@ When you're ready to hand the platform to a non-technical client:
 3. The "Daily / weekly rhythms" table.
 4. A printed copy of the [Pesapal IPN runbook](pesapal-ipn-runbook.md)
    for whoever owns the merchant account.
-5. The credentials for: Railway service, AWS RDS, Pesapal merchant
+5. The credentials for: Railway service, the Postgres provider (Railway plugin or external), Pesapal merchant
    console, the Google OAuth project, the SMTP provider, the domain
    registrar. **All of these should live in the operator's password
    manager, not in the repo.**

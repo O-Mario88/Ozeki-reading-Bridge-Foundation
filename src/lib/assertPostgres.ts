@@ -40,6 +40,6 @@ export function getPostgresConnectionSummary(databaseUrl = process.env.DATABASE_
     host: parsed.hostname || "unknown",
     port: parsed.port || "5432",
     database: parsed.pathname.replace(/^\//, "") || "default",
-    ssl: /amazonaws\.com/i.test(parsed.hostname) || ["1", "true", "yes", "require", "on"].includes(String(process.env.DATABASE_SSL ?? process.env.DB_SSL_REQUIRE ?? "").trim().toLowerCase()),
+    ssl: /(amazonaws|railway\.app|railway\.internal|neon\.tech|supabase\.co)/i.test(parsed.hostname) || ["1", "true", "yes", "require", "on"].includes(String(process.env.DATABASE_SSL ?? process.env.DB_SSL_REQUIRE ?? "").trim().toLowerCase()),
   };
 }

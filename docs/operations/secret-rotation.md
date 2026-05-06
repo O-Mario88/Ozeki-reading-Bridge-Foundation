@@ -18,7 +18,7 @@ intentionally blank is a secret. The high-value ones:
 
 | Secret | What it unlocks | Rotate where |
 | --- | --- | --- |
-| `DATABASE_URL` | Full read/write to production Postgres | AWS RDS console → modify master password |
+| `DATABASE_URL` | Full read/write to production Postgres | Railway Postgres → service → reset credentials (or your external DB provider's console) |
 | `PORTAL_PASSWORD_SALT` | Stored password hashes — **don't rotate without a re-hash plan** | (rotate ONLY during a planned password reset for everyone) |
 | `PORTAL_SESSION_SECRET` | Active sign-in cookies (rotating logs everyone out) | Generate `openssl rand -hex 32` |
 | `SECRET_KEY` | General signing key | Generate `openssl rand -hex 32` |

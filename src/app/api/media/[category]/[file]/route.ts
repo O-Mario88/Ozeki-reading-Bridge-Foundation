@@ -41,15 +41,17 @@ export async function GET(
     const mediaKind = params.category === "photos" ? "image" : "video";
     const contentType = resolveMimeType(filePath, null, mediaKind);
 
-    // AWS Optimization: If it's a video and missing locally, redirect to S3
+    // Object-storage offload: if a video is missing from local disk and an
+    // external bucket URL is configured, redirect there. Works with any
+    // S3-compatible storage (Cloudflare R2, Backblaze B2, AWS S3, MinIO).
     if (mediaKind === "video") {
       try {
         await fs.access(filePath);
       } catch {
-        const s3Bucket = process.env.NEXT_PUBLIC_S3_MEDIA_BUCKET;
-        if (s3Bucket) {
-          const s3Url = `${s3Bucket.replace(/\/$/, "")}/videos/${params.file}`;
-          return NextResponse.redirect(s3Url);
+        const bucketUrl = process.env.NEXT_PUBLIC_S3_MEDIA_BUCKET;
+        if (bucketUrl) {
+          const redirectUrl = `${bucketUrl.replace(/\/$/, "")}/videos/${params.file}`;
+          return NextResponse.redirect(redirectUrl);
         }
         // Fallback or 404
       }

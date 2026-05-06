@@ -33,17 +33,14 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 # Create the runtime data directory used by APP_DATA_DIR (evidence
 # photos, generated PDFs, queued offline payloads).
 #
-# Persistence is the host platform's job — Railway Volumes, Cloud Run
-# / Firebase App Hosting writable layer with caveats, AWS Amplify
-# ephemeral disk. The Dockerfile no longer declares VOLUME because:
-#   • Railway rejects Docker VOLUME — they require their managed
-#     Volumes feature attached at deploy time via the Railway console.
-#   • The original VOLUME was added when the app used SQLite; Postgres
-#     replaced SQLite long ago, so the directive only matters for
-#     uploaded files now.
-# If you need persistent uploads on the platform you choose, attach a
-# managed volume (Railway Volumes / GCS bucket via Cloud Storage FUSE /
-# EFS) and mount it at /app/data — no Dockerfile change required.
+# Persistence is the host platform's job — attach a managed disk and
+# mount it at /app/data. The Dockerfile no longer declares VOLUME
+# because Railway (the current target) rejects Docker VOLUME and
+# requires its managed Volumes feature attached at deploy time via the
+# Railway dashboard.
+# If you migrate to another host (Cloud Run, Fly.io, etc.), attach
+# whatever persistent-disk primitive that platform offers and mount it
+# at /app/data — no Dockerfile change required.
 RUN mkdir -p /app/data && chown -R node:node /app
 
 USER node

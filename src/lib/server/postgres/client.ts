@@ -44,14 +44,20 @@ function shouldUseSsl(databaseUrl?: string) {
   const value = (process.env.DATABASE_SSL ?? process.env.DB_SSL_REQUIRE)?.trim().toLowerCase();
   if (!value) {
     const candidate = databaseUrl ?? getDatabaseUrlRaw();
-    return candidate.includes("amazonaws.com") || candidate.includes("neon.tech");
+    return (
+      candidate.includes("amazonaws.com") ||
+      candidate.includes("neon.tech") ||
+      candidate.includes("railway.app") ||
+      candidate.includes("railway.internal") ||
+      candidate.includes("supabase.co")
+    );
   }
   return value === "1" || value === "true" || value === "require" || value === "yes";
 }
 
 /**
  * SSL posture:
- *   Managed Postgres (AWS RDS, Neon, Supabase, etc.) presents certificates
+ *   Managed Postgres (Railway, AWS RDS, Neon, Supabase, etc.) presents certificates
  *   signed by provider CAs that Node.js does not bundle. Setting
  *   `rejectUnauthorized: false` keeps the connection *encrypted* but skips
  *   certificate-chain validation. This is the industry-default for those
