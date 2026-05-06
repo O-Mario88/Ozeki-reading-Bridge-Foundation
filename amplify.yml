@@ -1,29 +1,67 @@
 version: 1
+# =============================================================================
+# AMPLIFY DEPLOYMENT INTENTIONALLY DISABLED — 2026-05-06
+# =============================================================================
+# The platform is being hosted elsewhere (Railway / Firebase App Hosting /
+# Vercel — see git history). To stop Amplify from auto-building every push
+# to main without disconnecting the GitHub integration in the AWS console,
+# the build phase below short-circuits to a no-op `exit 0`.
+#
+# Amplify will still receive the webhook and start a build, but it'll
+# finish in seconds with nothing deployed. No env vars are exported, no
+# Next.js build runs, no artifacts are produced.
+#
+# To re-enable Amplify deployment:
+#   1. Restore the original config block at the bottom of this file
+#      (search for "ORIGINAL CONFIG").
+#   2. Delete the no-op `build` phase below.
+#   3. Restore the artifacts block.
+#   4. Redeploy from the Amplify console.
+# =============================================================================
+
 frontend:
   phases:
     preBuild:
       commands:
-        - nvm use 22 || nvm install 22
-        - node -v
-        - npm -v
-        - npm ci --no-audit --no-fund
+        - echo "Amplify auto-deploy is disabled — see amplify.yml header."
+        - echo "Skipping build for commit $AWS_COMMIT_ID."
     build:
       commands:
-        - export NODE_OPTIONS="--max-old-space-size=8192"
-        - export NEXT_TELEMETRY_DISABLED=1
-        - npm run build:aws
-        - mkdir -p .next/standalone/data
-        - cp -r data/* .next/standalone/data/ || true
-        - cp -r public .next/standalone/public || true
-        - mkdir -p .next/standalone/.next/static
-        - cp -r .next/static .next/standalone/.next/static || true
-        - cp -r database .next/standalone/database || true
-        - |
-          echo "Writing runtime environment variables..."
-          env | grep -E '^(DATABASE_|DB_|GOOGLE_|NEXT_PUBLIC_|NODE_ENV|SMTP_|FINANCE_|APP_|PUBLIC_|ADMIN_|PORTAL_|YOUTUBE_|CRON_|DIGEST_|PROGRAMMES_)' > .next/standalone/.env.production || true
-          echo "Env vars written: $(wc -l < .next/standalone/.env.production) lines"
+        - exit 0
   artifacts:
-    baseDirectory: .next
-    files:
-      - "**/*"
-# No cache block for this cycle to reset Amplify state
+    baseDirectory: .
+    files: []
+
+# =============================================================================
+# ORIGINAL CONFIG — DO NOT DELETE
+# Restore the contents below into the `frontend:` block above (replacing the
+# no-op preBuild + build phases) to re-enable Amplify deployment.
+# =============================================================================
+#
+# frontend:
+#   phases:
+#     preBuild:
+#       commands:
+#         - nvm use 22 || nvm install 22
+#         - node -v
+#         - npm -v
+#         - npm ci --no-audit --no-fund
+#     build:
+#       commands:
+#         - export NODE_OPTIONS="--max-old-space-size=8192"
+#         - export NEXT_TELEMETRY_DISABLED=1
+#         - npm run build:aws
+#         - mkdir -p .next/standalone/data
+#         - cp -r data/* .next/standalone/data/ || true
+#         - cp -r public .next/standalone/public || true
+#         - mkdir -p .next/standalone/.next/static
+#         - cp -r .next/static .next/standalone/.next/static || true
+#         - cp -r database .next/standalone/database || true
+#         - |
+#           echo "Writing runtime environment variables..."
+#           env | grep -E '^(DATABASE_|DB_|GOOGLE_|NEXT_PUBLIC_|NODE_ENV|SMTP_|FINANCE_|APP_|PUBLIC_|ADMIN_|PORTAL_|YOUTUBE_|CRON_|DIGEST_|PROGRAMMES_)' > .next/standalone/.env.production || true
+#           echo "Env vars written: $(wc -l < .next/standalone/.env.production) lines"
+#   artifacts:
+#     baseDirectory: .next
+#     files:
+#       - "**/*"
